@@ -34,7 +34,7 @@ The following ``share.`` config options influence this feature:
     requested in the :hg:`clone` command matches exactly to a repository
     that was cloned before.
 
-    The default naming mode is "identity."
+    The default naming mode is "identity".
 '''
 
 from __future__ import absolute_import

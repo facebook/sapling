@@ -134,7 +134,7 @@ insensitive match on a case-sensitive predicate, use a regular expression,
 prefixed with ``(?i)``.
 
 For example, ``tag(r're:(?i)release')`` matches "release" or "RELEASE"
-or "Release", etc
+or "Release", etc.
 
 Predicates
 ==========
@@ -212,7 +212,7 @@ Some sample queries:
 
     hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"
 
-- Update to commit that bookmark @ is pointing too, without activating the
+- Update to the commit that bookmark @ is pointing to, without activating the
   bookmark (this works because the last revision of the revset is used)::
 
     hg update :@

@@ -2072,7 +2072,7 @@ def graft(ui, repo, *revs, **opts):
       (grafted from CHANGESETHASH)
 
     If --force is specified, revisions will be grafted even if they
-    are already ancestors of or have been grafted to the destination.
+    are already ancestors of, or have been grafted to, the destination.
     This is useful when the revisions have since been backed out.
 
     If a graft merge results in conflicts, the graft process is
@@ -3075,7 +3075,7 @@ def incoming(ui, repo, source="default", **opts):
 
     Show new changesets found in the specified path/URL or the default
     pull location. These are the changesets that would have been pulled
-    if a pull at the time you issued this command.
+    by :hg:`pull` at the time you issued this command.
 
     See pull for valid source format details.
 
@@ -3808,8 +3808,8 @@ def phase(ui, repo, *revs, **opts):
     With one of -p/--public, -d/--draft or -s/--secret, change the
     phase value of the specified revisions.
 
-    Unless -f/--force is specified, :hg:`phase` won't move changeset from a
-    lower phase to an higher phase. Phases are ordered as follows::
+    Unless -f/--force is specified, :hg:`phase` won't move changesets from a
+    lower phase to a higher phase. Phases are ordered as follows::
 
         public < draft < secret
 

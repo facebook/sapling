@@ -28,7 +28,7 @@ refuse to operate on them to prevent creating duplicate changesets.
 Phases can also be manually manipulated with the :hg:`phase` command
 if needed. See :hg:`help -v phase` for examples.
 
-To make yours commits secret by default, put this in your
+To make your commits secret by default, put this in your
 configuration file::
 
   [phases]
@@ -89,7 +89,7 @@ Examples
 
      hg phase --force --draft .
 
- - show a list of changeset revision and phase::
+ - show a list of changeset revisions and each corresponding phase::
 
      hg log --template "{rev} {phase}\n"
 

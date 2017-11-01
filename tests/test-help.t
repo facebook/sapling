@@ -1876,7 +1876,7 @@ Test dynamic list of merge tools only shows up once
       Note:
          After selecting a merge program, Mercurial will by default attempt to
          merge the files using a simple merge algorithm first. Only if it
-         doesn't succeed because of conflicting changes Mercurial will actually
+         doesn't succeed because of conflicting changes will Mercurial actually
          execute the merge program. Whether to use the simple merge algorithm
          first can be controlled by the premerge setting of the merge tool.
          Premerge is enabled by default unless the file is binary or a symlink.

@@ -23,7 +23,7 @@ Complex default value
 ---------------------
 
 If the default provided is a callable, it is called to retrieve the default
-value when accessing the config option. This is useful for default value that
+value when accessing the config option. This is useful for default values that
 are mutable like the empty list::
 
     coreconfigitem('pager', 'ignore',
@@ -31,8 +31,8 @@ are mutable like the empty list::
     )
 
 In addition, there are cases where the default is not fixed, but computed from
-other properties. In this case, use the ``dynamicdefault`` object as value for
-the ``default`` parameters. A default value is then explicitly required when
+other properties. In this case, use the ``dynamicdefault`` object as the value
+for the ``default`` parameter. A default value is then explicitly required when
 reading the option::
 
     # registration
@@ -41,7 +41,7 @@ reading the option::
     )
 
     # usage
-    ui.config('web', 'name', dirnam)
+    ui.config('web', 'name', dirname)
 
 Free form options
 -----------------
@@ -63,7 +63,7 @@ When ``generic=True`` is set, the option name is matched as a regular expression
         priority=-1,
     )
 
-The ``priority`` parameter control the order used to match the generic pattern
+The ``priority`` parameter controls the order used to match the generic pattern
 (lower first).
 
 Config Option in Extensions
@@ -85,24 +85,24 @@ for commands and others)::
 The ``dynamicdefault`` object is then available as
 ``configitem.dynamicdefault``.
 
-Supporting older version
-------------------------
+Supporting older versions
+-------------------------
 
-The register was introduced in Mercurial 4.3, the ``generic`` parameter was
+The registry was introduced in Mercurial 4.3, and the ``generic`` parameter was
 introduced in 4.4. Starting with Mercurial 4.4, all core options were registered
 and developer warnings are emitted when accessing unregistered option.
 
-Extensions supporting version older than Mercurial-4.3 cannot rely on the
-default value registered. The simplest way to register option while still
-supporting older version is to use ``dynamicdefault`` for option requiring a
-default value. The existing code passing an explicit default can then stay in
-use until compatibility to Mercurial 4.2 is dropped.
+Extensions supporting versions older than Mercurial 4.3 cannot rely on the
+default value being registered. The simplest way to register an option while
+still supporting an older version is to use ``dynamicdefault`` for options
+requiring a default value. The existing code passing an explicit default can
+then stay in use until compatibility with Mercurial 4.2 is dropped.
 
-As reminder here are the default value for each config types:
+As reminder, here are the default values for each config type:
 - config:      None
 - configbool:  False
 - configbytes: 0
 - configdate:  None
 - configint:   None
 - configlist:  []
-- configpath: None
+- configpath:  None

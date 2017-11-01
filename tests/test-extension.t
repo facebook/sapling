@@ -813,7 +813,7 @@ Test help topic with same name as extension
   $ echo "multirevs = multirevs.py" >> $HGRCPATH
 
   $ hg help multirevs | tail
-        bookmark (this works because the last revision of the revset is used):
+        used):
   
           hg update :@
   

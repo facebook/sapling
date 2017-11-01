@@ -76,7 +76,7 @@ Mercurial uses these rules when deciding which merge tool to use:
 
    After selecting a merge program, Mercurial will by default attempt
    to merge the files using a simple merge algorithm first. Only if it doesn't
-   succeed because of conflicting changes Mercurial will actually execute the
+   succeed because of conflicting changes will Mercurial actually execute the
    merge program. Whether to use the simple merge algorithm first can be
    controlled by the premerge setting of the merge tool. Premerge is enabled by
    default unless the file is binary or a symlink.
