@@ -202,7 +202,7 @@ internalstable = sorted([
      loaddoc('censor', subdir='internals')),
     (['changegroups'], _('Changegroups'),
      loaddoc('changegroups', subdir='internals')),
-    (['config'], _('Config Register'),
+    (['config'], _('Config Registrar'),
      loaddoc('config', subdir='internals')),
     (['requirements'], _('Repository Requirements'),
      loaddoc('requirements', subdir='internals')),

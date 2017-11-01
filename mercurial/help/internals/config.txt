@@ -88,7 +88,7 @@ The ``dynamicdefault`` object is then available as
 Supporting older versions
 -------------------------
 
-The registry was introduced in Mercurial 4.3, and the ``generic`` parameter was
+The registrar was introduced in Mercurial 4.3, and the ``generic`` parameter was
 introduced in 4.4. Starting with Mercurial 4.4, all core options were registered
 and developer warnings are emitted when accessing unregistered option.
 
