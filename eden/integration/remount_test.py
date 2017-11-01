@@ -9,20 +9,11 @@
 
 import json
 import os
-from .lib import gitrepo
-from .lib import hgrepo
-from .lib import testcase
+from .lib import edenclient, gitrepo, hgrepo, testcase
 
 
 @testcase.eden_repo_test
 class RemountTest:
-    '''Exercise some fundamental properties of the filesystem.
-
-    Listing directories, checking stat information, asserting
-    that the filesystem is reporting the basic information
-    about the sample git repo and that it is correct are all
-    things that are appropriate to include in this test case.
-    '''
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
@@ -126,6 +117,18 @@ class RemountTest:
         # Verify that unmounted clients are not remounted
         self.assertFalse(os.path.exists(self.mount))
         self.assertFalse(os.path.exists(self.mount + "3"))
+
+    def test_try_remount_existing_mount(self):
+        '''Verify trying to mount an existing mount prints a sensible error.'''
+        mount_destination = self.mount + '-0'
+        self.eden.clone(self.repo_name, mount_destination)
+        with self.assertRaises(edenclient.EdenCommandError) as context:
+            self.eden.run_cmd('mount', mount_destination)
+        self.assertEqual(
+            (b'ERROR: Mount point in use! %s is already mounted by Eden.\n'
+                % mount_destination.encode()),
+            context.exception.stderr)
+        self.assertEqual(1, context.exception.returncode)
 
     def test_empty_config_json(self):
         for i in range(5):

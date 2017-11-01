@@ -21,7 +21,8 @@ import subprocess
 import tempfile
 import time
 
-from . import (util, configinterpolator)
+from . import configinterpolator, util
+from .util import print_stderr
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
@@ -297,6 +298,30 @@ by hand to make changes to the repository or remove it.''' % name)
 
         # Make sure the mount path exists
         util.mkdir_p(path)
+
+        # Check if it is already mounted.
+        try:
+            root = os.path.join(path, '.eden', 'root')
+            target = os.readlink(root)
+            if target == path:
+                print_stderr('ERROR: Mount point in use! '
+                             '{} is already mounted by Eden.', path)
+                return 1
+            else:
+                # If we are here, MOUNT/.eden/root is a symlink, but it does not
+                # point to MOUNT. This suggests `path` is a subdirectory of an
+                # existing mount, though we should never reach this point
+                # because _get_client_dir_for_mount_point() above should have
+                # already thrown an exception. We return non-zero here just in
+                # case.
+                print_stderr('ERROR: Mount point in use! '
+                             '{} is already mounted by Eden as part of {}.',
+                             path, root)
+                return 1
+        except OSError as ex:
+            err = ex.errno
+            if err != errno.ENOENT and err != errno.EINVAL:
+                raise
 
         # Ask eden to mount the path
         mount_info = eden_ttypes.MountInfo(mountPoint=path,

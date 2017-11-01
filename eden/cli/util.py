@@ -11,6 +11,7 @@ import errno
 import os
 import pwd
 import subprocess
+import sys
 import time
 
 
@@ -141,3 +142,10 @@ def get_repo_source_and_type(path):
             repo_source = hg_repo
             repo_type = 'hg'
     return (repo_source, repo_type)
+
+
+def print_stderr(message, *args, **kwargs):
+    '''Prints the message to stderr.'''
+    if args or kwargs:
+        message = message.format(*args, **kwargs)
+    print(message, file=sys.stderr)

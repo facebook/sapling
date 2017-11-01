@@ -22,6 +22,7 @@ from . import rage as rage_mod
 from . import stats as stats_mod
 from . import util
 from .cmd_util import create_config
+from .util import print_stderr
 from facebook.eden import EdenService
 
 
@@ -150,6 +151,7 @@ def do_config(args):
     else:
         config.print_full_config()
     return 0
+
 
 def do_mount(args):
     config = create_config(args)
@@ -501,13 +503,6 @@ def main():
     else:
         retcode = args.func(args)
     return retcode
-
-
-def print_stderr(message, *args, **kwargs):
-    '''Prints the message to stderr.'''
-    if args or kwargs:
-        message = message.format(*args, **kwargs)
-    print(message, file=sys.stderr)
 
 
 def normalize_path_arg(path_arg, may_need_tilde_expansion=False):
