@@ -112,6 +112,7 @@ fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
     logger: &Logger,
     postpone_compaction: bool,
     channel_size: usize,
+    commits_limit: Option<usize>,
 ) -> Result<()>
 where
     In: AsRef<Path>,
@@ -170,6 +171,7 @@ where
         core,
         cpupool,
         logger: logger.clone(),
+        commits_limit: commits_limit,
     };
     let res = convert_context.convert();
     iothread.join().expect("failed to join io thread")?;
@@ -265,6 +267,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 
             -d, --debug              'print debug level output'
             --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
+            --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
         "#,
         )
         .arg(
@@ -366,6 +369,9 @@ fn main() {
             &root_log,
             postpone_compaction,
             channel_size,
+            matches.value_of("commits-limit").map(|size|
+                size.parse().expect("commits-limit must be positive integer")
+            ),
         )?;
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {

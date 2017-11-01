@@ -13,9 +13,9 @@ use slog::Logger;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobChangeset;
-use futures_ext::{FutureExt, StreamExt};
+use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
-use mercurial::{RevlogManifest, RevlogRepo};
+use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial_types::{Changeset, Manifest, NodeHash};
 use stats::Timeseries;
@@ -32,6 +32,7 @@ pub(crate) struct ConvertContext<H> {
     pub core: Core,
     pub cpupool: Arc<CpuPool>,
     pub logger: Logger,
+    pub commits_limit: Option<usize>,
 }
 
 impl<H> ConvertContext<H>
@@ -45,10 +46,17 @@ where
         let logger = &logger_owned;
         let cpupool = self.cpupool;
         let headstore = self.headstore;
+        let commits_limit = self.commits_limit;
+
+        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(limit) = commits_limit {
+            self.repo.changesets().take(limit as u64).boxify()
+        } else {
+            self.repo.changesets().boxify()
+        };
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
-        let changesets = self.repo.changesets()
+        let changesets = changesets
             .map_err(Error::from)
             .enumerate()
             .map({
