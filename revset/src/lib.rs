@@ -40,6 +40,9 @@ pub use validation::ValidateNodeStream;
 mod ancestors;
 pub use ancestors::{common_ancestors, greatest_common_ancestor, AncestorsNodeStream};
 
+mod range;
+pub use range::RangeNodeStream;
+
 #[cfg(test)]
 extern crate ascii;
 #[cfg(test)]
