@@ -71,6 +71,9 @@ class basepackstore(object):
                     ui.warn(_('unable to load pack %s: %s\n') % (filepath, ex))
                 continue
             self.packs.append(pack)
+        numpacks = len(self.packs)
+        ui.log("packsizes", "packstore %s has %d packs\n" % (path, numpacks),
+            numpacks=numpacks)
 
     def _getavailablepackfiles(self):
         suffixlen = len(self.INDEXSUFFIX)
