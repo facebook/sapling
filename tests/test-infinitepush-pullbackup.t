@@ -56,15 +56,8 @@ Restore
 Check that autobackup doesn't happen on pullbackup. Logs should be empty and backupstate should be correct
   $ test -f $TESTTMP/logs/test/*
   [1]
-  $ jq -MS . restored/.hg/infinitepushbackupstate
-  {
-    "bookmarks": {
-      "abook": "89ecc969c0ac7d7344728f1255250df7c54a56af"
-    },
-    "heads": [
-      "89ecc969c0ac7d7344728f1255250df7c54a56af"
-    ]
-  }
+  $ python -c "import sys; import json; bst = json.loads(sys.stdin.read()); print(bst['bookmarks'], bst['heads'])" < restored/.hg/infinitepushbackupstate
+  ({u'abook': u'89ecc969c0ac7d7344728f1255250df7c54a56af'}, [u'89ecc969c0ac7d7344728f1255250df7c54a56af'])
 
 
 Create second backup source
