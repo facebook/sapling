@@ -56,7 +56,8 @@ class DebugGetPathTest:
                 'getpath',
                 '1234',
                 cwd=self.mount)
-            self.assertIn('unknown inode number 1234', str(context.exception))
+            self.assertIn('unknown inode number 1234',
+                          context.exception.stderr.decode())
 
     def test_getpath_unloaded_inode(self):
         '''

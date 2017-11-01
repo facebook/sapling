@@ -132,7 +132,7 @@ echo -n "$1" >> "{scratch_file}"
             self.eden.run_cmd('clone', repo_name, tmp)
         self.assertIn(
             f'No repository configured named "{repo_name}". '
-            'Try one of: "main".', str(context.exception))
+            'Try one of: "main".', context.exception.stderr.decode())
 
     def _new_tmp_dir(self):
         return tempfile.mkdtemp(dir=self.tmp_dir)
