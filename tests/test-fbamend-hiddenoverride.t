@@ -179,3 +179,51 @@ Having a bookmark on a commit, obsolete the commit, remove the bookmark
   |
   o  0 A
   
+Uncommit and hiddenoverride. This is uncommon but the last uncommit should make
+"A" invisible:
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > uncommit =
+  > EOF
+
+  $ hg init $TESTTMP/repo2
+  $ cd $TESTTMP/repo2
+  $ hg debugdrawdag <<'EOS'
+  >   B
+  >   |
+  >   A
+  >   |
+  >   Z
+  > EOS
+
+  $ eval `hg tags -T '{tag}={node}\n'`
+  $ rm .hg/localtags
+
+  $ hg up $A
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg uncommit
+  $ hg log -T '{desc}' -G
+  o  B
+  |
+  x  A
+  |
+  @  Z
+  
+  $ hg up -C $B
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg uncommit
+  $ hg log -T '{desc}' -G
+  @  A
+  |
+  o  Z
+  
+  $ hg up -C .
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg uncommit
+  $ hg log -T '{desc}' -G
+  x  A
+  |
+  @  Z
+  
