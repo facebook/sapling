@@ -376,7 +376,7 @@ coreconfigitem('experimental', 'evolution.createmarkers',
     default=None,
 )
 coreconfigitem('experimental', 'evolution.effect-flags',
-    default=False,
+    default=True,
     alias=[('experimental', 'effect-flags')]
 )
 coreconfigitem('experimental', 'evolution.exchange',

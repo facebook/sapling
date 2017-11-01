@@ -1307,13 +1307,13 @@ we have reusable code here
   o  0:426bada5c675 A b-B b-C b-I
   
   $ hg debugobsolete
-  1fc8102cda6204549f031015641606ccf5513ec3 1473d4b996d1d1b121de6b39fab6a04fbf9d873e 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  64a8289d249234b9886244d379f15e6b650b28e3 d11b3456a873daec7c7bc53e5622e8df6d741bd2 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  f585351a92f85104bff7c284233c338b10eb1df7 7c78f703e465d73102cc8780667ce269c5208a40 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  48b9aae0607f43ff110d84e6883c151942add5ab 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  112478962961147124edd43549aedd1a335e44bf 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  08ebfeb61bac6e3f12079de774d285a0d6689eba 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
-  26805aba1e600a82e93661149f2313866a221a7b 0 {112478962961147124edd43549aedd1a335e44bf} (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'replace', 'user': 'test'}
+  1fc8102cda6204549f031015641606ccf5513ec3 1473d4b996d1d1b121de6b39fab6a04fbf9d873e 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '13', 'operation': 'replace', 'user': 'test'}
+  64a8289d249234b9886244d379f15e6b650b28e3 d11b3456a873daec7c7bc53e5622e8df6d741bd2 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '13', 'operation': 'replace', 'user': 'test'}
+  f585351a92f85104bff7c284233c338b10eb1df7 7c78f703e465d73102cc8780667ce269c5208a40 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '9', 'operation': 'replace', 'user': 'test'}
+  48b9aae0607f43ff110d84e6883c151942add5ab 0 {0000000000000000000000000000000000000000} (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'replace', 'user': 'test'}
+  112478962961147124edd43549aedd1a335e44bf 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'replace', 'user': 'test'}
+  08ebfeb61bac6e3f12079de774d285a0d6689eba 0 {426bada5c67598ca65036d57d9e4b64b0c1ce7a0} (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'replace', 'user': 'test'}
+  26805aba1e600a82e93661149f2313866a221a7b 0 {112478962961147124edd43549aedd1a335e44bf} (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '0', 'operation': 'replace', 'user': 'test'}
   $ cd ..
 
 Test that obsmarkers are restored even when not using generaldelta
@@ -1328,11 +1328,11 @@ Test that obsmarkers are restored even when not using generaldelta
   $ hg ci -Aqm a
   $ hg ci --amend -m a2
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '1', 'operation': 'amend', 'user': 'test'}
   $ hg strip .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue5678/.hg/strip-backup/489bac576828-bef27e14-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
   $ hg debugobsolete
-  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'}
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b 489bac576828490c0bb8d45eac9e5e172e4ec0a8 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '1', 'operation': 'amend', 'user': 'test'}
   $ cd ..
