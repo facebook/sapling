@@ -113,6 +113,7 @@ fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
     postpone_compaction: bool,
     channel_size: usize,
     commits_limit: Option<usize>,
+    max_blob_size: Option<usize>,
 ) -> Result<()>
 where
     In: AsRef<Path>,
@@ -139,7 +140,13 @@ where
         .spawn(move || {
             let receiverstream = stream::iter_ok::<_, ()>(recv);
             let mut core = Core::new().expect("cannot create core in iothread");
-            let blobstore = open_blobstore(output, blobtype, &core.remote(), postpone_compaction)?;
+            let blobstore = open_blobstore(
+                output,
+                blobtype,
+                &core.remote(),
+                postpone_compaction,
+                max_blob_size,
+            )?;
             // Filter only manifest entries, because changeset entries should be unique
             let mut inserted_manifest_entries = std::collections::HashSet::new();
             let stream = receiverstream
@@ -204,10 +211,11 @@ fn open_blobstore(
     ty: BlobstoreType,
     remote: &Remote,
     postpone_compaction: bool,
+    max_blob_size: Option<usize>,
 ) -> Result<BBlobstore> {
     output.push("blobs");
 
-    let blobstore = match ty {
+    let blobstore: BBlobstore = match ty {
         BlobstoreType::Files => Fileblob::<_, Bytes>::create(output)
             .map_err(Error::from)
             .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
@@ -244,12 +252,48 @@ fn open_blobstore(
         }
     };
 
+    let blobstore = if let Some(max_blob_size) = max_blob_size {
+        Arc::new(LimitedBlobstore {
+            blobstore,
+            max_blob_size,
+        })
+    } else {
+        blobstore
+    };
+
     _assert_clone(&blobstore);
     _assert_send(&blobstore);
     _assert_static(&blobstore);
     _assert_blobstore(&blobstore);
 
     Ok(blobstore)
+}
+
+/// Blobstore that doesn't inserts blobs that are bigger than max_blob_size
+struct LimitedBlobstore {
+    blobstore: BBlobstore,
+    max_blob_size: usize,
+}
+
+impl Blobstore for LimitedBlobstore {
+    type Key = String;
+    type ValueIn = Bytes;
+    type ValueOut = Vec<u8>;
+    type Error = Error;
+    type GetBlob = BoxFuture<Option<Vec<u8>>, Error>;
+    type PutBlob = BoxFuture<(), Error>;
+
+    fn get(&self, key: &Self::Key) -> Self::GetBlob {
+        self.blobstore.get(key)
+    }
+
+    fn put(&self, key: Self::Key, val: Self::ValueIn) -> Self::PutBlob {
+        if val.len() >= self.max_blob_size {
+            Ok(()).into_future().boxify()
+        } else {
+            self.blobstore.put(key, val)
+        }
+    }
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -268,6 +312,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             -d, --debug              'print debug level output'
             --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
+            --max-blob-size [LIMIT]  'max size of the blob to be inserted'
         "#,
         )
         .arg(
@@ -369,9 +414,14 @@ fn main() {
             &root_log,
             postpone_compaction,
             channel_size,
-            matches.value_of("commits-limit").map(|size|
-                size.parse().expect("commits-limit must be positive integer")
-            ),
+            matches.value_of("commits-limit").map(|size| {
+                size.parse()
+                    .expect("commits-limit must be positive integer")
+            }),
+            matches.value_of("max-blob-size").map(|size| {
+                size.parse()
+                    .expect("max-blob-size must be positive integer")
+            }),
         )?;
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
