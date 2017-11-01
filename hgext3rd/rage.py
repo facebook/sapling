@@ -22,7 +22,7 @@ from mercurial import pycompat, scmutil
 from hgext import blackbox
 from hgext3rd import (
     smartlog,
-    sparse,
+    fbsparse,
 )
 from phabricator import (
     arcconfig,
