@@ -10,14 +10,18 @@ extern crate futures;
 
 extern crate futures_ext;
 
+extern crate tokio_core;
+
 use std::error;
 use std::sync::Arc;
 
 use futures::Future;
 
 mod boxed;
+mod retrying;
 
 pub use boxed::{ArcBlobstore, BoxBlobstore};
+pub use retrying::RetryingBlobstore;
 
 /// Basic trait for the Blob Store interface
 ///
