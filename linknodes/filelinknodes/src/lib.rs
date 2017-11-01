@@ -28,7 +28,7 @@ use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, Linknode
 use mercurial_types::{NodeHash, RepoPath};
 use mercurial_types::hash::Sha1;
 
-static PREFIX: &str = "linknode:";
+static PREFIX: &str = "linknode-";
 
 /// A basic file-based persistent linknode store.
 ///
