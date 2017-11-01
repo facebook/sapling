@@ -151,7 +151,7 @@ where
 }
 
 
-impl<RE> Repo for Box<Repo<Error = RE>>
+impl<RE> Repo for Box<Repo<Error = RE> + Sync + Send>
 where
     RE: error::Error + Send + 'static,
 {
@@ -340,6 +340,6 @@ mod test {
         _assert_repo(&a);
         _assert_repo(&(a as Arc<Repo<Error = !>>));
         _assert_repo(&b);
-        _assert_repo(&(b as Box<Repo<Error = !>>));
+        _assert_repo(&(b as Box<Repo<Error = !> + Sync + Send>));
     }
 }
