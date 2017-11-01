@@ -346,9 +346,7 @@ class HgServer(object):
 
         rev_hash = request.body[:SHA1_NUM_BYTES]
         path = request.body[SHA1_NUM_BYTES:]
-        self.debug('(pid:%s) getting contents of file %r revision %s',
-                   os.getpid(),
-                   path,
+        self.debug('getting contents of file %r revision %s', path,
                    binascii.hexlify(rev_hash))
 
         contents = self.get_file(path, rev_hash)

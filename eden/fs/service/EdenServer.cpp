@@ -505,8 +505,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
     auto repoPath = realpath(name);
-    return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), threadPool_.get());
+    return make_shared<HgBackingStore>(repoPath, localStore_.get());
   } else if (type == "git") {
     auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());

@@ -13,7 +13,6 @@
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 
@@ -34,10 +33,7 @@ class HgBackingStore : public BackingStore {
    * HgBackingStore object).  It is guaranteed to be valid for the lifetime of
    * the HgBackingStore object.
    */
-  HgBackingStore(
-      AbsolutePathPiece repository,
-      LocalStore* localStore,
-      folly::Executor* serverThreadPool);
+  HgBackingStore(AbsolutePathPiece repository, LocalStore* localStore);
   ~HgBackingStore() override;
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
@@ -52,13 +48,11 @@ class HgBackingStore : public BackingStore {
 
   std::unique_ptr<Tree> getTreeForCommitImpl(const Hash& commitID);
 
+  // TODO: In the future we may want to maintain a pool of HgImporter objects,
+  // rather than just a single one, so we can perform multiple imports in
+  // parallel.
+  folly::Synchronized<HgImporter> importer_;
   LocalStore* localStore_{nullptr};
-  // A set of threads owning HgImporter instances
-  std::unique_ptr<folly::Executor> importThreadPool_;
-  // The main server thread pool; we push the Futures back into
-  // this pool to run their completion code to avoid clogging
-  // the importer pool.
-  folly::Executor* serverThreadPool_;
 };
 }
 } // facebook::eden
