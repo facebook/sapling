@@ -234,13 +234,9 @@ void EdenServiceHandler::async_tm_subscribe(
   auto edenMount = server_->getMount(*mountPoint);
   auto delta = edenMount->getJournal().rlock()->getLatest();
 
-  auto sub = std::make_shared<StreamingSubscriber>(
-      std::move(callback), std::move(edenMount));
-  // The subscribe call sets up a journal subscriber which captures
-  // a reference to the `sub` shared_ptr.  This keeps it alive for
-  // the duration of the subscription so that it doesn't get immediately
-  // deleted when sub falls out of scope at the bottom of this method call.
-  sub->subscribe();
+  // StreamingSubscriber manages the subscription lifetime and releases itself
+  // as appropriate.
+  StreamingSubscriber::subscribe(std::move(callback), std::move(edenMount));
 }
 
 void EdenServiceHandler::getFilesChangedSince(

@@ -16,19 +16,8 @@ using folly::StringPiece;
 namespace facebook {
 namespace eden {
 
-StreamingSubscriber::State::State(
-    StreamingSubscriber::Callback callback,
-    std::weak_ptr<EdenMount> edenMount)
-    : callback(std::move(callback)), edenMount(edenMount) {}
-
-StreamingSubscriber::StreamingSubscriber(
-    Callback callback,
-    std::shared_ptr<EdenMount> edenMount)
-    : state_(folly::in_place, std::move(callback), std::move(edenMount)) {
-  auto state = state_.wlock();
-  // Arrange to be told when the eventBase is about to be destroyed
-  state->callback->getEventBase()->runOnDestruction(this);
-}
+StreamingSubscriber::State::State(StreamingSubscriber::Callback callback)
+    : callback(std::move(callback)) {}
 
 void StreamingSubscriber::runLoopCallback() noexcept {
   auto state = state_.wlock();
@@ -44,10 +33,40 @@ void StreamingSubscriber::runLoopCallback() noexcept {
   state->eventBaseAlive = false;
 }
 
+void StreamingSubscriber::subscribe(
+    Callback callback,
+    std::shared_ptr<EdenMount> edenMount) {
+  auto self =
+      std::make_shared<StreamingSubscriber>(std::move(callback), edenMount);
+
+  // Separately scope the locks as the schedule() below will attempt
+  // to acquire the locks for itself.
+  {
+    auto journal = edenMount->getJournal().wlock();
+    auto state = self->state_.wlock();
+
+    // Arrange to be told when the eventBase is about to be destroyed
+    state->callback->getEventBase()->runOnDestruction(self.get());
+    state->subscriberId =
+        journal->registerSubscriber([self] { schedule(self); });
+  }
+
+  // Suggest to the subscription that the journal has been updated so that
+  // it will compute initial delta information.
+  schedule(self);
+}
+
+StreamingSubscriber::StreamingSubscriber(
+    Callback callback,
+    std::shared_ptr<EdenMount> edenMount)
+    : edenMount_(std::move(edenMount)),
+      state_(folly::in_place, std::move(callback)) {}
+
 StreamingSubscriber::~StreamingSubscriber() {
   auto state = state_.wlock();
   // If the eventBase is still live then we should tear down the peer
-  if (state->callback && state->eventBaseAlive) {
+  if (state->callback) {
+    CHECK(state->eventBaseAlive);
     auto evb = state->callback->getEventBase();
 
     // Move the callback away; we won't be able to use it
@@ -60,55 +79,38 @@ StreamingSubscriber::~StreamingSubscriber() {
   }
 }
 
-void StreamingSubscriber::subscribe() {
-  // Separately scope the wlock as the schedule() below will attempt
-  // to acquire the lock for itself.
-  {
-    auto state = state_.wlock();
-
-    auto edenMount = state->edenMount.lock();
-    DCHECK(edenMount)
-        << "we're called with the owner referenced, so this should always be valid";
-    state->subscriberId = edenMount->getJournal().wlock()->registerSubscriber(
-        [self = shared_from_this()]() { self->schedule(); });
-  }
-
-  // Suggest to the subscription that the journal has been updated so that
-  // it will compute initial delta information.
-  schedule();
-}
-
-void StreamingSubscriber::schedule() {
-  auto state = state_.rlock();
+void StreamingSubscriber::schedule(std::shared_ptr<StreamingSubscriber> self) {
+  auto state = self->state_.rlock();
   if (state->callback) {
     state->callback->getEventBase()->runInEventBaseThread(
-        [self = shared_from_this()]() { self->journalUpdated(); });
+        [self] { self->journalUpdated(); });
   }
 }
 
 void StreamingSubscriber::journalUpdated() {
-  auto state = state_.wlock();
+  auto edenMount = edenMount_.lock();
+  if (!edenMount) {
+    XLOG(DBG1) << "Mount is released: subscription is no longer active";
+    auto state = state_.wlock();
+    state->callback->done();
+    state->callback.reset();
+    return;
+  }
 
+  // The Journal lock must always be acquired before state_'s lock.
+  auto journal = edenMount->getJournal().ulock();
+
+  auto state = state_.wlock();
   if (!state->callback) {
     // We were cancelled while this callback was queued up.
     // There's nothing for us to do now.
     return;
   }
 
-  auto edenMount = state->edenMount.lock();
-  bool tearDown = !edenMount || !state->callback->isRequestActive();
-
-  if (!tearDown &&
-      !edenMount->getJournal().rlock()->isSubscriberValid(
-          state->subscriberId)) {
-    tearDown = true;
-  }
-
-  if (tearDown) {
+  if (!state->callback->isRequestActive() ||
+      !journal->isSubscriberValid(state->subscriberId)) {
     XLOG(DBG1) << "Subscription is no longer active";
-    if (edenMount) {
-      edenMount->getJournal().wlock()->cancelSubscriber(state->subscriberId);
-    }
+    journal.moveFromUpgradeToWrite()->cancelSubscriber(state->subscriberId);
     state->callback->done();
     state->callback.reset();
     return;
@@ -116,7 +118,7 @@ void StreamingSubscriber::journalUpdated() {
 
   JournalPosition pos;
 
-  auto delta = edenMount->getJournal().rlock()->getLatest();
+  auto delta = journal->getLatest();
   pos.sequenceNumber = delta->toSequence;
   pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
   pos.mountGeneration = edenMount->getMountGeneration();
@@ -128,5 +130,5 @@ void StreamingSubscriber::journalUpdated() {
     XLOG(ERR) << "Error while sending subscription update: " << exc.what();
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

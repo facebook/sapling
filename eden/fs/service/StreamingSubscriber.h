@@ -28,14 +28,10 @@ namespace eden {
  * for updates that match certain criteria.
  */
 
-class StreamingSubscriber
-    : public std::enable_shared_from_this<StreamingSubscriber>,
-      private folly::EventBase::LoopCallback {
+class StreamingSubscriber : private folly::EventBase::LoopCallback {
  public:
   using Callback = std::unique_ptr<apache::thrift::StreamingHandlerCallback<
       std::unique_ptr<JournalPosition>>>;
-  StreamingSubscriber(Callback callback, std::shared_ptr<EdenMount> edenMount);
-  ~StreamingSubscriber();
 
   /** Establishes a subscription with the journal in the edenMount
    * that was passed in during construction.
@@ -44,13 +40,20 @@ class StreamingSubscriber
    * As part of setting this up, pushes the initial subscription information
    * to the client.
    */
-  void subscribe();
+  static void subscribe(
+      Callback callback,
+      std::shared_ptr<EdenMount> edenMount);
+
+  // Not really public. Exposed publicly so std::make_shared can instantiate
+  // this class.
+  StreamingSubscriber(Callback callback, std::shared_ptr<EdenMount> edenMount);
+  ~StreamingSubscriber();
 
  private:
   /** Schedule a call to journalUpdated.
    * The journalUpdated method will be called in the context of the
    * eventBase thread that is associated with the connected client */
-  void schedule();
+  static void schedule(std::shared_ptr<StreamingSubscriber> self);
 
   /** Compute information to send to the connected subscriber.
    * This must only be called on the thread associated with the client.
@@ -68,13 +71,24 @@ class StreamingSubscriber
 
   struct State {
     Callback callback;
-    std::weak_ptr<EdenMount> edenMount;
     uint64_t subscriberId{0};
     bool eventBaseAlive{true};
 
-    State(Callback callback, std::weak_ptr<EdenMount> edenMount);
+    explicit State(Callback callback);
   };
+
+  // There is a lock hierarchy here.  Writes to Eden update the Journal which
+  // notifies the subscriber list (including StreamingSubscriber) which must
+  // forward to the synchronized callback.
+  // EdenMount owns and synchronizes access to the Journal, and since it's the
+  // outermost entry point, its lock must always be taken before state_'s.
+  //
+  // It's not clear to me this is the best ordering.  It's possible to lock the
+  // Journal after state_, but that would require Journal::addDelta to call
+  // its callbacks outside of its lock.  Alternatively, Journal::addDelta
+  // could simply schedule the subscriber calls onto the subscriber's thread.
+  const std::weak_ptr<EdenMount> edenMount_;
   folly::Synchronized<State> state_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook
