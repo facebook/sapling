@@ -22,11 +22,20 @@ testedwith = 'ships-with-fb-hgext'
 
 cwdrealtivepatkinds = ('glob', 'relpath')
 
+def _fbsparseexists(ui):
+    return not ui.config('extensions', 'fbsparse', '!').startswith('!')
+
 def uisetup(ui):
+    if _fbsparseexists(ui):
+        cmdtable.clear()
+        return
     _setupupdates(ui)
     _setupcommit(ui)
 
 def extsetup(ui):
+    if _fbsparseexists(ui):
+        cmdtable.clear()
+        return
     _setupclone(ui)
     _setuplog(ui)
     _setupadd(ui)
@@ -50,6 +59,8 @@ def extsetup(ui):
         pass
 
 def reposetup(ui, repo):
+    if _fbsparseexists(repo.ui):
+        return
     if not util.safehasattr(repo, 'dirstate'):
         return
 
