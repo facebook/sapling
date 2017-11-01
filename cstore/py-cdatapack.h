@@ -242,14 +242,8 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
     return -1;
   }
 
-  char* idx_path = (char*)malloc(nodelen + sizeof(INDEXSUFFIX));
-  char* data_path = (char*)malloc(nodelen + sizeof(PACKSUFFIX));
-  if(idx_path == NULL || data_path == NULL) {
-    free(data_path);
-    free(idx_path);
-    PyErr_NoMemory();
-    return -1;
-  }
+  char idx_path[nodelen + sizeof(INDEXSUFFIX)];
+  char data_path[nodelen + sizeof(PACKSUFFIX)];
 
   sprintf(idx_path, "%s%s", node, INDEXSUFFIX);
   sprintf(data_path, "%s%s", node, PACKSUFFIX);
@@ -257,8 +251,6 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
   self->handle = open_datapack(
       idx_path, strlen(idx_path),
       data_path, strlen(data_path));
-  free(data_path);
-  free(idx_path);
 
   if (self->handle == NULL) {
     PyErr_NoMemory();
@@ -271,7 +263,9 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args) {
     PyErr_Format(PyExc_RuntimeError, "Unsupported version");
   } else if (self->handle->status != DATAPACK_HANDLE_OK) {
     PyErr_Format(PyExc_ValueError,
-        "Error setting up datapack (status=%d)", self->handle->status);
+        "Error setting up datapack %s (status=%d)",
+        data_path,
+        self->handle->status);
   }
 
   free(self->handle);
