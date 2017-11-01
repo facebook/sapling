@@ -22,7 +22,7 @@ thrift_library(
     # Need to support .java and .py because eden.thrift depends on this file.
     languages = [
         "cpp2",
-        "java",
+        "javadeprecated",
         "py",
         "rust",
     ],

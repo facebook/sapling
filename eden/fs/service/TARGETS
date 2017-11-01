@@ -73,7 +73,7 @@ cpp_library(
 thrift_library(
     name = "thrift",
     languages = [
-        "java",
+        "javadeprecated",
         "py",
         "rust",
     ],
