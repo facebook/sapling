@@ -222,7 +222,7 @@ def do_rage(args):
     except KeyError:
         pass
 
-    if rage_processor:
+    if rage_processor and not args.stdout:
         proc = subprocess.Popen(['sh', '-c', rage_processor], stdin=subprocess.PIPE)
         sink = proc.stdin
     else:
@@ -484,6 +484,9 @@ def create_parser():
 
     rage_parser = subparsers.add_parser(
         'rage', help='Prints the diagnostic information about eden')
+    rage_parser.add_argument(
+        '--stdout', action='store_true',
+        help='Print the rage report to stdout: ignore reporter.')
     rage_parser.set_defaults(func=do_rage)
 
     stats_parser = subparsers.add_parser(
