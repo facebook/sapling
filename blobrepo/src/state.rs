@@ -150,20 +150,16 @@ impl MemBlobState {
 
 impl_blob_state! {
     TestManifoldBlobState {
-        heads: FileHeads<NodeHash>,
-        bookmarks: Arc<FileBookmarks<NodeHash>>,
+        heads: MemHeads<NodeHash>,
+        bookmarks: Arc<MemBookmarks<NodeHash>>,
         blobstore: ManifoldBlob<String, Bytes>,
     }
 }
 
 impl TestManifoldBlobState {
-    pub fn new(path: &Path, remote: &Remote) -> Result<Self> {
-        let heads = FileHeads::open(path.join("heads"))
-            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
-        let bookmarks = Arc::new(
-            FileBookmarks::open(path.join("books"))
-                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
-        );
+    pub fn new(remote: &Remote) -> Result<Self> {
+        let heads = MemHeads::new();
+        let bookmarks = Arc::new(MemBookmarks::new());
         let blobstore = ManifoldBlob::new_may_panic("mononoke", remote);
         Ok(TestManifoldBlobState {
             heads,

@@ -329,13 +329,12 @@ fn main() {
     let addr = matches.value_of("addr").unwrap_or("127.0.0.1:3000");
     let blobrepo_folder = matches
         .value_of("blobrepo-folder")
-        .expect("Please specify a path to the blobrepo");
+        .map(Path::new);
     let reponame = matches
         .value_of("reponame")
         .expect("Please specify a reponame")
         .to_string();
 
-    let blobrepo_folder = Path::new(blobrepo_folder);
     match matches
         .value_of("repotype")
         .expect("required argument 'repotype' is not provided")
@@ -343,12 +342,14 @@ fn main() {
         "files" => start_server(
             addr,
             reponame,
-            FilesBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
+            FilesBlobState::new(&blobrepo_folder.expect("Please specify a path to the blobrepo"))
+                .expect("couldn't open blob state"),
         ),
         "rocksdb" => start_server(
             addr,
             reponame,
-            RocksBlobState::new(&blobrepo_folder).expect("couldn't open blob state"),
+            RocksBlobState::new(&blobrepo_folder.expect("Please specify a path to the blobrepo"))
+                .expect("couldn't open blob state"),
         ),
         "manifold" => {
             let (sender, receiver) = oneshot::channel();
@@ -370,7 +371,7 @@ fn main() {
             start_server(
                 addr,
                 reponame,
-                TestManifoldBlobState::new(&blobrepo_folder, &remote)
+                TestManifoldBlobState::new(&remote)
                     .expect("couldn't open blob state"),
             )
         }
