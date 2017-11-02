@@ -125,7 +125,7 @@ where
     #[inline]
     fn set(&self, key: &AsRef<[u8]>, value: &Self::Value, version: &Version) -> Self::Set {
         self.kv
-            .set(encode_key(key), value, version)
+            .set(encode_key(key), value, version, None)
             .from_err()
             .boxify()
     }

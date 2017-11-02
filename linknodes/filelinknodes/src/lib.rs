@@ -83,7 +83,11 @@ impl Linknodes for FileLinknodes {
         let node = *node;
         let linknode = *linknode;
         self.kv
-            .set_new(hash(&path, &node).to_hex(), &linknode)
+            .set_new(
+                hash(&path, &node).to_hex(),
+                &linknode,
+                Some(1.into()), // Set a fixed version so that the bytes on disk are deterministic
+            )
             .then(move |res| {
                 match res {
                     Ok(Some(_)) => {

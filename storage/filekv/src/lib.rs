@@ -186,6 +186,7 @@ where
         key: Q,
         value: &V,
         version: &Version,
+        new_version: Option<Version>,
     ) -> impl Future<Item = Option<Version>, Error = Error> {
         let pool = self.pool.clone();
         let value = value.clone();
@@ -193,7 +194,8 @@ where
         self.get_path_mutex(key)
             .into_future()
             .and_then(move |mutex| {
-                let future = poll_fn(move || poll_set(&mutex, &value, &version));
+                let new_version = new_version.unwrap_or(version_random());
+                let future = poll_fn(move || poll_set(&mutex, &value, &version, new_version));
                 pool.spawn(future)
             })
     }
@@ -204,8 +206,9 @@ where
         &self,
         key: Q,
         value: &V,
+        new_version: Option<Version>,
     ) -> impl Future<Item = Option<Version>, Error = Error> {
-        self.set(key, value, &Version::absent())
+        self.set(key, value, &Version::absent(), new_version)
     }
 
 
@@ -266,6 +269,7 @@ fn poll_set<V>(
     path_mutex: &Arc<Mutex<PathBuf>>,
     value: &V,
     version: &Version,
+    new_version: Version,
 ) -> Poll<Option<Version>, Error>
 where
     V: Serialize,
@@ -296,7 +300,6 @@ where
 
             // Write out new value if versions match.
             if file_version == *version {
-                let new_version = version_random();
                 let out = serialize(&(value, new_version), Infinite)?;
                 file.seek(SeekFrom::Start(0))?;
                 file.set_len(0)?;
@@ -389,13 +392,13 @@ mod test {
         assert_eq!(kv.get(foo).wait().unwrap(), None);
 
         let absent = Version::absent();
-        let foo_v1 = kv.set(foo, &one, &absent).wait().unwrap().unwrap();
+        let foo_v1 = kv.set(foo, &one, &absent, None).wait().unwrap().unwrap();
         assert_eq!(kv.get(foo).wait().unwrap(), Some((one.clone(), foo_v1)));
 
-        let foo_v2 = kv.set(foo, &two, &foo_v1).wait().unwrap().unwrap();
+        let foo_v2 = kv.set(foo, &two, &foo_v1, None).wait().unwrap().unwrap();
 
         // Should fail due to version mismatch.
-        assert_eq!(kv.set(foo, &three, &foo_v1).wait().unwrap(), None);
+        assert_eq!(kv.set(foo, &three, &foo_v1, None).wait().unwrap(), None);
 
         assert_eq!(kv.delete(foo, &foo_v2).wait().unwrap().unwrap(), absent);
         assert_eq!(kv.get(foo).wait().unwrap(), None);
@@ -416,7 +419,7 @@ mod test {
         let version;
         {
             let kv = FileKV::open(tmp.path(), "kv:").unwrap();
-            version = kv.set_new(foo, &bar).wait().unwrap().unwrap();
+            version = kv.set_new(foo, &bar, None).wait().unwrap().unwrap();
         }
 
         let kv = FileKV::open(tmp.path(), "kv:").unwrap();
@@ -432,9 +435,15 @@ mod test {
         let two = "2";
         let three = "3";
 
-        let _ = kv.set_new(one, &"foo".to_string()).wait().unwrap().unwrap();
-        let _ = kv.set_new(two, &"bar".to_string()).wait().unwrap().unwrap();
-        let _ = kv.set_new(three, &"baz".to_string())
+        let _ = kv.set_new(one, &"foo".to_string(), None)
+            .wait()
+            .unwrap()
+            .unwrap();
+        let _ = kv.set_new(two, &"bar".to_string(), None)
+            .wait()
+            .unwrap()
+            .unwrap();
+        let _ = kv.set_new(three, &"baz".to_string(), None)
             .wait()
             .unwrap()
             .unwrap();
