@@ -207,12 +207,11 @@ Test failure to rebase deletion after rename
   rebasing 2:ad25e018afa9 "mod a"
   merging b and a to b
   rebasing 3:ba0395f0e180 "delete a"
-  transaction abort!
-  rollback completed
   abort: a@ba0395f0e180: not found in manifest!
   [255]
   $ hg rebase --abort
-  rebase aborted (no revision is removed, only broken state is cleared)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/3fd0353a7967-a25c7d46-backup.hg (glob)
+  rebase aborted
   $ cd ..
   $ rm -rf repo
 

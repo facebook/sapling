@@ -341,13 +341,12 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   |/
   o  0 add a
   $ hg rebase --restack
-  rebasing 3:47d2a3944de8 "add d"
   rebasing 5:a43fcd08f41f "add c" (tip)
-  rebasing 6:49b119a57122 "add d"
+  rebasing 3:47d2a3944de8 "add d"
   $ showgraph
-  @  8 add d
+  @  7 add d
   |
-  o  7 add c
+  o  6 add c
   |
   o  4 add b
   |
@@ -521,27 +520,21 @@ since the successor is obsolete.
   |/
   o  0 add a
   $ hg unamend
-  $ hg up -C 1
+  $ hg up -C 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  3 add b
+  @  3 add b
   |
   | o  2 add c
   | |
-  | @  1 add b
-  |/
-  o  0 add a
-  $ hg rebase --restack
-  rebasing 2:4538525df7e2 "add c"
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ showgraph
-  o  5 add c
-  |
-  @  3 add b
-  |
   | o  1 add b
   |/
   o  0 add a
+
+Revision 2 "add c" is already stable (not orphaned) so restack does nothing:
+
+  $ hg rebase --restack
+  nothing to rebase - empty destination
 
 Test recursive restacking -- basic case.
   $ reset
@@ -576,14 +569,13 @@ Test recursive restacking -- basic case.
   |/
   o  0 add a
   $ hg rebase --restack
-  rebasing 3:47d2a3944de8 "add d"
   rebasing 5:a43fcd08f41f "add c" (tip)
-  rebasing 6:49b119a57122 "add d"
+  rebasing 3:47d2a3944de8 "add d"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  8 add d
+  o  7 add d
   |
-  o  7 add c
+  o  6 add c
   |
   @  4 add b
   |
@@ -657,24 +649,22 @@ stack is lost upon rebasing lower levels.
   |/
   o  0 add a
   $ hg rebase --restack
-  rebasing 10:9f2a7cefd4b4 "add h"
   rebasing 6:2a79e3a98cd6 "add f"
-  rebasing 3:47d2a3944de8 "add d"
   rebasing 8:a43fcd08f41f "add c"
   rebasing 11:604f34a1983d "add g" (tip)
-  rebasing 12:e1df23499b99 "add h"
-  rebasing 14:49b119a57122 "add d"
+  rebasing 3:47d2a3944de8 "add d"
+  rebasing 10:9f2a7cefd4b4 "add h"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  18 add d
+  o  16 add h
   |
-  | o  17 add h
+  | o  15 add d
   | |
-  | o  16 add g
+  o |  14 add g
   |/
-  o  15 add c
+  o  13 add c
   |
-  | o  13 add f
+  | o  12 add f
   | |
   | o  7 add e
   |/
@@ -684,7 +674,7 @@ stack is lost upon rebasing lower levels.
   |/
   o  0 add a
 
-Suboptimal case: restack rebases "D" twice
+Restack does topological sort and only rebases "D" once:
 
   $ reset
   $ hg debugdrawdag<<'EOS'
@@ -717,13 +707,12 @@ Suboptimal case: restack rebases "D" twice
   |/
   o  0 A
   $ hg rebase --restack
-  rebasing 3:f585351a92f8 "D" (D)
   rebasing 5:ca53c8ceb284 "C"
-  rebasing 7:4da953fe10f3 "D"
+  rebasing 3:f585351a92f8 "D" (D)
   $ showgraph
-  o  9 D
+  o  8 D
   |
-  o  8 C
+  o  7 C
   |
   @  6 B3
   |
@@ -734,5 +723,147 @@ Suboptimal case: restack rebases "D" twice
   | x  2 C
   | |
   | x  1 B
+  |/
+  o  0 A
+
+Restack will only restack the "current" stack and leave other stacks untouched.
+
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  >  D   H   K
+  >  |   |   |
+  >  B C F G J L    # amend: B -> C
+  >  |/  |/  |/     # amend: F -> G
+  >  A   E   I   Z  # amend: J -> L
+  > EOS
+
+  $ hg phase --public -r Z+I+A+E
+
+  $ hg update -q Z
+  $ hg rebase --restack
+  nothing to restack
+  [1]
+
+  $ hg update -q D
+  $ hg rebase --restack
+  rebasing 10:be0ef73c17ad "D" (D)
+
+  $ hg update -q G
+  $ hg rebase --restack
+  rebasing 11:cc209258a732 "H" (H)
+
+  $ hg update -q I
+  $ hg rebase --restack
+  rebasing 12:59760668f0e1 "K" (K)
+
+  $ rm .hg/localtags
+  $ showgraph
+  o  15 K
+  |
+  | o  14 H
+  | |
+  | | o  13 D
+  | | |
+  o | |  9 L
+  | | |
+  | o |  7 G
+  | | |
+  | | o  5 C
+  | | |
+  | | | o  3 Z
+  | | |
+  @ | |  2 I
+   / /
+  o /  1 E
+   /
+  o  0 A
+
+The "prune" cases.
+
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > D E
+  > |/
+  > C
+  > |       # amend: F -> F2
+  > B  G H  # prune: A, C, F2
+  > |  |/
+  > A  F F2
+  > EOS
+
+  $ hg update -q B
+  $ hg rebase --restack
+  rebasing 3:112478962961 "B" (B)
+  rebasing 7:f585351a92f8 "D" (D)
+  rebasing 8:78d2dca436b2 "E" (E tip)
+
+  $ hg update -q H
+  $ hg rebase --restack
+  rebasing 4:8fdb2c1feb20 "G" (G)
+  rebasing 5:02ac06fe83b9 "H" (H)
+
+  $ rm .hg/localtags
+  $ showgraph
+  @  13 H
+  
+  o  12 G
+  
+  o  11 E
+  |
+  | o  10 D
+  |/
+  o  9 B
+
+Restack could resume after resolving merge conflicts.
+
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  >  F   G    # F/C = F # cause conflict
+  >  |   |    # G/E = G # cause conflict
+  >  B C D E  # amend: B -> C
+  >  |/  |/   # amend: D -> E
+  >  |   /
+  >  |  /
+  >  | /
+  >  |/
+  >  A
+  > EOS
+
+  $ hg update -q F
+  $ hg rebase --restack
+  rebasing 5:ed8545a5c22a "F" (F)
+  merging C
+  warning: conflicts while merging C! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ rm .hg/localtags
+
+  $ echo R > C
+  $ hg resolve --mark -q
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 5:ed8545a5c22a "F"
+  rebasing 6:4d1ef7d890c5 "G" (tip)
+  merging E
+  warning: conflicts while merging E! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ echo R > E
+  $ hg resolve --mark -q
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  already rebased 5:ed8545a5c22a "F" as 2282fe522d5c
+  rebasing 6:4d1ef7d890c5 "G"
+
+  $ showgraph
+  o  8 G
+  |
+  | @  7 F
+  | |
+  o |  4 E
+  | |
+  | o  2 C
   |/
   o  0 A
