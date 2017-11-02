@@ -72,11 +72,13 @@ CONFIG_DEFAULTS = {
         'findcopiesharder': False,
         'intree': None,
         'mindate': None,
+        'public': list,
         'renamelimit': 400,
         'similarity': 0,
     },
     'hggit': {
         'mapsavefrequency': 0,
+        'usephases': False,
     }
 }
 
