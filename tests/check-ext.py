@@ -19,7 +19,9 @@ foreignextre = re.compile(r'(%s)' % '|'.join(foreignexts))
 
 # extensions in this repo
 repoexts = set(os.path.basename(p).split('.')[0]
-               for p in glob('hgext3rd/*.py*') if '__' not in p)
+               for p in glob('hgext3rd/*.py') if '__' not in p)
+repoexts.update(os.path.basename(p).split('.')[0]
+                for p in glob('hgext3rd/*.pyx'))
 repoexts.update(os.path.basename(os.path.dirname(p))
                 for p in glob('hgext3rd/*/__init__.py'))
 repoexts.update(os.path.basename(os.path.dirname(p))
