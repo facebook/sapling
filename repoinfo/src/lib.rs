@@ -10,6 +10,7 @@
 //! for changesets within a repo.
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![feature(conservative_impl_trait)]
 
 extern crate asyncmemo;
 extern crate futures;

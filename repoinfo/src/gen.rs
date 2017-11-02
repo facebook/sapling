@@ -17,7 +17,7 @@ use std::usize;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
-use asyncmemo::{Asyncmemo, Filler, MemoFuture};
+use asyncmemo::{Asyncmemo, Filler};
 use mercurial_types::{NodeHash, Repo};
 
 use nodehashkey::Key;
@@ -62,7 +62,11 @@ where
     }
 
     /// Get a `Future` for a `Generation` number for a given changeset in a repo.
-    pub fn get(&self, repo: &Arc<R>, nodeid: NodeHash) -> MemoFuture<GenFiller<R>> {
+    pub fn get(
+        &self,
+        repo: &Arc<R>,
+        nodeid: NodeHash,
+    ) -> impl Future<Item = Generation, Error = R::Error> {
         self.cache.get((repo, nodeid))
     }
 }
