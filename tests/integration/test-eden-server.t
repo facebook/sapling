@@ -243,9 +243,9 @@ Send incorrect requests
   $ curl http://localhost:3000/repo/cs/hash/roottreemanifestid 2> /dev/null
   invalid sha-1 input: need at least 40 hex digits (no-eol)
   $ curl http://localhost:3000/badrepo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
-  unknown repo (no-eol)
+  Error: unknown repo
   $ curl http://localhost:3000/badrepo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null
-  unknown repo (no-eol)
+  Error: unknown repo
   $ curl http://localhost:3000/repo/BADURL/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   malformed url (no-eol)
   $ curl http://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid/more 2> /dev/null
@@ -257,3 +257,4 @@ Send incorrect requests
 
 Make sure there are no errors on the server
   $ cat $TESTTMP/edenserver.out
+  I*scm/mononoke/eden_server/src/main.rs:*] started eden server (glob)

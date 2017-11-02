@@ -31,6 +31,9 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+#[macro_use]
+extern crate slog;
+extern crate slog_glog_fmt;
 extern crate tokio_core;
 
 use std::collections::HashMap;
@@ -45,6 +48,7 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState, TestManifoldBlobState};
 use clap::App;
+use error_chain::ChainedError;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
@@ -53,6 +57,7 @@ use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
 use regex::{Captures, Regex};
+use slog::{Drain, Level, Logger};
 
 mod errors;
 
@@ -163,6 +168,7 @@ impl TreeMetadata {
 struct EdenServer<State> {
     name_to_repo: NameToRepo<State>,
     cpupool: Arc<CpuPool>,
+    logger: Logger,
 }
 
 impl<State> EdenServer<State>
@@ -170,10 +176,15 @@ where
     EdenServer<State>: Service,
     State: BlobState,
 {
-    fn new(name_to_repo: NameToRepo<State>, cpupool: Arc<CpuPool>) -> EdenServer<State> {
+    fn new(
+        name_to_repo: NameToRepo<State>,
+        cpupool: Arc<CpuPool>,
+        logger: Logger,
+    ) -> EdenServer<State> {
         EdenServer {
             name_to_repo,
             cpupool,
+            logger,
         }
     }
 
@@ -245,6 +256,7 @@ where
     type Future = futures_ext::BoxFuture<Self::Response, Self::Error>;
 
     fn call(&self, req: Request) -> Self::Future {
+        debug!(self.logger, "request: {}", req.uri().path());
         let mut resp = Response::new();
         let parsed_req = match parse_url(req.uri().path(), &ROUTES) {
             Ok(req) => req,
@@ -282,7 +294,8 @@ where
                         resp.set_body(output);
                     }
                     Err(e) => {
-                        resp.set_body(e.to_string());
+                        let error_msg = format!("{}", e.display_chain());
+                        resp.set_body(error_msg);
                         resp.set_status(StatusCode::NotFound);
                     }
                 };
@@ -292,7 +305,7 @@ where
     }
 }
 
-fn start_server<State>(addr: &str, reponame: String, state: State)
+fn start_server<State>(addr: &str, reponame: String, state: State, logger: Logger)
 where
     State: BlobState,
 {
@@ -301,8 +314,9 @@ where
     let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
+    info!(logger, "started eden server");
     let cpupool = Arc::new(CpuPool::new_num_cpus());
-    let func = move || Ok(EdenServer::new(map.clone(), cpupool.clone()));
+    let func = move || Ok(EdenServer::new(map.clone(), cpupool.clone(), logger.clone()));
     let server = Http::new().bind(&addr, func).expect("Failed to run server");
     server.run().expect("Error while running service");
 }
@@ -314,7 +328,9 @@ fn main() {
         .args_from_usage(
             "--addr=[ADDRESS] 'Sets a listen address in the form IP:PORT'
              --blobrepo-folder=[FOLDER] 'folder with blobrepo data'
-             --reponame=[REPONAME] 'Name of the repository'",
+             --reponame=[REPONAME] 'Name of the repository'
+            -d, --debug              'print debug level output'
+            ",
         )
         .arg(
             clap::Arg::with_name("repotype")
@@ -327,13 +343,22 @@ fn main() {
         )
         .get_matches();
     let addr = matches.value_of("addr").unwrap_or("127.0.0.1:3000");
-    let blobrepo_folder = matches
-        .value_of("blobrepo-folder")
-        .map(Path::new);
+    let blobrepo_folder = matches.value_of("blobrepo-folder").map(Path::new);
     let reponame = matches
         .value_of("reponame")
         .expect("Please specify a reponame")
         .to_string();
+
+    let root_logger = {
+        let level = if matches.is_present("debug") {
+            Level::Debug
+        } else {
+            Level::Info
+        };
+
+        let drain = slog_glog_fmt::default_drain().filter_level(level).fuse();
+        Logger::root(drain, o![])
+    };
 
     match matches
         .value_of("repotype")
@@ -342,14 +367,18 @@ fn main() {
         "files" => start_server(
             addr,
             reponame,
-            FilesBlobState::new(&blobrepo_folder.expect("Please specify a path to the blobrepo"))
+            FilesBlobState::new(&blobrepo_folder
+                .expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
+            root_logger.clone(),
         ),
         "rocksdb" => start_server(
             addr,
             reponame,
-            RocksBlobState::new(&blobrepo_folder.expect("Please specify a path to the blobrepo"))
+            RocksBlobState::new(&blobrepo_folder
+                .expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
+            root_logger.clone(),
         ),
         "manifold" => {
             let (sender, receiver) = oneshot::channel();
@@ -373,6 +402,7 @@ fn main() {
                 reponame,
                 TestManifoldBlobState::new(&remote)
                     .expect("couldn't open blob state"),
+                root_logger.clone(),
             )
         }
         bad => panic!("unknown blobrepo type {:?}", bad),
