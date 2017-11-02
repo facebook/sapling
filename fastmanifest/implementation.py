@@ -849,6 +849,22 @@ class hybridmanifestctx(object):
         return self._hybridmanifest
 
     def readdelta(self, shallow=False):
+        p1, p2 = self.parents
+        mf = self.read()
+        parentmf = self._manifestlog[p1].read()
+
+        treemf = mf._treemanifest()
+        ptreemf = parentmf._treemanifest()
+        if treemf is not None and ptreemf is not None:
+            diff = ptreemf.diff(treemf)
+            result = manifest.manifestdict()
+            for path, ((oldn, oldf), (newn, newf)) in diff.iteritems():
+                if newn is not None:
+                    result[path] = newn
+                    if newf:
+                        result.setflag(path, newf)
+            return mf._converttohybridmanifest(result)
+
         rl = self._revlog
         if rl._usemanifestv2:
             # Need to perform a slow delta
