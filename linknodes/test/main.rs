@@ -134,7 +134,7 @@ linknodes_test_impl! {
 linknodes_test_impl! {
     filelinknodes_test => {
         state: TempDir::new("filelinknodes_test").unwrap(),
-        new: |dir| FileLinknodes::open(&dir).unwrap(),
+        new: |dir: &TempDir| FileLinknodes::open(dir.as_ref()).unwrap(),
         persistent: true,
     }
 }

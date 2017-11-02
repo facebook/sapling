@@ -19,7 +19,7 @@ extern crate filekv;
 extern crate futures_ext;
 extern crate storage_types;
 
-use std::path::Path;
+use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
@@ -59,28 +59,28 @@ where
     V: Send + Clone + Serialize + DeserializeOwned + 'static,
 {
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn open<P: Into<PathBuf>>(path: P) -> Result<Self> {
         Ok(FileBookmarks {
             kv: FileKV::open(path, PREFIX)?,
         })
     }
 
     #[inline]
-    pub fn open_with_pool<P: AsRef<Path>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
+    pub fn open_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
         Ok(FileBookmarks {
             kv: FileKV::open_with_pool(path, PREFIX, pool)?,
         })
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn create<P: Into<PathBuf>>(path: P) -> Result<Self> {
         Ok(FileBookmarks {
             kv: FileKV::create(path, PREFIX)?,
         })
     }
 
     #[inline]
-    pub fn create_with_pool<P: AsRef<Path>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
+    pub fn create_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
         Ok(FileBookmarks {
             kv: FileKV::create_with_pool(path, PREFIX, pool)?,
         })

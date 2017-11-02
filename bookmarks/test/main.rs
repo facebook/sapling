@@ -155,7 +155,7 @@ bookmarks_test_impl! {
 bookmarks_test_impl! {
     filebookmarks_test => {
         state: TempDir::new("filebookmarks_test").unwrap(),
-        new: |dir| FileBookmarks::open(&dir).unwrap(),
+        new: |dir: &TempDir| FileBookmarks::open(dir.as_ref()).unwrap(),
         persistent: true,
     }
 }

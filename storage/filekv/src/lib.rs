@@ -31,7 +31,7 @@ use std::io::{self, SeekFrom};
 use std::io::prelude::*;
 use std::marker::PhantomData;
 use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -79,7 +79,7 @@ where
 {
     pub fn open<P, S>(path: P, prefix: S) -> Result<Self>
     where
-        P: AsRef<Path>,
+        P: Into<PathBuf>,
         S: Into<String>,
     {
         Self::open_with_pool(path, prefix, Arc::new(CpuPool::new_num_cpus()))
@@ -87,15 +87,16 @@ where
 
     pub fn open_with_pool<P, S>(path: P, prefix: S, pool: Arc<CpuPool>) -> Result<Self>
     where
-        P: AsRef<Path>,
+        P: Into<PathBuf>,
         S: Into<String>,
     {
-        if !path.as_ref().is_dir() {
-            bail!("'{}' is not a directory", path.as_ref().to_string_lossy());
+        let path = path.into();
+        if !path.is_dir() {
+            bail!("'{}' is not a directory", path.to_string_lossy());
         }
 
         Ok(FileKV {
-            base: path.as_ref().to_path_buf(),
+            base: path.into(),
             prefix: prefix.into(),
             pool: pool,
             locks: Mutex::new(HashMap::new()),
@@ -105,7 +106,7 @@ where
 
     pub fn create<P, S>(path: P, prefix: S) -> Result<Self>
     where
-        P: AsRef<Path>,
+        P: Into<PathBuf>,
         S: Into<String>,
     {
         Self::create_with_pool(path, prefix, Arc::new(CpuPool::new_num_cpus()))
@@ -113,11 +114,11 @@ where
 
     pub fn create_with_pool<P, S>(path: P, prefix: S, pool: Arc<CpuPool>) -> Result<Self>
     where
-        P: AsRef<Path>,
+        P: Into<PathBuf>,
         S: Into<String>,
     {
-        let path = path.as_ref();
-        fs::create_dir_all(path)?;
+        let path = path.into();
+        fs::create_dir_all(&path)?;
         Self::open_with_pool(path, prefix, pool)
     }
 

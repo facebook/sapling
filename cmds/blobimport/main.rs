@@ -42,7 +42,6 @@ mod convert;
 mod errors;
 mod manifest;
 
-use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
@@ -105,7 +104,7 @@ pub(crate) enum BlobstoreEntry {
     Changeset(BlobChangeset),
 }
 
-fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
+fn run_blobimport<In, Out>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
@@ -116,21 +115,22 @@ fn run_blobimport<In: AsRef<Path> + Debug, Out: AsRef<Path> + Debug>(
     max_blob_size: Option<usize>,
 ) -> Result<()>
 where
-    In: AsRef<Path>,
-    Out: AsRef<Path>,
+    In: Into<PathBuf>,
+    Out: Into<PathBuf>,
 {
+    let input = input.into();
+    let output = output.into();
     let core = Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
-    info!(logger, "Opening headstore: {:?}", output);
+    info!(logger, "Opening headstore: {}", output.display());
     let headstore = open_headstore(&output, &cpupool)?;
 
     if let BlobstoreType::Manifold(ref bucket) = blobtype {
         info!(logger, "Using ManifoldBlob with bucket: {:?}", bucket);
     } else {
-        info!(logger, "Opening blobstore: {:?}", output);
+        info!(logger, "Opening blobstore: {}", output.display());
     }
-    let output = output.as_ref().to_path_buf();
 
     let (sender, recv) = sync_channel::<BlobstoreEntry>(channel_size);
     // Separate thread that does all blobstore operations. Other worker threads send parsed revlog
@@ -170,7 +170,7 @@ where
 
     let repo = open_repo(&input)?;
 
-    info!(logger, "Converting: {:?}", input);
+    info!(logger, "Converting: {}", input.display());
     let convert_context = convert::ConvertContext {
         repo,
         sender,
@@ -185,10 +185,10 @@ where
     res
 }
 
-fn open_repo<P: AsRef<Path>>(input: P) -> Result<RevlogRepo> {
-    let mut input = PathBuf::from(input.as_ref());
+fn open_repo<P: Into<PathBuf>>(input: P) -> Result<RevlogRepo> {
+    let mut input = input.into();
     if !input.exists() || !input.is_dir() {
-        bail!("input {:?} doesn't exist or isn't a dir", input);
+        bail!("input {} doesn't exist or isn't a dir", input.display());
     }
     input.push(".hg");
 
@@ -197,8 +197,8 @@ fn open_repo<P: AsRef<Path>>(input: P) -> Result<RevlogRepo> {
     Ok(revlog)
 }
 
-fn open_headstore<P: AsRef<Path>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileHeads<String>> {
-    let mut heads = PathBuf::from(heads.as_ref());
+fn open_headstore<P: Into<PathBuf>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileHeads<String>> {
+    let mut heads = heads.into();
 
     heads.push("heads");
     let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
@@ -206,13 +206,14 @@ fn open_headstore<P: AsRef<Path>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileH
     Ok(headstore)
 }
 
-fn open_blobstore(
-    mut output: PathBuf,
+fn open_blobstore<P: Into<PathBuf>>(
+    output: P,
     ty: BlobstoreType,
     remote: &Remote,
     postpone_compaction: bool,
     max_blob_size: Option<usize>,
 ) -> Result<BBlobstore> {
+    let mut output = output.into();
     output.push("blobs");
 
     let blobstore: BBlobstore = match ty {
