@@ -145,8 +145,8 @@ impl<H: HgCommands> HgService<H> {
                 .map(|_| Response::Streamout)
                 .map_err(self::Error::into)
                 .boxify(),
-            Request::Unbundle { heads } => hgcmds
-                .unbundle(heads)
+            Request::Unbundle { heads, stream } => hgcmds
+                .unbundle(heads, stream)
                 .map(|_| Response::Unbundle)
                 .map_err(self::Error::into)
                 .boxify(), //_ => unimplemented!()
@@ -350,10 +350,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle(
-        &self,
-        _heads: Vec<String>, /* , _stream: BoxStream<Vec<u8>, Error> */
-    ) -> HgCommandRes<()> {
+    fn unbundle(&self, _heads: Vec<String>, _stream: Bytes) -> HgCommandRes<()> {
         unimplemented("unbundle")
     }
 }

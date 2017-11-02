@@ -53,8 +53,8 @@ pub trait OpenableRepoType {
 
 impl OpenableRepoType for RepoType {
     fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>> {
-        use metaconfig::repoconfig::RepoType::*;
         use hgproto::{Error, ErrorKind};
+        use metaconfig::repoconfig::RepoType::*;
 
         fn repo_chain<E: error::Error + Send + 'static>(err: E) -> Error {
             Error::with_chain(err, ErrorKind::Repo)
@@ -333,10 +333,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle(
-        &self,
-        heads: Vec<String>, /* , _stream: BoxStream<Vec<u8>, Error> */
-    ) -> HgCommandRes<()> {
+    fn unbundle(&self, heads: Vec<String>, _stream: Bytes) -> HgCommandRes<()> {
         info!(self.logger, "unbundle heads {:?}", heads);
         future::ok(()).boxify()
     }
