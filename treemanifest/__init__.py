@@ -986,6 +986,7 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     remote = hg.peer(repo.ui, {}, fallbackpath)
     if 'gettreepack' not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
+    remote.ui.pushbuffer()
     bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories)
 
     try:
@@ -1018,14 +1019,11 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         raise error.Abort(_('missing support for %s') % exc)
     finally:
         # Manually destruct the peer, so we can collect any error output
-        remote.ui.pushbuffer()
         remote._cleanup()
 
-        # Redirect cleanup output to the repo.ui so callers can buffer it if
-        # desired.
         output = remote.ui.popbuffer()
         if output:
-            repo.ui.status(output)
+            repo.ui.debug(output)
 
 def _registerbundle2parts():
     @bundle2.parthandler(TREEGROUP_PARTTYPE2, ('version', 'cache', 'category'))
