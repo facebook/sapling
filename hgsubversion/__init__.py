@@ -15,7 +15,7 @@ details.
 For more information and instructions, see :hg:`help subversion`.
 '''
 
-testedwith = '3.7 3.8 3.9 4.0 4.1 4.2 4.3'
+testedwith = '3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4'
 
 import os
 import sys
