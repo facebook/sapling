@@ -48,6 +48,9 @@ def _cansendflat(repo, mfnodes):
     if not util.safehasattr(repo.manifestlog, '_revlog'):
         return False
 
+    if repo.ui.configbool('treemanifest', 'treeonly'):
+        return False
+
     revlog = repo.manifestlog._revlog
     for mfnode in mfnodes:
         if mfnode not in revlog.nodemap:

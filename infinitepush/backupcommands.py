@@ -51,7 +51,7 @@ import time
 
 from .bundleparts import (
     getscratchbookmarkspart,
-    getscratchbranchpart,
+    getscratchbranchparts,
 )
 from mercurial import (
     bundle2,
@@ -459,10 +459,12 @@ def _dobackup(ui, repo, dest, **opts):
         backup = False
         if outgoing and outgoing.missing:
             backup = True
-            bundler.addpart(getscratchbranchpart(repo, other, outgoing,
-                                                 confignonforwardmove=False,
-                                                 ui=ui, bookmark=None,
-                                                 create=False))
+            parts = getscratchbranchparts(repo, other, outgoing,
+                                          confignonforwardmove=False,
+                                          ui=ui, bookmark=None,
+                                          create=False)
+            for part in parts:
+                bundler.addpart(part)
 
         if bookmarkstobackup:
             backup = True

@@ -100,7 +100,7 @@ import tempfile
 import time
 
 from .bundleparts import (
-    getscratchbranchpart,
+    getscratchbranchparts,
     scratchbookmarksparttype,
     scratchbranchparttype,
 )
@@ -471,9 +471,15 @@ def _rebundle(bundlerepo, bundleroots, unknownhead):
     except KeyError:
         pass
     else:
-        treepart = treemod.createtreepackpart(bundlerepo, outgoing,
-                                              treemod.TREEGROUP_PARTTYPE2)
-        parts.append(treepart)
+        mfnodes = []
+        for node in outgoing.missing:
+            mfnodes.append(('', bundlerepo[node].manifestnode()))
+
+        # Only include the tree parts if they all exist
+        if not bundlerepo.manifestlog.datastore.getmissing(mfnodes):
+            treepart = treemod.createtreepackpart(bundlerepo, outgoing,
+                                                  treemod.TREEGROUP_PARTTYPE2)
+            parts.append(treepart)
 
     return parts
 
@@ -891,6 +897,7 @@ def partgen(pushop, bundler):
         return
 
     pushop.stepsdone.add('changesets')
+    pushop.stepsdone.add('treepack')
     if not pushop.outgoing.missing:
         pushop.ui.status(_('no changes found\n'))
         pushop.cgresult = 0
@@ -903,15 +910,16 @@ def partgen(pushop, bundler):
 
     nonforwardmove = pushop.force or pushop.ui.configbool(experimental,
                                                           confignonforwardmove)
-    scratchpart = getscratchbranchpart(pushop.repo,
-                                       pushop.remote,
-                                       pushop.outgoing,
-                                       nonforwardmove,
-                                       pushop.ui,
-                                       bookmark,
-                                       create)
+    scratchparts = getscratchbranchparts(pushop.repo,
+                                         pushop.remote,
+                                         pushop.outgoing,
+                                         nonforwardmove,
+                                         pushop.ui,
+                                         bookmark,
+                                         create)
 
-    bundler.addpart(scratchpart)
+    for scratchpart in scratchparts:
+        bundler.addpart(scratchpart)
 
     def handlereply(op):
         # server either succeeds or aborts; no code to read
