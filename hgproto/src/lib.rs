@@ -14,10 +14,10 @@
 
 // Tokio/IO
 extern crate bytes;
+extern crate futures;
 extern crate tokio_io;
 extern crate tokio_proto;
 extern crate tokio_service;
-extern crate futures;
 
 #[macro_use]
 extern crate slog;
@@ -26,11 +26,11 @@ extern crate slog;
 #[macro_use]
 extern crate error_chain;
 
-#[macro_use]
-extern crate nom;
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;
+#[macro_use]
+extern crate nom;
 
 extern crate futures_ext;
 extern crate mercurial;
@@ -94,7 +94,9 @@ pub enum Request {
         new: NodeHash,
     },
     Streamout,
-    Unbundle { heads: Vec<String>, /* stream: Stream<Vec<u8>, Error> TBD: Stream */ },
+    Unbundle {
+        heads: Vec<String>, /* stream: Stream<Vec<u8>, Error> TBD: Stream */
+    },
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for
@@ -161,5 +163,5 @@ impl Response {
     }
 }
 
-pub use service::{HgCommandRes, HgCommands, HgService};
 pub use errors::{Error, ErrorKind, Result, ResultExt};
+pub use service::{HgCommandRes, HgCommands, HgService};

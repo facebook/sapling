@@ -9,15 +9,14 @@ use std::iter;
 use std::str::{self, FromStr};
 
 use bytes::BytesMut;
-
-use nom::{ErrorKind, FindSubstring, IResult, Needed, Slice, is_digit, is_alphanumeric};
+use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
 
 use mercurial_types::NodeHash;
 
+use {GetbundleArgs, Request};
 use batch;
 use errors;
 use errors::*;
-use {GetbundleArgs, Request};
 
 
 /// Parse an unsigned decimal integer. If it reaches the end of input, it returns Incomplete,
@@ -35,8 +34,13 @@ fn digit<F: Fn(u8) -> bool>(input: &[u8], isdigit: F) -> IResult<&[u8], &[u8]> {
     IResult::Incomplete(Needed::Unknown)
 }
 
-named!(integer<usize>,
-       map_res!(map_res!(apply!(digit, is_digit), str::from_utf8), FromStr::from_str));
+named!(
+    integer<usize>,
+    map_res!(
+        map_res!(apply!(digit, is_digit), str::from_utf8),
+        FromStr::from_str
+    )
+);
 
 /// Return an identifier of the form [a-zA-Z_][a-zA-Z0-9_]*. Returns Incomplete
 /// if it manages to reach the end of input, as there may be more identifier coming.
@@ -45,13 +49,11 @@ fn ident(input: &[u8]) -> IResult<&[u8], &[u8]> {
         match *item as char {
             'a'...'z' | 'A'...'Z' | '_' => continue,
             '0'...'9' if idx > 0 => continue,
-            _ => {
-                if idx > 0 {
-                    return IResult::Done(&input[idx..], &input[0..idx]);
-                } else {
-                    return IResult::Error(ErrorKind::AlphaNumeric);
-                }
-            }
+            _ => if idx > 0 {
+                return IResult::Done(&input[idx..], &input[0..idx]);
+            } else {
+                return IResult::Error(ErrorKind::AlphaNumeric);
+            },
         }
     }
     IResult::Incomplete(Needed::Unknown)
@@ -69,7 +71,8 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
 /// A "*" parameter is a meta-parameter - its argument is a count of
 /// a number of other parameters. (We accept nested/recursive star parameters,
 /// but I don't know if that ever happens in practice.)
-named!(param_star<HashMap<Vec<u8>, Vec<u8>>>,
+named!(
+    param_star<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(
         tag!(b"* ") >>
         count: integer >> tag!(b"\n") >>
@@ -82,7 +85,8 @@ named!(param_star<HashMap<Vec<u8>, Vec<u8>>>,
 /// bytes in the parameter, followed by newline. The parameter value has no terminator.
 /// ident <bytelen>\n
 /// <bytelen bytes>
-named!(param_kv<HashMap<Vec<u8>, Vec<u8>>>,
+named!(
+    param_kv<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(
         key: ident >> tag!(b" ") >>
         len: integer >> tag!(b"\n") >>
@@ -130,7 +134,8 @@ fn notcomma(b: u8) -> bool {
 /// scheme to protect ',', ';', '=', ':'. The value ends either at the end of the input
 /// (which is actually from the "batch" command "cmds" parameter), or at a ',', as they're
 /// comma-delimited.
-named!(batch_param_escaped<(Vec<u8>, Vec<u8>)>,
+named!(
+    batch_param_escaped<(Vec<u8>, Vec<u8>)>,
     map_res!(
         do_parse!(
             key: take_until_and_consume1!("=") >>
@@ -152,32 +157,39 @@ named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
 );
 
 /// A nodehash is simply 40 hex digits.
-named!(nodehash<NodeHash>,
-    map_res!(
-        take!(40),
-        |v: &[u8]| str::parse(str::from_utf8(v)?)
-    )
+named!(
+    nodehash<NodeHash>,
+    map_res!(take!(40), |v: &[u8]| str::parse(str::from_utf8(v)?))
 );
 
 /// A pair of nodehashes, separated by '-'
-named!(pair<(NodeHash, NodeHash)>,
+named!(
+    pair<(NodeHash, NodeHash)>,
     do_parse!(a: nodehash >> tag!("-") >> b: nodehash >> ((a, b)))
 );
 
 /// A space-separated list of pairs.
-named!(pairlist<Vec<(NodeHash, NodeHash)>>,
+named!(
+    pairlist<Vec<(NodeHash, NodeHash)>>,
     separated_list!(complete!(tag!(" ")), pair)
 );
 
 /// A space-separated list of node hashes
-named!(hashlist<Vec<NodeHash>>,
+named!(
+    hashlist<Vec<NodeHash>>,
     separated_list!(complete!(tag!(" ")), nodehash)
 );
 
 /// A space-separated list of strings
-named!(stringlist<Vec<String>>,
-    separated_list!(complete!(tag!(" ")),
-        map_res!(map_res!(take_while!(is_alphanumeric), str::from_utf8), FromStr::from_str))
+named!(
+    stringlist<Vec<String>>,
+    separated_list!(
+        complete!(tag!(" ")),
+        map_res!(
+            map_res!(take_while!(is_alphanumeric), str::from_utf8),
+            FromStr::from_str
+        )
+    )
 );
 
 /// A comma-separated list of arbitrary values. The input is assumed to be
@@ -204,7 +216,8 @@ fn notsemi(b: u8) -> bool {
 
 /// A command in a batch. Commands are represented as "command parameters". The parameters
 /// end either at the end of the buffer or at ';'.
-named!(cmd<(Vec<u8>, Vec<u8>)>,
+named!(
+    cmd<(Vec<u8>, Vec<u8>)>,
     do_parse!(
         cmd: take_until_and_consume1!(" ") >>
         args: take_while!(notsemi) >>
@@ -213,13 +226,12 @@ named!(cmd<(Vec<u8>, Vec<u8>)>,
 );
 
 /// A list of batched commands - the list is delimited by ';'.
-named!(cmdlist<Vec<(Vec<u8>, Vec<u8>)>>,
+named!(
+    cmdlist<Vec<(Vec<u8>, Vec<u8>)>>,
     separated_list!(complete!(tag!(";")), cmd)
 );
 
-named!(match_eof<&'a [u8]>,
-       eof!()
-);
+named!(match_eof<&'a [u8]>, eof!());
 /// Given a hash of parameters, look up a parameter by name, and if it exists,
 /// apply a parser to its value. If it doesn't, error out.
 fn parseval<'a, F, T>(params: &'a HashMap<Vec<u8>, Vec<u8>>, key: &str, parser: F) -> Result<T>
@@ -228,16 +240,14 @@ where
 {
     match params.get(key.as_bytes()) {
         None => bail!("missing param {}", key),
-        Some(v) => {
-            match parser(v.as_ref()) {
-                IResult::Done(rest, v) => match match_eof(rest) {
-                    IResult::Done(_, _) => Ok(v),
-                    _ => bail!("Unconsumed characters remain after parsing param"),
-                },
-                IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-                IResult::Error(err) => bail!("param parse failed: {:?}", err),
-            }
-        }
+        Some(v) => match parser(v.as_ref()) {
+            IResult::Done(rest, v) => match match_eof(rest) {
+                IResult::Done(..) => Ok(v),
+                _ => bail!("Unconsumed characters remain after parsing param"),
+            },
+            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+        },
     }
 }
 
@@ -254,18 +264,20 @@ where
 {
     match params.get(key.as_bytes()) {
         None => Ok(T::default()),
-        Some(v) => {
-            match parser(v.as_ref()) {
-                IResult::Done(unparsed, v) => match match_eof(unparsed) {
-                    IResult::Done(_, _) => Ok(v),
-                    _ => bail!("Unconsumed characters remain after parsing param: {:?}", unparsed)
-                },
-                IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-                IResult::Error(err) => bail!("param parse failed: {:?}", err),
-            }
-        }
+        Some(v) => match parser(v.as_ref()) {
+            IResult::Done(unparsed, v) => match match_eof(unparsed) {
+                IResult::Done(..) => Ok(v),
+                _ => bail!(
+                    "Unconsumed characters remain after parsing param: {:?}",
+                    unparsed
+                ),
+            },
+            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+        },
     }
 }
+
 
 /// Parse a command, given some input, a command name (used as a tag), a param parser
 /// function (which generalizes over batched and non-batched parameter syntaxes),
@@ -292,7 +304,7 @@ where
         IResult::Done(rest, v) => {
             match func(v) {
                 Ok(t) => IResult::Done(rest, t),
-                Err(_e) => IResult::Error(ErrorKind::Custom(999999)),    // ugh
+                Err(_e) => IResult::Error(ErrorKind::Custom(999999)), // ugh
             }
         }
         IResult::Error(e) => IResult::Error(e),
@@ -363,6 +375,7 @@ pub fn parse_batch(buf: &mut BytesMut) -> Result<Option<Request>> {
 
 /// Common parser, generalized over how to parse parameters (either unbatched or
 /// batched syntax.)
+#[cfg_attr(rustfmt, rustfmt_skip)]
 fn parse_common(
     buf: &mut BytesMut,
     parse_params: fn(&[u8], usize)
@@ -477,19 +490,20 @@ mod test {
     #[test]
     fn test_param_star() {
         let p = b"* 0\ntrailer";
-        assert_eq!(
-            param_star(p),
-            IResult::Done(&b"trailer"[..], hashmap! { }));
+        assert_eq!(param_star(p), IResult::Done(&b"trailer"[..], hashmap!{}));
 
         let p = b"* 1\n\
                   foo 12\n\
                   hello world!trailer";
         assert_eq!(
             param_star(p),
-            IResult::Done(&b"trailer"[..], hashmap! {
-                b"foo".to_vec() => b"hello world!".to_vec(),
-            }
-        ));
+            IResult::Done(
+                &b"trailer"[..],
+                hashmap! {
+                    b"foo".to_vec() => b"hello world!".to_vec(),
+                }
+            )
+        );
 
         let p = b"* 2\n\
                   foo 12\n\
@@ -498,27 +512,31 @@ mod test {
                   bloptrailer";
         assert_eq!(
             param_star(p),
-            IResult::Done(&b"trailer"[..], hashmap! {
-                b"foo".to_vec() => b"hello world!".to_vec(),
-                b"bar".to_vec() => b"blop".to_vec(),
-            }
-        ));
+            IResult::Done(
+                &b"trailer"[..],
+                hashmap! {
+                    b"foo".to_vec() => b"hello world!".to_vec(),
+                    b"bar".to_vec() => b"blop".to_vec(),
+                }
+            )
+        );
 
         // no trailer
         let p = b"* 0\n";
-        assert_eq!(
-            param_star(p),
-            IResult::Done(&b""[..], hashmap! { }));
+        assert_eq!(param_star(p), IResult::Done(&b""[..], hashmap!{}));
 
         let p = b"* 1\n\
                   foo 12\n\
                   hello world!";
         assert_eq!(
             param_star(p),
-            IResult::Done(&b""[..], hashmap! {
-                b"foo".to_vec() => b"hello world!".to_vec(),
-            }
-        ));
+            IResult::Done(
+                &b""[..],
+                hashmap! {
+                    b"foo".to_vec() => b"hello world!".to_vec(),
+                }
+            )
+        );
     }
 
     #[test]
@@ -527,17 +545,25 @@ mod test {
                   hello world!trailer";
         assert_eq!(
             param_kv(p),
-            IResult::Done(&b"trailer"[..], hashmap! {
-                b"foo".to_vec() => b"hello world!".to_vec(),
-            }));
+            IResult::Done(
+                &b"trailer"[..],
+                hashmap! {
+                    b"foo".to_vec() => b"hello world!".to_vec(),
+                }
+            )
+        );
 
         let p = b"foo 12\n\
                   hello world!";
         assert_eq!(
             param_kv(p),
-            IResult::Done(&b""[..], hashmap! {
-                b"foo".to_vec() => b"hello world!".to_vec(),
-            }));
+            IResult::Done(
+                &b""[..],
+                hashmap! {
+                    b"foo".to_vec() => b"hello world!".to_vec(),
+                }
+            )
+        );
     }
 
     #[test]
@@ -552,33 +578,36 @@ mod test {
                   badly formatted thing ";
 
         match params(p, 1) {
-            IResult::Done(_, v) => {
-                assert_eq!(v, hashmap! {
-                b"bar".to_vec() => b"hello world!".to_vec(),
-            })
-            }
+            IResult::Done(_, v) => assert_eq!(
+                v,
+                hashmap! {
+                    b"bar".to_vec() => b"hello world!".to_vec(),
+                }
+            ),
             bad => panic!("bad result {:?}", bad),
         }
 
         match params(p, 2) {
-            IResult::Done(_, v) => {
-                assert_eq!(v, hashmap! {
-                b"bar".to_vec() => b"hello world!".to_vec(),
-                b"foo".to_vec() => b"blibble".to_vec(),
-            })
-            }
+            IResult::Done(_, v) => assert_eq!(
+                v,
+                hashmap! {
+                    b"bar".to_vec() => b"hello world!".to_vec(),
+                    b"foo".to_vec() => b"blibble".to_vec(),
+                }
+            ),
             bad => panic!("bad result {:?}", bad),
         }
 
         match params(p, 4) {
-            IResult::Done(b"\nbadly formatted thing ", v) => {
-                assert_eq!(v, hashmap! {
-                b"bar".to_vec() => b"hello world!".to_vec(),
-                b"foo".to_vec() => b"blibble".to_vec(),
-                b"very_long_key_no_data".to_vec() => b"".to_vec(),
-                b"is_ok".to_vec() => b"y".to_vec(),
-            })
-            }
+            IResult::Done(b"\nbadly formatted thing ", v) => assert_eq!(
+                v,
+                hashmap! {
+                    b"bar".to_vec() => b"hello world!".to_vec(),
+                    b"foo".to_vec() => b"blibble".to_vec(),
+                    b"very_long_key_no_data".to_vec() => b"".to_vec(),
+                    b"is_ok".to_vec() => b"y".to_vec(),
+                }
+            ),
             bad => panic!("bad result {:?}", bad),
         }
 
@@ -597,8 +626,11 @@ mod test {
                 IResult::Incomplete(_) => (),
                 IResult::Done(remain, ref kv) => {
                     assert_eq!(kv.len(), 4);
-                    assert!(b"\nbadly formatted thing ".starts_with(remain),
-                        "remain \"{:?}\"", remain);
+                    assert!(
+                        b"\nbadly formatted thing ".starts_with(remain),
+                        "remain \"{:?}\"",
+                        remain
+                    );
                 }
                 bad => panic!("bad result l {} bad {:?}", l, bad),
             }
@@ -614,10 +646,13 @@ mod test {
             IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
             IResult::Done(remain, kv) => {
                 assert_eq!(remain, b"");
-                assert_eq!(kv, hashmap! {
-                    b"foo".to_vec() => vec!{},
-                    b"bar".to_vec() => vec!{},
-                });
+                assert_eq!(
+                    kv,
+                    hashmap! {
+                        b"foo".to_vec() => vec!{},
+                        b"bar".to_vec() => vec!{},
+                    }
+                );
             }
             IResult::Error(err) => panic!("unexpected error {:?}", err),
         }
@@ -630,11 +665,14 @@ mod test {
             IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
             IResult::Done(remain, kv) => {
                 assert_eq!(remain, b"");
-                assert_eq!(kv, hashmap! {
-                    b"foo".to_vec() => vec!{},
-                    b"bar".to_vec() => vec!{},
-                    b"plugh".to_vec() => vec!{},
-                });
+                assert_eq!(
+                    kv,
+                    hashmap! {
+                        b"foo".to_vec() => vec!{},
+                        b"bar".to_vec() => vec!{},
+                        b"plugh".to_vec() => vec!{},
+                    }
+                );
             }
             IResult::Error(err) => panic!("unexpected error {:?}", err),
         }
@@ -645,9 +683,12 @@ mod test {
             IResult::Incomplete(_) => panic!("unexpectedly incomplete"),
             IResult::Done(remain, kv) => {
                 assert_eq!(remain, b"");
-                assert_eq!(kv, hashmap! {
-                    b"bar".to_vec() => vec!{},
-                });
+                assert_eq!(
+                    kv,
+                    hashmap! {
+                        b"bar".to_vec() => vec!{},
+                    }
+                );
             }
             IResult::Error(err) => panic!("unexpected error {:?}", err),
         }
@@ -665,44 +706,59 @@ mod test {
 
         assert_eq!(
             batch_param_escaped(p),
-            IResult::Done(&b""[..], (b"foo".to_vec(), b"b=ar".to_vec())));
+            IResult::Done(&b""[..], (b"foo".to_vec(), b"b=ar".to_vec()))
+        );
     }
 
     #[test]
     fn test_batch_params() {
         let p = b"foo=bar";
 
-        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{
-            b"foo".to_vec() => b"bar".to_vec(),
-        }));
+        assert_eq!(
+            batch_params(p, 0),
+            IResult::Done(
+                &b""[..],
+                hashmap!{
+                    b"foo".to_vec() => b"bar".to_vec(),
+                }
+            )
+        );
 
         let p = b"foo=bar,biff=bop,esc:c:o:s:e=esc:c:o:s:e";
 
-        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{
-            b"foo".to_vec() => b"bar".to_vec(),
-            b"biff".to_vec() => b"bop".to_vec(),
-            b"esc:,;=".to_vec() => b"esc:,;=".to_vec(),
-        }));
+        assert_eq!(
+            batch_params(p, 0),
+            IResult::Done(
+                &b""[..],
+                hashmap!{
+                    b"foo".to_vec() => b"bar".to_vec(),
+                    b"biff".to_vec() => b"bop".to_vec(),
+                    b"esc:,;=".to_vec() => b"esc:,;=".to_vec(),
+                }
+            )
+        );
 
         let p = b"";
 
-        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{
-        }));
+        assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{}));
     }
 
     #[test]
     fn test_nodehash() {
         assert_eq!(
             nodehash(b"0000000000000000000000000000000000000000"),
-            IResult::Done(&b""[..], nodehash::NULL_HASH));
+            IResult::Done(&b""[..], nodehash::NULL_HASH)
+        );
 
         assert_eq!(
             nodehash(b"000000000000000000000000000000x000000000"),
-            IResult::Error(ErrorKind::MapRes));
+            IResult::Error(ErrorKind::MapRes)
+        );
 
         assert_eq!(
             nodehash(b"000000000000000000000000000000000000000"),
-            IResult::Incomplete(Needed::Size(40)));
+            IResult::Incomplete(Needed::Size(40))
+        );
     }
 
     #[test]
@@ -712,10 +768,10 @@ mod test {
         };
         match parseval(&kv, "foo", hashlist) {
             Err(_) => (),
-            _ => {
-                panic!("Paramval parse failed: Did not raise an error for param\
-                         with trailing characters.")
-            }
+            _ => panic!(
+                "Paramval parse failed: Did not raise an error for param\
+                 with trailing characters."
+            ),
         }
     }
 
@@ -726,82 +782,71 @@ mod test {
         };
         match parseval_default(&kv, "foo", hashlist) {
             Err(_) => (),
-            _ => {
-                panic!("paramval_default parse failed: Did not raise an error for param\
-                         with trailing characters.")
-            }
+            _ => panic!(
+                "paramval_default parse failed: Did not raise an error for param\
+                 with trailing characters."
+            ),
         }
     }
 
     #[test]
     fn test_pair() {
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
+        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pair(p),
             IResult::Done(&b""[..], (nodehash::NULL_HASH, nodehash::NULL_HASH))
         );
 
-        assert_eq!(
-            pair(&p[..80]),
-            IResult::Incomplete(Needed::Size(81))
-        );
+        assert_eq!(pair(&p[..80]), IResult::Incomplete(Needed::Size(81)));
 
-        assert_eq!(
-            pair(&p[..41]),
-            IResult::Incomplete(Needed::Size(81))
-        );
+        assert_eq!(pair(&p[..41]), IResult::Incomplete(Needed::Size(81)));
 
-        assert_eq!(
-            pair(&p[..40]),
-            IResult::Incomplete(Needed::Size(41))
-        );
+        assert_eq!(pair(&p[..40]), IResult::Incomplete(Needed::Size(41)));
     }
 
     #[test]
     fn test_pairlist() {
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
+        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
               0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(&b""[..], vec! {
-                (nodehash::NULL_HASH, nodehash::NULL_HASH),
-                (nodehash::NULL_HASH, nodehash::NULL_HASH),
-            })
+            IResult::Done(
+                &b""[..],
+                vec![
+                    (nodehash::NULL_HASH, nodehash::NULL_HASH),
+                    (nodehash::NULL_HASH, nodehash::NULL_HASH),
+                ]
+            )
         );
 
-        let p =
-            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
+        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
-            IResult::Done(&b""[..], vec! {
-                (nodehash::NULL_HASH, nodehash::NULL_HASH),
-            })
+            IResult::Done(&b""[..], vec![(nodehash::NULL_HASH, nodehash::NULL_HASH)])
         );
     }
 
     #[test]
     fn test_hashlist() {
-        let p =
-            b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
+        let p = b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
               0000000000000000000000000000000000000000 0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(&b""[..], vec! {
-                nodehash::NULL_HASH,
-                nodehash::NULL_HASH,
-                nodehash::NULL_HASH,
-                nodehash::NULL_HASH,
-            })
+            IResult::Done(
+                &b""[..],
+                vec![
+                    nodehash::NULL_HASH,
+                    nodehash::NULL_HASH,
+                    nodehash::NULL_HASH,
+                    nodehash::NULL_HASH,
+                ]
+            )
         );
 
         let p = b"0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
-            IResult::Done(&b""[..], vec! {
-                nodehash::NULL_HASH,
-            })
+            IResult::Done(&b""[..], vec![nodehash::NULL_HASH])
         );
     }
 
@@ -813,48 +858,64 @@ mod test {
 
         // Single entry
         let p = b"abc";
-        assert_eq!(commavalues(p), IResult::Done(&b""[..], vec![b"abc".to_vec()]));
+        assert_eq!(
+            commavalues(p),
+            IResult::Done(&b""[..], vec![b"abc".to_vec()])
+        );
 
         // Multiple entries
         let p = b"123,abc,test,456";
         assert_eq!(
             commavalues(p),
-            IResult::Done(&b""[..], vec![
-                b"123".to_vec(),
-                b"abc".to_vec(),
-                b"test".to_vec(),
-                b"456".to_vec(),
-            ])
+            IResult::Done(
+                &b""[..],
+                vec![
+                    b"123".to_vec(),
+                    b"abc".to_vec(),
+                    b"test".to_vec(),
+                    b"456".to_vec(),
+                ]
+            )
         );
-
-
-
     }
 
     #[test]
     fn test_cmd() {
         let p = b"foo bar";
 
-        assert_eq!(cmd(p), IResult::Done(&b""[..], (b"foo".to_vec(), b"bar".to_vec())));
+        assert_eq!(
+            cmd(p),
+            IResult::Done(&b""[..], (b"foo".to_vec(), b"bar".to_vec()))
+        );
 
         let p = b"noparam ";
-        assert_eq!(cmd(p), IResult::Done(&b""[..], (b"noparam".to_vec(), b"".to_vec())));
+        assert_eq!(
+            cmd(p),
+            IResult::Done(&b""[..], (b"noparam".to_vec(), b"".to_vec()))
+        );
     }
 
     #[test]
     fn test_cmdlist() {
         let p = b"foo bar";
 
-        assert_eq!(cmdlist(p), IResult::Done(&b""[..], vec! {
-            (b"foo".to_vec(), b"bar".to_vec()),
-        }));
+        assert_eq!(
+            cmdlist(p),
+            IResult::Done(&b""[..], vec![(b"foo".to_vec(), b"bar".to_vec())])
+        );
 
         let p = b"foo bar;biff blop";
 
-        assert_eq!(cmdlist(p), IResult::Done(&b""[..], vec! {
-            (b"foo".to_vec(), b"bar".to_vec()),
-            (b"biff".to_vec(), b"blop".to_vec()),
-        }));
+        assert_eq!(
+            cmdlist(p),
+            IResult::Done(
+                &b""[..],
+                vec![
+                    (b"foo".to_vec(), b"bar".to_vec()),
+                    (b"biff".to_vec(), b"blop".to_vec()),
+                ]
+            )
+        );
     }
 }
 
@@ -892,14 +953,18 @@ mod test_parse {
             let mut buf = BytesMut::from(inbytes[0..l].to_vec());
             match parse(&mut buf) {
                 Ok(None) => (),
-                Ok(Some(val)) => {
-                    panic!("BAD PASS: inp >>{}<< len {} passed unexpectedly val {:?}",
-                        inp, l, val)
-                }
-                Err(err) => {
-                    panic!("BAD FAIL: inp >>{}<< len {} failed {:?} (not incomplete)",
-                        inp, l, err)
-                }
+                Ok(Some(val)) => panic!(
+                    "BAD PASS: inp >>{}<< len {} passed unexpectedly val {:?}",
+                    inp,
+                    l,
+                    val
+                ),
+                Err(err) => panic!(
+                    "BAD FAIL: inp >>{}<< len {} failed {:?} (not incomplete)",
+                    inp,
+                    l,
+                    err
+                ),
             };
         }
 
@@ -911,10 +976,12 @@ mod test_parse {
             match parse(&mut buf) {
                 Ok(Some(val)) => assert_eq!(val, exp),
                 Ok(None) => panic!("BAD INCOMPLETE: inp >>{}<< extra {} incomplete", inp, l),
-                Err(err) => {
-                    panic!("BAD FAIL: inp >>{}<< extra {} failed {:?} (not incomplete)",
-                        inp, l, err)
-                }
+                Err(err) => panic!(
+                    "BAD FAIL: inp >>{}<< extra {} failed {:?} (not incomplete)",
+                    inp,
+                    l,
+                    err
+                ),
             };
             assert_eq!(&*buf, &extra[0..l]);
         }
@@ -930,7 +997,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Batch {
-                cmds: vec! { (b"hello".to_vec(), vec!{})},
+                cmds: vec![(b"hello".to_vec(), vec![])],
             },
         )
     }
@@ -944,10 +1011,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Between {
-                pairs: vec! {
-                    (hash_ones(), hash_twos()),
-                    (hash_threes(), hash_fours()),
-                },
+                pairs: vec![(hash_ones(), hash_twos()), (hash_threes(), hash_fours())],
             },
         );
     }
@@ -968,12 +1032,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Branches {
-                nodes: vec! {
-                    hash_ones(),
-                    hash_twos(),
-                    hash_threes(),
-                    hash_fours(),
-                 },
+                nodes: vec![hash_ones(), hash_twos(), hash_threes(), hash_fours()],
             },
         );
     }
@@ -1001,7 +1060,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Changegroup {
-                roots: vec! { hash_ones(), hash_twos() },
+                roots: vec![hash_ones(), hash_twos()],
             },
         );
     }
@@ -1017,13 +1076,8 @@ mod test_parse {
         test_parse(
             inp,
             Request::Changegroupsubset {
-                heads: vec! {
-                    hash_ones(),
-                },
-                bases: vec! {
-                    hash_twos(),
-                    hash_threes(),
-                },
+                heads: vec![hash_ones()],
+                bases: vec![hash_twos(), hash_threes()],
             },
         );
     }
@@ -1143,7 +1197,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Known {
-                nodes: vec! { hash_ones() },
+                nodes: vec![hash_ones()],
             },
         );
     }
@@ -1187,7 +1241,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Unbundle {
-                heads: vec! { String::from("666f726365") },
+                heads: vec![String::from("666f726365")],
             },
         );
     }
@@ -1215,12 +1269,15 @@ mod test_parse {
         test_parse(
             inp,
             Request::Batch {
-                cmds: vec! {
-                (b"heads".to_vec(), vec!{}),
-                (b"known".to_vec(),
-                    b"nodes=ee07e8c0780b5059e874c5b0dbcab2278fde2a14 \
-                      3243aa153e20a170cd2c7441c595c44a9b087f5b".to_vec()),
-            },
+                cmds: vec![
+                    (b"heads".to_vec(), vec![]),
+                    (
+                        b"known".to_vec(),
+                        b"nodes=ee07e8c0780b5059e874c5b0dbcab2278fde2a14 \
+                      3243aa153e20a170cd2c7441c595c44a9b087f5b"
+                            .to_vec(),
+                    ),
+                ],
             },
         );
     }
