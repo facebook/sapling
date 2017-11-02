@@ -823,6 +823,13 @@ class hybridmanifestctx(object):
 
     @propertycache
     def parents(self):
+        if util.safehasattr(self._manifestlog, 'historystore'):
+            store = self._manifestlog.historystore
+            try:
+                p1, p2, linknode, copyfrom = store.getnodeinfo('', self._node)
+                return p1, p2
+            except KeyError:
+                pass
         return self._revlog.parents(self._node)
 
     def read(self):
