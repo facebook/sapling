@@ -53,13 +53,13 @@ Updates to other branches should fail without --merge.
 
 Certain flags shouldn't work together.
   $ hg up --check --merge 3
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   [255]
   $ hg up --check --clean 3
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   [255]
   $ hg up --clean --merge 3
-  abort: can only specify one of -C/--clean, -c/--check, or -m/merge
+  abort: can only specify one of -C/--clean, -c/--check, or -m/--merge
   [255]
 
 --clean should work as expected.
