@@ -679,9 +679,8 @@ def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
-        chain = None
-        for chunkdata in iter(lambda: self.deltachunk(chain), {}):
-            chain = chunkdata['node']
+        for chunkdata in self.deltaiter():
+            pass
         return
 
     mfrevlog = repo.manifestlog._revlog
@@ -1008,8 +1007,13 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
             raise error.Abort(_("unable to download %d trees (%s,...)") %
                                (len(missingnodes), list(missingnodes)[0]))
     except bundle2.AbortFromPart as exc:
-        repo.ui.status(_('remote: abort: %s\n') % exc)
-        raise error.Abort(_('pull failed on remote'), hint=exc.hint)
+        repo.ui.debug('remote: abort: %s\n' % exc)
+        hexnodes = list(hex(mfnode) for mfnode in mfnodes)
+        nodestr = '\n'.join(hexnodes[:10])
+        if len(hexnodes) > 10:
+            nodestr += '\n...'
+        raise error.Abort(_('unable to download the following trees from the '
+                            'server:\n%s') % nodestr, hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:

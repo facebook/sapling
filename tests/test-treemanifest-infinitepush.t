@@ -193,6 +193,19 @@ Pull a treeonly scratch branch into a treeonly client
   -rw-r--r--       0 undo.phaseroots
 
 Pull a normal scratch branch into a treeonly client
+  $ hg pull -r scratch/nontree
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 42ec76eb772a
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -r 42ec76eb772a -T ' ' --stat
+  abort: unable to download the following trees from the server:
+  bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9
+  [255]
   $ cd ..
 
 Verify its not on the server
