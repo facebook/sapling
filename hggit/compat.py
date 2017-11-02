@@ -65,8 +65,19 @@ def read_pkt_refs(proto):
 CONFIG_DEFAULTS = {
 }
 
+hasconfigitems = False
+
+def registerconfigs(configitem):
+    global hasconfigitems
+    hasconfigitems = True
+    for section, items in CONFIG_DEFAULTS.iteritems():
+        for item, default in items.iteritems():
+            configitem(section, item, default=default)
+
 def config(ui, subtype, section, item):
     if subtype == 'string':
         subtype = ''
     getconfig = getattr(ui, 'config' + subtype)
+    if hasconfigitems:
+        return getconfig(section, item)
     return getconfig(section, item, CONFIG_DEFAULTS[section][item])

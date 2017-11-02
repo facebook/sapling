@@ -21,6 +21,7 @@ For more information and instructions, see :hg:`help git`
 import os
 
 # local modules
+import compat
 import gitrepo
 import hgrepo
 import overlay
@@ -84,9 +85,13 @@ testedwith = ('2.8.2 2.9.2 3.0.2 3.1.2 3.2.4 3.3.3 3.4.2 3.5.2 3.6.3 3.7.3'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
 
 cmdtable = {}
+configtable = {}
 try:
     from mercurial import registrar
     command = registrar.command(cmdtable)
+    configitem = registrar.configitem(configtable)
+    compat.registerconfigs(configitem)
+
 except (ImportError, AttributeError):
     command = cmdutil.command(cmdtable)
 
