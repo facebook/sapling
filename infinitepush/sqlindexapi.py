@@ -240,8 +240,9 @@ class sqlindexapi(indexapi):
             (self.reponame, node, jsonmetadata))
 
         self.sqlcursor.execute(
-            "UPDATE nodesmetadata SET optional_json_metadata=%s WHERE node=%s",
-            params=(jsonmetadata, node))
+            "UPDATE nodesmetadata SET optional_json_metadata=%s WHERE "
+            "reponame=%s AND node=%s",
+            params=(jsonmetadata, self.reponame, node))
 
 class CustomConverter(mysql.connector.conversion.MySQLConverter):
     """Ensure that all values being returned are returned as python string
