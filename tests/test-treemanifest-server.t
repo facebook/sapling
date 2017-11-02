@@ -120,10 +120,7 @@ Test pushing flat and tree
   [255]
 
 Test pushing only trees with commit hooks
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > sendflat=False
-  > EOF
+TODO: change this to create a treeonly commit and try to push it
   $ hg push --to mybook
   pushing to ssh://user@dummy/master
   searching for changes

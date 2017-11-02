@@ -44,6 +44,17 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
 
     yield self.close()
 
+def _cansendflat(repo, mfnodes):
+    if not util.safehasattr(repo.manifestlog, '_revlog'):
+        return False
+
+    revlog = repo.manifestlog._revlog
+    for mfnode in mfnodes:
+        if mfnode not in revlog.nodemap:
+            return False
+
+    return True
+
 @shallowutil.interposeclass(changegroup, 'cg1packer')
 class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
@@ -73,9 +84,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 core generatemanifests method, whose length depends on the
                 version of core Hg.
         """
-        sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
-                                            True)
-        if sendflat:
+        if _cansendflat(self._repo, mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
             # us.
             chunks = super(shallowcg1packer, self).generatemanifests(
@@ -241,12 +250,10 @@ if util.safehasattr(changegroup, 'cg3packer'):
             for chunk in chunks:
                 yield chunk
 
-            sendflat = self._repo.ui.configbool('treemanifest', 'sendflat',
-                                                True)
             # If we're not sending flat manifests, then the subclass
             # generatemanifests call did not add the appropriate closing chunk
             # for a changegroup3.
-            if not sendflat:
+            if not _cansendflat(self._repo, mfs.keys()):
                 yield self._manifestsdone()
 
 # Unused except in older versions of Mercurial

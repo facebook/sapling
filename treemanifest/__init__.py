@@ -56,12 +56,6 @@ default values are 0 and len(changelog) - 1, respectively.
    repackstartrev = 0
    repackendrev = 1000
 
-Setting `treemanifest.sendflat` to False will stop flat manifests from being
-sent as part of changegroups during push. It defaults to True.
-
-   [treemanifest]
-   sendflat = True
-
 Setting `treemanifest.treeonly` to True will force all manifest reads to use the
 tree format. This is useful in the final stages of a migration to treemanifest
 to prevent accesses of flat manifests.
@@ -1050,7 +1044,7 @@ def _registerbundle2parts():
 
         # Treemanifest servers don't accept tree directly. They must go through
         # pushrebase, which uses it's own part type and handler.
-        if op.repo.svfs.treemanifestserver:
+        if repo.svfs.treemanifestserver:
             return
 
         if part.params.get('cache', 'False') == 'True':

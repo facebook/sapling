@@ -94,7 +94,6 @@ Transition to tree-only client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > treeonly=True
-  > sendflat=False
   > EOF
 
 Make a local tree-only draft commit
