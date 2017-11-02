@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+extern crate bincode;
 extern crate futures;
 
 extern crate futures_ext;
@@ -20,8 +21,10 @@ use std::mem;
 use std::ptr;
 use std::sync::Mutex;
 
-use futures::future::{err, ok, FutureResult};
-use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, Linknodes};
+use futures::future::{err, ok, FutureResult, IntoFuture};
+
+use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes,
+                Result as LinknodeResult, ResultExt};
 use mercurial_types::{NodeHash, RepoPath};
 
 pub struct MemLinknodes {
@@ -34,6 +37,31 @@ impl MemLinknodes {
             linknodes: Mutex::new(HashMap::new()),
         }
     }
+
+    // The next couple of methods are convenience methods for tests.
+
+    pub fn add_data(&self, data: LinknodeData) -> LinknodeResult<()> {
+        let mut linknodes = self.linknodes.lock().unwrap();
+        match linknodes.entry((data.path.clone(), data.node)) {
+            Entry::Occupied(occupied) => Err(
+                LinknodeErrorKind::AlreadyExists(
+                    data.path,
+                    data.node,
+                    Some(*occupied.get()),
+                    data.linknode,
+                ).into(),
+            ),
+            Entry::Vacant(vacant) => {
+                vacant.insert(data.linknode);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn add_data_encoded(&self, bytes: &[u8]) -> LinknodeResult<()> {
+        let data = bincode::deserialize(bytes).chain_err(|| LinknodeErrorKind::StorageError)?;
+        self.add_data(data)
+    }
 }
 
 impl Linknodes for MemLinknodes {
@@ -41,17 +69,12 @@ impl Linknodes for MemLinknodes {
     type Effect = FutureResult<(), LinknodeError>;
 
     fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
-        let mut linknodes = self.linknodes.lock().unwrap();
-        match linknodes.entry((path.clone(), *node)) {
-            Entry::Occupied(occupied) => err(
-                LinknodeErrorKind::AlreadyExists(path, *node, Some(*occupied.get()), *linknode)
-                    .into(),
-            ),
-            Entry::Vacant(vacant) => {
-                vacant.insert(*linknode);
-                ok(())
-            }
-        }
+        let data = LinknodeData {
+            path,
+            node: *node,
+            linknode: *linknode,
+        };
+        self.add_data(data).into_future()
     }
 
     fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
