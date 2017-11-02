@@ -34,7 +34,7 @@ const MAXSTOREPATHLEN: usize = 120;
 /// A path or filename within Mercurial, with information about whether
 /// it's the root of the repo, a directory or a file.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf)]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub enum RepoPath {
     // Do not create a RepoPath directly! Go through the constructors instead -- they verify MPath
     // properties.
@@ -118,7 +118,7 @@ impl Display for RepoPath {
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct MPathElement(Vec<u8>);
 
 impl MPathElement {
@@ -152,7 +152,7 @@ impl From<MPathElement> for MPath {
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
 }

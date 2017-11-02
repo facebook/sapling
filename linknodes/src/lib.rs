@@ -9,6 +9,9 @@
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 
 extern crate mercurial_types;
 
@@ -96,4 +99,13 @@ where
     fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
         (**self).add(path, node, linknode)
     }
+}
+
+/// A struct representing all the data associated with a linknode. This definition is here so that
+/// it can be shared across memory-based and file-based linknodes.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LinknodeData {
+    pub path: RepoPath,
+    pub node: NodeHash,
+    pub linknode: NodeHash,
 }

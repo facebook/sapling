@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 extern crate futures;
 extern crate futures_cpupool;
@@ -24,7 +25,8 @@ use futures_cpupool::CpuPool;
 
 use filekv::FileKV;
 use futures_ext::{BoxFuture, FutureExt};
-use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, Linknodes, ResultExt};
+use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes,
+                ResultExt};
 use mercurial_types::{NodeHash, RepoPath};
 use mercurial_types::hash::Sha1;
 
@@ -34,7 +36,7 @@ static PREFIX: &str = "linknode-";
 ///
 /// Linknodes are stored as files in the specified base directory.
 pub struct FileLinknodes {
-    kv: FileKV<NodeHash>,
+    kv: FileKV<LinknodeData>,
 }
 
 impl FileLinknodes {
@@ -65,6 +67,23 @@ impl FileLinknodes {
             kv: FileKV::create_with_pool(path, PREFIX, pool)?,
         })
     }
+
+    pub fn get_data(
+        &self,
+        path: RepoPath,
+        node: &NodeHash,
+    ) -> impl Future<Item = LinknodeData, Error = LinknodeError> + Send {
+        let node = *node;
+        self.kv
+            .get(hash(&path, &node).to_hex())
+            .then(move |res| match res {
+                Ok(Some((data, _version))) => Ok(data),
+                Ok(None) => Err(LinknodeErrorKind::NotFound(path, node).into()),
+                Err(err) => {
+                    Err(err).chain_err(|| LinknodeError::from_kind(LinknodeErrorKind::StorageError))
+                }
+            })
+    }
 }
 
 fn hash(path: &RepoPath, node: &NodeHash) -> Sha1 {
@@ -82,10 +101,16 @@ impl Linknodes for FileLinknodes {
     fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
         let node = *node;
         let linknode = *linknode;
+        let hash = hash(&path, &node).to_hex();
+        let linknode_data = LinknodeData {
+            path: path.clone(),
+            node,
+            linknode,
+        };
         self.kv
             .set_new(
-                hash(&path, &node).to_hex(),
-                &linknode,
+                hash,
+                &linknode_data,
                 Some(1.into()), // Set a fixed version so that the bytes on disk are deterministic
             )
             .then(move |res| {
@@ -105,16 +130,6 @@ impl Linknodes for FileLinknodes {
     }
 
     fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
-        let node = *node;
-        self.kv
-            .get(hash(&path, &node).to_hex())
-            .then(move |res| match res {
-                Ok(Some((nodehash, _version))) => Ok(nodehash),
-                Ok(None) => Err(LinknodeErrorKind::NotFound(path, node).into()),
-                Err(err) => {
-                    Err(err).chain_err(|| LinknodeError::from_kind(LinknodeErrorKind::StorageError))
-                }
-            })
-            .boxify()
+        self.get_data(path, node).map(|data| data.linknode).boxify()
     }
 }
