@@ -1170,8 +1170,20 @@ class TreeInode::TreeRenameLocks {
       TreeInode* destTree,
       PathComponentPiece destName);
 
+  /**
+   * Reset the TreeRenameLocks to the empty state, releasing all locks that it
+   * holds.
+   */
   void reset() {
     *this = TreeRenameLocks();
+  }
+
+  /**
+   * Release all locks held by this TreeRenameLocks object except for the
+   * mount point RenameLock.
+   */
+  void releaseAllButRename() {
+    *this = TreeRenameLocks(std::move(renameLock_));
   }
 
   const RenameLock& renameLock() const {
@@ -1207,6 +1219,9 @@ class TreeInode::TreeRenameLocks {
   }
 
  private:
+  explicit TreeRenameLocks(RenameLock&& renameLock)
+      : renameLock_{std::move(renameLock)} {}
+
   void lockDestChild(PathComponentPiece destName);
 
   /**
@@ -1442,6 +1457,13 @@ Future<Unit> TreeInode::doRename(
     overlay->saveOverlayDir(destParent->getNodeId(), locks.destContents());
   }
 
+  // Release the TreeInode locks before we write a journal entry.
+  // We keep holding the mount point rename lock for now though.  This ensures
+  // that rename and deletion events do show up in the journal in the correct
+  // order.
+  locks.releaseAllButRename();
+
+  // Add a journal entry
   auto srcPath = getPath();
   auto destPath = destParent->getPath();
   if (srcPath.hasValue() && destPath.hasValue()) {
@@ -1451,10 +1473,11 @@ Future<Unit> TreeInode::doRename(
         JournalDelta::RENAME));
   }
 
-  // Release the rename locks before we destroy the deleted destination child
+  // Release the rename lock before we destroy the deleted destination child
   // inode (if it exists).
   locks.reset();
   deletedInode.reset();
+
   return folly::Unit{};
 }
 
