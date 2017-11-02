@@ -44,26 +44,26 @@ lazy_static! {
 
 type BoolFuture = future::FutureResult<bool, Error>;
 
-type WrappedStream<T> = Map<
-    TakeWhile<OuterStream<T>, fn(&OuterFrame) -> BoolFuture, BoolFuture>,
+type WrappedStream<'a, T> = Map<
+    TakeWhile<OuterStream<'a, T>, fn(&OuterFrame) -> BoolFuture, BoolFuture>,
     fn(OuterFrame) -> Bytes,
 >;
 
-pub trait InnerStream<T>
-    : Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<T>>
+pub trait InnerStream<'a, T>
+    : Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>
 where
-    T: AsyncRead + 'static,
+    T: AsyncRead + 'a,
 {
 }
 
-impl<T, U> InnerStream<T> for U
+impl<'a, T, U> InnerStream<'a, T> for U
 where
-    U: Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<T>>,
-    T: AsyncRead + 'static,
+    U: Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>,
+    T: AsyncRead + 'a,
 {
 }
 
-pub type BoxInnerStream<T> = Box<InnerStream<T, Item = InnerPart, Error = Error>>;
+pub type BoxInnerStream<'a, T> = Box<InnerStream<'a, T, Item = InnerPart, Error = Error> + 'a>;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InnerPart {
@@ -112,14 +112,14 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
-pub fn inner_stream<R: AsyncRead>(
+pub fn inner_stream<'a, R: AsyncRead + 'a>(
     header: &PartHeader,
-    stream: OuterStream<R>,
+    stream: OuterStream<'a, R>,
     logger: &slog::Logger,
-) -> BoxInnerStream<R> {
+) -> BoxInnerStream<'a, R> {
     // The casts are required for Rust to not complain about "expected fn
     // pointer, found fn item". See http://stackoverflow.com/q/34787928.
-    let wrapped_stream: WrappedStream<R> = stream
+    let wrapped_stream: WrappedStream<'a, R> = stream
         .take_while_wrapper(is_payload_fut as fn(&OuterFrame) -> BoolFuture)
         .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
     match header.part_type_lower().as_str() {

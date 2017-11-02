@@ -62,9 +62,7 @@ fn parse_bzip2(read_ops: PartialWithErrors<GenWouldBlock>) {
 fn test_parse_uncompressed() {
     let rng = StdGen::new(rand::thread_rng(), 20);
     let mut quickcheck = QuickCheck::new().gen(rng);
-    quickcheck.quickcheck(
-        parse_uncompressed as fn(PartialWithErrors<GenWouldBlock>) -> (),
-    );
+    quickcheck.quickcheck(parse_uncompressed as fn(PartialWithErrors<GenWouldBlock>) -> ());
 }
 
 fn parse_uncompressed(read_ops: PartialWithErrors<GenWouldBlock>) {
@@ -214,7 +212,10 @@ fn parse_bundle(
     assert!(res.is_none());
 }
 
-fn verify_cg2<R: AsyncRead>(core: &mut Core, stream: Bundle2Stream<R>) -> Bundle2Stream<R> {
+fn verify_cg2<'a, R: AsyncRead + 'a>(
+    core: &mut Core,
+    stream: Bundle2Stream<'a, R>,
+) -> Bundle2Stream<'a, R> {
     let (res, stream) = next_cg2_part(core, stream);
     assert_eq!(*res.section(), changegroup::Section::Changeset);
     let chunk = res.chunk();
@@ -329,11 +330,11 @@ fn path(bytes: &[u8]) -> MPath {
     MPath::new(bytes).unwrap()
 }
 
-fn parse_stream_start<R: AsyncRead>(
+fn parse_stream_start<'a, R: AsyncRead + 'a>(
     core: &mut Core,
     reader: R,
     compression: Option<&str>,
-) -> Result<Bundle2Stream<R>> {
+) -> Result<Bundle2Stream<'a, R>> {
     let mut m_stream_params = HashMap::new();
     let a_stream_params = HashMap::new();
     if let Some(compression) = compression {
@@ -362,10 +363,10 @@ fn make_root_logger() -> Logger {
     Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
 }
 
-fn next_cg2_part<R: AsyncRead>(
+fn next_cg2_part<'a, R: AsyncRead + 'a>(
     core: &mut Core,
-    stream: Bundle2Stream<R>,
-) -> (changegroup::Part, Bundle2Stream<R>) {
+    stream: Bundle2Stream<'a, R>,
+) -> (changegroup::Part, Bundle2Stream<'a, R>) {
     let (res, stream) = core.next_stream(stream);
     (res.unwrap().inner_part().cg2_part(), stream)
 }

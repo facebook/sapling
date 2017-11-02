@@ -17,12 +17,12 @@ use zstd::Decoder as ZstdDecoder;
 use noop::NoopDecoder;
 use raw::RawDecoder;
 
-pub struct Decompressor<R>
+pub struct Decompressor<'a, R>
 where
-    R: AsyncRead + 'static,
+    R: AsyncRead + 'a,
 {
     d_type: DecompressorType,
-    inner: Box<RawDecoder<R>>,
+    inner: Box<RawDecoder<R> + 'a>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -33,9 +33,9 @@ pub enum DecompressorType {
     Uncompressed,
 }
 
-impl<R> Decompressor<R>
+impl<'a, R> Decompressor<'a, R>
 where
-    R: AsyncRead + 'static,
+    R: AsyncRead + 'a,
 {
     pub fn new(r: R, dt: DecompressorType) -> Self {
         Decompressor {
@@ -69,16 +69,16 @@ where
     }
 }
 
-impl<R: AsyncRead> Read for Decompressor<R> {
+impl<'a, R: AsyncRead + 'a> Read for Decompressor<'a, R> {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buf)
     }
 }
 
-impl<R: AsyncRead> AsyncRead for Decompressor<R> {}
+impl<'a, R: AsyncRead + 'a> AsyncRead for Decompressor<'a, R> {}
 
-impl<R: AsyncRead> Debug for Decompressor<R> {
+impl<'a, R: AsyncRead + 'a> Debug for Decompressor<'a, R> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct("Decompressor")
             .field("decoder_type", &self.d_type)

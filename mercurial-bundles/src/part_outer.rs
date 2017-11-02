@@ -25,11 +25,11 @@ use part_inner::validate_header;
 use types::StreamHeader;
 use utils::{get_decompressor_type, BytesExt};
 
-pub fn outer_stream<R: AsyncRead>(
+pub fn outer_stream<'a, R: AsyncRead>(
     stream_header: &StreamHeader,
     r: R,
     logger: &slog::Logger,
-) -> Result<OuterStream<R>> {
+) -> Result<OuterStream<'a, R>> {
     let decompressor_type = get_decompressor_type(
         stream_header
             .m_stream_params
@@ -42,7 +42,7 @@ pub fn outer_stream<R: AsyncRead>(
     )
 }
 
-pub type OuterStream<R> = FramedStream<Decompressor<R>, OuterDecoder>;
+pub type OuterStream<'a, R> = FramedStream<Decompressor<'a, R>, OuterDecoder>;
 
 #[derive(Debug)]
 enum OuterState {
@@ -179,9 +179,7 @@ impl OuterDecoder {
             OuterState::StreamEnd => (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd),
 
             OuterState::Invalid => (
-                Err(
-                    ErrorKind::Bundle2Decode("byte stream corrupt".into()).into(),
-                ),
+                Err(ErrorKind::Bundle2Decode("byte stream corrupt".into()).into()),
                 OuterState::Invalid,
             ),
         }
