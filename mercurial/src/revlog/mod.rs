@@ -6,13 +6,14 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
+use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::result;
 use std::sync::Arc;
 
 use errors::*;
-use memmap::{self, Mmap};
+use memmap::Mmap;
 use nom::IResult;
 
 use mercurial_types::{Blob, BlobNode, NodeHash};
@@ -39,13 +40,14 @@ enum Datafile {
 
 impl Datafile {
     fn map<P: AsRef<Path>>(path: P) -> io::Result<Datafile> {
-        Mmap::open_path(path, memmap::Protection::Read).map(Datafile::Mmap)
+        let file = File::open(path)?;
+        unsafe { Mmap::map(&file).map(Datafile::Mmap) }
     }
 
     fn as_slice(&self) -> &[u8] {
         match self {
             &Datafile::Loaded(ref data) => data.as_ref(),
-            &Datafile::Mmap(ref mmap) => unsafe { mmap.as_slice() },
+            &Datafile::Mmap(ref mmap) => mmap.as_ref(),
         }
     }
 }
@@ -99,11 +101,7 @@ impl Revlog {
     fn init(idx: Datafile, data: Option<Datafile>) -> Result<Self> {
         let hdr = match parser::header(idx.as_slice()) {
             IResult::Done(_, hdr) => hdr,
-            err => {
-                return Err(
-                    ErrorKind::Revlog(format!("Header parse failed: {:?}", err)).into(),
-                )
-            }
+            err => return Err(ErrorKind::Revlog(format!("Header parse failed: {:?}", err)).into()),
         };
 
         let mut data = data;
@@ -321,9 +319,7 @@ impl RevlogInner {
     fn get_idx_by_nodeid(&self, nodeid: &NodeHash) -> Result<RevIdx> {
         match self.nodeidx.get(nodeid).cloned() {
             Some(idx) => Ok(idx), // cache hit
-            None => Err(
-                ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into(),
-            ),
+            None => Err(ErrorKind::Revlog(format!("nodeid {} not found", nodeid)).into()),
         }
     }
 
