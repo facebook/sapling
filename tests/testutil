@@ -9,6 +9,13 @@ echo "[extensions]" >> $HGRCPATH
 echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 echo 'mq=' >> $HGRCPATH
 
+# Defaults for testing against hg < 4.3
+echo '[defaults]' >> $HGRCPATH
+echo 'backout = -d "0 0"' >> $HGRCPATH
+echo 'commit = -d "0 0"' >> $HGRCPATH
+echo 'shelve = --date "0 0"\n' >> $HGRCPATH
+echo 'tag = -d "0 0"\n' >> $HGRCPATH
+
 # Standard checks for external dependencies
 # We use the git command-line client and dulwich in pretty much all the tests.
 # Thus, to avoid repetitively declaring that requirement in almost every test,
