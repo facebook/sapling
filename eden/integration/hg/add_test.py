@@ -84,7 +84,6 @@ class AddTest:
                          context.exception.output.decode('utf-8'))
         self.assertEqual(1, context.exception.returncode)
 
-    @unittest.skip('Try re-enabling as part of the great dirstate refactor.')
     def test_try_replacing_directory_with_file(self):
         # `hg rm` the only file in a directory, which should also remove the
         # directory.
