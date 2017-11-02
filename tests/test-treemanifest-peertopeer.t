@@ -56,18 +56,7 @@ Pushing with treemanifest disabled does nothing
 
   $ hg -R ../client2 strip -q -r tip
 
-Pushing p2p with sendtrees=False does nothing
-  $ hg push -q ../client2
-  $ ls ../client2/.hg/store/packs/manifests || true
-  * No such file or directory (glob)
-
-  $ hg -R ../client2 strip -q -r tip
-
 Pushing p2p puts the received packs in the local pack store
-  $ cat >> .hg/hgrc <<EOF
-  > [treemanifest]
-  > sendtrees=True
-  > EOF
   $ hg push -q ../client2
   $ ls ../client2/.hg/store/packs/manifests
   15f45e8ca8affec27464278498594f94a3624815.histidx

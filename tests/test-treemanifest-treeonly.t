@@ -94,7 +94,6 @@ Transition to tree-only client
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > treeonly=True
-  > sendtrees=True
   > sendflat=False
   > EOF
 

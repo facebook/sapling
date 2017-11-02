@@ -48,12 +48,6 @@ be prefetched after a pull. Defaults to None.
    [treemanifest]
    pullprefetchrevs = master + stable
 
-Setting `treemanifest.sendtrees` to True will include tree packs in sent
-bundles.
-
-    [treemanifest]
-    sendtrees = False
-
 Setting `treemanifest.repackstartrev` and `treemanifest.repackendrev` causes `hg
 repack --incremental` to only repack the revlog entries in the given range. The
 default values are 0 and len(changelog) - 1, respectively.
@@ -123,7 +117,6 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
-configitem('treemanifest', 'sendtrees', default=False)
 configitem('treemanifest', 'server', default=False)
 
 PACK_CATEGORY='manifests'
@@ -167,7 +160,7 @@ def uisetup(ui):
 
 def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
-    if repo.ui.configbool('treemanifest', 'sendtrees'):
+    if treeenabled(repo.ui):
         caps['treemanifest'] = ('True',)
     return caps
 
@@ -1055,6 +1048,11 @@ def _registerbundle2parts():
             raise error.Abort(_("invalid treegroup pack category: %s") %
                               category)
 
+        # Treemanifest servers don't accept tree directly. They must go through
+        # pushrebase, which uses it's own part type and handler.
+        if op.repo.svfs.treemanifestserver:
+            return
+
         if part.params.get('cache', 'False') == 'True':
             packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
         else:
@@ -1080,15 +1078,15 @@ def _registerbundle2parts():
     @exchange.b2partsgenerator(TREEGROUP_PARTTYPE2)
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
-        if ('treepack' in pushop.stepsdone or
-            not treeenabled(pushop.repo.ui) or
-            not pushop.repo.ui.configbool('treemanifest', 'sendtrees')):
+        if 'treepack' in pushop.stepsdone or not treeenabled(pushop.repo.ui):
             return
         pushop.stepsdone.add('treepack')
 
-        part = createtreepackpart(pushop.repo, pushop.outgoing,
-                                  TREEGROUP_PARTTYPE2)
-        bundler.addpart(part)
+        # Only add trees if we have them
+        if _cansendtrees(pushop.repo, pushop.outgoing.missing):
+            part = createtreepackpart(pushop.repo, pushop.outgoing,
+                                      TREEGROUP_PARTTYPE2)
+            bundler.addpart(part)
 
     @exchange.getbundle2partsgenerator(TREEGROUP_PARTTYPE2)
     def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
@@ -1102,8 +1100,16 @@ def _registerbundle2parts():
             return
 
         outgoing = exchange._computeoutgoing(repo, heads, common)
-        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
-        bundler.addpart(part)
+        if _cansendtrees(repo, outgoing.missing):
+            part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
+            bundler.addpart(part)
+
+def _cansendtrees(repo, nodes):
+    mfnodes = []
+    for node in nodes:
+        mfnodes.append(('', repo[node].manifestnode()))
+
+    return not repo.manifestlog.datastore.getmissing(mfnodes)
 
 def createtreepackpart(repo, outgoing, partname):
     rootdir = ''
@@ -1485,7 +1491,9 @@ def striptrees(orig, repo, tr, striprev, files):
 
 def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
     orig(ui, repo, bundler, source, outgoing, opts)
-    if ui.configbool('treemanifest', 'sendtrees'):
+
+    # Only add trees if we have them
+    if _cansendtrees(repo, outgoing.missing):
         part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
         bundler.addpart(part)
 
