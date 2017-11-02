@@ -24,7 +24,7 @@ cwdrealtivepatkinds = ('glob', 'relpath')
 
 def _fbsparseexists(ui):
     # internal config: extensions.fbsparse
-    with self.ui.configoverride({("devel", "all-warnings"): False}):
+    with ui.configoverride({("devel", "all-warnings"): False}):
         return not ui.config('extensions', 'fbsparse', '!').startswith('!')
 
 def uisetup(ui):
