@@ -78,7 +78,7 @@
 
 Note: the output to STDERR comes from a different process to the output on
 STDOUT and their relative ordering is not deterministic. As a result, the test
-was failing sporadically. To avoid this, we capture STDERR to a file and 
+was failing sporadically. To avoid this, we capture STDERR to a file and
 check its contents separately.
 
   $ TEMP_STDERR=full-clone-from-shallow.stderr.tmp
