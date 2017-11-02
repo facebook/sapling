@@ -35,10 +35,7 @@ use utils::get_compression_param;
 
 const BZIP2_BUNDLE2: &[u8] = include_bytes!("fixtures/bzip2.bin");
 const UNCOMP_BUNDLE2: &[u8] = include_bytes!("fixtures/uncompressed.bin");
-const UNKNOWN_COMPRESSION_BUNDLE2: &[u8] = include_bytes!(
-    "fixtures/unknown-compression.\
-     bin"
-);
+const UNKNOWN_COMPRESSION_BUNDLE2: &[u8] = include_bytes!("fixtures/unknown-compression.bin");
 
 const CHANGESET1_HASH_STR: &str = "b2040b24fd5cdfaf36e3164ddc357e834167b14a";
 const CHANGESET2_HASH_STR: &str = "415ab71954c98ea93dab4b8f61f04ca57bc5c33c";
