@@ -120,10 +120,10 @@ lazy_static! {
     static ref ROUTES: Vec<Route> = {
         vec![
             // Workaround for https://github.com/rust-lang/rust/issues/20178
-            (r"^/(\w+)/cs/(\w+)/roottreemanifestid$",
+            (r"^/(\w+)/cs/(\w+)/roottreemanifestid/?$",
             parse_root_treemanifest_id_url as UrlParseFunc),
-            (r"^/(\w+)/treenode/(\w+)/$", parse_tree_content_url as UrlParseFunc),
-            (r"^/(\w+)/blob/(\w+)/$", parse_blob_content_url as UrlParseFunc),
+            (r"^/(\w+)/treenode/(\w+)/?$", parse_tree_content_url as UrlParseFunc),
+            (r"^/(\w+)/blob/(\w+)/?$", parse_blob_content_url as UrlParseFunc),
         ].into_iter().map(|(re, func)| Route(Regex::new(re).expect("bad regex"), func)).collect()
     };
 }

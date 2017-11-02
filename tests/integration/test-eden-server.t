@@ -217,6 +217,9 @@ Empty file
   $ curl http://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid 2> /dev/null
   ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
 
+  $ curl http://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid/ 2> /dev/null
+  ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
+
   $ curl http://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | jq 'sort_by(.path)'
   [
     {
@@ -236,7 +239,19 @@ Empty file
       "type": "File"
     }
   ]
+  $ curl http://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | jq 'sort_by(.path)'
+  [
+    {
+      "hash": "7108421418404a937c684d2479a34a24d2ce4757",
+      "path": "content",
+      "size": 8,
+      "type": "File"
+    }
+  ]
+
   $ curl http://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757/ 2> /dev/null
+  content
+  $ curl http://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757 2> /dev/null
   content
 
 Send incorrect requests
