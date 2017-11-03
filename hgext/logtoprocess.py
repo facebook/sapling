@@ -124,8 +124,6 @@ def uisetup(ui):
                 env = dict(itertools.chain(encoding.environ.items(),
                                            msgpairs, optpairs),
                            EVENT=event, HGPID=str(os.getpid()))
-                # Connect stdin to /dev/null to prevent child processes messing
-                # with mercurial's stdin.
                 runshellcommand(script, env)
             return super(logtoprocessui, self).log(event, *msg, **opts)
 
