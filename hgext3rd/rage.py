@@ -152,6 +152,43 @@ def rpminfo(ui):
         result.add(shcmd('%s -qf %s' % (rpmbin, path), check=False))
     return ''.join(result)
 
+def infinitepushbackuplogs(ui, repo):
+    """Contents of recent infinitepush log files."""
+    logdir = ui.config('infinitepushbackup', 'logdir')
+    if not logdir:
+        return "infinitepushbackup.logdir not set"
+    try:
+        username = util.shortuser(ui.username())
+    except Exception:
+        username = 'unknown'
+    userlogdir = os.path.join(logdir, username)
+    if not os.path.exists(userlogdir):
+        return "log directory does not exist: %s" % userlogdir
+
+    # Log filenames are the reponame with the date (YYYYMMDD) appended.
+    reponame = os.path.basename(repo.origroot)
+    logfiles = sorted([f for f in os.listdir(userlogdir)
+                       if f[:-8] == reponame])
+    if not logfiles:
+        return "no log files found for %s in %s" % (reponame, userlogdir)
+
+    # Display the last 100 lines from the most recent log files.
+    logs = []
+    linelimit = 100
+    for logfile in reversed(logfiles):
+        loglines = open(os.path.join(userlogdir, logfile)).readlines()
+        linecount = len(loglines)
+        if linecount > linelimit:
+            logcontent = '  '.join(loglines[-linelimit:])
+            logs.append("%s (first %s lines omitted):\n  %s\n"
+                        % (logfile, linecount - linelimit, logcontent))
+            break
+        else:
+            logcontent = '  '.join(loglines)
+            logs.append("%s:\n  %s\n" % (logfile, logcontent))
+            linelimit -= linecount
+    return ''.join(reversed(logs))
+
 @command('^rage', rageopts , _('hg rage'))
 def rage(ui, repo, *pats, **opts):
     """collect useful diagnostics for asking help from the source control team
@@ -180,6 +217,12 @@ def rage(ui, repo, *pats, **opts):
         finally:
             return ui.popbuffer()
 
+    def hgfile(filename):
+        if repo.vfs.exists(filename):
+            return repo.vfs(filename).read()
+        else:
+            return "File not found: %s" % repo.vfs.join(filename)
+
     if opts.get('oncall') and opts.get('preview'):
         raise error.Abort('--preview and --oncall cannot be used together')
 
@@ -203,9 +246,11 @@ def rage(ui, repo, *pats, **opts):
         # smartlog as the user sees it
         ('hg sl (filtered)', _failsafe(lambda: hgcmd(
             smartlog.smartlog, template='{hsl}'))),
-        # unfiltered smartlog for recent hidden changesets
+        # unfiltered smartlog for recent hidden changesets, including full
+        # node identity
         ('hg sl (unfiltered)', _failsafe(lambda: hgcmd(
-            smartlog.smartlog, _repo=repo.unfiltered(), template='{hsl}'))),
+            smartlog.smartlog, _repo=repo.unfiltered(),
+            template='{node}\n{hsl}'))),
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
@@ -230,6 +275,10 @@ def rage(ui, repo, *pats, **opts):
                           '--getinfo', check=False))),
         ('hg debugobsolete <smartlog>',
             _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
+        ('infinitepush backup state',
+            _failsafe(lambda: hgfile('infinitepushbackupstate'))),
+        ('infinitepush backup logs',
+            _failsafe(lambda: infinitepushbackuplogs(ui, repo))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
