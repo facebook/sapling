@@ -2356,8 +2356,8 @@ class TestRunner(object):
         # assume all tests in same folder for now
         if testdescs:
             pathname = os.path.dirname(testdescs[0]['path'])
-            if pathname and not osenvironb[b'TESTDIR'].endswith('/'):
-                osenvironb[b'TESTDIR'] += '/'
+            if pathname and not osenvironb[b'TESTDIR'].endswith(b'/'):
+                osenvironb[b'TESTDIR'] += b'/'
             osenvironb[b'TESTDIR'] += pathname
         if self.options.outputdir:
             self._outputdir = canonpath(_bytespath(self.options.outputdir))
