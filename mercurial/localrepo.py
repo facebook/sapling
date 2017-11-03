@@ -366,9 +366,10 @@ class localrepository(object):
         self.origroot = path
         # These auditor are not used by the vfs,
         # only used when writing this comment: basectx.match
-        self.auditor = pathutil.pathauditor(self.root, self._checknested)
-        self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
-                                                realfs=False, cached=True)
+        self.auditor = pathutil.pathauditor(
+            self.root, callback=self._checknested)
+        self.nofsauditor = pathutil.pathauditor(
+            self.root, callback=self._checknested, realfs=False, cached=True)
         self.baseui = baseui
         self.ui = baseui.copy()
         self.ui.copy = baseui.copy # prevent copying repo configuration
