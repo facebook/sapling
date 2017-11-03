@@ -18,7 +18,7 @@ Check amend metadata
   adding a
   $ echo aa > a && hg amend
   $ hg debugobsolete
-  .* {'operation': 'amend', 'user': 'test'} (re)
+  .* {'ef1': '40', 'operation': 'amend', 'user': 'test'} (re)
 
 Check rebase metadata
   $ hg book -r . destination
@@ -30,5 +30,5 @@ Check rebase metadata
   $ hg rebase -r . -d destination
   rebasing 3:1e9a3c00cbe9 "b" (tip)
   $ hg debugobsolete
-  .* {'operation': 'amend', 'user': 'test'} (re)
-  .* {'operation': 'rebase', 'user': 'test'} (re)
+  .* {'ef1': '40', 'operation': 'amend', 'user': 'test'} (re)
+  .* {'ef1': '36', 'operation': 'rebase', 'user': 'test'} (re)
