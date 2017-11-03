@@ -237,7 +237,7 @@ def do_rage(args):
 
 
 def do_stats(args):
-    stats_mod.do_stat_general(args)
+    stats_mod.do_stats_general(args)
     return 0
 
 

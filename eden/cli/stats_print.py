@@ -69,16 +69,18 @@ def write_latency_table(table, out: TextIO) -> None:
 
 
 def write_table(table, heading: str, out: TextIO) -> None:
-    format_str = '{:<18}{:>15}{:>15}{:>15}{:>15}\n'
+    key_width = max([len(heading)] + list(map(len, table.keys()))) + 2
+
+    format_str = '{:<{}}{:>15}{:>15}{:>15}{:>15}\n'
     out.write(
         format_str.format(
-            heading, 'Last Minute', 'Last 10m', 'Last Hour', 'All Time'
+            heading, key_width, 'Last Minute', 'Last 10m', 'Last Hour', 'All Time'
         )
     )
-    border = '-' * 80
+    border = '-' * (key_width + 60)
     out.write(border + '\n')
     for key in table:
         value = table[key]
         out.write(
-            format_str.format(key, value[0], value[1], value[2], value[3])
+            format_str.format(key, key_width, value[0], value[1], value[2], value[3])
         )

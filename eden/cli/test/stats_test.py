@@ -15,6 +15,8 @@ import unittest
 
 
 class StatsTest(unittest.TestCase):
+    maxDiff = None
+
     def test_print_heading(self):
         expected_output = (
             '                                   **********                      '
@@ -55,7 +57,7 @@ class StatsTest(unittest.TestCase):
         )
         out = StringIO()
         stats_print.write_mem_status_table(dictionary, out)
-        self.assertEqual(out.getvalue(), expected_output)
+        self.assertEqual(expected_output, out.getvalue())
 
     def test_print_table(self):
         table = {
@@ -65,13 +67,28 @@ class StatsTest(unittest.TestCase):
             'key4': [13, 14, 15, 16]
         }
         expected_output = (
-            'SystemCall            Last Minute       Last 10m      Last Hour       All Time\n'
-            '--------------------------------------------------------------------------------\n'
-            'key1                            1              2              3              4\n'
-            'key2                            5              6              7              8\n'
-            'key3                            9             10             11             12\n'
-            'key4                           13             14             15             16\n'
+            'SystemCall      Last Minute       Last 10m      Last Hour       All Time\n'
+            '------------------------------------------------------------------------\n'
+            'key1                      1              2              3              4\n'
+            'key2                      5              6              7              8\n'
+            'key3                      9             10             11             12\n'
+            'key4                     13             14             15             16\n'
         )
         out = StringIO()
         stats_print.write_table(table, 'SystemCall', out)
+        self.assertEqual(expected_output, out.getvalue())
+
+    def test_print_table_with_shorter_header_and_key_column(self):
+        table = {
+            'key': [1, 2, 3, 4],
+        }
+        # Verifies the width of the first column depends on the header's and
+        # key's lengths.
+        expected_output = (
+            'SC       Last Minute       Last 10m      Last Hour       All Time\n'
+            '-----------------------------------------------------------------\n'
+            'key                1              2              3              4\n'
+        )
+        out = StringIO()
+        stats_print.write_table(table, 'SC', out)
         self.assertEqual(expected_output, out.getvalue())
