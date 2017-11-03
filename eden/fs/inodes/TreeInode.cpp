@@ -770,6 +770,13 @@ FileInodePtr TreeInode::symlink(
 
     folly::File file = getOverlay()->createOverlayFile(childNumber);
 
+    SCOPE_FAIL {
+      // If an exception is thrown, remove the in-progress file from the
+      // overlay.
+      auto filePath = getOverlay()->getFilePath(childNumber);
+      ::unlink(filePath.c_str());
+    };
+
     auto wrote = folly::writeNoInt(
         file.fd(), symlinkTarget.data(), symlinkTarget.size());
 
