@@ -12,11 +12,12 @@ Set up repo
   $ hg add base
   $ hg commit -m "base"
 
-Make a dir named b that contains a file
+Make a dir named b that contains a file, and a file named d
 
   $ mkdir -p b
   $ echo c1 > b/c
-  $ hg add b/c
+  $ echo d1 > d
+  $ hg add b/c d
   $ hg commit -m "c1"
   $ hg bookmark c1
 
@@ -30,15 +31,17 @@ Peform an update that causes b/c to be backed up
   b/c: replacing untracked file
   getting b/c
   creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting d
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ test -f .hg/origbackups/b/c
 
-Make a file named b
+Make files named b and d
 
   $ hg up -q 0
   $ echo b1 > b
-  $ hg add b
+  $ echo d2 > d
+  $ hg add b d
   $ hg commit -m b1
   created new head
   $ hg bookmark b1
@@ -52,7 +55,8 @@ Perform an update that causes b to be backed up - it should replace the backup b
   b: replacing untracked file
   getting b
   removing conflicting directory: $TESTTMP/repo/.hg/origbackups/b (glob)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting d
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
   $ test -f .hg/origbackups/b
 
@@ -67,40 +71,54 @@ Perform an update the causes b/c to be backed up again - it should replace the b
   getting b/c
   creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
   removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting d
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ test -d .hg/origbackups/b
 
-Cause a symlink to be backed up that points to a valid location from the backup dir
+Cause two symlinks to be backed up that points to a valid location from the backup dir
 
   $ hg up -q 0
   $ mkdir ../sym-link-target
 #if symlink
   $ ln -s ../../../sym-link-target b
+  $ ln -s ../../../sym-link-target d
 #else
-  $ touch b
+  $ touch b d
 #endif
   $ hg up b1
   b: replacing untracked file
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  d: replacing untracked file
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
 #if symlink
   $ readlink.py .hg/origbackups/b
   .hg/origbackups/b -> ../../../sym-link-target
 #endif
 
-Perform an update that causes b/c to be backed up again - it should not go into the target dir
+Perform an update that causes b/c and d to be backed up again - b/c should not go into the target dir
 
   $ hg up -q 0
   $ mkdir b
   $ echo c4 > b/c
+  $ echo d3 > d
   $ hg up --verbose c1
   resolving manifests
   b/c: replacing untracked file
+  d: replacing untracked file
   getting b/c
   creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
   removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting d
+  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/d (glob)
+  abort: None
+  [255]
+
+Workaround issue by deleting d:
+
+  $ rm d
+  $ hg up c1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ cat .hg/origbackups/b/c
   c4
