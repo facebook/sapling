@@ -364,10 +364,12 @@ class localrepository(object):
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
-        # These auditor are not used by the vfs,
-        # only used when writing this comment: basectx.match
+        # This is only used by context.workingctx.match in order to
+        # detect files in subrepos.
         self.auditor = pathutil.pathauditor(
             self.root, callback=self._checknested)
+        # This is only used by context.basectx.match in order to detect
+        # files in subrepos.
         self.nofsauditor = pathutil.pathauditor(
             self.root, callback=self._checknested, realfs=False, cached=True)
         self.baseui = baseui
