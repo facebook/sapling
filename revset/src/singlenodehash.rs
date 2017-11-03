@@ -11,6 +11,7 @@ use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
 use std::boxed::Box;
 
+use NodeStream;
 use errors::*;
 
 pub struct SingleNodeHash {
@@ -34,6 +35,10 @@ impl SingleNodeHash {
         SingleNodeHash {
             node: Box::new(future.into_stream()),
         }
+    }
+
+    pub fn boxed(self) -> Box<NodeStream> {
+        Box::new(self)
     }
 }
 
@@ -72,7 +77,7 @@ mod test {
             vec![
                 string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
             ].into_iter(),
-            Box::new(nodestream),
+            nodestream.boxed(),
         );
     }
 

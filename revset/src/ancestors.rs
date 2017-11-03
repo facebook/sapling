@@ -82,6 +82,10 @@ where
             drain: node_set.into_iter(),
         }
     }
+
+    pub fn boxed(self) -> Box<NodeStream> {
+        Box::new(self)
+    }
 }
 
 impl<R> Stream for AncestorsNodeStream<R>
@@ -149,15 +153,9 @@ where
 {
     let nodes_iter = nodes.into_iter().map({
         let repo_generation = repo_generation.clone();
-        move |node| {
-            Box::new(AncestorsNodeStream::new(
-                repo,
-                repo_generation.clone(),
-                node,
-            )) as Box<NodeStream>
-        }
+        move |node| AncestorsNodeStream::new(repo, repo_generation.clone(), node).boxed()
     });
-    Box::new(IntersectNodeStream::new(repo, repo_generation, nodes_iter))
+    IntersectNodeStream::new(repo, repo_generation, nodes_iter).boxed()
 }
 
 pub fn greatest_common_ancestor<I, R>(
@@ -186,11 +184,11 @@ mod test {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(AncestorsNodeStream::new(
+        let nodestream = AncestorsNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -214,11 +212,11 @@ mod test {
         let repo = Arc::new(merge_uneven::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(AncestorsNodeStream::new(
+        let nodestream = AncestorsNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -247,11 +245,11 @@ mod test {
         let repo = Arc::new(merge_uneven::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(AncestorsNodeStream::new(
+        let nodestream = AncestorsNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -272,11 +270,11 @@ mod test {
         let repo = Arc::new(unshared_merge_uneven::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(AncestorsNodeStream::new(
+        let nodestream = AncestorsNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,

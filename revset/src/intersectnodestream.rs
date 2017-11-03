@@ -50,6 +50,10 @@ impl IntersectNodeStream {
         }
     }
 
+    pub fn boxed(self) -> Box<NodeStream> {
+        Box::new(self)
+    }
+
     fn update_current_generation(&mut self) {
         if all_inputs_ready(&self.inputs) {
             self.current_generation = self.inputs
@@ -175,14 +179,11 @@ mod test {
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
-            Box::new(SingleNodeHash::new(head_hash.clone(), &repo)),
+            SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
+            SingleNodeHash::new(head_hash.clone(), &repo).boxed(),
         ];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(repo_generation, &repo, vec![head_hash.clone()], nodestream);
     }
@@ -194,24 +195,21 @@ mod test {
 
         // Note that these are *not* in generation order deliberately.
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
@@ -222,24 +220,21 @@ mod test {
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -257,34 +252,28 @@ mod test {
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
+            ).boxed(),
         ];
 
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         let inputs: Vec<Box<NodeStream>> = vec![
             nodestream,
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -302,51 +291,42 @@ mod test {
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
+            ).boxed(),
         ];
 
-        let nodestream = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         // This set has a different node sequence, so that we can demonstrate that we skip nodes
         // when they're not going to contribute.
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("3c15267ebf11807f3d772eb891272b911ec68759"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
                 &repo,
-            )),
+            ).boxed(),
         ];
 
-        let nodestream2 = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream2 =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         let inputs: Vec<Box<NodeStream>> = vec![nodestream, nodestream2];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -366,14 +346,11 @@ mod test {
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
-            Box::new(SingleNodeHash::new(nodehash.clone(), &repo)),
+            SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+            SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
         ];
-        let mut nodestream = spawn(Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation,
-            inputs.into_iter(),
-        )));
+        let mut nodestream =
+            spawn(IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed());
 
         assert!(
             if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
@@ -391,11 +368,8 @@ mod test {
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
         assert_node_sequence(repo_generation, &repo, vec![], nodestream);
     }
 
@@ -410,11 +384,8 @@ mod test {
                 poll_count: repeats,
             }),
         ];
-        let mut nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation,
-            inputs.into_iter(),
-        ));
+        let mut nodestream =
+            IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed();
 
         // Keep polling until we should be done.
         for _ in 0..repeats + 1 {
@@ -437,60 +408,51 @@ mod test {
 
         // Post-merge, merge, and both unshared branches
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("cc7f14bc631bca43eaa32c25b04a638d54d10b70"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("d592490c4386cdb3373dd93af04d563de199b2fb"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("33fb49d8a47b29290f5163e30b294339c89505a2"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let left_nodestream = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let left_nodestream =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         // Four commits from one branch
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let right_nodestream = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let right_nodestream =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -509,60 +471,51 @@ mod test {
 
         // Post-merge, merge, and both unshared branches
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("ec27ab4e7aeb7088e8a0234f712af44fb7b43a46"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("9c6dd4e2c2f43c89613b094efb426cc42afdee2a"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("64011f64aaf9c2ad2e674f57c033987da4016f51"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let left_nodestream = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let left_nodestream =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         // Four commits from one branch
         let inputs: Vec<Box<NodeStream>> = vec![
-            Box::new(SingleNodeHash::new(
+            SingleNodeHash::new(
                 string_to_nodehash("03b0589d9788870817d03ce7b87516648ed5b33a"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("2fa8b4ee6803a18db4649a3843a723ef1dfe852b"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("0b94a2881dda90f0d64db5fae3ee5695a38e7c8f"),
                 &repo,
-            )),
-            Box::new(SingleNodeHash::new(
+            ).boxed(),
+            SingleNodeHash::new(
                 string_to_nodehash("f61fdc0ddafd63503dcd8eed8994ec685bfc8941"),
                 &repo,
-            )),
+            ).boxed(),
         ];
-        let right_nodestream = Box::new(UnionNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let right_nodestream =
+            UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         let inputs: Vec<Box<NodeStream>> = vec![left_nodestream, right_nodestream];
-        let nodestream = Box::new(IntersectNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            inputs.into_iter(),
-        ));
+        let nodestream =
+            IntersectNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed();
 
         assert_node_sequence(
             repo_generation,

@@ -40,6 +40,10 @@ impl ValidateNodeStream {
             seen_hashes: HashSet::new(),
         }
     }
+
+    pub fn boxed(self) -> Box<NodeStream> {
+        Box::new(self)
+    }
 }
 
 impl Stream for ValidateNodeStream {
@@ -91,11 +95,8 @@ mod test {
 
         let nodestream = SingleNodeHash::new(head_hash, &repo);
 
-        let nodestream = Box::new(ValidateNodeStream::new(
-            Box::new(nodestream),
-            &repo,
-            repo_generation.clone(),
-        ));
+        let nodestream =
+            ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation.clone()).boxed();
         assert_node_sequence(repo_generation, &repo, vec![head_hash], nodestream);
     }
 
@@ -105,13 +106,13 @@ mod test {
         let repeats = 10;
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
-        let mut nodestream = Box::new(ValidateNodeStream::new(
+        let mut nodestream = ValidateNodeStream::new(
             Box::new(NotReadyEmptyStream {
                 poll_count: repeats,
             }),
             &repo,
             repo_generation,
-        ));
+        ).boxed();
 
         // Keep polling until we should be done.
         for _ in 0..repeats + 1 {
@@ -137,11 +138,8 @@ mod test {
         let nodestream =
             SingleNodeHash::new(head_hash, &repo).chain(SingleNodeHash::new(head_hash, &repo));
 
-        let mut nodestream = Box::new(ValidateNodeStream::new(
-            Box::new(nodestream),
-            &repo,
-            repo_generation,
-        ));
+        let mut nodestream =
+            ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation).boxed();
 
         loop {
             match nodestream.poll() {
@@ -165,11 +163,8 @@ mod test {
             &repo,
         ));
 
-        let mut nodestream = Box::new(ValidateNodeStream::new(
-            Box::new(nodestream),
-            &repo,
-            repo_generation,
-        ));
+        let mut nodestream =
+            ValidateNodeStream::new(Box::new(nodestream), &repo, repo_generation).boxed();
 
         loop {
             match nodestream.poll() {

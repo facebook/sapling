@@ -17,6 +17,7 @@ use futures::stream::{self, iter_ok, Stream};
 use mercurial_types::{NodeHash, Repo};
 use repoinfo::{Generation, RepoGenCache};
 
+use NodeStream;
 use errors::*;
 
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -135,6 +136,10 @@ where
         }
     }
 
+    pub fn boxed(self) -> Box<NodeStream> {
+        Box::new(self)
+    }
+
     fn build_output_nodes(&mut self, start_generation: Generation) {
         // We've been walking backwards from the end point, storing the nodes we see.
         // Now walk forward from the start point, looking at children only. These are
@@ -162,7 +167,6 @@ where
             }
         }
         self.output_nodes = Some(output_nodes);
-        println!("{:?}", self.output_nodes);
     }
 }
 
@@ -254,12 +258,12 @@ mod test {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -280,12 +284,12 @@ mod test {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
             string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -303,12 +307,12 @@ mod test {
         let repo = Arc::new(linear::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
             string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -326,12 +330,12 @@ mod test {
         let repo_generation = RepoGenCache::new(10);
 
         // These are swapped, so won't find anything
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
             string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-        ));
+        ).boxed();
 
         assert_node_sequence(repo_generation, &repo, vec![], nodestream)
     }
@@ -341,12 +345,12 @@ mod test {
         let repo = Arc::new(merge_uneven::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
             string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,
@@ -365,12 +369,12 @@ mod test {
         let repo = Arc::new(merge_uneven::getrepo());
         let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = Box::new(RangeNodeStream::new(
+        let nodestream = RangeNodeStream::new(
             &repo,
             repo_generation.clone(),
             string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
             string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-        ));
+        ).boxed();
 
         assert_node_sequence(
             repo_generation,

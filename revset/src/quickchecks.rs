@@ -112,44 +112,37 @@ impl RevsetSpec {
     {
         let mut output: Vec<Box<NodeStream>> = Vec::with_capacity(self.rp_entries.len());
         for entry in self.rp_entries.iter() {
-            let next_node = Box::new(ValidateNodeStream::new(
+            let next_node = ValidateNodeStream::new(
                 match entry {
                     &RevsetEntry::SingleNode(None) => panic!("You need to add_hashes first!"),
                     &RevsetEntry::SingleNode(Some(hash)) => {
-                        Box::new(SingleNodeHash::new(hash, &*repo.clone()))
+                        SingleNodeHash::new(hash, &*repo.clone()).boxed()
                     }
                     &RevsetEntry::SetDifference => {
                         let keep = output.pop().expect("No keep for setdifference");
                         let remove = output.pop().expect("No remove for setdifference");
-                        Box::new(SetDifferenceNodeStream::new(
+                        SetDifferenceNodeStream::new(
                             &repo.clone(),
                             repo_generation.clone(),
                             keep,
                             remove,
-                        ))
+                        ).boxed()
                     }
                     &RevsetEntry::Union(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        Box::new(UnionNodeStream::new(
-                            &repo.clone(),
-                            repo_generation.clone(),
-                            inputs,
-                        ))
+                        UnionNodeStream::new(&repo.clone(), repo_generation.clone(), inputs).boxed()
                     }
                     &RevsetEntry::Intersect(size) => {
                         let idx = output.len() - size;
                         let inputs = output.split_off(idx);
-                        Box::new(IntersectNodeStream::new(
-                            &repo.clone(),
-                            repo_generation.clone(),
-                            inputs,
-                        ))
+                        IntersectNodeStream::new(&repo.clone(), repo_generation.clone(), inputs)
+                            .boxed()
                     }
                 },
                 &repo.clone(),
                 repo_generation.clone(),
-            ));
+            ).boxed();
             output.push(next_node);
         }
         assert!(
