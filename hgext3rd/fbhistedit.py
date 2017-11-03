@@ -9,6 +9,7 @@
 Adds a s/stop verb to histedit to stop after a changeset was picked.
 """
 
+import json
 from pipes import quote
 
 from mercurial.i18n import _
@@ -196,6 +197,31 @@ def _extend_histedit(ui):
     options.append(('', 'show-plan', False, _('show remaining actions list')))
 
     extensions.wrapfunction(histedit, '_histedit', _histedit)
+    extensions.wrapfunction(histedit, 'parserules', parserules)
+
+def parserules(orig, rules, state):
+    try:
+        rules = _parsejsonrules(rules, state)
+    except ValueError:
+        pass
+    return orig(rules, state)
+
+def _parsejsonrules(rules, state):
+    jsondata = json.loads(rules)
+    parsedrules = ''
+    try:
+        for entry in jsondata['histedit']:
+            if entry['action'] in set(['exec', 'execr']):
+                rest = entry['command']
+            else:
+                rest = entry['node']
+            parsedrules += (entry['action'] + ' ' + rest + '\n')
+    except KeyError:
+        state.repo.ui.status(_("invalid JSON format, falling back "
+                               "to normal parsing\n"))
+        return rules
+
+    return parsedrules
 
 goalretry = 'retry'
 goalshowplan = 'show-plan'
