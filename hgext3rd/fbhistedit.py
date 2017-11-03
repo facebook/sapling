@@ -11,19 +11,21 @@ Adds a s/stop verb to histedit to stop after a changeset was picked.
 
 from pipes import quote
 
-from mercurial import cmdutil
-from mercurial import error
-from mercurial import encoding
-from mercurial import extensions
-from mercurial import hg
-from mercurial import lock
-from mercurial import merge as mergemod
-from mercurial import mergeutil
-from mercurial import node
-from mercurial import pycompat
-from mercurial import registrar
-from mercurial import scmutil
 from mercurial.i18n import _
+from mercurial import (
+    cmdutil,
+    error,
+    encoding,
+    extensions,
+    hg,
+    lock,
+    merge as mergemod,
+    mergeutil,
+    node,
+    pycompat,
+    registrar,
+    scmutil,
+)
 
 cmdtable = {}
 command = registrar.command(cmdtable)
