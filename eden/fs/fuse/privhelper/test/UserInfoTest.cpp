@@ -121,5 +121,5 @@ TEST(UserInfo, lookup) {
     // but we can't confirm their correctness.
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

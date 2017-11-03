@@ -36,7 +36,7 @@ std::string fgetxattr(int fd, folly::StringPiece name) {
         0, // position
         0 // options
 #endif
-        );
+    );
     if (size != -1) {
       result.resize(size);
       return result;
@@ -59,7 +59,7 @@ std::string fgetxattr(int fd, folly::StringPiece name) {
         0, // position
         0 // options
 #endif
-        );
+    );
     if (size < 0) {
       folly::throwSystemError("fgetxattr to query the size failed");
     }
@@ -85,5 +85,5 @@ void fsetxattr(int fd, folly::StringPiece name, folly::StringPiece value) {
       0 // allow create and replace
       ));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

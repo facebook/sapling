@@ -82,5 +82,5 @@ class Journal {
   /** The subscribers */
   std::unordered_map<uint64_t, folly::Function<void()>> subscribers_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

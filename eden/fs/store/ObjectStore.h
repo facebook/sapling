@@ -110,5 +110,5 @@ class ObjectStore : public IObjectStore {
    */
   std::shared_ptr<BackingStore> backingStore_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

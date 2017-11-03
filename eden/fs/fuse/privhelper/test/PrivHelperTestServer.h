@@ -53,6 +53,6 @@ class PrivHelperTestServer : public PrivHelperServer {
       const std::string pathToMarkerFile,
       const std::string contents) const;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

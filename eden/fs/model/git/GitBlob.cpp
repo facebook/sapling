@@ -60,5 +60,5 @@ std::unique_ptr<Blob> deserializeGitBlob(const Hash& hash, const IOBuf* data) {
 
   return std::make_unique<Blob>(hash, std::move(contents));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

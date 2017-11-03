@@ -69,5 +69,5 @@ class GitTreeSerializer {
   folly::IOBuf buf_;
   folly::io::Appender appender_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

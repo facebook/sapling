@@ -25,9 +25,9 @@
 
 using namespace facebook::eden;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
+using folly::makeFuture;
 using std::string;
 using testing::UnorderedElementsAre;
 

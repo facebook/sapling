@@ -19,5 +19,5 @@ bool operator==(const Tree& tree1, const Tree& tree2) {
 bool operator!=(const Tree& tree1, const Tree& tree2) {
   return !(tree1 == tree2);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -102,5 +102,5 @@ class TreeEntry {
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2);
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2);
-}
-}
+} // namespace eden
+} // namespace facebook

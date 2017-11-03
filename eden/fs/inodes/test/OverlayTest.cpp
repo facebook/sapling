@@ -7,10 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/Overlay.h"
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -22,8 +22,8 @@
 
 using namespace facebook::eden;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
+using folly::makeFuture;
 using std::string;
 
 class OverlayTest : public ::testing::Test {

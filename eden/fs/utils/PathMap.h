@@ -132,18 +132,18 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>, Allocator> {
 
   // inherit these methods from the underlying vector.
   using Vector::begin;
-  using Vector::end;
   using Vector::cbegin;
   using Vector::cend;
+  using Vector::clear;
   using Vector::crbegin;
   using Vector::crend;
+  using Vector::empty;
+  using Vector::end;
+  using Vector::erase;
+  using Vector::max_size;
   using Vector::rbegin;
   using Vector::rend;
-  using Vector::empty;
   using Vector::size;
-  using Vector::max_size;
-  using Vector::clear;
-  using Vector::erase;
 
   // Swap contents with another map.
   void swap(PathMap& other) noexcept {
@@ -294,5 +294,5 @@ bool operator!=(const PathMap<V, K, A>& lhs, const PathMap<V, K, A>& rhs) {
   const folly::fbvector<std::pair<K, V>, A>& vector = lhs;
   return vector != rhs;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

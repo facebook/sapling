@@ -7,17 +7,17 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/model/git/GitTree.h"
 #include <folly/String.h>
 #include <gtest/gtest.h>
 #include <string>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/model/git/GitTree.h"
 
 using namespace facebook::eden;
-using folly::StringPiece;
 using folly::IOBuf;
+using folly::StringPiece;
 using folly::io::Appender;
 using std::string;
 

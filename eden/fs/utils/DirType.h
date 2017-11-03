@@ -48,5 +48,5 @@ inline mode_t dtype_to_mode(dtype_t dt) {
 inline dtype_t mode_to_dtype(mode_t mode) {
   return static_cast<dtype_t>(IFTODT(mode));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

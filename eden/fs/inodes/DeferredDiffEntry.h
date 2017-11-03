@@ -17,7 +17,7 @@ namespace folly {
 template <typename T>
 class Future;
 class Unit;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {
@@ -104,5 +104,5 @@ class DeferredDiffEntry {
   const DiffContext* const context_;
   RelativePath const path_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

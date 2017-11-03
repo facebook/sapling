@@ -97,5 +97,5 @@ class ParentInodeInfo {
   bool isUnlinked_;
   folly::Synchronized<TreeInode::Dir>::LockedPtr parentContents_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -18,7 +18,7 @@ void freeString(void* /* buffer */, void* userData) {
   auto str = static_cast<std::string*>(userData);
   delete str;
 }
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -49,5 +49,5 @@ void StoreResult::throwInvalidError() const {
   // Maybe we should define our own more specific error type in the future
   throw std::domain_error("value not present in store");
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

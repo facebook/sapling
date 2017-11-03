@@ -7,12 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/model/git/GitBlob.h"
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <gtest/gtest.h>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/model/git/GitBlob.h"
 
 using facebook::eden::Hash;
 using folly::IOBuf;

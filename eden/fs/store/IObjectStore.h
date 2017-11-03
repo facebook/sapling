@@ -39,5 +39,5 @@ class IObjectStore {
       const Hash& commitID) const = 0;
   virtual folly::Future<BlobMetadata> getBlobMetadata(const Hash& id) const = 0;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

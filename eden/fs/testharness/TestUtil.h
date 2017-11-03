@@ -23,5 +23,5 @@ class Hash;
  * in which case it will be sign-extended to 40 bytes.
  */
 Hash makeTestHash(folly::StringPiece value);
-}
-}
+} // namespace eden
+} // namespace facebook

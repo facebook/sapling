@@ -45,5 +45,5 @@ class InodeDiffCallback {
       RelativePathPiece path,
       const folly::exception_wrapper& ew) = 0;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

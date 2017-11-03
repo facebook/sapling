@@ -1468,7 +1468,7 @@ template <typename A, typename String>
 void toAppend(const detail::AbsolutePathBase<A>& a, String* result) {
   toAppend(a.stringPiece(), result);
 }
-}
+} // namespace detail
 
 // I'm not really a fan of operator overloading, but these
 // are reasonably clear in intent; the `+` operator can be used
@@ -1526,7 +1526,7 @@ RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
     return RelativePathPiece();
   }
 }
-}
+} // namespace detail
 
 /**
  * Get the current working directory, as an AbsolutePath.
@@ -1580,8 +1580,8 @@ typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 realpath(const T& path) {
   return realpath(path.c_str());
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook
 
 namespace std {
 /* Allow std::hash to operate on these types */
@@ -1609,7 +1609,7 @@ struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
     return facebook::eden::detail::hash_value(s);
   }
 };
-}
+} // namespace std
 
 namespace folly {
 /*
@@ -1649,4 +1649,4 @@ class FormatValue<facebook::eden::detail::AbsolutePathBase<Storage>>
   explicit FormatValue(const Param& val)
       : FormatValue<StringPiece>(val.stringPiece()) {}
 };
-}
+} // namespace folly

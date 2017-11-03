@@ -62,5 +62,5 @@ void ScopedEnvVar::set(folly::StringPiece value) {
   folly::checkUnixError(
       rc, "failed to set environment variable ", name_.value());
 }
-}
-}
+} // namespace eden
+} // namespace facebook

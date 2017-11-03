@@ -28,5 +28,5 @@ class EmptyBackingStore : public BackingStore {
   folly::Future<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

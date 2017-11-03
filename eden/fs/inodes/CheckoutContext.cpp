@@ -96,5 +96,5 @@ void CheckoutContext::addError(
   conflict.message = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

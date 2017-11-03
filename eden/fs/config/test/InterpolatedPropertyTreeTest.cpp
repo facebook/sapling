@@ -7,10 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/config/InterpolatedPropertyTree.h"
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
-#include "eden/fs/config/InterpolatedPropertyTree.h"
 
 namespace {
 using folly::test::TemporaryDirectory;
@@ -120,8 +120,8 @@ TEST_F(InterpTest, testMerge) {
   EXPECT_EQ("value", tree.get("section", "name", "nope"));
 
   // A function that prevents merging a repo stanza over a pre-existing one
-  auto accept = [](
-      const InterpolatedPropertyTree& ipt, folly::StringPiece section) {
+  auto accept = [](const InterpolatedPropertyTree& ipt,
+                   folly::StringPiece section) {
     if (section.startsWith("repo ") && ipt.hasSection(section)) {
       return InterpolatedPropertyTree::MergeDisposition::SkipAll;
     }
@@ -169,4 +169,4 @@ TEST_F(InterpTest, testMerge) {
       folly::StringKeyedUnorderedMap<std::string>({{"name", "two"}}) ==
       tree.getSection("repo two"));
 }
-}
+} // namespace

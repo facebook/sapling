@@ -33,9 +33,8 @@ class EdenDispatcher : public fusell::Dispatcher {
   void initConnection(fuse_conn_info& conn) override;
 
   folly::Future<Attr> getattr(fuse_ino_t ino) override;
-  folly::Future<Attr> setattr(fuse_ino_t ino,
-                              const struct stat& attr,
-                              int to_set) override;
+  folly::Future<Attr>
+  setattr(fuse_ino_t ino, const struct stat& attr, int to_set) override;
   folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
@@ -43,8 +42,8 @@ class EdenDispatcher : public fusell::Dispatcher {
       fuse_ino_t parent,
       PathComponentPiece name) override;
 
-  folly::Future<folly::Unit> forget(fuse_ino_t ino,
-                                    unsigned long nlookup) override;
+  folly::Future<folly::Unit> forget(fuse_ino_t ino, unsigned long nlookup)
+      override;
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       fuse_ino_t ino,
       const struct fuse_file_info& fi) override;
@@ -93,5 +92,5 @@ class EdenDispatcher : public fusell::Dispatcher {
   // mount_ first.
   InodeMap* const inodeMap_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

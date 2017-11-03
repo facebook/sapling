@@ -297,7 +297,7 @@ folly::Expected<unsigned long, int> getFSID(const char* path) {
   }
   return folly::makeExpected<int>(data.f_fsid);
 }
-}
+} // namespace
 
 void PrivHelperServer::bindUnmount(const char* mountPath) {
   // Check the current filesystem information for this path,
@@ -363,6 +363,6 @@ void PrivHelperServer::run() {
   // Unmount all active mount points
   cleanupMountPoints();
 }
-}
-}
-} // facebook::eden::fusell
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

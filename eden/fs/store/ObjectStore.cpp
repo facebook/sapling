@@ -85,7 +85,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(const Hash& id) const {
 
   // Look in the BackingStore
   return backingStore_->getBlob(id).then(
-      [ localStore = localStore_, id ](std::unique_ptr<Blob> loadedBlob) {
+      [localStore = localStore_, id](std::unique_ptr<Blob> loadedBlob) {
         if (!loadedBlob) {
           XLOG(DBG2) << "unable to find blob " << id;
           // TODO: Perhaps we should do some short-term negative caching?
@@ -129,7 +129,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
   // can query it just for the blob metadata if it supports getting that
   // without retrieving the full blob data.
   return backingStore_->getBlob(id).then(
-      [ localStore = localStore_, id ](std::unique_ptr<Blob> blob) {
+      [localStore = localStore_, id](std::unique_ptr<Blob> blob) {
         if (!blob) {
           // TODO: Perhaps we should do some short-term negative caching?
           throw std::domain_error(
@@ -139,5 +139,5 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(const Hash& id) const {
         return localStore->putBlob(id, blob.get());
       });
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

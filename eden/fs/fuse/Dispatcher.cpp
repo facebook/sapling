@@ -51,7 +51,8 @@ std::shared_ptr<DirHandle> Dispatcher::getDirHandle(uint64_t dh) {
 }
 
 static std::string flagsToLabel(
-    const std::unordered_map<int32_t, const char*>& labels, uint32_t flags) {
+    const std::unordered_map<int32_t, const char*>& labels,
+    uint32_t flags) {
   std::vector<const char*> bits;
   for (auto& it : labels) {
     if (it.first == 0) {
@@ -97,12 +98,13 @@ static std::unordered_map<int32_t, const char*> capsLabels = {
 void Dispatcher::disp_init(void* userdata, struct fuse_conn_info* conn) {
   auto disp = reinterpret_cast<Dispatcher*>(userdata);
 
-  conn->want |= conn->capable & (
+  conn->want |=
+      conn->capable &
+      (
 #ifdef FUSE_CAP_IOCTL_DIR
-                                    FUSE_CAP_IOCTL_DIR |
+          FUSE_CAP_IOCTL_DIR |
 #endif
-                                    FUSE_CAP_ATOMIC_O_TRUNC |
-                                    FUSE_CAP_BIG_WRITES | FUSE_CAP_ASYNC_READ);
+          FUSE_CAP_ATOMIC_O_TRUNC | FUSE_CAP_BIG_WRITES | FUSE_CAP_ASYNC_READ);
 
   disp->initConnection(*conn);
   disp->connInfo_ = *conn;
@@ -163,7 +165,7 @@ disp_forget_multi(fuse_req_t req, size_t count, fuse_forget_data* forgets) {
   auto* dispatcher = request.getDispatcher();
   request.catchErrors(
       request.startRequest(dispatcher->getStats(), &EdenStats::forgetmulti)
-          .then([ =, &request, forget = std::move(forget) ] {
+          .then([=, &request, forget = std::move(forget)] {
             for (auto& f : forget) {
               dispatcher->forget(f.ino, f.nlookup);
             }
@@ -177,16 +179,15 @@ folly::Future<Dispatcher::Attr> Dispatcher::getattr(fuse_ino_t /*ino*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
-static void disp_getattr(fuse_req_t req,
-                         fuse_ino_t ino,
-                         struct fuse_file_info* fi) {
+static void
+disp_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
 
   if (fi) {
     request.setRequestFuture(
         request.startRequest(dispatcher->getStats(), &EdenStats::getattr)
-            .then([ =, &request, fi = *fi ] {
+            .then([=, &request, fi = *fi] {
               return dispatcher->getGenericFileHandle(fi.fh)->getattr();
             })
             .then([](Dispatcher::Attr&& attr) {
@@ -210,18 +211,19 @@ folly::Future<Dispatcher::Attr> Dispatcher::setattr(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_setattr(fuse_req_t req,
-                         fuse_ino_t ino,
-                         struct stat* attr,
-                         int to_set,
-                         struct fuse_file_info* fi) {
+static void disp_setattr(
+    fuse_req_t req,
+    fuse_ino_t ino,
+    struct stat* attr,
+    int to_set,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
 
   if (fi) {
     request.setRequestFuture(
         request.startRequest(dispatcher->getStats(), &EdenStats::setattr)
-            .then([ =, &request, fi = *fi ]() {
+            .then([=, &request, fi = *fi]() {
               return dispatcher->getGenericFileHandle(fi.fh)->setattr(
                   *attr, to_set);
             })
@@ -264,11 +266,12 @@ folly::Future<fuse_entry_param> Dispatcher::mknod(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_mknod(fuse_req_t req,
-                       fuse_ino_t parent,
-                       const char* name,
-                       mode_t mode,
-                       dev_t rdev) {
+static void disp_mknod(
+    fuse_req_t req,
+    fuse_ino_t parent,
+    const char* name,
+    mode_t mode,
+    dev_t rdev) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -283,14 +286,12 @@ static void disp_mknod(fuse_req_t req,
 }
 
 folly::Future<fuse_entry_param>
-    Dispatcher::mkdir(fuse_ino_t, PathComponentPiece, mode_t) {
+Dispatcher::mkdir(fuse_ino_t, PathComponentPiece, mode_t) {
   FUSELL_NOT_IMPL();
 }
 
-static void disp_mkdir(fuse_req_t req,
-                       fuse_ino_t parent,
-                       const char* name,
-                       mode_t mode) {
+static void
+disp_mkdir(fuse_req_t req, fuse_ino_t parent, const char* name, mode_t mode) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -338,10 +339,11 @@ Dispatcher::symlink(fuse_ino_t, PathComponentPiece, folly::StringPiece) {
   FUSELL_NOT_IMPL();
 }
 
-static void disp_symlink(fuse_req_t req,
-                         const char* link,
-                         fuse_ino_t parent,
-                         const char* name) {
+static void disp_symlink(
+    fuse_req_t req,
+    const char* link,
+    fuse_ino_t parent,
+    const char* name) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -362,36 +364,36 @@ folly::Future<folly::Unit> Dispatcher::rename(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_rename(fuse_req_t req,
-                        fuse_ino_t parent,
-                        const char* name,
-                        fuse_ino_t newparent,
-                        const char* newname) {
+static void disp_rename(
+    fuse_req_t req,
+    fuse_ino_t parent,
+    const char* name,
+    fuse_ino_t newparent,
+    const char* newname) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
-  request.setRequestFuture(request
-                               .startRequest(
-                                   dispatcher->getStats(), &EdenStats::rename)
-                               .then([=, &request] {
-                                 return dispatcher->rename(
-                                     parent,
-                                     PathComponentPiece(name),
-                                     newparent,
-                                     PathComponentPiece(newname));
-                               })
-                               .then(
-                                   []() { RequestData::get().replyError(0); }));
+  request.setRequestFuture(
+      request.startRequest(dispatcher->getStats(), &EdenStats::rename)
+          .then([=, &request] {
+            return dispatcher->rename(
+                parent,
+                PathComponentPiece(name),
+                newparent,
+                PathComponentPiece(newname));
+          })
+          .then([]() { RequestData::get().replyError(0); }));
 }
 
 folly::Future<fuse_entry_param>
-    Dispatcher::link(fuse_ino_t, fuse_ino_t, PathComponentPiece) {
+Dispatcher::link(fuse_ino_t, fuse_ino_t, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-static void disp_link(fuse_req_t req,
-                      fuse_ino_t ino,
-                      fuse_ino_t newparent,
-                      const char* newname) {
+static void disp_link(
+    fuse_req_t req,
+    fuse_ino_t ino,
+    fuse_ino_t newparent,
+    const char* newname) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -411,16 +413,15 @@ folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_open(fuse_req_t req,
-                      fuse_ino_t ino,
-                      struct fuse_file_info* fi) {
+static void
+disp_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::open)
-          .then([ =, &request, fi = *fi ] { return dispatcher->open(ino, fi); })
-          .then([ req, dispatcher, orig_info = *fi ](
-              std::shared_ptr<FileHandle> fh) {
+          .then([=, &request, fi = *fi] { return dispatcher->open(ino, fi); })
+          .then([req, dispatcher, orig_info = *fi](
+                    std::shared_ptr<FileHandle> fh) {
             if (!fh) {
               throw std::runtime_error("Dispatcher::open failed to set fh");
             }
@@ -448,7 +449,7 @@ static void disp_read(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::read)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getFileHandle(fi.fh);
             return fh->read(size, off);
           })
@@ -469,7 +470,7 @@ static void disp_write(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::write)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getFileHandle(fi.fh);
 
             return fh->write(folly::StringPiece(buf, size), off);
@@ -483,7 +484,7 @@ disp_flush(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::flush)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getFileHandle(fi.fh);
 
             return fh->flush(fi.lock_owner);
@@ -497,7 +498,7 @@ disp_release(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::release)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             RequestData::get().replyError(0);
           }));
@@ -512,7 +513,7 @@ static void disp_fsync(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::fsync)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getFileHandle(fi.fh);
             return fh->fsync(datasync);
           })
@@ -525,17 +526,15 @@ folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_opendir(fuse_req_t req,
-                         fuse_ino_t ino,
-                         struct fuse_file_info* fi) {
+static void
+disp_opendir(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::opendir)
-          .then([ =, &request, fi = *fi ] {
-            return dispatcher->opendir(ino, fi);
-          })
-          .then([ dispatcher, orig_info = *fi ](std::shared_ptr<DirHandle> dh) {
+          .then(
+              [=, &request, fi = *fi] { return dispatcher->opendir(ino, fi); })
+          .then([dispatcher, orig_info = *fi](std::shared_ptr<DirHandle> dh) {
             if (!dh) {
               throw std::runtime_error("Dispatcher::opendir failed to set dh");
             }
@@ -558,7 +557,7 @@ static void disp_readdir(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::readdir)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto dh = dispatcher->getDirHandle(fi.fh);
             return dh->readdir(DirList(size), off);
           })
@@ -574,7 +573,7 @@ disp_releasedir(fuse_req_t req, fuse_ino_t /*ino*/, struct fuse_file_info* fi) {
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::releasedir)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             dispatcher->getFileHandles().forgetGenericHandle(fi.fh);
             RequestData::get().replyError(0);
           }));
@@ -589,7 +588,7 @@ static void disp_fsyncdir(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::fsyncdir)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto dh = dispatcher->getDirHandle(fi.fh);
             return dh->fsyncdir(datasync);
           })
@@ -625,17 +624,18 @@ folly::Future<folly::Unit> Dispatcher::setxattr(
   FUSELL_NOT_IMPL();
 }
 
-static void disp_setxattr(fuse_req_t req,
-                          fuse_ino_t ino,
-                          const char* name,
-                          const char* value,
-                          size_t size,
-                          int flags
+static void disp_setxattr(
+    fuse_req_t req,
+    fuse_ino_t ino,
+    const char* name,
+    const char* value,
+    size_t size,
+    int flags
 #ifdef __APPLE__
-                          ,
-                          uint32_t position
+    ,
+    uint32_t position
 #endif
-                          ) {
+) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
 
@@ -669,15 +669,16 @@ folly::Future<std::string> Dispatcher::getxattr(
   throwSystemErrorExplicit(kENOATTR);
 }
 
-static void disp_getxattr(fuse_req_t req,
-                          fuse_ino_t ino,
-                          const char* name,
-                          size_t size
+static void disp_getxattr(
+    fuse_req_t req,
+    fuse_ino_t ino,
+    const char* name,
+    size_t size
 #ifdef __APPLE__
-                          ,
-                          uint32_t position
+    ,
+    uint32_t position
 #endif
-                          ) {
+) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
 
@@ -779,20 +780,21 @@ Dispatcher::create(fuse_ino_t, PathComponentPiece, mode_t, int) {
   FUSELL_NOT_IMPL();
 }
 
-static void disp_create(fuse_req_t req,
-                        fuse_ino_t parent,
-                        const char* name,
-                        mode_t mode,
-                        struct fuse_file_info* fi) {
+static void disp_create(
+    fuse_req_t req,
+    fuse_ino_t parent,
+    const char* name,
+    mode_t mode,
+    struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::create)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             return dispatcher->create(
                 parent, PathComponentPiece(name), mode, fi.flags);
           })
-          .then([ dispatcher, orig_info = *fi ](Dispatcher::Create info) {
+          .then([dispatcher, orig_info = *fi](Dispatcher::Create info) {
             fuse_file_info fi = orig_info;
             fi.direct_io = info.fh->usesDirectIO();
             fi.keep_cache = info.fh->preserveCache();
@@ -813,10 +815,8 @@ Dispatcher::bmap(fuse_ino_t /*ino*/, size_t /*blocksize*/, uint64_t /*idx*/) {
   FUSELL_NOT_IMPL();
 }
 
-static void disp_bmap(fuse_req_t req,
-                      fuse_ino_t ino,
-                      size_t blocksize,
-                      uint64_t idx) {
+static void
+disp_bmap(fuse_req_t req, fuse_ino_t ino, size_t blocksize, uint64_t idx) {
   auto& request = RequestData::create(req);
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
@@ -849,13 +849,14 @@ static void disp_ioctl(
 
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::ioctl)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getGenericFileHandle(fi.fh);
 
-            return fh->ioctl(cmd,
-                             arg,
-                             folly::ByteRange((uint8_t*)in_buf, in_bufsz),
-                             out_bufsz);
+            return fh->ioctl(
+                cmd,
+                arg,
+                folly::ByteRange((uint8_t*)in_buf, in_bufsz),
+                out_bufsz);
           })
           .then([](FileHandleBase::Ioctl&& result) {
             auto iov = result.buf.getIov();
@@ -875,7 +876,7 @@ static void disp_poll(
   auto* dispatcher = request.getDispatcher();
   request.setRequestFuture(
       request.startRequest(dispatcher->getStats(), &EdenStats::poll)
-          .then([ =, &request, fi = *fi ] {
+          .then([=, &request, fi = *fi] {
             auto fh = dispatcher->getGenericFileHandle(fi.fh);
 
             std::unique_ptr<PollHandle> poll_handle;
@@ -939,11 +940,13 @@ const fuse_lowlevel_ops dispatcher_ops = {
 #endif
 };
 
-const fuse_conn_info& Dispatcher::getConnInfo() const { return connInfo_; }
+const fuse_conn_info& Dispatcher::getConnInfo() const {
+  return connInfo_;
+}
 
 ThreadLocalEdenStats* Dispatcher::getStats() const {
   return stats_;
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

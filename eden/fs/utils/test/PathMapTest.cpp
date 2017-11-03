@@ -7,12 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include <gtest/gtest.h>
 #include "eden/fs/utils/PathMap.h"
+#include <gtest/gtest.h>
 
-using facebook::eden::PathMap;
 using facebook::eden::PathComponent;
 using facebook::eden::PathComponentPiece;
+using facebook::eden::PathMap;
 
 TEST(PathMap, insert) {
   PathMap<bool> map;

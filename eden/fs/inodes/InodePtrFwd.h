@@ -31,5 +31,5 @@ using DotEdenInodePtr = InodePtrImpl<DotEdenInode>;
 using FileInodePtr = InodePtrImpl<FileInode>;
 using TreeInodePtr = InodePtrImpl<TreeInode>;
 class InodePtr;
-}
-}
+} // namespace eden
+} // namespace facebook

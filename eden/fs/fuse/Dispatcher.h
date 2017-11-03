@@ -29,7 +29,6 @@ namespace fusell {
     folly::throwSystemErrorExplicit(ENOSYS, __PRETTY_FUNCTION__);       \
   } while (0)
 
-
 class Dispatcher;
 class RequestData;
 class FileHandle;
@@ -125,8 +124,9 @@ class Dispatcher {
    * @param ino the inode number
    * @param nlookup the number of lookups to forget
    */
-  virtual folly::Future<folly::Unit> forget(fuse_ino_t ino,
-                                            unsigned long nlookup);
+  virtual folly::Future<folly::Unit> forget(
+      fuse_ino_t ino,
+      unsigned long nlookup);
 
   /**
    * The stat information and the cache TTL for the kernel
@@ -165,9 +165,8 @@ class Dispatcher {
    * Changed in version 2.5:
    *     file information filled in for ftruncate
    */
-  virtual folly::Future<Attr> setattr(fuse_ino_t ino,
-                                      const struct stat& attr,
-                                      int to_set);
+  virtual folly::Future<Attr>
+  setattr(fuse_ino_t ino, const struct stat& attr, int to_set);
 
   /**
    * Read symbolic link
@@ -305,10 +304,11 @@ class Dispatcher {
   /**
    * Set an extended attribute
    */
-  virtual folly::Future<folly::Unit> setxattr(fuse_ino_t ino,
-                                              folly::StringPiece name,
-                                              folly::StringPiece value,
-                                              int flags);
+  virtual folly::Future<folly::Unit> setxattr(
+      fuse_ino_t ino,
+      folly::StringPiece name,
+      folly::StringPiece value,
+      int flags);
   /**
    * Get an extended attribute
    */
@@ -328,8 +328,9 @@ class Dispatcher {
    * @param ino the inode number
    * @param name of the extended attribute
    */
-  virtual folly::Future<folly::Unit> removexattr(fuse_ino_t ino,
-                                                 folly::StringPiece name);
+  virtual folly::Future<folly::Unit> removexattr(
+      fuse_ino_t ino,
+      folly::StringPiece name);
 
   /**
    * Check file access permissions
@@ -386,11 +387,10 @@ class Dispatcher {
    * @param blocksize unit of block index
    * @param idx block index within file
    */
-  virtual folly::Future<uint64_t> bmap(fuse_ino_t ino,
-                                       size_t blocksize,
-                                       uint64_t idx);
+  virtual folly::Future<uint64_t>
+  bmap(fuse_ino_t ino, size_t blocksize, uint64_t idx);
 };
 
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

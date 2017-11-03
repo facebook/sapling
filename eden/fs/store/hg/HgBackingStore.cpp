@@ -77,5 +77,5 @@ unique_ptr<Tree> HgBackingStore::getTreeForCommitImpl(const Hash& commitID) {
 
   return localStore_->getTree(rootTreeHash);
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

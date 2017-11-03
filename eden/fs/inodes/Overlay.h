@@ -139,5 +139,5 @@ class Overlay {
    */
   folly::File infoFile_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

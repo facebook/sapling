@@ -175,5 +175,5 @@ class GitIgnore {
    */
   std::vector<GitIgnorePattern> rules_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

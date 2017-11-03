@@ -171,5 +171,5 @@ std::unique_ptr<JournalDelta> JournalDelta::merge(
 
   return result;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

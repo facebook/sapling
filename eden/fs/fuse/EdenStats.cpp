@@ -25,7 +25,7 @@ constexpr auto kDurations = folly::make_array(
     std::chrono::seconds(600),
     std::chrono::seconds(3600),
     std::chrono::seconds(0));
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -70,6 +70,6 @@ void EdenStats::recordLatency(
   (this->*item)->addValue(now, elapsed.count());
 #endif
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

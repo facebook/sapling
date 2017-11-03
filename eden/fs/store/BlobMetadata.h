@@ -27,5 +27,5 @@ class BlobMetadata {
   Hash sha1;
   uint64_t size;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

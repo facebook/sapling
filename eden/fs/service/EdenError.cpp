@@ -43,5 +43,5 @@ EdenError newEdenError(const folly::exception_wrapper& ew) {
   }
   return err;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -24,8 +24,8 @@
 using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
-using folly::makeFuture;
 using folly::StringPiece;
+using folly::makeFuture;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -46,7 +46,7 @@ void freeBlobIOBufData(void* /*blobData*/, void* blobObject) {
   git_blob* gitBlob = static_cast<git_blob*>(blobObject);
   git_blob_free(gitBlob);
 }
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -208,5 +208,5 @@ Hash GitBackingStore::oid2Hash(const git_oid* oid) {
   ByteRange oidBytes(oid->id, GIT_OID_RAWSZ);
   return Hash(oidBytes);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

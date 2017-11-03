@@ -31,7 +31,7 @@ class TreeInode;
 namespace fusell {
 class InodeBase;
 class MountPoint;
-}
+} // namespace fusell
 
 /**
  * Returns the single-char representation of the status used by `hg status`.
@@ -146,5 +146,5 @@ class Dirstate {
 
   folly::Synchronized<DirstateData> data_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

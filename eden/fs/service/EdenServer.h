@@ -34,7 +34,7 @@ namespace apache {
 namespace thrift {
 class ThriftServer;
 }
-}
+} // namespace apache
 
 namespace folly {
 class EventBase;
@@ -294,5 +294,5 @@ class EdenServer {
    */
   std::shared_ptr<folly::Executor> threadPool_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

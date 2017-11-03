@@ -28,5 +28,5 @@ Hash makeTestHash(folly::StringPiece value) {
       value.size());
   return Hash{folly::StringPiece{folly::range(fullValue)}};
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -758,5 +758,5 @@ class TreeInode : public InodeBase {
 
   folly::Synchronized<Dir> contents_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

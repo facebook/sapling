@@ -15,8 +15,8 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::Hash;
 using facebook::eden::FileType;
+using facebook::eden::Hash;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::Tree;
 using facebook::eden::TreeEntry;
@@ -33,7 +33,7 @@ string testHashHex = folly::to<string>(
     "8badf00d");
 
 Hash testHash(testHashHex);
-}
+} // namespace
 
 TEST(Tree, testGetEntryPtr) {
   uint8_t mode = 0b110;

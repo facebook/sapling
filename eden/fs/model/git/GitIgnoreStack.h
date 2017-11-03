@@ -84,5 +84,5 @@ class GitIgnoreStack {
    */
   const GitIgnoreStack* parent_{nullptr};
 };
-}
-}
+} // namespace eden
+} // namespace facebook

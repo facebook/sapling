@@ -267,8 +267,8 @@ void testCharClass(StringPiece name, int (*libcFn)(int)) {
     // (The libc functions may behave differently for these characters
     // depending on the current locale settings.)
     if (ch == '/' || ch >= 0x80) {
-      EXPECT_FALSE(matcher.match(text)) << "character class \"" << name
-                                        << "\", character " << (int)ch;
+      EXPECT_FALSE(matcher.match(text))
+          << "character class \"" << name << "\", character " << (int)ch;
     } else {
       EXPECT_EQ((bool)libcFn(ch), matcher.match(text))
           << "character class \"" << name << "\", character " << (int)ch;

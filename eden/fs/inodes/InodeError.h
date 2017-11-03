@@ -85,5 +85,5 @@ class InodeError : public std::system_error {
   std::string message_;
   mutable folly::Synchronized<std::string> fullMessage_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

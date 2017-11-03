@@ -23,8 +23,8 @@
 using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
-using folly::makeFuture;
 using folly::StringPiece;
+using folly::makeFuture;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -319,5 +319,5 @@ StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
   }
   return it->second.get();
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

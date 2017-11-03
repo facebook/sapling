@@ -164,5 +164,5 @@ struct FakeBackingStore::TreeEntryData {
 
   TreeEntry entry;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

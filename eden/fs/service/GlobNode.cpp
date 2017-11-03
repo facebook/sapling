@@ -11,14 +11,14 @@
 #include "EdenError.h"
 #include "eden/fs/inodes/TreeInode.h"
 
-using std::string;
-using std::unique_ptr;
-using std::vector;
 using folly::Future;
+using folly::StringPiece;
 using folly::makeFuture;
 using std::make_unique;
-using folly::StringPiece;
+using std::string;
+using std::unique_ptr;
 using std::unordered_set;
+using std::vector;
 
 namespace facebook {
 namespace eden {
@@ -129,18 +129,20 @@ Future<unordered_set<RelativePath>> GlobNode::evaluate(
   std::vector<Future<unordered_set<RelativePath>>> futures;
   for (auto& item : recurse) {
     auto candidateName = rootPath + item.first;
-    futures.emplace_back(root->getOrLoadChildTree(item.first).then([
-      candidateName,
-      node = item.second
-    ](TreeInodePtr dir) { return node->evaluate(candidateName, dir); }));
+    futures.emplace_back(
+        root->getOrLoadChildTree(item.first)
+            .then([candidateName, node = item.second](TreeInodePtr dir) {
+              return node->evaluate(candidateName, dir);
+            }));
   }
-  return folly::collect(futures).then([results = std::move(results)](
-      std::vector<std::unordered_set<RelativePath>> && matchVector) mutable {
-    for (auto& matches : matchVector) {
-      results.insert(matches.begin(), matches.end());
-    }
-    return results;
-  });
+  return folly::collect(futures).then(
+      [results = std::move(results)](
+          std::vector<std::unordered_set<RelativePath>>&& matchVector) mutable {
+        for (auto& matches : matchVector) {
+          results.insert(matches.begin(), matches.end());
+        }
+        return results;
+      });
 }
 
 StringPiece GlobNode::tokenize(StringPiece& pattern, bool* hasSpecials) {
@@ -223,13 +225,14 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponent(
                              }));
   }
 
-  return folly::collect(futures).then([results = std::move(results)](
-      std::vector<std::unordered_set<RelativePath>> && matchVector) mutable {
-    for (auto& matches : matchVector) {
-      results.insert(matches.begin(), matches.end());
-    }
-    return results;
-  });
+  return folly::collect(futures).then(
+      [results = std::move(results)](
+          std::vector<std::unordered_set<RelativePath>>&& matchVector) mutable {
+        for (auto& matches : matchVector) {
+          results.insert(matches.begin(), matches.end());
+        }
+        return results;
+      });
 }
-}
-}
+} // namespace eden
+} // namespace facebook

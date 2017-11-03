@@ -7,11 +7,11 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/fuse/FileHandleMap.h"
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
-#include "eden/fs/fuse/FileHandleMap.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 
 using namespace facebook::eden;
@@ -81,7 +81,7 @@ class FakeFileHandle : public FileHandle {
  private:
   fuse_ino_t inode_;
 };
-}
+} // namespace
 
 FileHandleMapEntry makeEntry(fuse_ino_t inode, uint64_t handleId, bool isDir) {
   FileHandleMapEntry entry;

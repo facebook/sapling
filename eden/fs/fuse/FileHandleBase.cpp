@@ -29,6 +29,6 @@ folly::Future<unsigned> FileHandleBase::poll(
     std::unique_ptr<PollHandle> /*ph*/) {
   FUSELL_NOT_IMPL();
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

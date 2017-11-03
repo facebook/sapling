@@ -27,15 +27,15 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/XAttr.h"
 
-using folly::checkUnixError;
+using folly::ByteRange;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
+using folly::checkUnixError;
+using folly::makeFuture;
 using std::shared_ptr;
 using std::string;
 using std::vector;
-using folly::ByteRange;
 
 namespace facebook {
 namespace eden {
@@ -62,9 +62,7 @@ FileInode::State::State(
     folly::File&& file,
     const timespec& lastCheckoutTime,
     dev_t rdev)
-    : mode(m),
-      rdev(rdev),
-      file(std::move(file)) {
+    : mode(m), rdev(rdev), file(std::move(file)) {
   timeStamps.setTimestampValues(lastCheckoutTime);
 }
 /*
@@ -129,7 +127,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
   }
 
   return materializeForWrite(openFlags).then(
-      [ self = inodePtrFromThis(), attr, to_set ]() {
+      [self = inodePtrFromThis(), attr, to_set]() {
         self->materializeInParent();
 
         auto result =
@@ -185,9 +183,8 @@ folly::Future<std::string> FileInode::readlink() {
   }
 
   // The symlink contents are simply the file contents!
-  return ensureDataLoaded().then([self = inodePtrFromThis()]() {
-    return self->readAll();
-  });
+  return ensureDataLoaded().then(
+      [self = inodePtrFromThis()]() { return self->readAll(); });
 }
 
 void FileInode::fileHandleDidClose() {
@@ -233,10 +230,8 @@ folly::Future<bool> FileInode::isSameAs(const Hash& blobID, mode_t mode) {
     return makeFuture(result.value());
   }
 
-  return getMount()
-      ->getObjectStore()
-      ->getBlobMetadata(blobID)
-      .then([self = inodePtrFromThis()](const BlobMetadata& metadata) {
+  return getMount()->getObjectStore()->getBlobMetadata(blobID).then(
+      [self = inodePtrFromThis()](const BlobMetadata& metadata) {
         return self->getSHA1().value() == metadata.sha1;
       });
 }
@@ -722,5 +717,5 @@ void FileInode::updateOverlayHeader() const {
     Overlay::updateTimestampToHeader(state->file.fd(), state->timeStamps);
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

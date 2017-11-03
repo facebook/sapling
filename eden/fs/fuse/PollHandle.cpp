@@ -26,6 +26,6 @@ void PollHandle::notify() {
   fuse_lowlevel_notify_poll(h_.get());
 #endif
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

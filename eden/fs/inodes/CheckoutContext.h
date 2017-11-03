@@ -21,7 +21,7 @@ class exception_wrapper;
 template <typename T>
 class Future;
 class Unit;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {
@@ -108,5 +108,5 @@ class CheckoutContext {
   // Therefore access to the conflicts list must be synchronized.
   folly::Synchronized<std::vector<CheckoutConflict>> conflicts_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

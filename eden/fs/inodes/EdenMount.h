@@ -31,14 +31,14 @@ class File;
 
 template <typename T>
 class Future;
-}
+} // namespace folly
 
 namespace facebook {
 namespace eden {
 namespace fusell {
 class FuseChannel;
 class MountPoint;
-}
+} // namespace fusell
 
 class BindMount;
 class CheckoutConflict;
@@ -674,5 +674,5 @@ class EdenMountDeleter {
     mount->destroy();
   }
 };
-}
-}
+} // namespace eden
+} // namespace facebook

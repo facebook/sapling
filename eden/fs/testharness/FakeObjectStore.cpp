@@ -93,5 +93,5 @@ Future<BlobMetadata> FakeObjectStore::getBlobMetadata(const Hash& id) const {
   }
   return makeFuture(iter->second);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

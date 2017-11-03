@@ -112,5 +112,5 @@ folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
   inode_->fsync(datasync);
   return folly::Unit{};
 }
-}
-}
+} // namespace eden
+} // namespace facebook

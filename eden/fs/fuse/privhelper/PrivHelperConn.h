@@ -181,6 +181,6 @@ class PrivHelperError : public std::exception {
  private:
   std::string message_;
 };
-}
-}
-} // facebook::eden::fusell
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

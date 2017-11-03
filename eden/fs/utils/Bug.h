@@ -116,5 +116,5 @@ class EdenBugDisabler {
   EdenBugDisabler(const EdenBugDisabler&) = delete;
   EdenBugDisabler operator=(const EdenBugDisabler&) = delete;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

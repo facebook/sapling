@@ -7,11 +7,11 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/DirstatePersistence.h"
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 
 using namespace facebook::eden;

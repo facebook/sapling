@@ -90,7 +90,7 @@ FileInodePtr InodePtr::asFilePtr() const& {
   return asSubclassPtr<FileInodePtr>();
 }
 
-FileInodePtr InodePtr::asFilePtr()&& {
+FileInodePtr InodePtr::asFilePtr() && {
   return extractSubclassPtr<FileInodePtr>();
 }
 
@@ -103,7 +103,7 @@ FileInodePtr InodePtr::asFilePtrOrNull() const& {
                       FileInodePtr::NORMAL_INCREMENT};
 }
 
-FileInodePtr InodePtr::asFilePtrOrNull()&& {
+FileInodePtr InodePtr::asFilePtrOrNull() && {
   return extractSubclassPtrOrNull<FileInodePtr>();
 }
 
@@ -115,7 +115,7 @@ TreeInodePtr InodePtr::asTreePtr() const& {
   return asSubclassPtr<TreeInodePtr>();
 }
 
-TreeInodePtr InodePtr::asTreePtr()&& {
+TreeInodePtr InodePtr::asTreePtr() && {
   return extractSubclassPtr<TreeInodePtr>();
 }
 
@@ -128,7 +128,7 @@ TreeInodePtr InodePtr::asTreePtrOrNull() const& {
                       TreeInodePtr::NORMAL_INCREMENT};
 }
 
-TreeInodePtr InodePtr::asTreePtrOrNull()&& {
+TreeInodePtr InodePtr::asTreePtrOrNull() && {
   return extractSubclassPtrOrNull<TreeInodePtr>();
 }
 
@@ -137,5 +137,5 @@ template class InodePtrImpl<FileInode>;
 template class InodePtrImpl<TreeInode>;
 template FileInodePtr InodePtr::asSubclassPtrOrNull<FileInodePtr>() const&;
 template TreeInodePtr InodePtr::asSubclassPtrOrNull<TreeInodePtr>() const&;
-}
-}
+} // namespace eden
+} // namespace facebook

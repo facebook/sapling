@@ -276,5 +276,5 @@ class FileInode : public InodeBase {
 
   friend class ::facebook::eden::FileHandle;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

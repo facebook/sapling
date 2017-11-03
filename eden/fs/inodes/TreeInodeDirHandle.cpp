@@ -141,5 +141,5 @@ folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::getattr() {
 fuse_ino_t TreeInodeDirHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
-}
-}
+} // namespace eden
+} // namespace facebook

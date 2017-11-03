@@ -139,5 +139,5 @@ class StoreResult {
   // The std::string containing the data
   std::string data_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

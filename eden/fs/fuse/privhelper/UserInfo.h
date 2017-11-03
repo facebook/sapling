@@ -108,5 +108,5 @@ class UserInfo {
   std::string username_;
   AbsolutePath homeDirectory_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

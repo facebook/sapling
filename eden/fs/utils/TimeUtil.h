@@ -42,5 +42,5 @@ inline bool operator==(const timespec& a, const timespec& b) {
 inline bool operator!=(const timespec& a, const timespec& b) {
   return !(b == a);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

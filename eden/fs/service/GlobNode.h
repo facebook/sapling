@@ -91,5 +91,5 @@ class GlobNode {
   // If true, this node is **
   bool alwaysMatch_{false};
 };
-}
-}
+} // namespace eden
+} // namespace facebook

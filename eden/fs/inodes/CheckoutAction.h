@@ -180,5 +180,5 @@ class CheckoutAction {
    */
   folly::Promise<folly::Unit> promise_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

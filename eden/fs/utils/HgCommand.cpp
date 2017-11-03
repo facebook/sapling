@@ -45,8 +45,7 @@ static folly::StringPiece basename(folly::StringPiece name) {
 
 // Generic function to insert an item in sorted order
 template <typename T, typename COMP, typename CONT>
-inline typename CONT::iterator sorted_insert(CONT &vec,
-    T&&val, COMP compare) {
+inline typename CONT::iterator sorted_insert(CONT& vec, T&& val, COMP compare) {
   auto find = std::lower_bound(vec.begin(), vec.end(), val, compare);
   if (find != vec.end() && !compare(val, *find)) {
     // Already exists
@@ -56,7 +55,7 @@ inline typename CONT::iterator sorted_insert(CONT &vec,
 }
 
 struct compare_str {
-  inline bool operator()(const folly::fbstring &a, const folly::fbstring &b) {
+  inline bool operator()(const folly::fbstring& a, const folly::fbstring& b) {
     // Bias dotfiles later so that we're more likely to match `ls` access
     // patterns
     int ascore = a[0] == '.' ? 0 : 1;
@@ -75,7 +74,7 @@ HgDirInformation& HgTreeInformation::makeDir(folly::StringPiece name) {
     // Recursively build out parents if missing
     auto parent_dir = dirname(name);
     if (parent_dir != name) {
-      auto &parent = makeDir(dirname(name));
+      auto& parent = makeDir(dirname(name));
       // Add ourselves to the parent
       sorted_insert(parent.dirs, basename(name).str(), compare_str());
     }
@@ -108,9 +107,10 @@ void HgTreeInformation::loadManifest() {
               flags = "x";
             }
             auto filename = line.subpiece(6);
-            fileInfo_.set(filename.str(),
-                       std::make_shared<HgFileInformation>(
-                           flags, 0, basename(filename)));
+            fileInfo_.set(
+                filename.str(),
+                std::make_shared<HgFileInformation>(
+                    flags, 0, basename(filename)));
           } else {
             XLOG(ERR) << "[" << repoDir_ << "] hg files -r " << rev_
                       << " stderr: " << line;
@@ -150,7 +150,7 @@ void HgTreeInformation::buildTree() {
           folly::StringPiece filename = basename(line);
 
           // This will create the dir node on demand
-          auto &d = makeDir(dir);
+          auto& d = makeDir(dir);
           // and add this file to its list
           sorted_insert(d.files, filename.str(), compare_str());
           num_files++;
@@ -174,9 +174,10 @@ const HgDirInformation& HgTreeInformation::readDir(folly::StringPiece name) {
   return dirs_.at(name.str());
 }
 
-HgFileInformation::HgFileInformation(folly::StringPiece flags,
-                                     size_t fileSize,
-                                     folly::StringPiece filename)
+HgFileInformation::HgFileInformation(
+    folly::StringPiece flags,
+    size_t fileSize,
+    folly::StringPiece filename)
     : size(fileSize), name(filename.str()) {
   if (flags.find('d') != std::string::npos) {
     mode = S_IFDIR | 0755;
@@ -197,7 +198,6 @@ HgFileInformation::HgFileInformation(folly::StringPiece flags,
 
 folly::Future<std::shared_ptr<HgFileInformation>>
 HgTreeInformation::rawStatFile(const std::string& filename) {
-
   auto find_dir = dirs_.find(filename);
   if (find_dir != dirs_.end()) {
     auto dir = basename(filename);
@@ -207,8 +207,8 @@ HgTreeInformation::rawStatFile(const std::string& filename) {
   folly::Promise<std::shared_ptr<HgFileInformation>> promise;
   auto future = promise.getFuture();
 
-  std::thread thr([ this, promise = std::move(promise), filename ]() mutable {
-    promise.setWith([ this, filename = std::move(filename) ] {
+  std::thread thr([this, promise = std::move(promise), filename]() mutable {
+    promise.setWith([this, filename = std::move(filename)] {
       std::vector<std::string> args = {"hg",
                                        "files",
                                        "-r",
@@ -251,15 +251,15 @@ folly::Future<std::vector<std::shared_ptr<HgFileInformation>>>
 HgTreeInformation::statFiles(const std::vector<std::string>& files) {
   std::vector<folly::Future<std::shared_ptr<HgFileInformation>>> futures;
 
-  return folly::collectAll(folly::window(files,
-                                         [this](std::string name) {
-                                           return fileInfo_.get(name);
-                                         },
-                                         sysconf(_SC_NPROCESSORS_ONLN) / 2))
-      .then([](
-          Try<std::vector<Try<std::shared_ptr<HgFileInformation>>>>&& items) {
+  return folly::collectAll(
+             folly::window(
+                 files,
+                 [this](std::string name) { return fileInfo_.get(name); },
+                 sysconf(_SC_NPROCESSORS_ONLN) / 2))
+      .then([](Try<std::vector<Try<std::shared_ptr<HgFileInformation>>>>&&
+                   items) {
         std::vector<std::shared_ptr<HgFileInformation>> res;
-        for (auto &item : items.value()) {
+        for (auto& item : items.value()) {
           res.push_back(item.value());
         }
         return res;
@@ -268,7 +268,6 @@ HgTreeInformation::statFiles(const std::vector<std::string>& files) {
 
 folly::Future<std::vector<std::shared_ptr<HgFileInformation>>>
 HgTreeInformation::statDir(folly::StringPiece name) {
-
   std::vector<std::string> names;
   auto stat = dirs_.at(name.str());
 
@@ -286,12 +285,14 @@ HgTreeInformation::statDir(folly::StringPiece name) {
   return statFiles(names);
 }
 
-HgTreeInformation::HgTreeInformation(const std::string& repoDir,
-                                     const std::string& rev)
+HgTreeInformation::HgTreeInformation(
+    const std::string& repoDir,
+    const std::string& rev)
     : repoDir_(repoDir),
       rev_(rev),
-      fileInfo_(FLAGS_file_cache_size,
-                [=](const std::string name) { return rawStatFile(name); }) {
+      fileInfo_(FLAGS_file_cache_size, [=](const std::string name) {
+        return rawStatFile(name);
+      }) {
   buildTree();
 }
 
@@ -300,7 +301,7 @@ folly::Future<std::string> HgCommand::future_run(folly::Subprocess&& proc) {
     folly::Subprocess proc;
     folly::Promise<std::string> promise;
 
-    proc_state(folly::Subprocess &&p) : proc(std::move(p)) {}
+    proc_state(folly::Subprocess&& p) : proc(std::move(p)) {}
   };
 
   auto state = std::make_shared<proc_state>(std::move(proc));
@@ -316,9 +317,15 @@ folly::Future<std::string> HgCommand::future_run(folly::Subprocess&& proc) {
   return state->promise.getFuture();
 }
 
-void HgCommand::setRepoDir(const std::string& repoDir) { repoDir_ = repoDir; }
-void HgCommand::setRepoRev(const std::string& rev) { rev_ = rev; }
-const std::string& HgCommand::getRepoRev() { return rev_; }
+void HgCommand::setRepoDir(const std::string& repoDir) {
+  repoDir_ = repoDir;
+}
+void HgCommand::setRepoRev(const std::string& rev) {
+  rev_ = rev;
+}
+const std::string& HgCommand::getRepoRev() {
+  return rev_;
+}
 
 std::string HgCommand::run(const std::vector<std::string>& args) {
   folly::Subprocess proc(
@@ -367,6 +374,5 @@ std::string HgCommand::identifyRev() {
   return hash.str();
 }
 
-
-}
-}
+} // namespace hgsparse
+} // namespace facebook

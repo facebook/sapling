@@ -57,8 +57,8 @@ using folly::test::TemporaryDirectory;
 
 using folly::Endian;
 using folly::IOBuf;
-using folly::io::Cursor;
 using folly::StringPiece;
+using folly::io::Cursor;
 using std::string;
 
 namespace {
@@ -157,7 +157,7 @@ int importTree(
 
   return EX_OK;
 }
-}
+} // namespace
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);

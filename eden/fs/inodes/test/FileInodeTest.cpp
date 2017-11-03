@@ -38,8 +38,8 @@ std::ostream& operator<<(
   os << folly::sformat("{}.{:09d}", secs.count(), nsecs.count());
   return os;
 }
-}
-}
+} // namespace chrono
+} // namespace std
 
 template <typename Clock = std::chrono::system_clock>
 typename Clock::time_point timespecToTimePoint(const timespec& ts) {
@@ -143,7 +143,7 @@ fusell::Dispatcher::Attr basicAttrChecks(const FileInodePtr& inode) {
         folly::to<std::string>("Originally from ", __FILE__, ":", __LINE__)); \
     basicAttrChecks(inode, ##__VA_ARGS__);                                    \
   })
-}
+} // namespace
 
 class FileInodeTest : public ::testing::Test {
  protected:

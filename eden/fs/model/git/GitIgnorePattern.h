@@ -98,5 +98,5 @@ class GitIgnorePattern {
    */
   GlobMatcher matcher_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

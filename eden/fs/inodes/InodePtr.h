@@ -368,5 +368,5 @@ template <typename InodeTypeParam>
 bool operator!=(std::nullptr_t, const InodePtrImpl<InodeTypeParam>& ptr) {
   return bool(ptr);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

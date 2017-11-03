@@ -124,5 +124,5 @@ class HgRepo {
   std::vector<std::string> hgEnv_;
   AbsolutePath path_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

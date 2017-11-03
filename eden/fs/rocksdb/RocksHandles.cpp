@@ -10,12 +10,12 @@
 #include "eden/fs/rocksdb/RocksHandles.h"
 
 using folly::StringPiece;
+using rocksdb::ColumnFamilyDescriptor;
+using rocksdb::ColumnFamilyHandle;
 using rocksdb::DB;
 using rocksdb::Options;
 using rocksdb::ReadOptions;
 using rocksdb::Status;
-using rocksdb::ColumnFamilyDescriptor;
-using rocksdb::ColumnFamilyHandle;
 using std::string;
 using std::unique_ptr;
 
@@ -66,5 +66,5 @@ RocksHandles::RocksHandles(
     columns.emplace_back(h);
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

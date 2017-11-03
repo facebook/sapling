@@ -64,5 +64,5 @@ class GitBackingStore : public BackingStore {
   LocalStore* localStore_{nullptr};
   git_repository* repo_{nullptr};
 };
-}
-}
+} // namespace eden
+} // namespace facebook

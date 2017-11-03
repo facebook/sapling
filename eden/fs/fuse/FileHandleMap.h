@@ -89,11 +89,10 @@ class FileHandleMap {
   static SerializedFileHandleMap loadFileHandleMap(folly::StringPiece fileName);
 
  private:
-
   folly::Synchronized<
       std::unordered_map<uint64_t, std::shared_ptr<FileHandleBase>>>
       handles_;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

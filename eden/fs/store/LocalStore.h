@@ -211,5 +211,5 @@ class LocalStore {
  private:
   RocksHandles dbHandles_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

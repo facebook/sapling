@@ -7,12 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/testharness/TestMount.h"
 #include <folly/Range.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
-#include "eden/fs/testharness/TestMount.h"
 
 #include <gtest/gtest.h>
 

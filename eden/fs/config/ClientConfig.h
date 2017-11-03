@@ -150,5 +150,5 @@ class ClientConfig {
   std::string repoSource_;
   folly::Optional<AbsolutePath> repoHooks_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

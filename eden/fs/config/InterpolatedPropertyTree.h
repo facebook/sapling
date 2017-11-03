@@ -83,5 +83,5 @@ class InterpolatedPropertyTree {
   // resultant string
   std::string interpolate(const std::string& input) const;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

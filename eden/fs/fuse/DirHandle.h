@@ -35,6 +35,6 @@ class DirHandle : public FileHandleBase {
    */
   virtual folly::Future<folly::Unit> fsyncdir(bool datasync) = 0;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

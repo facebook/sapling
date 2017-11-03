@@ -121,8 +121,9 @@ class RequestData : public folly::RequestData {
   void replyEntry(const struct fuse_entry_param& e);
 
   // Reply with a directory entry and open params
-  bool replyCreate(const struct fuse_entry_param& e,
-                   const struct fuse_file_info& fi);
+  bool replyCreate(
+      const struct fuse_entry_param& e,
+      const struct fuse_file_info& fi);
 
   void replyAttr(const struct stat& attr, double attr_timeout);
   void replyReadLink(const std::string& link);
@@ -140,6 +141,6 @@ class RequestData : public folly::RequestData {
  private:
   std::unique_ptr<Cancel> interrupter_;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

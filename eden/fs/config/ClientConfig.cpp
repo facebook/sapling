@@ -64,7 +64,7 @@ enum : uint32_t {
   kSnapshotHeaderSize = 8,
   kSnapshotFormatVersion = 1,
 };
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -198,8 +198,8 @@ ClientConfig::ConfigData ClientConfig::loadConfigData(
   rcFiles.push_back(userConfigPath.c_str());
 
   // A function that prevents merging a repo stanza over a pre-existing one
-  auto accept = [](
-      const InterpolatedPropertyTree& tree, folly::StringPiece section) {
+  auto accept = [](const InterpolatedPropertyTree& tree,
+                   folly::StringPiece section) {
     if (section.startsWith("repository ") && tree.hasSection(section)) {
       return InterpolatedPropertyTree::MergeDisposition::SkipAll;
     }
@@ -291,5 +291,5 @@ AbsolutePathPiece ClientConfig::getRepoHooks() const {
   return repoHooks_.hasValue() ? repoHooks_.value()
                                : AbsolutePathPiece{"/etc/eden/hooks"};
 }
-}
-}
+} // namespace eden
+} // namespace facebook

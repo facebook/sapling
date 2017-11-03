@@ -37,11 +37,11 @@
 
 using folly::ByteRange;
 using folly::Endian;
-using folly::io::Appender;
-using folly::io::Cursor;
 using folly::IOBuf;
 using folly::StringPiece;
 using folly::Subprocess;
+using folly::io::Appender;
+using folly::io::Cursor;
 using std::string;
 using KeySpace = facebook::eden::LocalStore::KeySpace;
 
@@ -929,5 +929,5 @@ void HgImporter::sendFetchTreeRequest(
   iov[2].iov_len = pathStr.size();
   folly::writevFull(helperIn_, iov.data(), iov.size());
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

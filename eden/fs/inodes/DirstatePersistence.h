@@ -63,5 +63,5 @@ class DirstatePersistence {
 
   AbsolutePath storageFile_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -41,7 +41,7 @@ vector<PathComponent> getTreeEntryNames(const Tree* tree) {
   }
   return results;
 }
-}
+} // namespace
 
 class HgImportTest : public ::testing::Test {
  public:

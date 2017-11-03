@@ -20,7 +20,7 @@ class IOBuf;
 namespace io {
 class Cursor;
 }
-}
+} // namespace folly
 
 /* forward declare support classes from mercurial */
 class DatapackStore;
@@ -281,5 +281,5 @@ class HgImporter {
   std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
   std::unique_ptr<UnionDatapackStore> unionStore_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

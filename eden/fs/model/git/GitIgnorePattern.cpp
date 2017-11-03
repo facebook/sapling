@@ -170,5 +170,5 @@ GitIgnore::MatchResult GitIgnorePattern::match(
 
   return GitIgnore::NO_MATCH;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

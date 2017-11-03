@@ -7,10 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/InodePtr.h"
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -34,8 +34,8 @@ class InodePtrTestHelper {
     return inode->ptrRefcount_.load(std::memory_order_acquire);
   }
 };
-}
-}
+} // namespace eden
+} // namespace facebook
 
 #define EXPECT_REFCOUNT(expected, inodePtr) \
   EXPECT_EQ(expected, InodePtrTestHelper::getRefcount(inodePtr))

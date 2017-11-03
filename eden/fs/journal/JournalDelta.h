@@ -73,5 +73,5 @@ class JournalDelta {
       Journal::SequenceNumber limitSequence = 0,
       bool pruneAfterLimit = false) const;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

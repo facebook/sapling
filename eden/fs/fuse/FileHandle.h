@@ -90,6 +90,6 @@ class FileHandle : public FileHandleBase {
    */
   virtual folly::Future<folly::Unit> fsync(bool datasync) = 0;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

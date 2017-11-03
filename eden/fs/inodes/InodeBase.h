@@ -516,7 +516,7 @@ class InodeBase {
    */
   folly::Synchronized<LocationInfo> location_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook
 
 #include "eden/fs/inodes/InodePtr-defs.h"

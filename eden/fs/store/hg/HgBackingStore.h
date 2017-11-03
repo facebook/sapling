@@ -54,5 +54,5 @@ class HgBackingStore : public BackingStore {
   folly::Synchronized<HgImporter> importer_;
   LocalStore* localStore_{nullptr};
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

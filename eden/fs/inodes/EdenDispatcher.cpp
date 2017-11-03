@@ -26,8 +26,8 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 using namespace folly;
-using facebook::eden::PathComponentPiece;
 using facebook::eden::PathComponent;
+using facebook::eden::PathComponentPiece;
 using facebook::eden::RelativePath;
 using std::string;
 using std::vector;
@@ -63,7 +63,7 @@ fuse_entry_param computeEntryParam(
   entry.entry_timeout = attr.timeout;
   return entry;
 }
-}
+} // namespace
 
 folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
     fuse_ino_t ino) {
@@ -136,8 +136,8 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
       mode,
       flags);
   return inodeMap_->lookupTreeInode(parent)
-      .then([ childName = PathComponent{name}, mode, flags ](
-          const TreeInodePtr& parentInode) {
+      .then([childName = PathComponent{name}, mode, flags](
+                const TreeInodePtr& parentInode) {
         return parentInode->create(childName, mode, flags);
       })
       .then([=](TreeInode::CreateResult created) {
@@ -170,8 +170,7 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
       mode,
       rdev);
   return inodeMap_->lookupTreeInode(parent).then(
-      [ childName = PathComponent{name}, mode, rdev ](
-          const TreeInodePtr& inode) {
+      [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child = inode->mknod(childName, mode, rdev);
         return child->getattr().then([child](fusell::Dispatcher::Attr attr) {
           child->incFuseRefcount();
@@ -190,7 +189,7 @@ EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
       name,
       mode);
   return inodeMap_->lookupTreeInode(parent).then(
-      [ childName = PathComponent{name}, mode ](const TreeInodePtr& inode) {
+      [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode);
         return child->getattr().then([child](fusell::Dispatcher::Attr attr) {
           child->incFuseRefcount();
@@ -204,7 +203,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
     PathComponentPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).then(
-      [ this, childName = PathComponent{name} ](const TreeInodePtr& inode) {
+      [this, childName = PathComponent{name}](const TreeInodePtr& inode) {
         inode->unlink(childName);
       });
 }
@@ -213,8 +212,8 @@ folly::Future<folly::Unit> EdenDispatcher::rmdir(
     fuse_ino_t parent,
     PathComponentPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "rmdir({}, {})", parent, name);
-  return inodeMap_->lookupTreeInode(parent)
-      .then([childName = PathComponent{name}](const TreeInodePtr& inode) {
+  return inodeMap_->lookupTreeInode(parent).then(
+      [childName = PathComponent{name}](const TreeInodePtr& inode) {
         return inode->rmdir(childName);
       });
 }
@@ -226,8 +225,8 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "rmdir({}, {}, {})", parent, name, link);
   return inodeMap_->lookupTreeInode(parent).then(
-      [ linkContents = link.str(),
-        childName = PathComponent{name} ](const TreeInodePtr& inode) {
+      [linkContents = link.str(),
+       childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode = inode->symlink(childName, linkContents);
         symlinkInode->incFuseRefcount();
         return symlinkInode->getattr().then([symlinkInode](Attr&& attr) {
@@ -253,11 +252,10 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
   // Do the rename once we have looked up both parents.
-  return parentFuture.then([
-    npFuture = std::move(newParentFuture),
-    name = PathComponent{namePiece},
-    newName = PathComponent{newNamePiece}
-  ](const TreeInodePtr& parent) mutable {
+  return parentFuture.then([npFuture = std::move(newParentFuture),
+                            name = PathComponent{namePiece},
+                            newName = PathComponent{newNamePiece}](
+                               const TreeInodePtr& parent) mutable {
     return npFuture.then(
         [parent, name, newName](const TreeInodePtr& newParent) {
           parent->rename(name, newParent, newName);
@@ -286,8 +284,10 @@ folly::Future<fuse_entry_param> EdenDispatcher::link(
 
 Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getxattr({}, {})", ino, name);
-  return inodeMap_->lookupInode(ino).then([attrName = name.str()](
-      const InodePtr& inode) { return inode->getxattr(attrName); });
+  return inodeMap_->lookupInode(ino).then(
+      [attrName = name.str()](const InodePtr& inode) {
+        return inode->getxattr(attrName);
+      });
 }
 
 Future<vector<string>> EdenDispatcher::listxattr(fuse_ino_t ino) {
@@ -295,5 +295,5 @@ Future<vector<string>> EdenDispatcher::listxattr(fuse_ino_t ino) {
   return inodeMap_->lookupInode(ino).then(
       [](const InodePtr& inode) { return inode->listxattr(); });
 }
-}
-}
+} // namespace eden
+} // namespace facebook

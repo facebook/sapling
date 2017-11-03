@@ -32,11 +32,11 @@
 
 using folly::ByteRange;
 using folly::Future;
-using folly::makeFuture;
 using folly::StringPiece;
+using folly::Unit;
+using folly::makeFuture;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
-using folly::Unit;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -389,5 +389,5 @@ std::shared_ptr<const Tree> TestMount::getRootTree() const {
 Dirstate* TestMount::getDirstate() const {
   return edenMount_->getDirstate();
 }
-}
-}
+} // namespace eden
+} // namespace facebook

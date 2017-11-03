@@ -7,8 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PrivHelperTestServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "PrivHelperTestServer.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
@@ -25,10 +25,10 @@
 using namespace facebook::eden::fusell;
 using facebook::eden::UserInfo;
 using folly::ByteRange;
-using folly::checkUnixError;
 using folly::File;
 using folly::IOBuf;
 using folly::StringPiece;
+using folly::checkUnixError;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
 using std::string;

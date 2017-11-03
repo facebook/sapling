@@ -22,5 +22,5 @@ void runServer(const EdenServer& server) {
       folly::EventBaseManager::get()->getEventBase());
   server.getServer()->serve();
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

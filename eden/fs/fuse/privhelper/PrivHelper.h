@@ -89,6 +89,6 @@ void privilegedFuseUnmount(folly::StringPiece mountPath);
 void privilegedBindMount(
     folly::StringPiece clientPath,
     folly::StringPiece mountPath);
-}
-}
-} // facebook::eden::fusell
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

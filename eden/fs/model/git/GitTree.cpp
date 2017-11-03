@@ -18,8 +18,8 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 
-using folly::StringPiece;
 using folly::IOBuf;
+using folly::StringPiece;
 using std::array;
 using std::invalid_argument;
 using std::string;
@@ -210,5 +210,5 @@ folly::IOBuf GitTreeSerializer::finalize() {
 
   return std::move(buf_);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

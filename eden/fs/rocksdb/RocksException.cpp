@@ -30,5 +30,5 @@ const rocksdb::Status& RocksException::getStatus() const {
 const std::string& RocksException::getMsg() const {
   return msg_;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

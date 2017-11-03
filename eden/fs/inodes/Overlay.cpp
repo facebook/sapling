@@ -23,12 +23,12 @@ namespace eden {
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;
-using folly::fbstring;
-using folly::fbvector;
 using folly::File;
 using folly::MutableStringPiece;
 using folly::Optional;
 using folly::StringPiece;
+using folly::fbstring;
+using folly::fbvector;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -77,7 +77,7 @@ void formatSubdirPath(MutableStringPiece subdirPath, fuse_ino_t inode) {
   subdirPath[0] = hexdigit[(inode >> 4) & 0xf];
   subdirPath[1] = hexdigit[inode & 0xf];
 }
-}
+} // namespace
 
 constexpr folly::StringPiece Overlay::kHeaderIdentifierDir;
 constexpr folly::StringPiece Overlay::kHeaderIdentifierFile;
@@ -543,5 +543,5 @@ void Overlay::updateTimestampToHeader(
         "writeNoInt wrote only ", wrote, " of ", newHeader.size(), " bytes");
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

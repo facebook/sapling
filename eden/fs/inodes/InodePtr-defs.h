@@ -69,5 +69,5 @@ void InodePtrImpl<InodeType>::resetNoDecRef() {
   CHECK_NOTNULL(value_);
   value_ = nullptr;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

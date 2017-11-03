@@ -56,6 +56,6 @@ bool DirList::add(StringPiece name, const struct stat& st, off_t off) {
 StringPiece DirList::getBuf() const {
   return StringPiece(buf_.get(), cur_ - buf_.get());
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

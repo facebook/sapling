@@ -20,8 +20,8 @@
 #include "eden/fs/store/LocalStore.h"
 
 using folly::ByteRange;
-using folly::io::Appender;
 using folly::IOBuf;
+using folly::io::Appender;
 using std::string;
 
 namespace facebook {
@@ -237,5 +237,5 @@ void HgManifestImporter::popCurrentDir() {
   dirStack_.back().addEntry(std::move(dirEntry));
   dirStack_.back().addPartialTree(std::move(back));
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

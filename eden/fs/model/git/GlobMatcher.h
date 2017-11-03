@@ -104,5 +104,5 @@ class GlobMatcher {
    */
   std::vector<uint8_t> pattern_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

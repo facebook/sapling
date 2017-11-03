@@ -25,7 +25,7 @@
           ::facebook::eden::test::checkThrowErrno(             \
               [&]() { statement; }, errnoValue, #statement)) { \
   } else                                                       \
-  fail(gtest_result.what())
+    fail(gtest_result.what())
 
 /**
  * Check that a statement throws a std::system_error with the expected errno
@@ -42,7 +42,7 @@
           ::facebook::eden::test::CheckThrowRegex<exceptionType>::check(    \
               [&]() { statement; }, pattern, #statement, #exceptionType)) { \
   } else                                                                    \
-  fail(gtest_result.what())
+    fail(gtest_result.what())
 
 /**
  * Check that a statement throws the expected exception type, and that the
@@ -143,10 +143,10 @@ struct CheckThrowRegex {
     } catch (const ExType& ex) {
       std::regex re(pattern);
       if (!std::regex_search(ex.what(), re)) {
-        return CheckResult(false) << "Expected: " << statementStr
-                                  << " throws a " << excTypeStr
-                                  << " with message matching \"" << pattern
-                                  << "\"\nActual: message is: " << ex.what();
+        return CheckResult(false)
+            << "Expected: " << statementStr << " throws a " << excTypeStr
+            << " with message matching \"" << pattern
+            << "\"\nActual: message is: " << ex.what();
       }
       return CheckResult(true);
     } catch (const std::exception& ex) {
@@ -155,9 +155,9 @@ struct CheckThrowRegex {
           << ")\nActual: it throws a different exception type: "
           << ::folly::exceptionStr(ex);
     } catch (...) {
-      return CheckResult(false) << "Expected: " << statementStr << " throws a "
-                                << excTypeStr
-                                << ")\nActual: it throws a non-exception type";
+      return CheckResult(false)
+          << "Expected: " << statementStr << " throws a " << excTypeStr
+          << ")\nActual: it throws a non-exception type";
     }
     return CheckResult(false) << "Expected: " << statementStr << " throws a "
                               << excTypeStr << ")\nActual: it throws nothing";
@@ -183,21 +183,21 @@ struct CheckThrowRegex<std::exception> {
     } catch (const std::exception& ex) {
       std::regex re(pattern);
       if (!std::regex_search(ex.what(), re)) {
-        return CheckResult(false) << "Expected: " << statementStr
-                                  << " throws a " << excTypeStr
-                                  << " with message matching \"" << pattern
-                                  << "\"\nActual: message is: " << ex.what();
+        return CheckResult(false)
+            << "Expected: " << statementStr << " throws a " << excTypeStr
+            << " with message matching \"" << pattern
+            << "\"\nActual: message is: " << ex.what();
       }
       return CheckResult(true);
     } catch (...) {
-      return CheckResult(false) << "Expected: " << statementStr << " throws a "
-                                << excTypeStr
-                                << ")\nActual: it throws a non-exception type";
+      return CheckResult(false)
+          << "Expected: " << statementStr << " throws a " << excTypeStr
+          << ")\nActual: it throws a non-exception type";
     }
     return CheckResult(false) << "Expected: " << statementStr << " throws a "
                               << excTypeStr << ")\nActual: it throws nothing";
   }
 };
-}
-}
-}
+} // namespace test
+} // namespace eden
+} // namespace facebook

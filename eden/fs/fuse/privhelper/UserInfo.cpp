@@ -175,5 +175,5 @@ UserInfo UserInfo::lookup() {
   info.initHomedir(&pwd);
   return info;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

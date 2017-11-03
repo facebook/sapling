@@ -77,5 +77,5 @@ class ParentCommits {
  * This makes it possible to easily use ParentCommits in glog statements.
  */
 std::ostream& operator<<(std::ostream& os, const ParentCommits& parents);
-}
-}
+} // namespace eden
+} // namespace facebook

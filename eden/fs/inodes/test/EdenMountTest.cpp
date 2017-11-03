@@ -7,10 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/EdenMount.h"
 #include <folly/Range.h>
 #include <gtest/gtest.h>
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/journal/JournalDelta.h"
@@ -119,5 +119,5 @@ TEST(EdenMount, testLastCheckoutTime) {
   EXPECT_EQ(sec.count(), stDir.mtime.tv_sec);
   EXPECT_EQ(nsec.count(), stDir.mtime.tv_nsec);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -155,7 +155,7 @@ AbsolutePath canonicalPathImpl(
 
   return makeAbsolutePath(baseCanon.components);
 }
-}
+} // namespace
 
 AbsolutePath canonicalPath(folly::StringPiece path) {
   // Pass in folly::none.
@@ -183,5 +183,5 @@ AbsolutePath realpath(StringPiece path) {
   // The input may not be nul-terminated, so we have to construct a std::string
   return realpath(path.str().c_str());
 }
-}
-}
+} // namespace eden
+} // namespace facebook

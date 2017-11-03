@@ -19,9 +19,9 @@
 #include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
+using ::testing::UnorderedElementsAre;
 using folly::StringPiece;
 using std::string;
-using ::testing::UnorderedElementsAre;
 
 class DiffResults {
  public:
@@ -167,9 +167,7 @@ class DiffTest {
     });
   }
 
-  DiffResults resetCommitAndDiff(
-      FakeTreeBuilder& builder,
-      bool loadInodes);
+  DiffResults resetCommitAndDiff(FakeTreeBuilder& builder, bool loadInodes);
 
   void checkNoChanges() {
     auto result = diff();

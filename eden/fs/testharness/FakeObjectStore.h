@@ -47,5 +47,5 @@ class FakeObjectStore : public IObjectStore {
   std::unordered_map<Hash, Tree> commits_;
   std::unordered_map<Hash, BlobMetadata> blobMetadata_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

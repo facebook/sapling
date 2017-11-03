@@ -7,9 +7,9 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/InodeBase.h"
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"

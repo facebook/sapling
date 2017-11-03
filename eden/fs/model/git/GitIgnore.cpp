@@ -92,5 +92,5 @@ string GitIgnore::matchString(MatchResult result) {
   }
   return folly::to<string>("unexpected result", int(result));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -270,5 +270,5 @@ struct FakeTreeBuilder::FileInfo {
   FileInfo(folly::StringPiece p, folly::StringPiece c, int perms = 0644)
       : path(p), contents(c.str()), permissions(perms) {}
 };
-}
-}
+} // namespace eden
+} // namespace facebook

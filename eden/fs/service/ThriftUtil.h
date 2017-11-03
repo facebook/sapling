@@ -43,5 +43,5 @@ inline std::string thriftHash(const folly::Optional<Hash> hash) {
 inline Hash hashFromThrift(const std::string& commitID) {
   return Hash(folly::ByteRange(folly::StringPiece(commitID)));
 }
-}
-}
+} // namespace eden
+} // namespace facebook

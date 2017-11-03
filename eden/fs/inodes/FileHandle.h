@@ -40,5 +40,5 @@ class FileHandle : public fusell::FileHandle {
  private:
   FileInodePtr inode_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

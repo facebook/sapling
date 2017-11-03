@@ -60,7 +60,7 @@ enum : uint8_t {
   // GLOB_ENDS_WITH.
   GLOB_ENDS_WITH = '$',
 };
-}
+} // namespace
 
 namespace facebook {
 namespace eden {
@@ -631,5 +631,5 @@ bool GlobMatcher::charClassMatch(uint8_t ch, size_t* patternIdx) const {
     }
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -50,5 +50,5 @@ class DiffContext {
  private:
   GitIgnoreStack rootIgnore_{nullptr};
 };
-}
-}
+} // namespace eden
+} // namespace facebook

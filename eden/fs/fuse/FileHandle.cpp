@@ -15,10 +15,16 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
-bool FileHandle::usesDirectIO() const { return false; }
-bool FileHandle::preserveCache() const { return false; }
-bool FileHandle::isSeekable() const { return true; }
+bool FileHandle::usesDirectIO() const {
+  return false;
+}
+bool FileHandle::preserveCache() const {
+  return false;
+}
+bool FileHandle::isSeekable() const {
+  return true;
+}
 
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

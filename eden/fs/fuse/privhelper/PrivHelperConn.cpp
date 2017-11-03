@@ -24,12 +24,12 @@
 #include <unistd.h>
 #include "eden/fs/utils/ControlMsg.h"
 
-using folly::io::Appender;
-using folly::io::Cursor;
 using folly::ByteRange;
-using folly::checkUnixError;
 using folly::IOBuf;
 using folly::StringPiece;
+using folly::checkUnixError;
+using folly::io::Appender;
+using folly::io::Cursor;
 using folly::throwSystemError;
 using std::string;
 
@@ -420,6 +420,6 @@ void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
 
 PrivHelperError::PrivHelperError(StringPiece remoteExType, StringPiece msg)
     : message_(folly::to<string>(remoteExType, ": ", msg)) {}
-}
+} // namespace fusell
 } // namespace eden
 } // namespace facebook

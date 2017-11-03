@@ -128,6 +128,6 @@ class EdenStats
   folly::TimeseriesHistogram<int64_t> createHistogram(const std::string& name);
 #endif
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

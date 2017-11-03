@@ -46,6 +46,6 @@ class DirList {
 
   folly::StringPiece getBuf() const;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

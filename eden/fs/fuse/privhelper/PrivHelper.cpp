@@ -220,6 +220,6 @@ void privilegedBindMount(
   gPrivHelper->sendAndRecv(&msg, nullptr);
   PrivHelperConn::parseEmptyResponse(&msg);
 }
-}
-}
-} // facebook::eden::fusell
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

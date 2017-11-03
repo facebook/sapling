@@ -7,10 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/config/ClientConfig.h"
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
-#include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/test/TestChecks.h"
 
@@ -79,7 +79,7 @@ class ClientConfigTest : public ::testing::Test {
   template <typename ExceptionType = std::runtime_error>
   void testBadSnapshot(StringPiece contents, const char* errorRegex);
 };
-}
+} // namespace
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto configData = ClientConfig::loadConfigData(

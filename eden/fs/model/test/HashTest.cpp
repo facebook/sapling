@@ -16,9 +16,9 @@
 
 using facebook::eden::Hash;
 using folly::ByteRange;
-using folly::io::Appender;
 using folly::IOBuf;
 using folly::StringPiece;
+using folly::io::Appender;
 using std::string;
 
 namespace {
@@ -30,7 +30,7 @@ string testHashHex = folly::to<string>(
     "8badf00d");
 
 Hash testHash(testHashHex);
-}
+} // namespace
 
 TEST(Hash, testDefaultConstructor) {
   EXPECT_EQ("0000000000000000000000000000000000000000", Hash().toString());

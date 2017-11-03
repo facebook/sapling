@@ -81,8 +81,8 @@ std::ostream& operator<<(std::ostream& os, const Hash& hash);
 
 /* Define toAppend() so folly::to<string>(Hash) will work */
 void toAppend(const Hash& hash, std::string* result);
-}
-}
+} // namespace eden
+} // namespace facebook
 
 namespace std {
 template <>
@@ -91,4 +91,4 @@ struct hash<facebook::eden::Hash> {
     return hash.getHashCode();
   }
 };
-}
+} // namespace std

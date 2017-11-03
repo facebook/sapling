@@ -300,5 +300,5 @@ StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
   }
   return storedBlob;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

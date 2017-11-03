@@ -160,6 +160,6 @@ SerializedFileHandleMap FileHandleMap::loadFileHandleMap(
   return CompactSerializer::deserialize<SerializedFileHandleMap>(
       serializedData);
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

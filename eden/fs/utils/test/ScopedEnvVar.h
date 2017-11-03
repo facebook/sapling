@@ -59,5 +59,5 @@ class ScopedEnvVar {
    */
   folly::Optional<std::string> origValue_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

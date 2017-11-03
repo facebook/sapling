@@ -20,8 +20,8 @@
 #include <sstream>
 #include "eden/fs/utils/test/TestChecks.h"
 
-using facebook::eden::dirname;
 using facebook::eden::basename;
+using facebook::eden::dirname;
 using folly::StringPiece;
 using std::string;
 using std::vector;
@@ -119,11 +119,10 @@ TEST(PathFuncs, Iterate) {
 }
 
 TEST(PathFuncs, IteratorDecrement) {
-  auto checkDecrement = [](
-      const auto& path,
-      StringPiece function,
-      const auto& range,
-      const vector<string>& expectedList) {
+  auto checkDecrement = [](const auto& path,
+                           StringPiece function,
+                           const auto& range,
+                           const vector<string>& expectedList) {
     SCOPED_TRACE(folly::to<string>(path, ".", function, "()"));
     auto iter = range.end();
     for (const auto& expectedPath : expectedList) {
@@ -606,7 +605,7 @@ class TmpWorkingDir {
   std::string pathStr{dir.path().string()};
   AbsolutePathPiece path{pathStr};
 };
-}
+} // namespace
 
 TEST(PathFuncs, canonicalPath) {
   EXPECT_EQ("/foo/bar/abc.txt", canonicalPath("/foo/bar/abc.txt").value());

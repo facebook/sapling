@@ -86,5 +86,5 @@ bool operator<=(const timespec& a, const timespec& b) {
     return a.tv_sec < b.tv_sec;
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

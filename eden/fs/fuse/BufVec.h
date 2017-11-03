@@ -53,6 +53,6 @@ class BufVec {
    */
   folly::fbvector<struct iovec> getIov() const;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

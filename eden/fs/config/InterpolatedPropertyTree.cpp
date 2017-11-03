@@ -37,7 +37,7 @@ void replaceAll(
     pos += replace.size();
   }
 }
-}
+} // namespace
 
 std::string InterpolatedPropertyTree::interpolate(
     const std::string& input) const {
@@ -109,5 +109,5 @@ void InterpolatedPropertyTree::updateFromIniFile(
     }
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

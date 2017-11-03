@@ -21,9 +21,9 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 
-using folly::makeFuture;
 using folly::Future;
 using folly::Unit;
+using folly::makeFuture;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
@@ -142,24 +142,23 @@ folly::Future<folly::Unit> diffRemovedTree(
     }
   }
 
-  return folly::collectAll(subFutures).then([
-    currentPath = RelativePath{std::move(currentPath)},
-    tree = std::move(tree),
-    context
-  ](vector<folly::Try<Unit>> results) {
-    // Call diffError() for each error that occurred
-    for (size_t n = 0; n < results.size(); ++n) {
-      auto& result = results[n];
-      if (result.hasException()) {
-        const auto& entry = tree->getEntryAt(n);
-        context->callback->diffError(
-            currentPath + entry.getName(), result.exception());
-      }
-    }
-    // Return successfully after recording the errors.  (If we failed then
-    // our caller would also record us as an error, which we don't want.)
-    return makeFuture();
-  });
+  return folly::collectAll(subFutures)
+      .then([currentPath = RelativePath{std::move(currentPath)},
+             tree = std::move(tree),
+             context](vector<folly::Try<Unit>> results) {
+        // Call diffError() for each error that occurred
+        for (size_t n = 0; n < results.size(); ++n) {
+          auto& result = results[n];
+          if (result.hasException()) {
+            const auto& entry = tree->getEntryAt(n);
+            context->callback->diffError(
+                currentPath + entry.getName(), result.exception());
+          }
+        }
+        // Return successfully after recording the errors.  (If we failed then
+        // our caller would also record us as an error, which we don't want.)
+        return makeFuture();
+      });
 }
 } // unnamed namespace
 
@@ -392,5 +391,5 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
   return make_unique<ModifiedBlobDiffEntry>(
       context, std::move(path), scmEntry, currentBlobHash);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

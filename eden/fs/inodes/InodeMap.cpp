@@ -22,8 +22,8 @@
 
 using folly::Future;
 using folly::Promise;
-using folly::throwSystemErrorExplicit;
 using folly::Unit;
+using folly::throwSystemErrorExplicit;
 using std::string;
 
 namespace facebook {
@@ -176,14 +176,11 @@ void InodeMap::setupParentLookupPromise(
     bool isUnlinked,
     fuse_ino_t childInodeNumber) {
   promise.getFuture()
-      .then([
-        name = PathComponent(childName),
-        this,
-        isUnlinked,
-        childInodeNumber
-      ](const InodePtr& inode) {
-        startChildLookup(inode, name, isUnlinked, childInodeNumber);
-      })
+      .then(
+          [name = PathComponent(childName), this, isUnlinked, childInodeNumber](
+              const InodePtr& inode) {
+            startChildLookup(inode, name, isUnlinked, childInodeNumber);
+          })
       .onError([this, childInodeNumber](const folly::exception_wrapper& ex) {
         // Fail all pending lookups on the child
         inodeLoadFailed(childInodeNumber, ex);
@@ -693,5 +690,5 @@ fuse_ino_t InodeMap::allocateInodeNumber(Members& data) {
   ++data.nextInodeNumber_;
   return number;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

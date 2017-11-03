@@ -43,10 +43,10 @@
 #include "eden/fs/utils/TimeUtil.h"
 
 using folly::Future;
-using folly::makeFuture;
 using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
+using folly::makeFuture;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
@@ -297,7 +297,7 @@ class LookupProcessor {
   RelativePath path_;
   size_t pathIndex_{0};
 };
-}
+} // namespace
 
 Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
   auto pathStr = path.stringPiece();
@@ -376,12 +376,12 @@ void TreeInode::registerInodeLoadComplete(
   // This method should never be called with the contents_ lock held.  If the
   // future is already ready we will try to acquire the contents_ lock now.
   future
-      .then([ self = inodePtrFromThis(), childName = PathComponent{name} ](
-          unique_ptr<InodeBase> && childInode) {
+      .then([self = inodePtrFromThis(), childName = PathComponent{name}](
+                unique_ptr<InodeBase>&& childInode) {
         self->inodeLoadComplete(childName, std::move(childInode));
       })
-      .onError([ self = inodePtrFromThis(), number ](
-          const folly::exception_wrapper& ew) {
+      .onError([self = inodePtrFromThis(),
+                number](const folly::exception_wrapper& ew) {
         self->getInodeMap()->inodeLoadFailed(number, ew);
       });
 }
@@ -721,7 +721,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // Now that we have the file handle, let's look up the attributes.
   auto getattrResult = handle->getattr();
   return getattrResult.then(
-      [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
+      [=, handle = std::move(handle)](fusell::Dispatcher::Attr attr) mutable {
         CreateResult result(getMount());
 
         // Return all of the results back to the kernel.
@@ -961,16 +961,16 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
 
 folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
   return getOrLoadChild(name).then(
-      [ self = inodePtrFromThis(),
-        childName = PathComponent{name} ](const InodePtr& child) {
+      [self = inodePtrFromThis(),
+       childName = PathComponent{name}](const InodePtr& child) {
         return self->removeImpl<FileInodePtr>(std::move(childName), child, 1);
       });
 }
 
 folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
   return getOrLoadChild(name).then(
-      [ self = inodePtrFromThis(),
-        childName = PathComponent{name} ](const InodePtr& child) {
+      [self = inodePtrFromThis(),
+       childName = PathComponent{name}](const InodePtr& child) {
         return self->removeImpl<TreeInodePtr>(std::move(childName), child, 1);
       });
 }
@@ -1057,11 +1057,9 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // the left side of "." will always get evaluated before the right
   // side.
   auto childFuture = getOrLoadChild(name);
-  return childFuture.then([
-    self = inodePtrFromThis(),
-    childName = PathComponent{std::move(name)},
-    attemptNum
-  ](const InodePtr& loadedChild) {
+  return childFuture.then([self = inodePtrFromThis(),
+                           childName = PathComponent{std::move(name)},
+                           attemptNum](const InodePtr& loadedChild) {
     return self->removeImpl<InodePtrType>(
         childName, loadedChild, attemptNum + 1);
   });
@@ -1356,12 +1354,10 @@ Future<Unit> TreeInode::rename(
   // Once we finish the loads, we have to re-run all the rename() logic.
   // Other renames or unlinks may have occurred in the meantime, so all of the
   // validation above has to be redone.
-  auto onLoadFinished = [
-    self = inodePtrFromThis(),
-    nameCopy = name.copy(),
-    destParent,
-    destNameCopy = destName.copy()
-  ]() {
+  auto onLoadFinished = [self = inodePtrFromThis(),
+                         nameCopy = name.copy(),
+                         destParent,
+                         destNameCopy = destName.copy()]() {
     return self->rename(nameCopy, destParent, destNameCopy);
   };
 
@@ -1388,7 +1384,7 @@ bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
   }
   return false;
 }
-}
+} // namespace
 
 Future<Unit> TreeInode::doRename(
     TreeRenameLocks&& locks,
@@ -1659,22 +1655,21 @@ Future<Unit> TreeInode::diff(
   }
 
   if (inodeFuture.hasValue()) {
-    return inodeFuture.value().then([
-      self = inodePtrFromThis(),
-      context,
-      currentPath = RelativePath{currentPath},
-      tree = std::move(tree),
-      parentIgnore,
-      isIgnored
-    ](InodePtr && loadedInode) mutable {
-      return self->loadGitIgnoreThenDiff(
-          std::move(loadedInode),
-          context,
-          currentPath,
-          std::move(tree),
-          parentIgnore,
-          isIgnored);
-    });
+    return inodeFuture.value().then(
+        [self = inodePtrFromThis(),
+         context,
+         currentPath = RelativePath{currentPath},
+         tree = std::move(tree),
+         parentIgnore,
+         isIgnored](InodePtr&& loadedInode) mutable {
+          return self->loadGitIgnoreThenDiff(
+              std::move(loadedInode),
+              context,
+              currentPath,
+              std::move(tree),
+              parentIgnore,
+              isIgnored);
+        });
   } else {
     return loadGitIgnoreThenDiff(
         std::move(inode),
@@ -1729,15 +1724,13 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
   // compiler may decide to move data away before evaluating
   // data->ensureDataLoaded().
   auto dataFuture = fileInode->ensureDataLoaded();
-  return dataFuture.then([
-    self = inodePtrFromThis(),
-    context,
-    currentPath = RelativePath{currentPath},
-    tree = std::move(tree),
-    parentIgnore,
-    isIgnored,
-    fileInode = std::move(fileInode)
-  ]() mutable {
+  return dataFuture.then([self = inodePtrFromThis(),
+                          context,
+                          currentPath = RelativePath{currentPath},
+                          tree = std::move(tree),
+                          parentIgnore,
+                          isIgnored,
+                          fileInode = std::move(fileInode)]() mutable {
     auto ignoreFileContents = fileInode->readAll();
     auto ignore = make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents);
     return self->computeDiff(
@@ -2008,28 +2001,28 @@ Future<Unit> TreeInode::computeDiff(
   // Note that we explicitly move-capture the deferredFutures vector into this
   // callback, to ensure that the DeferredDiffEntry objects do not get
   // destroyed before they complete.
-  return folly::collectAll(deferredFutures).then([
-    self = std::move(self),
-    currentPath = RelativePath{std::move(currentPath)},
-    context,
-    // Capture ignore to ensure it remains valid until all of our children's
-    // diff operations complete.
-    ignore = std::move(ignore),
-    deferredJobs = std::move(deferredEntries)
-  ](vector<folly::Try<Unit>> results) {
-    // Call diffError() for any jobs that failed.
-    for (size_t n = 0; n < results.size(); ++n) {
-      auto& result = results[n];
-      if (result.hasException()) {
-        context->callback->diffError(
-            deferredJobs[n]->getPath(), result.exception());
-      }
-    }
-    // Report success here, even if some of our deferred jobs failed.
-    // We will have reported those errors to the callback already, and so we
-    // don't want our parent to report a new error at our path.
-    return makeFuture();
-  });
+  return folly::collectAll(deferredFutures)
+      .then([self = std::move(self),
+             currentPath = RelativePath{std::move(currentPath)},
+             context,
+             // Capture ignore to ensure it remains valid until all of our
+             // children's diff operations complete.
+             ignore = std::move(ignore),
+             deferredJobs =
+                 std::move(deferredEntries)](vector<folly::Try<Unit>> results) {
+        // Call diffError() for any jobs that failed.
+        for (size_t n = 0; n < results.size(); ++n) {
+          auto& result = results[n];
+          if (result.hasException()) {
+            context->callback->diffError(
+                deferredJobs[n]->getPath(), result.exception());
+          }
+        }
+        // Report success here, even if some of our deferred jobs failed.
+        // We will have reported those errors to the callback already, and so we
+        // don't want our parent to report a new error at our path.
+        return makeFuture();
+      });
 }
 
 Future<Unit> TreeInode::checkout(
@@ -2056,29 +2049,30 @@ Future<Unit> TreeInode::checkout(
     actionFutures.emplace_back(action->run(ctx, getStore()));
   }
   // Wait for all of the actions, and record any errors.
-  return folly::collectAll(actionFutures).then([
-    ctx,
-    self = inodePtrFromThis(),
-    toTree = std::move(toTree),
-    actions = std::move(actions)
-  ](vector<folly::Try<Unit>> actionResults) {
-    // Record any errors that occurred
-    size_t numErrors = 0;
-    for (size_t n = 0; n < actionResults.size(); ++n) {
-      auto& result = actionResults[n];
-      if (!result.hasException()) {
-        continue;
-      }
-      ++numErrors;
-      ctx->addError(self.get(), actions[n]->getEntryName(), result.exception());
-    }
+  return folly::collectAll(actionFutures)
+      .then([ctx,
+             self = inodePtrFromThis(),
+             toTree = std::move(toTree),
+             actions =
+                 std::move(actions)](vector<folly::Try<Unit>> actionResults) {
+        // Record any errors that occurred
+        size_t numErrors = 0;
+        for (size_t n = 0; n < actionResults.size(); ++n) {
+          auto& result = actionResults[n];
+          if (!result.hasException()) {
+            continue;
+          }
+          ++numErrors;
+          ctx->addError(
+              self.get(), actions[n]->getEntryName(), result.exception());
+        }
 
-    // Update our state in the overlay
-    self->saveOverlayPostCheckout(ctx, toTree.get());
+        // Update our state in the overlay
+        self->saveOverlayPostCheckout(ctx, toTree.get());
 
-    XLOG(DBG4) << "checkout: finished update of " << self->getLogPath() << ": "
-               << numErrors << " errors";
-  });
+        XLOG(DBG4) << "checkout: finished update of " << self->getLogPath()
+                   << ": " << numErrors << " errors";
+      });
 }
 
 void TreeInode::computeCheckoutActions(
@@ -2350,49 +2344,48 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
   // Fortunately, calling checkout() with an empty destination tree does
   // exactly what we want.  checkout() will even remove the directory before it
   // returns if the directory is empty.
-  return treeInode->checkout(ctx, std::move(oldTree), nullptr).then([
-    ctx,
-    name = PathComponent{name},
-    parentInode = inodePtrFromThis(),
-    treeInode,
-    newScmEntry
-  ]() {
-    // Make sure the treeInode was completely removed by the checkout.
-    // If there were still untracked files inside of it, it won't have
-    // been deleted, and we have a conflict that we cannot resolve.
-    if (!treeInode->isUnlinked()) {
-      ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
-      return;
-    }
+  return treeInode->checkout(ctx, std::move(oldTree), nullptr)
+      .then([ctx,
+             name = PathComponent{name},
+             parentInode = inodePtrFromThis(),
+             treeInode,
+             newScmEntry]() {
+        // Make sure the treeInode was completely removed by the checkout.
+        // If there were still untracked files inside of it, it won't have
+        // been deleted, and we have a conflict that we cannot resolve.
+        if (!treeInode->isUnlinked()) {
+          ctx->addConflict(ConflictType::DIRECTORY_NOT_EMPTY, treeInode.get());
+          return;
+        }
 
-    if (!newScmEntry) {
-      // We're done
-      return;
-    }
+        if (!newScmEntry) {
+          // We're done
+          return;
+        }
 
-    // Add the new entry
-    auto contents = parentInode->contents_.wlock();
-    DCHECK_EQ(TreeEntryType::BLOB, newScmEntry->getType());
-    auto newTreeEntry =
-        make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
-    auto ret = contents->entries.emplace(name, std::move(newTreeEntry));
-    if (!ret.second) {
-      // Hmm.  Someone else already created a new entry in this location
-      // before we had a chance to add our new entry.  We don't block new file
-      // or directory creations during a checkout operation, so this is
-      // possible.  Just report an error in this case.
-      contents.unlock();
-      ctx->addError(
-          parentInode.get(),
-          name,
-          InodeError(
-              EEXIST,
-              parentInode,
+        // Add the new entry
+        auto contents = parentInode->contents_.wlock();
+        DCHECK_EQ(TreeEntryType::BLOB, newScmEntry->getType());
+        auto newTreeEntry =
+            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
+        auto ret = contents->entries.emplace(name, std::move(newTreeEntry));
+        if (!ret.second) {
+          // Hmm.  Someone else already created a new entry in this location
+          // before we had a chance to add our new entry.  We don't block new
+          // file or directory creations during a checkout operation, so this is
+          // possible.  Just report an error in this case.
+          contents.unlock();
+          ctx->addError(
+              parentInode.get(),
               name,
-              "new file created with this name while checkout operation "
-              "was in progress"));
-    }
-  });
+              InodeError(
+                  EEXIST,
+                  parentInode,
+                  name,
+                  "new file created with this name while checkout operation "
+                  "was in progress"));
+        }
+      });
 }
 
 void TreeInode::saveOverlayPostCheckout(
@@ -2557,7 +2550,7 @@ folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
   }
   return folly::makeFuture();
 }
-}
+} // namespace
 
 folly::Future<InodePtr> TreeInode::loadChildLocked(
     Dir& /* contents */,
@@ -2935,5 +2928,5 @@ void TreeInode::setAtime(struct timespec& atime) {
   auto contents = contents_.wlock();
   contents->timeStamps.atime = atime;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

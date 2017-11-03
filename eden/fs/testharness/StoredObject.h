@@ -130,5 +130,5 @@ class StoredObject {
   const T object_;
   folly::Synchronized<Data> data_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

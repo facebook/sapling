@@ -7,6 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/store/LocalStore.h"
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
@@ -17,7 +18,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;

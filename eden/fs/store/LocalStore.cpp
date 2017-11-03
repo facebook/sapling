@@ -31,10 +31,10 @@
 
 using facebook::eden::Hash;
 using folly::ByteRange;
-using folly::io::Cursor;
 using folly::IOBuf;
 using folly::Optional;
 using folly::StringPiece;
+using folly::io::Cursor;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
 using rocksdb::SliceParts;
@@ -135,7 +135,7 @@ class SerializedBlobMetadata {
 rocksdb::Slice _createSlice(folly::ByteRange bytes) {
   return Slice(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
-}
+} // namespace
 
 namespace facebook {
 namespace eden {

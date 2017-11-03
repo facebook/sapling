@@ -374,5 +374,5 @@ void InodeBase::updateJournal() {
         std::make_unique<JournalDelta>(JournalDelta{path.value()}));
   }
 }
-}
-}
+} // namespace eden
+} // namespace facebook

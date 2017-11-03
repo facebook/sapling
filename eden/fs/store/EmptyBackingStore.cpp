@@ -37,5 +37,5 @@ Future<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
     const Hash& /* commitID */) {
   return makeFuture<unique_ptr<Tree>>(std::domain_error("empty backing store"));
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

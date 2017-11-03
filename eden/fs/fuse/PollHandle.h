@@ -8,8 +8,8 @@
  *
  */
 #pragma once
-#include "fuse_headers.h"
 #include <memory>
+#include "fuse_headers.h"
 
 namespace facebook {
 namespace eden {
@@ -37,6 +37,6 @@ class PollHandle {
   // Requests that the kernel poll the associated file
   void notify();
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

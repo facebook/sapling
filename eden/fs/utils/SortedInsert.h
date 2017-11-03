@@ -8,8 +8,8 @@
  *
  */
 #pragma once
-#include <algorithm>
 #include <folly/String.h>
+#include <algorithm>
 
 namespace facebook {
 namespace eden {
@@ -31,5 +31,5 @@ struct CompareString {
     return a < b;
   }
 };
-}
-}
+} // namespace eden
+} // namespace facebook

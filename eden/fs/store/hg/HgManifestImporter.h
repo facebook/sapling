@@ -64,5 +64,5 @@ class HgManifestImporter {
   std::vector<PartialTree> dirStack_;
   LocalStore::WriteBatch& writeBatch_;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

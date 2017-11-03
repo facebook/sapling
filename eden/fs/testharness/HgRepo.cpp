@@ -134,5 +134,5 @@ void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {
   auto rc = ::symlink(contents.str().c_str(), fullPath.value().c_str());
   checkUnixError(rc, "error creating symlink at ", path);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

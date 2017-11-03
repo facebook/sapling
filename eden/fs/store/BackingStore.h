@@ -47,5 +47,5 @@ class BackingStore {
   BackingStore(BackingStore const&) = delete;
   BackingStore& operator=(BackingStore const&) = delete;
 };
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

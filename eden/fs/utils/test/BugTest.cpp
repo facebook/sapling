@@ -19,7 +19,7 @@ namespace {
 void buggyFunction() {
   EDEN_BUG() << "oh noes";
 }
-}
+} // namespace
 
 TEST(EdenBug, throws) {
   EdenBugDisabler noCrash;

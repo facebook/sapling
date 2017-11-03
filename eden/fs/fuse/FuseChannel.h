@@ -101,6 +101,6 @@ class FuseChannel {
   Dispatcher* const dispatcher_{nullptr};
   folly::File fuseDevice_;
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

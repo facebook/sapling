@@ -73,5 +73,5 @@ EdenBugDisabler::EdenBugDisabler() {
 EdenBugDisabler::~EdenBugDisabler() {
   --edenBugDisabledCount;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

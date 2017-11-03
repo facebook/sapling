@@ -61,5 +61,5 @@ void Journal::cancelAllSubscribers() {
 bool Journal::isSubscriberValid(uint64_t id) const {
   return subscribers_.find(id) != subscribers_.end();
 }
-}
+} // namespace eden
 } // namespace facebook

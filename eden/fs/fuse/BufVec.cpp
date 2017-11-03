@@ -29,6 +29,6 @@ folly::fbvector<struct iovec> BufVec::getIov() const {
 
   return vec;
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

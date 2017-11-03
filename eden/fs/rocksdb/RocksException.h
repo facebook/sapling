@@ -41,5 +41,5 @@ class RocksException : public std::exception {
   std::string msg_;
   std::string fullMsg_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

@@ -64,5 +64,5 @@ std::string InodeError::computeMessage() const {
   return path + ": " + message_ + ": " +
       folly::errnoStr(errnum()).toStdString();
 }
-}
-}
+} // namespace eden
+} // namespace facebook

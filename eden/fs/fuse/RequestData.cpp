@@ -38,7 +38,9 @@ void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
 
   // Guarantee to preserve the current context
   auto saved = folly::RequestContext::saveContext();
-  SCOPE_EXIT { folly::RequestContext::setContext(saved); };
+  SCOPE_EXIT {
+    folly::RequestContext::setContext(saved);
+  };
 
   // Adopt the context of the target request
   folly::RequestContext::setContext(request.requestContext_.lock());
@@ -150,8 +152,9 @@ void RequestData::replyEntry(const struct fuse_entry_param& e) {
   checkKernelError(fuse_reply_entry(stealReq(), &e));
 }
 
-bool RequestData::replyCreate(const struct fuse_entry_param& e,
-                              const struct fuse_file_info& fi) {
+bool RequestData::replyCreate(
+    const struct fuse_entry_param& e,
+    const struct fuse_file_info& fi) {
   int err = fuse_reply_create(stealReq(), &e, &fi);
   if (err == -ENOENT) {
     return false;
@@ -239,6 +242,6 @@ void RequestData::genericErrorHandler(const std::exception& err) {
   XLOG(DBG5) << folly::exceptionStr(err);
   RequestData::get().replyError(EIO);
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

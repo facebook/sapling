@@ -587,5 +587,5 @@ class InodeMapLock {
   friend class InodeMap;
   folly::Synchronized<InodeMap::Members>::LockedPtr data_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

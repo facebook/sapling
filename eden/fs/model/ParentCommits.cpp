@@ -30,5 +30,5 @@ std::ostream& operator<<(std::ostream& os, const ParentCommits& parents) {
   os << "]";
   return os;
 }
-}
-}
+} // namespace eden
+} // namespace facebook

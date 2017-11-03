@@ -227,6 +227,6 @@ void FuseChannel::processSession() {
     fuse_session_process(session_, buf.data(), res, ch);
   }
 }
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

@@ -8,13 +8,13 @@
  *
  */
 #pragma once
+#include <folly/Singleton.h>
+#include <folly/Subprocess.h>
+#include <folly/futures/Future.h>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <mutex>
 #include "LeaseCache.h"
-#include <folly/futures/Future.h>
-#include <folly/Subprocess.h>
-#include <folly/Singleton.h>
 
 namespace facebook {
 namespace hgsparse {
@@ -24,9 +24,10 @@ struct HgFileInformation {
   std::string name;
   mode_t mode;
 
-  HgFileInformation(folly::StringPiece flags,
-                    size_t fileSize,
-                    folly::StringPiece filename);
+  HgFileInformation(
+      folly::StringPiece flags,
+      size_t fileSize,
+      folly::StringPiece filename);
 };
 
 struct HgDirInformation {
@@ -76,7 +77,7 @@ class HgCommand {
 
   void setRepoDir(const std::string& repoDir);
   void setRepoRev(const std::string& rev);
-  const std::string &getRepoRev();
+  const std::string& getRepoRev();
 
   // Executes a command, returning stdout.
   // If the command failed, throws an exception with the error
@@ -92,5 +93,5 @@ class HgCommand {
   static folly::Future<std::string> future_run(folly::Subprocess&& proc);
 };
 
-}
-}
+} // namespace hgsparse
+} // namespace facebook

@@ -7,13 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/testharness/FakeObjectStore.h"
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/testharness/FakeObjectStore.h"
 
 using namespace facebook::eden;
 using folly::IOBuf;
@@ -27,7 +27,7 @@ Hash tree1Hash("1111111111111111111111111111111111111111");
 Hash tree2Hash("2222222222222222222222222222222222222222");
 Hash commHash("4444444444444444444444444444444444444444");
 Hash blobHash("5555555555555555555555555555555555555555");
-}
+} // namespace
 
 TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
   FakeObjectStore store;

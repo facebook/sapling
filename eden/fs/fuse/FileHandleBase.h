@@ -8,10 +8,10 @@
  *
  */
 #pragma once
+#include <folly/futures/Future.h>
 #include "BufVec.h"
 #include "Dispatcher.h"
 #include "PollHandle.h"
-#include <folly/futures/Future.h>
 
 namespace facebook {
 namespace eden {
@@ -44,8 +44,9 @@ class FileHandleBase {
    * @param attr the attributes
    * @param to_set bit mask of attributes which should be set
    */
-  virtual folly::Future<Dispatcher::Attr> setattr(const struct stat& attr,
-                                                  int to_set) = 0;
+  virtual folly::Future<Dispatcher::Attr> setattr(
+      const struct stat& attr,
+      int to_set) = 0;
 
   /* The result of an ioctl operation */
   struct Ioctl {
@@ -63,10 +64,11 @@ class FileHandleBase {
    * @param inputData is a copy of the arg data from userspace
    * @param outputSize is the maximum size of the output data
    */
-  virtual folly::Future<Ioctl> ioctl(int cmd,
-                                     const void* arg,
-                                     folly::ByteRange inputData,
-                                     size_t outputSize);
+  virtual folly::Future<Ioctl> ioctl(
+      int cmd,
+      const void* arg,
+      folly::ByteRange inputData,
+      size_t outputSize);
 
   /**
    * Poll for IO readiness
@@ -86,6 +88,6 @@ class FileHandleBase {
    */
   virtual folly::Future<unsigned> poll(std::unique_ptr<PollHandle> ph);
 };
-}
-}
-}
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

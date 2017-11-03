@@ -36,7 +36,7 @@ DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
 using namespace facebook::eden::fusell;
 using namespace facebook::eden;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
 

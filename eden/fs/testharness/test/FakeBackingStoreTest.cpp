@@ -7,13 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/test/TestChecks.h"
@@ -53,7 +53,7 @@ std::string blobContents(const Blob& blob) {
   Cursor c(&blob.getContents());
   return c.readFixedString(blob.getContents().computeChainDataLength());
 }
-}
+} // namespace
 
 TEST_F(FakeBackingStoreTest, getNonExistent) {
   // getTree()/getBlob()/getTreeForCommit() should throw immediately
@@ -137,7 +137,8 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto* dir1 = store_->putTree(
       makeTestHash("abc"),
       {
-          {"foo", foo}, {"runme", runme, 0755},
+          {"foo", foo},
+          {"runme", runme, 0755},
       });
   EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
   auto* dir2 = store_->putTree({{"README", store_->putBlob("docs go here")}});
@@ -275,14 +276,16 @@ TEST_F(FakeBackingStoreTest, maybePutTree) {
   auto* bar = store_->putBlob("bar\n");
 
   auto dir1 = store_->maybePutTree({
-      {"foo", foo}, {"bar", bar},
+      {"foo", foo},
+      {"bar", bar},
   });
   EXPECT_TRUE(dir1.second);
 
   // Listing the entries in a different order should still
   // result in the same tree.
   auto dir2 = store_->maybePutTree({
-      {"bar", bar}, {"foo", foo},
+      {"bar", bar},
+      {"foo", foo},
   });
   EXPECT_FALSE(dir2.second);
   EXPECT_EQ(dir1.first, dir2.first);

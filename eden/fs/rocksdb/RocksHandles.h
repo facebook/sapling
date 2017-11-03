@@ -55,5 +55,5 @@ struct RocksHandles {
   RocksHandles(RocksHandles&&) = default;
   RocksHandles& operator=(RocksHandles&&) = default;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

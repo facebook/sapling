@@ -8,9 +8,9 @@
  *
  */
 
+#include "eden/fs/inodes/Dirstate.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -207,7 +207,8 @@ TEST(Dirstate, createDirstateWithTouchedFile) {
 TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   FakeTreeBuilder builder;
   builder.setFiles({
-      {"rootfile.txt", ""}, {"dir1/a.txt", "original contents"},
+      {"rootfile.txt", ""},
+      {"dir1/a.txt", "original contents"},
   });
   TestMount testMount{builder};
 
@@ -249,7 +250,8 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
   verifyExpectedDirstate(
       dirstate,
       {
-          {"dir1/b.txt", StatusCode::ADDED}, {"dir2/c.txt", StatusCode::ADDED},
+          {"dir1/b.txt", StatusCode::ADDED},
+          {"dir2/c.txt", StatusCode::ADDED},
       });
 
   scmRemoveFile(dirstate, "dir1/a.txt", /* force */ false);
@@ -282,7 +284,7 @@ TEST(Dirstate, addDirectoriesWithMixOfFiles) {
       DirstateAddRemoveError{RelativePath("dir3"),
                              "dir3: No such file or directory"}
 
-      );
+  );
 }
 
 TEST(Dirstate, createDirstateWithFileAndThenHgRemoveIt) {

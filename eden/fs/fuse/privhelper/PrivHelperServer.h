@@ -68,6 +68,6 @@ class PrivHelperServer {
   std::set<std::string> mountPoints_;
   std::unordered_multimap<std::string, std::string> bindMountPoints_;
 };
-}
-}
-} // facebook::eden::fusell
+} // namespace fusell
+} // namespace eden
+} // namespace facebook

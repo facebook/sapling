@@ -31,5 +31,5 @@ class TreeInodeDirHandle : public fusell::DirHandle {
  private:
   TreeInodePtr inode_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

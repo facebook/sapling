@@ -509,7 +509,7 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
 
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
   // exists until the diff completes.
-  auto stateHolder = [ctx = std::move(context)](){};
+  auto stateHolder = [ctx = std::move(context)]() {};
 
   auto rootInode = getRootInode();
   return getRootTreeFuture()
@@ -689,5 +689,5 @@ struct stat EdenMount::initStatData() const {
 
   return st;
 }
-}
-} // facebook::eden
+} // namespace eden
+} // namespace facebook

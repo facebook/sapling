@@ -36,5 +36,5 @@ class Blob {
   const Hash hash_;
   const folly::IOBuf contents_;
 };
-}
-}
+} // namespace eden
+} // namespace facebook

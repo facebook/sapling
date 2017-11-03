@@ -17,11 +17,11 @@
 #include <folly/ssl/OpenSSLHash.h>
 #include <string>
 
-using std::string;
 using folly::ByteRange;
 using folly::StringPiece;
 using folly::range;
 using folly::ssl::OpenSSLHash;
+using std::string;
 
 namespace facebook {
 namespace eden {
@@ -31,7 +31,7 @@ const Hash kZeroHash;
 namespace {
 Hash::Storage hexToBytes(StringPiece hex);
 Hash::Storage byteRangeToArray(ByteRange bytes);
-}
+} // namespace
 
 Hash::Hash() : bytes_{{0}} {}
 
@@ -107,7 +107,7 @@ Hash::Storage byteRangeToArray(ByteRange bytes) {
   std::copy(bytes.begin(), bytes.end(), arr.data());
   return arr;
 }
-}
+} // namespace
 
 Hash Hash::sha1(const folly::IOBuf* buf) {
   Storage hashBytes;
@@ -129,5 +129,5 @@ std::ostream& operator<<(std::ostream& os, const Hash& hash) {
 void toAppend(const Hash& hash, std::string* result) {
   folly::toAppend(hash.toString(), result);
 }
-}
-}
+} // namespace eden
+} // namespace facebook

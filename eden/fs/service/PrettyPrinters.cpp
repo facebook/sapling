@@ -55,5 +55,5 @@ std::ostream& operator<<(std::ostream& os, StatusCode statusCode) {
   return outputThriftEnum(
       os, statusCode, _StatusCode_VALUES_TO_NAMES, "StatusCode");
 }
-}
-}
+} // namespace eden
+} // namespace facebook

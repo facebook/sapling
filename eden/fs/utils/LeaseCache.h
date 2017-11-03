@@ -15,13 +15,13 @@
 namespace facebook {
 namespace eden {
 
-template <typename KEY, typename VAL, typename HASH=std::hash<KEY>>
+template <typename KEY, typename VAL, typename HASH = std::hash<KEY>>
 class LeaseCache {
  public:
   using ValuePtr = std::shared_ptr<VAL>;
   using FutureType = folly::Future<ValuePtr>;
   using SharedPromiseType = std::shared_ptr<folly::SharedPromise<ValuePtr>>;
-  using FetchFunc = std::function<FutureType(const KEY &key)>;
+  using FetchFunc = std::function<FutureType(const KEY& key)>;
 
  private:
   std::mutex lock_;
@@ -29,19 +29,17 @@ class LeaseCache {
   FetchFunc fetcher_;
 
  public:
-  LeaseCache(size_t maxSize, FetchFunc fetcher, size_t clearSize = 1) :
-    cache_(maxSize, clearSize),
-    fetcher_(fetcher) {
-  }
+  LeaseCache(size_t maxSize, FetchFunc fetcher, size_t clearSize = 1)
+      : cache_(maxSize, clearSize), fetcher_(fetcher) {}
 
-  void set(const KEY &key, ValuePtr val) {
+  void set(const KEY& key, ValuePtr val) {
     std::lock_guard<std::mutex> g(lock_);
     auto entry = std::make_shared<typename SharedPromiseType::element_type>();
     entry->setValue(val);
     cache_.set(key, entry);
   }
 
-  void erase(const KEY&key) {
+  void erase(const KEY& key) {
     std::lock_guard<std::mutex> g(lock_);
     cache_.erase(key);
   }
@@ -50,7 +48,7 @@ class LeaseCache {
     cache_.setMaxSize(size);
   }
 
-  FutureType get(const KEY &key) {
+  FutureType get(const KEY& key) {
     SharedPromiseType entry;
 
     {
@@ -75,8 +73,10 @@ class LeaseCache {
     return future;
   }
 
-  bool exists(const KEY& key) { return cache_.exists(key); }
+  bool exists(const KEY& key) {
+    return cache_.exists(key);
+  }
 };
 
-}
-}
+} // namespace eden
+} // namespace facebook
