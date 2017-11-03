@@ -2,6 +2,10 @@
 
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [treemanifest]
+  > sendtrees=True
+  > EOF
 
 Setup the server
 

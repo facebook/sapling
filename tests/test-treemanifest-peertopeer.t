@@ -2,6 +2,11 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
+  $ cat >> $HGRCPATH <<EOF
+  > [treemanifest]
+  > sendtrees=True
+  > EOF
+
   $ . "$TESTDIR/library.sh"
 
   $ hg init client1

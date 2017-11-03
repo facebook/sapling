@@ -111,6 +111,7 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('treemanifest', 'sendtrees', default=False)
 configitem('treemanifest', 'server', default=False)
 
 PACK_CATEGORY='manifests'
@@ -1074,7 +1075,8 @@ def _registerbundle2parts():
     @exchange.b2partsgenerator(TREEGROUP_PARTTYPE2)
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
-        if 'treepack' in pushop.stepsdone or not treeenabled(pushop.repo.ui):
+        if ('treepack' in pushop.stepsdone or
+            not treeenabled(pushop.repo.ui)):
             return
         pushop.stepsdone.add('treepack')
 
@@ -1101,6 +1103,10 @@ def _registerbundle2parts():
             bundler.addpart(part)
 
 def _cansendtrees(repo, nodes):
+    sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
+    if not sendtrees:
+        return False
+
     mfnodes = []
     for node in nodes:
         mfnodes.append(('', repo[node].manifestnode()))
