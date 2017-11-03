@@ -400,11 +400,13 @@ Don't crash if the subrepo is missing
 Don't crash if subrepo is a broken symlink
   $ ln -s broken s
   $ hg status -S
+  abort: subrepo 's' traverses symbolic link
+  [255]
   $ hg push -q
-  abort: subrepo s is missing (in subrepository "s")
+  abort: subrepo 's' traverses symbolic link
   [255]
   $ hg commit --subrepos -qm missing
-  abort: subrepo s is missing (in subrepository "s")
+  abort: subrepo 's' traverses symbolic link
   [255]
   $ rm s
 #endif

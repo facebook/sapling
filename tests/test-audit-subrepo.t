@@ -50,17 +50,35 @@ on commit:
   $ hg ci -qAm 'add symlink "out"'
   $ hg init ../out
   $ echo 'out = out' >> .hgsub
-BROKEN: should fail
   $ hg ci -qAm 'add subrepo "out"'
+  abort: subrepo 'out' traverses symbolic link
+  [255]
+
+prepare tampered repo (including the commit above):
+
+  $ hg import --bypass -qm 'add subrepo "out"' - <<'EOF'
+  > diff --git a/.hgsub b/.hgsub
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/.hgsub
+  > @@ -0,0 +1,1 @@
+  > +out = out
+  > diff --git a/.hgsubstate b/.hgsubstate
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/.hgsubstate
+  > @@ -0,0 +1,1 @@
+  > +0000000000000000000000000000000000000000 out
+  > EOF
   $ cd ../..
 
 on clone (and update):
 
   $ mkdir hgsymdir2
-BROKEN: should fail to update
   $ hg clone -q hgsymdir/root hgsymdir2/root
+  abort: subrepo 'out' traverses symbolic link
+  [255]
   $ ls hgsymdir2
-  out
   root
 
 #endif

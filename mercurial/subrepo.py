@@ -359,6 +359,12 @@ def _sanitize(ui, vfs, ignore):
                           "in '%s'\n") % vfs.join(dirname))
                 vfs.unlink(vfs.reljoin(dirname, f))
 
+def _auditsubrepopath(repo, path):
+    # auditor doesn't check if the path itself is a symlink
+    pathutil.pathauditor(repo.root)(path)
+    if repo.wvfs.islink(path):
+        raise error.Abort(_("subrepo '%s' traverses symbolic link") % path)
+
 def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
@@ -369,7 +375,7 @@ def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     from . import hg as h
     hg = h
 
-    pathutil.pathauditor(ctx.repo().root)(path)
+    _auditsubrepopath(ctx.repo(), path)
     state = ctx.substate[path]
     if state[2] not in types:
         raise error.Abort(_('unknown subrepo type %s') % state[2])
@@ -387,7 +393,7 @@ def nullsubrepo(ctx, path, pctx):
     from . import hg as h
     hg = h
 
-    pathutil.pathauditor(ctx.repo().root)(path)
+    _auditsubrepopath(ctx.repo(), path)
     state = ctx.substate[path]
     if state[2] not in types:
         raise error.Abort(_('unknown subrepo type %s') % state[2])
