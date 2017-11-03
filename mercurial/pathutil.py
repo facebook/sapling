@@ -184,8 +184,10 @@ def canonpath(root, cwd, myname, auditor=None):
         try:
             if cwd != root:
                 canonpath(root, root, myname, auditor)
-                hint = (_("consider using '--cwd %s'")
-                        % os.path.relpath(root, cwd))
+                relpath = util.pathto(root, cwd, '')
+                if relpath[-1] == pycompat.ossep:
+                    relpath = relpath[:-1]
+                hint = (_("consider using '--cwd %s'") % relpath)
         except error.Abort:
             pass
 
