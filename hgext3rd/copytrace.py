@@ -37,7 +37,14 @@
 
 '''
 
-from collections import defaultdict
+import anydbm
+import collections
+import json
+import os
+import time
+
+from mercurial.i18n import _
+
 from mercurial import (
     cmdutil,
     commands,
@@ -50,13 +57,8 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
 
-import anydbm
-import json
-import os
-import time
-
+defaultdict = collections.defaultdict
 _copytracinghint = ("hint: if this message is due to a moved file, you can " +
                     "ask mercurial to attempt to automatically resolve this " +
                     "change by re-running with the --tracecopies flag, but " +
