@@ -54,9 +54,19 @@ from mercurial import (
     filemerge,
     node,
     phases,
+    registrar,
     scmutil,
     util,
 )
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('copytrace', 'maxmovescandidatestocheck', default=5)
+configitem('copytrace', 'sourcecommitlimit', default=100)
+configitem('copytrace', 'fastcopytrace', default=False)
+configitem('copytrace', 'enableamendcopytrace', default=True)
+configitem('copytrace', 'amendcopytracecommitlimit', default=100)
 
 defaultdict = collections.defaultdict
 _copytracinghint = ("hint: if this message is due to a moved file, you can " +
@@ -158,7 +168,7 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
     """
 
     # Check if amend copytracing has been disabled.
-    if not ui.configbool("copytrace", "enableamendcopytrace", True):
+    if not ui.configbool("copytrace", "enableamendcopytrace"):
         return orig(ui, repo, old, extra, pats, opts)
 
     # Need to get the amend-copies before calling the command because files from
@@ -236,7 +246,7 @@ def _getamendcopies(repo, dest, ancestor):
     try:
         ctx = dest
         count = 0
-        limit = repo.ui.configint('copytrace', 'amendcopytracecommitlimit', 100)
+        limit = repo.ui.configint('copytrace', 'amendcopytracecommitlimit')
 
         # Search for the ancestor commit that has amend copytrace data.  This
         # will be the most recent amend commit if we are rebasing onto an
@@ -339,7 +349,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
         configoverrides = {('experimental', 'copytrace'): 'on'}
         with repo.ui.configoverride(configoverrides, 'mergecopies'):
             result = orig(repo, cdst, csrc, base)
-            if repo.ui.configbool("copytrace", "enableamendcopytrace", True):
+            if repo.ui.configbool("copytrace", "enableamendcopytrace"):
                 # Look for additional amend-copies
                 amend_copies = _getamendcopies(repo, cdst, base.p1())
                 # update result[0] dict w/ amend_copies
@@ -361,7 +371,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     ctx = csrc
     changedfiles = set()
     sourcecommitnum = 0
-    sourcecommitlimit = repo.ui.configint('copytrace', 'sourcecommitlimit', 100)
+    sourcecommitlimit = repo.ui.configint('copytrace', 'sourcecommitlimit')
     mdst = cdst.manifest()
     while ctx != base:
         if len(ctx.parents()) == 2:
@@ -398,7 +408,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
             dirnametofilename[dirname].append(f)
 
         maxmovecandidatestocheck = repo.ui.configint(
-            'copytrace', 'maxmovescandidatestocheck', 5)
+            'copytrace', 'maxmovescandidatestocheck')
         # in case of a rebase/graft, base may not be a common ancestor
         anc = cdst.ancestor(csrc)
         for f in missingfiles:
@@ -422,7 +432,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
                 repo.ui.log("copytrace", msg=msg,
                             reponame=_getreponame(repo, repo.ui))
 
-    if repo.ui.configbool("copytrace", "enableamendcopytrace", True):
+    if repo.ui.configbool("copytrace", "enableamendcopytrace"):
         # Look for additional amend-copies.
         amend_copies = _getamendcopies(repo, cdst, base.p1())
         if amend_copies:
@@ -434,7 +444,7 @@ def _domergecopies(orig, repo, cdst, csrc, base):
     return copies, {}, {}, {}, {}
 
 def _fastcopytraceenabled(ui):
-    return ui.configbool("copytrace", "fastcopytrace", False)
+    return ui.configbool("copytrace", "fastcopytrace")
 
 def _getreponame(repo, ui):
     reporoot = repo.origroot if util.safehasattr(repo, 'origroot') else ''
@@ -460,7 +470,7 @@ def _isfullcopytraceable(ui, cdst, base):
         # draft branch: Use traditional copytracing if < 100 commits
         ctx = cdst
         commits = 0
-        sourcecommitlimit = ui.configint('copytrace', 'sourcecommitlimit', 100)
+        sourcecommitlimit = ui.configint('copytrace', 'sourcecommitlimit')
         while ctx != base and commits != sourcecommitlimit:
             ctx = ctx.p1()
             commits += 1
