@@ -997,16 +997,26 @@ class recordhunk(object):
 def getmessages():
     return {
         'multiple': {
+            'apply': _("apply change %d/%d to '%s'?"),
             'discard': _("discard change %d/%d to '%s'?"),
             'record': _("record change %d/%d to '%s'?"),
-            'revert': _("revert change %d/%d to '%s'?"),
         },
         'single': {
+            'apply': _("apply this change to '%s'?"),
             'discard': _("discard this change to '%s'?"),
             'record': _("record this change to '%s'?"),
-            'revert': _("revert this change to '%s'?"),
         },
         'help': {
+            'apply': _('[Ynesfdaq?]'
+                         '$$ &Yes, apply this change'
+                         '$$ &No, skip this change'
+                         '$$ &Edit this change manually'
+                         '$$ &Skip remaining changes to this file'
+                         '$$ Apply remaining changes to this &file'
+                         '$$ &Done, skip remaining changes and files'
+                         '$$ Apply &all changes to all remaining files'
+                         '$$ &Quit, applying no changes'
+                         '$$ &? (display help)'),
             'discard': _('[Ynesfdaq?]'
                          '$$ &Yes, discard this change'
                          '$$ &No, skip this change'
@@ -1027,16 +1037,6 @@ def getmessages():
                         '$$ Record &all changes to all remaining files'
                         '$$ &Quit, recording no changes'
                         '$$ &? (display help)'),
-            'revert': _('[Ynesfdaq?]'
-                        '$$ &Yes, revert this change'
-                        '$$ &No, skip this change'
-                        '$$ &Edit this change manually'
-                        '$$ &Skip remaining changes to this file'
-                        '$$ Revert remaining changes to this &file'
-                        '$$ &Done, skip remaining changes and files'
-                        '$$ Revert &all changes to all remaining files'
-                        '$$ &Quit, reverting no changes'
-                        '$$ &? (display help)')
         }
     }
 

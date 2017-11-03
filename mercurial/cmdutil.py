@@ -3790,9 +3790,8 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         operation = 'discard'
         reversehunks = True
         if node != parent:
-            operation = 'revert'
-            reversehunks = repo.ui.configbool('experimental',
-                'revertalternateinteractivemode')
+            operation = 'apply'
+            reversehunks = False
         if reversehunks:
             diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
         else:

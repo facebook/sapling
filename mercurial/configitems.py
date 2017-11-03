@@ -439,9 +439,6 @@ coreconfigitem('experimental', 'obsmarkers-exchange-debug',
 coreconfigitem('experimental', 'rebase.multidest',
     default=False,
 )
-coreconfigitem('experimental', 'revertalternateinteractivemode',
-    default=True,
-)
 coreconfigitem('experimental', 'revlogv2',
     default=None,
 )

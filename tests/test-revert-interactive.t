@@ -60,56 +60,56 @@ Revert interactive tests
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,6 @@
-  +a
+  @@ -1,6 +1,5 @@
+  -a
    1
    2
    3
    4
    5
-  revert change 1/6 to 'f'? [Ynesfdaq?] y
+  apply change 1/6 to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +2,6 @@
+  @@ -2,6 +1,5 @@
    1
    2
    3
    4
    5
-  +b
-  revert change 2/6 to 'f'? [Ynesfdaq?] y
+  -b
+  apply change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,6 @@
-  +c
+  @@ -1,6 +1,5 @@
+  -c
    1
    2
    3
    4
    5
-  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] ?
+  apply change 3/6 to 'folder1/g'? [Ynesfdaq?] ?
   
-  y - yes, revert this change
+  y - yes, apply this change
   n - no, skip this change
   e - edit this change manually
   s - skip remaining changes to this file
-  f - revert remaining changes to this file
+  f - apply remaining changes to this file
   d - done, skip remaining changes and files
-  a - revert all changes to all remaining files
-  q - quit, reverting no changes
+  a - apply all changes to all remaining files
+  q - quit, applying no changes
   ? - ? (display help)
-  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] y
+  apply change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,5 +2,6 @@
+  @@ -2,6 +1,5 @@
    1
    2
    3
    4
    5
-  +d
-  revert change 4/6 to 'folder1/g'? [Ynesfdaq?] n
+  -d
+  apply change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
   2 hunks, 2 lines changed
@@ -157,12 +157,12 @@ Test that a noop revert doesn't do an unnecessary backup
   1 hunks, 1 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -3,3 +3,4 @@
+  @@ -3,4 +3,3 @@
    3
    4
    5
-  +d
-  revert this change to 'folder1/g'? [Ynesfdaq?] n
+  -d
+  apply this change to 'folder1/g'? [Ynesfdaq?] n
   
   $ ls folder1/
   g
@@ -173,12 +173,12 @@ Test --no-backup
   1 hunks, 1 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -3,3 +3,4 @@
+  @@ -3,4 +3,3 @@
    3
    4
    5
-  +d
-  revert this change to 'folder1/g'? [Ynesfdaq?] y
+  -d
+  apply this change to 'folder1/g'? [Ynesfdaq?] y
   
   $ ls folder1/
   g
@@ -206,45 +206,45 @@ Test --no-backup
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,6 @@
-  +a
+  @@ -1,6 +1,5 @@
+  -a
    1
    2
    3
    4
    5
-  revert change 1/6 to 'f'? [Ynesfdaq?] y
+  apply change 1/6 to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +2,6 @@
+  @@ -2,6 +1,5 @@
    1
    2
    3
    4
    5
-  +b
-  revert change 2/6 to 'f'? [Ynesfdaq?] y
+  -b
+  apply change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,6 @@
-  +c
+  @@ -1,6 +1,5 @@
+  -c
    1
    2
    3
    4
    5
-  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] y
+  apply change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,5 +2,6 @@
+  @@ -2,6 +1,5 @@
    1
    2
    3
    4
    5
-  +d
-  revert change 4/6 to 'folder1/g'? [Ynesfdaq?] n
+  -d
+  apply change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
   2 hunks, 2 lines changed
@@ -368,77 +368,6 @@ Check editing files newly added by a revert
   $ cat k
   42
 
-Check the experimental config to invert the selection:
-  $ cat <<EOF >> $HGRCPATH
-  > [experimental]
-  > revertalternateinteractivemode=False
-  > EOF
-
-
-  $ hg up -C .
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ printf 'firstline\nc\n1\n2\n3\n 3\n5\nd\nlastline\n' > folder1/g
-  $ hg diff --nodates
-  diff -r a3d963a027aa folder1/g
-  --- a/folder1/g
-  +++ b/folder1/g
-  @@ -1,7 +1,9 @@
-  +firstline
-   c
-   1
-   2
-   3
-  -4
-  + 3
-   5
-   d
-  +lastline
-  $ hg revert -i <<EOF
-  > y
-  > y
-  > y
-  > n
-  > EOF
-  reverting folder1/g (glob)
-  diff --git a/folder1/g b/folder1/g
-  3 hunks, 3 lines changed
-  examine changes to 'folder1/g'? [Ynesfdaq?] y
-  
-  @@ -1,4 +1,5 @@
-  +firstline
-   c
-   1
-   2
-   3
-  discard change 1/3 to 'folder1/g'? [Ynesfdaq?] y
-  
-  @@ -1,7 +2,7 @@
-   c
-   1
-   2
-   3
-  -4
-  + 3
-   5
-   d
-  discard change 2/3 to 'folder1/g'? [Ynesfdaq?] y
-  
-  @@ -6,2 +7,3 @@
-   5
-   d
-  +lastline
-  discard change 3/3 to 'folder1/g'? [Ynesfdaq?] n
-  
-  $ hg diff --nodates
-  diff -r a3d963a027aa folder1/g
-  --- a/folder1/g
-  +++ b/folder1/g
-  @@ -5,3 +5,4 @@
-   4
-   5
-   d
-  +lastline
-
   $ hg update -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg purge
@@ -463,11 +392,6 @@ Check the experimental config to invert the selection:
 
 When a line without EOL is selected during "revert -i" (issue5651)
 
-  $ cat <<EOF >> $HGRCPATH
-  > [experimental]
-  > %unset revertalternateinteractivemode
-  > EOF
-
   $ hg init $TESTTMP/revert-i-eol
   $ cd $TESTTMP/revert-i-eol
   $ echo 0 > a
@@ -487,11 +411,11 @@ When a line without EOL is selected during "revert -i" (issue5651)
   1 hunks, 1 lines changed
   examine changes to 'a'? [Ynesfdaq?] y
   
-  @@ -1,1 +1,2 @@
+  @@ -1,2 +1,1 @@
    0
-  +1
+  -1
   \ No newline at end of file
-  revert this change to 'a'? [Ynesfdaq?] y
+  apply this change to 'a'? [Ynesfdaq?] y
   
   $ cat a
   0
