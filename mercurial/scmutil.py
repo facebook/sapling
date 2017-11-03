@@ -610,7 +610,7 @@ def origpath(ui, repo, filepath):
 
         origvfs.makedirs(origbackupdir)
 
-    if origvfs.isdir(filepathfromroot):
+    if origvfs.isdir(filepathfromroot) and not origvfs.islink(filepathfromroot):
         ui.note(_('removing conflicting directory: %s\n')
                 % origvfs.join(filepathfromroot))
         origvfs.rmtree(filepathfromroot, forcibly=True)

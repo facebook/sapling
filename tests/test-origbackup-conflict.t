@@ -110,18 +110,12 @@ Perform an update that causes b/c and d to be backed up again - b/c should not g
   creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
   removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
   getting d
-  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/d (glob)
-  abort: None
-  [255]
-
-Workaround issue by deleting d:
-
-  $ rm d
-  $ hg up c1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
   $ cat .hg/origbackups/b/c
   c4
+  $ cat .hg/origbackups/d
+  d3
   $ ls ../sym-link-target
 
 Incorrectly configure origbackuppath to be under a file
