@@ -106,12 +106,14 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // materialized the data from the entry, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
-  return ensureDataLoaded().then([self = inodePtrFromThis()]() {
-    auto attr = fusell::Dispatcher::Attr{self->getMount()->initStatData()};
-    attr.st = self->stat();
-    attr.st.st_ino = self->getNodeId();
-    return attr;
-  });
+  return stat().then(
+      [nodeId = getNodeId(),
+       initStat = getMount()->initStatData()](const struct stat& st) {
+        auto attr = fusell::Dispatcher::Attr{initStat};
+        attr.st = st;
+        attr.st.st_ino = nodeId;
+        return attr;
+      });
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
@@ -355,44 +357,46 @@ Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
   }
 }
 
-struct stat FileInode::stat() {
-  auto st = getMount()->initStatData();
-  st.st_nlink = 1;
+folly::Future<struct stat> FileInode::stat() {
+  return ensureDataLoaded().then([self = inodePtrFromThis()]() {
+    auto st = self->getMount()->initStatData();
+    st.st_nlink = 1;
 
-  auto state = state_.rlock();
+    auto state = self->state_.rlock();
 
-  if (state->file) {
-    // We are calling fstat only to get the size of the file.
-    checkUnixError(fstat(state->file.fd(), &st));
+    if (state->file) {
+      // We are calling fstat only to get the size of the file.
+      checkUnixError(fstat(state->file.fd(), &st));
 
-    if (st.st_size < Overlay::kHeaderLength) {
-      auto filePath = getLocalPath();
-      EDEN_BUG() << "Overlay file " << getLocalPath()
-                 << " is too short for header: size=" << st.st_size;
+      if (st.st_size < Overlay::kHeaderLength) {
+        auto filePath = self->getLocalPath();
+        EDEN_BUG() << "Overlay file " << filePath
+                   << " is too short for header: size=" << st.st_size;
+      }
+      st.st_size -= Overlay::kHeaderLength;
+      st.st_rdev = state->rdev;
+    } else {
+      CHECK(state->blob);
+      auto buf = state->blob->getContents();
+      st.st_size = buf.computeChainDataLength();
+
+      // NOTE: we don't set rdev to anything special here because we
+      // don't support committing special device nodes.
     }
-    st.st_size -= Overlay::kHeaderLength;
-    st.st_rdev = state->rdev;
-  } else {
-    CHECK(state->blob);
-    auto buf = state->blob->getContents();
-    st.st_size = buf.computeChainDataLength();
-
-    // NOTE: we don't set rdev to anything special here because we
-    // don't support committing special device nodes.
-  }
 #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-  st.st_atim = state->timeStamps.atime;
-  st.st_ctim = state->timeStamps.ctime;
-  st.st_mtim = state->timeStamps.mtime;
+    st.st_atim = state->timeStamps.atime;
+    st.st_ctim = state->timeStamps.ctime;
+    st.st_mtim = state->timeStamps.mtime;
 #else
-  st.st_atime = state->timeStamps.atime.tv_sec;
-  st.st_mtime = state->timeStamps.mtime.tv_sec;
-  st.st_ctime = state->timeStamps.ctime.tv_sec;
+    st.st_atime = state->timeStamps.atime.tv_sec;
+    st.st_mtime = state->timeStamps.mtime.tv_sec;
+    st.st_ctime = state->timeStamps.ctime.tv_sec;
 #endif
-  st.st_mode = state->mode;
+    st.st_mode = state->mode;
 
-  return st;
+    return st;
+  });
 }
 
 void FileInode::flush(uint64_t /* lock_owner */) {

@@ -56,7 +56,10 @@ class FileInode : public InodeBase {
       dev_t rdev = 0);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+
+  /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink();
+
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi);
 
@@ -72,7 +75,8 @@ class FileInode : public InodeBase {
   folly::Future<folly::Unit> prefetch() override;
 
   /**
-   * Updates inmemory timestamps in FileInode and TreeInode to the overlay file.
+   * Updates in-memory timestamps in FileInode and TreeInode to the overlay
+   * file.
    */
   void updateOverlayHeader() const override;
   folly::Future<Hash> getSHA1(bool failIfSymlink = true);
@@ -258,9 +262,11 @@ class FileInode : public InodeBase {
   void storeSha1(
       const folly::Synchronized<FileInode::State>::LockedPtr& state,
       Hash sha1);
+
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);
-  struct stat stat();
+
+  folly::Future<struct stat> stat();
   void flush(uint64_t lock_owner);
   void fsync(bool datasync);
 
