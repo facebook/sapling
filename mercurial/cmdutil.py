@@ -3153,6 +3153,18 @@ def amend(ui, repo, old, extra, pats, opts):
             raise error.Abort(
                 _("failed to mark all new/missing files as added/removed"))
 
+        # Check subrepos. This depends on in-place wctx._status update in
+        # subrepo.precommit(). To minimize the risk of this hack, we do
+        # nothing if .hgsub does not exist.
+        if '.hgsub' in wctx or '.hgsub' in old:
+            from . import subrepo  # avoid cycle: cmdutil -> subrepo -> cmdutil
+            subs, commitsubs, newsubstate = subrepo.precommit(
+                ui, wctx, wctx._status, matcher)
+            # amend should abort if commitsubrepos is enabled
+            assert not commitsubs
+            if subs:
+                subrepo.writestate(repo, newsubstate)
+
         filestoamend = set(f for f in wctx.files() if matcher(f))
 
         changes = (len(filestoamend) > 0)
