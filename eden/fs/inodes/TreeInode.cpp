@@ -1706,9 +1706,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
   }
 
   if (S_ISLNK(fileInode->getMode())) {
-    auto dataFuture = fileInode->ensureDataLoaded();
-    return dataFuture.then([fileInode = std::move(fileInode)]() {
-      // auto symlinkContents = data->readAll();
+    return fileInode->readAll().then([](std::string&& /*symlinkContents*/) {
       // TODO: Look up the symlink destination and continue.
       // The symlink might point to another path inside our mount point, or
       // it may point outside.
@@ -1717,21 +1715,13 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     });
   }
 
-  // Load the file data
-  // We intentionally call data->ensureDataLoaded() as a separate statement
-  // from creating the future callback with then(), since the callback
-  // move-captures.  Before C++17 the ordering is undefined here, and the
-  // compiler may decide to move data away before evaluating
-  // data->ensureDataLoaded().
-  auto dataFuture = fileInode->ensureDataLoaded();
-  return dataFuture.then([self = inodePtrFromThis(),
-                          context,
-                          currentPath = RelativePath{currentPath},
-                          tree = std::move(tree),
-                          parentIgnore,
-                          isIgnored,
-                          fileInode = std::move(fileInode)]() mutable {
-    auto ignoreFileContents = fileInode->readAll();
+  return fileInode->readAll().then([self = inodePtrFromThis(),
+                                    context,
+                                    currentPath = RelativePath{currentPath},
+                                    tree = std::move(tree),
+                                    parentIgnore,
+                                    isIgnored](
+                                       std::string&& ignoreFileContents) {
     auto ignore = make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents);
     return self->computeDiff(
         self->contents_.wlock(),

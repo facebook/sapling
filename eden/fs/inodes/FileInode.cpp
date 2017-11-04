@@ -183,8 +183,7 @@ folly::Future<std::string> FileInode::readlink() {
   }
 
   // The symlink contents are simply the file contents!
-  return ensureDataLoaded().then(
-      [self = inodePtrFromThis()]() { return self->readAll(); });
+  return readAll();
 }
 
 void FileInode::fileHandleDidClose() {
@@ -469,24 +468,26 @@ std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
   return result;
 }
 
-std::string FileInode::readAll() {
-  // We need to take the wlock instead of the rlock because the lseek() call
-  // modifies the file offset of the file descriptor.
-  auto state = state_.wlock();
-  std::string result;
-  if (state->file) {
-    auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
-    folly::checkUnixError(rc, "unable to seek in materialized FileInode");
-    folly::readFile(state->file.fd(), result);
-  } else {
-    const auto& contentsBuf = state->blob->getContents();
-    folly::io::Cursor cursor(&contentsBuf);
-    result = cursor.readFixedString(contentsBuf.computeChainDataLength());
-  }
+folly::Future<std::string> FileInode::readAll() {
+  return ensureDataLoaded().then([self = inodePtrFromThis()] {
+    // We need to take the wlock instead of the rlock because the lseek() call
+    // modifies the file offset of the file descriptor.
+    auto state = self->state_.wlock();
+    std::string result;
+    if (state->file) {
+      auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
+      folly::checkUnixError(rc, "unable to seek in materialized FileInode");
+      folly::readFile(state->file.fd(), result);
+    } else {
+      const auto& contentsBuf = state->blob->getContents();
+      folly::io::Cursor cursor(&contentsBuf);
+      result = cursor.readFixedString(contentsBuf.computeChainDataLength());
+    }
 
-  // We want to update atime after the read operation.
-  clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
-  return result;
+    // We want to update atime after the read operation.
+    clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
+    return result;
+  });
 }
 
 fusell::BufVec FileInode::read(size_t size, off_t off) {
@@ -695,7 +696,7 @@ void FileInode::storeSha1(
   }
 }
 
-// Gets the immemory timestamps of the inode.
+// Gets the in-memory timestamps of the inode.
 InodeBase::InodeTimestamps FileInode::getTimestamps() const {
   auto state = state_.rlock();
   return state->timeStamps;

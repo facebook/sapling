@@ -126,16 +126,7 @@ class FileInode : public InodeBase {
    *
    * Note that this API generally should only be used for fairly small files.
    */
-  std::string readAll();
-
-  /**
-   * Load the file data so it can be used for reading.
-   *
-   * If this file is materialized, this opens its file in the overlay.
-   * If the file is not materialized, this loads the Blob data from the
-   * ObjectStore.
-   */
-  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
+  FOLLY_NODISCARD folly::Future<std::string> readAll();
 
   /**
    * Materialize the file data.
@@ -169,6 +160,15 @@ class FileInode : public InodeBase {
   InodeTimestamps getTimestamps() const;
 
  private:
+  /**
+   * Load the file data so it can be used for reading.
+   *
+   * If this file is materialized, this opens its file in the overlay.
+   * If the file is not materialized, this loads the Blob data from the
+   * ObjectStore.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
+
   /**
    * The contents of a FileInode.
    *
