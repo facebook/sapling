@@ -268,7 +268,6 @@ amend r1 to include wc changes
 
 clean/modified/removed/added states of the amended revision
 
-BROKEN: untracked files aren't removed
 BROKEN: missing files are removed
 
   $ hg status --all --change . 'glob:content1_*_content1-tracked'
@@ -285,21 +284,16 @@ BROKEN: missing files are removed
   R content1_missing_missing-tracked
   C content1_content1_missing-tracked
   $ hg status --all --change . 'glob:content1_*_*-untracked'
-  M content1_content1_content3-untracked (true !)
-  M content1_content2_content2-untracked (true !)
-  M content1_content2_content3-untracked (true !)
-  R content1_content1_content1-untracked (false !)
-  R content1_content1_content3-untracked (false !)
+  R content1_content1_content1-untracked
+  R content1_content1_content3-untracked
   R content1_content1_missing-untracked
-  R content1_content2_content1-untracked (false !)
-  R content1_content2_content2-untracked (false !)
-  R content1_content2_content3-untracked (false !)
+  R content1_content2_content1-untracked
+  R content1_content2_content2-untracked
+  R content1_content2_content3-untracked
   R content1_content2_missing-untracked
   R content1_missing_content1-untracked
   R content1_missing_content3-untracked
   R content1_missing_missing-untracked
-  C content1_content1_content1-untracked (true !)
-  C content1_content2_content1-untracked (true !)
   $ hg status --all --change . 'glob:missing_content2_*'
   A missing_content2_content2-tracked
   A missing_content2_content3-tracked

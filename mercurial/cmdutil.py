@@ -3180,12 +3180,11 @@ def amend(ui, repo, old, extra, pats, opts):
                     if path not in filestoamend:
                         return old.filectx(path)
 
-                    fctx = wctx[path]
-
                     # Return None for removed files.
-                    if not fctx.exists():
+                    if path in wctx.removed():
                         return None
 
+                    fctx = wctx[path]
                     flags = fctx.flags()
                     mctx = context.memfilectx(repo,
                                               fctx.path(), fctx.data(),
