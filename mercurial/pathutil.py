@@ -135,7 +135,47 @@ class pathauditor(object):
             return False
 
 def canonpath(root, cwd, myname, auditor=None):
-    '''return the canonical path of myname, given cwd and root'''
+    '''return the canonical path of myname, given cwd and root
+
+    >>> def check(root, cwd, myname):
+    ...     a = pathauditor(root, realfs=False)
+    ...     try:
+    ...         return canonpath(root, cwd, myname, a)
+    ...     except error.Abort:
+    ...         return 'aborted'
+    >>> def unixonly(root, cwd, myname, expected='aborted'):
+    ...     if pycompat.iswindows:
+    ...         return expected
+    ...     return check(root, cwd, myname)
+    >>> def winonly(root, cwd, myname, expected='aborted'):
+    ...     if not pycompat.iswindows:
+    ...         return expected
+    ...     return check(root, cwd, myname)
+    >>> winonly(b'd:\\\\repo', b'c:\\\\dir', b'filename')
+    'aborted'
+    >>> winonly(b'c:\\\\repo', b'c:\\\\dir', b'filename')
+    'aborted'
+    >>> winonly(b'c:\\\\repo', b'c:\\\\', b'filename')
+    'aborted'
+    >>> winonly(b'c:\\\\repo', b'c:\\\\', b'repo\\\\filename',
+    ...         b'filename')
+    'filename'
+    >>> winonly(b'c:\\\\repo', b'c:\\\\repo', b'filename', b'filename')
+    'filename'
+    >>> winonly(b'c:\\\\repo', b'c:\\\\repo\\\\subdir', b'filename',
+    ...         b'subdir/filename')
+    'subdir/filename'
+    >>> unixonly(b'/repo', b'/dir', b'filename')
+    'aborted'
+    >>> unixonly(b'/repo', b'/', b'filename')
+    'aborted'
+    >>> unixonly(b'/repo', b'/', b'repo/filename', b'filename')
+    'filename'
+    >>> unixonly(b'/repo', b'/repo', b'filename', b'filename')
+    'filename'
+    >>> unixonly(b'/repo', b'/repo/subdir', b'filename', b'subdir/filename')
+    'subdir/filename'
+    '''
     if util.endswithsep(root):
         rootsep = root
     else:
