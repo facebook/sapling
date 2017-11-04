@@ -3166,9 +3166,11 @@ def amend(ui, repo, old, extra, pats, opts):
             # introduced file X and the file was renamed in the working
             # copy, then those two files are the same and
             # we can discard X from our list of files. Likewise if X
-            # was deleted, it's no longer relevant
+            # was removed, it's no longer relevant. If X is missing (aka
+            # deleted), old X must be preserved.
             files.update(filestoamend)
-            files = [f for f in files if not samefile(f, wctx, base)]
+            files = [f for f in files if (not samefile(f, wctx, base)
+                                          or f in wctx.deleted())]
 
             def filectxfn(repo, ctx_, path):
                 try:

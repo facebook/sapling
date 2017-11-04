@@ -268,8 +268,6 @@ amend r1 to include wc changes
 
 clean/modified/removed/added states of the amended revision
 
-BROKEN: missing files are removed
-
   $ hg status --all --change . 'glob:content1_*_content1-tracked'
   C content1_content1_content1-tracked
   C content1_content2_content1-tracked
@@ -297,7 +295,7 @@ BROKEN: missing files are removed
   $ hg status --all --change . 'glob:missing_content2_*'
   A missing_content2_content2-tracked
   A missing_content2_content3-tracked
-  A missing_content2_missing-tracked (false !)
+  A missing_content2_missing-tracked
   $ hg status --all --change . 'glob:missing_missing_*'
   A missing_missing_content3-tracked
 
