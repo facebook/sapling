@@ -1845,58 +1845,8 @@ class localrepository(object):
                 status.modified.extend(status.clean) # mq may commit clean files
 
             # check subrepos
-            subs = []
-            commitsubs = set()
-            newstate = wctx.substate.copy()
-            # only manage subrepos and .hgsubstate if .hgsub is present
-            if '.hgsub' in wctx:
-                # we'll decide whether to track this ourselves, thanks
-                for c in status.modified, status.added, status.removed:
-                    if '.hgsubstate' in c:
-                        c.remove('.hgsubstate')
-
-                # compare current state to last committed state
-                # build new substate based on last committed state
-                oldstate = wctx.p1().substate
-                for s in sorted(newstate.keys()):
-                    if not match(s):
-                        # ignore working copy, use old state if present
-                        if s in oldstate:
-                            newstate[s] = oldstate[s]
-                            continue
-                        if not force:
-                            raise error.Abort(
-                                _("commit with new subrepo %s excluded") % s)
-                    dirtyreason = wctx.sub(s).dirtyreason(True)
-                    if dirtyreason:
-                        if not self.ui.configbool('ui', 'commitsubrepos'):
-                            raise error.Abort(dirtyreason,
-                                hint=_("use --subrepos for recursive commit"))
-                        subs.append(s)
-                        commitsubs.add(s)
-                    else:
-                        bs = wctx.sub(s).basestate()
-                        newstate[s] = (newstate[s][0], bs, newstate[s][2])
-                        if oldstate.get(s, (None, None, None))[1] != bs:
-                            subs.append(s)
-
-                # check for removed subrepos
-                for p in wctx.parents():
-                    r = [s for s in p.substate if s not in newstate]
-                    subs += [s for s in r if match(s)]
-                if subs:
-                    if (not match('.hgsub') and
-                        '.hgsub' in (wctx.modified() + wctx.added())):
-                        raise error.Abort(
-                            _("can't commit subrepos without .hgsub"))
-                    status.modified.insert(0, '.hgsubstate')
-
-            elif '.hgsub' in status.removed:
-                # clean up .hgsubstate when .hgsub is removed
-                if ('.hgsubstate' in wctx and
-                    '.hgsubstate' not in (status.modified + status.added +
-                                          status.removed)):
-                    status.removed.insert(0, '.hgsubstate')
+            subs, commitsubs, newstate = subrepo.precommit(
+                self.ui, wctx, status, match, force=force)
 
             # make sure all explicit patterns are matched
             if not force:

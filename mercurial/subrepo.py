@@ -293,6 +293,71 @@ def submerge(repo, wctx, mctx, actx, overwrite, labels=None):
     writestate(repo, sm)
     return sm
 
+def precommit(ui, wctx, status, match, force=False):
+    """Calculate .hgsubstate changes that should be applied before committing
+
+    Returns (subs, commitsubs, newstate) where
+    - subs: changed subrepos (including dirty ones)
+    - commitsubs: dirty subrepos which the caller needs to commit recursively
+    - newstate: new state dict which the caller must write to .hgsubstate
+
+    This also updates the given status argument.
+    """
+    subs = []
+    commitsubs = set()
+    newstate = wctx.substate.copy()
+
+    # only manage subrepos and .hgsubstate if .hgsub is present
+    if '.hgsub' in wctx:
+        # we'll decide whether to track this ourselves, thanks
+        for c in status.modified, status.added, status.removed:
+            if '.hgsubstate' in c:
+                c.remove('.hgsubstate')
+
+        # compare current state to last committed state
+        # build new substate based on last committed state
+        oldstate = wctx.p1().substate
+        for s in sorted(newstate.keys()):
+            if not match(s):
+                # ignore working copy, use old state if present
+                if s in oldstate:
+                    newstate[s] = oldstate[s]
+                    continue
+                if not force:
+                    raise error.Abort(
+                        _("commit with new subrepo %s excluded") % s)
+            dirtyreason = wctx.sub(s).dirtyreason(True)
+            if dirtyreason:
+                if not ui.configbool('ui', 'commitsubrepos'):
+                    raise error.Abort(dirtyreason,
+                        hint=_("use --subrepos for recursive commit"))
+                subs.append(s)
+                commitsubs.add(s)
+            else:
+                bs = wctx.sub(s).basestate()
+                newstate[s] = (newstate[s][0], bs, newstate[s][2])
+                if oldstate.get(s, (None, None, None))[1] != bs:
+                    subs.append(s)
+
+        # check for removed subrepos
+        for p in wctx.parents():
+            r = [s for s in p.substate if s not in newstate]
+            subs += [s for s in r if match(s)]
+        if subs:
+            if (not match('.hgsub') and
+                '.hgsub' in (wctx.modified() + wctx.added())):
+                raise error.Abort(_("can't commit subrepos without .hgsub"))
+            status.modified.insert(0, '.hgsubstate')
+
+    elif '.hgsub' in status.removed:
+        # clean up .hgsubstate when .hgsub is removed
+        if ('.hgsubstate' in wctx and
+            '.hgsubstate' not in (status.modified + status.added +
+                                  status.removed)):
+            status.removed.insert(0, '.hgsubstate')
+
+    return subs, commitsubs, newstate
+
 def _updateprompt(ui, sub, dirty, local, remote):
     if dirty:
         msg = (_(' subrepository sources for %s differ\n'
