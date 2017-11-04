@@ -235,3 +235,105 @@ Amend a merge changeset
   |
   o  A
   
+
+More complete test for status changes (issue5732)
+-------------------------------------------------
+
+Generates history of files having 3 states, r0_r1_wc:
+
+ r0: ground (content/missing)
+ r1: old state to be amended (content/missing, where missing means removed)
+ wc: changes to be included in r1 (content/missing-tracked/untracked)
+
+  $ hg init $TESTTMP/wcstates
+  $ cd $TESTTMP/wcstates
+
+  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 1
+  $ hg addremove -q --similarity 0
+  $ hg commit -m0
+
+  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 2
+  $ hg addremove -q --similarity 0
+  $ hg commit -m1
+
+  $ $PYTHON $TESTDIR/generate-working-copy-states.py state 2 wc
+  $ hg addremove -q --similarity 0
+  $ hg forget *_*_*-untracked
+  $ rm *_*_missing-*
+
+amend r1 to include wc changes
+
+  $ hg amend
+  saved backup bundle to * (glob) (obsstore-off !)
+
+clean/modified/removed/added states of the amended revision
+
+BROKEN: untracked files aren't removed
+BROKEN: missing files are removed
+
+  $ hg status --all --change . 'glob:content1_*_content1-tracked'
+  C content1_content1_content1-tracked
+  C content1_content2_content1-tracked
+  C content1_missing_content1-tracked
+  $ hg status --all --change . 'glob:content1_*_content[23]-tracked'
+  M content1_content1_content3-tracked
+  M content1_content2_content2-tracked
+  M content1_content2_content3-tracked
+  M content1_missing_content3-tracked
+  $ hg status --all --change . 'glob:content1_*_missing-tracked'
+  M content1_content2_missing-tracked
+  R content1_missing_missing-tracked
+  C content1_content1_missing-tracked
+  $ hg status --all --change . 'glob:content1_*_*-untracked'
+  M content1_content1_content3-untracked (true !)
+  M content1_content2_content2-untracked (true !)
+  M content1_content2_content3-untracked (true !)
+  R content1_content1_content1-untracked (false !)
+  R content1_content1_content3-untracked (false !)
+  R content1_content1_missing-untracked
+  R content1_content2_content1-untracked (false !)
+  R content1_content2_content2-untracked (false !)
+  R content1_content2_content3-untracked (false !)
+  R content1_content2_missing-untracked
+  R content1_missing_content1-untracked
+  R content1_missing_content3-untracked
+  R content1_missing_missing-untracked
+  C content1_content1_content1-untracked (true !)
+  C content1_content2_content1-untracked (true !)
+  $ hg status --all --change . 'glob:missing_content2_*'
+  A missing_content2_content2-tracked
+  A missing_content2_content3-tracked
+  A missing_content2_missing-tracked (false !)
+  $ hg status --all --change . 'glob:missing_missing_*'
+  A missing_missing_content3-tracked
+
+working directory should be all clean (with some missing/untracked files)
+
+  $ hg status --all 'glob:*_content?-tracked'
+  C content1_content1_content1-tracked
+  C content1_content1_content3-tracked
+  C content1_content2_content1-tracked
+  C content1_content2_content2-tracked
+  C content1_content2_content3-tracked
+  C content1_missing_content1-tracked
+  C content1_missing_content3-tracked
+  C missing_content2_content2-tracked
+  C missing_content2_content3-tracked
+  C missing_missing_content3-tracked
+  $ hg status --all 'glob:*_missing-tracked'
+  ! content1_content1_missing-tracked
+  ! content1_content2_missing-tracked
+  ! content1_missing_missing-tracked
+  ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
+  $ hg status --all 'glob:*-untracked'
+  ? content1_content1_content1-untracked
+  ? content1_content1_content3-untracked
+  ? content1_content2_content1-untracked
+  ? content1_content2_content2-untracked
+  ? content1_content2_content3-untracked
+  ? content1_missing_content1-untracked
+  ? content1_missing_content3-untracked
+  ? missing_content2_content2-untracked
+  ? missing_content2_content3-untracked
+  ? missing_missing_content3-untracked
