@@ -86,9 +86,29 @@ clone root
   path s
    source   ../gitroot
    revision 126f2a14290cd5ce061fdedc430170e8d39e1c5a
+  $ cd ..
+
+clone with subrepo disabled (update should fail)
+
+  $ hg clone t -U tc2 --config subrepos.allowed=false
+  $ hg update -R tc2 --config subrepos.allowed=false
+  abort: subrepo not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+  $ ls tc2
+  a
+
+  $ hg clone t tc3 --config subrepos.allowed=false
+  updating to branch default
+  abort: subrepo not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+  $ ls tc3
+  a
 
 update to previous substate
 
+  $ cd tc
   $ hg update 1 -q
   $ cat s/g
   g

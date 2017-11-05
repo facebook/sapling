@@ -365,6 +365,13 @@ def _auditsubrepopath(repo, path):
     if repo.wvfs.islink(path):
         raise error.Abort(_("subrepo '%s' traverses symbolic link") % path)
 
+def _checktype(ui, kind):
+    if not ui.configbool('subrepos', 'allowed', True):
+        raise error.Abort(_("subrepo not allowed"),
+                          hint=_("see 'hg help config.subrepos' for details"))
+    if kind not in types:
+        raise error.Abort(_('unknown subrepo type %s') % kind)
+
 def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
@@ -375,10 +382,10 @@ def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     from . import hg as h
     hg = h
 
-    _auditsubrepopath(ctx.repo(), path)
+    repo = ctx.repo()
+    _auditsubrepopath(repo, path)
     state = ctx.substate[path]
-    if state[2] not in types:
-        raise error.Abort(_('unknown subrepo type %s') % state[2])
+    _checktype(repo.ui, state[2])
     if allowwdir:
         state = (state[0], ctx.subrev(path), state[2])
     return types[state[2]](ctx, path, state[:2], allowcreate)
@@ -393,10 +400,10 @@ def nullsubrepo(ctx, path, pctx):
     from . import hg as h
     hg = h
 
-    _auditsubrepopath(ctx.repo(), path)
+    repo = ctx.repo()
+    _auditsubrepopath(repo, path)
     state = ctx.substate[path]
-    if state[2] not in types:
-        raise error.Abort(_('unknown subrepo type %s') % state[2])
+    _checktype(repo.ui, state[2])
     subrev = ''
     if state[2] == 'hg':
         subrev = "0" * 40

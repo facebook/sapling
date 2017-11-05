@@ -811,6 +811,9 @@ coreconfigitem('smtp', 'username',
 coreconfigitem('sparse', 'missingwarning',
     default=True,
 )
+coreconfigitem('subrepos', 'allowed',
+    default=dynamicdefault,  # to make backporting simpler
+)
 coreconfigitem('templates', '.*',
     default=None,
     generic=True,

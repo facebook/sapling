@@ -1893,6 +1893,19 @@ rewrite rules are then applied on the full (absolute) path. If ``pattern``
 doesn't match the full path, an attempt is made to apply it on the
 relative path alone. The rules are applied in definition order.
 
+``subrepos``
+------------
+
+This section contains options that control the behavior of the
+subrepositories feature. See also :hg:`help subrepos`.
+
+``allowed``
+    Whether subrepository operation in the working directory is allowed.
+
+    When disabled, any commands including :hg:`update` will fail if
+    subrepositories are involved.
+    (default: True)
+
 ``templatealias``
 -----------------
 

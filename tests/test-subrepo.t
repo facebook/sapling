@@ -484,9 +484,29 @@ clone
   path t
    source   t
    revision 20a0db6fbf6c3d2836e6519a642ae929bfc67c0e
+  $ cd ..
+
+clone with subrepo disabled (update should fail)
+
+  $ hg clone t -U tc2 --config subrepos.allowed=false
+  $ hg update -R tc2 --config subrepos.allowed=false
+  abort: subrepo not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+  $ ls tc2
+  a
+
+  $ hg clone t tc3 --config subrepos.allowed=false
+  updating to branch default
+  abort: subrepo not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+  $ ls tc3
+  a
 
 push
 
+  $ cd tc
   $ echo bah > t/t
   $ hg ci -m11
   committing subrepository t
