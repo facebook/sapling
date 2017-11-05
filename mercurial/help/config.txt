@@ -1905,7 +1905,7 @@ subrepositories feature. See also :hg:`help subrepos`.
 
     When disallowed, any commands including :hg:`update` will fail if
     subrepositories are involved.
-    (default: `hg, git, svn`)
+    (default: `hg`)
 
 ``templatealias``
 -----------------

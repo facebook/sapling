@@ -41,7 +41,23 @@ add subrepo clone
   $ echo 's = [git]../gitroot' > .hgsub
   $ git clone -q ../gitroot s
   $ hg add .hgsub
+
+git subrepo is disabled by default
+
   $ hg commit -m 'new git subrepo'
+  abort: subrepo type git not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+
+so enable it
+
+  $ cat >> $HGRCPATH <<EOF
+  > [subrepos]
+  > allowed = hg, git
+  > EOF
+
+  $ hg commit -m 'new git subrepo'
+
   $ hg debugsub
   path s
    source   ../gitroot

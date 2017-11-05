@@ -5,6 +5,8 @@
   > mq =
   > [diff]
   > nodates = 1
+  > [subrepos]
+  > allowed = hg, svn
   > EOF
 
 fn to create new repository, and cd into it
