@@ -130,7 +130,7 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   readline(184 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(157 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(128 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(87 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(87 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(39 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(4 from -1) -> (4) host
   read limit reached; closing socket
@@ -172,7 +172,7 @@ Failure to read getbundle HTTP request
   readline(266 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(239 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(210 from -1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(169 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(169 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(121 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(86 from -1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(6? from -1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n (glob)
@@ -231,7 +231,7 @@ Now do a variation using POST to send arguments
   readline(261 from -1) -> (41) content-type: application/mercurial-0.1\r\n
   readline(220 from -1) -> (19) vary: X-HgProto-1\r\n
   readline(201 from -1) -> (19) x-hgargs-post: 28\r\n
-  readline(182 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(182 from -1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(134 from -1) -> (35) accept: application/mercurial-0.1\r\n
   readline(99 from -1) -> (20) content-length: 28\r\n
   readline(79 from -1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -334,7 +334,7 @@ TODO this output is horrible
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -382,7 +382,7 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -434,7 +434,7 @@ TODO this output is terrible
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -450,7 +450,7 @@ TODO this output is terrible
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -495,7 +495,7 @@ Server sends empty HTTP body for getbundle
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -511,7 +511,7 @@ Server sends empty HTTP body for getbundle
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -558,7 +558,7 @@ Server sends partial compression string
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (41) x-hgarg-1: cmds=heads+%3Bknown+nodes%3D\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
@@ -574,7 +574,7 @@ Server sends partial compression string
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
   readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
-  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=zstd,zlib,none,bzip2\r\n
+  readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
