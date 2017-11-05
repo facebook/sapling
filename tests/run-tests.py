@@ -968,6 +968,13 @@ class Test(unittest.TestCase):
             ]
         r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
+        testdir = os.path.dirname(self.path)
+        replacementfile = os.path.join(testdir, 'common-pattern.py')
+
+        if os.path.exists(replacementfile):
+            data = {}
+            execfile(replacementfile, data)
+            r.extend(data.get('substitutions', ()))
         return r
 
     def _escapepath(self, p):

@@ -1503,3 +1503,43 @@ Test cases in .t files
   # Ran 2 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
+
+Test automatic pattern replacement
+
+  $ cat << EOF >> common-pattern.py
+  > substitutions = [
+  >     (br'foo-(.*)\\b',
+  >      br'\$XXX=\\1\$'),
+  >     (br'bar\\n',
+  >      br'\$YYY$\\n'),
+  > ]
+  > EOF
+
+  $ cat << EOF >> test-substitution.t
+  >   $ echo foo-12
+  >   \$XXX=12$
+  >   $ echo foo-42
+  >   \$XXX=42$
+  >   $ echo bar prior
+  >   bar prior
+  >   $ echo lastbar
+  >   last\$YYY$
+  >   $ echo foo-bar foo-baz
+  > EOF
+
+  $ rt test-substitution.t
+  
+  --- $TESTTMP/anothertests/cases/test-substitution.t
+  +++ $TESTTMP/anothertests/cases/test-substitution.t.err
+  @@ -7,3 +7,4 @@
+     $ echo lastbar
+     last$YYY$
+     $ echo foo-bar foo-baz
+  +  $XXX=bar foo-baz$
+  
+  ERROR: test-substitution.t output changed
+  !
+  Failed test-substitution.t: output changed
+  # Ran 1 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
