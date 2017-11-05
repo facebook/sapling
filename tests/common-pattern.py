@@ -32,4 +32,8 @@ substitutions = [
      # (replacement patterns)
      br'$USUAL_BUNDLE2_CAPS$'
     ),
+    # HTTP log dates
+    (br' - - \[\d\d/.../2\d\d\d \d\d:\d\d:\d\d] "GET',
+     br' - - [$LOGDATE$] "GET'
+    ),
 ]
