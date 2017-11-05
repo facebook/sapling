@@ -366,8 +366,8 @@ def _auditsubrepopath(repo, path):
         raise error.Abort(_("subrepo '%s' traverses symbolic link") % path)
 
 def _checktype(ui, kind):
-    if not ui.configbool('subrepos', 'allowed', True):
-        raise error.Abort(_("subrepo not allowed"),
+    if kind not in ui.configlist('subrepos', 'allowed', ['hg', 'git', 'svn']):
+        raise error.Abort(_("subrepo type %s not allowed") % kind,
                           hint=_("see 'hg help config.subrepos' for details"))
     if kind not in types:
         raise error.Abort(_('unknown subrepo type %s') % kind)

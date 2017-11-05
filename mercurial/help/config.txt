@@ -1900,11 +1900,12 @@ This section contains options that control the behavior of the
 subrepositories feature. See also :hg:`help subrepos`.
 
 ``allowed``
-    Whether subrepository operation in the working directory is allowed.
+    List of subrepository types (hg, git, svn) allowed in the working
+    directory.
 
-    When disabled, any commands including :hg:`update` will fail if
+    When disallowed, any commands including :hg:`update` will fail if
     subrepositories are involved.
-    (default: True)
+    (default: `hg, git, svn`)
 
 ``templatealias``
 -----------------
