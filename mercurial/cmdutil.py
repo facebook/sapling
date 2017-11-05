@@ -570,9 +570,8 @@ def _conflictsmsg(repo):
     unresolvedlist = [f for f in mergestate.unresolved() if m(f)]
     if unresolvedlist:
         mergeliststr = '\n'.join(
-            ['    %s' % os.path.relpath(
-                os.path.join(repo.root, path),
-                pycompat.getcwd()) for path in unresolvedlist])
+            ['    %s' % util.pathto(repo.root, pycompat.getcwd(), path)
+             for path in unresolvedlist])
         msg = _('''Unresolved merge conflicts:
 
 %s
