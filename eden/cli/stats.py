@@ -9,12 +9,12 @@
 
 import argparse
 import sys
-from typing import Dict
+from typing import Dict, Tuple
 from . import cmd_util
 from . import stats_print
 
 DiagInfoCounters = Dict[str, int]
-Table = Dict[str, [int, int, int, int]]
+Table = Dict[str, Tuple[int, int, int, int]]
 
 
 # Gets Information like memory usage, List of mount points and number of Inodes
