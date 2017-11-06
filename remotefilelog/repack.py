@@ -476,13 +476,17 @@ class repacker(object):
                 if deltabase != nullid:
                     deltabasetext = self.data.get(filename, deltabase)
                     original = self.data.get(filename, node)
+                    size = len(original)
                     delta = mdiff.textdiff(deltabasetext, original)
                 else:
                     delta = self.data.get(filename, node)
+                    size = len(delta)
 
                 # TODO: don't use the delta if it's larger than the fulltext
                 # TODO: don't use the delta if the chain is already long
                 meta = self.data.getmeta(filename, node)
+                if constants.METAKEYSIZE not in meta:
+                    meta[constants.METAKEYSIZE] = size
                 target.add(filename, node, deltabase, delta, meta)
 
                 entries[node].datarepacked = True

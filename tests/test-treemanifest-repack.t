@@ -81,19 +81,19 @@
   $ hg repack
 
   $ ls_l $CACHEDIR/master/packs/manifests | grep pack
+  -r--r--r--     339 56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a.datapack
   -r--r--r--     262 7535b6084226436bbdff33043969e7fa963e8428.histpack
-  -r--r--r--     327 be1a1ae9828d9bd09ab8ba765db358f99fd09ea7.datapack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.datapack
   
   
   Node          Delta Base    Delta Length  Blob Size
-  1832e0765de9  000000000000  89            (missing)
-  a0c8bcbbb45c  1832e0765de9  12            (missing)
+  1832e0765de9  000000000000  89            89
+  a0c8bcbbb45c  1832e0765de9  12            43
   
   dir
   Node          Delta Base    Delta Length  Blob Size
-  23226e7a252c  000000000000  43            (missing)
+  23226e7a252c  000000000000  43            43
 
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histpack
   
@@ -115,32 +115,32 @@
   -r--r--r--     146 cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack
   $ hg repack
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
+  -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
 
 # Test incremental repacking of trees
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
   -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
   -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
 - repack incremental does nothing here because there are so few packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,200 --config remotefilelog.data.repacksizelimit=300
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
   -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
+  -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
   -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
 
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack
-  -r--r--r--     374 201094db51b761cd78352c055b3135178aadfec5.datapack
   -r--r--r--     248 21501384df03b8489b366c5218be639fa08830e4.datapack
   -r--r--r--     248 347263bf1efbdb5bf7e1d1565b6b504073fb9093.datapack
   -r--r--r--     248 544a3b46a61732209116ae50847ec333b75e3765.datapack
   -r--r--r--     248 863908ef8149261ab0d891c2344d8e8766c39441.datapack
+  -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
   -r--r--r--     248 d7e689a91ac63385be120a118af9ce8663748f28.datapack
   $ cd .hg/store/packs/manifests
   $ cp d7e689a91ac63385be120a118af9ce8663748f28.datapack x7e689a91ac63385be120a118af9ce8663748f28.datapack

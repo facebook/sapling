@@ -301,7 +301,7 @@ Single pack - repack does nothing
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      59 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack
-  -r--r--r--     213 f3c56163b762b2931865bbbb1250b4fae09e782c.datapack
+  -r--r--r--     225 8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
@@ -309,7 +309,7 @@ Single pack - repack does nothing
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      59 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack
-  -r--r--r--     213 f3c56163b762b2931865bbbb1250b4fae09e782c.datapack
+  -r--r--r--     225 8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
@@ -347,7 +347,7 @@ Pull should run background repack
   $ hg debugwaitonrepack >/dev/null 2>&1
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      59 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack
-  -r--r--r--     213 f3c56163b762b2931865bbbb1250b4fae09e782c.datapack
+  -r--r--r--     225 8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
 
@@ -387,11 +387,11 @@ Test limiting the max delta chain length
   
   x
   Node          Delta Base    Delta Length  Blob Size
-  1bb2e6237e03  000000000000  8             (missing)
-  d4a3ed9310e5  1bb2e6237e03  12            (missing)
-  aee31534993a  000000000000  4             (missing)
-  1406e7411862  aee31534993a  12            (missing)
+  1bb2e6237e03  000000000000  8             8
+  d4a3ed9310e5  1bb2e6237e03  12            6
+  aee31534993a  000000000000  4             4
+  1406e7411862  aee31534993a  12            2
   
   y
   Node          Delta Base    Delta Length  Blob Size
-  577959738234  000000000000  8             (missing)
+  577959738234  000000000000  8             8
