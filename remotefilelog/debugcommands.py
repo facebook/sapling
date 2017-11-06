@@ -10,6 +10,7 @@ from mercurial import error, filelog, revlog
 from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
 from . import (
+    constants,
     datapack,
     fileserverclient,
     historypack,
@@ -218,13 +219,23 @@ def debugdatapack(ui, path, **opts):
     for filename, node, deltabase, deltalen in dpack.iterentries():
         if filename != lastfilename:
             ui.write("\n%s\n" % filename)
-            ui.write("%s%s%s\n" % (
+            ui.write("%s%s%s%s\n" % (
                 "Node".ljust(hashlen),
                 "Delta Base".ljust(hashlen),
-                "Delta Length".ljust(6)))
+                "Delta Length".ljust(14),
+                "Blob Size".ljust(9)))
             lastfilename = filename
-        ui.write("%s  %s  %s\n" % (
-            hashformatter(node), hashformatter(deltabase), deltalen))
+        # Metadata could be missing, in which case it will be an empty dict.
+        meta = dpack.getmeta(filename, node)
+        if constants.METAKEYSIZE in meta:
+            blobsize = meta[constants.METAKEYSIZE]
+        else:
+            blobsize = "(missing)"
+        ui.write("%s  %s  %s%s\n" % (
+            hashformatter(node),
+            hashformatter(deltabase),
+            str(deltalen).ljust(14),
+            blobsize))
 
 def dumpdeltachain(ui, deltachain, **opts):
     hashformatter = hex

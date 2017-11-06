@@ -53,13 +53,13 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
   
   x
-  Node          Delta Base    Delta Length
-  1406e7411862  000000000000  2
+  Node          Delta Base    Delta Length  Blob Size
+  1406e7411862  000000000000  2             2
   
   y
-  Node          Delta Base    Delta Length
-  50dbc4572b8e  000000000000  3
-  076f5e2225b3  50dbc4572b8e  14
+  Node          Delta Base    Delta Length  Blob Size
+  50dbc4572b8e  000000000000  3             3
+  076f5e2225b3  50dbc4572b8e  14            2
 
 # Test garbage collection during repack
 
@@ -84,8 +84,8 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/05baa499c6b07f2bf0ea3d2c8151da1cb86f5e33.datapack
   
   y
-  Node          Delta Base    Delta Length
-  50dbc4572b8e  000000000000  3
+  Node          Delta Base    Delta Length  Blob Size
+  50dbc4572b8e  000000000000  3             3
 
 # Prefetch all data again and repack for later garbage collection
 
@@ -109,13 +109,13 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
   
   x
-  Node          Delta Base    Delta Length
-  1406e7411862  000000000000  2
+  Node          Delta Base    Delta Length  Blob Size
+  1406e7411862  000000000000  2             2
   
   y
-  Node          Delta Base    Delta Length
-  50dbc4572b8e  000000000000  3
-  076f5e2225b3  50dbc4572b8e  14
+  Node          Delta Base    Delta Length  Blob Size
+  50dbc4572b8e  000000000000  3             3
+  076f5e2225b3  50dbc4572b8e  14            2
 
 # Test garbage collection during repack. Ensure that new files are not removed even though they are not in the keepset
 # For the purposes of the test the TTL of a file is set to current time + 100 seconds. i.e. all commits in tests have
@@ -140,10 +140,10 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
   
   x
-  Node          Delta Base    Delta Length
-  1406e7411862  000000000000  2
+  Node          Delta Base    Delta Length  Blob Size
+  1406e7411862  000000000000  2             2
   
   y
-  Node          Delta Base    Delta Length
-  50dbc4572b8e  000000000000  3
-  076f5e2225b3  50dbc4572b8e  14
+  Node          Delta Base    Delta Length  Blob Size
+  50dbc4572b8e  000000000000  3             3
+  076f5e2225b3  50dbc4572b8e  14            2

@@ -45,17 +45,17 @@
   $TESTTMP/hgcache/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8.datapack
   
   
-  Node          Delta Base    Delta Length
-  a0c8bcbbb45c  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a0c8bcbbb45c  000000000000  43            (missing)
   $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
   
   dir
-  Node          Delta Base    Delta Length
-  23226e7a252c  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  23226e7a252c  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  1832e0765de9  000000000000  89
+  Node          Delta Base    Delta Length  Blob Size
+  1832e0765de9  000000000000  89            (missing)
 
 - Verify histpack contents
   $ for i in $CACHEDIR/master/packs/manifests/*.histpack; do
@@ -87,13 +87,13 @@
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.datapack
   
   
-  Node          Delta Base    Delta Length
-  1832e0765de9  000000000000  89
-  a0c8bcbbb45c  1832e0765de9  12
+  Node          Delta Base    Delta Length  Blob Size
+  1832e0765de9  000000000000  89            (missing)
+  a0c8bcbbb45c  1832e0765de9  12            (missing)
   
   dir
-  Node          Delta Base    Delta Length
-  23226e7a252c  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  23226e7a252c  000000000000  43            (missing)
 
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histpack
   
@@ -189,13 +189,13 @@ Test repacking from revlogs to pack files on the server
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
   
   
-  Node          Delta Base    Delta Length
-  1832e0765de9  000000000000  89
-  a0c8bcbbb45c  1832e0765de9  12
+  Node          Delta Base    Delta Length  Blob Size
+  1832e0765de9  000000000000  89            89
+  a0c8bcbbb45c  1832e0765de9  12            43
   
   dir
-  Node          Delta Base    Delta Length
-  23226e7a252c  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  23226e7a252c  000000000000  43            43
 
 Test incremental revlog repacking
 # 1. Make commit that we'll need to repack
@@ -228,9 +228,9 @@ Test incremental repack with limited revs only repacks those revs
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
   
   
-  Node          Delta Base    Delta Length
-  1832e0765de9  000000000000  89
+  Node          Delta Base    Delta Length  Blob Size
+  1832e0765de9  000000000000  89            89
   
   dir
-  Node          Delta Base    Delta Length
-  23226e7a252c  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  23226e7a252c  000000000000  43            43

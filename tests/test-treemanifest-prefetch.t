@@ -68,28 +68,28 @@ Test prefetchtrees
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
   
   subdir
-  Node                                      Delta Base                                Delta Length
-  ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43
+  Node                                      Delta Base                                Delta Length  Blob Size
+  ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
   
   
-  Node                                      Delta Base                                Delta Length
-  1be4ab2126dd2252dcae6be2aac2561dd3ddcda0  0000000000000000000000000000000000000000  95
-  
-  dir
-  Node                                      Delta Base                                Delta Length
-  a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43
-  
-  
-  Node                                      Delta Base                                Delta Length
-  60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95
+  Node                                      Delta Base                                Delta Length  Blob Size
+  1be4ab2126dd2252dcae6be2aac2561dd3ddcda0  0000000000000000000000000000000000000000  95            (missing)
   
   dir
-  Node                                      Delta Base                                Delta Length
-  bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43
+  Node                                      Delta Base                                Delta Length  Blob Size
+  a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43            (missing)
   
   
-  Node                                      Delta Base                                Delta Length
-  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46
+  Node                                      Delta Base                                Delta Length  Blob Size
+  60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95            (missing)
+  
+  dir
+  Node                                      Delta Base                                Delta Length  Blob Size
+  bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43            (missing)
+  
+  
+  Node                                      Delta Base                                Delta Length  Blob Size
+  ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46            (missing)
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histidx
   
   
@@ -132,12 +132,12 @@ Test prefetch with base node (subdir/ shouldn't show up in the pack)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   
   dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
 
 Test auto prefetch during normal access
   $ rm -rf $CACHEDIR/master
@@ -170,27 +170,27 @@ Test auto prefetch during normal access
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675
   
   dir
-  Node          Delta Base    Delta Length
-  bc0c2c938b92  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  bc0c2c938b92  000000000000  43            (missing)
   
   subdir
-  Node          Delta Base    Delta Length
-  ddb35f099a64  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  1be4ab2126dd  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  1be4ab2126dd  000000000000  95            (missing)
 
 - Note that subdir/ is not downloaded again
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c
   
   dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
 
 Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
@@ -218,28 +218,28 @@ Test auto prefetch during pull
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   subdir
-  Node          Delta Base    Delta Length
-  ddb35f099a64  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  1be4ab2126dd  000000000000  95
-  
-  dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
-  
-  
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  1be4ab2126dd  000000000000  95            (missing)
   
   dir
-  Node          Delta Base    Delta Length
-  bc0c2c938b92  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  ef362f8bbe8a  000000000000  46
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
+  
+  dir
+  Node          Delta Base    Delta Length  Blob Size
+  bc0c2c938b92  000000000000  43            (missing)
+  
+  
+  Node          Delta Base    Delta Length  Blob Size
+  ef362f8bbe8a  000000000000  46            (missing)
 
   $ hg strip -q -r 'draft()'
 
@@ -254,16 +254,16 @@ Test auto prefetch during pull
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   subdir
-  Node          Delta Base    Delta Length
-  ddb35f099a64  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
 
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
@@ -283,12 +283,12 @@ Test auto prefetch during pull
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   
   dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
 
 Test prefetching certain revs during pull
   $ cd ../master
@@ -313,16 +313,16 @@ Test prefetching certain revs during pull
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
   dir
-  Node          Delta Base    Delta Length
-  a18d21674e76  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  a18d21674e76  000000000000  43            (missing)
   
   subdir
-  Node          Delta Base    Delta Length
-  ddb35f099a64  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  60a7f7acb6bb  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  60a7f7acb6bb  000000000000  95            (missing)
 
 - Test prefetching only the new tree parts for a commit who's parent tree is not
 - downloaded already. Note that subdir/z was not downloaded this time.
@@ -335,12 +335,12 @@ Test prefetching certain revs during pull
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
   
   dir
-  Node          Delta Base    Delta Length
-  bf22bc15398b  000000000000  43
+  Node          Delta Base    Delta Length  Blob Size
+  bf22bc15398b  000000000000  43            (missing)
   
   
-  Node          Delta Base    Delta Length
-  aa52a49be522  000000000000  95
+  Node          Delta Base    Delta Length  Blob Size
+  aa52a49be522  000000000000  95            (missing)
 
 Test that prefetch refills just part of a tree when the cache is deleted
 

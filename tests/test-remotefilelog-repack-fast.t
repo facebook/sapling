@@ -155,17 +155,17 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
   
   x
-  Node          Delta Base    Delta Length
-  1bb2e6237e03  000000000000  8
-  d4a3ed9310e5  1bb2e6237e03  12
-  aee31534993a  d4a3ed9310e5  12
+  Node          Delta Base    Delta Length  Blob Size
+  1bb2e6237e03  000000000000  8             8
+  d4a3ed9310e5  1bb2e6237e03  12            6
+  aee31534993a  d4a3ed9310e5  12            4
   $ hg debugdatapack --long $TESTTMP/hgcache/master/packs/*.datapack
   
   x
-  Node                                      Delta Base                                Delta Length
-  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  8
-  d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  12
-  aee31534993a501858fb6dd96a065671922e7d51  d4a3ed9310e5bd9887e3bf779da5077efab28216  12
+  Node                                      Delta Base                                Delta Length  Blob Size
+  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  8             8
+  d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  12            6
+  aee31534993a501858fb6dd96a065671922e7d51  d4a3ed9310e5bd9887e3bf779da5077efab28216  12            4
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack --node d4a3ed9310e5bd9887e3bf779da5077efab28216
   
   x
@@ -249,14 +249,14 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
   
   x
-  Node          Delta Base    Delta Length
-  1bb2e6237e03  000000000000  8
-  aee31534993a  000000000000  4
-  d4a3ed9310e5  000000000000  6
+  Node          Delta Base    Delta Length  Blob Size
+  1bb2e6237e03  000000000000  8             8
+  aee31534993a  000000000000  4             4
+  d4a3ed9310e5  000000000000  6             6
   
   y
-  Node          Delta Base    Delta Length
-  577959738234  000000000000  70
+  Node          Delta Base    Delta Length  Blob Size
+  577959738234  000000000000  70            8
 
   $ hg cat -r ".^" x
   x
