@@ -60,15 +60,15 @@ Test autocreatetrees
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/678f597a73b2b96f2e120c84ef8a84069a250266
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   70f2c6726cec  bc0c2c938b92  61            (missing)
 
@@ -84,11 +84,11 @@ Test that commit creates local trees
   -r--r--r--     254 a7f7e084adff88a01cf76909345be1e56ee704a9.datapack
   $ hg debugdatapack .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ac728a786423  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   7a911436836f  000000000000  92            (missing)
 
@@ -120,19 +120,19 @@ Test rebasing a stack of commits results in a pack with all the trees
   4:8289b85c6a30
   $ hg debugdatapack .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7.datapack
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   a4e2f032ee0f  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   0d05c20bb7eb  000000000000  92            (missing)
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ad0a48a2ec1e  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   8289b85c6a30  000000000000  92            (missing)
 

@@ -67,27 +67,27 @@ Test prefetchtrees
   8adc618d23082c0a5311a4bbf9ac08b9b9672471.datapack
   $ hg debugdatapack --long $CACHEDIR/master/packs/manifests/*.dataidx
   
-  subdir
+  subdir:
   Node                                      Delta Base                                Delta Length  Blob Size
   ddb35f099a648a43a997aef53123bce309c794fd  0000000000000000000000000000000000000000  43            (missing)
   
-  
+  (empty name):
   Node                                      Delta Base                                Delta Length  Blob Size
   1be4ab2126dd2252dcae6be2aac2561dd3ddcda0  0000000000000000000000000000000000000000  95            (missing)
   
-  dir
+  dir:
   Node                                      Delta Base                                Delta Length  Blob Size
   a18d21674e76d6aab2edb46810b20fbdbd10fb4b  0000000000000000000000000000000000000000  43            (missing)
   
-  
+  (empty name):
   Node                                      Delta Base                                Delta Length  Blob Size
   60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5  0000000000000000000000000000000000000000  95            (missing)
   
-  dir
+  dir:
   Node                                      Delta Base                                Delta Length  Blob Size
   bc0c2c938b929f98b1c31a8c5994396ebb096bf0  0000000000000000000000000000000000000000  43            (missing)
   
-  
+  (empty name):
   Node                                      Delta Base                                Delta Length  Blob Size
   ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46            (missing)
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histidx
@@ -131,11 +131,11 @@ Test prefetch with base node (subdir/ shouldn't show up in the pack)
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
 
@@ -169,26 +169,26 @@ Test auto prefetch during normal access
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1be4ab2126dd  000000000000  95            (missing)
 
 - Note that subdir/ is not downloaded again
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
 
@@ -217,27 +217,27 @@ Test auto prefetch during pull
   6 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1be4ab2126dd  000000000000  95            (missing)
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   ef362f8bbe8a  000000000000  46            (missing)
 
@@ -253,15 +253,15 @@ Test auto prefetch during pull
   3 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
 
@@ -282,11 +282,11 @@ Test auto prefetch during pull
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
 
@@ -312,15 +312,15 @@ Test prefetching certain revs during pull
   3 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   60a7f7acb6bb  000000000000  95            (missing)
 
@@ -334,11 +334,11 @@ Test prefetching certain revs during pull
   2 trees fetched over * (glob)
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
   
-  dir
+  dir:
   Node          Delta Base    Delta Length  Blob Size
   bf22bc15398b  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   aa52a49be522  000000000000  95            (missing)
 

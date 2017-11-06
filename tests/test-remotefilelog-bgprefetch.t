@@ -153,22 +153,26 @@
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
   
-  w
+  w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  x
+  x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
+  Total:                      17            5         (240.0% bigger)
   
-  y
+  y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  z
+  z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
 
 # background prefetch with repack on commit when wcprevset configured
 
@@ -199,22 +203,26 @@
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
   
-  w
+  w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  x
+  x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
+  Total:                      17            5         (240.0% bigger)
   
-  y
+  y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  z
+  z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
 
 # background prefetch with repack on rebase when wcprevset configured
 
@@ -237,22 +245,26 @@
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
   
-  w
+  w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  x
+  x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
+  Total:                      17            5         (240.0% bigger)
   
-  y
+  y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  z
+  z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
 
 # Check that foregound prefetch with no arguments blocks until background prefetches finish
 
@@ -278,22 +290,26 @@
 # Ensure that files were prefetched
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
   
-  w
+  w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  x
+  x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
+  Total:                      17            5         (240.0% bigger)
   
-  y
+  y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  z
+  z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
 
 # Check that foreground prefetch fetches revs specified by '. + draft() + bgprefetchrevs + pullprefetch'
 
@@ -316,22 +332,26 @@
 # Ensure that files were prefetched
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
   
-  w
+  w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  x
+  x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
+  Total:                      17            5         (240.0% bigger)
   
-  y
+  y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
   
-  z
+  z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  Total:                      2             2         (0.0% bigger)
 
 # Test that if data was prefetched and repacked we dont need to prefetch it again
 # It ensures that Mercurial looks not only in loose files but in packs as well

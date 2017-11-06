@@ -49,21 +49,21 @@ Test committing auto-downloads server trees and produces local trees
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
   
-  subdir
+  subdir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   85b359fdb09e  000000000000  49            (missing)
 
   $ hg debugdatapack .hg/store/packs/manifests/*.dataidx
   
-  subdir2
+  subdir2:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
   
-  
+  (empty name):
   Node          Delta Base    Delta Length  Blob Size
   54cbf534b62b  000000000000  99            (missing)
 
