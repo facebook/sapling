@@ -63,16 +63,6 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-configtable = {}
-configitem = registrar.configitem(configtable)
-
-configitem('share', 'pool',
-    default=None,
-)
-configitem('share', 'poolnaming',
-    default='identity',
-)
-
 @command('share',
     [('U', 'noupdate', None, _('do not create a working directory')),
      ('B', 'bookmarks', None, _('also share bookmarks')),

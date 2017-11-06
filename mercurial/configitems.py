@@ -790,6 +790,12 @@ coreconfigitem('server', 'validate',
 coreconfigitem('server', 'zliblevel',
     default=-1,
 )
+coreconfigitem('share', 'pool',
+    default=None,
+)
+coreconfigitem('share', 'poolnaming',
+    default='identity',
+)
 coreconfigitem('smtp', 'host',
     default=None,
 )
