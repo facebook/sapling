@@ -1905,6 +1905,13 @@ subrepositories feature. See also :hg:`help subrepos`.
 
     When disallowed, any commands including :hg:`update` will fail if
     subrepositories are involved.
+
+    Security note: auditing in Mercurial is known to be insufficient
+    to prevent clone-time code execution with carefully constructed
+    Git subrepos. It is unknown if a similar defect is present in
+    Subversion subrepos, so both are disabled by default out of an
+    abundance of caution. Re-enable such subrepos via this setting
+    with caution.
     (default: `hg`)
 
 ``templatealias``
