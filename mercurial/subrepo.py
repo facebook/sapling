@@ -359,6 +359,33 @@ def _sanitize(ui, vfs, ignore):
                           "in '%s'\n") % vfs.join(dirname))
                 vfs.unlink(vfs.reljoin(dirname, f))
 
+def _auditsubrepopath(repo, path):
+    # auditor doesn't check if the path itself is a symlink
+    pathutil.pathauditor(repo.root)(path)
+    if repo.wvfs.islink(path):
+        raise error.Abort(_("subrepo '%s' traverses symbolic link") % path)
+
+SUBREPO_ALLOWED_DEFAULTS = {
+    'hg': True,
+    'git': False,
+    'svn': False,
+}
+
+def _checktype(ui, kind):
+    # subrepos.allowed is a master kill switch. If disabled, subrepos are
+    # disabled period.
+    if not ui.configbool('subrepos', 'allowed', True):
+        raise error.Abort(_('subrepos not enabled'),
+                          hint=_("see 'hg help config.subrepos' for details"))
+
+    default = SUBREPO_ALLOWED_DEFAULTS.get(kind, False)
+    if not ui.configbool('subrepos', '%s:allowed' % kind, default):
+        raise error.Abort(_('%s subrepos not allowed') % kind,
+                          hint=_("see 'hg help config.subrepos' for details"))
+
+    if kind not in types:
+        raise error.Abort(_('unknown subrepo type %s') % kind)
+
 def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
@@ -369,10 +396,10 @@ def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     from . import hg as h
     hg = h
 
-    pathutil.pathauditor(ctx.repo().root)(path)
+    repo = ctx.repo()
+    _auditsubrepopath(repo, path)
     state = ctx.substate[path]
-    if state[2] not in types:
-        raise error.Abort(_('unknown subrepo type %s') % state[2])
+    _checktype(repo.ui, state[2])
     if allowwdir:
         state = (state[0], ctx.subrev(path), state[2])
     return types[state[2]](ctx, path, state[:2], allowcreate)
@@ -387,10 +414,10 @@ def nullsubrepo(ctx, path, pctx):
     from . import hg as h
     hg = h
 
-    pathutil.pathauditor(ctx.repo().root)(path)
+    repo = ctx.repo()
+    _auditsubrepopath(repo, path)
     state = ctx.substate[path]
-    if state[2] not in types:
-        raise error.Abort(_('unknown subrepo type %s') % state[2])
+    _checktype(repo.ui, state[2])
     subrev = ''
     if state[2] == 'hg':
         subrev = "0" * 40

@@ -57,6 +57,21 @@ add first svn sub with leading whitespaces
   $ mkdir subdir
   $ svn co --quiet "$SVNREPOURL"/src subdir/s
   $ hg add .hgsub
+
+svn subrepo is disabled by default
+
+  $ hg ci -m1
+  abort: svn subrepos not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+
+so enable it
+
+  $ cat >> $HGRCPATH <<EOF
+  > [subrepos]
+  > svn:allowed = true
+  > EOF
+
   $ hg ci -m1
 
 make sure we avoid empty commits (issue2445)

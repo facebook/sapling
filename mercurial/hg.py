@@ -243,7 +243,9 @@ def share(ui, source, dest=None, update=True, bookmarks=True, defaultpath=None,
         try:
             sharedpath = os.path.relpath(sharedpath, destvfs.base)
             requirements += 'relshared\n'
-        except IOError as e:
+        except (IOError, ValueError) as e:
+            # ValueError is raised on Windows if the drive letters differ on
+            # each path
             raise error.Abort(_('cannot calculate relative path'),
                               hint=str(e))
     else:

@@ -1893,6 +1893,47 @@ rewrite rules are then applied on the full (absolute) path. If ``pattern``
 doesn't match the full path, an attempt is made to apply it on the
 relative path alone. The rules are applied in definition order.
 
+``subrepos``
+------------
+
+This section contains options that control the behavior of the
+subrepositories feature. See also :hg:`help subrepos`.
+
+Security note: auditing in Mercurial is known to be insufficient to
+prevent clone-time code execution with carefully constructed Git
+subrepos. It is unknown if a similar detect is present in Subversion
+subrepos. Both Git and Subversion subrepos are disabled by default
+out of security concerns. These subrepo types can be enabled using
+the respective options below.
+
+``allowed``
+    Whether subrepositories are allowed in the working directory.
+
+    When false, commands involving subrepositories (like :hg:`update`)
+    will fail for all subrepository types.
+    (default: true)
+
+``hg:allowed``
+    Whether Mercurial subrepositories are allowed in the working
+    directory. This option only has an effect if ``subrepos.allowed``
+    is true.
+    (default: true)
+
+``git:allowed``
+    Whether Git subrepositories are allowed in the working directory.
+    This option only has an effect if ``subrepos.allowed`` is true.
+
+    See the security note above before enabling Git subrepos.
+    (default: false)
+
+``svn:allowed``
+    Whether Subversion subrepositories are allowed in the working
+    directory. This option only has an effect if ``subrepos.allowed``
+    is true.
+
+    See the security note above before enabling Subversion subrepos.
+    (default: false)
+
 ``templatealias``
 -----------------
 
