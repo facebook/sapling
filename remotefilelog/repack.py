@@ -136,31 +136,50 @@ def _getmanifeststores(repo):
     return ((localpackpath, localdatastores, localhistorystores),
             (sharedpackpath, shareddatastores, sharedhistorystores))
 
+def _topacks(packpath, files, constructor):
+    paths = list(os.path.join(packpath, p) for p in files)
+    packs = list(constructor(p) for p in paths)
+    return packs
+
 def _incrementalrepack(repo, datastore, historystore, packpath, category,
         allowincompletedata=False):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
 
-    datapacks = _computeincrementaldatapack(repo.ui, files)
-    fullpaths = list(os.path.join(packpath, p) for p in datapacks)
-    datapacks = list(datapack.datapack(p) for p in fullpaths)
+    datapacks = _topacks(packpath,
+        _computeincrementaldatapack(repo.ui, files),
+        datapack.datapack)
     datapacks.extend(s for s in datastore
                      if not isinstance(s, datapack.datapackstore))
 
-    historypacks = _computeincrementalhistorypack(repo.ui, files)
-    fullpaths = list(os.path.join(packpath, p) for p in historypacks)
-    historypacks = list(historypack.historypack(p) for p in fullpaths)
+    historypacks = _topacks(packpath,
+        _computeincrementalhistorypack(repo.ui, files),
+        historypack.historypack)
     historypacks.extend(s for s in historystore
                         if not isinstance(s, historypack.historypackstore))
 
-    datasource = contentstore.unioncontentstore(
-        *datapacks,
-        allowincomplete=allowincompletedata)
-    historysource = metadatastore.unionmetadatastore(*historypacks,
-                                                     allowincomplete=True)
-
-    _runrepack(repo, datasource, historysource, packpath, category)
+    # ``allhistory{files,packs}`` contains all known history packs, even ones we
+    # don't plan to repack. They are used during the datapack repack to ensure
+    # good ordering of nodes.
+    allhistoryfiles = _allpackfileswithsuffix(files, historypack.PACKSUFFIX,
+                            historypack.INDEXSUFFIX)
+    allhistorypacks = _topacks(packpath,
+        (f for f, mode, stat in allhistoryfiles),
+        historypack.historypack)
+    allhistorypacks.extend(s for s in historystore
+                        if not isinstance(s, historypack.historypackstore))
+    _runrepack(repo,
+               contentstore.unioncontentstore(
+                   *datapacks,
+                   allowincomplete=allowincompletedata),
+               metadatastore.unionmetadatastore(
+                   *historypacks,
+                   allowincomplete=True),
+               packpath, category,
+               fullhistory=metadatastore.unionmetadatastore(
+                   *allhistorypacks,
+                   allowincomplete=True))
 
 def _computeincrementaldatapack(ui, files):
     """Given a set of pack files and a set of generation size limits, this
@@ -202,13 +221,8 @@ def _computeincrementalhistorypack(ui, files):
             historypack.PACKSUFFIX, historypack.INDEXSUFFIX, gencountlimit,
             repacksizelimit, maxrepackpacks)
 
-def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
-                            gencountlimit, repacksizelimit, maxrepackpacks):
-    # Group the packs by generation (i.e. by size)
-    generations = []
-    for i in xrange(len(limits)):
-        generations.append([])
-    sizes = {}
+def _allpackfileswithsuffix(files, packsuffix, indexsuffix):
+    result = []
     fileset = set(fn for fn, mode, stat in files)
     for filename, mode, stat in files:
         if not filename.endswith(packsuffix):
@@ -219,7 +233,20 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
         # Don't process a pack if it doesn't have an index.
         if (prefix + indexsuffix) not in fileset:
             continue
+        result.append((prefix, mode, stat))
 
+    return result
+
+def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
+                            gencountlimit, repacksizelimit, maxrepackpacks):
+    # Group the packs by generation (i.e. by size)
+    generations = []
+    for i in xrange(len(limits)):
+        generations.append([])
+
+    sizes = {}
+    for prefix, mode, stat in _allpackfileswithsuffix(files, packsuffix,
+            indexsuffix):
         size = stat.st_size
         sizes[prefix] = size
         for i, limit in enumerate(limits):
@@ -257,7 +284,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 
     return chosenpacks
 
-def _runrepack(repo, data, history, packpath, category):
+def _runrepack(repo, data, history, packpath, category, fullhistory=None):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     def isold(repo, filename, node):
@@ -275,7 +302,10 @@ def _runrepack(repo, data, history, packpath, category):
         return filetime[0] < limit
 
     garbagecollect = repo.ui.configbool('remotefilelog', 'gcrepack')
-    packer = repacker(repo, data, history, category, gc=garbagecollect,
+    if not fullhistory:
+        fullhistory = history
+    packer = repacker(repo, data, history, fullhistory, category,
+                      gc=garbagecollect,
                       isold=isold)
 
     # internal config: remotefilelog.datapackversion
@@ -354,10 +384,12 @@ class repacker(object):
     """Class for orchestrating the repack of data and history information into a
     new format.
     """
-    def __init__(self, repo, data, history, category, gc=False, isold=None):
+    def __init__(self, repo, data, history, fullhistory, category, gc=False,
+                 isold=None):
         self.repo = repo
         self.data = data
         self.history = history
+        self.fullhistory = fullhistory
         self.unit = constants.getunits(category)
         self.garbagecollect = gc
         if self.garbagecollect:
@@ -409,8 +441,8 @@ class repacker(object):
                 ui.progress(_("building history"), i, unit='nodes',
                             total=len(nodes))
                 try:
-                    ancestors.update(self.history.getancestors(filename, node,
-                                                               known=ancestors))
+                    ancestors.update(self.fullhistory.getancestors(filename,
+                        node, known=ancestors))
                 except KeyError:
                     # Since we're packing data entries, we may not have the
                     # corresponding history entries for them. It's not a big
@@ -420,6 +452,9 @@ class repacker(object):
 
             # Order the nodes children first, so we can produce reverse deltas
             orderednodes = list(reversed(self._toposort(ancestors)))
+            if len(nohistory) > 0:
+                ui.debug('repackdata: %d nodes without history\n' %
+                         len(nohistory))
             orderednodes.extend(sorted(nohistory))
 
             # Compute deltas and write to the pack
