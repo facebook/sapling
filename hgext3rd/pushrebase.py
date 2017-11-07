@@ -210,7 +210,8 @@ def validaterevset(repo, revset):
 
 def getrebaseparts(repo, peer, outgoing, onto, newhead):
     parts = []
-    if util.safehasattr(repo.manifestlog, 'datastore'):
+    if (util.safehasattr(repo.manifestlog, 'datastore') and
+        repo.ui.configbool('treemanifest', 'sendtrees')):
         mfnodes = []
         for node in outgoing.missing:
             mfnodes.append(('', repo[node].manifestnode()))

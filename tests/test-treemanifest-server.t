@@ -34,6 +34,7 @@ Create client
   > usecache=False
   > [treemanifest]
   > demanddownload=True
+  > sendtrees=True
   > EOF
 
 Test committing auto-downloads server trees and produces local trees

@@ -93,3 +93,39 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   8\x00cc31c19aff7dbbbed214ec304839a8003fdd0b10 (esc)
   9\x00cc31c19aff7dbbbed214ec304839a8003fdd0b10 (esc)
   subdir/a\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
+
+Test that pushrebase hooks can access the commit data
+  $ cat >> $TESTTMP/cathook.sh <<EOF
+  > #! /bin/sh
+  > echo "\$(hg cat -r \$HG_NODE subdir/a)"
+  > exit 1
+  > EOF
+  $ chmod a+x $TESTTMP/cathook.sh
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase.cat=$TESTTMP/cathook.sh
+  > EOF
+  $ cd ..
+
+  $ hg clone -q ssh://user@dummy/master hook_client
+  $ cd hook_client
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=$TESTDIR/../treemanifest
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > EOF
+  $ hg up -q master
+  $ echo baz >> subdir/a
+  $ hg commit -Aqm 'hook commit'
+  1 trees fetched over * (glob)
+
+  $ hg push --to master -B master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: baz
+  remote: prepushrebase.cat hook exited with status 1
+  abort: push failed on remote
+  [255]
