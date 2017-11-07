@@ -358,9 +358,10 @@ def _showbookmarks(ui, bookmarks, **opts):
 
 def exbookmarks(orig, ui, repo, *names, **opts):
     pattern = opts.get('list_remote')
+    delete = opts.get('delete')
+    remotepath = opts.get('remote_path')
+    path = ui.paths.getpath(remotepath or None, default=('default'))
     if pattern:
-        remotepath = opts.get('remote_path')
-        path = ui.paths.getpath(remotepath or None, default=('default'))
         destpath = path.pushloc or path.loc
         other = hg.peer(repo, opts, destpath)
         if not names:
@@ -372,7 +373,28 @@ def exbookmarks(orig, ui, repo, *names, **opts):
                                                       patterns=names)
         _showbookmarks(ui, fetchedbookmarks, **opts)
         return
-    return orig(ui, repo, *names, **opts)
+    elif delete and 'remotenames' in extensions._extensions:
+        existing_local_bms = set(repo._bookmarks.keys())
+        scratch_bms = []
+        other_bms = []
+        for name in names:
+            if _scratchbranchmatcher(name) and name not in existing_local_bms:
+                scratch_bms.append(name)
+            else:
+                other_bms.append(name)
+
+        if len(scratch_bms) > 0:
+            if remotepath == '':
+                remotepath = 'default'
+            _deleteinfinitepushbookmarks(ui,
+                                         repo,
+                                         remotepath,
+                                         scratch_bms)
+
+        if len(other_bms) > 0 or len(scratch_bms) == 0:
+            return orig(ui, repo, *other_bms, **opts)
+    else:
+        return orig(ui, repo, *names, **opts)
 
 def _checkheads(orig, pushop):
     if pushop.ui.configbool(experimental, configscratchpush, False):
@@ -875,6 +897,39 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
     if oldphasemove:
         exchange._localphasemove = oldphasemove
     return result
+
+def _deleteinfinitepushbookmarks(ui, repo, path, names):
+    """Prune remote names by removing the bookmarks we don't want anymore,
+    then writing the result back to disk
+    """
+    remotenamesext = extensions.find('remotenames')
+
+    # remotename format is:
+    # (node, nametype ("branches" or "bookmarks"), remote, name)
+    nametype_idx = 1
+    remote_idx = 2
+    name_idx = 3
+    remotenames = [remotename for remotename in \
+                   remotenamesext.readremotenames(repo) \
+                   if remotename[remote_idx] == path]
+    remote_bm_names = [remotename[name_idx] for remotename in \
+                       remotenames if remotename[nametype_idx] == "bookmarks"]
+
+    for name in names:
+        if name not in remote_bm_names:
+            raise error.Abort(_("infinitepush bookmark '{}' does not exist "
+                                "in path '{}'").format(name, path))
+
+    bookmarks = {}
+    branches = defaultdict(list)
+    for node, nametype, remote, name in remotenames:
+        if nametype == "bookmarks" and name not in names:
+            bookmarks[name] = node
+        elif nametype == "branches":
+            # saveremotenames wants binary nodes for branches
+            branches[name].append(bin(node))
+
+    remotenamesext.saveremotenames(repo, path, branches, bookmarks)
 
 def _phasemove(orig, pushop, nodes, phase=phases.public):
     """prevent commits from being marked public
