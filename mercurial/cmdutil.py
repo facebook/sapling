@@ -3029,6 +3029,11 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
         if fntemplate:
             filename = makefilename(repo, fntemplate, ctx.node(),
                                     pathname=os.path.join(prefix, path))
+            # attempt to create the directory if it does not already exist
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError:
+                pass
         with formatter.maybereopen(basefm, filename, opts) as fm:
             data = ctx[path].data()
             if opts.get('decode'):

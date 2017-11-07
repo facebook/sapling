@@ -126,7 +126,6 @@ Test behavior of output when directory structure does not already exist
   $ echo a > foo/a
   $ hg add foo/a
   $ hg commit -qm "add foo/a"
-  $ mkdir output
   $ hg cat --output "output/%p" foo/a
-  abort: No such file or directory: output/foo/a
-  [255]
+  $ cat output/foo/a
+  a
