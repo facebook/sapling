@@ -43,12 +43,13 @@
   >   hg debugdatapack "$i"
   > done
   $TESTTMP/hgcache/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8.datapack
-  
+  $TESTTMP/hgcache/master/packs/manifests/65df85879cdd898607ee3f323a0b61edc7de25b8:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   a0c8bcbbb45c  000000000000  43            (missing)
-  $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
   
+  $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79.datapack
+  $TESTTMP/hgcache/master/packs/manifests/bb55d9105672c45d4f82df15bd091a555ef02c79:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            (missing)
@@ -56,6 +57,7 @@
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1832e0765de9  000000000000  89            (missing)
+  
 
 - Verify histpack contents
   $ for i in $CACHEDIR/master/packs/manifests/*.histpack; do
@@ -85,16 +87,17 @@
   -r--r--r--     262 7535b6084226436bbdff33043969e7fa963e8428.histpack
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.datapack
-  
+  $TESTTMP/hgcache/master/packs/manifests/56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1832e0765de9  000000000000  89            89
   a0c8bcbbb45c  1832e0765de9  12            43
-  Total:                      101           132       (23.5% smaller)
   
+  Total:                      101           132       (23.5% smaller)
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            43
+  
   Total:                      43            43        (0.0% bigger)
 
   $ hg debughistorypack $CACHEDIR/master/packs/manifests/*.histpack
@@ -189,16 +192,17 @@ Test repacking from revlogs to pack files on the server
   7535b6084226436bbdff33043969e7fa963e8428.histidx
   7535b6084226436bbdff33043969e7fa963e8428.histpack
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
-  
+  .hg/cache/packs/manifests/56e8c6f0ca2a324b8b5ca1a2730323a1b4d0793a:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1832e0765de9  000000000000  89            89
   a0c8bcbbb45c  1832e0765de9  12            43
-  Total:                      101           132       (23.5% smaller)
   
+  Total:                      101           132       (23.5% smaller)
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            43
+  
   Total:                      43            43        (0.0% bigger)
 
 Test incremental revlog repacking
@@ -230,13 +234,14 @@ Test incremental repack with limited revs only repacks those revs
   $ rm -rf .hg/cache/packs/manifests
   $ hg repack --incremental --config treemanifest.repackstartrev=1 --config treemanifest.repackendrev=1
   $ hg debugdatapack .hg/cache/packs/manifests/*.datapack
-  
+  .hg/cache/packs/manifests/e9093d2d887ff14457d43338fcb3994e92051853:
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   1832e0765de9  000000000000  89            89
-  Total:                      89            89        (0.0% bigger)
   
+  Total:                      89            89        (0.0% bigger)
   dir:
   Node          Delta Base    Delta Length  Blob Size
   23226e7a252c  000000000000  43            43
+  
   Total:                      43            43        (0.0% bigger)

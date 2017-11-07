@@ -51,16 +51,17 @@
 # Ensure that all file versions were prefetched
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
-  
+  $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1406e7411862  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   50dbc4572b8e  000000000000  3             3
   076f5e2225b3  50dbc4572b8e  14            2
+  
   Total:                      17            5         (240.0% bigger)
 
 # Test garbage collection during repack
@@ -84,10 +85,11 @@
 # and is old (commit date is 0.0 in tests). Ensure that file 'y' is present as it is in the keepset.
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/05baa499c6b07f2bf0ea3d2c8151da1cb86f5e33.datapack
-  
+  $TESTTMP/hgcache/master/packs/05baa499c6b07f2bf0ea3d2c8151da1cb86f5e33:
   y:
   Node          Delta Base    Delta Length  Blob Size
   50dbc4572b8e  000000000000  3             3
+  
   Total:                      3             3         (0.0% bigger)
 
 # Prefetch all data again and repack for later garbage collection
@@ -110,16 +112,17 @@
 # Ensure that all file versions were prefetched
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
-  
+  $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1406e7411862  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   50dbc4572b8e  000000000000  3             3
   076f5e2225b3  50dbc4572b8e  14            2
+  
   Total:                      17            5         (240.0% bigger)
 
 # Test garbage collection during repack. Ensure that new files are not removed even though they are not in the keepset
@@ -143,14 +146,15 @@
 # Ensure that all file versions were prefetched
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4.datapack
-  
+  $TESTTMP/hgcache/master/packs/f7a942a6e4673d2c7b697fdd926ca2d153831ca4:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1406e7411862  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   50dbc4572b8e  000000000000  3             3
   076f5e2225b3  50dbc4572b8e  14            2
+  
   Total:                      17            5         (240.0% bigger)

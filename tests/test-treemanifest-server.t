@@ -49,7 +49,7 @@ Test committing auto-downloads server trees and produces local trees
   2 trees fetched over * (glob)
 
   $ hg debugdatapack $CACHEDIR/master/packs/manifests/*.dataidx
-  
+  $TESTTMP/hgcache/master/packs/manifests/4d21ecb6c95e12dcf807b793cd1c55eeed861734:
   subdir:
   Node          Delta Base    Delta Length  Blob Size
   bc0c2c938b92  000000000000  43            (missing)
@@ -57,9 +57,10 @@ Test committing auto-downloads server trees and produces local trees
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   85b359fdb09e  000000000000  49            (missing)
+  
 
   $ hg debugdatapack .hg/store/packs/manifests/*.dataidx
-  
+  .hg/store/packs/manifests/e3876af326e0e51d1f3ea0444d2b1a7db2915763:
   subdir2:
   Node          Delta Base    Delta Length  Blob Size
   ddb35f099a64  000000000000  43            (missing)
@@ -67,6 +68,7 @@ Test committing auto-downloads server trees and produces local trees
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
   54cbf534b62b  000000000000  99            (missing)
+  
 
 Test pushing without pushrebase fails
   $ hg push

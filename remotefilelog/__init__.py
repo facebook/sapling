@@ -924,9 +924,9 @@ def verifyremotefilelog(ui, path, **opts):
 @command('debugdatapack', [
     ('', 'long', None, _('print the long hashes')),
     ('', 'node', '', _('dump the contents of node'), 'NODE'),
-    ], _('hg debugdatapack <path>'), norepo=True)
-def debugdatapack(ui, path, **opts):
-    return debugcommands.debugdatapack(ui, path, **opts)
+    ], _('hg debugdatapack <paths>'), norepo=True)
+def debugdatapack(ui, *paths, **opts):
+    return debugcommands.debugdatapack(ui, *paths, **opts)
 
 @command('debughistorypack', [
     ], _('hg debughistorypack <path>'), norepo=True)

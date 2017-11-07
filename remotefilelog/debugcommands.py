@@ -197,70 +197,74 @@ def parsefileblob(path, decompress):
 
     return size, firstnode, mapping
 
-def debugdatapack(ui, path, **opts):
-    if '.data' in path:
-        path = path[:path.index('.data')]
-    dpack = datapack.datapack(path)
-
-    node = opts.get('node')
-    if node:
-        deltachain = dpack.getdeltachain('', bin(node))
-        dumpdeltachain(ui, deltachain, **opts)
-        return
-
-    if opts.get('long'):
-        hashformatter = hex
-        hashlen = 42
-    else:
-        hashformatter = short
-        hashlen = 14
-
-    lastfilename = None
-    totaldeltasize = 0
-    totalblobsize = 0
-    def printtotals():
-        if not totaldeltasize or not totalblobsize:
+def debugdatapack(ui, *paths, **opts):
+    for path in paths:
+        if '.data' in path:
+            path = path[:path.index('.data')]
+        ui.write("%s:\n" % path)
+        dpack = datapack.datapack(path)
+        node = opts.get('node')
+        if node:
+            deltachain = dpack.getdeltachain('', bin(node))
+            dumpdeltachain(ui, deltachain, **opts)
             return
-        difference = totalblobsize - totaldeltasize
-        deltastr = "%0.1f%% %s" % (
-            (100.0 * abs(difference) / totalblobsize),
-            ("smaller" if difference > 0 else "bigger"))
 
-        ui.write(("Total:%s%s  %s (%s)\n") % (
-            "".ljust(2 * hashlen - len("Total:")),
-            str(totaldeltasize).ljust(12),
-            str(totalblobsize).ljust(9),
-            deltastr
-        ))
-
-    for filename, node, deltabase, deltalen in dpack.iterentries():
-        if filename != lastfilename:
-            printtotals()
-            name = '(empty name)' if filename == '' else filename
-            ui.write("\n%s:\n" % name)
-            ui.write("%s%s%s%s\n" % (
-                "Node".ljust(hashlen),
-                "Delta Base".ljust(hashlen),
-                "Delta Length".ljust(14),
-                "Blob Size".ljust(9)))
-            lastfilename = filename
-            totalblobsize = 0
-            totaldeltasize = 0
-        # Metadata could be missing, in which case it will be an empty dict.
-        meta = dpack.getmeta(filename, node)
-        if constants.METAKEYSIZE in meta:
-            blobsize = meta[constants.METAKEYSIZE]
-            totaldeltasize += deltalen
-            totalblobsize += blobsize
+        if opts.get('long'):
+            hashformatter = hex
+            hashlen = 42
         else:
-            blobsize = "(missing)"
-        ui.write("%s  %s  %s%s\n" % (
-            hashformatter(node),
-            hashformatter(deltabase),
-            str(deltalen).ljust(14),
-            blobsize))
-    if filename is not None:
-        printtotals()
+            hashformatter = short
+            hashlen = 14
+
+        lastfilename = None
+        totaldeltasize = 0
+        totalblobsize = 0
+        def printtotals():
+            if lastfilename is not None:
+                ui.write("\n")
+            if not totaldeltasize or not totalblobsize:
+                return
+            difference = totalblobsize - totaldeltasize
+            deltastr = "%0.1f%% %s" % (
+                (100.0 * abs(difference) / totalblobsize),
+                ("smaller" if difference > 0 else "bigger"))
+
+            ui.write(("Total:%s%s  %s (%s)\n") % (
+                "".ljust(2 * hashlen - len("Total:")),
+                str(totaldeltasize).ljust(12),
+                str(totalblobsize).ljust(9),
+                deltastr
+            ))
+
+        for filename, node, deltabase, deltalen in dpack.iterentries():
+            if filename != lastfilename:
+                printtotals()
+                name = '(empty name)' if filename == '' else filename
+                ui.write("%s:\n" % name)
+                ui.write("%s%s%s%s\n" % (
+                    "Node".ljust(hashlen),
+                    "Delta Base".ljust(hashlen),
+                    "Delta Length".ljust(14),
+                    "Blob Size".ljust(9)))
+                lastfilename = filename
+                totalblobsize = 0
+                totaldeltasize = 0
+            # Metadata could be missing, in which case it will be an empty dict.
+            meta = dpack.getmeta(filename, node)
+            if constants.METAKEYSIZE in meta:
+                blobsize = meta[constants.METAKEYSIZE]
+                totaldeltasize += deltalen
+                totalblobsize += blobsize
+            else:
+                blobsize = "(missing)"
+            ui.write("%s  %s  %s%s\n" % (
+                hashformatter(node),
+                hashformatter(deltabase),
+                str(deltalen).ljust(14),
+                blobsize))
+
+        if filename is not None:
+            printtotals()
 
 def dumpdeltachain(ui, deltachain, **opts):
     hashformatter = hex

@@ -148,22 +148,25 @@
 # Test debug commands
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
-  
+  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
   d4a3ed9310e5  1bb2e6237e03  12            6
   aee31534993a  d4a3ed9310e5  12            4
+  
   Total:                      32            18        (77.8% bigger)
   $ hg debugdatapack --long $TESTTMP/hgcache/master/packs/*.datapack
-  
+  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
   x:
   Node                                      Delta Base                                Delta Length  Blob Size
   1bb2e6237e035c8f8ef508e281f1ce075bc6db72  0000000000000000000000000000000000000000  8             8
   d4a3ed9310e5bd9887e3bf779da5077efab28216  1bb2e6237e035c8f8ef508e281f1ce075bc6db72  12            6
   aee31534993a501858fb6dd96a065671922e7d51  d4a3ed9310e5bd9887e3bf779da5077efab28216  12            4
+  
   Total:                                                                              32            18        (77.8% bigger)
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack --node d4a3ed9310e5bd9887e3bf779da5077efab28216
+  $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15:
   
   x
   Node                                      Delta Base                                Delta SHA1                                Delta Length
@@ -244,17 +247,18 @@
   $ rm -rf $CACHEDIR/master/packs/*hist*
   $ hg repack
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
-  
+  $TESTTMP/hgcache/master/packs/055c02949317b8507cdb7aaf2e00cc00fd0c5716:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
   aee31534993a  000000000000  4             4
   d4a3ed9310e5  000000000000  6             6
-  Total:                      18            18        (0.0% bigger)
   
+  Total:                      18            18        (0.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   577959738234  000000000000  70            8
+  
   Total:                      70            8         (775.0% bigger)
 
   $ hg cat -r ".^" x
@@ -388,16 +392,17 @@ Test local remotefilelog blob is correct when based on a pack
 Test limiting the max delta chain length
   $ hg repack --config packs.maxchainlen=1
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.dataidx
-  
+  $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
   d4a3ed9310e5  1bb2e6237e03  12            6
   aee31534993a  000000000000  4             4
   1406e7411862  aee31534993a  12            2
-  Total:                      36            20        (80.0% bigger)
   
+  Total:                      36            20        (80.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   577959738234  000000000000  8             8
+  
   Total:                      8             8         (0.0% bigger)

@@ -152,26 +152,27 @@
 # could only be downloaded by the background prefetch
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
   w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
-  Total:                      17            5         (240.0% bigger)
   
+  Total:                      17            5         (240.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  
   Total:                      2             2         (0.0% bigger)
 
 # background prefetch with repack on commit when wcprevset configured
@@ -202,26 +203,27 @@
 # could only be downloaded by the background prefetch
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
   w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
-  Total:                      17            5         (240.0% bigger)
   
+  Total:                      17            5         (240.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  
   Total:                      2             2         (0.0% bigger)
 
 # background prefetch with repack on rebase when wcprevset configured
@@ -244,26 +246,27 @@
 # could only be downloaded by the background prefetch
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
   w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
-  Total:                      17            5         (240.0% bigger)
   
+  Total:                      17            5         (240.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  
   Total:                      2             2         (0.0% bigger)
 
 # Check that foregound prefetch with no arguments blocks until background prefetches finish
@@ -289,26 +292,27 @@
 
 # Ensure that files were prefetched
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
   w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
-  Total:                      17            5         (240.0% bigger)
   
+  Total:                      17            5         (240.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  
   Total:                      2             2         (0.0% bigger)
 
 # Check that foreground prefetch fetches revs specified by '. + draft() + bgprefetchrevs + pullprefetch'
@@ -331,26 +335,27 @@
 
 # Ensure that files were prefetched
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0.datapack
-  
+  $TESTTMP/hgcache/master/packs/8299d5a1030f073f4adbb3b6bd2ad3bdcc276df0:
   w:
   Node          Delta Base    Delta Length  Blob Size
   bb6ccd5dceaa  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   x:
   Node          Delta Base    Delta Length  Blob Size
   ef95c5376f34  000000000000  3             3
   1406e7411862  ef95c5376f34  14            2
-  Total:                      17            5         (240.0% bigger)
   
+  Total:                      17            5         (240.0% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   076f5e2225b3  000000000000  2             2
-  Total:                      2             2         (0.0% bigger)
   
+  Total:                      2             2         (0.0% bigger)
   z:
   Node          Delta Base    Delta Length  Blob Size
   69a1b6752270  000000000000  2             2
+  
   Total:                      2             2         (0.0% bigger)
 
 # Test that if data was prefetched and repacked we dont need to prefetch it again
