@@ -118,8 +118,8 @@ Test rebasing a stack of commits results in a pack with all the trees
   rebasing 4:f096b21e165f "modify subdir/y again" (tip)
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/6a2476258ba5-a90056a1-rebase.hg (glob)
   $ hg log -r '.^::.' -T '{manifest}\n'
-  3:0d05c20bb7eb
-  4:8289b85c6a30
+  0d05c20bb7eb53dbfe91f834ed3f0c26ca6ca655
+  8289b85c6a307a5a64ffe3bd80bd7998775c787a
   $ hg debugdatapack .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7.datapack
   .hg/store/packs/manifests/5a5fb42e99986c90ac86b57d184561c44238b7b7:
   subdir:

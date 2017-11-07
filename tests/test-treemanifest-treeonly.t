@@ -190,7 +190,7 @@ Test pulling new commits from a hybrid server
   $ echo x >> subdir/x
   $ hg commit -qAm 'modify subdir/x'
   $ hg log -r tip -T '{manifest}'
-  1:d9920715ba88 (no-eol)
+  d9920715ba88cbc7962c4dac9f20004aafd94ac8 (no-eol)
 
   $ cd ../client
   $ hg pull
@@ -253,6 +253,10 @@ Test histedit treeonly commits
   o  add y
   |
   ~
+
+Test {manifest} template
+  $ hg log -r . -T '{manifest}'
+  0ab0ab59dd6ab41bda558ad2fd4c665da69323ab (no-eol)
 
 Test turning treeonly off and making sure we can still commit on top of treeonly
 commits

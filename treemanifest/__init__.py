@@ -82,6 +82,7 @@ from mercurial import (
     repair,
     revlog,
     sshserver,
+    templatekw,
     util,
     wireproto,
 )
@@ -152,6 +153,16 @@ def uisetup(ui):
                             _handlebundle2part)
     extensions.wrapfunction(bundle2, 'getrepocaps', getrepocaps)
     _registerbundle2parts()
+
+    extensions.wrapfunction(templatekw, 'showmanifest', showmanifest)
+    templatekw.keywords['manifest'] = templatekw.showmanifest
+
+def showmanifest(orig, **args):
+    # The normal manifest template shows a rev number, which we don't have.
+    # Let's just print the node. Note, this breaks the ability for us to do
+    # '{manifest % "{node} {rev}"}' but that's fine, since we can only show
+    # the node now anyway.
+    return hex(args[r'ctx'].manifestnode())
 
 def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
