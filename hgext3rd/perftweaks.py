@@ -258,7 +258,7 @@ def _trackdirstatesizes(runcommand, lui, repo, *args):
         dirstate = repo.dirstate
         # if the _map attribute is missing on the map, the dirstate was not
         # loaded.
-        if '_map' in vars(dirstate):
+        if '_map' in vars(dirstate) and '_map' in vars(dirstate._map):
             map_ = dirstate._map._map
             lui.log('dirstate_size', '',
                     dirstate_size=len(map_))
