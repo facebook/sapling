@@ -54,6 +54,7 @@ use futures::{stream, Future, IntoFuture, Stream};
 use futures_cpupool::CpuPool;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
+use stats::Timeseries;
 use tokio_core::reactor::{Core, Remote};
 
 use blobrepo::BlobChangeset;
@@ -73,6 +74,9 @@ define_stats! {
     prefix = "blobimport";
     changesets: timeseries(RATE, SUM),
     heads: timeseries(RATE, SUM),
+    duplicates: timeseries(RATE, SUM),
+    failures: timeseries(RATE, SUM),
+    successes: timeseries(RATE, SUM),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -156,14 +160,23 @@ where
                     }
                     BlobstoreEntry::ManifestEntry((key, value)) => {
                         if inserted_manifest_entries.insert(key.clone()) {
-                            blobstore.put(key, value)
+                            blobstore.put(key.clone(), value).boxify()
                         } else {
+                            STATS::duplicates.add_value(1);
                             Ok(()).into_future().boxify()
                         }
                     }
                 })
                 .map_err(|_| Error::from("error happened"))
-                .buffer_unordered(channel_size);
+                .buffer_unordered(channel_size)
+                .then(move |res| {
+                    if res.is_err() {
+                        STATS::failures.add_value(1);
+                    } else {
+                        STATS::successes.add_value(1);
+                    }
+                    res
+                });
             core.run(stream.for_each(|_| Ok(())))
         })
         .expect("cannot start iothread");
