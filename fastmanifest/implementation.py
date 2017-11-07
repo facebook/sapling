@@ -1016,11 +1016,19 @@ class manifestfactory(object):
         return node
 
     def ctxwrite(self, orig, mfctx, transaction, link, p1, p2, added, removed):
-        node = orig(mfctx, transaction, link, p1, p2, added, removed)
-
+        mfl = mfctx._manifestlog
         treeenabled = self.ui.configbool("fastmanifest", "usetree")
+        if (supportsctree and treeenabled and
+            p1 not in mfl._revlog.nodemap and
+            not mfl.datastore.getmissing([('', p1)])):
+            # If p1 is not in the flat manifest but is in the tree store, then
+            # this is a commit on top of a tree only commit and we should then
+            # produce a treeonly commit.
+            node = None
+        else:
+            node = orig(mfctx, transaction, link, p1, p2, added, removed)
+
         if supportsctree and treeenabled:
-            mfl = mfctx._manifestlog
             datastore = mfl.datastore
             opener = mfctx._revlog().opener
 
@@ -1082,13 +1090,25 @@ class manifestfactory(object):
                     transaction.addabort('treepack', abort)
                     transaction.addpending('treepack', writepending)
 
-                dpack = treemanifest.InterceptedMutableDataPack(
-                        transaction.treedatapack,
-                        node, p1)
-                hpack = treemanifest.InterceptedMutableHistoryPack(
-                        transaction.treehistpack, node, p1)
+                # If the manifest was already committed as a flat manifest, use
+                # its node.
+                if node is not None:
+                    dpack = treemanifest.InterceptedMutableDataPack(
+                            transaction.treedatapack,
+                            node, p1)
+                    hpack = treemanifest.InterceptedMutableHistoryPack(
+                            transaction.treehistpack, node, p1)
+                else:
+                    dpack = transaction.treedatapack
+                    hpack = transaction.treehistpack
+
                 newtreeiter = newtree.finalize(tree)
                 for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+                    # If the node wasn't set by a flat manifest, use the tree
+                    # root node.
+                    if node is None and nname == '':
+                        node = nnode
+
                     # Not using deltas, since there aren't any other trees in
                     # this pack it could delta against.
                     dpack.add(nname, nnode, revlog.nullid, ntext)

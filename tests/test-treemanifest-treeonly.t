@@ -254,6 +254,28 @@ Test histedit treeonly commits
   |
   ~
 
+Test turning treeonly off and making sure we can still commit on top of treeonly
+commits
+  $ echo >> subdir/x
+  $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
+       2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
+  $ hg commit -m 'treeonly from hybrid repo' --config treemanifest.treeonly=False
+  $ hg log -r . -T '{desc}\n' --stat
+  treeonly from hybrid repo
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg log -r . -T '{desc}\n' --stat --config treemanifest.treeonly=False
+  treeonly from hybrid repo
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg debugindex -m --config treemanifest.treeonly=False | tail -1
+       2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
+  $ hg strip -r . --config fbamend.safestrip=False
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/87da9865954c-3cfa5389-backup.hg (glob)
+
 Test peer-to-peer push/pull of tree only commits
   $ cd ..
   $ clearcache
