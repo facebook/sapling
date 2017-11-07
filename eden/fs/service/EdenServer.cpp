@@ -204,7 +204,9 @@ void EdenServer::prepare() {
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   createThriftServer();
 
+  XLOG(DBG2) << "opening local RocksDB store";
   localStore_ = make_shared<LocalStore>(rocksPath_);
+  XLOG(DBG2) << "done opening local RocksDB store";
 
   // Start stats aggregation
   scheduleFlushStats();
