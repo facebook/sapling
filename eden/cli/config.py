@@ -379,7 +379,7 @@ by hand to make changes to the repository or remove it.''' % name)
                 lockfile_contents = f.read()
             pid = lockfile_contents.rstrip()
             int(pid)  # Throw if this does not parse as an integer.
-        except BaseException:
+        except Exception:
             # If we cannot read the PID from the lockfile for any reason, return
             # DEAD.
             return self._create_dead_health_status()
