@@ -122,7 +122,17 @@ Test that pushrebase hooks can access the commit data
   $ hg commit -Aqm 'hook commit'
   1 trees fetched over * (glob)
 
+- Push without sendtrees
   $ hg push --to master -B master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: baz
+  remote: prepushrebase.cat hook exited with status 1
+  abort: push failed on remote
+  [255]
+
+- Push with sendtrees
+  $ hg push --to master -B master --config treemanifest.sendtrees=True
   pushing to ssh://user@dummy/master
   searching for changes
   remote: baz
