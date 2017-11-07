@@ -8,9 +8,9 @@ use mercurial_types::NodeHash;
 
 error_chain! {
     errors {
-        NoSuchNode(hash: NodeHash) {
-            description("node not found in repo")
-            display("no such node: {}", hash)
+        RepoError(hash: NodeHash) {
+            description("repo error")
+            display("repo error checking for node: {}", hash)
         }
         GenerationFetchFailed {
             description("could not fetch node generation")

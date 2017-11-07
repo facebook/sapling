@@ -4,8 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error_chain::ChainedError;
-use futures::Poll;
+use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
@@ -15,26 +14,17 @@ use NodeStream;
 use errors::*;
 
 pub struct SingleNodeHash {
-    node: Box<Stream<Item = NodeHash, Error = Error> + Send>,
+    nodehash: Option<NodeHash>,
+    exists: Box<Future<Item = bool, Error = Error> + Send>,
 }
 
 impl SingleNodeHash {
-    pub fn new<R>(nodehash: NodeHash, repo: &R) -> SingleNodeHash
-    where
-        R: Repo,
-    {
-        let future = repo.changeset_exists(&nodehash);
-        let future = future.map_err(move |err| {
-            ChainedError::with_chain(err, ErrorKind::NoSuchNode(nodehash))
-        });
-        let future = future.and_then(move |exists| if exists {
-            Ok(nodehash)
-        } else {
-            Err(ErrorKind::NoSuchNode(nodehash).into())
-        });
-        SingleNodeHash {
-            node: Box::new(future.into_stream()),
-        }
+    pub fn new<R: Repo>(nodehash: NodeHash, repo: &R) -> Self {
+        let exists = Box::new(repo.changeset_exists(&nodehash).map_err(move |e| {
+            Error::with_chain(e, ErrorKind::RepoError(nodehash))
+        }));
+        let nodehash = Some(nodehash);
+        SingleNodeHash { nodehash, exists }
     }
 
     pub fn boxed(self) -> Box<NodeStream> {
@@ -46,7 +36,19 @@ impl Stream for SingleNodeHash {
     type Item = NodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        self.node.poll()
+        if self.nodehash.is_none() {
+            Ok(Async::Ready(None))
+        } else {
+            match self.exists.poll()? {
+                Async::NotReady => Ok(Async::NotReady),
+                Async::Ready(true) => {
+                    let nodehash = self.nodehash;
+                    self.nodehash = None;
+                    Ok(Async::Ready(nodehash))
+                }
+                Async::Ready(false) => Ok(Async::Ready(None)),
+            }
+        }
     }
 }
 
@@ -54,7 +56,6 @@ impl Stream for SingleNodeHash {
 mod test {
     use super::*;
     use blobrepo::{BlobRepo, MemBlobState};
-    use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
     use std::sync::Arc;
@@ -83,17 +84,11 @@ mod test {
 
     #[test]
     fn invalid_node() {
-        let repo = linear::getrepo();
+        let repo = Arc::new(linear::getrepo());
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
-        let mut nodestream = spawn(SingleNodeHash::new(nodehash, &repo));
+        let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
+        let repo_generation: RepoGenCache<BlobRepo<MemBlobState>> = RepoGenCache::new(10);
 
-        assert!(
-            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
-                hash == nodehash
-            } else {
-                false
-            },
-            "No error for bad node"
-        );
+        assert_node_sequence(repo_generation, &repo, vec![].into_iter(), nodestream);
     }
 }

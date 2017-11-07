@@ -157,7 +157,7 @@ mod test {
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
-    use setcommon::NotReadyEmptyStream;
+    use setcommon::{NotReadyEmptyStream, RepoErrorStream};
     use std::sync::Arc;
     use tests::assert_node_sequence;
     use tests::string_to_nodehash;
@@ -185,14 +185,14 @@ mod test {
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
         let inputs: Vec<Box<NodeStream>> = vec![
-            SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+            Box::new(RepoErrorStream { hash: nodehash }),
             SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
         ];
         let mut nodestream =
             spawn(UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed());
 
         assert!(
-            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
+            if let Some(Err(Error(ErrorKind::RepoError(hash), _))) = nodestream.wait_stream() {
                 hash == nodehash
             } else {
                 false

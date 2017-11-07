@@ -31,6 +31,7 @@ mod setdifferencenodestream;
 pub use setdifferencenodestream::SetDifferenceNodeStream;
 
 pub mod errors;
+pub use errors::{Error, ErrorKind};
 
 pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + Send + 'static;
 

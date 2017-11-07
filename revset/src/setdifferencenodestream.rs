@@ -213,13 +213,13 @@ mod test {
             SetDifferenceNodeStream::new(
                 &repo,
                 repo_generation,
-                SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+                Box::new(RepoErrorStream { hash: nodehash }),
                 SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
             ).boxed(),
         );
 
         assert!(
-            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
+            if let Some(Err(Error(ErrorKind::RepoError(hash), _))) = nodestream.wait_stream() {
                 hash == nodehash
             } else {
                 false

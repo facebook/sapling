@@ -346,14 +346,14 @@ mod test {
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
         let inputs: Vec<Box<NodeStream>> = vec![
-            SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
+            Box::new(RepoErrorStream { hash: nodehash }),
             SingleNodeHash::new(nodehash.clone(), &repo).boxed(),
         ];
         let mut nodestream =
             spawn(IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed());
 
         assert!(
-            if let Some(Err(Error(ErrorKind::NoSuchNode(hash), _))) = nodestream.wait_stream() {
+            if let Some(Err(Error(ErrorKind::RepoError(hash), _))) = nodestream.wait_stream() {
                 hash == nodehash
             } else {
                 false
