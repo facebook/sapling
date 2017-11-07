@@ -77,7 +77,8 @@ def makepackstores(repo):
 
     repo.shareddatastores.append(packcontentstore)
     repo.sharedhistorystores.append(packmetadatastore)
-
+    shallowutil.reportpackmetrics(repo.ui, 'filestore', packcontentstore,
+        packmetadatastore)
     return packcontentstore, packmetadatastore
 
 def makeunionstores(repo):
@@ -104,6 +105,8 @@ def makeunionstores(repo):
         fileservicehistorywrite = packmetadatastore
     repo.fileservice.setstore(repo.contentstore, repo.metadatastore,
                               fileservicedatawrite, fileservicehistorywrite)
+    shallowutil.reportpackmetrics(repo.ui, 'filestore',
+        packcontentstore, packmetadatastore)
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):

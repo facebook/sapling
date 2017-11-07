@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 
 import errno, hashlib, mmap, os, struct, time
+
+from collections import defaultdict
 from mercurial import policy, pycompat, util
 from mercurial.i18n import _
 from mercurial import vfs as vfsmod
@@ -56,7 +58,7 @@ class basepackstore(object):
         # lastrefesh is 0 so we'll immediately check for new packs on the first
         # failure.
         self.lastrefresh = 0
-        for filepath in self._getavailablepackfiles():
+        for filepath, __, __ in self._getavailablepackfilessorted():
             try:
                 pack = self.getpack(filepath)
             except Exception as ex:
@@ -73,33 +75,77 @@ class basepackstore(object):
             self.packs.append(pack)
 
     def _getavailablepackfiles(self):
-        suffixlen = len(self.INDEXSUFFIX)
+        """For each pack file (a index/data file combo), yields:
+          (full path without extension, mtime, size)
 
-        totalsize = 0
-        files = []
-        filenames = set()
+        mtime will be the mtime of the index/data file (whichever is newer)
+        size is the combined size of index/data file
+        """
+        indexsuffixlen = len(self.INDEXSUFFIX)
+        packsuffixlen = len(self.PACKSUFFIX)
+
+        ids = set()
+        sizes = defaultdict(lambda: 0)
+        mtimes = defaultdict(lambda: [])
         try:
             for filename, size, stat in osutil.listdir(self.path, stat=True):
-                files.append((stat.st_mtime, filename))
-                filenames.add(filename)
-                totalsize += size
+                id = None
+                if filename[-indexsuffixlen:] == self.INDEXSUFFIX:
+                    id = filename[:-indexsuffixlen]
+                elif filename[-packsuffixlen:] == self.PACKSUFFIX:
+                    id = filename[:-packsuffixlen]
+
+                # Since we expect to have two files corresponding to each ID
+                # (the index file and the pack file), we can yield once we see
+                # it twice.
+                if id:
+                    sizes[id] += size # Sum both files' sizes together
+                    mtimes[id].append(stat.st_mtime)
+                    if id in ids:
+                        yield (os.path.join(self.path, id), max(mtimes[id]),
+                            sizes[id])
+                    else:
+                        ids.add(id)
         except OSError as ex:
             if ex.errno != errno.ENOENT:
                 raise
 
-        numpacks = len(filenames)
-        self.ui.log("packsizes", "packstore %s has %d packs totaling %s\n" %
-                            (self.path, numpacks, util.bytecount(totalsize)),
-                numpacks=numpacks,
-                totalsize=totalsize)
-        # Put most recent pack files first since they contain the most recent
-        # info.
+    def _getavailablepackfilessorted(self):
+        """Like `_getavailablepackfiles`, but also sorts the files by mtime,
+        yielding newest files first.
+
+        This is desirable, since it is more likely newer packfiles have more
+        desirable data.
+        """
+        files = []
+        for path, mtime, size in self._getavailablepackfiles():
+            files.append((mtime, size, path))
         files = sorted(files, reverse=True)
-        for mtime, filename in files:
-            packfilename = '%s%s' % (filename[:-suffixlen], self.PACKSUFFIX)
-            if (filename[-suffixlen:] == self.INDEXSUFFIX
-                and packfilename in filenames):
-                yield os.path.join(self.path, filename)[:-suffixlen]
+        for mtime, size, path in files:
+            yield path, mtime, size
+
+    def gettotalsizeandcount(self):
+        """Returns the total disk size (in bytes) of all the pack files in
+        this store, and the count of pack files.
+
+        (This might be smaller than the total size of the ``self.path``
+        directory, since this only considers fuly-writen pack files, and not
+        temporary files or other detritus on the directory.)
+        """
+        totalsize = 0
+        count = 0
+        for __, __, size in self._getavailablepackfiles():
+            totalsize += size
+            count += 1
+        return totalsize, count
+
+    def getmetrics(self):
+        """Returns metrics on the state of this store."""
+        size, count = self.gettotalsizeandcount()
+        return {
+            'numpacks': count,
+            'totalpacksize': size,
+        }
 
     def getpack(self, path):
         raise NotImplemented()
@@ -138,10 +184,9 @@ class basepackstore(object):
         if now > self.lastrefresh + REFRESHRATE:
             self.lastrefresh = now
             previous = set(p.path for p in self.packs)
-            new = set(self._getavailablepackfiles()) - previous
-
-            for filepath in new:
-                newpacks.append(self.getpack(filepath))
+            for filepath, __, __ in self._getavailablepackfilessorted():
+                if filepath not in previous:
+                    newpacks.append(self.getpack(filepath))
             self.packs.extend(newpacks)
 
         return newpacks

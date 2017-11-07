@@ -369,6 +369,10 @@ static PyObject *uniondatapackstore_markforrefresh(py_uniondatapackstore *self) 
   Py_RETURN_NONE;
 }
 
+static PyObject *uniondatapackstore_getmetrics(py_uniondatapackstore *self) {
+  return PyDict_New();
+}
+
 // --------- UnionDatapackStore Declaration ---------
 
 static PyMethodDef uniondatapackstore_methods[] = {
@@ -376,6 +380,7 @@ static PyMethodDef uniondatapackstore_methods[] = {
   {"getdeltachain", (PyCFunction)uniondatapackstore_getdeltachain, METH_VARARGS, ""},
   {"getmissing", (PyCFunction)uniondatapackstore_getmissing, METH_O, ""},
   {"markforrefresh", (PyCFunction)uniondatapackstore_markforrefresh, METH_NOARGS, ""},
+  {"getmetrics", (PyCFunction)uniondatapackstore_getmetrics, METH_NOARGS, ""},
   {NULL, NULL}
 };
 

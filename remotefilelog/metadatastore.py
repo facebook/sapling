@@ -100,6 +100,10 @@ class unionmetadatastore(object):
         for store in self.stores:
             store.markledger(ledger)
 
+    def getmetrics(self):
+        metrics = [s.getmetrics() for s in self.stores]
+        return shallowutil.sumdicts(*metrics)
+
 class remotefilelogmetadatastore(basestore.basestore):
     def getancestors(self, name, node, known=None):
         """Returns as many ancestors as we're aware of.

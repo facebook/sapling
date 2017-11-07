@@ -7,6 +7,8 @@
 from __future__ import absolute_import
 
 import errno, hashlib, os, stat, struct, tempfile
+
+from collections import defaultdict
 from mercurial import filelog, revlog, util, error
 from mercurial.i18n import _
 
@@ -92,6 +94,30 @@ def parsemeta(text):
         s = text.index('\1\n', 2)
         text = text[s + 2:]
     return meta or {}, text
+
+def sumdicts(*dicts):
+    """Adds all the values of *dicts together into one dictionary. This assumes
+    the values in *dicts are all summable.
+
+    e.g. [{'a': 4', 'b': 2}, {'b': 3, 'c': 1}] -> {'a': 4, 'b': 5, 'c': 1}
+    """
+    result = defaultdict(lambda: 0)
+    for dict in dicts:
+        for k, v in dict.iteritems():
+            result[k] += v
+    return result
+
+def prefixkeys(dict, prefix):
+    """Returns ``dict`` with ``prefix`` prepended to all its keys."""
+    result = {}
+    for k, v in dict.iteritems():
+        result[prefix + k] = v
+    return result
+
+def reportpackmetrics(ui, prefix, *stores):
+    dicts = [s.getmetrics() for s in stores]
+    dict = prefixkeys(sumdicts(*dicts), prefix + '_')
+    ui.log(prefix + "_packsizes", "", **dict)
 
 def _parsepackmeta(metabuf):
     """parse datapack meta, bytes (<metadata-list>) -> dict

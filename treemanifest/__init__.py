@@ -227,6 +227,7 @@ def setuptreestores(repo, mfl):
         datastore = cstore.datapackstore(packpath)
         localdatastore = cstore.datapackstore(localpackpath)
         # TODO: can't use remotedatastore with cunionstore yet
+        # TODO make reportmetrics work with cstore
         mfl.datastore = cstore.uniondatapackstore([localdatastore, datastore])
     else:
         datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
@@ -259,6 +260,8 @@ def setuptreestores(repo, mfl):
         localhistorystore,
         writestore=localhistorystore,
     )
+    shallowutil.reportpackmetrics(repo.ui, 'treestore', mfl.datastore,
+        mfl.historystore)
 
 class treemanifestlog(manifest.manifestlog):
     def __init__(self, opener, treemanifest=False):
@@ -1450,6 +1453,9 @@ class remotetreedatastore(object):
 
     def markledger(self, ledger):
         pass
+
+    def getmetrics(self):
+        return {}
 
 def serverrepack(repo, incremental=False):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
