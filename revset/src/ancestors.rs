@@ -30,7 +30,7 @@ where
     repo: Arc<R>,
     repo_generation: RepoGenCache<R>,
     next_generation: BTreeMap<Generation, HashSet<NodeHash>>,
-    pending_changesets: Box<Stream<Item = (NodeHash, Generation), Error = Error>>,
+    pending_changesets: Box<Stream<Item = (NodeHash, Generation), Error = Error> + Send>,
     drain: IntoIter<NodeHash>,
 }
 
@@ -38,7 +38,7 @@ fn make_pending<R: Repo>(
     repo: Arc<R>,
     repo_generation: RepoGenCache<R>,
     hashes: IntoIter<NodeHash>,
-) -> Box<Stream<Item = (NodeHash, Generation), Error = Error>> {
+) -> Box<Stream<Item = (NodeHash, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
     let new_repo = repo.clone();
 

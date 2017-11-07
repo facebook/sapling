@@ -17,7 +17,7 @@ use errors::*;
 
 use futures::{Async, Poll};
 
-pub type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static>;
+pub type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static + Send>;
 
 pub fn add_generations<R>(
     stream: Box<NodeStream>,

@@ -32,7 +32,7 @@ pub use setdifferencenodestream::SetDifferenceNodeStream;
 
 pub mod errors;
 
-pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + 'static;
+pub type NodeStream = Stream<Item = NodeHash, Error = errors::Error> + Send + 'static;
 
 mod validation;
 pub use validation::ValidateNodeStream;

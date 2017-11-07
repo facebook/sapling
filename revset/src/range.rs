@@ -39,10 +39,10 @@ where
     repo: Arc<R>,
     repo_generation: RepoGenCache<R>,
     start_node: NodeHash,
-    start_generation: Box<Stream<Item = Generation, Error = Error>>,
+    start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
     // Child, parent
-    pending_nodes: Box<Stream<Item = ParentChild, Error = Error>>,
+    pending_nodes: Box<Stream<Item = ParentChild, Error = Error> + Send>,
     output_nodes: Option<BTreeMap<Generation, HashSet<NodeHash>>>,
     drain: Option<IntoIter<NodeHash>>,
 }
@@ -51,7 +51,7 @@ fn make_pending<R: Repo>(
     repo: Arc<R>,
     repo_generation: RepoGenCache<R>,
     child: HashGen,
-) -> Box<Stream<Item = ParentChild, Error = Error>> {
+) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
     Box::new(
         {
             let repo = repo.clone();

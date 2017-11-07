@@ -28,7 +28,7 @@ pub type BoxedBookmarks<E> = Box<
     >,
 >;
 
-pub trait Repo: 'static {
+pub trait Repo: Send + Sync + 'static {
     type Error: error::Error + Send + 'static;
 
     /// Return a stream of all changeset ids

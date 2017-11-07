@@ -66,7 +66,7 @@ where
         &self,
         repo: &Arc<R>,
         nodeid: NodeHash,
-    ) -> impl Future<Item = Generation, Error = R::Error> {
+    ) -> impl Future<Item = Generation, Error = R::Error> + Send {
         self.cache.get((repo, nodeid))
     }
 }
@@ -88,7 +88,7 @@ where
     R: Repo,
 {
     type Key = Key<R>;
-    type Value = Box<Future<Item = Generation, Error = R::Error>>;
+    type Value = Box<Future<Item = Generation, Error = R::Error> + Send>;
 
     fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {
         let parents = repo
@@ -108,6 +108,6 @@ where
             .fold(Generation(0), |g, s| future::ok(cmp::max(g, s)))
             .map(|Generation(g)| Generation(g + 1)); // Future<Generation>
 
-        Box::new(gen) as Box<Future<Item = Generation, Error = R::Error> + 'static>
+        Box::new(gen) as Box<Future<Item = Generation, Error = R::Error> + Send + 'static>
     }
 }

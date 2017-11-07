@@ -15,7 +15,7 @@ use NodeStream;
 use errors::*;
 
 pub struct SingleNodeHash {
-    node: Box<Stream<Item = NodeHash, Error = Error>>,
+    node: Box<Stream<Item = NodeHash, Error = Error> + Send>,
 }
 
 impl SingleNodeHash {
