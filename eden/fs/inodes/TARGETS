@@ -12,25 +12,6 @@ thrift_library(
     thrift_srcs = {
         "overlay.thrift": [],
     },
-    deps = [
-        ":hgdirstate",
-    ],
-)
-
-thrift_library(
-    name = "hgdirstate",
-    # Need to support .java and .py because eden.thrift depends on this file.
-    languages = [
-        "cpp2",
-        "javadeprecated",
-        "py",
-        "rust",
-    ],
-    py_base_module = "facebook",
-    thrift_args = ["--strict"],
-    thrift_srcs = {
-        "hgdirstate.thrift": None,
-    },
 )
 
 cpp_library(
@@ -38,7 +19,6 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        ":hgdirstate-cpp2",
         ":serialization-cpp2",
         "@/eden/fs/config:config",
         "@/eden/fs/fuse:fusell",
@@ -58,7 +38,6 @@ cpp_library(
         "@/folly:file_util",
         "@/folly:format",
         "@/folly:likely",
-        "@/folly:map_util",
         "@/folly:optional",
         "@/folly:portability",
         "@/folly:range",
@@ -70,7 +49,6 @@ cpp_library(
         "@/folly:unit",
         "@/folly/executors:cpu_thread_pool_executor",
         "@/folly/executors:global_executor",
-        "@/folly/experimental:string_keyed_unordered_map",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",

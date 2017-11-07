@@ -22,6 +22,8 @@ import subprocess
 import sys
 import tempfile
 
+import eden.dirstate
+
 
 def read_config(directory, name, default=None):
     try:
@@ -95,8 +97,10 @@ sparse = !
 
     # Write the parents to the dirstate file.
     with open(os.path.join(eden_hg_dir, 'dirstate'), 'wb') as f:
-        f.write(binascii.unhexlify(revision))
-        f.write(b'\x00' * 20)
+        parents = [binascii.unhexlify(revision), b'\x00' * 20]
+        tuples_dict = {}
+        copymap = {}
+        eden.dirstate.write(f, parents, tuples_dict, copymap)
 
 
 def main():

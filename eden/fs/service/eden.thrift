@@ -1,5 +1,4 @@
 include "common/fb303/if/fb303.thrift"
-include "eden/fs/inodes/hgdirstate.thrift"
 
 namespace cpp2 facebook.eden
 namespace java com.facebook.eden.thrift
@@ -97,9 +96,9 @@ struct FileDelta {
   4: list<string> createdPaths
   5: list<string> removedPaths
   /** When fromPosition.snapshotHash != toPosition.snapshotHash this holds
-   * the union of the set of files whose StatusCode differed from the
+   * the union of the set of files whose ScmFileStatus differed from the
    * committed fromPosition hash before the hash changed, and the set of
-   * files whose StatusCode differed from the committed toPosition hash
+   * files whose ScmFileStatus differed from the committed toPosition hash
    * after the hash was changed.  This list of files represents files
    * whose state may have changed as part of an update operation, but
    * in ways that may not be able to be extracted solely by performing
@@ -107,18 +106,37 @@ struct FileDelta {
   6: list<string> uncleanPaths
 }
 
-enum StatusCode {
-  CLEAN = 0x0,
+/**
+ * Classifies the change of the state of a file between and old and new state
+ * of the repository. Most commonly, the "old state" is the parent commit while
+ * the "new state" is the working copy.
+ */
+enum ScmFileStatus {
+  /**
+   * File is present in the new state, but was not present in old state.
+   */
+  ADDED = 0x0,
+
+  /**
+   * File is present in both the new and old states, but its contents or
+   * file permissions have changed.
+   */
   MODIFIED = 0x1,
-  ADDED = 0x2,
-  REMOVED = 0x3,
-  MISSING = 0x4,
-  NOT_TRACKED = 0x5,
-  IGNORED = 0x6,
+
+  /**
+   * File was present in the old state, but is not present in the new state.
+   */
+  REMOVED = 0x2,
+
+  /**
+   * File is present in the new state, but it is ignored according to the rules
+   * of the new state.
+   */
+  IGNORED = 0x3,
 }
 
-struct ThriftHgStatus {
-  1: map<string, StatusCode> entries
+struct ScmStatus {
+  1: map<string, ScmFileStatus> entries
 }
 
 enum ConflictType {
@@ -173,11 +191,6 @@ struct ScmTreeEntry {
   1: binary name
   2: i32 mode
   3: BinaryHash id
-}
-
-struct HgNonnormalFile {
-  1: string relativePath
-  2: hgdirstate.DirstateTuple tuple
 }
 
 struct TreeInodeEntryDebugInfo {
@@ -259,6 +272,11 @@ struct InternalStats {
  * and number of materialized inodes in that mountpoint.
  */
   3: map<string, MountInodeInfo> mountPointInfo
+}
+
+struct ManifestEntry {
+  /* mode_t */
+  1: i32 mode
 }
 
 service EdenService extends fb303.FacebookService {
@@ -367,85 +385,34 @@ service EdenService extends fb303.FacebookService {
     2: list<string> globs)
       throws (1: EdenError ex)
 
-  //////// Source Control APIs ////////
 
-  // TODO(mbolin): `hg status` has a ton of command line flags to support.
-  ThriftHgStatus scmGetStatus(
+  /**
+   * This may exclude special files according to the rules of the underlying
+   * SCM system, such as the .git folder in Git and the .hg folder in Mercurial.
+   */
+  ScmStatus getScmStatus(
     1: string mountPoint,
     2: bool listIgnored,
   ) throws (1: EdenError ex)
 
-  /**
-   * Backup the dirstate tuples and copymap to storage identified by backupName.
-   *
-   * @param backupName cannot contain path characters.
-   */
-  void hgBackupDirstate(
-    1: string mountPoint,
-    2: string backupName,
-  ) throws (1: EdenError ex)
+  //////// SCM Commit-Related APIs ////////
 
   /**
-   * Replace the current dirstate tuples and copymap with the data that was
-   * backed up via hgBackupDirstate() using backupName.
+   * If the relative path exists in the manifest (i.e., the current commit),
+   * then return the corresponding ManifestEntry; otherwise, throw
+   * NoValueForKeyError.
    *
-   * If there is nothing stored for the backupName, then the dirstate data will
-   * be reset to empty.
-   *
-   * @param backupName cannot contain path characters.
+   * Note that we are still experimenting with the type of SCM information Eden
+   * should be responsible for reporting, so this method is subject to change,
+   * or may go away entirely. At a minimum, it should take a commit as a
+   * parameter rather than assuming the current commit.
    */
-  void hgRestoreDirstateFromBackup(
-    1: string mountPoint,
-    2: string backupName,
-  ) throws (1: EdenError ex)
-
-  void hgClearDirstate(
-    1: string mountPoint,
-  ) throws (1: EdenError ex)
-
-  void hgSetDirstateTuple(
-    1: string mountPoint,
-    2: string relativePath,
-    3: hgdirstate.DirstateTuple tuple,
-  ) throws (1: EdenError ex)
-
-  // Throw KeyError if no entry for relativePath?
-  hgdirstate.DirstateTuple hgGetDirstateTuple(
-    1: string mountPoint,
-    2: string relativePath,
+  ManifestEntry getManifestEntry(
+    1: string mountPoint
+    2: string relativePath
   ) throws (
     1: EdenError ex
     2: NoValueForKeyError noValueForKeyError
-  )
-
-  /** Return a boolean indicating whether something was actually deleted. */
-  bool hgDeleteDirstateTuple(
-    1: string mountPoint,
-    2: string relativePath,
-  ) throws (1: EdenError ex)
-
-  list<HgNonnormalFile> hgGetNonnormalFiles(
-    1: string mountPoint,
-  ) throws (1: EdenError ex)
-
-  // If relativePathSource is the empty string, remove the entry in the map for
-  // relativePathDest.
-  void hgCopyMapPut(
-    1: string mountPoint,
-    2: string relativePathDest,
-    3: string relativePathSource,
-  )
-
-  string hgCopyMapGet(
-    1: string mountPoint,
-    2: string relativePathDest,
-  ) throws (1: NoValueForKeyError noValueForKeyError)
-
-  /**
-   * In practice, this map should be fairly small.
-   */
-  map<string, string> hgCopyMapGetAll(
-    1: string mountPoint,
   )
 
   //////// Debugging APIs ////////

@@ -14,7 +14,6 @@
 #include <folly/io/IOBuf.h>
 #include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
-#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -207,7 +206,7 @@ void TestMount::resetCommit(
     rootTree->setReady();
   }
 
-  edenMount_->resetParent(commitHash).get();
+  edenMount_->resetParent(commitHash);
 }
 
 void TestMount::setInitialCommit(Hash commitHash) {
@@ -224,11 +223,6 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
 
   // Call setInitialCommit(hash) to write the snapshot file
   setInitialCommit(commitHash);
-}
-
-void TestMount::setInitialDirstate(const DirstateData& dirstateData) {
-  DirstatePersistence dirstatePersistence{config_->getDirstateStoragePath()};
-  dirstatePersistence.save(dirstateData);
 }
 
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
@@ -386,8 +380,5 @@ std::shared_ptr<const Tree> TestMount::getRootTree() const {
   return edenMount_->getRootTree();
 }
 
-Dirstate* TestMount::getDirstate() const {
-  return edenMount_->getDirstate();
-}
 } // namespace eden
 } // namespace facebook

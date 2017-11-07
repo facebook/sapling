@@ -43,7 +43,6 @@ class MountPoint;
 class BindMount;
 class CheckoutConflict;
 class ClientConfig;
-class Dirstate;
 class EdenDispatcher;
 class InodeDiffCallback;
 class InodeMap;
@@ -178,10 +177,6 @@ class EdenMount {
     return overlay_;
   }
 
-  Dirstate* getDirstate() {
-    return dirstate_.get();
-  }
-
   folly::Synchronized<Journal>& getJournal() {
     return journal_;
   }
@@ -283,18 +278,13 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       InodeDiffCallback* callback,
-      bool listIgnored = false);
+      bool listIgnored = false) const;
 
   /**
    * Reset the state to point to the specified parent commit(s), without
    * modifying the working directory contents at all.
-   *
-   * @return Returns a folly::Future that will be fulfilled when the operation
-   *     is complete.  This is marked FOLLY_NODISCARD to make sure
-   *     callers do not forget to wait for the operation to complete.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> resetParents(
-      const ParentCommits& parents);
+  void resetParents(const ParentCommits& parents);
 
   /**
    * Reset the state to point to the specified parent commit, without
@@ -304,7 +294,7 @@ class EdenMount {
    * compile time that it will only ever have a single parent commit on this
    * code path.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> resetParent(const Hash& parent);
+  void resetParent(const Hash& parent);
 
   /**
    * Acquire the rename lock in exclusive mode.
@@ -523,7 +513,6 @@ class EdenMount {
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
-  std::unique_ptr<Dirstate> dirstate_;
   fuse_ino_t dotEdenInodeNumber_{0};
 
   /**

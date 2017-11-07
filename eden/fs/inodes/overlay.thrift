@@ -1,5 +1,3 @@
-include "eden/fs/inodes/hgdirstate.thrift"
-
 namespace cpp2 facebook.eden.overlay
 namespace py facebook.eden.overlay
 
@@ -30,14 +28,4 @@ struct OverlayData {
   // (since it should be O(things-changed-in-1-diff) should reasonably
   // fit in memory and thus that this won't be too big to work with.
   1: map<RelativePath, OverlayDir> localDirs
-}
-
-enum UserStatusDirective {
-  Add = 0x0,
-  Remove = 0x1,
-}
-
-struct DirstateData {
-  1: map<RelativePath, hgdirstate.DirstateTuple> hgDirstateTuples
-  2: map<RelativePath, RelativePath> hgDestToSourceCopyMap
 }

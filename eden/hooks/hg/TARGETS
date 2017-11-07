@@ -4,4 +4,7 @@ python_binary(
         "post-clone.py",
     ],
     main_module = "eden/hooks/hg/post-clone",
+    deps = [
+        "@/eden/py:py",
+    ],
 )

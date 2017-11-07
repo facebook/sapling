@@ -14,12 +14,10 @@
 #include <folly/experimental/logging/LoggerDB.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
-#include <unordered_set>
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/Dirstate.h"
-#include "eden/fs/inodes/DirstatePersistence.h"
+#include "eden/fs/inodes/Differ.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -40,11 +38,6 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 
-using facebook::eden::hgdirstate::DirstateMergeState;
-using facebook::eden::hgdirstate::DirstateNonnormalFileStatus;
-using facebook::eden::hgdirstate::DirstateTuple;
-using facebook::eden::hgdirstate::_DirstateMergeState_VALUES_TO_NAMES;
-using facebook::eden::hgdirstate::_DirstateNonnormalFileStatus_VALUES_TO_NAMES;
 using folly::Future;
 using folly::Optional;
 using folly::StringPiece;
@@ -72,21 +65,6 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   } catch (const std::exception& ex) {
     throw newEdenError(ex);
   }
-}
-
-/**
- * The path to the metadata for this mount is available at
- * ~/.eden/clients/CLIENT_HASH.
- */
-AbsolutePath EdenServiceHandler::getPathToDirstateStorage(
-    AbsolutePathPiece mountPointPath) {
-  // We need to take the sha-1 of the utf-8 version of path.
-  folly::ByteRange bytes(mountPointPath.stringPiece());
-  auto sha1 = Hash::sha1(bytes);
-  auto component = PathComponent(sha1.toString());
-
-  return server_->getEdenDir() + PathComponent("clients") + component +
-      PathComponent("dirstate");
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
@@ -142,7 +120,7 @@ void EdenServiceHandler::resetParentCommits(
     edenParents.parent2() = hashFromThrift(parents->parent2);
   }
   auto edenMount = server_->getMount(*mountPoint);
-  edenMount->resetParents(edenParents).get();
+  edenMount->resetParents(edenParents);
 }
 
 void EdenServiceHandler::getSHA1(
@@ -340,163 +318,54 @@ void EdenServiceHandler::glob(
   }
 }
 
-void EdenServiceHandler::scmGetStatus(
-    ThriftHgStatus& out,
-    std::unique_ptr<std::string> mountPoint,
-    bool listIgnored) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  out = dirstate->getStatus(listIgnored);
-  XLOG(INFO) << "scmGetStatus() returning " << out;
-}
-
-void EdenServiceHandler::hgBackupDirstate(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> backupName) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-  dirstate->createBackup(PathComponent{*backupName});
-}
-
-void EdenServiceHandler::hgRestoreDirstateFromBackup(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> backupName) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-  dirstate->restoreBackup(PathComponent{*backupName});
-}
-
-void EdenServiceHandler::hgClearDirstate(
-    std::unique_ptr<std::string> mountPoint) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  XLOG(DBG2) << "hgClearDirstate(" << *mountPoint << ")";
-  dirstate->clear();
-}
-
-void EdenServiceHandler::hgGetDirstateTuple(
-    DirstateTuple& out,
+void EdenServiceHandler::getManifestEntry(
+    ManifestEntry& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
+  auto mount = server_->getMount(*mountPoint);
   auto filename = RelativePathPiece{*relativePath};
-  try {
-    out = dirstate->hgGetDirstateTuple(filename);
-    // Print this before invoking hgGetDirstateTuple(), as it may throw.
-    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") returning "
-               << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
-                      out.get_status())
-               << " "
-               << _DirstateMergeState_VALUES_TO_NAMES.at(out.get_mergeState());
-  } catch (const std::out_of_range& e) {
-    XLOG(DBG2) << "hgGetDirstateTuple(" << *relativePath << ") returns None";
+  auto mode = isInManifestAsFile(mount.get(), filename);
+  if (mode.hasValue()) {
+    out.mode = mode.value();
+  } else {
     NoValueForKeyError error;
     error.set_key(*relativePath);
     throw error;
   }
 }
 
-void EdenServiceHandler::hgSetDirstateTuple(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> relativePath,
-    std::unique_ptr<DirstateTuple> tuple) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  XLOG(INFO) << "hgSetDirstateTuple(" << *relativePath << ") to "
-             << _DirstateNonnormalFileStatus_VALUES_TO_NAMES.at(
-                    tuple->get_status())
-             << " "
-             << _DirstateMergeState_VALUES_TO_NAMES.at(tuple->get_mergeState());
-
-  auto filename = RelativePathPiece{*relativePath};
-  dirstate->hgSetDirstateTuple(filename, tuple.get());
-}
-
-bool EdenServiceHandler::hgDeleteDirstateTuple(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> relativePath) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  XLOG(DBG2) << "hgDeleteDirstateTuple(" << *relativePath << ")";
-  auto filename = RelativePathPiece{*relativePath};
-  return dirstate->hgDeleteDirstateTuple(filename);
-};
-
-void EdenServiceHandler::hgGetNonnormalFiles(
-    std::vector<HgNonnormalFile>& out,
-    std::unique_ptr<std::string> mountPoint) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  for (auto& pair : dirstate->hgGetNonnormalFiles()) {
-    HgNonnormalFile nonnormal;
-    nonnormal.set_relativePath(pair.first.stringPiece().str());
-    nonnormal.tuple = pair.second;
-    nonnormal.__isset.tuple = true;
-    out.emplace_back(nonnormal);
+// TODO(mbolin): Make this a method of ObjectStore and make it Future-based.
+folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
+    const EdenMount* mount,
+    const RelativePathPiece filename) {
+  auto tree = mount->getRootTree();
+  auto parentDirectory = filename.dirname();
+  auto objectStore = mount->getObjectStore();
+  for (auto piece : parentDirectory.components()) {
+    auto entry = tree->getEntryPtr(piece);
+    if (entry != nullptr && entry->getFileType() == FileType::DIRECTORY) {
+      tree = objectStore->getTree(entry->getHash()).get();
+    } else {
+      return folly::none;
+    }
   }
-}
 
-void EdenServiceHandler::hgCopyMapPut(
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> relativePathDest,
-    std::unique_ptr<std::string> relativePathSource) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-  XLOG(DBG2) << "hgCopyMapPut(" << *relativePathDest << ","
-             << *relativePathSource << ")";
-
-  dirstate->hgCopyMapPut(
-      RelativePathPiece{*relativePathDest},
-      RelativePathPiece{*relativePathSource});
-}
-
-void EdenServiceHandler::hgCopyMapGet(
-    std::string& relativePathSource,
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> relativePathDest) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  try {
-    auto source = dirstate->hgCopyMapGet(RelativePathPiece{*relativePathDest});
-    relativePathSource = source.stringPiece().str();
-    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") returning "
-               << relativePathSource;
-  } catch (const std::out_of_range& e) {
-    XLOG(DBG2) << "hgCopyMapGet(" << *relativePathDest << ") returns None";
-    NoValueForKeyError error;
-    error.set_key(*relativePathDest);
-    throw error;
+  if (tree != nullptr) {
+    auto entry = tree->getEntryPtr(filename.basename());
+    if (entry != nullptr && entry->getFileType() != FileType::DIRECTORY) {
+      return entry->getMode();
+    }
   }
+
+  return folly::none;
 }
 
-void EdenServiceHandler::hgCopyMapGetAll(
-    std::map<std::string, std::string>& copyMap,
-    std::unique_ptr<std::string> mountPoint) {
-  auto dirstate = server_->getMount(*mountPoint)->getDirstate();
-  DCHECK(dirstate != nullptr)
-      << "Failed to get dirstate for " << mountPoint.get();
-
-  for (const auto& pair : dirstate->hgCopyMapGetAll()) {
-    copyMap.emplace(pair.first.str(), pair.second.stringPiece().str());
-  }
+folly::Future<std::unique_ptr<ScmStatus>>
+EdenServiceHandler::future_getScmStatus(
+    std::unique_ptr<std::string> mountPoint,
+    bool listIgnored) {
+  auto mount = server_->getMount(*mountPoint);
+  return diffMountForStatus(mount.get(), listIgnored);
 }
 
 void EdenServiceHandler::debugGetScmTree(

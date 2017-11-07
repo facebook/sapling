@@ -14,8 +14,6 @@
 #include <folly/experimental/TestUtil.h>
 #include <sys/stat.h>
 #include <vector>
-#include "eden/fs/inodes/Dirstate.h"
-#include "eden/fs/inodes/DirstatePersistence.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
@@ -125,15 +123,6 @@ class TestMount {
   void initialize(FakeTreeBuilder& rootBuilder, bool startReady = true);
 
   /**
-   * Set the initial directives stored in the on-disk dirstate.
-   *
-   * This method should only be called before initialize().  This allows tests
-   * to imitate mounting an existing eden client that has saved dirstate
-   * information.
-   */
-  void setInitialDirstate(const DirstateData& dirstateData);
-
-  /**
    * Get the ClientConfig object.
    *
    * The ClientConfig object provides methods to get the paths to the mount
@@ -218,8 +207,6 @@ class TestMount {
   const std::shared_ptr<EdenMount>& getEdenMount() const {
     return edenMount_;
   }
-
-  Dirstate* getDirstate() const;
 
   /**
    * Get a hash to use for the next commit.

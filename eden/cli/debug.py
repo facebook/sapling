@@ -15,8 +15,8 @@ import sys
 from typing import List, IO, Tuple
 
 from facebook.eden.overlay.ttypes import OverlayDir
-import facebook.hgdirstate.ttypes as hgdirstate
-from facebook.eden.ttypes import TimeSpec
+import eden.dirstate
+from facebook.eden.ttypes import NoValueForKeyError, TimeSpec
 
 from . import cmd_util
 
@@ -152,11 +152,9 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
 
 
 def do_hg_copy_map_get_all(args: argparse.Namespace):
-    config = cmd_util.create_config(args)
     mount, _ = get_mount_path(args.path)
-    with config.get_thrift_client() as client:
-        copy_map = client.hgCopyMapGetAll(mount)
-    _print_copymap(copy_map)
+    _parents, _dirstate_tuples, copymap = _get_dirstate_data(mount)
+    _print_copymap(copymap)
 
 
 def _print_copymap(copy_map) -> None:
@@ -167,50 +165,87 @@ def _print_copymap(copy_map) -> None:
 
 
 def do_hg_dirstate(args: argparse.Namespace) -> None:
-    config = cmd_util.create_config(args)
     mount, _ = get_mount_path(args.path)
-    with config.get_thrift_client() as client:
-        nonnormal_files = client.hgGetNonnormalFiles(mount)
-        copy_map = client.hgCopyMapGetAll(mount)
-
+    _parents, dirstate_tuples, copymap = _get_dirstate_data(mount)
     printer = StdoutPrinter()
-    print(printer.bold('Non-normal Files (%d):' % len(nonnormal_files)))
-    nonnormal_files.sort(key=lambda nn: nn.relativePath)
-    for nonnormal_file in nonnormal_files:
-        _print_hg_nonnormal_file(nonnormal_file.relativePath,
-                                 nonnormal_file.tuple,
-                                 printer)
+    entries = list(dirstate_tuples.items())
+    print(printer.bold('Non-normal Files (%d):' % len(entries)))
+    entries.sort(key=lambda entry: entry[0])  # Sort by key.
+    for path, dirstate_tuple in entries:
+        _print_hg_nonnormal_file(path, dirstate_tuple, printer)
 
-    print(printer.bold('Copymap (%d):' % len(copy_map)))
-    _print_copymap(copy_map)
+    print(printer.bold('Copymap (%d):' % len(copymap)))
+    _print_copymap(copymap)
 
 
 def do_hg_get_dirstate_tuple(args: argparse.Namespace):
-    config = cmd_util.create_config(args)
     mount, rel_path = get_mount_path(args.path)
-    with config.get_thrift_client() as client:
-        dirstate_tuple = client.hgGetDirstateTuple(mount, rel_path)
+    _parents, dirstate_tuples, _copymap = _get_dirstate_data(mount)
+    dirstate_tuple = dirstate_tuples.get(rel_path)
     printer = StdoutPrinter()
-    _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
+    if dirstate_tuple:
+        _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
+    else:
+        config = cmd_util.create_config(args)
+        with config.get_thrift_client() as client:
+            try:
+                entry = client.getManifestEntry(mount, rel_path)
+                dirstate_tuple = ('n', entry.mode, 0)
+                _print_hg_nonnormal_file(rel_path, dirstate_tuple, printer)
+            except NoValueForKeyError:
+                print('No tuple for ' + rel_path, file=sys.stderr)
+                return 1
 
 
 def _print_hg_nonnormal_file(
     rel_path, dirstate_tuple, printer: 'StdoutPrinter'
 ) -> None:
-    status = hgdirstate.DirstateNonnormalFileStatus._VALUES_TO_NAMES[
-        dirstate_tuple.status
-    ]
-    merge_state = hgdirstate.DirstateMergeState._VALUES_TO_NAMES[dirstate_tuple.
-                                                                 mergeState]
+    status = _dirstate_char_to_name(dirstate_tuple[0])
+    merge_state = _dirstate_merge_state_to_name(dirstate_tuple[2])
 
     print(
         f'''\
 {printer.green(rel_path)}
     status = {status}
-    mode = {oct(dirstate_tuple.mode)}
+    mode = {oct(dirstate_tuple[1])}
     mergeState = {merge_state}\
 '''
     )
+
+
+def _dirstate_char_to_name(state: str) -> str:
+    if state == 'n':
+        return 'Normal'
+    elif state == 'm':
+        return 'NeedsMerging'
+    elif state == 'r':
+        return 'MarkedForRemoval'
+    elif state == 'a':
+        return 'MarkedForAddition'
+    elif state == '?':
+        return 'NotTracked'
+    else:
+        raise Exception(f'Unrecognized dirstate char: {state}')
+
+
+def _dirstate_merge_state_to_name(merge_state: int) -> str:
+    if merge_state == 0:
+        return 'NotApplicable'
+    elif merge_state == -1:
+        return 'BothParents'
+    elif merge_state == -2:
+        return 'OtherParent'
+    else:
+        raise Exception(f'Unrecognized merge_state value: {merge_state}')
+
+
+def _get_dirstate_data(mount):
+    '''Returns a tuple of (parents, dirstate_tuples, copymap).
+    On error, returns None.
+    '''
+    filename = os.path.join(mount, '.hg', 'dirstate')
+    with open(filename, 'rb') as f:
+        return eden.dirstate.read(f, filename)
 
 
 def do_inode(args: argparse.Namespace, out: IO[bytes] = None):

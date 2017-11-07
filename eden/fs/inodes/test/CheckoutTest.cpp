@@ -401,7 +401,7 @@ void testModifyConflict(
   // resetCommit(), as the files will be materialized this way.
   auto commit1 = testMount.getBackingStore()->putCommit("a", builder1);
   commit1->setReady();
-  testMount.getEdenMount()->resetParent(makeTestHash("a")).get();
+  testMount.getEdenMount()->resetParent(makeTestHash("a"));
 
   // Prepare the destination tree
   auto builder2 = builder1.clone();

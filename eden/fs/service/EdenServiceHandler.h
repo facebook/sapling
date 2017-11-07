@@ -10,7 +10,6 @@
 #pragma once
 
 #include "common/fb303/cpp/FacebookBase2.h"
-#include "eden/fs/inodes/gen-cpp2/hgdirstate_types.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -23,6 +22,7 @@ namespace facebook {
 namespace eden {
 
 class Hash;
+class EdenMount;
 class EdenServer;
 class TreeInode;
 
@@ -89,52 +89,14 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
           std::unique_ptr<JournalPosition>>> callback,
       std::unique_ptr<std::string> mountPoint) override;
 
-  void scmGetStatus(
-      ThriftHgStatus& out,
+  void getManifestEntry(
+      ManifestEntry& out,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> relativePath) override;
+
+  folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
       bool listIgnored) override;
-
-  void hgBackupDirstate(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> backupName) override;
-
-  void hgRestoreDirstateFromBackup(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> backupName) override;
-
-  void hgClearDirstate(std::unique_ptr<std::string> mountPoint) override;
-
-  void hgGetDirstateTuple(
-      hgdirstate::DirstateTuple& out,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePath) override;
-
-  void hgSetDirstateTuple(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePath,
-      std::unique_ptr<hgdirstate::DirstateTuple> tuple) override;
-
-  bool hgDeleteDirstateTuple(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePath) override;
-
-  void hgGetNonnormalFiles(
-      std::vector<HgNonnormalFile>& out,
-      std::unique_ptr<std::string> mountPoint) override;
-
-  void hgCopyMapPut(
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePathDest,
-      std::unique_ptr<std::string> relativePathSource) override;
-
-  void hgCopyMapGet(
-      std::string& relativePathSource,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePathDest) override;
-
-  void hgCopyMapGetAll(
-      std::map<std::string, std::string>& copyMap,
-      std::unique_ptr<std::string> mountPoint) override;
 
   void debugGetScmTree(
       std::vector<ScmTreeEntry>& entries,
@@ -201,7 +163,13 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece mountPoint,
       folly::StringPiece path) noexcept;
 
-  AbsolutePath getPathToDirstateStorage(AbsolutePathPiece mountPointPath);
+  /**
+   * If `filename` exists in the manifest as a file (not a directory), returns
+   * the mode of the file as recorded in the manifest.
+   */
+  folly::Optional<mode_t> isInManifestAsFile(
+      const EdenMount* mount,
+      const RelativePathPiece filename);
 
   EdenServer* const server_;
 };

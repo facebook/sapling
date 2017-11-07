@@ -23,7 +23,6 @@
 
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"

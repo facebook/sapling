@@ -1,0 +1,7 @@
+python_library(
+    name = "py",
+    srcs = [
+        "dirstate.py",
+    ],
+    base_module = "eden",
+)

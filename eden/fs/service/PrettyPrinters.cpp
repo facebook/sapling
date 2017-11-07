@@ -51,9 +51,9 @@ std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
 /**
  * Pretty-print a StatusCode
  */
-std::ostream& operator<<(std::ostream& os, StatusCode statusCode) {
+std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus) {
   return outputThriftEnum(
-      os, statusCode, _StatusCode_VALUES_TO_NAMES, "StatusCode");
+      os, scmFileStatus, _ScmFileStatus_VALUES_TO_NAMES, "ScmFileStatus");
 }
 } // namespace eden
 } // namespace facebook

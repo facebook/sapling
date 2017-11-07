@@ -18,6 +18,7 @@
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
+#include <folly/io/async/EventBase.h>
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/ClientConfig.h"
@@ -25,7 +26,6 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DiffContext.h"
-#include "eden/fs/inodes/Dirstate.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
@@ -177,7 +177,6 @@ EdenMount::EdenMount(
       dispatcher_{new EdenDispatcher(this)},
       objectStore_(std::move(objectStore)),
       overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
-      dirstate_(std::make_unique<Dirstate>(this)),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       socketPath_(socketPath),
@@ -468,11 +467,6 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
                   .then([toTree]() mutable { return toTree; });
             });
       })
-      .then([this](std::shared_ptr<const Tree> toTree) {
-        return dirstate_->onSnapshotChanged(toTree.get()).then([toTree] {
-          return toTree;
-        });
-      })
       .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
                 std::shared_ptr<const Tree> toTree) {
         // Save the new snapshot hash
@@ -501,7 +495,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       });
 }
 
-Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
+Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
+    const {
   // Create a DiffContext object for this diff operation.
   auto context =
       make_unique<DiffContext>(callback, listIgnored, getObjectStore());
@@ -525,7 +520,7 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored) {
       .ensure(std::move(stateHolder));
 }
 
-Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
+void EdenMount::resetParents(const ParentCommits& parents) {
   // Hold the snapshot lock around the entire operation.
   auto parentsLock = parentInfo_.wlock();
   auto oldParents = parentsLock->parents;
@@ -534,24 +529,14 @@ Future<Unit> EdenMount::resetParents(const ParentCommits& parents) {
 
   // TODO: Maybe we should walk the inodes and see if we can dematerialize some
   // files using the new source control state.
-  //
-  // It probably makes sense to do this if/when we convert the Dirstate user
-  // directives into a tree-like data structure.
 
-  return objectStore_->getTreeForCommit(parents.parent1())
-      .then([this](std::shared_ptr<const Tree> rootTree) {
-        return dirstate_->onSnapshotChanged(rootTree.get());
-      })
-      .then(
-          [this, oldParents, parents, parentsLock = std::move(parentsLock)]() {
-            this->config_->setParentCommits(parents);
-            parentsLock->parents.setParents(parents);
+  config_->setParentCommits(parents);
+  parentsLock->parents.setParents(parents);
 
-            auto journalDelta = make_unique<JournalDelta>();
-            journalDelta->fromHash = oldParents.parent1();
-            journalDelta->toHash = parents.parent1();
-            journal_.wlock()->addDelta(std::move(journalDelta));
-          });
+  auto journalDelta = make_unique<JournalDelta>();
+  journalDelta->fromHash = oldParents.parent1();
+  journalDelta->toHash = parents.parent1();
+  journal_.wlock()->addDelta(std::move(journalDelta));
 }
 
 struct timespec EdenMount::getLastCheckoutTime() {
@@ -568,8 +553,8 @@ struct timespec EdenMount::getLastCheckoutTime() {
   return time;
 }
 
-Future<Unit> EdenMount::resetParent(const Hash& parent) {
-  return resetParents(ParentCommits{parent});
+void EdenMount::resetParent(const Hash& parent) {
+  resetParents(ParentCommits{parent});
 }
 
 RenameLock EdenMount::acquireRenameLock() {

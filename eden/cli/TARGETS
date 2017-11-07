@@ -31,8 +31,8 @@ python_library(
     ],
     deps = [
         ":lib",
-        "@/eden/fs/inodes:hgdirstate-py",
         "@/eden/fs/inodes:serialization-py",
+        "@/eden/py:py",
     ],
 )
 
