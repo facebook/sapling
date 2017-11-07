@@ -236,7 +236,15 @@ def debugdatapack(ui, *paths, **opts):
                 deltastr
             ))
 
+        bases = {}
+        nodes = set()
+        failures = 0
         for filename, node, deltabase, deltalen in dpack.iterentries():
+            bases[node] = deltabase
+            if node in nodes:
+                ui.write(("Bad entry: %s appears twice\n" % short(node)))
+                failures += 1
+            nodes.add(node)
             if filename != lastfilename:
                 printtotals()
                 name = '(empty name)' if filename == '' else filename
@@ -249,6 +257,7 @@ def debugdatapack(ui, *paths, **opts):
                 lastfilename = filename
                 totalblobsize = 0
                 totaldeltasize = 0
+
             # Metadata could be missing, in which case it will be an empty dict.
             meta = dpack.getmeta(filename, node)
             if constants.METAKEYSIZE in meta:
@@ -265,6 +274,46 @@ def debugdatapack(ui, *paths, **opts):
 
         if filename is not None:
             printtotals()
+
+        failures += _sanitycheck(ui, set(nodes), bases)
+        if failures > 1:
+            ui.warn(("%d failures\n" % failures))
+            return 1
+
+def _sanitycheck(ui, nodes, bases):
+    """
+    Does some basic sanity checking on a packfiles with ``nodes`` ``bases`` (a
+    mapping of node->base):
+
+    - Each deltabase must itself be a node elsewhere in the pack
+    - There must be no cycles
+    """
+    failures = 0
+    for node in nodes:
+        seen = set()
+        current = node
+        deltabase = bases[current]
+
+        while deltabase != nullid:
+            if deltabase not in nodes:
+                ui.warn(("Bad entry: %s has an unknown deltabase (%s)\n" %
+                        (short(node), short(deltabase))))
+                failures += 1
+                break
+
+            if deltabase in seen:
+                ui.warn(("Bad entry: %s has a cycle (at %s)\n" %
+                        (short(node), short(deltabase))))
+                failures += 1
+                break
+
+            current = deltabase
+            seen.add(current)
+            deltabase = bases[current]
+        # Since ``node`` begins a valid chain, reset/memoize its base to nullid
+        # so we don't traverse it again.
+        bases[node] = nullid
+    return failures
 
 def dumpdeltachain(ui, deltachain, **opts):
     hashformatter = hex
