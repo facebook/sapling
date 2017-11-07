@@ -20,6 +20,10 @@ from six import iteritems
 # this library.
 CURRENT_DIRSTATE_VERSION = 1
 
+# Older versions of eden put the string "\n#edendirstate" after the parent
+# hashes.  0x0a236564 is struct.unpack('>I', '\n#ed')[0]
+OLD_DIRSTATE_VERSION = 0x0a236564
+
 # Valid values for the merge state.
 MERGE_STATE_NOT_APPLICABLE = 0
 MERGE_STATE_BOTH_PARENTS = -1
@@ -125,6 +129,10 @@ def read(fp, filename):  # noqa: C901
             format(filename)
         )
     version = struct.unpack('>I', binary_version)[0]
+    if version == OLD_DIRSTATE_VERSION:
+        # This is an old-format dirstate object.
+        tuples_dict, copymap = _read_old_dirstate_info(fp, filename)
+        return parents, tuples_dict, copymap
     if version != CURRENT_DIRSTATE_VERSION:
         raise DirstateParseException(
             'Unknown dirstate version in {}. Found {} but expected {}.\n'.
@@ -188,6 +196,22 @@ def read(fp, filename):  # noqa: C901
             )
 
     return parents, tuples_dict, copymap
+
+
+def _read_old_dirstate_info(fp, filename):
+    # It would perhaps be nice to read the data out of the old dirstate file.
+    # The thrift definitions were removed in D6179950 however.
+    #
+    # For now we just return empty info here; this will lose file
+    # additions/removals people have set, but that probably shouldn't be a
+    # major issue for most people during this upgrade.
+
+    # old_dirstate_path = os.path.join(os.path.dirname(fp.name),
+    #                                  '.eden', 'client', 'dirstate')
+
+    tuples_dict = {}
+    copymap = {}
+    return tuples_dict, copymap
 
 
 def _write_path(writer, path):
