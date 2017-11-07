@@ -352,6 +352,15 @@ class bundlerepository(localrepo.localrepository):
         self.filestart = self.bundle.tell()
         return m
 
+    def _consumemanifest(self):
+        """Consumes the manifest portion of the bundle, setting filestart so the
+        file portion can be read."""
+        self.bundle.seek(self.manstart)
+        self.bundle.manifestheader()
+        for delta in self.bundle.deltaiter():
+            pass
+        self.filestart = self.bundle.tell()
+
     @localrepo.unfilteredpropertycache
     def manstart(self):
         self.changelog
@@ -360,6 +369,14 @@ class bundlerepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def filestart(self):
         self.manifestlog
+
+        # If filestart was not set by self.manifestlog, that means the
+        # manifestlog implementation did not consume the manifests from the
+        # changegroup (ex: it might be consuming trees from a separate bundle2
+        # part instead). So we need to manually consume it.
+        if 'filestart' not in self.__dict__:
+            self._consumemanifest()
+
         return self.filestart
 
     def url(self):
