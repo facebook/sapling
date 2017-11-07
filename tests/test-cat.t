@@ -119,3 +119,14 @@ Environment variable visibility can be explicit
   $ PATTERN='t4' hg log -r '.' -T "{envvars % '{key} -> {value}\n'}" \
   >                 --config "experimental.exportableenviron=PATTERN"
   PATTERN -> t4
+
+Test behavior of output when directory structure does not already exist
+
+  $ mkdir foo
+  $ echo a > foo/a
+  $ hg add foo/a
+  $ hg commit -qm "add foo/a"
+  $ mkdir output
+  $ hg cat --output "output/%p" foo/a
+  abort: No such file or directory: output/foo/a
+  [255]
