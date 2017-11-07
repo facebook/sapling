@@ -8,7 +8,7 @@
   $ echo "convert=" >> $HGRCPATH
   $ cat >> $HGRCPATH <<EOF
   > [subrepos]
-  > allowed = hg, git
+  > git:allowed = true
   > EOF
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
   $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL

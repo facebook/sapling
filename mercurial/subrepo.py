@@ -365,10 +365,24 @@ def _auditsubrepopath(repo, path):
     if repo.wvfs.islink(path):
         raise error.Abort(_("subrepo '%s' traverses symbolic link") % path)
 
+SUBREPO_ALLOWED_DEFAULTS = {
+    'hg': True,
+    'git': False,
+    'svn': False,
+}
+
 def _checktype(ui, kind):
-    if kind not in ui.configlist('subrepos', 'allowed', ['hg']):
-        raise error.Abort(_("subrepo type %s not allowed") % kind,
+    # subrepos.allowed is a master kill switch. If disabled, subrepos are
+    # disabled period.
+    if not ui.configbool('subrepos', 'allowed', True):
+        raise error.Abort(_('subrepos not enabled'),
                           hint=_("see 'hg help config.subrepos' for details"))
+
+    default = SUBREPO_ALLOWED_DEFAULTS.get(kind, False)
+    if not ui.configbool('subrepos', '%s:allowed' % kind, default):
+        raise error.Abort(_('%s subrepos not allowed') % kind,
+                          hint=_("see 'hg help config.subrepos' for details"))
+
     if kind not in types:
         raise error.Abort(_('unknown subrepo type %s') % kind)
 

@@ -61,7 +61,7 @@ add first svn sub with leading whitespaces
 svn subrepo is disabled by default
 
   $ hg ci -m1
-  abort: subrepo type svn not allowed
+  abort: svn subrepos not allowed
   (see 'hg help config.subrepos' for details)
   [255]
 
@@ -69,7 +69,7 @@ so enable it
 
   $ cat >> $HGRCPATH <<EOF
   > [subrepos]
-  > allowed = hg, svn
+  > svn:allowed = true
   > EOF
 
   $ hg ci -m1

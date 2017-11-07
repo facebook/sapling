@@ -488,28 +488,38 @@ clone
 
 clone with subrepo disabled (update should fail)
 
-  $ hg clone t -U tc2 --config subrepos.allowed=
-  $ hg update -R tc2 --config subrepos.allowed=
-  abort: subrepo type hg not allowed
+  $ hg clone t -U tc2 --config subrepos.allowed=false
+  $ hg update -R tc2 --config subrepos.allowed=false
+  abort: subrepos not enabled
   (see 'hg help config.subrepos' for details)
   [255]
   $ ls tc2
   a
 
-  $ hg clone t tc3 --config subrepos.allowed=
+  $ hg clone t tc3 --config subrepos.allowed=false
   updating to branch default
-  abort: subrepo type hg not allowed
+  abort: subrepos not enabled
   (see 'hg help config.subrepos' for details)
   [255]
   $ ls tc3
   a
 
-  $ hg clone t tc4 --config subrepos.allowed=git
-  updating to branch default
-  abort: subrepo type hg not allowed
+And again with just the hg type disabled
+
+  $ hg clone t -U tc4 --config subrepos.hg:allowed=false
+  $ hg update -R tc4 --config subrepos.hg:allowed=false
+  abort: hg subrepos not allowed
   (see 'hg help config.subrepos' for details)
   [255]
   $ ls tc4
+  a
+
+  $ hg clone t tc5 --config subrepos.hg:allowed=false
+  updating to branch default
+  abort: hg subrepos not allowed
+  (see 'hg help config.subrepos' for details)
+  [255]
+  $ ls tc5
   a
 
 push

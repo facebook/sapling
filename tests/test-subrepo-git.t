@@ -45,7 +45,7 @@ add subrepo clone
 git subrepo is disabled by default
 
   $ hg commit -m 'new git subrepo'
-  abort: subrepo type git not allowed
+  abort: git subrepos not allowed
   (see 'hg help config.subrepos' for details)
   [255]
 
@@ -53,7 +53,7 @@ so enable it
 
   $ cat >> $HGRCPATH <<EOF
   > [subrepos]
-  > allowed = hg, git
+  > git:allowed = true
   > EOF
 
   $ hg commit -m 'new git subrepo'
@@ -106,28 +106,20 @@ clone root
 
 clone with subrepo disabled (update should fail)
 
-  $ hg clone t -U tc2 --config subrepos.allowed=
-  $ hg update -R tc2 --config subrepos.allowed=
-  abort: subrepo type git not allowed
+  $ hg clone t -U tc2 --config subrepos.allowed=false
+  $ hg update -R tc2 --config subrepos.allowed=false
+  abort: subrepos not enabled
   (see 'hg help config.subrepos' for details)
   [255]
   $ ls tc2
   a
 
-  $ hg clone t tc3 --config subrepos.allowed=
+  $ hg clone t tc3 --config subrepos.allowed=false
   updating to branch default
-  abort: subrepo type git not allowed
+  abort: subrepos not enabled
   (see 'hg help config.subrepos' for details)
   [255]
   $ ls tc3
-  a
-
-  $ hg clone t tc4 --config subrepos.allowed=hg
-  updating to branch default
-  abort: subrepo type git not allowed
-  (see 'hg help config.subrepos' for details)
-  [255]
-  $ ls tc4
   a
 
 update to previous substate
