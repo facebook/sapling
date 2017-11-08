@@ -931,6 +931,11 @@ class propertycache(object):
         # __dict__ assignment required to bypass __setattr__ (eg: repoview)
         obj.__dict__[self.name] = value
 
+def clearcachedproperty(obj, prop):
+    '''clear a cached property value, if one has been set'''
+    if prop in obj.__dict__:
+        del obj.__dict__[prop]
+
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''
     p = subprocess.Popen(cmd, shell=True, close_fds=closefds,
