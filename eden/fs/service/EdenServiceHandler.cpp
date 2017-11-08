@@ -83,7 +83,7 @@ std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
 // Note this will also log the duration of the Thrift call.
 #define INSTRUMENT_THRIFT_CALL(...)                                            \
   /* This is needed because __func__ has a different value in SCOPE_EXIT. */   \
-  static constexpr folly::StringPiece _itcFunctionName{__func__};              \
+  static folly::StringPiece _itcFunctionName{__func__};                        \
   static folly::Logger _itcLogger("eden.thrift." + _itcFunctionName.str());    \
   auto _itcTimer = folly::stop_watch<std::chrono::milliseconds>{};             \
   { TLOG() << _itcFunctionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; } \
