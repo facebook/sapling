@@ -15,7 +15,7 @@ extern crate serde_derive;
 
 /// Versions are used to ensure consistency of state across all users of the bookmark store.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct Version(Option<u64>);
+pub struct Version(pub Option<u64>);
 
 impl Version {
     pub fn absent() -> Self {
