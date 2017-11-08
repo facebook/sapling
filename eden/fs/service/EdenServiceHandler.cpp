@@ -9,12 +9,14 @@
  */
 #include "EdenServiceHandler.h"
 
+#include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/LoggerDB.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
-
+#include <folly/stop_watch.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Differ.h"
@@ -47,6 +49,49 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+namespace {
+/*
+ * We need a version of folly::toDelim() that accepts zero, one, or many
+ * arguments so it can be used with __VA_ARGS__ in the INSTRUMENT_THRIFT_CALL()
+ * macro, so we create an overloaded method, toDelimWrapper(), to achieve that
+ * effect.
+ */
+constexpr StringPiece toDelimWrapper() {
+  return "";
+}
+
+std::string toDelimWrapper(StringPiece value) {
+  return value.str();
+}
+
+template <class... Args>
+std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
+  std::string result;
+  folly::toAppendDelimFit(", ", arg1, rest..., &result);
+  return result;
+}
+} // namespace
+
+#define TLOG() \
+  FB_LOG(_itcLogger, DBG2) << "[" << folly::RequestContext::get() << "] "
+
+// This macro must be used on a line by itself at the start of a Thrift endpoint
+// method. Log calls in each method should use TLOG() instead of XLOG(LEVEL).
+//
+// Using TLOG() throughout your method will ensure the messages for the
+// Thrift endpoint can be controlled via an endpoint-specific log category.
+// Note this will also log the duration of the Thrift call.
+#define INSTRUMENT_THRIFT_CALL(...)                                            \
+  /* This is needed because __func__ has a different value in SCOPE_EXIT. */   \
+  static constexpr folly::StringPiece _itcFunctionName{__func__};              \
+  static folly::Logger _itcLogger("eden.thrift." + _itcFunctionName.str());    \
+  auto _itcTimer = folly::stop_watch<std::chrono::milliseconds>{};             \
+  { TLOG() << _itcFunctionName << "(" << toDelimWrapper(__VA_ARGS__) << ")"; } \
+  SCOPE_EXIT {                                                                 \
+    TLOG() << _itcFunctionName << "() took " << _itcTimer.elapsed().count()    \
+           << "ms";                                                            \
+  }
+
 namespace facebook {
 namespace eden {
 
@@ -54,10 +99,12 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
     : FacebookBase2("Eden"), server_(server) {}
 
 facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
+  INSTRUMENT_THRIFT_CALL();
   return facebook::fb303::cpp2::fb_status::ALIVE;
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
+  INSTRUMENT_THRIFT_CALL(info->get_mountPoint());
   try {
     server_->mount(*info).get();
   } catch (const EdenError& ex) {
@@ -68,6 +115,7 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint);
   try {
     server_->unmount(*mountPoint).get();
   } catch (const EdenError& ex) {
@@ -78,6 +126,7 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
+  INSTRUMENT_THRIFT_CALL();
   for (const auto& edenMount : server_->getMountPoints()) {
     MountInfo info;
     info.mountPoint = edenMount->getPath().stringPiece().str();
@@ -91,6 +140,7 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
 void EdenServiceHandler::getParentCommits(
     WorkingDirectoryParents& result,
     std::unique_ptr<std::string> mountPoint) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto parents = edenMount->getParentCommits();
   result.set_parent1(thriftHash(parents.parent1()));
@@ -104,6 +154,10 @@ void EdenServiceHandler::checkOutRevision(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
     bool force) {
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint,
+      hashFromThrift(*hash).toString(),
+      folly::format("force={}", force ? "true" : "false"));
   auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
@@ -114,6 +168,8 @@ void EdenServiceHandler::checkOutRevision(
 void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents) {
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint, hashFromThrift(parents->parent1).toString());
   ParentCommits edenParents;
   edenParents.parent1() = hashFromThrift(parents->parent1);
   if (parents->__isset.parent2) {
@@ -127,8 +183,8 @@ void EdenServiceHandler::getSHA1(
     vector<SHA1Result>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> paths) {
-  XLOG(DBG2) << "getSHA1(" << *mountPoint << ", ["
-             << folly::join(", ", *paths.get()) << "])";
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
 
   vector<Future<Hash>> futures;
   for (const auto& path : *paths) {
@@ -183,6 +239,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 void EdenServiceHandler::getBindMounts(
     std::vector<string>& out,
     std::unique_ptr<string> mountPointPtr) {
+  INSTRUMENT_THRIFT_CALL(*mountPointPtr);
   auto mountPoint = *mountPointPtr.get();
   auto mountPointPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPoint);
@@ -197,6 +254,7 @@ void EdenServiceHandler::getBindMounts(
 void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto latest = edenMount->getJournal().rlock()->getLatest();
 
@@ -220,6 +278,7 @@ void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto delta = edenMount->getJournal().rlock()->getLatest();
 
@@ -268,6 +327,8 @@ void EdenServiceHandler::getFileInformation(
     std::vector<FileInformationOrError>& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -300,8 +361,8 @@ void EdenServiceHandler::glob(
     vector<string>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> globs) {
-  XLOG(DBG2) << "glob(" << *mountPoint << ", ["
-             << folly::join(", ", *globs.get()) << "])";
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint, "[" + folly::join(", ", *globs.get()) + "]");
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -322,6 +383,7 @@ void EdenServiceHandler::getManifestEntry(
     ManifestEntry& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint, *relativePath);
   auto mount = server_->getMount(*mountPoint);
   auto filename = RelativePathPiece{*relativePath};
   auto mode = isInManifestAsFile(mount.get(), filename);
@@ -364,6 +426,9 @@ folly::Future<std::unique_ptr<ScmStatus>>
 EdenServiceHandler::future_getScmStatus(
     std::unique_ptr<std::string> mountPoint,
     bool listIgnored) {
+  INSTRUMENT_THRIFT_CALL(
+      *mountPoint,
+      folly::format("listIgnored={}", listIgnored ? "true" : "false"));
   auto mount = server_->getMount(*mountPoint);
   return diffMountForStatus(mount.get(), listIgnored);
 }
@@ -373,6 +438,7 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
+  INSTRUMENT_THRIFT_CALL();
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -403,6 +469,7 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
+  INSTRUMENT_THRIFT_CALL();
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -427,6 +494,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
+  INSTRUMENT_THRIFT_CALL();
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -450,6 +518,7 @@ void EdenServiceHandler::debugInodeStatus(
     vector<TreeInodeDebugInfo>& inodeInfo,
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path) {
+  INSTRUMENT_THRIFT_CALL();
   auto edenMount = server_->getMount(*mountPoint);
 
   TreeInodePtr inode;
@@ -466,6 +535,7 @@ void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
+  INSTRUMENT_THRIFT_CALL();
   auto inodeNum = static_cast<fuse_ino_t>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
@@ -483,6 +553,7 @@ void EdenServiceHandler::debugSetLogLevel(
     SetLogLevelResult& result,
     std::unique_ptr<std::string> category,
     std::unique_ptr<std::string> level) {
+  INSTRUMENT_THRIFT_CALL();
   // TODO: This is a temporary hack until Adam's upcoming log config parser
   // is ready.
   bool inherit = true;
@@ -501,6 +572,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path,
     std::unique_ptr<TimeSpec> age) {
+  INSTRUMENT_THRIFT_CALL(*mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
 
   TreeInodePtr inode;
@@ -516,6 +588,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 }
 
 void EdenServiceHandler::getStatInfo(InternalStats& result) {
+  INSTRUMENT_THRIFT_CALL();
   auto mountList = server_->getMountPoints();
   for (auto& mount : mountList) {
     // Set LoadedInde Count and unloaded Inode count for the mountPoint.
@@ -549,8 +622,10 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
 }
 
 void EdenServiceHandler::flushStatsNow() {
+  INSTRUMENT_THRIFT_CALL();
   server_->flushStatsNow();
 }
+
 void EdenServiceHandler::invalidateKernelInodeCache(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> path) {
@@ -578,6 +653,7 @@ void EdenServiceHandler::invalidateKernelInodeCache(
 }
 
 void EdenServiceHandler::shutdown() {
+  INSTRUMENT_THRIFT_CALL();
   server_->stop();
 }
 } // namespace eden
