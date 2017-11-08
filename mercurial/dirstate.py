@@ -458,8 +458,6 @@ class dirstate(object):
                     return
         self._addpath(f, 'n', 0, -1, -1)
         self._map.copymap.pop(f, None)
-        if f in self._map.nonnormalset:
-            self._map.nonnormalset.remove(f)
 
     def otherparent(self, f):
         '''Mark as coming from the other parent, always dirty.'''
