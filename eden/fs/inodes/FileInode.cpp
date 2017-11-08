@@ -54,6 +54,8 @@ FileInode::State::State(
   } else {
     timeStamps.setTimestampValues(lastCheckoutTime);
   }
+
+  checkInvariants();
 }
 
 FileInode::State::State(
@@ -64,6 +66,27 @@ FileInode::State::State(
     dev_t rdev)
     : mode(m), rdev(rdev), file(std::move(file)) {
   timeStamps.setTimestampValues(lastCheckoutTime);
+  checkInvariants();
+}
+
+void FileInode::State::State::checkInvariants() {
+  if (blob) {
+    // 'loaded'
+    CHECK(hash);
+    CHECK(!file);
+    CHECK(!sha1Valid);
+  } else if (file) {
+    // 'materialized'
+    CHECK(!hash);
+    CHECK(!blob);
+    CHECK(file);
+  } else {
+    // 'not loaded'
+    CHECK(hash);
+    CHECK(!blob);
+    CHECK(!file);
+    CHECK(!sha1Valid);
+  }
 }
 /*
  * Defined State Destructor explicitly to avoid including
@@ -169,6 +192,8 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
         result.st.st_mtim = state->timeStamps.mtime;
         result.st.st_mode = state->mode;
 
+        state->checkInvariants();
+
         // Update the Journal
         self->updateJournal();
         return result;
@@ -177,7 +202,10 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
 
 folly::Future<std::string> FileInode::readlink() {
   {
-    auto state = state_.wlock();
+    // TODO: Since the type component of the mode is immutable, it could be
+    // moved out of the locked state, obviating the need to acquire a lock
+    // here.
+    auto state = state_.rlock();
     if (!S_ISLNK(state->mode)) {
       // man 2 readlink says:  EINVAL The named file is not a symbolic link.
       throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
@@ -195,6 +223,7 @@ void FileInode::fileHandleDidClose() {
     // file handle close.
   }
 }
+
 AbsolutePath FileInode::getLocalPath() const {
   return getMount()->getOverlay()->getFilePath(getNodeId());
 }
@@ -204,7 +233,7 @@ folly::Optional<bool> FileInode::isSameAsFast(const Hash& blobID, mode_t mode) {
   // file type and owner permissions.
   auto relevantModeBits = [](mode_t m) { return (m & (S_IFMT | S_IRWXU)); };
 
-  auto state = state_.wlock();
+  auto state = state_.rlock();
   if (relevantModeBits(state->mode) != relevantModeBits(mode)) {
     return false;
   }
@@ -265,7 +294,10 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
 #endif
 
   {
-    auto state = state_.wlock();
+    // TODO: Since the type component of the mode is immutable, it could be
+    // moved out of the locked state, obviating the need to acquire a lock
+    // here.
+    auto state = state_.rlock();
 
     if (S_ISLNK(state->mode)) {
       // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
@@ -330,6 +362,8 @@ Future<string> FileInode::getxattr(StringPiece name) {
 
 Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
   auto state = state_.wlock();
+  state->checkInvariants();
+
   if (failIfSymlink && !S_ISREG(state->mode)) {
     // We only define a SHA-1 value for regular files
     return makeFuture<Hash>(InodeError(kENOATTR, inodePtrFromThis()));
@@ -406,6 +440,7 @@ void FileInode::flush(uint64_t /* lock_owner */) {
   if (state->file && !state->sha1Valid) {
     recomputeAndStoreSha1(state);
   }
+  state->checkInvariants();
 }
 
 void FileInode::fsync(bool datasync) {
@@ -567,11 +602,16 @@ Future<Unit> FileInode::ensureDataLoaded() {
   // that only one thread can load the data at a time.  It's pretty unfortunate
   // to block with the lock held, though :-(
   state->blob = blobFuture.get();
+  state->checkInvariants();
   return makeFuture();
 }
 
 Future<Unit> FileInode::materializeForWrite(int openFlags) {
   auto state = state_.wlock();
+
+  SCOPE_SUCCESS {
+    state->checkInvariants();
+  };
 
   // If we already have a materialized overlay file then we don't
   // need to do much
@@ -646,7 +686,7 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
   // Update the FileInode to indicate that we are materialized now
   state->blob.reset();
   state->hash = folly::none;
-
+  
   return makeFuture();
 }
 

@@ -179,6 +179,11 @@ class FileInode : public InodeBase {
    * This structure exists to allow the entire contents to be protected inside
    * folly::Synchronized.  This ensures proper synchronization when accessing
    * any member variables of FileInode.
+   *
+   * A FileInode can be in one of three states:
+   *   - not loaded
+   *   - loaded: contents has been imported from mercurial and is accessible
+   *   - materialized: contents are written into overlay and file handle is open
    */
   struct State {
     State(
@@ -194,12 +199,24 @@ class FileInode : public InodeBase {
         dev_t rdev = 0);
     ~State();
 
+    /**
+     * In lieu of std::variant, enforce the state machine invariants.
+     * Call after construction and on every modification.
+     */
+    void checkInvariants();
+
     mode_t mode{0};
-    dev_t rdev{0};
+
+    // TODO: Since rdev is immutable, move it out of the locked state.
+    const dev_t rdev{0};
+
+    /**
+     * Set only in 'not loaded' and 'loaded' states, none otherwise.
+     */
     folly::Optional<Hash> hash;
 
     /**
-     * If backed by tree, the data from the tree, else nullptr.
+     * Set if 'loaded', references immutable data from the backing store.
      */
     std::shared_ptr<const Blob> blob;
 
@@ -209,7 +226,8 @@ class FileInode : public InodeBase {
     bool sha1Valid{false};
 
     /**
-     * If backed by an overlay file, the open file descriptor.
+     * Set if 'materialized', holds the open file descriptor backed by an
+     * overlay file.
      */
     folly::File file;
 
