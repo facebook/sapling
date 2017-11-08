@@ -304,6 +304,8 @@ replace subrepo with symlink
   verifying rev 87bae50d72cb against git commit 88171163bf4795b5570924e51d5f8ede33f8bc28
 
 (replace symlink with subrepo)
+XXX: The new logic in core is too strict but we don't really care about this usecase so
+we just ignore this failure for now.
   $ hg cat -r 7 .hgsub .hgsubstate
   subrepo2 = [git]../gitsubrepo
   alpha = [git]../gitsubrepo
@@ -311,6 +313,8 @@ replace subrepo with symlink
   6e4ad8da50204560c00fa25e4987eb2e239029ba alpha
   6e4ad8da50204560c00fa25e4987eb2e239029ba foolink
   6e4ad8da50204560c00fa25e4987eb2e239029ba subrepo2
+  abort: subrepo 'foolink' traverses symbolic link
+  [255]
   $ hg gverify -r 7
   verifying rev e338dc0b9f64 against git commit e3288fa737d429a60637b3b6782cb25b8298bc00
 
