@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
 from ..lib import hgrepo
 from .lib.hg_extension_test_base import hg_test
 from textwrap import dedent
@@ -166,17 +167,49 @@ class UpdateTest:
             self.hg('update', '.^', '--merge')
         self.assertIn(
             b'conflicts while merging foo/bar.txt! '
-            b'(edit, then use \'hg resolve --mark\')',
-            context.exception.stderr
+            b'(edit, then use \'hg resolve --mark\')', context.exception.stderr
         )
         self.assert_status({
             'foo/bar.txt': 'M',
         })
-        expected_contents = dedent('''\
+        expected_contents = dedent(
+            '''\
         <<<<<<< working copy
         changing yet again
         =======
         test
         >>>>>>> destination
-        ''')
+        '''
+        )
         self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
+
+    def test_update_with_untracked_file_that_is_tracked_in_destination(self):
+        base_commit = self.repo.log()[-1]
+        original_contents = 'Original contents.\n'
+        self.write_file('some_new_file.txt', original_contents)
+        self.hg('add', 'some_new_file.txt')
+        commit = self.repo.commit('Commit a new file.')
+
+        # Do an `hg prev` and re-create the new file with different contents.
+        self.hg('update', base_commit)
+        self.assert_status_empty()
+        self.assertFalse(os.path.exists('some_new_file.txt'))
+        modified_contents = 'Re-create the file with different contents.\n'
+        self.write_file('some_new_file.txt', modified_contents)
+        self.assert_status({
+            'some_new_file.txt': '?',
+        })
+
+        # Verify `hg next` updates such that the original contents and commit
+        # hash are restored. No conflicts should be reported.
+        path_to_backup = '.hg/origbackups/some_new_file.txt'
+        expected_backup_file = os.path.join(self.mount, path_to_backup)
+        self.assertFalse(os.path.isfile(expected_backup_file))
+        self.hg('update', commit)
+        self.assertEqual(commit, self.repo.log()[-1])
+        self.assertEqual(original_contents, self.read_file('some_new_file.txt'))
+        self.assert_status_empty()
+
+        # Verify the previous version of the file was backed up as expected.
+        self.assertTrue(os.path.isfile(expected_backup_file))
+        self.assertEqual(modified_contents, self.read_file(path_to_backup))
