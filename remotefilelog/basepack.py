@@ -50,14 +50,64 @@ if pycompat.isposix:
 else:
     PACKOPENMODE = 'rb'
 
+class _cachebackedpacks(object):
+    def __init__(self, packs, cachesize):
+        self._packs = set(packs)
+        self._lrucache = util.lrucachedict(cachesize)
+        self._lastpack = None
+
+        # Avoid cold start of the cache by populating the most recent packs
+        # in the cache.
+        for i in reversed(range(min(cachesize, len(packs)))):
+            self._movetofront(packs[i])
+
+    def _movetofront(self, pack):
+        # This effectively makes pack the first entry in the cache.
+        self._lrucache[pack] = True
+
+    def _registerlastpackusage(self):
+        if self._lastpack is not None:
+            self._movetofront(self._lastpack)
+            self._lastpack = None
+
+    def add(self, pack):
+        self._registerlastpackusage()
+
+        # This method will mostly be called when packs are not in cache.
+        # Therefore, adding pack to the cache.
+        self._movetofront(pack)
+        self._packs.add(pack)
+
+    def __iter__(self):
+        self._registerlastpackusage()
+
+        # Cache iteration is based on LRU.
+        for pack in self._lrucache:
+            self._lastpack = pack
+            yield pack
+
+        cachedpacks = set(pack for pack in self._lrucache)
+        # Yield for paths not in the cache.
+        for pack in self._packs - cachedpacks:
+            self._lastpack = pack
+            yield pack
+
+        # Data not found in any pack.
+        self._lastpack = None
+
 class basepackstore(object):
+    # Default cache size limit for the pack files.
+    DEFAULTCACHESIZE = 100
+
     def __init__(self, ui, path):
         self.ui = ui
         self.path = path
-        self.packs = []
+
         # lastrefesh is 0 so we'll immediately check for new packs on the first
         # failure.
         self.lastrefresh = 0
+
+        packs = []
         for filepath, __, __ in self._getavailablepackfilessorted():
             try:
                 pack = self.getpack(filepath)
@@ -72,7 +122,9 @@ class basepackstore(object):
                 if getattr(ex, 'errno', None) != errno.ENOENT:
                     ui.warn(_('unable to load pack %s: %s\n') % (filepath, ex))
                 continue
-            self.packs.append(pack)
+            packs.append(pack)
+
+        self.packs = _cachebackedpacks(packs, self.DEFAULTCACHESIZE)
 
     def _getavailablepackfiles(self):
         """For each pack file (a index/data file combo), yields:
@@ -155,6 +207,11 @@ class basepackstore(object):
         for pack in self.packs:
             missing = pack.getmissing(missing)
 
+            # Ensures better performance of the cache by keeping the most
+            # recently accessed pack at the beginning in subsequent iterations.
+            if not missing:
+                return missing
+
         if missing:
             for pack in self.refresh():
                 missing = pack.getmissing(missing)
@@ -186,8 +243,9 @@ class basepackstore(object):
             previous = set(p.path for p in self.packs)
             for filepath, __, __ in self._getavailablepackfilessorted():
                 if filepath not in previous:
-                    newpacks.append(self.getpack(filepath))
-            self.packs.extend(newpacks)
+                    newpack = self.getpack(filepath)
+                    newpacks.append(newpack)
+                    self.packs.add(newpack)
 
         return newpacks
 

@@ -17,6 +17,7 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
 from remotefilelog.datapack import (
     datapack,
+    datapackstore,
     fastdatapack,
     mutabledatapack,
 )
@@ -266,6 +267,48 @@ class datapacktestsbase(object):
         for (filename, node), content in blobs.iteritems():
             actualcontent = pack.getdeltachain(filename, node)[0][4]
             self.assertEquals(actualcontent, content)
+
+    def testPacksCache(self):
+        """Test that we remember the most recent packs while fetching the delta
+        chain."""
+
+        packdir = self.makeTempDir()
+        deltachains = []
+
+        # Ensures that we are not keeping everything in the cache.
+        numpacks = datapackstore.DEFAULTCACHESIZE * 2
+        revisionsperpack = 100
+
+        for i in range(numpacks):
+            chain = []
+            revision = (str(i), self.getFakeHash(), nullid, "content")
+
+            for _ in range(revisionsperpack):
+                chain.append(revision)
+                revision = (
+                    str(i),
+                    self.getFakeHash(),
+                    revision[1],
+                    self.getFakeHash()
+                )
+
+            self.createPack(chain, packdir)
+            deltachains.append(chain)
+
+        store = datapackstore(mercurial.ui.ui(), packdir)
+
+        random.shuffle(deltachains)
+        for randomchain in deltachains:
+            revision = random.choice(randomchain)
+            chain = store.getdeltachain(revision[0], revision[1])
+
+            mostrecentpack = next(iter(store.packs), None)
+            self.assertEquals(
+                mostrecentpack.getdeltachain(revision[0], revision[1]),
+                chain
+            )
+
+            self.assertEquals(randomchain.index(revision) + 1, len(chain))
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):
