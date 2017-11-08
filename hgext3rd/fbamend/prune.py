@@ -121,7 +121,13 @@ def prune(ui, repo, *revs, **opts):
     prune multiple changesets with a single successor, you must pass the
     ``--fold`` option.
     """
-    ui.warn(_("advice: 'hg hide' provides a better UI for hiding commits\n"))
+    if opts.get('keep', False):
+        advice = "'hg uncommit' provides a better UI for undoing commits " \
+                 "while keeping the changes\n"
+    else:
+        advice = "'hg hide' provides a better UI for hiding commits\n"
+    ui.warn(_("advice: %s") % advice)
+
     revs = scmutil.revrange(repo, list(revs) + opts.get('rev', []))
     succs = opts.get('succ', [])
     bookmarks = set(opts.get('bookmark', ()))
