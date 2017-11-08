@@ -1226,6 +1226,11 @@ class dirstatemap(object):
         self._map.clear()
         self.copymap.clear()
         self.setparents(nullid, nullid)
+        util.clearcachedproperty(self, "dirs")
+        util.clearcachedproperty(self, "filefoldmap")
+        util.clearcachedproperty(self, "dirfoldmap")
+        util.clearcachedproperty(self, "nonnormalset")
+        util.clearcachedproperty(self, "otherparentset")
 
     def iteritems(self):
         return self._map.iteritems()
