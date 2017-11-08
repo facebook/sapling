@@ -7,11 +7,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-class MergeTest:
+class MergeTest(EdenHgTestCase):
     '''Note that Mercurial has a number of built-in merge tools:
     https://www.mercurial-scm.org/repo/hg/help/merge-tools
     '''

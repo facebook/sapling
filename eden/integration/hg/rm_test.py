@@ -9,12 +9,12 @@
 
 import os
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from ..lib import hgrepo
 
 
 @hg_test
-class RmTest:
+class RmTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('apple', '')
         repo.write_file('banana', '')

@@ -7,12 +7,12 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from textwrap import dedent
 
 
 @hg_test
-class DebugHgGetDirstateTupleTest:
+class DebugHgGetDirstateTupleTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('hello', 'hola\n')
         repo.write_file('dir/file', 'blah\n')

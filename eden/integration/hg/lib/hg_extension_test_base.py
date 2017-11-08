@@ -48,7 +48,7 @@ POST_CLONE = _find_post_clone()
 EDEN_EXT_DIR = _eden_ext_dir()
 
 
-class HgExtensionTestBase(testcase.EdenTestCase):
+class EdenHgTestCase(testcase.EdenTestCase):
     '''
     A test case class for integration tests that exercise mercurial commands
     inside an eden client.
@@ -278,7 +278,7 @@ def _replicate_hg_test(test_class):
     }
 
     for name, config_fn in configs.items():
-        class HgTestVariant(test_class, HgExtensionTestBase):
+        class HgTestVariant(test_class):
             apply_hg_config_variant = config_fn
 
         yield name, HgTestVariant

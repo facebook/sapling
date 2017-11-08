@@ -9,12 +9,12 @@
 
 import os
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from ..lib import hgrepo
 
 
 @hg_test
-class GraftTest:
+class GraftTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('first.txt', '1')
         self.commit1 = repo.commit('Initial commit\n')

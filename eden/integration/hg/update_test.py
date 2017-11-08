@@ -9,12 +9,12 @@
 
 import os
 from ..lib import hgrepo
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from textwrap import dedent
 
 
 @hg_test
-class UpdateTest:
+class UpdateTest(EdenHgTestCase):
     def edenfs_logging_settings(self):
         return {
             'eden.fs.inodes.TreeInode': 'DBG5',

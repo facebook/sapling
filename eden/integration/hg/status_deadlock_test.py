@@ -11,12 +11,12 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from eden.integration.lib.repobase import Repository
-from .lib.hg_extension_test_base import hg_test
+from eden.integration.lib.hgrepo import HgRepository
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-class StatusDeadlockTest:
+class StatusDeadlockTest(EdenHgTestCase):
     """
     Test running an "hg status" command that needs to import many directories
     and .gitignore files.
@@ -34,7 +34,7 @@ class StatusDeadlockTest:
             levels['eden.fs.store.hg'] = 'DBG9'
         return levels
 
-    def populate_backing_repo(self, repo: Repository) -> None:
+    def populate_backing_repo(self, repo: HgRepository) -> None:
         logging.debug('== populate_backing_repo')
 
         # By default repo.write_file() also calls "hg add" on the path.
@@ -79,7 +79,7 @@ class StatusDeadlockTest:
         self.commit2 = repo.commit('Initial commit.')
         logging.debug('== created second commit')
 
-    def _hg_add_many(self, repo: Repository, paths: List[str]) -> None:
+    def _hg_add_many(self, repo: HgRepository, paths: List[str]) -> None:
         # Call "hg add" with at most chunk_size files at a time
         chunk_size = 250
         for n in range(0, len(paths), chunk_size):

@@ -9,11 +9,11 @@
 
 from textwrap import dedent
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-class CopyTest:
+class CopyTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('hello.txt', 'hola')
         repo.commit('Initial commit.\n')

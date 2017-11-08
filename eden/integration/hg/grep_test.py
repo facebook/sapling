@@ -8,12 +8,12 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from ..lib import hgrepo
 
 
 @hg_test
-class GrepTest:
+class GrepTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file(
             'file_in_root.txt', '\n'.join(['apple', '  banana', 'cat'])

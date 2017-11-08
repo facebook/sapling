@@ -8,12 +8,12 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-from .lib.hg_extension_test_base import hg_test
-from ..lib import eden_server_inspector
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
+from eden.integration.lib import eden_server_inspector
 
 
 @hg_test
-class RebaseTest:
+class RebaseTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.mkdir('numbers')
         repo.write_file('numbers/README', 'this will have two directories')

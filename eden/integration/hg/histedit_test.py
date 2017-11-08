@@ -10,13 +10,13 @@
 import os
 from textwrap import dedent
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from .lib.histedit_command import HisteditCommand
 from ..lib import hgrepo
 
 
 @hg_test
-class HisteditTest:
+class HisteditTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('first', '')
         self._commit1 = repo.commit('first commit')

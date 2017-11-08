@@ -8,13 +8,13 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import logging
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 log = logging.getLogger('eden.test.absorb')
 
 
 @hg_test
-class AbsorbTest:
+class AbsorbTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('readme.txt', 'readme\n')
         repo.write_file('src/test.c', '''\

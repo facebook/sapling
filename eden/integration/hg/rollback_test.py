@@ -7,12 +7,12 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from .lib.hg_extension_test_base import hg_test
+from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from ..lib import hgrepo
 
 
 @hg_test
-class RollbackTest:
+class RollbackTest(EdenHgTestCase):
     def populate_backing_repo(self, repo):
         repo.write_file('first', '')
         self._commit1 = repo.commit('first commit')
