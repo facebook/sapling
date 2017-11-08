@@ -11,6 +11,12 @@ from mercurial import (
 )
 
 try:
+    # 4.3 Moved osutil to cext
+    from mercurial.cext import osutil
+except (AttributeError, ImportError):
+    from mercurial import osutil
+
+try:
     from mercurial import ignore
     ignore.readpats
     ignoremod = True
