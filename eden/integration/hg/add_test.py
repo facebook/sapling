@@ -40,11 +40,13 @@ class AddTest(EdenHgTestCase):
         self.hg('rm', '--force', 'dir1/a.txt')
         self.write_file('dir1/a.txt', 'original contents')
         self.touch('dir1/a.txt')
-        self.assert_status({
-            'dir1/a.txt': 'R',
-            'dir1/b.txt': '?',
-            'dir2/c.txt': 'A',
-        })
+        self.assert_status(
+            {
+                'dir1/a.txt': 'R',
+                'dir1/b.txt': '?',
+                'dir2/c.txt': 'A',
+            }
+        )
 
         # Running `hg add .` should remove the removal marker from dir1/a.txt
         # because dir1/a.txt is still on disk.
@@ -59,20 +61,24 @@ class AddTest(EdenHgTestCase):
         # Running `hg add dir1` should remove the removal marker from
         # dir1/a.txt, but `hg status` should also reflect that it is modified.
         self.hg('add', 'dir1')
-        self.assert_status({
-            'dir1/a.txt': 'M',
-            'dir1/b.txt': 'A',
-            'dir2/c.txt': 'A',
-        })
+        self.assert_status(
+            {
+                'dir1/a.txt': 'M',
+                'dir1/b.txt': 'A',
+                'dir2/c.txt': 'A',
+            }
+        )
 
         self.hg('rm', '--force', 'dir1/a.txt')
         # This should not add dir1/a.txt back because it is not on disk.
         self.hg('add', 'dir1')
-        self.assert_status({
-            'dir1/a.txt': 'R',
-            'dir1/b.txt': 'A',
-            'dir2/c.txt': 'A',
-        })
+        self.assert_status(
+            {
+                'dir1/a.txt': 'R',
+                'dir1/b.txt': 'A',
+                'dir2/c.txt': 'A',
+            }
+        )
 
     @unittest.skip('Need to add precondition checks that true Hg has.')
     def test_add_nonexistent_directory(self):
@@ -80,8 +86,10 @@ class AddTest(EdenHgTestCase):
         # invoke the bad() method of the matcher.
         with self.assertRaises(subprocess.CalledProcessError) as context:
             self.hg('add', 'dir3')
-        self.assertEqual('dir3: No such file or directory\n',
-                         context.exception.output.decode('utf-8'))
+        self.assertEqual(
+            'dir3: No such file or directory\n',
+            context.exception.output.decode('utf-8')
+        )
         self.assertEqual(1, context.exception.returncode)
 
     def test_try_replacing_directory_with_file(self):
@@ -106,3 +114,99 @@ class AddTest(EdenHgTestCase):
             'dir1': 'A',
             'dir1/a.txt': 'R',
         })
+
+    def test_add_file_that_would_normally_be_ignored(self):
+        self.write_file('somefile.bak', 'Backup file.\n')
+        self.assert_status({
+            'somefile.bak': '?',
+        })
+        self.write_file('.gitignore', '*.bak\n')
+
+        self.assert_status({
+            '.gitignore': '?',
+            'somefile.bak': 'I',
+        })
+        self.assert_status(
+            {
+                '.gitignore': '?',
+            }, check_ignored=False
+        )
+
+        self.hg('add', 'somefile.bak')
+        self.assert_status({
+            '.gitignore': '?',
+            'somefile.bak': 'A',
+        })
+
+        self.rm('somefile.bak')
+        self.assert_status({
+            '.gitignore': '?',
+            'somefile.bak': '!',
+        })
+
+        self.hg('forget', 'somefile.bak')
+        self.assert_status({
+            '.gitignore': '?',
+        })
+
+    def test_add_ignored_directory_has_no_effect(self):
+        self.write_file('.gitignore', 'ignored_directory\n')
+        self.hg('add', '.gitignore')
+        self.repo.commit('Add .gitignore.\n')
+        self.assert_status_empty()
+
+        self.mkdir('ignored_directory')
+        self.assert_status_empty()
+
+        self.write_file('ignored_directory/one.txt', '1\n')
+        self.write_file('ignored_directory/two.txt', '2\n')
+        self.assert_status_empty(check_ignored=False)
+
+        self.hg('add', 'ignored_directory')
+        self.assert_status_empty(
+            check_ignored=False,
+            msg='Even though the directory was explicitly passed to `hg add`, '
+            'it should not be added.'
+        )
+
+        self.hg('add', 'ignored_directory/two.txt')
+        self.assert_status(
+            {
+                'ignored_directory/two.txt': 'A',
+            },
+            check_ignored=False,
+            msg='Explicitly adding a file in an ignored directory '
+            'should take effect.'
+        )
+
+        self.hg('add', 'ignored_directory')
+        self.assert_status(
+            {
+                'ignored_directory/two.txt': 'A',
+            },
+            check_ignored=False,
+            msg='Even though one file in ignored_directory has been added, '
+            'calling `hg add` on the directory '
+            'should not add the other ignored file.'
+        )
+
+        self.rm('ignored_directory/two.txt')
+        self.assert_status(
+            {
+                'ignored_directory/one.txt': 'I',
+                'ignored_directory/two.txt': '!',
+            }
+        )
+
+        self.hg('forget', 'ignored_directory/two.txt')
+        self.assert_status({
+            'ignored_directory/one.txt': 'I',
+        })
+
+        self.write_file('ignored_directory/two.txt', '2\n')
+        self.assert_status(
+            {
+                'ignored_directory/one.txt': 'I',
+                'ignored_directory/two.txt': 'I',
+            }
+        )
