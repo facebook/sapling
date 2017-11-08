@@ -213,3 +213,24 @@ class UpdateTest:
         # Verify the previous version of the file was backed up as expected.
         self.assertTrue(os.path.isfile(expected_backup_file))
         self.assertEqual(modified_contents, self.read_file(path_to_backup))
+
+    def test_update_ignores_untracked_directory(self):
+        head = self.repo.log()[-1]
+        self.mkdir('foo/bar')
+        self.write_file('foo/bar/a.txt', 'File in directory two levels deep.\n')
+        self.write_file('foo/bar/b.txt', 'Another file.\n')
+        self.hg('add', 'foo/bar/a.txt')
+        self.assert_status({
+            'foo/bar/a.txt': 'A',
+            'foo/bar/b.txt': '?',
+        })
+        self.repo.commit('Commit only a.txt.')
+        self.assert_status({
+            'foo/bar/b.txt': '?',
+        })
+        self.hg('update', head)
+        self.assert_status({
+            'foo/bar/b.txt': '?',
+        })
+        self.assertFalse(os.path.exists(self.get_path('foo/bar/a.txt')))
+        self.assertTrue(os.path.exists(self.get_path('foo/bar/b.txt')))
