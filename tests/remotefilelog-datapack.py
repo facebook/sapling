@@ -53,11 +53,13 @@ class datapacktestsbase(object):
     def getFakeHash(self):
         return ''.join(chr(random.randint(0, 255)) for _ in range(20))
 
-    def createPack(self, revisions=None, version=0):
+    def createPack(self, revisions=None, packdir=None, version=0):
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
-        packdir = self.makeTempDir()
+        if packdir is None:
+            packdir = self.makeTempDir()
+
         packer = mutabledatapack(mercurial.ui.ui(), packdir, version=version)
 
         for args in revisions:
