@@ -7,11 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
+import datetime
 import distutils.spawn
 import os
 import shlex
@@ -120,19 +116,27 @@ class HgRepository(repobase.Repository):
         self.hg('add', path)
 
     def commit(self,
-               message,
-               author_name=None,
-               author_email=None,
-               date=None,
-               amend=False):
+               message: str,
+               author_name: str=None,
+               author_email: str=None,
+               date: datetime.datetime=None,
+               amend: bool=False) -> str:
+        '''
+        - message Commit message to use.
+        - author_name Author name to use: defaults to self.author_name.
+        - author_email Author email to use: defaults to self.author_email.
+        - date datetime.datetime to use for the commit. Defaults to
+          self.get_commit_time().
+        - amend If true, adds the `--amend` argument.
+        '''
         if author_name is None:
             author_name = self.author_name
         if author_email is None:
             author_email = self.author_email
         if date is None:
             date = self.get_commit_time()
-            # Mercurial's internal format of <unix_timestamp> <timezone>
-            date_str = '{} 0'.format(int(date.timestamp()))
+        # Mercurial's internal format of <unix_timestamp> <timezone>
+        date_str = '{} 0'.format(int(date.timestamp()))
 
         user_config = 'ui.username={} <{}>'.format(author_name, author_email)
 
