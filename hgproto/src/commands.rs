@@ -15,7 +15,6 @@ use slog::Logger;
 use bytes::{Bytes, BytesMut};
 use futures::future::{self, Future};
 use futures::stream::Stream;
-use tokio_service::Service;
 
 use futures_ext::{futures_ordered, BoxFuture, BoxStream, FutureExt};
 use mercurial_types::NodeHash;
@@ -24,36 +23,25 @@ use {BranchRes, GetbundleArgs, Request, Response};
 use errors::*;
 use sshproto;
 
-pub struct HgService<H> {
+pub struct HgCommandHandler<H> {
     commands: H,
-    logger: Option<Logger>,
+    logger: Logger,
 }
 
-impl<H: HgCommands> HgService<H> {
-    pub fn new(hgcmds: H) -> Self {
-        HgService {
-            commands: hgcmds,
-            logger: None,
-        }
+impl<H: HgCommands> HgCommandHandler<H> {
+    pub fn new(commands: H, logger: Logger) -> Self {
+        HgCommandHandler { commands, logger }
     }
 
-    pub fn new_with_logger(hgcmds: H, logger: &Logger) -> Self {
-        HgService {
-            commands: hgcmds,
-            logger: Some(logger.new(o!())),
-        }
-    }
-
-    pub fn command(&self, req: Request) -> BoxFuture<Response, Error>
+    pub fn handle(&self, req: Request) -> BoxFuture<Response, Error>
     where
         H: HgCommands,
     {
-        if let Some(ref logger) = self.logger {
-            match &req {
-                &Request::Batch { .. } => (),
-                req => debug!(logger, "Got request: {:?}", req),
-            }
+        match &req {
+            &Request::Batch { .. } => (),
+            req => debug!(self.logger, "Got request: {:?}", req),
         }
+
         let hgcmds = &self.commands;
 
         match req {
@@ -175,9 +163,7 @@ impl<H: HgCommands> HgService<H> {
                 }
                 Ok(Some(cmd)) => cmd,
             };
-            if let Some(ref logger) = self.logger {
-                info!(logger, "batch command: {:?}", parsed);
-            }
+            info!(self.logger, "batch command: {:?}", parsed);
             parsed_cmds.push(parsed);
         }
 
@@ -186,7 +172,7 @@ impl<H: HgCommands> HgService<H> {
         // too long.
         let response_futures: Vec<_> = parsed_cmds
             .into_iter()
-            .map(|cmd| self.command(cmd))
+            .map(|cmd| self.handle(cmd))
             .collect();
 
         let encoded_futures = response_futures
@@ -228,20 +214,6 @@ fn get_or_none<'a>(map: &'a HashMap<Vec<u8>, Vec<u8>>, key: &'a [u8]) -> &'a [u8
     match map.get(key) {
         Some(ref val) => val,
         None => &NONE,
-    }
-}
-
-impl<H> Service for HgService<H>
-where
-    H: HgCommands,
-{
-    type Request = Request;
-    type Response = Response;
-    type Error = Error;
-    type Future = BoxFuture<Response, Self::Error>;
-
-    fn call(&self, req: Request) -> Self::Future {
-        self.command(req)
     }
 }
 
@@ -360,6 +332,8 @@ mod test {
     use super::*;
     use futures::future;
 
+    use slog::Discard;
+
     struct Dummy;
     impl HgCommands for Dummy {
         fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
@@ -372,9 +346,10 @@ mod test {
 
     #[test]
     fn hello() {
-        let service = HgService::new(Dummy);
+        let logger = Logger::root(Discard, o!());
+        let handler = HgCommandHandler::new(Dummy, logger);
 
-        let r = service.call(Request::Hello).wait();
+        let r = handler.handle(Request::Hello).wait();
         println!("hello r = {:?}", r);
         let mut res: HashMap<String, Vec<String>> = HashMap::new();
         res.insert("capabilities".into(), vec!["something".into()]);
@@ -387,9 +362,10 @@ mod test {
 
     #[test]
     fn unimpl() {
-        let service = HgService::new(Dummy);
+        let logger = Logger::root(Discard, o!());
+        let handler = HgCommandHandler::new(Dummy, logger);
 
-        let r = service.call(Request::Heads).wait();
+        let r = handler.handle(Request::Heads).wait();
         println!("heads r = {:?}", r);
 
         match r {

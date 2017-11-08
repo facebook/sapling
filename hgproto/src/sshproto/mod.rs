@@ -41,8 +41,9 @@ use errors::*;
 pub mod request;
 pub mod response;
 
-
+#[derive(Clone)]
 pub struct HgSshCommandEncode;
+#[derive(Clone)]
 pub struct HgSshCommandDecode;
 
 impl Encoder for HgSshCommandEncode {

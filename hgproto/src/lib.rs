@@ -17,7 +17,6 @@ extern crate bytes;
 extern crate futures;
 extern crate tokio_io;
 extern crate tokio_proto;
-extern crate tokio_service;
 
 #[macro_use]
 extern crate slog;
@@ -51,7 +50,8 @@ use mercurial_types::NodeHash;
 
 mod batch;
 mod errors;
-mod service;
+mod handler;
+mod commands;
 pub mod sshproto;
 
 // result from `branches()`
@@ -161,5 +161,6 @@ impl Response {
     }
 }
 
+pub use commands::{HgCommandRes, HgCommands};
 pub use errors::{Error, ErrorKind, Result, ResultExt};
-pub use service::{HgCommandRes, HgCommands, HgService};
+pub use handler::HgProtoHandler;

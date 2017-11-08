@@ -57,7 +57,6 @@ use std::thread::{self, JoinHandle};
 use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
-use futures_ext::{encode, StreamLayeredExt};
 
 use clap::{App, ArgGroup, ArgMatches};
 
@@ -67,8 +66,7 @@ use slog_kvfilter::KVFilter;
 use slog_logview::LogViewDrain;
 
 use bytes::Bytes;
-use hgproto::HgService;
-use hgproto::sshproto::{HgSshCommandDecode, HgSshCommandEncode};
+use hgproto::{sshproto, HgProtoHandler};
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoType;
 
@@ -301,18 +299,17 @@ where
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = Logger::root(drain, o![]);
 
-            // Construct a repo
-            let client = repo::RepoClient::new(repo.clone(), &conn_log);
-            let service = Arc::new(HgService::new_with_logger(client, &conn_log));
-
-            // Map stdin into mercurial requests
-            let reqs = stdin.decode(HgSshCommandDecode);
-
-            // process requests
-            let resps = reqs.and_then(move |req| service.clone().command(req));
+            // Construct a hg protocol handler
+            let proto_handler = HgProtoHandler::new(
+                stdin,
+                repo::RepoClient::new(repo.clone(), &conn_log),
+                sshproto::HgSshCommandDecode,
+                sshproto::HgSshCommandEncode,
+                &conn_log,
+            );
 
             // send responses back
-            let endres = encode::encode(resps, HgSshCommandEncode)
+            let endres = proto_handler
                 .map_err(Error::from)
                 .forward(stdout)
                 .map(|_| ());
