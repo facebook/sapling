@@ -51,7 +51,10 @@ class Repository(object):
         raise NotImplementedError('subclasses must implement get_head_hash()')
 
     def add_file(self, path):
-        raise NotImplementedError('subclasses must implement add_file()')
+        self.add_files([path])
+
+    def add_files(self, path):
+        raise NotImplementedError('subclasses must implement add_files()')
 
     def get_path(self, *args):
         for arg in args:

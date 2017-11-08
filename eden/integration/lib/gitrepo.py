@@ -68,8 +68,8 @@ class GitRepository(repobase.Repository):
     def get_canonical_root(self):
         return os.path.join(self.path, '.git')
 
-    def add_file(self, path):
-        self.git('add', path)
+    def add_files(self, paths):
+        self.git('add', *paths)
 
     def commit(self,
                message,

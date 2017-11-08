@@ -110,10 +110,10 @@ class HgRepository(repobase.Repository):
     def get_canonical_root(self):
         return self.path
 
-    def add_file(self, path):
-        # add_file() may be called for files that are already tracked.
+    def add_files(self, paths):
+        # add_files() may be called for files that are already tracked.
         # hg will print a warning, but this is fine.
-        self.hg('add', path)
+        self.hg('add', *paths)
 
     def commit(self,
                message: str,
