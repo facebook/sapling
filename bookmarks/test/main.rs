@@ -13,6 +13,8 @@ extern crate tempdir;
 extern crate tokio_core;
 
 extern crate bookmarks;
+extern crate db;
+extern crate dbbookmarks;
 extern crate filebookmarks;
 extern crate membookmarks;
 extern crate mercurial_types;
@@ -27,6 +29,7 @@ use tempdir::TempDir;
 use tokio_core::reactor::Core;
 
 use bookmarks::BookmarksMut;
+use dbbookmarks::DbBookmarks;
 use filebookmarks::FileBookmarks;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
@@ -178,6 +181,18 @@ bookmarks_test_impl! {
     filebookmarks_test => {
         state: TempDir::new("filebookmarks_test").unwrap(),
         new: |dir: &TempDir, _| FileBookmarks::open(dir.as_ref()).unwrap(),
+        persistent: true,
+    }
+}
+
+bookmarks_test_impl! {
+    dbbookmarks_test => {
+        state: dbbookmarks::init_test_db(),
+        new: |params: &db::ConnectionParams, core: &mut Core| {
+            let params = params.clone();
+            let remote = core.remote();
+            core.run(DbBookmarks::new_async(params, &remote)).unwrap()
+        },
         persistent: true,
     }
 }
