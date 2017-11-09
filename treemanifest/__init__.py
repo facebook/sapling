@@ -1478,13 +1478,13 @@ class remotetreedatastore(object):
     def getmissing(self, keys):
         return keys
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         pass
 
     def getmetrics(self):
         return {}
 
-def serverrepack(repo, incremental=False):
+def serverrepack(repo, incremental=False, options=None):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
     revlogstore = manifestrevlogstore(repo)
@@ -1529,7 +1529,8 @@ def serverrepack(repo, incremental=False):
         startrev = latestpackedlinkrev + 1
 
     revlogstore.setrepacklinkrevrange(startrev, endrev)
-    _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY)
+    _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY,
+        options=options)
 
 def striptrees(orig, repo, tr, striprev, files):
     if not treeenabled(repo.ui):

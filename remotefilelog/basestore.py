@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import errno, hashlib, heapq, os, shutil, time
 
 from . import (
+    constants,
     shallowutil,
 )
 
@@ -55,7 +56,9 @@ class basestore(object):
 
     # BELOW THIS ARE IMPLEMENTATIONS OF REPACK SOURCE
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_PACKSONLY):
+            return
         if self._shared:
             for filename, nodes in self._getfiles():
                 for node in nodes:

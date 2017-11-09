@@ -36,9 +36,12 @@ def backgroundrepack(repo, incremental=True):
     repo.ui.warn(msg)
     runshellcommand(cmd, os.environ)
 
-def fullrepack(repo):
+def fullrepack(repo, options=None):
+    """If ``packsonly`` is True, stores creating only loose objects are skipped.
+    """
     if util.safehasattr(repo, 'shareddatastores'):
-        datasource = contentstore.unioncontentstore(*repo.shareddatastores)
+        datasource = contentstore.unioncontentstore(
+            *repo.shareddatastores)
         historysource = metadatastore.unionmetadatastore(
             *repo.sharedhistorystores,
             allowincomplete=True)
@@ -47,11 +50,11 @@ def fullrepack(repo):
             repo,
             constants.FILEPACK_CATEGORY)
         _runrepack(repo, datasource, historysource, packpath,
-                   constants.FILEPACK_CATEGORY)
+                   constants.FILEPACK_CATEGORY, options=options)
 
     if repo.ui.configbool('treemanifest', 'server'):
         treemfmod = extensions.find('treemanifest')
-        treemfmod.serverrepack(repo)
+        treemfmod.serverrepack(repo, options=options)
     elif util.safehasattr(repo.manifestlog, 'datastore'):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
@@ -63,7 +66,7 @@ def fullrepack(repo):
                         *shstores,
                         allowincomplete=True)
         _runrepack(repo, datasource, historysource, spackpath,
-                   constants.TREEPACK_CATEGORY)
+                   constants.TREEPACK_CATEGORY, options=options)
 
         # Repack the local manifest store
         datasource = contentstore.unioncontentstore(
@@ -73,10 +76,10 @@ def fullrepack(repo):
                         *lhstores,
                         allowincomplete=True)
         _runrepack(repo, datasource, historysource, lpackpath,
-                   constants.TREEPACK_CATEGORY)
+                   constants.TREEPACK_CATEGORY, options=options)
 
 
-def incrementalrepack(repo):
+def incrementalrepack(repo, options=None):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.
     """
@@ -88,7 +91,8 @@ def incrementalrepack(repo):
                            repo.shareddatastores,
                            repo.sharedhistorystores,
                            packpath,
-                           constants.FILEPACK_CATEGORY)
+                           constants.FILEPACK_CATEGORY,
+                           options=options)
 
     if repo.ui.configbool('treemanifest', 'server'):
         treemfmod = extensions.find('treemanifest')
@@ -103,7 +107,8 @@ def incrementalrepack(repo):
                            sdstores,
                            shstores,
                            spackpath,
-                           constants.TREEPACK_CATEGORY)
+                           constants.TREEPACK_CATEGORY,
+                           options=options)
 
         # Repack the local manifest store
         _incrementalrepack(repo,
@@ -111,7 +116,8 @@ def incrementalrepack(repo):
                            lhstores,
                            lpackpath,
                            constants.TREEPACK_CATEGORY,
-                           allowincompletedata=True)
+                           allowincompletedata=True,
+                           options=options)
 
 def _getmanifeststores(repo):
     shareddatastores = repo.manifestlog.shareddatastores
@@ -142,7 +148,7 @@ def _topacks(packpath, files, constructor):
     return packs
 
 def _incrementalrepack(repo, datastore, historystore, packpath, category,
-        allowincompletedata=False):
+        allowincompletedata=False, options=None):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
@@ -179,7 +185,8 @@ def _incrementalrepack(repo, datastore, historystore, packpath, category,
                packpath, category,
                fullhistory=metadatastore.unionmetadatastore(
                    *allhistorypacks,
-                   allowincomplete=True))
+                   allowincomplete=True),
+                options=options)
 
 def _computeincrementaldatapack(ui, files):
     """Given a set of pack files and a set of generation size limits, this
@@ -284,7 +291,8 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 
     return chosenpacks
 
-def _runrepack(repo, data, history, packpath, category, fullhistory=None):
+def _runrepack(repo, data, history, packpath, category, fullhistory=None,
+               options=None):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     def isold(repo, filename, node):
@@ -305,8 +313,7 @@ def _runrepack(repo, data, history, packpath, category, fullhistory=None):
     if not fullhistory:
         fullhistory = history
     packer = repacker(repo, data, history, fullhistory, category,
-                      gc=garbagecollect,
-                      isold=isold)
+                      gc=garbagecollect, isold=isold, options=options)
 
     # internal config: remotefilelog.datapackversion
     dv = repo.ui.configint('remotefilelog', 'datapackversion', 0)
@@ -385,13 +392,14 @@ class repacker(object):
     new format.
     """
     def __init__(self, repo, data, history, fullhistory, category, gc=False,
-                 isold=None):
+                 isold=None, options=None):
         self.repo = repo
         self.data = data
         self.history = history
         self.fullhistory = fullhistory
         self.unit = constants.getunits(category)
         self.garbagecollect = gc
+        self.options = options
         if self.garbagecollect:
             if not isold:
                 raise ValueError("Function 'isold' is not properly specified")
@@ -407,8 +415,8 @@ class repacker(object):
             self.repo.hook('prerepack')
 
             # Populate ledger from source
-            self.data.markledger(ledger)
-            self.history.markledger(ledger)
+            self.data.markledger(ledger, options=self.options)
+            self.history.markledger(ledger, options=self.options)
 
             # Run repack
             self.repackdata(ledger, targetdata)

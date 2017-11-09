@@ -218,7 +218,7 @@ class basepackstore(object):
 
         return missing
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         for pack in self.packs:
             pack.markledger(ledger)
 
@@ -339,7 +339,7 @@ class basepack(versionmixin):
     def getmissing(self, keys):
         raise NotImplemented()
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         raise NotImplemented()
 
     def cleanup(self, ledger):

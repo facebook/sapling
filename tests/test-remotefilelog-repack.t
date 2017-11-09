@@ -82,6 +82,18 @@
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
   $TESTTMP/hgcache/repos
 
+# First assert that with --packsonly, the loose object will be ignored:
+
+  $ hg repack --packsonly
+
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/d4a3ed9310e5bd9887e3bf779da5077efab28216
+  $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
+  $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
+  $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
+  $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  $TESTTMP/hgcache/repos
+
   $ hg repack --traceback
 
   $ find $CACHEDIR -type f | sort

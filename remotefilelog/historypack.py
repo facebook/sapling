@@ -270,7 +270,7 @@ class historypack(basepack.basepack):
                     endnode = midnode
         return None
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         for filename, node in self:
             ledger.markhistoryentry(self, filename, node)
 

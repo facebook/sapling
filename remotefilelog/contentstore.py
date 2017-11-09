@@ -127,9 +127,9 @@ class unioncontentstore(object):
         else:
             raise RuntimeError("no writable store configured")
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         for store in self.stores:
-            store.markledger(ledger)
+            store.markledger(ledger, options)
 
     def markforrefresh(self):
         for store in self.stores:
@@ -219,7 +219,7 @@ class remotecontentstore(object):
     def getmissing(self, keys):
         return keys
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         pass
 
 class manifestrevlogstore(object):
@@ -301,7 +301,9 @@ class manifestrevlogstore(object):
         self._repackstartlinkrev = startrev
         self._repackendlinkrev = endrev
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_PACKSONLY):
+            return
         treename = ''
         rl = revlog.revlog(self._svfs, '00manifesttree.i')
         startlinkrev = self._repackstartlinkrev

@@ -118,7 +118,10 @@
   $ ls_l .hg/store/packs/manifests | grep datapack
   -r--r--r--     248 5d1716bbef6e7200192de6509055d1ee31a4172c.datapack
   -r--r--r--     146 cffef142da32f3e52c1779490e5d0ddac5f9b82b.datapack
-  $ hg repack
+
+# As we only have packs, also test that --packsonly doesn't prevent packs from
+being repacked
+  $ hg repack --packsonly
   $ ls_l .hg/store/packs/manifests | grep datapack
   -r--r--r--     386 d15c09a9a5a13bb689bd9764455a415a20dc885e.datapack
 
@@ -184,6 +187,10 @@ Test repacking from revlogs to pack files on the server
   data/a.i
   data/dir/b.i
   meta/dir/00manifest.i
+
+--packsonly shouldn't repack anything:
+  $ hg repack --packsonly
+  $ ls .hg/cache/packs/manifests
 
   $ hg repack
   $ ls .hg/cache/packs/manifests

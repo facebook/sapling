@@ -30,3 +30,6 @@ def getunits(category):
         return _("files")
     if category == TREEPACK_CATEGORY:
         return _("trees")
+
+# Repack options passed to ``markledger``.
+OPTION_PACKSONLY = 'packsonly'

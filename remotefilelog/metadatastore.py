@@ -96,9 +96,9 @@ class unionmetadatastore(object):
                 missing = store.getmissing(missing)
         return missing
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         for store in self.stores:
-            store.markledger(ledger)
+            store.markledger(ledger, options)
 
     def getmetrics(self):
         metrics = [s.getmetrics() for s in self.stores]
@@ -143,5 +143,5 @@ class remotemetadatastore(object):
     def getmissing(self, keys):
         return keys
 
-    def markledger(self, ledger):
+    def markledger(self, ledger, options=None):
         pass

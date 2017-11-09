@@ -992,13 +992,16 @@ def prefetch(ui, repo, *pats, **opts):
 @command('repack', [
      ('', 'background', None, _('run in a background process'), None),
      ('', 'incremental', None, _('do an incremental repack'), None),
+     ('', 'packsonly', None, _('only repack packs (skip loose objects)'), None),
     ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     if opts.get('background'):
         repackmod.backgroundrepack(repo, incremental=opts.get('incremental'))
         return
 
+    options = {'packsonly': opts.get('packsonly')}
+
     if opts.get('incremental'):
-        repackmod.incrementalrepack(repo)
+        repackmod.incrementalrepack(repo, options=options)
     else:
-        repackmod.fullrepack(repo)
+        repackmod.fullrepack(repo, options=options)
