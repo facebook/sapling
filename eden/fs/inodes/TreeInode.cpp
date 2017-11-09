@@ -1615,7 +1615,7 @@ Future<Unit> TreeInode::diff(
     // the .gitignore inode, which changes the entry status
     auto contents = contents_.wlock();
 
-    XLOG(DBG4) << "Loading ignore file for " << getLogPath();
+    XLOG(DBG7) << "Loading ignore file for " << getLogPath();
     Entry* inodeEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
@@ -1780,6 +1780,7 @@ Future<Unit> TreeInode::computeDiff(
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // Completely skip over hidden entries.
           // This is used for reserved directories like .hg and .eden
+          XLOG(DBG9) << "diff: hidden entry: " << entryPath;
           return;
         }
         entryIgnored = (ignoreStatus == GitIgnore::EXCLUDE);
@@ -1810,8 +1811,10 @@ Future<Unit> TreeInode::computeDiff(
         }
       } else {
         if (!entryIgnored) {
+          XLOG(DBG8) << "diff: untracked file: " << entryPath;
           context->callback->untrackedFile(entryPath);
         } else if (context->listIgnored) {
+          XLOG(DBG9) << "diff: ignored file: " << entryPath;
           context->callback->ignoredFile(entryPath);
         } else {
           // Don't bother reporting this ignored file since
@@ -1825,6 +1828,8 @@ Future<Unit> TreeInode::computeDiff(
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
             context, currentPath + scmEntry.getName(), scmEntry));
       } else {
+        XLOG(DBG5) << "diff: removed file: "
+                   << currentPath + scmEntry.getName();
         context->callback->removedFile(
             currentPath + scmEntry.getName(), scmEntry);
       }
@@ -1880,6 +1885,7 @@ Future<Unit> TreeInode::computeDiff(
           inodeEntry->getMode() == scmEntry.getMode() &&
           inodeEntry->getHash() == scmEntry.getHash()) {
         // This file or directory is unchanged.  We can skip it.
+        XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
       } else if (inodeEntry->isDirectory()) {
         // This is a modified directory.  We have to load it then recurse
         // into it to find files with differences.
@@ -1900,9 +1906,11 @@ Future<Unit> TreeInode::computeDiff(
         // removed.
         if (entryIgnored) {
           if (context->listIgnored) {
+            XLOG(DBG6) << "diff: directory --> ignored file: " << entryPath;
             context->callback->ignoredFile(entryPath);
           }
         } else {
+          XLOG(DBG6) << "diff: directory --> untracked file: " << entryPath;
           context->callback->untrackedFile(entryPath);
         }
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
@@ -1923,6 +1931,7 @@ Future<Unit> TreeInode::computeDiff(
         // immediately assume the file is different here, without checking.
         if (inodeEntry->getMode() != scmEntry.getMode()) {
           // The mode is definitely modified
+          XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
           context->callback->modifiedFile(entryPath, scmEntry);
         } else {
           // TODO: Hopefully at some point we will track file sizes in the
@@ -2004,6 +2013,9 @@ Future<Unit> TreeInode::computeDiff(
         for (size_t n = 0; n < results.size(); ++n) {
           auto& result = results[n];
           if (result.hasException()) {
+            XLOG(WARN) << "exception processing diff for "
+                       << deferredJobs[n]->getPath() << ": "
+                       << folly::exceptionStr(result.exception());
             context->callback->diffError(
                 deferredJobs[n]->getPath(), result.exception());
           }
