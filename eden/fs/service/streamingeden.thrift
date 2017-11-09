@@ -1,4 +1,4 @@
-include "eden.thrift"
+include "eden/fs/service/eden.thrift"
 namespace cpp2 facebook.eden
 
 /** This file holds definitions for the streaming flavor of the Eden interface
