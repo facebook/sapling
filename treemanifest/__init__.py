@@ -78,6 +78,7 @@ from mercurial import (
     manifest,
     mdiff,
     phases,
+    policy,
     registrar,
     repair,
     revlog,
@@ -97,22 +98,29 @@ from remotefilelog.metadatastore import (
     unionmetadatastore,
 )
 from remotefilelog.datapack import (
+    datapack,
     datapackstore,
     mutabledatapack,
 )
 from remotefilelog.historypack import (
+    historypack,
     historypackstore,
     mutablehistorypack,
 )
 from remotefilelog import shallowrepo, shallowutil, wirepack
 from remotefilelog.repack import (
+    _computeincrementaldatapack,
+    _computeincrementalhistorypack,
     _runrepack,
+    _topacks,
 )
 import cstore
 
 import os
 import struct
 import time
+
+osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -1479,12 +1487,33 @@ class remotetreedatastore(object):
 def serverrepack(repo, incremental=False):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
-    dpackstore = datapackstore(repo.ui, packpath)
     revlogstore = manifestrevlogstore(repo)
-    datastore = unioncontentstore(dpackstore, revlogstore)
 
-    hpackstore = historypackstore(repo.ui, packpath)
-    histstore = unionmetadatastore(hpackstore, revlogstore)
+    try:
+        files = osutil.listdir(packpath, stat=True)
+    except OSError:
+        files = []
+
+    # Data store
+    fulldatapackstore = datapackstore(repo.ui, packpath)
+    if incremental:
+        datastores = _topacks(packpath,
+            _computeincrementaldatapack(repo.ui, files),
+            datapack)
+    else:
+        datastores = [fulldatapackstore]
+    datastores.append(revlogstore)
+    datastore = unioncontentstore(*datastores)
+
+    # History store
+    if incremental:
+        historystores = _topacks(packpath,
+            _computeincrementalhistorypack(repo.ui, files),
+            historypack)
+    else:
+        historystores = [historypackstore(repo.ui, packpath)]
+    historystores.append(revlogstore)
+    histstore = unionmetadatastore(*historystores)
 
     startrev = repo.ui.configint('treemanifest', 'repackstartrev', 0)
     endrev = repo.ui.configint('treemanifest', 'repackendrev',
@@ -1494,7 +1523,7 @@ def serverrepack(repo, incremental=False):
         mfrevlog = repo.manifestlog.treemanifestlog._revlog
         for i in xrange(len(mfrevlog) - 1, 0, -1):
             node = mfrevlog.node(i)
-            if not dpackstore.getmissing([('', node)]):
+            if not fulldatapackstore.getmissing([('', node)]):
                 latestpackedlinkrev = mfrevlog.linkrev(i)
                 break
         startrev = latestpackedlinkrev + 1

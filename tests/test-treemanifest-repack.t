@@ -245,3 +245,27 @@ Test incremental repack with limited revs only repacks those revs
   23226e7a252c  000000000000  43            43
   
   Total:                      43            43        (0.0% bigger)
+
+Test incremental repack that doesn't take all packs
+  $ ls_l .hg/cache/packs/manifests/ | grep datapack
+  -r--r--r--     264 e9093d2d887ff14457d43338fcb3994e92051853.datapack
+
+- Only one pack, means don't repack it. Only turn revlogs into a pack.
+  $ hg repack --incremental --config remotefilelog.data.generations=300,20
+  $ ls_l .hg/cache/packs/manifests/ | grep datapack
+  -r--r--r--     264 e9093d2d887ff14457d43338fcb3994e92051853.datapack
+  -r--r--r--     154 f9657fdc11d7c9847208da3f1245b38c5981df79.datapack
+
+- Two packs doesn't meet the bar for repack. Only turn revlogs into a pack.
+  $ echo >> a
+  $ hg commit -m 'modify a'
+  $ hg repack --incremental --config remotefilelog.data.generations=300,20
+  $ ls_l .hg/cache/packs/manifests/ | grep datapack
+  -r--r--r--     154 0adbde90bc92c6f23e46180a9d7885c8e2499173.datapack
+  -r--r--r--     264 e9093d2d887ff14457d43338fcb3994e92051853.datapack
+  -r--r--r--     154 f9657fdc11d7c9847208da3f1245b38c5981df79.datapack
+
+- Three packs meets the bar. Repack new revlogs and old pack into one.
+  $ hg repack --incremental --config remotefilelog.data.generations=300,20
+  $ ls_l .hg/cache/packs/manifests/ | grep datapack
+  -r--r--r--     496 bc6c2ebb080844d7a227dacbc847a5b375ec620c.datapack
