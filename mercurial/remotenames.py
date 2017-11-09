@@ -64,6 +64,12 @@ def writeremotenamefile(repo, remotepath, names, nametype):
     # version '0' represents the very initial version of the storage format
     f.write('0\n\n')
 
+    olddata = set(readremotenamefile(repo, nametype))
+    # re-save the data from a different remote than this one.
+    for node, oldpath, rname in sorted(olddata):
+        if oldpath != remotepath:
+            f.write('%s\0%s\0%s\n' % (node, oldpath, rname))
+
     for name, node in sorted(names.iteritems()):
         if nametype == "branches":
             for n in node:
