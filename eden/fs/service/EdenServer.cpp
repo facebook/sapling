@@ -42,7 +42,6 @@ DEFINE_int32(
     thrift_num_workers,
     std::thread::hardware_concurrency(),
     "The number of thrift worker threads");
-DEFINE_int32(thrift_max_conns, 0, "Maximum number of thrift connections");
 DEFINE_int32(
     thrift_max_requests,
     apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
@@ -520,7 +519,6 @@ void EdenServer::createThriftServer() {
   auto address = getThriftAddress(FLAGS_thrift_address, edenDir_.stringPiece());
 
   server_ = make_shared<ThriftServer>();
-  server_->setMaxConnections(FLAGS_thrift_max_conns);
   server_->setMaxRequests(FLAGS_thrift_max_requests);
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
