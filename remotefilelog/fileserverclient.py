@@ -339,7 +339,7 @@ class fileserverclient(object):
         count = [total - len(missed)]
         fromcache = count[0]
         self.ui.progress(_downloading, count[0], total=total)
-        self.ui.log("remotefilelog", "remote cache hit rate is %r of %r ",
+        self.ui.log("remotefilelog", "remote cache hit rate is %r of %r\n",
                     count[0], total, hit=count[0], total=total)
 
         oldumask = os.umask(0o002)
@@ -382,12 +382,12 @@ class fileserverclient(object):
                                              " does not support remotefilelog")
 
                     self.ui.log("remotefilefetchlog",
-                                "Success",
+                                "Success\n",
                                 fetched_files = count[0] - fromcache,
                                 total_to_fetch = total - fromcache)
                 except Exception:
                     self.ui.log("remotefilefetchlog",
-                                "Fail",
+                                "Fail\n",
                                 fetched_files = count[0] - fromcache,
                                 total_to_fetch = total - fromcache)
                     raise
@@ -443,12 +443,12 @@ class fileserverclient(object):
                 rcvd = len(receiveddata)
 
             self.ui.log("remotefilefetchlog",
-                        "Success(pack)" if (rcvd==total) else "Fail(pack)",
+                        "Success(pack)\n" if (rcvd==total) else "Fail(pack)\n",
                         fetched_files = rcvd,
                         total_to_fetch = total)
         except Exception:
             self.ui.log("remotefilefetchlog",
-                        "Fail(pack)",
+                        "Fail(pack)\n",
                         fetched_files = rcvd,
                         total_to_fetch = total)
             raise
@@ -612,5 +612,5 @@ class fileserverclient(object):
 
     def logstacktrace(self):
         import traceback
-        self.ui.log('remotefilelog', 'excess remotefilelog fetching:\n%s',
+        self.ui.log('remotefilelog', 'excess remotefilelog fetching:\n%s\n',
                     ''.join(traceback.format_stack()))
