@@ -692,7 +692,7 @@ class cg1packer(object):
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
-        def makelookupmflinknode(dir):
+        def makelookupmflinknode(dir, nodes):
             if fastpathlinkrev:
                 assert not dir
                 return mfs.__getitem__
@@ -713,7 +713,7 @@ class cg1packer(object):
                 the client before you can trust the list of files and
                 treemanifests to send.
                 """
-                clnode = tmfnodes[dir][x]
+                clnode = nodes[x]
                 mdata = mfl.get(dir, x).readfast(shallow=True)
                 for p, n, fl in mdata.iterentries():
                     if fl == 't': # subdirectory manifest
@@ -733,15 +733,13 @@ class cg1packer(object):
 
         size = 0
         while tmfnodes:
-            dir = min(tmfnodes)
-            nodes = tmfnodes[dir]
+            dir, nodes = tmfnodes.popitem()
             prunednodes = self.prune(dirlog(dir), nodes, commonrevs)
             if not dir or prunednodes:
                 for x in self._packmanifests(dir, prunednodes,
-                                             makelookupmflinknode(dir)):
+                                             makelookupmflinknode(dir, nodes)):
                     size += len(x)
                     yield x
-            del tmfnodes[dir]
         self._verbosenote(_('%8.i (manifests)\n') % size)
         yield self._manifestsdone()
 
