@@ -232,7 +232,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
       return makeFuture<Hash>(
           InodeError(EINVAL, fileInode, "file is a symlink"));
     }
-    return fileInode->getSHA1();
+    return fileInode->getSha1();
   });
 }
 

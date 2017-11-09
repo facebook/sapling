@@ -251,7 +251,7 @@ bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
     return result.value();
   }
 
-  return getSHA1().value() == Hash::sha1(&blob.getContents());
+  return getSha1().value() == Hash::sha1(&blob.getContents());
 }
 
 folly::Future<bool> FileInode::isSameAs(const Hash& blobID, mode_t mode) {
@@ -262,7 +262,7 @@ folly::Future<bool> FileInode::isSameAs(const Hash& blobID, mode_t mode) {
 
   return getMount()->getObjectStore()->getBlobMetadata(blobID).then(
       [self = inodePtrFromThis()](const BlobMetadata& metadata) {
-        return self->getSHA1().value() == metadata.sha1;
+        return self->getSha1().value() == metadata.sha1;
       });
 }
 
@@ -357,10 +357,10 @@ Future<string> FileInode::getxattr(StringPiece name) {
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSHA1().then([](Hash hash) { return hash.toString(); });
+  return getSha1().then([](Hash hash) { return hash.toString(); });
 }
 
-Future<Hash> FileInode::getSHA1(bool failIfSymlink) {
+Future<Hash> FileInode::getSha1(bool failIfSymlink) {
   auto state = state_.wlock();
   state->checkInvariants();
 
@@ -686,7 +686,7 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
   // Update the FileInode to indicate that we are materialized now
   state->blob.reset();
   state->hash = folly::none;
-  
+
   return makeFuture();
 }
 
