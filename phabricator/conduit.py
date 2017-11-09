@@ -32,13 +32,14 @@ class ClientError(Exception):
 
 class Client(object):
     def __init__(self, url=None, user=None, cert=None, act_as=None,
-                 ca_certs=None):
+                 ca_certs=None, timeout=None):
         self._url = url or DEFAULT_URL
         self._user = user
         self._cert = cert
         self._actas = act_as or self._user
         self._connection = None
         self._ca_certs = ca_certs
+        self._timeout = timeout
 
     def apply_arcconfig(self, config):
         self._url = config.get('conduit_uri', DEFAULT_URL)
@@ -61,7 +62,12 @@ class Client(object):
         self._actas = self._user
         self._connection = None
 
-    def call(self, method, args, timeout=DEFAULT_TIMEOUT):
+    def call(self, method, args, timeout=None):
+        if timeout is None:
+            if self._timeout is None:
+                timeout = DEFAULT_TIMEOUT
+            else:
+                timeout = self._timeout
         token = '%d' % time.time()
         sig = token + self._cert
         args['__conduit__'] = {

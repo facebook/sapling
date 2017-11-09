@@ -24,7 +24,9 @@ def extsetup(ui):
         _('show changes since last `arc diff`')))
 
 def _differentialhash(ui, repo, phabrev):
-    client = conduit.Client()
+    timeout = repo.ui.configint('ssl', 'timeout', 5)
+    ca_certs = repo.ui.configpath('web', 'cacerts')
+    client = conduit.Client(ca_certs=ca_certs, timeout=timeout)
     try:
         client.apply_arcconfig(arcconfig.load_for_path(repo.root))
 
