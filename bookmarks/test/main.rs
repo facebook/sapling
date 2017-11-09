@@ -15,6 +15,8 @@ extern crate tokio_core;
 extern crate bookmarks;
 extern crate filebookmarks;
 extern crate membookmarks;
+extern crate mercurial_types;
+extern crate mercurial_types_mocks;
 extern crate storage_types;
 
 use std::cell::RefCell;
@@ -27,16 +29,18 @@ use tokio_core::reactor::Core;
 use bookmarks::BookmarksMut;
 use filebookmarks::FileBookmarks;
 use membookmarks::MemBookmarks;
+use mercurial_types::NodeHash;
+use mercurial_types_mocks::nodehash;
 use storage_types::Version;
 
 fn basic<B>(bookmarks: B, core: &mut Core)
 where
-    B: BookmarksMut<Value = String>,
+    B: BookmarksMut<Value = NodeHash>,
 {
-    let foo = "foo".to_string();
-    let one = "1".to_string();
-    let two = "2".to_string();
-    let three = "3".to_string();
+    let foo = b"foo";
+    let one = nodehash::ONES_HASH;
+    let two = nodehash::TWOS_HASH;
+    let three = nodehash::THREES_HASH;
 
     assert_eq!(core.run(bookmarks.get(&foo)).unwrap(), None);
 
@@ -77,21 +81,16 @@ where
 
 fn list<B>(bookmarks: B, core: &mut Core)
 where
-    B: BookmarksMut<Value = String>,
+    B: BookmarksMut<Value = NodeHash>,
 {
     let one = b"1";
     let two = b"2";
     let three = b"3";
+    let hash = nodehash::ONES_HASH;
 
-    let _ = core.run(bookmarks.create(&one, &"foo".to_string()))
-        .unwrap()
-        .unwrap();
-    let _ = core.run(bookmarks.create(&two, &"bar".to_string()))
-        .unwrap()
-        .unwrap();
-    let _ = core.run(bookmarks.create(&three, &"baz".to_string()))
-        .unwrap()
-        .unwrap();
+    let _ = core.run(bookmarks.create(&one, &hash)).unwrap().unwrap();
+    let _ = core.run(bookmarks.create(&two, &hash)).unwrap().unwrap();
+    let _ = core.run(bookmarks.create(&three, &hash)).unwrap().unwrap();
 
     let mut result = core.run(bookmarks.keys().collect()).unwrap();
     result.sort();
@@ -103,10 +102,10 @@ where
 fn persistence<F, B>(mut new_bookmarks: F, core: Rc<RefCell<Core>>)
 where
     F: FnMut() -> B,
-    B: BookmarksMut<Value = String>,
+    B: BookmarksMut<Value = NodeHash>,
 {
-    let foo = "foo".to_string();
-    let bar = "bar".to_string();
+    let foo = b"foo";
+    let bar = nodehash::ONES_HASH;
 
     let version = {
         let bookmarks = new_bookmarks();
