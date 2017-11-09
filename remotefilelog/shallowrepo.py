@@ -99,7 +99,7 @@ def makeunionstores(repo):
             localmetadata, remotemetadata, writestore=localmetadata)
 
     fileservicedatawrite = cachecontent
-    fileservicehistorywrite = cachecontent
+    fileservicehistorywrite = cachemetadata
     if repo.ui.configbool('remotefilelog', 'fetchpacks'):
         fileservicedatawrite = packcontentstore
         fileservicehistorywrite = packmetadatastore
