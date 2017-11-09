@@ -96,10 +96,18 @@ from remotefilelog.contentstore import (
 from remotefilelog.metadatastore import (
     unionmetadatastore,
 )
-from remotefilelog.datapack import datapackstore, mutabledatapack
-from remotefilelog.historypack import historypackstore, mutablehistorypack
+from remotefilelog.datapack import (
+    datapackstore,
+    mutabledatapack,
+)
+from remotefilelog.historypack import (
+    historypackstore,
+    mutablehistorypack,
+)
 from remotefilelog import shallowrepo, shallowutil, wirepack
-from remotefilelog.repack import _runrepack
+from remotefilelog.repack import (
+    _runrepack,
+)
 import cstore
 
 import os
