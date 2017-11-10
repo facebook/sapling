@@ -642,7 +642,6 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
   // We must not be materialized yet
   CHECK(state->hash.hasValue());
 
-  Hash sha1;
   auto filePath = getLocalPath();
 
   if ((openFlags & O_TRUNC) != 0) {
@@ -653,7 +652,8 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     InodeTimestamps timeStamps;
     state->file = Overlay::openFile(
         filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
-    sha1 = Hash::sha1(ByteRange{});
+    state->sha1Valid = false;
+    storeSha1(state, Hash::sha1(ByteRange{}));
   } else {
     if (!state->blob) {
       // TODO: Load the blob using the non-blocking Future APIs.
@@ -672,16 +672,23 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     InodeTimestamps timeStamps;
     state->file = Overlay::openFile(
         filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
+    state->sha1Valid = false;
 
-    // TODO: Fetch the metadata with the non-blocking Future APIs.  See the TODO
-    // comment from the getObjectStore()->getBlob() call above.
-    sha1 = getObjectStore()->getBlobMetadata(state->hash.value()).get().sha1;
+    // If we have a SHA-1 from the metadata, apply it to the new file.  This
+    // saves us from recomputing it again in the case that something opens the
+    // file read/write and closes it without changing it.
+    auto metadata = getObjectStore()->getBlobMetadata(state->hash.value());
+    if (metadata.isReady()) {
+      storeSha1(state, metadata.value().sha1);
+    } else {
+      // Leave the SHA-1 attribute dirty - it is not very likely that a file
+      // will be opened for writing, closed without changing, and then have its
+      // SHA-1 queried via Thrift or xattr. If so, the SHA-1 will be recomputed
+      // as needed. That said, it's perhaps cheaper to hash now (SHA-1 is
+      // hundreds of MB/s) while the data is accessible in the blob than to read
+      // the file out of the overlay later.
+    }
   }
-
-  // Copy and apply the sha1 to the new file.  This saves us from
-  // recomputing it again in the case that something opens the file
-  // read/write and closes it without changing it.
-  storeSha1(state, sha1);
 
   // Update the FileInode to indicate that we are materialized now
   state->blob.reset();
