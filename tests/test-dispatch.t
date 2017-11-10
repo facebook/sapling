@@ -42,6 +42,15 @@ Missing parameter for early option:
   hg log [OPTION]... [FILE]
   (use 'hg log -h' to show more help)
 
+Parsing of early options should stop at "--":
+
+  $ hg cat -- --config=hooks.pre-cat=false
+  --config=hooks.pre-cat=false: no such file in rev cb9a9f314b8b
+  [1]
+  $ hg cat -- --debugger
+  --debugger: no such file in rev cb9a9f314b8b
+  [1]
+
 [defaults]
 
   $ hg cat a

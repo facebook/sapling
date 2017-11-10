@@ -699,8 +699,28 @@ def _earlygetopt(aliases, args):
     return values
 
 def _earlyreqoptbool(req, name, aliases):
-    assert len(aliases) == 1
-    return aliases[0] in req.args
+    """Peek a boolean option without using a full options table
+
+    >>> req = request([b'x', b'--debugger'])
+    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
+    True
+
+    >>> req = request([b'x', b'--', b'--debugger'])
+    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
+    False
+    """
+    try:
+        argcount = req.args.index("--")
+    except ValueError:
+        argcount = len(req.args)
+    value = False
+    pos = 0
+    while pos < argcount:
+        arg = req.args[pos]
+        if arg in aliases:
+            value = True
+        pos += 1
+    return value
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
