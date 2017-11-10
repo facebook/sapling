@@ -73,3 +73,39 @@ Making a client repo
   
   ec2426147f0e39dbc9cef599b066be6035ce691d\x00file:$TESTTMP/server\x00default (esc)
   3e1487808078543b0af6d10dadf5d46943578db0\x00file:$TESTTMP/server\x00wat (esc)
+
+Making a new server
+-------------------
+
+  $ cd ..
+  $ hg init server2
+  $ cd server2
+  $ hg pull ../server/
+  pulling from ../server/
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 9 changesets with 9 changes to 9 files (+1 heads)
+  adding remote bookmark bar
+  adding remote bookmark foo
+  new changesets 18d04c59bb5d:3e1487808078
+  (run 'hg heads' to see heads)
+
+Pulling form the new server
+---------------------------
+  $ cd ../client/
+  $ hg pull ../server2/
+  pulling from ../server2/
+  searching for changes
+  no changes found
+  $ cat .hg/remotenames/bookmarks
+  0
+  
+  87d6d66763085b629e6d7ed56778c79827273022\x00file:$TESTTMP/server2\x00bar (esc)
+  62615734edd52f06b6fb9c2beb429e4fe30d57b8\x00file:$TESTTMP/server2\x00foo (esc)
+  $ cat .hg/remotenames/branches
+  0
+  
+  ec2426147f0e39dbc9cef599b066be6035ce691d\x00file:$TESTTMP/server2\x00default (esc)
+  3e1487808078543b0af6d10dadf5d46943578db0\x00file:$TESTTMP/server2\x00wat (esc)
