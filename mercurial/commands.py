@@ -3918,7 +3918,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
 
 @command('^pull',
     [('u', 'update', None,
-     _('update to new branch head if changesets were pulled')),
+     _('update to new branch head if new descendants were pulled')),
     ('f', 'force', None, _('run even when remote repository is unrelated')),
     ('r', 'rev', [], _('a remote changeset intended to be added'), _('REV')),
     ('B', 'bookmark', [], _("bookmark to pull"), _('BOOKMARK')),
