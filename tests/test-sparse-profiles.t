@@ -271,3 +271,81 @@ Test file permissions changing across a sparse profile change
   $ ls -l b
   -rwxr-xr-x* b (glob)
 
+  $ cd ..
+
+Test profile discovery
+  $ hg init sparseprofiles
+  $ cd sparseprofiles
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > EOF
+  $ mkdir -p profiles/foo profiles/bar
+  $ touch profiles/README.txt
+  $ cat > profiles/foo/spam <<EOF
+  > %include profiles/bar/eggs
+  > EOF
+  $ cat > profiles/bar/eggs <<EOF
+  > [include]
+  > profiles
+  > EOF
+  $ touch profiles/foo/monty
+  $ touch profiles/bar/python
+  $ hg add -q profiles
+  $ hg commit -qm 'created profiles'
+  $ hg sparse --enable-profile profiles/foo/spam
+  $ hg sparse --list-profiles
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs
+  * profiles/foo/spam
+  $ hg sparse --list-profiles -T json
+  [
+   {
+    "active": "included",
+    "path": "profiles/bar/eggs"
+   },
+   {
+    "active": "active",
+    "path": "profiles/foo/spam"
+   }
+  ]
+  $ cat >> .hg/hgrc <<EOF
+  > [sparse]
+  > profile_directory = profiles/
+  > EOF
+  $ hg sparse --list-profiles
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs
+    profiles/bar/python
+    profiles/foo/monty
+  * profiles/foo/spam
+  $ hg sparse --list-profiles -T json
+  [
+   {
+    "active": "included",
+    "path": "profiles/bar/eggs"
+   },
+   {
+    "active": "inactive",
+    "path": "profiles/bar/python"
+   },
+   {
+    "active": "inactive",
+    "path": "profiles/foo/monty"
+   },
+   {
+    "active": "active",
+    "path": "profiles/foo/spam"
+   }
+  ]
+
+Profiles are loaded from the manifest, so excluding a profile directory should
+not hamper listing.
+
+  $ hg sparse --exclude profiles/bar
+  $ hg sparse --list-profiles
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs
+    profiles/bar/python
+    profiles/foo/monty
+  * profiles/foo/spam

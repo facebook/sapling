@@ -655,6 +655,88 @@ def _wraprepo(ui, repo):
     repo.signaturecache = {}
     repo.__class__ = SparseRepo
 
+ProfileInfo = collections.namedtuple('ProfileInfo', 'path active')
+# A profile is either active, inactive or included; the latter is a profile
+# included (transitively) by an active profile.
+PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = range(3)
+
+def _discover(ui, repo):
+    """Produce a list of available profiles with metadata
+
+    Returns a list of ProfileInfo objects, paths are relative to the
+    repository root, the list is sorted by path.
+
+    If no sparse.profile_directory path is configured, will only
+    list active and included profiles.
+
+    README(.*) files are filtered out.
+
+    """
+    included = repo.getactiveprofiles()
+    sparse = repo.vfs.read('sparse')
+    _, _, active = repo.readsparseconfig(sparse)
+    active = set(active)
+
+    profile_directory = ui.config('sparse', 'profile_directory')
+    available = set()
+    if profile_directory is not None:
+        if (os.path.isabs(profile_directory) or
+                profile_directory.startswith('../')):
+            raise error.Abort(
+                _('sparse.profile_directory must be relative to the '
+                  'repository root'))
+        if not profile_directory.endswith('/'):
+            profile_directory += '/'
+
+        ctx = repo['.']
+        mf = ctx.manifest()
+
+        tmf = None
+        if util.safehasattr(mf, '_treemanifest'):
+            # Hybrid manifest, use the (much) faster subtree support
+            tmf = mf._treemanifest()
+
+        if tmf is not None:
+            # a treemanifest is available for this revision
+            matcher = matchmod.match(
+                repo.root, repo.getcwd(),
+                patterns=['path:' + profile_directory])
+            files = tmf.matches(matcher)
+        else:
+            files = (f for f in mf if f.startswith(profile_directory))
+
+        available.update(
+            fname for fname in files
+            if not os.path.basename(fname).startswith('README.') and
+            not fname.endswith('/README'))
+
+    return [ProfileInfo(p, (
+                PROFILE_ACTIVE if p in active else
+                PROFILE_INCLUDED if p in included else
+                PROFILE_INACTIVE))
+            for p in sorted(available | included)]
+
+def _listprofiles(ui, repo, opts):
+    chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
+    labels = {
+        PROFILE_INACTIVE: 'inactive',
+        PROFILE_INCLUDED: 'included',
+        PROFILE_ACTIVE: 'active',
+    }
+    with ui.formatter('sparse', opts) as fm:
+        if fm.isplain():
+            ui.write_err(
+                _('symbols: * = active profile, ~ = transitively '
+                  'included\n'),
+                label='sparse.profile.legend')
+        for info in _discover(ui, repo):
+            fm.startitem()
+            label = 'sparse.profile.' + labels[info.active]
+            fm.plain('%1s ' % chars[info.active], label=label)
+            fm.data(active=labels[info.active])
+            fm.write(b'path', '%s', info.path, label=label)
+            fm.plain('\n')
+
 @command('^sparse', [
     ('I', 'include', False, _('include files in the sparse checkout')),
     ('X', 'exclude', False, _('exclude files in the sparse checkout')),
@@ -668,6 +750,7 @@ def _wraprepo(ui, repo):
     ('', 'reset', False, _('makes the repo full again')),
     ('', 'cwd-list', False, _('list the full contents of the current '
                               'directory')),
+    ('', 'list-profiles', False, _('list available profiles')),
     ] + commands.templateopts,
     _('[--OPTION] PATTERN...'))
 def sparse(ui, repo, *pats, **opts):
@@ -713,6 +796,10 @@ def sparse(ui, repo, *pats, **opts):
     are excluded by the current sparse checkout are annotated with a hyphen
     ('-') before the name.
 
+    --list-profiles lists all available profiles, indicating which ones are
+    currently active. Activated profiles are marked with a *, profiles
+    included transitively are marked with a ~.
+
     The following config option defines whether sparse treats supplied
     paths as relative to repo root or to the current working dir for
     include and exclude options:
@@ -727,6 +814,15 @@ def sparse(ui, repo, *pats, **opts):
         [sparse]
         enablereporootpaths = on
 
+    You can configure a path to find sparse profiles in; this path is
+    used to discover available sparse profiles. Nested directories are
+    reflected in the UI.
+
+        [sparse]
+        profile_directory = tools/scm/sparse
+
+    It is not set by default.
+
     Returns 0 if editing the sparse checkout succeeds.
     """
     include = opts.get('include')
@@ -740,8 +836,10 @@ def sparse(ui, repo, *pats, **opts):
     refresh = opts.get('refresh')
     reset = opts.get('reset')
     cwdlist = opts.get('cwd_list')
+    listprofiles = opts.get('list_profiles')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-                 importrules, refresh, clearrules, reset, cwdlist])
+                 importrules, refresh, clearrules, reset, cwdlist,
+                 listprofiles])
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
@@ -779,6 +877,9 @@ def sparse(ui, repo, *pats, **opts):
 
     if cwdlist:
         _cwdlist(repo)
+
+    if listprofiles:
+        _listprofiles(ui, repo, opts)
 
 def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             delete=False, enableprofile=False, disableprofile=False,
