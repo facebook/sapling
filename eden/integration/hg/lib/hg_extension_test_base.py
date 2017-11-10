@@ -8,7 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-from typing import List
+from typing import Dict, List, Optional
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
 import os
@@ -135,8 +135,14 @@ class EdenHgTestCase(testcase.EdenTestCase):
         with open(edenrc, 'w') as f:
             config.write(f)
 
-    def hg(self, *args, stdout_charset='utf-8', cwd=None, shell=False,
-           hgeditor=None):
+    def hg(
+        self,
+        *args: str,
+        stdout_charset: str = 'utf-8',
+        cwd: Optional[str] = None,
+        shell: bool = False,
+        hgeditor: Optional[str] = None
+    ) -> str:
         '''Runs `hg.real` with the specified args in the Eden mount.
 
         If hgeditor is specified, it will be used as the value of the $HGEDITOR
@@ -198,7 +204,12 @@ class EdenHgTestCase(testcase.EdenTestCase):
         '''Returns the output of `hg status` as a string.'''
         return self.repo.status()
 
-    def assert_status(self, expected, msg=None, check_ignored=True):
+    def assert_status(
+        self,
+        expected: Dict[str, str],
+        msg: Optional[str] = None,
+        check_ignored: bool = True
+    ):
         '''Asserts the output of `hg status`. `expected` is a dict where keys
         are paths relative to the repo root and values are the single-character
         string that represents the status: 'M', 'A', 'R', '!', '?', 'I'.

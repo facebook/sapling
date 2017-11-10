@@ -13,6 +13,7 @@ import os
 import shlex
 import subprocess
 import tempfile
+from typing import Any, List, Optional
 
 from . import repobase
 
@@ -64,8 +65,16 @@ class HgRepository(repobase.Repository):
         self.hg_bin = distutils.spawn.find_executable(
             'hg.real') or distutils.spawn.find_executable('hg')
 
-    def hg(self, *args, stdout_charset='utf-8', stdout=subprocess.PIPE,
-           stderr=subprocess.PIPE, shell=False, hgeditor=None, cwd=None):
+    def hg(
+        self,
+        *args: str,
+        stdout_charset: str = 'utf-8',
+        stdout: Any = subprocess.PIPE,
+        stderr: Any = subprocess.PIPE,
+        shell: bool = False,
+        hgeditor: Optional[str] = None,
+        cwd: Optional[str] = None
+    ) -> Optional[str]:
         if shell:
             cmd = self.hg_bin + ' ' + args[0]
         else:
@@ -86,6 +95,8 @@ class HgRepository(repobase.Repository):
             raise HgError(ex) from ex
         if completed_process.stdout is not None:
             return completed_process.stdout.decode(stdout_charset)
+        else:
+            return None
 
     def init(self, hgrc=None):
         '''
@@ -110,16 +121,16 @@ class HgRepository(repobase.Repository):
     def get_canonical_root(self):
         return self.path
 
-    def add_files(self, paths):
+    def add_files(self, paths: List[str]) -> None:
         # add_files() may be called for files that are already tracked.
         # hg will print a warning, but this is fine.
         self.hg('add', *paths)
 
     def commit(self,
                message: str,
-               author_name: str=None,
-               author_email: str=None,
-               date: datetime.datetime=None,
+               author_name: Optional[str]=None,
+               author_email: Optional[str]=None,
+               date: Optional[datetime.datetime]=None,
                amend: bool=False) -> str:
         '''
         - message Commit message to use.

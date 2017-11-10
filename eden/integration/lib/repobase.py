@@ -1,14 +1,11 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016-present, Facebook, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import datetime
 import errno
@@ -25,7 +22,7 @@ class Repository(object):
         self.commit_time = datetime.datetime(year=2000, month=1, day=1)
         self.commit_time_delta = datetime.timedelta(seconds=1)
 
-    def get_commit_time(self):
+    def get_commit_time(self) -> datetime.datetime:
         '''
         Get a datetime object to use for the next commit.
 
@@ -80,7 +77,9 @@ class Repository(object):
         if dirname:
             self.mkdir(dirname)
 
-    def write_file(self, path, contents, mode=None, add=True):
+    def write_file(
+        self, path: str, contents: str, mode: int=None, add: bool=True
+    ) -> None:
         '''
         Create or overwrite a file with the given contents.
         '''
