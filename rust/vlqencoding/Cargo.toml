@@ -1,0 +1,8 @@
+[package]
+name = "vlqencoding"
+version = "0.1.0"
+
+[dependencies]
+
+[dev-dependencies]
+quickcheck = "0.4"
