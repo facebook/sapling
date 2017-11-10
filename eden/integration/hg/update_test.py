@@ -232,6 +232,19 @@ class UpdateTest(EdenHgTestCase):
             ':other was specified explicitly.'
         )
 
+    def test_update_modified_file_to_removed_file_taking_local(self):
+        self.write_file('some_new_file.txt', 'I am new!\n')
+        self.hg('add', 'some_new_file.txt')
+        self.repo.commit('Commit a new file.')
+        new_contents = 'Make some changes to that new file.\n'
+        self.write_file(
+            'some_new_file.txt', new_contents
+        )
+
+        self.hg('update', '.^', '--merge', '--tool', ':local')
+        self.assertEqual(new_contents, self.read_file('some_new_file.txt'))
+        self.assert_status({'some_new_file.txt': 'A'})
+
     def test_update_ignores_untracked_directory(self):
         head = self.repo.log()[-1]
         self.mkdir('foo/bar')
