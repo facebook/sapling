@@ -214,6 +214,24 @@ class UpdateTest(EdenHgTestCase):
         self.assertTrue(os.path.isfile(expected_backup_file))
         self.assertEqual(modified_contents, self.read_file(path_to_backup))
 
+    def test_update_modified_file_to_removed_file_taking_other(self):
+        self.write_file('some_new_file.txt', 'I am new!\n')
+        self.hg('add', 'some_new_file.txt')
+        self.repo.commit('Commit a new file.')
+        self.write_file(
+            'some_new_file.txt', 'Make some changes to that new file.\n'
+        )
+
+        self.hg('update', '.^', '--merge', '--tool', ':other')
+        self.assertFalse(os.path.exists(self.get_path('some_new_file.txt')))
+        self.assertFalse(
+            os.path.isfile(
+                os.path.join(self.mount, '.hg/origbackups/some_new_file.txt')
+            ),
+            msg='There should not be a backup file because '
+            ':other was specified explicitly.'
+        )
+
     def test_update_ignores_untracked_directory(self):
         head = self.repo.log()[-1]
         self.mkdir('foo/bar')

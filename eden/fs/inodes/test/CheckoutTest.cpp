@@ -505,6 +505,30 @@ TEST(Checkout, modifyThenRevert) {
   EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
 }
 
+TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  TestMount testMount{makeTestHash("1"), builder1};
+
+  auto builder2 = builder1.clone();
+  builder2.setFile("src/test.c", "// Unit test.\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto checkoutTo2 = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  ASSERT_TRUE(checkoutTo2.isReady());
+
+  testMount.overwriteFile("src/test.c", "temporary edit\n");
+  auto checkoutTo1 = testMount.getEdenMount()->checkout(makeTestHash("1"));
+  ASSERT_TRUE(checkoutTo1.isReady());
+
+  EXPECT_THAT(
+      checkoutTo1.get(),
+      UnorderedElementsAre(
+          makeConflict(ConflictType::MODIFIED_REMOVED, "src/test.c")));
+}
+
 void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
