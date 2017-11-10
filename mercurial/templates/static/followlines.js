@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // element
     var selectableElements = Array.prototype.filter.call(
         sourcelines.children,
-        function(x) { return x.tagName === selectableTag });
+        function(x) { return x.tagName === selectableTag; });
 
     var btnTitleStart = 'start following lines history from here';
     var btnTitleEnd = 'terminate line block selection here';
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // extend DOM with CSS class for selection highlight and action buttons
-    var followlinesButtons = []
+    var followlinesButtons = [];
     for (var i = 0; i < selectableElements.length; i++) {
         selectableElements[i].classList.add('followlines-select');
         var btn = createButton();
