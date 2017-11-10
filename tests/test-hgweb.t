@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 9066
+  content-length: 9044
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -536,10 +536,9 @@ static file
   }
   
   div#followlines {
-    background-color: #B7B7B7;
-    border: 1px solid #CCC;
-    border-radius: 5px;
-    padding: 4px;
+    background-color: #FFF;
+    border: 1px solid #d9d8d1;
+    padding: 5px;
     position: fixed;
   }
   
