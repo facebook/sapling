@@ -147,7 +147,7 @@ def dispatch(req):
     try:
         if not req.ui:
             req.ui = uimod.ui.load()
-        if '--traceback' in req.args:
+        if _earlyreqoptbool(req, 'traceback', ['--traceback']):
             req.ui.setconfig('ui', 'traceback', 'on', '--traceback')
 
         # set ui streams from the request
@@ -275,7 +275,7 @@ def _runcatch(req):
             if not debugger or ui.plain():
                 # if we are in HGPLAIN mode, then disable custom debugging
                 debugger = 'pdb'
-            elif '--debugger' in req.args:
+            elif _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 # This import can be slow for fancy debuggers, so only
                 # do it when absolutely necessary, i.e. when actual
                 # debugging has been requested
@@ -289,7 +289,7 @@ def _runcatch(req):
             debugmortem[debugger] = debugmod.post_mortem
 
             # enter the debugger before command execution
-            if '--debugger' in req.args:
+            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 ui.warn(_("entering debugger - "
                         "type c to continue starting hg or h for help\n"))
 
@@ -305,7 +305,7 @@ def _runcatch(req):
                 ui.flush()
         except: # re-raises
             # enter the debugger when we hit an exception
-            if '--debugger' in req.args:
+            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 traceback.print_exc()
                 debugmortem[debugger](sys.exc_info()[2])
             raise
@@ -698,6 +698,10 @@ def _earlygetopt(aliases, args):
             pos += 1
     return values
 
+def _earlyreqoptbool(req, name, aliases):
+    assert len(aliases) == 1
+    return aliases[0] in req.args
+
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
     hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
@@ -785,7 +789,7 @@ def _dispatch(req):
     if req.repo:
         uis.add(req.repo.ui)
 
-    if '--profile' in args:
+    if _earlyreqoptbool(req, 'profile', ['--profile']):
         for ui_ in uis:
             ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
