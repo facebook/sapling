@@ -51,6 +51,7 @@ cpp_library(
         "@/folly/executors:global_executor",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
+        "@/folly/futures:shared_promise",
         "@/folly/io:iobuf",
         "@/folly/io/async:async",
         "@/folly/system:thread_name",

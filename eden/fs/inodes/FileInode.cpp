@@ -73,16 +73,26 @@ void FileInode::State::State::checkInvariants() {
   if (blob) {
     // 'loaded'
     CHECK(hash);
+    CHECK(!blobLoadingPromise);
+    CHECK(!file);
+    CHECK(!sha1Valid);
+    DCHECK_EQ(blob->getHash(), hash.value());
+  } else if (blobLoadingPromise) {
+    // 'loading'
+    CHECK(hash);
+    CHECK(!blob);
     CHECK(!file);
     CHECK(!sha1Valid);
   } else if (file) {
     // 'materialized'
     CHECK(!hash);
+    CHECK(!blobLoadingPromise);
     CHECK(!blob);
     CHECK(file);
   } else {
     // 'not loaded'
     CHECK(hash);
+    CHECK(!blobLoadingPromise);
     CHECK(!blob);
     CHECK(!file);
     CHECK(!sha1Valid);
@@ -575,93 +585,133 @@ size_t FileInode::write(folly::StringPiece data, off_t off) {
   return xfer;
 }
 
+// Waits until inode is either in 'loaded' or 'materialized' state.
 Future<Unit> FileInode::ensureDataLoaded() {
-  auto state = state_.wlock();
+  Future<Unit> resultFuture;
+  auto blobFuture = Future<std::shared_ptr<const Blob>>::makeEmpty();
 
-  if (!state->hash.hasValue()) {
-    // We should always have the file open if we are materialized.
-    CHECK(state->file);
-    return makeFuture();
+  {
+    // Scope the lock so that we can't deadlock on the completion of
+    // the blobFuture below.
+    auto state = state_.wlock();
+
+    SCOPE_SUCCESS {
+      state->checkInvariants();
+    };
+
+    if (state->blobLoadingPromise.hasValue()) {
+      // If we're already loading, latch on to the in-progress load
+      return state->blobLoadingPromise->getFuture();
+    }
+
+    // Nothing to do if loaded or materialized.
+    if (state->file || state->blob) {
+      return makeFuture();
+    }
+
+    // We need to load the blob data.  Arrange to do so in a way that
+    // multiple callers can wait for.
+    folly::SharedPromise<Unit> promise;
+    // The resultFuture will complete after we have loaded the blob
+    // and updated state_.
+    resultFuture = promise.getFuture();
+    // Move the promise into the Optional type that we can test
+    // in a subsequent call to ensureDataLoaded().
+    state->blobLoadingPromise.emplace(std::move(promise));
+    // Start the load of the blob.
+    blobFuture = getObjectStore()->getBlob(state->hash.value());
   }
 
-  if (state->blob) {
-    DCHECK_EQ(state->blob->getHash(), state->hash.value());
-    return makeFuture();
-  }
+  auto self = inodePtrFromThis(); // separate line for formatting
+  blobFuture.then([self](std::shared_ptr<const Blob> blob) {
+    folly::SharedPromise<Unit> promise;
 
-  // Load the blob data.
-  auto blobFuture = getObjectStore()->getBlob(state->hash.value());
+    {
+      auto state = self->state_.wlock();
+      state->checkInvariants();
+      SCOPE_SUCCESS {
+        state->checkInvariants();
+      };
 
-  // TODO: We really should defer this using a Future rather than calling get()
-  // here and blocking until the load completes.  However, for that to work we
-  // will need to add some extra data tracking whether or not we are already in
-  // the process of loading the data.  We need to avoid multiple threads all
-  // trying to load the data at the same time.
-  //
-  // For now doing a blocking load with the inode_->state_ lock held ensures
-  // that only one thread can load the data at a time.  It's pretty unfortunate
-  // to block with the lock held, though :-(
-  state->blob = blobFuture.get();
-  state->checkInvariants();
-  return makeFuture();
+      // Since the load doesn't hold the state lock for its duration,
+      // sanity check that the inode is still in loading state.
+      //
+      // Note that FileInode can transition from loading to materialized
+      // with a concurrent materializeForWrite(O_TRUNC), in which case the
+      // state would have transitioned to 'materialized' before this
+      // callback runs.
+      if (state->blobLoadingPromise) {
+        // Transition to 'loaded' state.
+        state->blob = std::move(blob);
+        promise = std::move(*state->blobLoadingPromise);
+        state->blobLoadingPromise.clear();
+      } else {
+        CHECK(state->file);
+        // The load raced with a materializeForWrite(O_TRUNC).  Nothing left to
+        // do here: ensureDataLoaded() guarantees `blob` or `file` is defined
+        // after its completion, and the materializeForWrite(O_TRUNC) fulfilled
+        // the promise.
+      }
+    }
+
+    // Call the Future's subscribers while the state_ lock is not held.
+    // Even if the FileInode has transitioned to a materialized state, any
+    // pending loads must be unblocked.
+    promise.setValue();
+  });
+
+  return resultFuture;
 }
 
+namespace {
+folly::IOBuf createOverlayHeaderFromTimestamps(
+    const InodeBase::InodeTimestamps& timestamps) {
+  return Overlay::createHeader(
+      Overlay::kHeaderIdentifierFile,
+      Overlay::kHeaderVersion,
+      timestamps.atime,
+      timestamps.ctime,
+      timestamps.mtime);
+}
+} // namespace
+
+// Waits until inode is in 'materialized' state.
 Future<Unit> FileInode::materializeForWrite(int openFlags) {
-  auto state = state_.wlock();
-
-  SCOPE_SUCCESS {
-    state->checkInvariants();
-  };
-
-  // If we already have a materialized overlay file then we don't
-  // need to do much
-  if (state->file) {
-    CHECK(!state->hash.hasValue());
-    if ((openFlags & O_TRUNC) != 0) {
-      // truncating a file that we already have open
-      state->sha1Valid = false;
-      checkUnixError(ftruncate(state->file.fd(), Overlay::kHeaderLength));
-      auto emptySha1 = Hash::sha1(ByteRange{});
-      storeSha1(state, emptySha1);
-    } else {
-      // no truncate option,overlay file contain old header
-      // we have to update only header but not contents
-    }
+  // Fast-path O_TRUNC for all states: blobs never need to be loaded from the
+  // backing store.
+  if (openFlags & O_TRUNC) {
+    materializeAndTruncate();
     return makeFuture();
   }
 
-  // Add header to the overlay File.
-  auto header = Overlay::createHeader(
-      Overlay::kHeaderIdentifierFile,
-      Overlay::kHeaderVersion,
-      state->timeStamps.atime,
-      state->timeStamps.ctime,
-      state->timeStamps.mtime);
-  auto iov = header.getIov();
+  // Not O_TRUNC, so ensure we have a blob (or are already materialized).
+  return ensureDataLoaded().then([self = inodePtrFromThis()]() {
+    auto state = self->state_.wlock();
 
-  // We must not be materialized yet
-  CHECK(state->hash.hasValue());
+    state->checkInvariants();
+    SCOPE_SUCCESS {
+      state->checkInvariants();
+    };
 
-  auto filePath = getLocalPath();
-
-  if ((openFlags & O_TRUNC) != 0) {
-    folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size());
-    // We don't want to set the in-memory timestamps to the timestamps returned
-    // by the below openFile function as we just wrote these timestamps in to
-    // overlay using writeFileAtomic.
-    InodeTimestamps timeStamps;
-    state->file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
-    state->sha1Valid = false;
-    storeSha1(state, Hash::sha1(ByteRange{}));
-  } else {
-    if (!state->blob) {
-      // TODO: Load the blob using the non-blocking Future APIs.
-      // However, just as in ensureDataLoaded() above we will also need
-      // to add a mechanism to wait for already in-progress loads.
-      auto blobFuture = getObjectStore()->getBlob(state->hash.value());
-      state->blob = blobFuture.get();
+    if (state->file) {
+      // This conditional will be hit if materializeForWrite is called without
+      // O_TRUNC, issues a load, and then materializeForWrite is called _with_
+      // O_TRUNC before ensureDataLoaded() completes.  The prior O_TRUNC would
+      // have completed synchronously and switched the inode into the
+      // 'materialized' state, in which case there is nothing left to do here.
+      return;
     }
+
+    // Add header to the overlay File.
+    auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
+    auto iov = header.getIov();
+
+    auto filePath = self->getLocalPath();
+
+    // state->blob is guaranteed non-null because:
+    //   If state->file was set, we would have early exited above.
+    //   If not O_TRUNC, then we called ensureDataLoaded().
+    CHECK_NOTNULL(state->blob.get());
 
     // Write the blob contents out to the overlay
     auto contents = state->blob->getContents().getIov();
@@ -670,16 +720,18 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     folly::writeFileAtomic(
         filePath.stringPiece(), iov.data(), iov.size(), 0600);
     InodeTimestamps timeStamps;
-    state->file = Overlay::openFile(
+
+    auto file = Overlay::openFile(
         filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
     state->sha1Valid = false;
 
     // If we have a SHA-1 from the metadata, apply it to the new file.  This
     // saves us from recomputing it again in the case that something opens the
     // file read/write and closes it without changing it.
-    auto metadata = getObjectStore()->getBlobMetadata(state->hash.value());
+    auto metadata =
+        self->getObjectStore()->getBlobMetadata(state->hash.value());
     if (metadata.isReady()) {
-      storeSha1(state, metadata.value().sha1);
+      self->storeSha1(state, metadata.value().sha1);
     } else {
       // Leave the SHA-1 attribute dirty - it is not very likely that a file
       // will be opened for writing, closed without changing, and then have its
@@ -688,13 +740,73 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
       // hundreds of MB/s) while the data is accessible in the blob than to read
       // the file out of the overlay later.
     }
+
+    // Update the FileInode to indicate that we are materialized now
+    state->file = std::move(file);
+    state->blob.reset();
+    state->hash = folly::none;
+  });
+}
+
+void FileInode::materializeAndTruncate() {
+  // Set if in 'loading' state.  Fulfilled outside of the scopes of any locks.
+  folly::Optional<folly::SharedPromise<folly::Unit>> sharedPromise;
+
+  auto exceptionWrapper = folly::try_and_catch<const std::exception>([&] {
+    auto state = state_.wlock();
+    state->checkInvariants();
+    SCOPE_SUCCESS {
+      state->checkInvariants();
+    };
+
+    if (state->file) { // Materialized already.
+      state->sha1Valid = false;
+      checkUnixError(ftruncate(state->file.fd(), Overlay::kHeaderLength));
+      // The timestamps in the overlay header will get updated when the inode is
+      // unloaded.
+    } else {
+      // Add header to the overlay File.
+      auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
+      auto iov = header.getIov();
+
+      auto filePath = getLocalPath();
+
+      folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size());
+      // We don't want to set the in-memory timestamps to the timestamps
+      // returned by the below openFile function as we just wrote these
+      // timestamps in to overlay using writeFileAtomic.
+      InodeTimestamps timeStamps;
+      auto file = Overlay::openFile(
+          filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
+
+      // Everything below here in the scope should be noexcept to ensure that
+      // the state is never partially transitioned.
+
+      // Transition to `loaded`.
+      if (state->blobLoadingPromise) { // Loading.
+        // Move the promise out so it's fulfilled outside of the lock.
+        sharedPromise.emplace(std::move(*state->blobLoadingPromise));
+        state->blobLoadingPromise.reset();
+      } else if (state->blob) { // Loaded.
+        state->blob.reset();
+      } else { // Not loaded.
+      }
+
+      state->hash.reset();
+      state->file = std::move(file);
+      state->sha1Valid = false;
+    }
+    storeSha1(state, Hash::sha1(ByteRange{}));
+  });
+
+  // Fulfill outside of the lock.
+  if (sharedPromise) {
+    if (exceptionWrapper) {
+      sharedPromise->setException(exceptionWrapper);
+    } else {
+      sharedPromise->setValue();
+    }
   }
-
-  // Update the FileInode to indicate that we are materialized now
-  state->blob.reset();
-  state->hash = folly::none;
-
-  return makeFuture();
 }
 
 ObjectStore* FileInode::getObjectStore() const {

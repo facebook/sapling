@@ -11,6 +11,7 @@
 #include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
+#include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/model/Tree.h"
@@ -174,6 +175,12 @@ class FileInode : public InodeBase {
   FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
 
   /**
+   * Ensures the inode transitions to or stays in the 'materialized' state,
+   * and truncates the file to zero bytes.
+   */
+  void materializeAndTruncate();
+
+  /**
    * The contents of a FileInode.
    *
    * This structure exists to allow the entire contents to be protected inside
@@ -182,8 +189,16 @@ class FileInode : public InodeBase {
    *
    * A FileInode can be in one of three states:
    *   - not loaded
+   *   - loading: fetching data from backing store, but it's not available yet
    *   - loaded: contents has been imported from mercurial and is accessible
    *   - materialized: contents are written into overlay and file handle is open
+   *
+   * Valid state transitions:
+   *   - not loaded -> loading
+   *   - not loaded -> materialized (O_TRUNC)
+   *   - loading -> loaded
+   *   - loading -> materialized (O_TRUNC)
+   *   - loaded -> materialized
    */
   struct State {
     State(
@@ -211,9 +226,15 @@ class FileInode : public InodeBase {
     const dev_t rdev{0};
 
     /**
-     * Set only in 'not loaded' and 'loaded' states, none otherwise.
+     * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.
+     * TODO: Perhaps we ought to simply leave this defined...
      */
     folly::Optional<Hash> hash;
+
+    /**
+     * Set if 'loading'.
+     */
+    folly::Optional<folly::SharedPromise<folly::Unit>> blobLoadingPromise;
 
     /**
      * Set if 'loaded', references immutable data from the backing store.
@@ -277,7 +298,7 @@ class FileInode : public InodeBase {
       const folly::Synchronized<FileInode::State>::LockedPtr& state);
 
   ObjectStore* getObjectStore() const;
-  void storeSha1(
+  static void storeSha1(
       const folly::Synchronized<FileInode::State>::LockedPtr& state,
       Hash sha1);
 
