@@ -39,16 +39,15 @@ void StreamingSubscriber::subscribe(
   auto self =
       std::make_shared<StreamingSubscriber>(std::move(callback), edenMount);
 
-  // Separately scope the locks as the schedule() below will attempt
-  // to acquire the locks for itself.
+  // Separately scope the lock as the schedule() below will attempt to acquire
+  // it for itself.
   {
-    auto journal = edenMount->getJournal().wlock();
     auto state = self->state_.wlock();
 
     // Arrange to be told when the eventBase is about to be destroyed
     state->callback->getEventBase()->runOnDestruction(self.get());
     state->subscriberId =
-        journal->registerSubscriber([self] { schedule(self); });
+        edenMount->getJournal().registerSubscriber([self] { schedule(self); });
   }
 
   // Suggest to the subscription that the journal has been updated so that
@@ -97,9 +96,6 @@ void StreamingSubscriber::journalUpdated() {
     return;
   }
 
-  // The Journal lock must always be acquired before state_'s lock.
-  auto journal = edenMount->getJournal().ulock();
-
   auto state = state_.wlock();
   if (!state->callback) {
     // We were cancelled while this callback was queued up.
@@ -107,10 +103,11 @@ void StreamingSubscriber::journalUpdated() {
     return;
   }
 
+  auto& journal = edenMount->getJournal();
   if (!state->callback->isRequestActive() ||
-      !journal->isSubscriberValid(state->subscriberId)) {
+      !journal.isSubscriberValid(state->subscriberId)) {
     XLOG(DBG1) << "Subscription is no longer active";
-    journal.moveFromUpgradeToWrite()->cancelSubscriber(state->subscriberId);
+    journal.cancelSubscriber(state->subscriberId);
     state->callback->done();
     state->callback.reset();
     return;
@@ -118,7 +115,7 @@ void StreamingSubscriber::journalUpdated() {
 
   JournalPosition pos;
 
-  auto delta = journal->getLatest();
+  auto delta = journal.getLatest();
   pos.sequenceNumber = delta->toSequence;
   pos.snapshotHash = StringPiece(delta->toHash.getBytes()).str();
   pos.mountGeneration = edenMount->getMountGeneration();

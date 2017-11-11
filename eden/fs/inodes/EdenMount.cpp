@@ -203,7 +203,7 @@ folly::Future<folly::Unit> EdenMount::initialize() {
         // snapshot id forward through subsequent journal entries.
         auto delta = std::make_unique<JournalDelta>();
         delta->toHash = parents->parent1();
-        journal_.wlock()->addDelta(std::move(delta));
+        journal_.addDelta(std::move(delta));
         return setupDotEden(getRootInode());
       });
 }
@@ -364,7 +364,7 @@ Future<Unit> EdenMount::shutdown() {
 }
 
 Future<Unit> EdenMount::shutdownImpl() {
-  journal_.wlock()->cancelAllSubscribers();
+  journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
   return inodeMap_->shutdown().then([this] {
     auto oldState = state_.exchange(State::SHUT_DOWN);
@@ -488,7 +488,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
 
               journalDelta->fromHash = oldParents.parent1();
               journalDelta->toHash = snapshotHash;
-              journal_.wlock()->addDelta(std::move(journalDelta));
+              journal_.addDelta(std::move(journalDelta));
 
               return conflicts;
             });
@@ -536,7 +536,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   auto journalDelta = make_unique<JournalDelta>();
   journalDelta->fromHash = oldParents.parent1();
   journalDelta->toHash = parents.parent1();
-  journal_.wlock()->addDelta(std::move(journalDelta));
+  journal_.addDelta(std::move(journalDelta));
 }
 
 struct timespec EdenMount::getLastCheckoutTime() {

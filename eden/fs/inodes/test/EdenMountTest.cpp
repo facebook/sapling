@@ -51,7 +51,7 @@ TEST(EdenMount, resetParents) {
   EXPECT_EQ(
       ParentCommits{makeTestHash("1")},
       edenMount->getConfig()->getParentCommits());
-  auto latestJournalEntry = edenMount->getJournal()->getLatest();
+  auto latestJournalEntry = edenMount->getJournal().getLatest();
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->toHash);
   EXPECT_FILE_INODE(testMount.getFileInode("src/test.c"), "testy tests", 0644);
@@ -64,7 +64,7 @@ TEST(EdenMount, resetParents) {
   EXPECT_EQ(
       ParentCommits{makeTestHash("2")},
       edenMount->getConfig()->getParentCommits());
-  latestJournalEntry = edenMount->getJournal()->getLatest();
+  latestJournalEntry = edenMount->getJournal().getLatest();
   EXPECT_EQ(makeTestHash("1"), latestJournalEntry->fromHash);
   EXPECT_EQ(makeTestHash("2"), latestJournalEntry->toHash);
   // The file contents should not have changed.

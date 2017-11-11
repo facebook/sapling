@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <folly/Function.h>
+#include <folly/Synchronized.h>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -31,13 +32,14 @@ class JournalDelta;
  * revisions (the prior and new revision hash) from which we can derive
  * the larger list of files.
  *
- * The Journal class is not internally threadsafe; we make it safe
- * through the use of folly::Synchronized in the EdenMount class
- * that owns the Journal.
+ * The Journal class is thread-safe.  Subscribers are called on the thread
+ * that called addDelta.
  */
 class Journal {
  public:
   using SequenceNumber = uint64_t;
+  using SubscriberId = uint64_t;
+  using SubscriberCallback = std::function<void()>;
 
   /** Add a delta to the journal
    * The delta will have a new sequence number and timestamp
@@ -65,22 +67,28 @@ class Journal {
    * The return value of registerSubscriber is an identifier than
    * can be passed to cancelSubscriber to later remove the registration.
    */
-  uint64_t registerSubscriber(folly::Function<void()>&& callback);
-  void cancelSubscriber(uint64_t id);
+  SubscriberId registerSubscriber(SubscriberCallback&& callback);
+  void cancelSubscriber(SubscriberId id);
 
   void cancelAllSubscribers();
-  bool isSubscriberValid(uint64_t id) const;
+  bool isSubscriberValid(SubscriberId id) const;
 
  private:
-  /** The sequence number that we'll use for the next entry
-   * that we link into the chain */
-  SequenceNumber nextSequence_{1};
-  /** The most recently recorded entry */
-  std::shared_ptr<const JournalDelta> latest_;
-  /** The next id to assign to subscribers */
-  uint64_t nextSubscriberId_{1};
-  /** The subscribers */
-  std::unordered_map<uint64_t, folly::Function<void()>> subscribers_;
+  struct DeltaState {
+    /** The sequence number that we'll use for the next entry
+     * that we link into the chain */
+    SequenceNumber nextSequence{1};
+    /** The most recently recorded entry */
+    std::shared_ptr<const JournalDelta> latest;
+  };
+  folly::Synchronized<DeltaState> deltaState_;
+
+  struct SubscriberState {
+    SubscriberId nextSubscriberId{1};
+    std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
+  };
+
+  folly::Synchronized<SubscriberState> subscriberState_;
 };
 } // namespace eden
 } // namespace facebook

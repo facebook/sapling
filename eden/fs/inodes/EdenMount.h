@@ -177,7 +177,7 @@ class EdenMount {
     return overlay_;
   }
 
-  folly::Synchronized<Journal>& getJournal() {
+  Journal& getJournal() {
     return journal_;
   }
 
@@ -539,7 +539,7 @@ class EdenMount {
    */
   const std::vector<BindMount> bindMounts_;
 
-  folly::Synchronized<Journal> journal_;
+  Journal journal_;
 
   /**
    * A number to uniquely identify this particular incarnation of this mount.

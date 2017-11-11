@@ -13,53 +13,64 @@ namespace facebook {
 namespace eden {
 
 void Journal::addDelta(std::unique_ptr<JournalDelta>&& delta) {
-  delta->toSequence = nextSequence_++;
-  delta->fromSequence = delta->toSequence;
+  {
+    auto deltaState = deltaState_.wlock();
 
-  delta->toTime = std::chrono::steady_clock::now();
-  delta->fromTime = delta->toTime;
+    delta->toSequence = deltaState->nextSequence++;
+    delta->fromSequence = delta->toSequence;
 
-  delta->previous = latest_;
+    delta->toTime = std::chrono::steady_clock::now();
+    delta->fromTime = delta->toTime;
 
-  // If the hashes were not set to anything, default to copying
-  // the value from the prior journal entry
-  if (delta->previous && delta->fromHash == kZeroHash &&
-      delta->toHash == kZeroHash) {
-    delta->fromHash = delta->previous->toHash;
-    delta->toHash = delta->fromHash;
+    delta->previous = deltaState->latest;
+
+    // If the hashes were not set to anything, default to copying
+    // the value from the prior journal entry
+    if (delta->previous && delta->fromHash == kZeroHash &&
+        delta->toHash == kZeroHash) {
+      delta->fromHash = delta->previous->toHash;
+      delta->toHash = delta->fromHash;
+    }
+
+    deltaState->latest = std::shared_ptr<const JournalDelta>(std::move(delta));
   }
 
-  latest_ = std::shared_ptr<const JournalDelta>(std::move(delta));
-
-  for (auto& sub : subscribers_) {
+  // Careful to call the subscribers with no locks held.
+  auto subscribers = subscriberState_.rlock()->subscribers;
+  for (auto& sub : subscribers) {
     sub.second();
   }
 }
 
 std::shared_ptr<const JournalDelta> Journal::getLatest() const {
-  return latest_;
+  return deltaState_.rlock()->latest;
 }
 
 void Journal::replaceJournal(std::unique_ptr<JournalDelta>&& delta) {
-  latest_ = std::shared_ptr<const JournalDelta>(std::move(delta));
+  auto deltaState = deltaState_.wlock();
+  deltaState->latest = std::shared_ptr<const JournalDelta>(std::move(delta));
 }
 
-uint64_t Journal::registerSubscriber(folly::Function<void()>&& callback) {
-  auto id = nextSubscriberId_++;
-  subscribers_[id] = std::move(callback);
+uint64_t Journal::registerSubscriber(SubscriberCallback&& callback) {
+  auto subscriberState = subscriberState_.wlock();
+  auto id = subscriberState->nextSubscriberId++;
+  subscriberState->subscribers[id] = std::move(callback);
   return id;
 }
 
 void Journal::cancelSubscriber(uint64_t id) {
-  subscribers_.erase(id);
+  subscriberState_.wlock()->subscribers.erase(id);
 }
 
 void Journal::cancelAllSubscribers() {
-  subscribers_.clear();
+  subscriberState_.wlock()->subscribers.clear();
 }
 
 bool Journal::isSubscriberValid(uint64_t id) const {
-  return subscribers_.find(id) != subscribers_.end();
+  auto subscriberState = subscriberState_.rlock();
+  auto& subscribers = subscriberState->subscribers;
+  return subscribers.find(id) != subscribers.end();
 }
+
 } // namespace eden
 } // namespace facebook

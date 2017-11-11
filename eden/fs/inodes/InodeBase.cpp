@@ -370,7 +370,7 @@ void InodeBase::setattrTimes(
 void InodeBase::updateJournal() {
   auto path = getPath();
   if (path.hasValue()) {
-    getMount()->getJournal().wlock()->addDelta(
+    getMount()->getJournal().addDelta(
         std::make_unique<JournalDelta>(JournalDelta{path.value()}));
   }
 }

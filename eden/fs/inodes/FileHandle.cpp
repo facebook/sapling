@@ -65,7 +65,7 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
   SCOPE_SUCCESS {
     auto myname = inode_->getPath();
     if (myname.hasValue()) {
-      inode_->getMount()->getJournal().wlock()->addDelta(
+      inode_->getMount()->getJournal().addDelta(
           std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
     }
   };
@@ -81,7 +81,7 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
   SCOPE_SUCCESS {
     auto myname = inode_->getPath();
     if (myname.hasValue()) {
-      inode_->getMount()->getJournal().wlock()->addDelta(
+      inode_->getMount()->getJournal().addDelta(
           std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
     }
   };

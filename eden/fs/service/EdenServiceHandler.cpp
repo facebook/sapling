@@ -260,7 +260,7 @@ void EdenServiceHandler::getCurrentJournalPosition(
     std::unique_ptr<std::string> mountPoint) {
   INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
-  auto latest = edenMount->getJournal().rlock()->getLatest();
+  auto latest = edenMount->getJournal().getLatest();
 
   out.mountGeneration = edenMount->getMountGeneration();
   out.sequenceNumber = latest->toSequence;
@@ -284,7 +284,7 @@ void EdenServiceHandler::getFilesChangedSince(
     std::unique_ptr<JournalPosition> fromPosition) {
   INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
-  auto delta = edenMount->getJournal().rlock()->getLatest();
+  auto delta = edenMount->getJournal().getLatest();
 
   if (fromPosition->mountGeneration != edenMount->getMountGeneration()) {
     throw newEdenError(

@@ -715,7 +715,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
-  getMount()->getJournal().wlock()->addDelta(
+  getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   // Now that we have the file handle, let's look up the attributes.
@@ -816,7 +816,7 @@ FileInodePtr TreeInode::symlink(
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
-  getMount()->getJournal().wlock()->addDelta(
+  getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return inode;
@@ -885,7 +885,7 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
-  getMount()->getJournal().wlock()->addDelta(
+  getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return inode;
@@ -953,7 +953,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     overlay->saveOverlayDir(getNodeId(), &*contents);
   }
 
-  getMount()->getJournal().wlock()->addDelta(
+  getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
   return newChild;
@@ -1024,7 +1024,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   if (errnoValue == 0) {
     // We successfully removed the child.
     // Record the change in the journal.
-    getMount()->getJournal().wlock()->addDelta(
+    getMount()->getJournal().addDelta(
         std::make_unique<JournalDelta>(targetName, JournalDelta::REMOVED));
 
     return folly::Unit{};
@@ -1470,7 +1470,7 @@ Future<Unit> TreeInode::doRename(
   auto srcPath = getPath();
   auto destPath = destParent->getPath();
   if (srcPath.hasValue() && destPath.hasValue()) {
-    getMount()->getJournal().wlock()->addDelta(std::make_unique<JournalDelta>(
+    getMount()->getJournal().addDelta(std::make_unique<JournalDelta>(
         srcPath.value() + srcName,
         destPath.value() + destName,
         JournalDelta::RENAME));
