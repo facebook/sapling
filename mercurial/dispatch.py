@@ -787,8 +787,8 @@ def _getlocal(ui, rpath, wd=None):
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
-    if rpath and rpath[-1]:
-        path = lui.expandpath(rpath[-1])
+    if rpath:
+        path = lui.expandpath(rpath)
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
@@ -829,10 +829,12 @@ def _dispatch(req):
 
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)
+    cwd = cwd and cwd[-1] or ''
     if cwd:
-        os.chdir(cwd[-1])
+        os.chdir(cwd)
 
     rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
+    rpath = rpath and rpath[-1] or ''
     path, lui = _getlocal(ui, rpath)
 
     uis = {ui, lui}
@@ -971,7 +973,7 @@ def _dispatch(req):
                 except error.RequirementError:
                     raise
                 except error.RepoError:
-                    if rpath and rpath[-1]: # invalid -R path
+                    if rpath: # invalid -R path
                         raise
                     if not func.optionalrepo:
                         if func.inferrepo and args and not path:
