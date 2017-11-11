@@ -51,6 +51,12 @@ Parsing of early options should stop at "--":
   --debugger: no such file in rev cb9a9f314b8b
   [1]
 
+Unparsable form of early options:
+
+  $ hg cat --debugg
+  abort: option --debugger may not be abbreviated!
+  [255]
+
 [defaults]
 
   $ hg cat a

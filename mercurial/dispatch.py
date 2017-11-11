@@ -55,6 +55,9 @@ class request(object):
         self.fout = fout
         self.ferr = ferr
 
+        # remember options pre-parsed by _earlyreqopt*()
+        self.earlyoptions = {}
+
         # reposetups which run before extensions, useful for chg to pre-fill
         # low-level repo state (for example, changelog) before extensions.
         self.prereposetups = prereposetups or []
@@ -707,19 +710,19 @@ def _earlyreqoptbool(req, name, aliases):
 
     >>> req = request([b'x', b'--', b'--debugger'])
     >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
-    False
     """
     try:
         argcount = req.args.index("--")
     except ValueError:
         argcount = len(req.args)
-    value = False
+    value = None
     pos = 0
     while pos < argcount:
         arg = req.args[pos]
         if arg in aliases:
             value = True
         pos += 1
+    req.earlyoptions[name] = value
     return value
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
@@ -849,6 +852,9 @@ def _dispatch(req):
             raise error.Abort(_(
                 "option -R has to be separated from other options (e.g. not "
                 "-qR) and --repository may only be abbreviated as --repo!"))
+        if options["debugger"] != req.earlyoptions["debugger"]:
+            raise error.Abort(_("option --debugger may not be abbreviated!"))
+        # don't validate --profile/--traceback, which can be enabled from now
 
         if options["encoding"]:
             encoding.encoding = options["encoding"]
