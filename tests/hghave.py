@@ -444,6 +444,10 @@ def has_clang_format():
     return matchoutput("clang-format --help",
                        br"^OVERVIEW: A tool to format C/C\+\+[^ ]+ code.")
 
+@check("jshint", "JSHint static code analysis tool")
+def has_jshint():
+    return matchoutput("jshint --version 2>&1", br"jshint v")
+
 @check("pygments", "Pygments source highlighting library")
 def has_pygments():
     try:
