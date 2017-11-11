@@ -42,13 +42,13 @@ function Graph() {
 		this.columns = 0;
 		document.getElementById('nodebgs').innerHTML = '';
 		document.getElementById('graphnodes').innerHTML = '';
-	}
+	};
 
 	this.scale = function(height) {
 		this.bg_height = height;
 		this.box_size = Math.floor(this.bg_height / 1.2);
 		this.cell_height = this.box_size;
-	}
+	};
 
 	this.setColor = function(color, bg, fg) {
 
@@ -78,7 +78,7 @@ function Graph() {
 		this.ctx.fillStyle = s;
 		return s;
 
-	}
+	};
 
 	this.edge = function(x0, y0, x1, y1, color, width) {
 
@@ -90,7 +90,7 @@ function Graph() {
 		this.ctx.lineTo(x1, y1);
 		this.ctx.stroke();
 
-	}
+	};
 
 	this.render = function(data) {
 
@@ -127,7 +127,7 @@ function Graph() {
 				}
 
 				if (start == this.columns && start > end) {
-					var fold = true;
+					fold = true;
 				}
 
 				x0 = this.cell[0] + this.box_size * start + this.box_size / 2;
@@ -142,8 +142,8 @@ function Graph() {
 
 			// Draw the revision node in the right column
 
-			column = node[0]
-			color = node[1]
+			column = node[0];
+			color = node[1];
 
 			radius = this.box_size / 8;
 			x = this.cell[0] + this.box_size * column + this.box_size / 2;
@@ -159,7 +159,7 @@ function Graph() {
 		document.getElementById('nodebgs').innerHTML += backgrounds;
 		document.getElementById('graphnodes').innerHTML += nodedata;
 
-	}
+	};
 
 }
 
@@ -228,7 +228,7 @@ function process_dates(parentSelector){
 			return shortdate(once);
 		}
 
-		for (unit in scales){
+		for (var unit in scales){
 			var s = scales[unit];
 			var n = Math.floor(delta / s);
 			if ((n >= 2) || (s == 1)){
@@ -273,7 +273,8 @@ function toggleLinewrap() {
 
     function setLinewrap(enable) {
         var nodes = document.getElementsByClassName('sourcelines');
-        for (var i = 0; i < nodes.length; i++) {
+        var i;
+        for (i = 0; i < nodes.length; i++) {
             if (enable) {
                 nodes[i].classList.add('wrap');
             } else {
@@ -282,7 +283,7 @@ function toggleLinewrap() {
         }
 
         var links = document.getElementsByClassName('linewraplink');
-        for (var i = 0; i < links.length; i++) {
+        for (i = 0; i < links.length; i++) {
             links[i].innerHTML = enable ? 'on' : 'off';
         }
     }
@@ -354,8 +355,7 @@ function ajaxScrollInit(urlFormat,
 
         var scrollHeight = document.documentElement.scrollHeight;
         var clientHeight = document.documentElement.clientHeight;
-        var scrollTop = document.body.scrollTop
-            || document.documentElement.scrollTop;
+        var scrollTop = document.body.scrollTop || document.documentElement.scrollTop;
 
         if (scrollHeight - (scrollTop + clientHeight) < 50) {
             updateInitiated = true;
