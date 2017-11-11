@@ -368,9 +368,43 @@ be rebased.
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hidden
+  $ hg log -G
+  @  7:02de42196ebe H
+  |
+  | o  6:eea13746799a G
+  |/|
+  o |  5:24b6387c8c8c F
+  | |
+  | o  4:9520eea781bc E
+  |/
+  | o  3:32af7686d403 D
+  | |
+  | o  2:5fddd98957c8 C
+  | |
+  | o  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
   $ hg rebase -s 5fddd98957c8 -d eea13746799a
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
+  $ hg log -G
+  o  9:cf44d2f5a9f4 D
+  |
+  o  8:e273c5e7d2d2 C
+  |
+  | @  7:02de42196ebe H
+  | |
+  o |  6:eea13746799a G
+  |\|
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  | o  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
   $ hg rebase -s 42ccdea3bb16 -d 02de42196ebe
   rebasing 1:42ccdea3bb16 "B"
   $ hg log -G
@@ -695,6 +729,15 @@ setup
   $ echo C > C
   $ hg add C
   $ hg commit -m C
+  $ hg log -G
+  @  4:212cb178bcbb C
+  |
+  | o  3:261e70097290 B2
+  | |
+  x |  1:a8b11f55fb19 B0 (rewritten using amend as 3:261e70097290)
+  |/
+  o  0:4a2df7238c3b A
+  
 
 Rebase finds its way in a chain of marker
 
@@ -711,6 +754,17 @@ Even when the chain include missing node
   $ hg commit -m D
   $ hg --hidden strip -r 'desc(B1)'
   saved backup bundle to $TESTTMP/obsskip/.hg/strip-backup/86f6414ccda7-b1c452ee-backup.hg (glob)
+  $ hg log -G
+  @  5:1a79b7535141 D
+  |
+  | o  4:ff2c4d47b71d C
+  | |
+  | o  2:261e70097290 B2
+  | |
+  x |  1:a8b11f55fb19 B0 (rewritten using amend as 2:261e70097290)
+  |/
+  o  0:4a2df7238c3b A
+  
 
   $ hg rebase -d 'desc(B2)'
   note: not rebasing 1:a8b11f55fb19 "B0", already in destination as 2:261e70097290 "B2"
@@ -766,6 +820,19 @@ should display a friendly error message
   created new head
   $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
+  $ hg log -G
+  @  11:f44da1f4954c nonrelevant (pruned)
+  |
+  | o  10:121d9e3bc4c6 P
+  |/
+  o  9:4be60e099a77 C
+  |
+  o  6:9c48361117de D
+  |
+  o  2:261e70097290 B2
+  |
+  o  0:4a2df7238c3b A
+  
   $ hg rebase -r . -d 10
   note: not rebasing 11:f44da1f4954c "nonrelevant" (tip), it has no successor
 
