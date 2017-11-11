@@ -12,6 +12,7 @@
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/container/Access.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/LoggerDB.h>
 #include <folly/experimental/logging/xlog.h>
@@ -83,7 +84,8 @@ std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
 // Note this will also log the duration of the Thrift call.
 #define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
   /* This is needed because __func__ has a different value in SCOPE_EXIT. */ \
-  static folly::StringPiece _itcFunctionName{__func__};                      \
+  static constexpr folly::StringPiece _itcFunctionName{                      \
+      __func__, folly::size(__func__) - 1};                                  \
   static folly::Logger _itcLogger("eden.thrift." + _itcFunctionName.str());  \
   auto _itcTimer = folly::stop_watch<std::chrono::milliseconds>{};           \
   {                                                                          \

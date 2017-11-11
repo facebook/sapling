@@ -53,6 +53,7 @@ cpp_library(
         "@/folly:stop_watch",
         "@/folly:synchronized",
         "@/folly:thread_local",
+        "@/folly/container:access",
         "@/folly/experimental:string_keyed_map",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
