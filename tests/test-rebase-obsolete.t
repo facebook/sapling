@@ -361,8 +361,8 @@ collapse rebase
 Rebase set has hidden descendants
 ---------------------------------
 
-We rebase a changeset which has a hidden changeset. The hidden changeset must
-not be rebased.
+We rebase a changeset which has hidden descendants. Hidden changesets must not
+be rebased.
 
   $ hg clone base hidden
   updating to branch default
