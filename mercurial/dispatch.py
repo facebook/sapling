@@ -264,7 +264,8 @@ def _runcatch(req):
 
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
-            cfgs = _parseconfig(req.ui, _earlygetopt(['--config'], req.args))
+            cfgs = _parseconfig(req.ui,
+                                _earlyreqopt(req, 'config', ['--config']))
 
             if req.repo:
                 # copy configs that were passed on the cmdline (--config) to
@@ -468,7 +469,7 @@ class cmdalias(object):
         self.cmdname = cmd = args.pop(0)
         self.givenargs = args
 
-        for invalidarg in ("--cwd", "-R", "--repository", "--repo", "--config"):
+        for invalidarg in commands.earlyoptflags:
             if _earlygetopt([invalidarg], args):
                 self.badalias = (_("error in definition for alias '%s': %s may "
                                    "only be given on the command line")
@@ -729,6 +730,18 @@ def _earlygetopt(aliases, args, strip=True):
             pos += 1
     return values
 
+def _earlyreqopt(req, name, aliases):
+    """Peek a list option without using a full options table"""
+    values = _earlygetopt(aliases, req.args, strip=False)
+    req.earlyoptions[name] = values
+    return values
+
+def _earlyreqoptstr(req, name, aliases):
+    """Peek a string option without using a full options table"""
+    value = (_earlygetopt(aliases, req.args, strip=False) or [''])[-1]
+    req.earlyoptions[name] = value
+    return value
+
 def _earlyreqoptbool(req, name, aliases):
     """Peek a boolean option without using a full options table
 
@@ -819,6 +832,9 @@ def _checkshellalias(lui, ui, args):
     fn = entry[0]
 
     if cmd and util.safehasattr(fn, 'shell'):
+        # shell alias shouldn't receive early options which are consumed by hg
+        args = args[:]
+        _earlygetopt(commands.earlyoptflags, args, strip=True)
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})
@@ -828,13 +844,11 @@ def _dispatch(req):
     ui = req.ui
 
     # check for cwd
-    cwd = _earlygetopt(['--cwd'], args)
-    cwd = cwd and cwd[-1] or ''
+    cwd = _earlyreqoptstr(req, 'cwd', ['--cwd'])
     if cwd:
         os.chdir(cwd)
 
-    rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
-    rpath = rpath and rpath[-1] or ''
+    rpath = _earlyreqoptstr(req, 'repository', ["-R", "--repository", "--repo"])
     path, lui = _getlocal(ui, rpath)
 
     uis = {ui, lui}
@@ -874,11 +888,11 @@ def _dispatch(req):
         fullargs = args
         cmd, func, args, options, cmdoptions = _parse(lui, args)
 
-        if options["config"]:
+        if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(_("option --config may not be abbreviated!"))
-        if options["cwd"]:
+        if options["cwd"] != req.earlyoptions["cwd"]:
             raise error.Abort(_("option --cwd may not be abbreviated!"))
-        if options["repository"]:
+        if options["repository"] != req.earlyoptions["repository"]:
             raise error.Abort(_(
                 "option -R has to be separated from other options (e.g. not "
                 "-qR) and --repository may only be abbreviated as --repo!"))

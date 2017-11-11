@@ -57,6 +57,62 @@ Unparsable form of early options:
   abort: option --debugger may not be abbreviated!
   [255]
 
+Parsing failure of early options should be detected before executing the
+command:
+
+  $ hg log -b '--config=hooks.pre-log=false' default
+  abort: option --config may not be abbreviated!
+  [255]
+  $ hg log -b -R. default
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
+  $ hg log --cwd .. -b --cwd=. default
+  abort: option --cwd may not be abbreviated!
+  [255]
+
+However, we can't prevent it from loading extensions and configs:
+
+  $ cat <<EOF > bad.py
+  > raise Exception('bad')
+  > EOF
+  $ hg log -b '--config=extensions.bad=bad.py' default
+  *** failed to import extension bad from bad.py: bad
+  abort: option --config may not be abbreviated!
+  [255]
+
+  $ mkdir -p badrepo/.hg
+  $ echo 'invalid-syntax' > badrepo/.hg/hgrc
+  $ hg log -b -Rbadrepo default
+  hg: parse error at badrepo/.hg/hgrc:1: invalid-syntax
+  [255]
+
+  $ hg log -b --cwd=inexistent default
+  abort: No such file or directory: 'inexistent'
+  [255]
+
+  $ hg log -b '--config=ui.traceback=yes' 2>&1 | grep '^Traceback'
+  Traceback (most recent call last):
+  $ hg log -b '--config=profiling.enabled=yes' 2>&1 | grep -i sample
+  Sample count: .*|No samples recorded\. (re)
+
+Early options can't be specified in [aliases] and [defaults] because they are
+applied before the command name is resolved:
+
+  $ hg log -b '--config=alias.log=log --config=hooks.pre-log=false'
+  hg log: option -b not recognized
+  error in definition for alias 'log': --config may only be given on the command
+  line
+  [255]
+
+  $ hg log -b '--config=defaults.log=--config=hooks.pre-log=false'
+  abort: option --config may not be abbreviated!
+  [255]
+
+Shell aliases bypass any command parsing rules but for the early one:
+
+  $ hg log -b '--config=alias.log=!echo howdy'
+  howdy
+
 [defaults]
 
   $ hg cat a
