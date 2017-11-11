@@ -643,11 +643,11 @@ def _parseconfig(ui, config):
 
     return configs
 
-def _earlygetopt(aliases, args):
+def _earlygetopt(aliases, args, strip=True):
     """Return list of values for an option (or aliases).
 
     The values are listed in the order they appear in args.
-    The options and values are removed from args.
+    The options and values are removed from args if strip=True.
 
     >>> args = [b'x', b'--cwd', b'foo', b'y']
     >>> _earlygetopt([b'--cwd'], args), args
@@ -657,13 +657,25 @@ def _earlygetopt(aliases, args):
     >>> _earlygetopt([b'--cwd'], args), args
     (['bar'], ['x', 'y'])
 
+    >>> args = [b'x', b'--cwd=bar', b'y']
+    >>> _earlygetopt([b'--cwd'], args, strip=False), args
+    (['bar'], ['x', '--cwd=bar', 'y'])
+
     >>> args = [b'x', b'-R', b'foo', b'y']
     >>> _earlygetopt([b'-R'], args), args
     (['foo'], ['x', 'y'])
 
+    >>> args = [b'x', b'-R', b'foo', b'y']
+    >>> _earlygetopt([b'-R'], args, strip=False), args
+    (['foo'], ['x', '-R', 'foo', 'y'])
+
     >>> args = [b'x', b'-Rbar', b'y']
     >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
+
+    >>> args = [b'x', b'-Rbar', b'y']
+    >>> _earlygetopt([b'-R'], args, strip=False), args
+    (['bar'], ['x', '-Rbar', 'y'])
 
     >>> args = [b'x', b'-R=bar', b'y']
     >>> _earlygetopt([b'-R'], args), args
@@ -689,20 +701,30 @@ def _earlygetopt(aliases, args):
             arg = arg[:equals]
         if arg in aliases:
             if equals > -1:
-                del args[pos]
                 values.append(fullarg[equals + 1:])
-                argcount -= 1
+                if strip:
+                    del args[pos]
+                    argcount -= 1
+                else:
+                    pos += 1
             else:
                 if pos + 1 >= argcount:
                     # ignore and let getopt report an error if there is no value
                     break
-                del args[pos]
-                values.append(args.pop(pos))
-                argcount -= 2
+                values.append(args[pos + 1])
+                if strip:
+                    del args[pos:pos + 2]
+                    argcount -= 2
+                else:
+                    pos += 2
         elif arg[:2] in shortopts:
             # short option can have no following space, e.g. hg log -Rfoo
-            values.append(args.pop(pos)[2:])
-            argcount -= 1
+            values.append(args[pos][2:])
+            if strip:
+                del args[pos]
+                argcount -= 1
+            else:
+                pos += 1
         else:
             pos += 1
     return values
