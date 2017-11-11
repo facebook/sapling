@@ -661,6 +661,10 @@ def _earlygetopt(aliases, args):
     >>> args = [b'x', b'-Rbar', b'y']
     >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
+
+    >>> args = [b'x', b'-R', b'--', b'y']
+    >>> _earlygetopt([b'-R'], args), args
+    ([], ['x', '-R', '--', 'y'])
     """
     try:
         argcount = args.index("--")
@@ -675,14 +679,15 @@ def _earlygetopt(aliases, args):
         if equals > -1:
             arg = arg[:equals]
         if arg in aliases:
-            del args[pos]
             if equals > -1:
+                del args[pos]
                 values.append(fullarg[equals + 1:])
                 argcount -= 1
             else:
                 if pos + 1 >= argcount:
                     # ignore and let getopt report an error if there is no value
                     break
+                del args[pos]
                 values.append(args.pop(pos))
                 argcount -= 2
         elif arg[:2] in shortopts:

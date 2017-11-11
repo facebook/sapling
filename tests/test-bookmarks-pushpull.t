@@ -175,7 +175,7 @@ divergent bookmarks
      Z                         1:0d2164f0ce0d
 
   $ cd ../b
-  $ hg up --config
+  $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark foobar
   $ echo c2 > f2

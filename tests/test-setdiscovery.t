@@ -17,7 +17,7 @@ Function to test discovery between two repos in both directions, using both the 
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true
   >     echo
   >     echo "% -- b -> a tree"
-  >     hg -R b debugdiscovery a --verbose --old --config
+  >     hg -R b debugdiscovery a --verbose --old
   >     echo
   >     echo "% -- b -> a set"
   >     hg -R b debugdiscovery a --verbose --debug --config progress.debug=true

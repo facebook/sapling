@@ -30,6 +30,18 @@ Missing arg:
   (use 'hg cat -h' to show more help)
   [255]
 
+Missing parameter for early option:
+
+  $ hg log -R 2>&1 | grep 'hg log'
+  hg log: option -R requires argument
+  hg log [OPTION]... [FILE]
+  (use 'hg log -h' to show more help)
+
+  $ hg log -R -- 2>&1 | grep 'hg log'
+  hg log: option -R requires argument
+  hg log [OPTION]... [FILE]
+  (use 'hg log -h' to show more help)
+
 [defaults]
 
   $ hg cat a
