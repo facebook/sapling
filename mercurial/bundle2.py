@@ -148,6 +148,7 @@ preserve.
 from __future__ import absolute_import, division
 
 import errno
+import os
 import re
 import string
 import struct
@@ -362,7 +363,7 @@ class partiterator(object):
                 self.count = count
                 self.current = p
                 yield p
-                p.seek(0, 2)
+                p.seek(0, os.SEEK_END)
                 self.current = None
         self.iterator = func()
         return self.iterator
@@ -384,11 +385,11 @@ class partiterator(object):
             try:
                 if self.current:
                     # consume the part content to not corrupt the stream.
-                    self.current.seek(0, 2)
+                    self.current.seek(0, os.SEEK_END)
 
                 for part in self.iterator:
                     # consume the bundle content
-                    part.seek(0, 2)
+                    part.seek(0, os.SEEK_END)
             except Exception:
                 seekerror = True
 
@@ -858,8 +859,8 @@ class unbundle20(unpackermixin):
             # Seek to the end of the part to force it's consumption so the next
             # part can be read. But then seek back to the beginning so the
             # code consuming this generator has a part that starts at 0.
-            part.seek(0, 2)
-            part.seek(0)
+            part.seek(0, os.SEEK_END)
+            part.seek(0, os.SEEK_SET)
             headerblock = self._readpartheader()
         indebug(self.ui, 'end of bundle2 stream')
 
@@ -1164,7 +1165,7 @@ class interrupthandler(unpackermixin):
             raise
         finally:
             if not hardabort:
-                part.seek(0, 2)
+                part.seek(0, os.SEEK_END)
         self.ui.debug('bundle2-input-stream-interrupt:'
                       ' closing out of band context\n')
 
@@ -1330,12 +1331,12 @@ class unbundlepart(unpackermixin):
     def tell(self):
         return self._pos
 
-    def seek(self, offset, whence=0):
-        if whence == 0:
+    def seek(self, offset, whence=os.SEEK_SET):
+        if whence == os.SEEK_SET:
             newpos = offset
-        elif whence == 1:
+        elif whence == os.SEEK_CUR:
             newpos = self._pos + offset
-        elif whence == 2:
+        elif whence == os.SEEK_END:
             if not self.consumed:
                 self.read()
             newpos = self._chunkindex[-1][0] - offset
