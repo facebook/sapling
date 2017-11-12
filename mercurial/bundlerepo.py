@@ -86,7 +86,7 @@ class bundlerevlog(revlog.revlog):
             self.bundlerevs.add(n)
             n += 1
 
-    def _chunk(self, rev):
+    def _chunk(self, rev, df=None):
         # Warning: in case of bundle, the diff is against what we stored as
         # delta base, not against rev - 1
         # XXX: could use some caching
@@ -108,7 +108,7 @@ class bundlerevlog(revlog.revlog):
         return mdiff.textdiff(self.revision(rev1, raw=True),
                               self.revision(rev2, raw=True))
 
-    def revision(self, nodeorrev, raw=False):
+    def revision(self, nodeorrev, _df=None, raw=False):
         """return an uncompressed revision of a given node or revision
         number.
         """
@@ -152,12 +152,15 @@ class bundlerevlog(revlog.revlog):
         # needs to override 'baserevision' and make more specific call here.
         return revlog.revlog.revision(self, nodeorrev, raw=True)
 
-    def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
+    def addrevision(self, *args, **kwargs):
         raise NotImplementedError
-    def addgroup(self, deltas, transaction, addrevisioncb=None):
+
+    def addgroup(self, *args, **kwargs):
         raise NotImplementedError
-    def strip(self, rev, minlink):
+
+    def strip(self, *args, **kwargs):
         raise NotImplementedError
+
     def checksize(self):
         raise NotImplementedError
 
