@@ -1,4 +1,6 @@
   $ cat << EOF >> $HGRCPATH
+  > [ui]
+  > interactive=yes
   > [format]
   > usegeneraldelta=yes
   > EOF
@@ -157,7 +159,7 @@ waitlock <file> will wait for file to be created. If it isn't in a reasonable
 amount of time, displays error message and returns 1
   $ waitlock() {
   >     start=`date +%s`
-  >     timeout=1
+  >     timeout=5
   >     while [ \( ! -f $1 \) -a \( ! -L $1 \) ]; do
   >         now=`date +%s`
   >         if [ "`expr $now - $start`" -gt $timeout ]; then
@@ -167,25 +169,14 @@ amount of time, displays error message and returns 1
   >         sleep 0.1
   >     done
   > }
-dolock [wlock] [lock] will set the locks until interrupted
   $ dolock() {
-  >     declare -A options
-  >     options=([${1:-nolock}]=1 [${2:-nowlock}]=1)
-  >     python <<EOF
-  > from mercurial import hg, ui as uimod
-  > import os
-  > import time
-  > 
-  > repo = hg.repository(uimod.ui.load(), path='.')
-  > `[ -n "${options["wlock"]}" ] && echo "with repo.wlock(False):" || echo "if True:"`
-  >     `[ -n "${options["lock"]}" ] && echo "with repo.lock(False):" || echo "if True:"`
-  >         while not os.path.exists('.hg/unlock'):
-  >             time.sleep(0.1)
-  > os.unlink('.hg/unlock')
-  > EOF
+  >     {
+  >         waitlock .hg/unlock
+  >         rm -f .hg/unlock
+  >         echo y
+  >     } | hg debuglocks "$@" > /dev/null
   > }
-
-  $ dolock lock &
+  $ dolock -s &
   $ waitlock .hg/store/lock
 
   $ hg debuglocks
@@ -194,10 +185,12 @@ dolock [wlock] [lock] will set the locks until interrupted
   [1]
   $ touch .hg/unlock
   $ wait
+  $ [ -f .hg/store/lock ] || echo "There is no lock"
+  There is no lock
 
 * Test setting the wlock
 
-  $ dolock wlock &
+  $ dolock -S &
   $ waitlock .hg/wlock
 
   $ hg debuglocks
@@ -206,16 +199,29 @@ dolock [wlock] [lock] will set the locks until interrupted
   [1]
   $ touch .hg/unlock
   $ wait
+  $ [ -f .hg/wlock ] || echo "There is no wlock"
+  There is no wlock
 
 * Test setting both locks
 
-  $ dolock wlock lock &
+  $ dolock -Ss &
   $ waitlock .hg/wlock && waitlock .hg/store/lock
 
   $ hg debuglocks
   lock:  user *, process * (*s) (glob)
   wlock: user *, process * (*s) (glob)
   [2]
+
+* Test failing to set a lock
+
+  $ hg debuglocks -s
+  abort: lock is already held
+  [255]
+
+  $ hg debuglocks -S
+  abort: wlock is already held
+  [255]
+
   $ touch .hg/unlock
   $ wait
 
@@ -225,7 +231,7 @@ dolock [wlock] [lock] will set the locks until interrupted
 
 * Test forcing the lock
 
-  $ dolock lock &
+  $ dolock -s &
   $ waitlock .hg/store/lock
 
   $ hg debuglocks
@@ -244,7 +250,7 @@ dolock [wlock] [lock] will set the locks until interrupted
 
 * Test forcing the wlock
 
-  $ dolock wlock &
+  $ dolock -S &
   $ waitlock .hg/wlock
 
   $ hg debuglocks

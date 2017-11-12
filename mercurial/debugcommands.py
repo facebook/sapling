@@ -1275,7 +1275,10 @@ def debuglabelcomplete(ui, repo, *args):
 @command('debuglocks',
          [('L', 'force-lock', None, _('free the store lock (DANGEROUS)')),
           ('W', 'force-wlock', None,
-           _('free the working state lock (DANGEROUS)'))],
+           _('free the working state lock (DANGEROUS)')),
+          ('s', 'set-lock', None, _('set the store lock until stopped')),
+          ('S', 'set-wlock', None,
+           _('set the working state lock until stopped'))],
          _('[OPTION]...'))
 def debuglocks(ui, repo, **opts):
     """show or modify state of locks
@@ -1294,6 +1297,10 @@ def debuglocks(ui, repo, **opts):
     instance, on a shared filesystem). Removing locks may also be
     blocked by filesystem permissions.
 
+    Setting a lock will prevent other commands from changing the data.
+    The command will wait until an interruption (SIGINT, SIGTERM, ...) occurs.
+    The set locks are removed when the command exits.
+
     Returns 0 if no locks are held.
 
     """
@@ -1304,6 +1311,24 @@ def debuglocks(ui, repo, **opts):
         repo.vfs.unlink('wlock')
     if opts.get(r'force_lock') or opts.get(r'force_wlock'):
         return 0
+
+    locks = []
+    try:
+        if opts.get(r'set_wlock'):
+            try:
+                locks.append(repo.wlock(False))
+            except error.LockHeld:
+                raise error.Abort(_('wlock is already held'))
+        if opts.get(r'set_lock'):
+            try:
+                locks.append(repo.lock(False))
+            except error.LockHeld:
+                raise error.Abort(_('lock is already held'))
+        if len(locks):
+            ui.promptchoice(_("ready to release the lock (y)? $$ &Yes"))
+            return 0
+    finally:
+        release(*locks)
 
     now = time.time()
     held = 0
