@@ -390,8 +390,12 @@ Test update with subrepos.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -S
 
+Forget doesn't change the content of the file
+  $ echo 'pre-forget content' > subrepo/large.txt
   $ hg forget -v subrepo/large.txt
   removing subrepo/large.txt (glob)
+  $ cat subrepo/large.txt
+  pre-forget content
 
 Test reverting a forgotten file
   $ hg revert -R subrepo subrepo/large.txt
@@ -1060,7 +1064,9 @@ largefiles (issue4547)
   > largefiles=
   > EOF
   $ echo large > subrepo-root/large
-  $ hg -R subrepo-root add --large subrepo-root/large
+  $ mkdir -p subrepo-root/dir/subdir
+  $ echo large2 > subrepo-root/dir/subdir/large.bin
+  $ hg -R subrepo-root add --large subrepo-root/large subrepo-root/dir/subdir/large.bin
   $ hg clone -q no-largefiles subrepo-root/no-largefiles
   $ cat > subrepo-root/.hgsub <<EOF
   > no-largefiles = no-largefiles
@@ -1069,6 +1075,7 @@ largefiles (issue4547)
   $ hg -R subrepo-root commit -m '#0'
   Invoking status precommit hook
   A .hgsub
+  A dir/subdir/large.bin
   A large
   ? .hgsubstate
   $ echo dirty >> subrepo-root/large
@@ -1085,8 +1092,163 @@ largefiles (issue4547)
   reverting subrepo no-largefiles
   reverting subrepo-root/no-largefiles/normal1 (glob)
 
-  $ cd ..
+Move (and then undo) a directory move with only largefiles.
 
+  $ listtree() {
+  >   find $@ \( -type d -printf "%p/\n" -o -type f -printf "%p\n" \) \
+  >           -a -name .hg -prune | sort
+  > }
+
+  $ cd subrepo-root
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir/
+  .hglf/dir/subdir/
+  .hglf/dir/subdir/large.bin
+  .hglf/large
+  dir/
+  dir/subdir/
+  dir/subdir/large.bin
+  large
+  large.orig
+
+  $ hg mv dir/subdir dir/subdir2
+  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin (glob)
+
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir/
+  .hglf/dir/subdir2/
+  .hglf/dir/subdir2/large.bin
+  .hglf/large
+  dir/
+  dir/subdir2/
+  dir/subdir2/large.bin
+  large
+  large.orig
+  $ hg status -C
+  A dir/subdir2/large.bin
+    dir/subdir/large.bin
+  R dir/subdir/large.bin
+  ? large.orig
+
+  $ echo 'modified' > dir/subdir2/large.bin
+  $ hg status -C
+  A dir/subdir2/large.bin
+    dir/subdir/large.bin
+  R dir/subdir/large.bin
+  ? large.orig
+
+  $ hg revert --all
+  undeleting .hglf/dir/subdir/large.bin (glob)
+  forgetting .hglf/dir/subdir2/large.bin (glob)
+  reverting subrepo no-largefiles
+
+  $ hg status -C
+  ? dir/subdir2/large.bin
+  ? large.orig
+
+BUG: The content of the forgotten file shouldn't be clobbered
+
+  $ cat dir/subdir2/large.bin
+  large2
+
+BUG: the standin for subdir2 should be deleted, not just dropped
+
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir/
+  .hglf/dir/subdir/
+  .hglf/dir/subdir/large.bin
+  .hglf/dir/subdir2/
+  .hglf/dir/subdir2/large.bin
+  .hglf/large
+  dir/
+  dir/subdir/
+  dir/subdir/large.bin
+  dir/subdir2/
+  dir/subdir2/large.bin
+  large
+  large.orig
+
+  $ rm -r dir/subdir2
+
+BUG: subdir should not be in the destination.  This is caused by the directory
+existing under .hglf/.
+  $ hg mv dir/subdir dir/subdir2
+  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/subdir/large.bin (glob)
+
+  $ hg status -C
+  A dir/subdir2/subdir/large.bin
+    dir/subdir/large.bin
+  R dir/subdir/large.bin
+  ? large.orig
+
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir/
+  .hglf/dir/subdir2/
+  .hglf/dir/subdir2/large.bin
+  .hglf/dir/subdir2/subdir/
+  .hglf/dir/subdir2/subdir/large.bin
+  .hglf/large
+  dir/
+  dir/subdir2/
+  dir/subdir2/subdir/
+  dir/subdir2/subdir/large.bin
+  large
+  large.orig
+
+Start from scratch, and rename something other than the final path component.
+
+  $ hg up -qC .
+  $ hg --config extensions.purge= purge
+
+  $ hg mv dir/subdir dir2/subdir
+  moving .hglf/dir/subdir/large.bin to .hglf/dir2/subdir/large.bin (glob)
+
+  $ hg status -C
+  A dir2/subdir/large.bin
+    dir/subdir/large.bin
+  R dir/subdir/large.bin
+
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir2/
+  .hglf/dir2/subdir/
+  .hglf/dir2/subdir/large.bin
+  .hglf/large
+  dir2/
+  dir2/subdir/
+  dir2/subdir/large.bin
+  large
+
+  $ hg revert --all
+  undeleting .hglf/dir/subdir/large.bin (glob)
+  forgetting .hglf/dir2/subdir/large.bin (glob)
+  reverting subrepo no-largefiles
+
+  $ hg status -C
+  ? dir2/subdir/large.bin
+
+  $ listtree .hglf dir* large*
+  .hglf/
+  .hglf/dir/
+  .hglf/dir/subdir/
+  .hglf/dir/subdir/large.bin
+  .hglf/dir2/
+  .hglf/dir2/subdir/
+  .hglf/dir2/subdir/large.bin
+  .hglf/large
+  dir/
+  dir/subdir/
+  dir/subdir/large.bin
+  dir2/
+  dir2/subdir/
+  dir2/subdir/large.bin
+  large
+
+  $ cd ../..
 
 Test "pull --rebase" when rebase is enabled before largefiles (issue3861)
 =========================================================================
