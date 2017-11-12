@@ -319,19 +319,19 @@ class bundlerepository(localrepo.localrepository):
                                [ctx.node() for ctx in self[self.firstnewrev:]])
 
     def _handlebundle2part(self, bundle, part):
-        if part.type == 'changegroup':
-            cgstream = part
-            version = part.params.get('version', '01')
-            legalcgvers = changegroup.supportedincomingversions(self)
-            if version not in legalcgvers:
-                msg = _('Unsupported changegroup version: %s')
-                raise error.Abort(msg % version)
-            if bundle.compressed():
-                cgstream = self._writetempbundle(part.read,
-                                                 ".cg%sun" % version)
+        if part.type != 'changegroup':
+            return
 
-            self._cgunpacker = changegroup.getunbundler(version, cgstream,
-                                                         'UN')
+        cgstream = part
+        version = part.params.get('version', '01')
+        legalcgvers = changegroup.supportedincomingversions(self)
+        if version not in legalcgvers:
+            msg = _('Unsupported changegroup version: %s')
+            raise error.Abort(msg % version)
+        if bundle.compressed():
+            cgstream = self._writetempbundle(part.read, '.cg%sun' % version)
+
+        self._cgunpacker = changegroup.getunbundler(version, cgstream, 'UN')
 
     def _writetempbundle(self, readfn, suffix, header=''):
         """Write a temporary file to disk
