@@ -281,11 +281,11 @@ class bundlerepository(localrepo.localrepository):
 
         self.tempfile = None
         f = util.posixfile(bundlepath, "rb")
-        self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlepath)
+        self._bundlefile = self._bundle = exchange.readbundle(ui, f, bundlepath)
 
-        if isinstance(self.bundle, bundle2.unbundle20):
+        if isinstance(self._bundle, bundle2.unbundle20):
             hadchangegroup = False
-            for part in self.bundle.iterparts():
+            for part in self._bundle.iterparts():
                 if part.type == 'changegroup':
                     if hadchangegroup:
                         raise NotImplementedError("can't process "
@@ -296,16 +296,15 @@ class bundlerepository(localrepo.localrepository):
 
             if not hadchangegroup:
                 raise error.Abort(_("No changegroups found"))
-        elif isinstance(self.bundle, changegroup.cg1unpacker):
-            if self.bundle.compressed():
-                f = self._writetempbundle(self.bundle.read, '.hg10un',
+        elif isinstance(self._bundle, changegroup.cg1unpacker):
+            if self._bundle.compressed():
+                f = self._writetempbundle(self._bundle.read, '.hg10un',
                                           header='HG10UN')
-                self.bundlefile = self.bundle = exchange.readbundle(ui, f,
-                                                                    bundlepath,
-                                                                    self.vfs)
+                self._bundlefile = self._bundle = exchange.readbundle(
+                    ui, f, bundlepath, self.vfs)
         else:
             raise error.Abort(_('bundle type %s cannot be read') %
-                              type(self.bundle))
+                              type(self._bundle))
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
@@ -322,11 +321,11 @@ class bundlerepository(localrepo.localrepository):
             if version not in legalcgvers:
                 msg = _('Unsupported changegroup version: %s')
                 raise error.Abort(msg % version)
-            if self.bundle.compressed():
+            if self._bundle.compressed():
                 cgstream = self._writetempbundle(part.read,
                                                  ".cg%sun" % version)
 
-            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
+            self._bundle = changegroup.getunbundler(version, cgstream, 'UN')
 
     def _writetempbundle(self, readfn, suffix, header=''):
         """Write a temporary file to disk
@@ -352,28 +351,28 @@ class bundlerepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def changelog(self):
         # consume the header if it exists
-        self.bundle.changelogheader()
-        c = bundlechangelog(self.svfs, self.bundle)
-        self.manstart = self.bundle.tell()
+        self._bundle.changelogheader()
+        c = bundlechangelog(self.svfs, self._bundle)
+        self.manstart = self._bundle.tell()
         return c
 
     def _constructmanifest(self):
-        self.bundle.seek(self.manstart)
+        self._bundle.seek(self.manstart)
         # consume the header if it exists
-        self.bundle.manifestheader()
+        self._bundle.manifestheader()
         linkmapper = self.unfiltered().changelog.rev
-        m = bundlemanifest(self.svfs, self.bundle, linkmapper)
-        self.filestart = self.bundle.tell()
+        m = bundlemanifest(self.svfs, self._bundle, linkmapper)
+        self.filestart = self._bundle.tell()
         return m
 
     def _consumemanifest(self):
         """Consumes the manifest portion of the bundle, setting filestart so the
         file portion can be read."""
-        self.bundle.seek(self.manstart)
-        self.bundle.manifestheader()
-        for delta in self.bundle.deltaiter():
+        self._bundle.seek(self.manstart)
+        self._bundle.manifestheader()
+        for delta in self._bundle.deltaiter():
             pass
-        self.filestart = self.bundle.tell()
+        self.filestart = self._bundle.tell()
 
     @localrepo.unfilteredpropertycache
     def manstart(self):
@@ -398,19 +397,19 @@ class bundlerepository(localrepo.localrepository):
 
     def file(self, f):
         if not self.bundlefilespos:
-            self.bundle.seek(self.filestart)
-            self.bundlefilespos = _getfilestarts(self.bundle)
+            self._bundle.seek(self.filestart)
+            self.bundlefilespos = _getfilestarts(self._bundle)
 
         if f in self.bundlefilespos:
-            self.bundle.seek(self.bundlefilespos[f])
+            self._bundle.seek(self.bundlefilespos[f])
             linkmapper = self.unfiltered().changelog.rev
-            return bundlefilelog(self.svfs, f, self.bundle, linkmapper)
+            return bundlefilelog(self.svfs, f, self._bundle, linkmapper)
         else:
             return filelog.filelog(self.svfs, f)
 
     def close(self):
         """Close assigned bundle file immediately."""
-        self.bundlefile.close()
+        self._bundlefile.close()
         if self.tempfile is not None:
             self.vfs.unlink(self.tempfile)
         if self._tempparent:
