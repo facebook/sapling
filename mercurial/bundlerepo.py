@@ -256,24 +256,24 @@ def _getfilestarts(bundle):
     return bundlefilespos
 
 class bundlerepository(localrepo.localrepository):
-    def __init__(self, ui, path, bundlename):
+    def __init__(self, ui, repopath, bundlepath):
         self._tempparent = None
         try:
-            localrepo.localrepository.__init__(self, ui, path)
+            localrepo.localrepository.__init__(self, ui, repopath)
         except error.RepoError:
             self._tempparent = tempfile.mkdtemp()
             localrepo.instance(ui, self._tempparent, 1)
             localrepo.localrepository.__init__(self, ui, self._tempparent)
         self.ui.setconfig('phases', 'publish', False, 'bundlerepo')
 
-        if path:
-            self._url = 'bundle:' + util.expandpath(path) + '+' + bundlename
+        if repopath:
+            self._url = 'bundle:' + util.expandpath(repopath) + '+' + bundlepath
         else:
-            self._url = 'bundle:' + bundlename
+            self._url = 'bundle:' + bundlepath
 
         self.tempfile = None
-        f = util.posixfile(bundlename, "rb")
-        self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
+        f = util.posixfile(bundlepath, "rb")
+        self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlepath)
 
         if isinstance(self.bundle, bundle2.unbundle20):
             hadchangegroup = False
@@ -293,7 +293,7 @@ class bundlerepository(localrepo.localrepository):
             f = self._writetempbundle(self.bundle.read, '.hg10un',
                                       header='HG10UN')
             self.bundlefile = self.bundle = exchange.readbundle(ui, f,
-                                                                bundlename,
+                                                                bundlepath,
                                                                 self.vfs)
 
         # dict with the mapping 'filename' -> position in the bundle
