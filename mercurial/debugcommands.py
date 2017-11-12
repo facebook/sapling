@@ -1302,7 +1302,7 @@ def debuglocks(ui, repo, **opts):
         repo.svfs.unlink('lock')
     if opts.get(r'force_wlock'):
         repo.vfs.unlink('wlock')
-    if opts.get(r'force_lock') or opts.get(r'force_lock'):
+    if opts.get(r'force_lock') or opts.get(r'force_wlock'):
         return 0
 
     now = time.time()
