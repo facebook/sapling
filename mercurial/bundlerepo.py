@@ -285,7 +285,7 @@ class bundlerepository(localrepo.localrepository):
 
         if isinstance(bundle, bundle2.unbundle20):
             self._bundlefile = bundle
-            self._bundle = None
+            self._cgunpacker = None
 
             hadchangegroup = False
             for part in bundle.iterparts():
@@ -306,7 +306,7 @@ class bundlerepository(localrepo.localrepository):
                 bundle = exchange.readbundle(ui, f, bundlepath, self.vfs)
 
             self._bundlefile = bundle
-            self._bundle = bundle
+            self._cgunpacker = bundle
         else:
             raise error.Abort(_('bundle type %s cannot be read') %
                               type(bundle))
@@ -330,7 +330,8 @@ class bundlerepository(localrepo.localrepository):
                 cgstream = self._writetempbundle(part.read,
                                                  ".cg%sun" % version)
 
-            self._bundle = changegroup.getunbundler(version, cgstream, 'UN')
+            self._cgunpacker = changegroup.getunbundler(version, cgstream,
+                                                         'UN')
 
     def _writetempbundle(self, readfn, suffix, header=''):
         """Write a temporary file to disk
@@ -356,28 +357,28 @@ class bundlerepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def changelog(self):
         # consume the header if it exists
-        self._bundle.changelogheader()
-        c = bundlechangelog(self.svfs, self._bundle)
-        self.manstart = self._bundle.tell()
+        self._cgunpacker.changelogheader()
+        c = bundlechangelog(self.svfs, self._cgunpacker)
+        self.manstart = self._cgunpacker.tell()
         return c
 
     def _constructmanifest(self):
-        self._bundle.seek(self.manstart)
+        self._cgunpacker.seek(self.manstart)
         # consume the header if it exists
-        self._bundle.manifestheader()
+        self._cgunpacker.manifestheader()
         linkmapper = self.unfiltered().changelog.rev
-        m = bundlemanifest(self.svfs, self._bundle, linkmapper)
-        self.filestart = self._bundle.tell()
+        m = bundlemanifest(self.svfs, self._cgunpacker, linkmapper)
+        self.filestart = self._cgunpacker.tell()
         return m
 
     def _consumemanifest(self):
         """Consumes the manifest portion of the bundle, setting filestart so the
         file portion can be read."""
-        self._bundle.seek(self.manstart)
-        self._bundle.manifestheader()
-        for delta in self._bundle.deltaiter():
+        self._cgunpacker.seek(self.manstart)
+        self._cgunpacker.manifestheader()
+        for delta in self._cgunpacker.deltaiter():
             pass
-        self.filestart = self._bundle.tell()
+        self.filestart = self._cgunpacker.tell()
 
     @localrepo.unfilteredpropertycache
     def manstart(self):
@@ -402,13 +403,13 @@ class bundlerepository(localrepo.localrepository):
 
     def file(self, f):
         if not self.bundlefilespos:
-            self._bundle.seek(self.filestart)
-            self.bundlefilespos = _getfilestarts(self._bundle)
+            self._cgunpacker.seek(self.filestart)
+            self.bundlefilespos = _getfilestarts(self._cgunpacker)
 
         if f in self.bundlefilespos:
-            self._bundle.seek(self.bundlefilespos[f])
+            self._cgunpacker.seek(self.bundlefilespos[f])
             linkmapper = self.unfiltered().changelog.rev
-            return bundlefilelog(self.svfs, f, self._bundle, linkmapper)
+            return bundlefilelog(self.svfs, f, self._cgunpacker, linkmapper)
         else:
             return filelog.filelog(self.svfs, f)
 
