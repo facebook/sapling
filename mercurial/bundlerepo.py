@@ -281,30 +281,35 @@ class bundlerepository(localrepo.localrepository):
 
         self.tempfile = None
         f = util.posixfile(bundlepath, "rb")
-        self._bundlefile = self._bundle = exchange.readbundle(ui, f, bundlepath)
+        bundle = exchange.readbundle(ui, f, bundlepath)
 
-        if isinstance(self._bundle, bundle2.unbundle20):
+        if isinstance(bundle, bundle2.unbundle20):
+            self._bundlefile = bundle
+            self._bundle = None
+
             hadchangegroup = False
-            for part in self._bundle.iterparts():
+            for part in bundle.iterparts():
                 if part.type == 'changegroup':
                     if hadchangegroup:
                         raise NotImplementedError("can't process "
                                                   "multiple changegroups")
                     hadchangegroup = True
 
-                self._handlebundle2part(part)
+                self._handlebundle2part(bundle, part)
 
             if not hadchangegroup:
                 raise error.Abort(_("No changegroups found"))
-        elif isinstance(self._bundle, changegroup.cg1unpacker):
-            if self._bundle.compressed():
-                f = self._writetempbundle(self._bundle.read, '.hg10un',
+        elif isinstance(bundle, changegroup.cg1unpacker):
+            if bundle.compressed():
+                f = self._writetempbundle(bundle.read, '.hg10un',
                                           header='HG10UN')
-                self._bundlefile = self._bundle = exchange.readbundle(
-                    ui, f, bundlepath, self.vfs)
+                bundle = exchange.readbundle(ui, f, bundlepath, self.vfs)
+
+            self._bundlefile = bundle
+            self._bundle = bundle
         else:
             raise error.Abort(_('bundle type %s cannot be read') %
-                              type(self._bundle))
+                              type(bundle))
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
@@ -313,7 +318,7 @@ class bundlerepository(localrepo.localrepository):
         phases.retractboundary(self, None, phases.draft,
                                [ctx.node() for ctx in self[self.firstnewrev:]])
 
-    def _handlebundle2part(self, part):
+    def _handlebundle2part(self, bundle, part):
         if part.type == 'changegroup':
             cgstream = part
             version = part.params.get('version', '01')
@@ -321,7 +326,7 @@ class bundlerepository(localrepo.localrepository):
             if version not in legalcgvers:
                 msg = _('Unsupported changegroup version: %s')
                 raise error.Abort(msg % version)
-            if self._bundle.compressed():
+            if bundle.compressed():
                 cgstream = self._writetempbundle(part.read,
                                                  ".cg%sun" % version)
 
