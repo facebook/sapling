@@ -256,6 +256,14 @@ def _getfilestarts(bundle):
     return bundlefilespos
 
 class bundlerepository(localrepo.localrepository):
+    """A repository instance that is a union of a local repo and a bundle.
+
+    Instances represent a read-only repository composed of a local repository
+    with the contents of a bundle file applied. The repository instance is
+    conceptually similar to the state of a repository after an
+    ``hg unbundle`` operation. However, the contents of the bundle are never
+    applied to the actual base repository.
+    """
     def __init__(self, ui, repopath, bundlepath):
         self._tempparent = None
         try:
