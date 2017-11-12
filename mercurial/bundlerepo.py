@@ -321,7 +321,7 @@ class bundlerepository(localrepo.localrepository):
         """Write a temporary file to disk
         """
         fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
-                                        suffix=".hg10un")
+                                        suffix=suffix)
         self.tempfile = temp
 
         with os.fdopen(fdtemp, pycompat.sysstr('wb')) as fptemp:
