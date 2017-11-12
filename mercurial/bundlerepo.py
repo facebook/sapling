@@ -296,13 +296,16 @@ class bundlerepository(localrepo.localrepository):
 
             if not hadchangegroup:
                 raise error.Abort(_("No changegroups found"))
-
-        elif self.bundle.compressed():
-            f = self._writetempbundle(self.bundle.read, '.hg10un',
-                                      header='HG10UN')
-            self.bundlefile = self.bundle = exchange.readbundle(ui, f,
-                                                                bundlepath,
-                                                                self.vfs)
+        elif isinstance(self.bundle, changegroup.cg1unpacker):
+            if self.bundle.compressed():
+                f = self._writetempbundle(self.bundle.read, '.hg10un',
+                                          header='HG10UN')
+                self.bundlefile = self.bundle = exchange.readbundle(ui, f,
+                                                                    bundlepath,
+                                                                    self.vfs)
+        else:
+            raise error.Abort(_('bundle type %s cannot be read') %
+                              type(self.bundle))
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
