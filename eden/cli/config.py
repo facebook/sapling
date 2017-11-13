@@ -654,7 +654,6 @@ class ConfigUpdater(object):
         self._lock_path = self.path + '.lock'
         self._lock_file = None
         self.config = configparser.ConfigParser()
-        self.config.read(self.path)
 
         # Acquire a lock.
         # This makes sure that another process can't modify the config in the
@@ -662,6 +661,7 @@ class ConfigUpdater(object):
         # from manually editing the file while we work, but we can stop
         # other eden CLI processes.)
         self._acquire_lock()
+        self.config.read(self.path)
 
     def __enter__(self):
         return self
