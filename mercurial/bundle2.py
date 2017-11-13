@@ -1475,6 +1475,7 @@ class seekableunbundlepart(unbundlepart):
 # These are only the static capabilities.
 # Check the 'getrepocaps' function for the rest.
 capabilities = {'HG20': (),
+                'bookmarks': (),
                 'error': ('abort', 'unsupportedcontent', 'pushraced',
                           'pushkey'),
                 'listkeys': (),

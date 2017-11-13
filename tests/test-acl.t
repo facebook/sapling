@@ -93,14 +93,14 @@ Extension disabled for lack of a hook
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -156,14 +156,14 @@ Extension disabled for lack of acl.sources
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -222,14 +222,14 @@ No [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -298,14 +298,14 @@ Empty [acl.allow]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -366,14 +366,14 @@ fred is allowed inside foo/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -439,14 +439,14 @@ Empty [acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -509,14 +509,14 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -584,14 +584,14 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -656,14 +656,14 @@ fred is allowed inside foo/, but not foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -730,14 +730,14 @@ barney is allowed everywhere
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -813,14 +813,14 @@ wilma can change files with a .txt extension
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -894,14 +894,14 @@ file specified by acl.config does not exist
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -970,14 +970,14 @@ betty is allowed inside foo/ by a acl.config file
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1057,14 +1057,14 @@ acl.config can set only [acl.allow]/[acl.deny]
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1143,14 +1143,14 @@ fred is always allowed
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1225,14 +1225,14 @@ no one is allowed inside foo/Bar/
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1304,14 +1304,14 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1387,14 +1387,14 @@ OS-level groups
   f9cafe1212c8c6fa1120d14a556e18cc44ff8bdd
   911600dab2ae7a9baff75958b84fe606851ce955
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 24 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 24
   bundle2-input-part: "check:heads" supported
@@ -1507,14 +1507,14 @@ No branch acls specified
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1591,14 +1591,14 @@ Branch acl deny test
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1668,14 +1668,14 @@ Branch acl empty allow test
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1741,14 +1741,14 @@ Branch acl allow other
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1808,14 +1808,14 @@ Branch acl allow other
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1897,14 +1897,14 @@ push foobar into the remote
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -1985,14 +1985,14 @@ Branch acl conflicting deny
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -2057,14 +2057,14 @@ User 'astro' must not be denied
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported
@@ -2139,14 +2139,14 @@ Non-astro users must be denied
   911600dab2ae7a9baff75958b84fe606851ce955
   e8fc755d4d8217ee5b0c2bb41558c40d43b92c01
   bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 168 bytes payload
+  bundle2-output-part: "replycaps" 178 bytes payload
   bundle2-output-part: "check:phases" 48 bytes payload
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "phase-heads" 48 bytes payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "replycaps" supported
-  bundle2-input-part: total payload size 168
+  bundle2-input-part: total payload size 178
   bundle2-input-part: "check:phases" supported
   bundle2-input-part: total payload size 48
   bundle2-input-part: "check:heads" supported

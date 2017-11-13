@@ -118,9 +118,9 @@ Failure on subsequent HTTP request on the same socket (cmd?batch)
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41) -> Content-Type: application/mercurial-0.1\r\n
-  write(21) -> Content-Length: 405\r\n
+  write(21) -> Content-Length: 417\r\n
   write(2) -> \r\n
-  write(405) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(417) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(4? from 65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n (glob)
   readline(1? from -1) -> (1?) Accept-Encoding* (glob)
   read limit reached; closing socket
@@ -157,9 +157,10 @@ Failure to read getbundle HTTP request
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41) -> Content-Type: application/mercurial-0.1\r\n
-  write(21) -> Content-Length: 405\r\n
+  readline(1 from -1) -> (1) x (?)
+  write(21) -> Content-Length: 417\r\n
   write(2) -> \r\n
-  write(405) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(417) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline\(12[34] from 65537\) -> \(2[67]\) GET /\?cmd=batch HTTP/1.1\\r\\n (re)
   readline(9? from -1) -> (27) Accept-Encoding: identity\r\n (glob)
   readline(7? from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n (glob)
@@ -187,7 +188,7 @@ Failure to read getbundle HTTP request
   readline(292 from 65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(262 from -1) -> (27) Accept-Encoding: identity\r\n
   readline(235 from -1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(206 from -1) -> (206) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Ali
+  readline(206 from -1) -> (206) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Abookmarks%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtag
   read limit reached; closing socket
 
   $ rm -f error.log
@@ -214,9 +215,9 @@ Now do a variation using POST to send arguments
   write(23) -> Server: badhttpserver\r\n
   write(37) -> Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41) -> Content-Type: application/mercurial-0.1\r\n
-  write(21) -> Content-Length: 418\r\n
+  write(21) -> Content-Length: 430\r\n
   write(2) -> \r\n
-  write(418) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httppostargs httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(430) -> lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httppostargs httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline\(14[67] from 65537\) -> \(2[67]\) POST /\?cmd=batch HTTP/1.1\\r\\n (re)
   readline\(1(19|20) from -1\) -> \(27\) Accept-Encoding: identity\\r\\n (re)
   readline(9? from -1) -> (41) content-type: application/mercurial-0.1\r\n (glob)
@@ -273,7 +274,7 @@ Server sends an incomplete capabilities response body
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: HTTP request error (incomplete response; expected 385 bytes got 20)
+  abort: HTTP request error (incomplete response; expected 397 bytes got 20)
   (this may be an intermittent network failure; if the error persists, consider contacting the network or server operator)
   [255]
 
@@ -290,9 +291,9 @@ Server sends an incomplete capabilities response body
   write(23 from 23) -> (121) Server: badhttpserver\r\n
   write(37 from 37) -> (84) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41 from 41) -> (43) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (22) Content-Length: 405\r\n
+  write(21 from 21) -> (22) Content-Length: 417\r\n
   write(2 from 2) -> (20) \r\n
-  write(20 from 405) -> (0) lookup changegroupsu
+  write(20 from 417) -> (0) lookup changegroupsu
   write limit reached; closing socket
 
   $ rm -f error.log
@@ -306,7 +307,7 @@ TODO this output is horrible
 
   $ hg clone http://localhost:$HGPORT/ clone
   abort: 'http://localhost:$HGPORT/' does not appear to be an hg repository:
-  ---%<--- (application/mercuria)
+  ---%<--- (applicat)
   
   ---%<---
   !
@@ -325,9 +326,9 @@ TODO this output is horrible
   write(23 from 23) -> (636) Server: badhttpserver\r\n
   write(37 from 37) -> (599) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41 from 41) -> (558) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (537) Content-Length: 405\r\n
+  write(21 from 21) -> (537) Content-Length: 417\r\n
   write(2 from 2) -> (535) \r\n
-  write(405 from 405) -> (130) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(417 from 417) -> (118) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
@@ -337,10 +338,10 @@ TODO this output is horrible
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (94) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (71) Server: badhttpserver\r\n
-  write(37 from 37) -> (34) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(34 from 41) -> (0) Content-Type: application/mercuria
+  write(36 from 36) -> (82) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (59) Server: badhttpserver\r\n
+  write(37 from 37) -> (22) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(22 from 41) -> (0) Content-Type: applicat
   write limit reached; closing socket
   write(36) -> HTTP/1.1 500 Internal Server Error\r\n
 
@@ -373,9 +374,9 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   write(23 from 23) -> (701) Server: badhttpserver\r\n
   write(37 from 37) -> (664) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41 from 41) -> (623) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (602) Content-Length: 405\r\n
+  write(21 from 21) -> (602) Content-Length: 417\r\n
   write(2 from 2) -> (600) \r\n
-  write(405 from 405) -> (195) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(417 from 417) -> (183) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
@@ -385,13 +386,13 @@ TODO client spews a stack due to uncaught ValueError in batch.results()
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (159) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (136) Server: badhttpserver\r\n
-  write(37 from 37) -> (99) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(41 from 41) -> (58) Content-Type: application/mercurial-0.1\r\n
-  write(20 from 20) -> (38) Content-Length: 42\r\n
-  write(2 from 2) -> (36) \r\n
-  write(36 from 42) -> (0) 96ee1d7354c4ad7372047672c36a1f561e3a
+  write(36 from 36) -> (147) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (124) Server: badhttpserver\r\n
+  write(37 from 37) -> (87) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(41 from 41) -> (46) Content-Type: application/mercurial-0.1\r\n
+  write(20 from 20) -> (26) Content-Length: 42\r\n
+  write(2 from 2) -> (24) \r\n
+  write(24 from 42) -> (0) 96ee1d7354c4ad7372047672
   write limit reached; closing socket
 
   $ rm -f error.log
@@ -406,7 +407,7 @@ TODO this output is terrible
   $ hg clone http://localhost:$HGPORT/ clone
   requesting all changes
   abort: 'http://localhost:$HGPORT/' does not appear to be an hg repository:
-  ---%<--- (application/mercuri)
+  ---%<--- (applica)
   
   ---%<---
   !
@@ -425,9 +426,9 @@ TODO this output is terrible
   write(23 from 23) -> (836) Server: badhttpserver\r\n
   write(37 from 37) -> (799) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
   write(41 from 41) -> (758) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (737) Content-Length: 405\r\n
+  write(21 from 21) -> (737) Content-Length: 417\r\n
   write(2 from 2) -> (735) \r\n
-  write(405 from 405) -> (330) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(417 from 417) -> (318) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
@@ -437,26 +438,26 @@ TODO this output is terrible
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (294) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (271) Server: badhttpserver\r\n
-  write(37 from 37) -> (234) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(41 from 41) -> (193) Content-Type: application/mercurial-0.1\r\n
-  write(20 from 20) -> (173) Content-Length: 42\r\n
-  write(2 from 2) -> (171) \r\n
-  write(42 from 42) -> (129) 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
+  write(36 from 36) -> (282) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (259) Server: badhttpserver\r\n
+  write(37 from 37) -> (222) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(41 from 41) -> (181) Content-Type: application/mercurial-0.1\r\n
+  write(20 from 20) -> (161) Content-Length: 42\r\n
+  write(2 from 2) -> (159) \r\n
+  write(42 from 42) -> (117) 96ee1d7354c4ad7372047672c36a1f561e3a6a4c\n;
   readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
+  readline(-1) -> (410) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Abookmarks%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
   readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (93) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (70) Server: badhttpserver\r\n
-  write(37 from 37) -> (33) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(33 from 41) -> (0) Content-Type: application/mercuri
+  write(36 from 36) -> (81) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (58) Server: badhttpserver\r\n
+  write(37 from 37) -> (21) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(21 from 41) -> (0) Content-Type: applica
   write limit reached; closing socket
   write(36) -> HTTP/1.1 500 Internal Server Error\r\n
 
@@ -464,7 +465,7 @@ TODO this output is terrible
 
 Server sends empty HTTP body for getbundle
 
-  $ hg serve --config badserver.closeaftersendbytes=933 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=945 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -482,13 +483,13 @@ Server sends empty HTTP body for getbundle
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (897) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (874) Server: badhttpserver\r\n
-  write(37 from 37) -> (837) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(41 from 41) -> (796) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (775) Content-Length: 405\r\n
-  write(2 from 2) -> (773) \r\n
-  write(405 from 405) -> (368) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(36 from 36) -> (909) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (886) Server: badhttpserver\r\n
+  write(37 from 37) -> (849) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(41 from 41) -> (808) Content-Type: application/mercurial-0.1\r\n
+  write(21 from 21) -> (787) Content-Length: 417\r\n
+  write(2 from 2) -> (785) \r\n
+  write(417 from 417) -> (368) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
@@ -508,7 +509,7 @@ Server sends empty HTTP body for getbundle
   readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
+  readline(-1) -> (410) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Abookmarks%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
   readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -527,7 +528,7 @@ Server sends empty HTTP body for getbundle
 
 Server sends partial compression string
 
-  $ hg serve --config badserver.closeaftersendbytes=945 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=957 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -545,13 +546,13 @@ Server sends partial compression string
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
   readline(-1) -> (49) user-agent: mercurial/proto-1.0 (Mercurial 4.2)\r\n
   readline(-1) -> (2) \r\n
-  write(36 from 36) -> (909) HTTP/1.1 200 Script output follows\r\n
-  write(23 from 23) -> (886) Server: badhttpserver\r\n
-  write(37 from 37) -> (849) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
-  write(41 from 41) -> (808) Content-Type: application/mercurial-0.1\r\n
-  write(21 from 21) -> (787) Content-Length: 405\r\n
-  write(2 from 2) -> (785) \r\n
-  write(405 from 405) -> (380) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
+  write(36 from 36) -> (921) HTTP/1.1 200 Script output follows\r\n
+  write(23 from 23) -> (898) Server: badhttpserver\r\n
+  write(37 from 37) -> (861) Date: Fri, 14 Apr 2017 00:00:00 GMT\r\n
+  write(41 from 41) -> (820) Content-Type: application/mercurial-0.1\r\n
+  write(21 from 21) -> (799) Content-Length: 417\r\n
+  write(2 from 2) -> (797) \r\n
+  write(417 from 417) -> (380) lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Abookmarks%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 httpmediatype=0.1rx,0.1tx,0.2tx compression=none
   readline(65537) -> (26) GET /?cmd=batch HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
@@ -571,7 +572,7 @@ Server sends partial compression string
   readline(65537) -> (30) GET /?cmd=getbundle HTTP/1.1\r\n
   readline(-1) -> (27) Accept-Encoding: identity\r\n
   readline(-1) -> (29) vary: X-HgArg-1,X-HgProto-1\r\n
-  readline(-1) -> (396) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
+  readline(-1) -> (410) x-hgarg-1: bundlecaps=HG20%2Cbundle2%3DHG20%250Abookmarks%250Achangegroup%253D01%252C02%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=96ee1d7354c4ad7372047672c36a1f561e3a6a4c&listkeys=phases%2Cbookmarks\r\n
   readline(-1) -> (48) x-hgproto-1: 0.1 0.2 comp=$USUAL_COMPRESSIONS$\r\n
   readline(-1) -> (35) accept: application/mercurial-0.1\r\n
   readline(-1) -> (2?) host: localhost:$HGPORT\r\n (glob)
@@ -592,7 +593,7 @@ Server sends partial compression string
 
 Server sends partial bundle2 header magic
 
-  $ hg serve --config badserver.closeaftersendbytes=954 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=966 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -616,7 +617,7 @@ Server sends partial bundle2 header magic
 
 Server sends incomplete bundle2 stream params length
 
-  $ hg serve --config badserver.closeaftersendbytes=963 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=975 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -641,7 +642,7 @@ Server sends incomplete bundle2 stream params length
 
 Servers stops after bundle2 stream params header
 
-  $ hg serve --config badserver.closeaftersendbytes=966 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=978 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -666,7 +667,7 @@ Servers stops after bundle2 stream params header
 
 Server stops sending after bundle2 part header length
 
-  $ hg serve --config badserver.closeaftersendbytes=975 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=987 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -692,7 +693,7 @@ Server stops sending after bundle2 part header length
 
 Server stops sending after bundle2 part header
 
-  $ hg serve --config badserver.closeaftersendbytes=1022 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1034 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -722,7 +723,7 @@ Server stops sending after bundle2 part header
 
 Server stops after bundle2 part payload chunk size
 
-  $ hg serve --config badserver.closeaftersendbytes=1031 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1043 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -753,7 +754,7 @@ Server stops after bundle2 part payload chunk size
 
 Server stops sending in middle of bundle2 payload chunk
 
-  $ hg serve --config badserver.closeaftersendbytes=1504 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1516 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -785,7 +786,7 @@ Server stops sending in middle of bundle2 payload chunk
 
 Server stops sending after 0 length payload chunk size
 
-  $ hg serve --config badserver.closeaftersendbytes=1513 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1525 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -822,7 +823,7 @@ Server stops sending after 0 length payload chunk size
 Server stops sending after 0 part bundle part header (indicating end of bundle2 payload)
 This is before the 0 size chunked transfer part that signals end of HTTP response.
 
-  $ hg serve --config badserver.closeaftersendbytes=1710 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1722 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
@@ -866,7 +867,7 @@ This is before the 0 size chunked transfer part that signals end of HTTP respons
 
 Server sends a size 0 chunked-transfer size without terminating \r\n
 
-  $ hg serve --config badserver.closeaftersendbytes=1713 -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve --config badserver.closeaftersendbytes=1725 -p $HGPORT -d --pid-file=hg.pid -E error.log
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone

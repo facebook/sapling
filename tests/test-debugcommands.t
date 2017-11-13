@@ -204,6 +204,7 @@ Test debugcapabilities command:
     unbundle
   Bundle2 capabilities:
     HG20
+    bookmarks
     changegroup
       01
       02

@@ -13,6 +13,7 @@ import hashlib
 
 from .i18n import _
 from .node import (
+    bin,
     hex,
     nullid,
 )
@@ -742,6 +743,22 @@ def _pushing(pushop):
                 or pushop.outdatedphases
                 or pushop.outobsmarkers
                 or pushop.outbookmarks)
+
+@b2partsgenerator('check-bookmarks')
+def _pushb2checkbookmarks(pushop, bundler):
+    """insert bookmark move checking"""
+    if not _pushing(pushop) or pushop.force:
+        return
+    b2caps = bundle2.bundle2caps(pushop.remote)
+    hasbookmarkcheck = 'bookmarks' in b2caps
+    if not (pushop.outbookmarks and hasbookmarkcheck):
+        return
+    data = []
+    for book, old, new in pushop.outbookmarks:
+        old = bin(old)
+        data.append((book, old))
+    checkdata = bookmod.binaryencode(data)
+    bundler.newpart('check:bookmarks', data=checkdata)
 
 @b2partsgenerator('check-phases')
 def _pushb2checkphases(pushop, bundler):

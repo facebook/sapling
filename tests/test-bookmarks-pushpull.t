@@ -112,25 +112,31 @@ delete a remote bookmark
   checking for updated bookmarks
   listing keys for "bookmarks"
   no changes found
-  bundle2-output-bundle: "HG20", 3 parts total
+  bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output: start emission of HG20 stream
   bundle2-output: bundle parameter: 
   bundle2-output: start of parts
   bundle2-output: bundle part: "replycaps"
-  bundle2-output-part: "replycaps" 185 bytes payload
+  bundle2-output-part: "replycaps" 195 bytes payload
   bundle2-output: part 0: "REPLYCAPS"
   bundle2-output: header chunk size: 16
-  bundle2-output: payload chunk size: 185
+  bundle2-output: payload chunk size: 195
+  bundle2-output: closing payload chunk
+  bundle2-output: bundle part: "check:bookmarks"
+  bundle2-output-part: "check:bookmarks" 23 bytes payload
+  bundle2-output: part 1: "CHECK:BOOKMARKS"
+  bundle2-output: header chunk size: 22
+  bundle2-output: payload chunk size: 23
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "check:phases"
   bundle2-output-part: "check:phases" 48 bytes payload
-  bundle2-output: part 1: "CHECK:PHASES"
+  bundle2-output: part 2: "CHECK:PHASES"
   bundle2-output: header chunk size: 19
   bundle2-output: payload chunk size: 48
   bundle2-output: closing payload chunk
   bundle2-output: bundle part: "pushkey"
   bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output: part 2: "PUSHKEY"
+  bundle2-output: part 3: "PUSHKEY"
   bundle2-output: header chunk size: 90
   bundle2-output: closing payload chunk
   bundle2-output: end of bundle
@@ -144,12 +150,21 @@ delete a remote bookmark
   bundle2-input: part parameters: 0
   bundle2-input: found a handler for part replycaps
   bundle2-input-part: "replycaps" supported
-  bundle2-input: payload chunk size: 185
+  bundle2-input: payload chunk size: 195
   bundle2-input: payload chunk size: 0
-  bundle2-input-part: total payload size 185
+  bundle2-input-part: total payload size 195
+  bundle2-input: part header size: 22
+  bundle2-input: part type: "CHECK:BOOKMARKS"
+  bundle2-input: part id: "1"
+  bundle2-input: part parameters: 0
+  bundle2-input: found a handler for part check:bookmarks
+  bundle2-input-part: "check:bookmarks" supported
+  bundle2-input: payload chunk size: 23
+  bundle2-input: payload chunk size: 0
+  bundle2-input-part: total payload size 23
   bundle2-input: part header size: 19
   bundle2-input: part type: "CHECK:PHASES"
-  bundle2-input: part id: "1"
+  bundle2-input: part id: "2"
   bundle2-input: part parameters: 0
   bundle2-input: found a handler for part check:phases
   bundle2-input-part: "check:phases" supported
@@ -158,7 +173,7 @@ delete a remote bookmark
   bundle2-input-part: total payload size 48
   bundle2-input: part header size: 90
   bundle2-input: part type: "PUSHKEY"
-  bundle2-input: part id: "2"
+  bundle2-input: part id: "3"
   bundle2-input: part parameters: 4
   bundle2-input: found a handler for part pushkey
   bundle2-input-part: "pushkey" (params: 4 mandatory) supported
@@ -166,7 +181,7 @@ delete a remote bookmark
   bundle2-input: payload chunk size: 0
   bundle2-input: part header size: 0
   bundle2-input: end of bundle2 stream
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 3 parts total
   running hook txnclose-bookmark.test: sh $TESTTMP/hook.sh
   test-hook-bookmark: W:  0000000000000000000000000000000000000000 -> 
   bundle2-output-bundle: "HG20", 1 parts total
