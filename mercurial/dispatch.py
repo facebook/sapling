@@ -665,6 +665,10 @@ def _earlygetopt(aliases, args):
     >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
 
+    >>> args = [b'x', b'-R=bar', b'y']
+    >>> _earlygetopt([b'-R'], args), args
+    (['=bar'], ['x', 'y'])
+
     >>> args = [b'x', b'-R', b'--', b'y']
     >>> _earlygetopt([b'-R'], args), args
     ([], ['x', '-R', '--', 'y'])
@@ -678,7 +682,9 @@ def _earlygetopt(aliases, args):
     pos = 0
     while pos < argcount:
         fullarg = arg = args[pos]
-        equals = arg.find('=')
+        equals = -1
+        if arg.startswith('--'):
+            equals = arg.find('=')
         if equals > -1:
             arg = arg[:equals]
         if arg in aliases:
