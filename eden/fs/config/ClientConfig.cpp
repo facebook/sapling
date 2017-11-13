@@ -47,7 +47,6 @@ const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
 const facebook::eden::RelativePathPiece kCloneSuccessFile{"clone-succeeded"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
-const facebook::eden::RelativePathPiece kDirstateFile{"dirstate"};
 
 // File holding mapping of client directories.
 const facebook::eden::RelativePathPiece kClientDirectoryMap{"config.json"};
@@ -173,10 +172,6 @@ AbsolutePath ClientConfig::getOverlayPath() const {
 
 AbsolutePath ClientConfig::getCloneSuccessPath() const {
   return clientDirectory_ + kCloneSuccessFile;
-}
-
-AbsolutePath ClientConfig::getDirstateStoragePath() const {
-  return clientDirectory_ + kDirstateFile;
 }
 
 ClientConfig::ConfigData ClientConfig::loadConfigData(

@@ -128,9 +128,6 @@ class ClientConfig {
   /** File that will be written once the clone for this client has succeeded. */
   AbsolutePath getCloneSuccessPath() const;
 
-  /** Path to the file where the dirstate data is stored. */
-  AbsolutePath getDirstateStoragePath() const;
-
   /** Path to the file where the current commit ID is stored */
   AbsolutePath getSnapshotPath() const;
 
