@@ -455,6 +455,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
             lfiles = [f for f in lfiles if f in filelist]
 
         update = {}
+        dropped = set()
         updated, removed = 0, 0
         wvfs = repo.wvfs
         wctx = repo[None]
@@ -476,7 +477,11 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                 expecthash = lfutil.readasstandin(wctx[relstandin])
                 if expecthash != '':
                     if lfile not in wctx: # not switched to normal file
-                        wvfs.unlinkpath(rellfile, ignoremissing=True)
+                        if repo.dirstate[relstandin] != '?':
+                            wvfs.unlinkpath(rellfile, ignoremissing=True)
+                        else:
+                            dropped.add(rellfile)
+
                     # use normallookup() to allocate an entry in largefiles
                     # dirstate to prevent lfilesrepo.status() from reporting
                     # missing files as removed.
@@ -496,6 +501,15 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
         lfdirstate.write()
 
         if lfiles:
+            lfiles = [f for f in lfiles if f not in dropped]
+
+            for f in dropped:
+                repo.wvfs.unlinkpath(lfutil.standin(f))
+
+                # This needs to happen for dropped files, otherwise they stay in
+                # the M state.
+                lfutil.synclfdirstate(repo, lfdirstate, f, normallookup)
+
             statuswriter(_('getting changed largefiles\n'))
             cachelfiles(ui, repo, None, lfiles)
 

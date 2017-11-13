@@ -1148,20 +1148,18 @@ Move (and then undo) a directory move with only largefiles.
   ? dir/subdir2/large.bin
   ? large.orig
 
-BUG: The content of the forgotten file shouldn't be clobbered
+The content of the forgotten file shouldn't be clobbered
 
   $ cat dir/subdir2/large.bin
-  large2
+  modified
 
-BUG: the standin for subdir2 should be deleted, not just dropped
+The standin for subdir2 should be deleted, not just dropped
 
   $ listtree .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir/
   .hglf/dir/subdir/large.bin
-  .hglf/dir/subdir2/
-  .hglf/dir/subdir2/large.bin
   .hglf/large
   dir/
   dir/subdir/
@@ -1173,13 +1171,13 @@ BUG: the standin for subdir2 should be deleted, not just dropped
 
   $ rm -r dir/subdir2
 
-BUG: subdir should not be in the destination.  This is caused by the directory
-existing under .hglf/.
+'subdir' should not be in the destination.  It would be if the subdir2 directory
+existed under .hglf/.
   $ hg mv dir/subdir dir/subdir2
-  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/subdir/large.bin (glob)
+  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin (glob)
 
   $ hg status -C
-  A dir/subdir2/subdir/large.bin
+  A dir/subdir2/large.bin
     dir/subdir/large.bin
   R dir/subdir/large.bin
   ? large.orig
@@ -1189,13 +1187,10 @@ existing under .hglf/.
   .hglf/dir/
   .hglf/dir/subdir2/
   .hglf/dir/subdir2/large.bin
-  .hglf/dir/subdir2/subdir/
-  .hglf/dir/subdir2/subdir/large.bin
   .hglf/large
   dir/
   dir/subdir2/
-  dir/subdir2/subdir/
-  dir/subdir2/subdir/large.bin
+  dir/subdir2/large.bin
   large
   large.orig
 
@@ -1236,9 +1231,6 @@ Start from scratch, and rename something other than the final path component.
   .hglf/dir/
   .hglf/dir/subdir/
   .hglf/dir/subdir/large.bin
-  .hglf/dir2/
-  .hglf/dir2/subdir/
-  .hglf/dir2/subdir/large.bin
   .hglf/large
   dir/
   dir/subdir/
