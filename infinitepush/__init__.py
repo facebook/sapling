@@ -493,12 +493,7 @@ def _rebundle(bundlerepo, bundleroots, unknownhead):
     except KeyError:
         pass
     else:
-        mfnodes = []
-        for node in outgoing.missing:
-            mfnodes.append(('', bundlerepo[node].manifestnode()))
-
-        # Only include the tree parts if they all exist
-        if not bundlerepo.manifestlog.datastore.getmissing(mfnodes):
+        if treemod._cansendtrees(bundlerepo, outgoing.missing):
             treepart = treemod.createtreepackpart(bundlerepo, outgoing,
                                                   treemod.TREEGROUP_PARTTYPE2)
             parts.append(treepart)
