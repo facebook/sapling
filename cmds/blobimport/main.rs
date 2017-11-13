@@ -46,7 +46,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::sync_channel;
 use std::thread;
-use std::time::Duration;
 
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches};
@@ -58,7 +57,7 @@ use stats::Timeseries;
 use tokio_core::reactor::{Core, Remote};
 
 use blobrepo::BlobChangeset;
-use blobstore::{Blobstore, RetryingBlobstore};
+use blobstore::Blobstore;
 use fileblob::Fileblob;
 use fileheads::FileHeads;
 use futures_ext::{BoxFuture, FutureExt};
@@ -245,24 +244,7 @@ fn open_blobstore<P: Into<PathBuf>>(
         }
         BlobstoreType::Manifold(bucket) => {
             let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic(bucket, remote);
-            let rmb: RetryingBlobstore<
-                String,
-                Bytes,
-                Vec<u8>,
-                Error,
-                manifoldblob::Error,
-            > = RetryingBlobstore::new(
-                mb.arced(),
-                remote,
-                Arc::new(|_| None),
-                Arc::new(|attempt| if attempt > 3 {
-                    None
-                } else {
-                    // 100ms 400ms 1.6s 6.4s
-                    Some(Duration::from_millis(100 * 4u64.pow(attempt as u32)))
-                }),
-            );
-            rmb.arced()
+            mb.arced()
         }
     };
 
