@@ -19,4 +19,17 @@ substitutions = [
      # (the replacement patterns)
      br'$USUAL_BUNDLE_CAPS$'
     ),
+    # bundle2 capabilities sent through ssh
+    (br'bundle2=HG20%0A'
+     br'changegroup%3D01%2C02%0A'
+     br'digests%3Dmd5%2Csha1%2Csha512%0A'
+     br'error%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0A'
+     br'hgtagsfnodes%0A'
+     br'listkeys%0A'
+     br'phases%3Dheads%0A'
+     br'pushkey%0A'
+     br'remote-changegroup%3Dhttp%2Chttps',
+     # (replacement patterns)
+     br'$USUAL_BUNDLE2_CAPS$'
+    ),
 ]
