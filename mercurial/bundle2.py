@@ -1415,13 +1415,20 @@ class seekableunbundlepart(unbundlepart):
             newpos = self._pos + offset
         elif whence == os.SEEK_END:
             if not self.consumed:
-                self.read()
+                # Can't use self.consume() here because it advances self._pos.
+                chunk = self.read(32768)
+                while chunk:
+                    chunk = self.read(32768)
             newpos = self._chunkindex[-1][0] - offset
         else:
             raise ValueError('Unknown whence value: %r' % (whence,))
 
         if newpos > self._chunkindex[-1][0] and not self.consumed:
-            self.read()
+            # Can't use self.consume() here because it advances self._pos.
+            chunk = self.read(32768)
+            while chunk:
+                chunk = self.read(32668)
+
         if not 0 <= newpos <= self._chunkindex[-1][0]:
             raise ValueError('Offset out of range')
 
