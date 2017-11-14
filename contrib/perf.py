@@ -488,6 +488,117 @@ def perfbookmarks(ui, repo, **opts):
     timer(d)
     fm.end()
 
+@command('perfbundleread', formatteropts, 'BUNDLE')
+def perfbundleread(ui, repo, bundlepath, **opts):
+    """Benchmark reading of bundle files.
+
+    This command is meant to isolate the I/O part of bundle reading as
+    much as possible.
+    """
+    from mercurial import (
+        bundle2,
+        exchange,
+        streamclone,
+    )
+
+    def makebench(fn):
+        def run():
+            with open(bundlepath, 'rb') as fh:
+                bundle = exchange.readbundle(ui, fh, bundlepath)
+                fn(bundle)
+
+        return run
+
+    def makereadnbytes(size):
+        def run():
+            with open(bundlepath, 'rb') as fh:
+                bundle = exchange.readbundle(ui, fh, bundlepath)
+                while bundle.read(size):
+                    pass
+
+        return run
+
+    def makestdioread(size):
+        def run():
+            with open(bundlepath, 'rb') as fh:
+                while fh.read(size):
+                    pass
+
+        return run
+
+    # bundle1
+
+    def deltaiter(bundle):
+        for delta in bundle.deltaiter():
+            pass
+
+    def iterchunks(bundle):
+        for chunk in bundle.getchunks():
+            pass
+
+    # bundle2
+
+    def forwardchunks(bundle):
+        for chunk in bundle._forwardchunks():
+            pass
+
+    def iterparts(bundle):
+        for part in bundle.iterparts():
+            pass
+
+    def seek(bundle):
+        for part in bundle.iterparts():
+            part.seek(0, os.SEEK_END)
+
+    def makepartreadnbytes(size):
+        def run():
+            with open(bundlepath, 'rb') as fh:
+                bundle = exchange.readbundle(ui, fh, bundlepath)
+                for part in bundle.iterparts():
+                    while part.read(size):
+                        pass
+
+        return run
+
+    benches = [
+        (makestdioread(8192), 'read(8k)'),
+        (makestdioread(16384), 'read(16k)'),
+        (makestdioread(32768), 'read(32k)'),
+        (makestdioread(131072), 'read(128k)'),
+    ]
+
+    with open(bundlepath, 'rb') as fh:
+        bundle = exchange.readbundle(ui, fh, bundlepath)
+
+        if isinstance(bundle, changegroup.cg1unpacker):
+            benches.extend([
+                (makebench(deltaiter), 'cg1 deltaiter()'),
+                (makebench(iterchunks), 'cg1 getchunks()'),
+                (makereadnbytes(8192), 'cg1 read(8k)'),
+                (makereadnbytes(16384), 'cg1 read(16k)'),
+                (makereadnbytes(32768), 'cg1 read(32k)'),
+                (makereadnbytes(131072), 'cg1 read(128k)'),
+            ])
+        elif isinstance(bundle, bundle2.unbundle20):
+            benches.extend([
+                (makebench(forwardchunks), 'bundle2 forwardchunks()'),
+                (makebench(iterparts), 'bundle2 iterparts()'),
+                (makebench(seek), 'bundle2 part seek()'),
+                (makepartreadnbytes(8192), 'bundle2 part read(8k)'),
+                (makepartreadnbytes(16384), 'bundle2 part read(16k)'),
+                (makepartreadnbytes(32768), 'bundle2 part read(32k)'),
+                (makepartreadnbytes(131072), 'bundle2 part read(128k)'),
+            ])
+        elif isinstance(bundle, streamclone.streamcloneapplier):
+            raise error.Abort('stream clone bundles not supported')
+        else:
+            raise error.Abort('unhandled bundle type: %s' % type(bundle))
+
+    for fn, title in benches:
+        timer, fm = gettimer(ui, opts)
+        timer(fn, title=title)
+        fm.end()
+
 @command('perfchangegroupchangelog', formatteropts +
          [('', 'version', '02', 'changegroup version'),
           ('r', 'rev', '', 'revisions to add to changegroup')])

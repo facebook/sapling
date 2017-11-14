@@ -55,6 +55,8 @@ perfstatus
                  benchmark parsing bookmarks from disk to memory
    perfbranchmap
                  benchmark the update of a branchmap
+   perfbundleread
+                 Benchmark reading of bundle files.
    perfcca       (no help text available)
    perfchangegroupchangelog
                  Benchmark producing a changelog group for a changegroup.
@@ -173,3 +175,7 @@ Check perf.py for historical portability
   $ (testrepohg files -r 1.2 glob:mercurial/*.c glob:mercurial/*.py;
   >  testrepohg files -r tip glob:mercurial/*.c glob:mercurial/*.py) |
   > "$TESTDIR"/check-perf-code.py contrib/perf.py
+  contrib/perf.py:498:
+   >     from mercurial import (
+   import newer module separately in try clause for early Mercurial
+  [1]
