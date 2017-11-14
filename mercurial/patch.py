@@ -1990,14 +1990,16 @@ def applydiff(ui, fp, backend, store, strip=1, prefix='', eolmode='strict'):
     return _applydiff(ui, fp, patchfile, backend, store, strip=strip,
                       prefix=prefix, eolmode=eolmode)
 
-def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
-               eolmode='strict'):
-
+def _canonprefix(repo, prefix):
     if prefix:
-        prefix = pathutil.canonpath(backend.repo.root, backend.repo.getcwd(),
-                                    prefix)
+        prefix = pathutil.canonpath(repo.root, repo.getcwd(), prefix)
         if prefix != '':
             prefix += '/'
+    return prefix
+
+def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
+               eolmode='strict'):
+    prefix = _canonprefix(backend.repo, prefix)
     def pstrip(p):
         return pathtransform(p, strip - 1, prefix)[1]
 
@@ -2183,20 +2185,22 @@ def patch(ui, repo, patchname, strip=1, prefix='', files=None, eolmode='strict',
     return internalpatch(ui, repo, patchname, strip, prefix, files, eolmode,
                          similarity)
 
-def changedfiles(ui, repo, patchpath, strip=1):
+def changedfiles(ui, repo, patchpath, strip=1, prefix=''):
     backend = fsbackend(ui, repo.root)
+    prefix = _canonprefix(repo, prefix)
     with open(patchpath, 'rb') as fp:
         changed = set()
         for state, values in iterhunks(fp):
             if state == 'file':
                 afile, bfile, first_hunk, gp = values
                 if gp:
-                    gp.path = pathtransform(gp.path, strip - 1, '')[1]
+                    gp.path = pathtransform(gp.path, strip - 1, prefix)[1]
                     if gp.oldpath:
-                        gp.oldpath = pathtransform(gp.oldpath, strip - 1, '')[1]
+                        gp.oldpath = pathtransform(gp.oldpath, strip - 1,
+                                                   prefix)[1]
                 else:
                     gp = makepatchmeta(backend, afile, bfile, first_hunk, strip,
-                                       '')
+                                       prefix)
                 changed.add(gp.path)
                 if gp.op == 'RENAME':
                     changed.add(gp.oldpath)
