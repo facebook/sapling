@@ -122,12 +122,6 @@ class ClientConfig {
     return repoSource_;
   }
 
-  /** Path to the directory where the scripts for the hooks are defined. */
-  AbsolutePathPiece getRepoHooks() const;
-
-  /** File that will be written once the clone for this client has succeeded. */
-  AbsolutePath getCloneSuccessPath() const;
-
   /** Path to the file where the current commit ID is stored */
   AbsolutePath getSnapshotPath() const;
 
@@ -145,7 +139,6 @@ class ClientConfig {
   std::vector<BindMount> bindMounts_;
   std::string repoType_;
   std::string repoSource_;
-  folly::Optional<AbsolutePath> repoHooks_;
 };
 } // namespace eden
 } // namespace facebook

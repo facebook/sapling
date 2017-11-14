@@ -48,6 +48,7 @@ CONFIG_JSON = 'config.json'
 
 # These are files in a client directory.
 LOCAL_CONFIG = 'edenrc'
+CLONE_SUCCEEDED = 'clone-succeeded'
 SNAPSHOT = 'SNAPSHOT'
 SNAPSHOT_MAGIC = b'eden\x00\x00\x00\x01'
 
@@ -72,16 +73,18 @@ class RepoConfig:
     - name used to identify the repository, e.g., "fbsource"
     - path real path where the true repo resides on disk
     - type "hg" or "git"
+    - hooks_path path to where the hooks scripts are for the repo
     - bind_mounts dict where keys are private pathnames under ~/.eden where the
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
     '''
-    __slots__ = ['name', 'path', 'type', 'bind_mounts']
+    __slots__ = ['name', 'path', 'type', 'hooks_path', 'bind_mounts']
 
-    def __init__(self, name, path, type, bind_mounts):
+    def __init__(self, name, path, type, hooks_path, bind_mounts):
         self.name = name
         self.path = path
         self.type = type
+        self.hooks_path = hooks_path
         self.bind_mounts = bind_mounts
 
 
@@ -169,8 +172,12 @@ class Config:
         elif 'path' not in repo_data:
             raise Exception(f'repository "{name}" missing key "path".')
 
+        hooks_path = repo_data.get('hooks')
+        if hooks_path is None:
+            hooks_path = os.path.join(self._etc_eden_dir, 'hooks')
+
         return RepoConfig(name, repo_data['path'], repo_data['type'],
-                          bind_mounts)
+                          hooks_path, bind_mounts)
 
     @staticmethod
     def _throw_suggest_other_repositories(
@@ -211,11 +218,7 @@ class Config:
         client_dir = self._get_client_dir_for_mount_point(path)
         repo_name = self._get_repo_name(client_dir)
         repo_config = self.get_repo_config(repo_name)
-
-        snapshot_file = os.path.join(client_dir, SNAPSHOT)
-        with open(snapshot_file, 'rb') as f:
-            assert f.read(8) == SNAPSHOT_MAGIC
-            snapshot = binascii.hexlify(f.read(20)).decode('utf-8')
+        snapshot = self._get_snapshot(client_dir)
 
         return collections.OrderedDict([
             ['bind-mounts', repo_config.bind_mounts],
@@ -223,6 +226,14 @@ class Config:
             ['snapshot', snapshot],
             ['client-dir', client_dir],
         ])
+
+    @staticmethod
+    def _get_snapshot(client_dir: str) -> str:
+        '''Return the hex version of the parent hash in the SNAPSHOT file.'''
+        snapshot_file = os.path.join(client_dir, SNAPSHOT)
+        with open(snapshot_file, 'rb') as f:
+            assert f.read(8) == SNAPSHOT_MAGIC
+            return binascii.hexlify(f.read(20)).decode('utf-8')
 
     def checkout(self, path, snapshot_id):
         '''Switch the active snapshot id for a given client'''
@@ -307,8 +318,39 @@ by hand to make changes to the repository or remove it.''' % name)
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
+        self._run_post_clone_hooks(path, client_dir, repo_config)
+
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, dir_name)
+
+    def _run_post_clone_hooks(self, eden_mount_path: str, client_dir: str,
+                              repo_config: RepoConfig):
+        # First, check to see if the post-clone hook has been run successfully
+        # before.
+        clone_success_path = os.path.join(client_dir, CLONE_SUCCEEDED)
+        is_initial_mount = not os.path.isfile(clone_success_path)
+        if is_initial_mount:
+            post_clone = os.path.join(repo_config.hooks_path, 'post-clone')
+            snapshot = self._get_snapshot(client_dir)
+            try:
+                subprocess.run([
+                    post_clone,
+                    repo_config.type,
+                    eden_mount_path,
+                    repo_config.path,
+                    snapshot,
+                ], pass_fds=[1, 2], check=True)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    # TODO(T13448173): If clone fails, then we should roll back
+                    # the mount.
+                    raise
+                print_stderr(f'Did not run post-clone hook "{post_clone}" for '
+                             f'{repo_config.path} because it was not found.')
+
+        # "touch" the clone_success_path.
+        with open(clone_success_path, 'a'):
+            os.utime(clone_success_path, None)
 
     def mount(self, path):
         # Load the config info for this client, to make sure we

@@ -34,7 +34,6 @@ constexpr folly::StringPiece kBindMountsKey{"bindmounts "};
 constexpr folly::StringPiece kRepositoryKey{"repository "};
 constexpr folly::StringPiece kRepoSection{"repository"};
 constexpr folly::StringPiece kName{"name"};
-constexpr folly::StringPiece kRepoHooksKey{"hooks"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kPathsSection{"__paths__"};
@@ -45,7 +44,6 @@ constexpr folly::StringPiece kConfigDotD{"config.d"};
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
-const facebook::eden::RelativePathPiece kCloneSuccessFile{"clone-succeeded"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
 
 // File holding mapping of client directories.
@@ -170,10 +168,6 @@ AbsolutePath ClientConfig::getOverlayPath() const {
   return clientDirectory_ + kOverlayDir;
 }
 
-AbsolutePath ClientConfig::getCloneSuccessPath() const {
-  return clientDirectory_ + kCloneSuccessFile;
-}
-
 ClientConfig::ConfigData ClientConfig::loadConfigData(
     AbsolutePathPiece etcEdenDirectory,
     AbsolutePathPiece configPath) {
@@ -255,14 +249,6 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   config->repoType_ = repoData[kRepoTypeKey];
   config->repoSource_ = repoData[kRepoSourceKey];
 
-  auto hooksPath = configData->get(
-      repoHeader,
-      kRepoHooksKey,
-      configData->get(kPathsSection, kEtcEdenDir, "/etc/eden") + "/hooks");
-  if (hooksPath != "") {
-    config->repoHooks_ = AbsolutePath{hooksPath};
-  }
-
   return config;
 }
 
@@ -280,11 +266,6 @@ folly::dynamic ClientConfig::loadClientDirectoryMap(AbsolutePathPiece edenDir) {
   folly::json::serialization_opts options;
   options.allow_trailing_comma = true;
   return folly::parseJson(jsonWithoutComments, options);
-}
-
-AbsolutePathPiece ClientConfig::getRepoHooks() const {
-  return repoHooks_.hasValue() ? repoHooks_.value()
-                               : AbsolutePathPiece{"/etc/eden/hooks"};
 }
 } // namespace eden
 } // namespace facebook

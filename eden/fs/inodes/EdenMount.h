@@ -383,13 +383,6 @@ class EdenMount {
    */
   void performBindMounts();
 
-  /**
-   * Execute any post-clone script that may be configured.
-   * This requires that the filesystem already be mounted, and must not
-   * be called in the context of a fuseWorkerThread().
-   */
-  void performPostClone();
-
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

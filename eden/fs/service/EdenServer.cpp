@@ -387,7 +387,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               // Perform all of the bind mounts associated with the
               // client.
               edenMount->performBindMounts();
-              edenMount->performPostClone();
               return edenMount;
             });
       });
