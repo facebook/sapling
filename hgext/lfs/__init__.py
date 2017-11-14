@@ -54,6 +54,31 @@ from . import (
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('lfs', 'url',
+    default=configitem.dynamicdefault,
+)
+configitem('lfs', 'threshold',
+    default=None,
+)
+configitem('lfs', 'retry',
+    default=5,
+)
+# Deprecated
+configitem('lfs', 'remotestore',
+    default=None,
+)
+# Deprecated
+configitem('lfs', 'dummy',
+    default=None,
+)
+# Deprecated
+configitem('lfs', 'git-lfs',
+    default=None,
+)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -64,7 +89,7 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    threshold = repo.ui.configbytes('lfs', 'threshold', None)
+    threshold = repo.ui.configbytes('lfs', 'threshold')
 
     repo.svfs.options['lfsthreshold'] = threshold
     repo.svfs.lfslocalblobstore = blobstore.local(repo)

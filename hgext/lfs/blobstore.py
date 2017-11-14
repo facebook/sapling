@@ -91,7 +91,7 @@ class _gitlfsremote(object):
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip('/')
         self.urlopener = urlmod.opener(ui, authinfo)
-        self.retry = ui.configint('lfs', 'retry', 5)
+        self.retry = ui.configint('lfs', 'retry')
 
     def writebatch(self, pointers, fromstore):
         """Batch upload from local to remote blobstore."""
