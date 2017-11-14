@@ -179,6 +179,7 @@ class rebaseruntime(object):
         # other extensions
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
+        self.obsoletewithoutsuccessorindestination = set()
 
     @property
     def repo(self):
@@ -311,9 +312,10 @@ class rebaseruntime(object):
         if not self.ui.configbool('experimental', 'rebaseskipobsolete'):
             return
         obsoleteset = set(obsoleterevs)
-        self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
-                                    obsoleteset, destmap)
+        self.obsoletenotrebased, self.obsoletewithoutsuccessorindestination = \
+            _computeobsoletenotrebased(self.repo, obsoleteset, destmap)
         skippedset = set(self.obsoletenotrebased)
+        skippedset.update(self.obsoletewithoutsuccessorindestination)
         _checkobsrebase(self.repo, self.ui, obsoleteset, skippedset)
 
     def _prepareabortorcontinue(self, isabort):
@@ -419,12 +421,26 @@ class rebaseruntime(object):
     def _performrebasesubset(self, tr, subset, pos, total):
         repo, ui, opts = self.repo, self.ui, self.opts
         sortedrevs = repo.revs('sort(%ld, -topo)', subset)
+        allowdivergence = self.ui.configbool(
+            'experimental', 'evolution.allowdivergence')
+        if not allowdivergence:
+            sortedrevs -= repo.revs(
+                'descendants(%ld) and not %ld',
+                self.obsoletewithoutsuccessorindestination,
+                self.obsoletewithoutsuccessorindestination,
+            )
         for rev in sortedrevs:
             dest = self.destmap[rev]
             ctx = repo[rev]
             desc = _ctxdesc(ctx)
             if self.state[rev] == rev:
                 ui.status(_('already rebased %s\n') % desc)
+            elif (not allowdivergence
+                  and rev in self.obsoletewithoutsuccessorindestination):
+                msg = _('note: not rebasing %s and its descendants as '
+                        'this would cause divergence\n') % desc
+                repo.ui.status(msg)
+                self.skipped.add(rev)
             elif rev in self.obsoletenotrebased:
                 succ = self.obsoletenotrebased[rev]
                 if succ is None:
@@ -1616,11 +1632,16 @@ def _filterobsoleterevs(repo, revs):
     return set(r for r in revs if repo[r].obsolete())
 
 def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
-    """return a mapping obsolete => successor for all obsolete nodes to be
-    rebased that have a successors in the destination
+    """Return (obsoletenotrebased, obsoletewithoutsuccessorindestination).
 
-    obsolete => None entries in the mapping indicate nodes with no successor"""
+    `obsoletenotrebased` is a mapping mapping obsolete => successor for all
+    obsolete nodes to be rebased given in `rebaseobsrevs`.
+
+    `obsoletewithoutsuccessorindestination` is a set with obsolete revisions
+    without a successor in destination.
+    """
     obsoletenotrebased = {}
+    obsoletewithoutsuccessorindestination = set([])
 
     assert repo.filtername is None
     cl = repo.changelog
@@ -1641,8 +1662,15 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
                 if cl.isancestor(succnode, destnode):
                     obsoletenotrebased[srcrev] = nodemap[succnode]
                     break
+            else:
+                # If 'srcrev' has a successor in rebase set but none in
+                # destination (which would be catched above), we shall skip it
+                # and its descendants to avoid divergence.
+                if any(nodemap[s] in destmap
+                       for s in successors if s != srcnode):
+                    obsoletewithoutsuccessorindestination.add(srcrev)
 
-    return obsoletenotrebased
+    return obsoletenotrebased, obsoletewithoutsuccessorindestination
 
 def summaryhook(ui, repo):
     if not repo.vfs.exists('rebasestate'):

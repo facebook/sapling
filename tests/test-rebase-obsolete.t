@@ -987,6 +987,208 @@ Create the changes that we will rebase
   rebasing 21:7bdc8a87673d "dummy change" (tip)
   $ cd ..
 
+Divergence cases due to obsolete changesets
+-------------------------------------------
+
+We should ignore branches with unstable changesets when they are based on an
+obsolete changeset which successor is in rebase set.
+
+  $ hg init divergence
+  $ cd divergence
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > strip =
+  > [alias]
+  > strip = strip --no-backup --quiet
+  > [templates]
+  > instabilities = '{rev}:{node|short} {desc|firstline}{if(instabilities," ({instabilities})")}\n'
+  > EOF
+
+  $ hg debugdrawdag <<EOF
+  >   e   f
+  >   |   |
+  >   d'  d # replace: d -> d'
+  >    \ /
+  >     c
+  >     |
+  >   x b
+  >    \|
+  >     a
+  > EOF
+  $ hg log -G -r 'a'::
+  o  7:1143e9adc121 f
+  |
+  | o  6:d60ebfa0f1cb e
+  | |
+  | o  5:027ad6c5830d d'
+  | |
+  x |  4:76be324c128b d (rewritten using replace as 5:027ad6c5830d)
+  |/
+  o  3:a82ac2b38757 c
+  |
+  | o  2:630d7c95eff7 x
+  | |
+  o |  1:488e1b7e7341 b
+  |/
+  o  0:b173517d0057 a
+  
+
+Changeset d and its descendants are excluded to avoid divergence of d, which
+would occur because the successor of d (d') is also in rebaseset. As a
+consequence f (descendant of d) is left behind.
+
+  $ hg rebase -b 'e' -d 'x'
+  rebasing 1:488e1b7e7341 "b" (b)
+  rebasing 3:a82ac2b38757 "c" (c)
+  rebasing 5:027ad6c5830d "d'" (d')
+  rebasing 6:d60ebfa0f1cb "e" (e)
+  note: not rebasing 4:76be324c128b "d" (d) and its descendants as this would cause divergence
+  $ hg log -G -r 'a'::
+  o  11:eb6d63fc4ed5 e
+  |
+  o  10:44d8c724a70c d'
+  |
+  o  9:d008e6b4d3fd c
+  |
+  o  8:67e8f4a16c49 b
+  |
+  | o  7:1143e9adc121 f
+  | |
+  | | x  6:d60ebfa0f1cb e (rewritten using rebase as 11:eb6d63fc4ed5)
+  | | |
+  | | x  5:027ad6c5830d d' (rewritten using rebase as 10:44d8c724a70c)
+  | | |
+  | x |  4:76be324c128b d (rewritten using replace as 5:027ad6c5830d)
+  | |/
+  | x  3:a82ac2b38757 c (rewritten using rebase as 9:d008e6b4d3fd)
+  | |
+  o |  2:630d7c95eff7 x
+  | |
+  | x  1:488e1b7e7341 b (rewritten using rebase as 8:67e8f4a16c49)
+  |/
+  o  0:b173517d0057 a
+  
+  $ hg strip -r 8:
+
+If the rebase set has an obsolete (d) with a successor (d') outside the rebase
+set and none in destination, we still get the divergence warning.
+By allowing divergence, we can perform the rebase.
+
+  $ hg rebase -r 'c'::'f' -d 'x'
+  abort: this rebase will cause divergences from: 76be324c128b
+  (to force the rebase please set experimental.evolution.allowdivergence=True)
+  [255]
+  $ hg rebase --config experimental.evolution.allowdivergence=true -r 'c'::'f' -d 'x'
+  rebasing 3:a82ac2b38757 "c" (c)
+  rebasing 4:76be324c128b "d" (d)
+  rebasing 7:1143e9adc121 "f" (f tip)
+  $ hg log -G -r 'a':: -T instabilities
+  o  10:e1744ea07510 f
+  |
+  o  9:e2b36ea9a0a0 d (content-divergent)
+  |
+  o  8:6a0376de376e c
+  |
+  | x  7:1143e9adc121 f
+  | |
+  | | o  6:d60ebfa0f1cb e (orphan)
+  | | |
+  | | o  5:027ad6c5830d d' (orphan content-divergent)
+  | | |
+  | x |  4:76be324c128b d
+  | |/
+  | x  3:a82ac2b38757 c
+  | |
+  o |  2:630d7c95eff7 x
+  | |
+  | o  1:488e1b7e7341 b
+  |/
+  o  0:b173517d0057 a
+  
+  $ hg strip -r 8:
+
+(Not skipping obsoletes means that divergence is allowed.)
+
+  $ hg rebase --config experimental.rebaseskipobsolete=false -r 'c'::'f' -d 'x'
+  rebasing 3:a82ac2b38757 "c" (c)
+  rebasing 4:76be324c128b "d" (d)
+  rebasing 7:1143e9adc121 "f" (f tip)
+
+  $ hg strip -r 0:
+
+Similar test on a more complex graph
+
+  $ hg debugdrawdag <<EOF
+  >       g
+  >       |
+  >   f   e
+  >   |   |
+  >   e'  d # replace: e -> e'
+  >    \ /
+  >     c
+  >     |
+  >   x b
+  >    \|
+  >     a
+  > EOF
+  $ hg log -G -r 'a':
+  o  8:2876ce66c6eb g
+  |
+  | o  7:3ffec603ab53 f
+  | |
+  x |  6:e36fae928aec e (rewritten using replace as 5:63324dc512ea)
+  | |
+  | o  5:63324dc512ea e'
+  | |
+  o |  4:76be324c128b d
+  |/
+  o  3:a82ac2b38757 c
+  |
+  | o  2:630d7c95eff7 x
+  | |
+  o |  1:488e1b7e7341 b
+  |/
+  o  0:b173517d0057 a
+  
+  $ hg rebase -b 'f' -d 'x'
+  rebasing 1:488e1b7e7341 "b" (b)
+  rebasing 3:a82ac2b38757 "c" (c)
+  rebasing 5:63324dc512ea "e'" (e')
+  rebasing 7:3ffec603ab53 "f" (f)
+  rebasing 4:76be324c128b "d" (d)
+  note: not rebasing 6:e36fae928aec "e" (e) and its descendants as this would cause divergence
+  $ hg log -G -r 'a':
+  o  13:a1707a5b7c2c d
+  |
+  | o  12:ef6251596616 f
+  | |
+  | o  11:b6f172e64af9 e'
+  |/
+  o  10:d008e6b4d3fd c
+  |
+  o  9:67e8f4a16c49 b
+  |
+  | o  8:2876ce66c6eb g
+  | |
+  | | x  7:3ffec603ab53 f (rewritten using rebase as 12:ef6251596616)
+  | | |
+  | x |  6:e36fae928aec e (rewritten using replace as 5:63324dc512ea)
+  | | |
+  | | x  5:63324dc512ea e' (rewritten using rebase as 11:b6f172e64af9)
+  | | |
+  | x |  4:76be324c128b d (rewritten using rebase as 13:a1707a5b7c2c)
+  | |/
+  | x  3:a82ac2b38757 c (rewritten using rebase as 10:d008e6b4d3fd)
+  | |
+  o |  2:630d7c95eff7 x
+  | |
+  | x  1:488e1b7e7341 b (rewritten using rebase as 9:67e8f4a16c49)
+  |/
+  o  0:b173517d0057 a
+  
+
+  $ cd ..
+
 Rebase merge where successor of one parent is equal to destination (issue5198)
 
   $ hg init p1-succ-is-dest
