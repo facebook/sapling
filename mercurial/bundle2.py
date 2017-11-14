@@ -1198,13 +1198,21 @@ def decodepayloadchunks(ui, fh):
 
     headersize = struct.calcsize(_fpayloadsize)
     readexactly = changegroup.readexactly
+    read = fh.read
 
     chunksize = _unpack(_fpayloadsize, readexactly(fh, headersize))[0]
     indebug(ui, 'payload chunk size: %i' % chunksize)
 
+    # changegroup.readexactly() is inlined below for performance.
     while chunksize:
         if chunksize >= 0:
-            yield readexactly(fh, chunksize)
+            s = read(chunksize)
+            if len(s) < chunksize:
+                raise error.Abort(_('stream ended unexpectedly '
+                                    ' (got %d bytes, expected %d)') %
+                                  (len(s), chunksize))
+
+            yield s
         elif chunksize == flaginterrupt:
             # Interrupt "signal" detected. The regular stream is interrupted
             # and a bundle2 part follows. Consume it.
@@ -1213,7 +1221,13 @@ def decodepayloadchunks(ui, fh):
             raise error.BundleValueError(
                 'negative payload chunk size: %s' % chunksize)
 
-        chunksize = _unpack(_fpayloadsize, readexactly(fh, headersize))[0]
+        s = read(headersize)
+        if len(s) < headersize:
+            raise error.Abort(_('stream ended unexpectedly '
+                                ' (got %d bytes, expected %d)') %
+                              (len(s), chunksize))
+
+        chunksize = _unpack(_fpayloadsize, s)[0]
 
         # indebug() inlined for performance.
         if dolog:
