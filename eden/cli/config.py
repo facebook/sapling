@@ -65,6 +65,26 @@ class UsageError(Exception):
     pass
 
 
+class RepoConfig:
+    '''Configuration for a repo as determined by an ~/.edenrc file or
+    equivalent.
+
+    - name used to identify the repository, e.g., "fbsource"
+    - path real path where the true repo resides on disk
+    - type "hg" or "git"
+    - bind_mounts dict where keys are private pathnames under ~/.eden where the
+      files are actually stored and values are the relative pathnames in the
+      EdenFS mount that maps to them.
+    '''
+    __slots__ = ['name', 'path', 'type', 'bind_mounts']
+
+    def __init__(self, name, path, type, bind_mounts):
+        self.name = name
+        self.path = path
+        self.type = type
+        self.bind_mounts = bind_mounts
+
+
 class Config:
     def __init__(self, config_dir, etc_eden_dir, home_dir):
         self._config_dir = config_dir
@@ -124,32 +144,33 @@ class Config:
             for k, v in parser.items(section):
                 print('%s=%s' % (k, v))
 
-    def get_repo_data(self, name):
+    def get_repo_config(self, name) -> RepoConfig:
+        '''Returns a RepoConfig for the specified name or raises an Exception.
         '''
-        Returns a dictionary containing the metadata and the bind mounts of the
-        repository specified by name and raises an exception if the repository
-        data could not be found. The expected keys in the returned dictionary
-        are: 'type', 'path', 'bind-mounts'.
-        '''
-        result = {}
+        repo_data = {}
         parser = self._loadConfig()
         repository_header = f'repository {name}'
         if repository_header in parser:
-            result.update(parser[repository_header])
-            if 'type' not in result:
-                raise Exception('repository "%s" missing key "type".' % name)
-            elif 'path' not in result:
-                raise Exception('repository "%s" missing key "path".' % name)
-        else:
+            repo_data.update(parser[repository_header])
+        if not repo_data:
+            # At a minimum, "type" and "path" should have been assigned.
             self._throw_suggest_other_repositories(name, parser)
+
         bind_mounts_header = 'bindmounts ' + name
         if bind_mounts_header in parser:
             # Convert the ConfigParser section into a dict so it is JSON
             # serializable for the `eden info` command.
-            result['bind-mounts'] = dict(parser[bind_mounts_header].items())
+            bind_mounts = dict(parser[bind_mounts_header].items())
         else:
-            result['bind-mounts'] = {}
-        return result
+            bind_mounts = {}
+
+        if 'type' not in repo_data:
+            raise Exception(f'repository "{name}" missing key "type".')
+        elif 'path' not in repo_data:
+            raise Exception(f'repository "{name}" missing key "path".')
+
+        return RepoConfig(name, repo_data['path'], repo_data['type'],
+                          bind_mounts)
 
     @staticmethod
     def _throw_suggest_other_repositories(
@@ -189,7 +210,7 @@ class Config:
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
         repo_name = self._get_repo_name(client_dir)
-        repo_data = self.get_repo_data(repo_name)
+        repo_config = self.get_repo_config(repo_name)
 
         snapshot_file = os.path.join(client_dir, SNAPSHOT)
         with open(snapshot_file, 'rb') as f:
@@ -197,7 +218,7 @@ class Config:
             snapshot = binascii.hexlify(f.read(20)).decode('utf-8')
 
         return collections.OrderedDict([
-            ['bind-mounts', repo_data['bind-mounts']],
+            ['bind-mounts', repo_config.bind_mounts],
             ['mount', path],
             ['snapshot', snapshot],
             ['client-dir', client_dir],
@@ -274,10 +295,10 @@ by hand to make changes to the repository or remove it.''' % name)
             raise Exception('snapshot id not provided')
 
         # Create bind mounts directories
-        repo_data = self.get_repo_data(repo_name)
+        repo_config = self.get_repo_config(repo_name)
         bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
         util.mkdir_p(bind_mounts_dir)
-        for mount in repo_data['bind-mounts']:
+        for mount in repo_config.bind_mounts:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         # Prepare to mount

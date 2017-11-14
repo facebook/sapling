@@ -119,15 +119,15 @@ def do_clone(args):
     snapshot_id = args.snapshot
     if not snapshot_id:
         try:
-            source = config.get_repo_data(args.repo)
+            repo_config = config.get_repo_config(args.repo)
         except Exception as ex:
             print_stderr('error: {}', ex)
             return 1
 
-        if source['type'] == 'git':
-            snapshot_id = util.get_git_commit(source['path'])
-        elif source['type'] == 'hg':
-            snapshot_id = util.get_hg_commit(source['path'])
+        if repo_config.type == 'git':
+            snapshot_id = util.get_git_commit(repo_config.path)
+        elif repo_config.type == 'hg':
+            snapshot_id = util.get_hg_commit(repo_config.path)
         else:
             print_stderr(
                 '%s does not look like a git or hg repository' % args.path)
