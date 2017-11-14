@@ -247,14 +247,14 @@ class bundlephasecache(phases.phasecache):
         self.invalidate()
         self.dirty = True
 
-    bundlefilespos = {}
 def _getfilestarts(cgunpacker):
+    filespos = {}
     for chunkdata in iter(cgunpacker.filelogheader, {}):
         fname = chunkdata['filename']
-        bundlefilespos[fname] = bundle.tell()
+        filespos[fname] = cgunpacker.tell()
         for chunk in iter(lambda: cgunpacker.deltachunk(None), {}):
             pass
-    return bundlefilespos
+    return filespos
 
 class bundlerepository(localrepo.localrepository):
     """A repository instance that is a union of a local repo and a bundle.
@@ -312,8 +312,8 @@ class bundlerepository(localrepo.localrepository):
             raise error.Abort(_('bundle type %s cannot be read') %
                               type(bundle))
 
-        # dict with the mapping 'filename' -> position in the bundle
-        self.bundlefilespos = {}
+        # dict with the mapping 'filename' -> position in the changegroup.
+        self._cgfilespos = {}
 
         self.firstnewrev = self.changelog.repotiprev + 1
         phases.retractboundary(self, None, phases.draft,
@@ -403,12 +403,12 @@ class bundlerepository(localrepo.localrepository):
         return self._url
 
     def file(self, f):
-        if not self.bundlefilespos:
+        if not self._cgfilespos:
             self._cgunpacker.seek(self.filestart)
-            self.bundlefilespos = _getfilestarts(self._cgunpacker)
+            self._cgfilespos = _getfilestarts(self._cgunpacker)
 
-        if f in self.bundlefilespos:
-            self._cgunpacker.seek(self.bundlefilespos[f])
+        if f in self._cgfilespos:
+            self._cgunpacker.seek(self._cgfilespos[f])
             linkmapper = self.unfiltered().changelog.rev
             return bundlefilelog(self.svfs, f, self._cgunpacker, linkmapper)
         else:
