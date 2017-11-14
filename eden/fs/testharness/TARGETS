@@ -7,7 +7,7 @@ cpp_library(
     deps = [
         "@/eden/fs/config:config",
         "@/eden/fs/inodes:inodes",
-        "@/eden/fs/inodes:serialization-cpp2",
+        "@/eden/fs/inodes:serialization-cpp2-types",
         "@/eden/fs/model:model",
         "@/eden/fs/store:store",
         "@/eden/fs/store/hg:hg",

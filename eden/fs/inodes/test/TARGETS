@@ -14,7 +14,7 @@ cpp_unittest(
     deps = [
         "@/eden/fs/config:config",
         "@/eden/fs/fuse:fusell",
-        "@/eden/fs/fuse:handlemap-cpp2",
+        "@/eden/fs/fuse:handlemap-cpp2-types",
         "@/eden/fs/inodes:inodes",
         "@/eden/fs/journal:journal",
         "@/eden/fs/service:thrift_cpp",

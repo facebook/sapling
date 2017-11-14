@@ -7,17 +7,14 @@ cpp_unittest(
         "@/eden/fs/model:model",
         "@/eden/fs/store:store",
         "@/eden/fs/store/mononoke:mononoke",
-        "@/eden/fs/testharness:testharness",
-        "@/eden/fs/utils:path",
-        "@/eden/fs/utils/test:test_lib",
         "@/folly/experimental:test_util",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",
-        "@/folly/init:init",
         "@/folly/test:test_utils",
         "@/proxygen/httpserver:httpserver",
     ],
     external_deps = [
+        ("boost", None, "boost_regex"),
         ("googletest", None, "gmock"),
     ],
 )
