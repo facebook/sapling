@@ -272,9 +272,6 @@ class datapacktestsbase(object):
         """Test that we remember the most recent packs while fetching the delta
         chain."""
 
-        # TODO(T23454758) reenable this when it starts passing on our CI infra
-        return True
-
         packdir = self.makeTempDir()
         deltachains = []
 
