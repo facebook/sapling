@@ -19,6 +19,7 @@ extern crate futures;
 #[macro_use]
 extern crate lazy_static;
 #[cfg(test)]
+#[macro_use]
 extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
@@ -42,6 +43,7 @@ pub mod bundle2;
 pub mod bundle2_encode;
 pub mod changegroup;
 mod chunk;
+mod delta;
 pub mod parts;
 pub mod part_encode;
 mod part_header;

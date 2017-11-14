@@ -10,7 +10,9 @@ use futures::{Async, Poll, Stream};
 
 use byteorder::ByteOrder;
 use bytes::{BigEndian, BufMut};
+
 use chunk::Chunk;
+use delta;
 use errors::*;
 
 use super::{CgDeltaChunk, Part, Section};
@@ -115,13 +117,7 @@ impl ChunkBuilder {
         self.inner.put_slice(chunk.base.as_ref());
         self.inner.put_slice(chunk.linknode.as_ref());
 
-        for fragment in chunk.delta.fragments() {
-            self.inner.put_i32::<BigEndian>(fragment.start as i32);
-            self.inner.put_i32::<BigEndian>(fragment.end as i32);
-            self.inner
-                .put_i32::<BigEndian>(fragment.content.len() as i32);
-            self.inner.put_slice(&fragment.content[..]);
-        }
+        delta::encode_delta(&chunk.delta, &mut self.inner);
 
         self
     }

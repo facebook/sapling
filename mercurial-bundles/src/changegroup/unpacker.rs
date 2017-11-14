@@ -14,10 +14,10 @@ use bytes::BytesMut;
 use slog;
 use tokio_io::codec::Decoder;
 
-use mercurial_types::{Delta, MPath};
-use mercurial_types::delta::Fragment;
+use mercurial_types::MPath;
 
 use InnerPart;
+use delta;
 use errors::*;
 use utils::BytesExt;
 
@@ -210,7 +210,7 @@ impl Cg2Unpacker {
         let base = buf.drain_node();
         let linknode = buf.drain_node();
 
-        let delta = Self::decode_delta(buf, chunk_len - CHUNK_HEADER_LEN)?;
+        let delta = delta::decode_delta(buf.split_to(chunk_len - CHUNK_HEADER_LEN))?;
         return Ok(Some(CgChunk::Delta(CgDeltaChunk {
             node: node,
             p1: p1,
@@ -219,44 +219,6 @@ impl Cg2Unpacker {
             linknode: linknode,
             delta: delta,
         })));
-    }
-
-    fn decode_delta(buf: &mut BytesMut, mut remaining: usize) -> Result<Delta> {
-        let mut frags = vec![];
-
-        while remaining > 0 {
-            // Each delta fragment has:
-            // ---
-            // start offset: i32
-            // end offset: i32
-            // new length: i32
-            // content (new length bytes)
-            // ---
-            let start = buf.drain_i32();
-            let end = buf.drain_i32();
-            let new_len = buf.drain_i32();
-            // TODO: handle negative values for all the above
-
-            let delta_len = (new_len + 12) as usize;
-            if remaining < delta_len {
-                bail!(ErrorKind::Cg2Decode(format!(
-                    "expected {} bytes, {} remaining",
-                    delta_len,
-                    remaining
-                )));
-            }
-
-            frags.push(Fragment {
-                start: start as usize,
-                end: end as usize,
-                // TODO: avoid copies here by switching this to Bytes
-                content: buf.split_to(new_len as usize).to_vec(),
-            });
-
-            remaining -= delta_len;
-        }
-
-        Delta::new(frags).chain_err(|| ErrorKind::Cg2Decode("invalid delta".into()))
     }
 
     fn decode_filename(buf: &mut BytesMut) -> Result<DecodeRes<MPath>> {

@@ -33,6 +33,10 @@ error_chain! {
             description("bundle2 chunk error")
             display("bundle2 chunk error: {}", msg)
         }
+        InvalidDelta(msg: String) {
+            description("invalid delta")
+            display("invalid delta: {}", msg)
+        }
         BundleUnknownPart(header: PartHeader) {
             description("unknown bundle2 part type")
             display("unknown part type: {}", header.part_type())
