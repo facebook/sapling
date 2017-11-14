@@ -546,8 +546,12 @@ def perfbundleread(ui, repo, bundlepath, **opts):
         for part in bundle.iterparts():
             pass
 
+    def iterpartsseekable(bundle):
+        for part in bundle.iterparts(seekable=True):
+            pass
+
     def seek(bundle):
-        for part in bundle.iterparts():
+        for part in bundle.iterparts(seekable=True):
             part.seek(0, os.SEEK_END)
 
     def makepartreadnbytes(size):
@@ -583,6 +587,7 @@ def perfbundleread(ui, repo, bundlepath, **opts):
             benches.extend([
                 (makebench(forwardchunks), 'bundle2 forwardchunks()'),
                 (makebench(iterparts), 'bundle2 iterparts()'),
+                (makebench(iterpartsseekable), 'bundle2 iterparts() seekable'),
                 (makebench(seek), 'bundle2 part seek()'),
                 (makepartreadnbytes(8192), 'bundle2 part read(8k)'),
                 (makepartreadnbytes(16384), 'bundle2 part read(16k)'),

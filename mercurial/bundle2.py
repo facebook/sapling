@@ -845,8 +845,9 @@ class unbundle20(unpackermixin):
             yield self._readexact(size)
 
 
-    def iterparts(self):
+    def iterparts(self, seekable=False):
         """yield all parts contained in the stream"""
+        cls = seekableunbundlepart if seekable else unbundlepart
         # make sure param have been loaded
         self.params
         # From there, payload need to be decompressed
@@ -854,7 +855,7 @@ class unbundle20(unpackermixin):
         indebug(self.ui, 'start extraction of bundle2 parts')
         headerblock = self._readpartheader()
         while headerblock is not None:
-            part = seekableunbundlepart(self.ui, headerblock, self._fp)
+            part = cls(self.ui, headerblock, self._fp)
             yield part
             # Ensure part is fully consumed so we can start reading the next
             # part.
@@ -1154,7 +1155,7 @@ class interrupthandler(unpackermixin):
         if headerblock is None:
             indebug(self.ui, 'no part found during interruption.')
             return
-        part = seekableunbundlepart(self.ui, headerblock, self._fp)
+        part = unbundlepart(self.ui, headerblock, self._fp)
         op = interruptoperation(self.ui)
         hardabort = False
         try:

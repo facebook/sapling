@@ -289,7 +289,7 @@ class bundlerepository(localrepo.localrepository):
             self._cgunpacker = None
 
             cgpart = None
-            for part in bundle.iterparts():
+            for part in bundle.iterparts(seekable=True):
                 if part.type == 'changegroup':
                     if cgpart:
                         raise NotImplementedError("can't process "
