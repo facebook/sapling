@@ -18,7 +18,8 @@ extern crate mercurial_types;
 use std::fmt;
 use std::sync::Arc;
 
-use futures::Future;
+use futures::{Future, IntoFuture};
+use futures::future::FutureResult;
 
 use mercurial_types::{NodeHash, RepoPath};
 
@@ -81,6 +82,31 @@ pub trait Linknodes: Send + Sync + 'static {
 
     fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect;
     fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get;
+}
+
+/// A linknodes implementation that never stores anything.
+pub struct NoopLinknodes;
+
+impl NoopLinknodes {
+    #[inline]
+    pub fn new() -> Self {
+        NoopLinknodes
+    }
+}
+
+impl Linknodes for NoopLinknodes {
+    type Get = FutureResult<NodeHash, Error>;
+    type Effect = FutureResult<(), Error>;
+
+    #[inline]
+    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
+        Err(ErrorKind::NotFound(path, *node).into()).into_future()
+    }
+
+    #[inline]
+    fn add(&self, _path: RepoPath, _node: &NodeHash, _linknode: &NodeHash) -> Self::Effect {
+        Ok(()).into_future()
+    }
 }
 
 impl<L> Linknodes for Arc<L>

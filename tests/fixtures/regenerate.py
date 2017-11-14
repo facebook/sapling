@@ -84,7 +84,14 @@ def convert(tar: str, blobimport: str):
         ) as tmpdest:
             new_dir = os.path.join(tmpdest, 'new')
             subprocess.check_call(
-                [blobimport, '--blobstore', 'files', revlog_repo, new_dir]
+                [
+                    blobimport,
+                    '--blobstore',
+                    'files',
+                    '--linknodes',
+                    revlog_repo,
+                    new_dir,
+                ]
             )
             safe_overwrite_dir(new_dir, abs_dest)
 

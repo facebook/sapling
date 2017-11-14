@@ -27,8 +27,11 @@ extern crate blobrepo;
 extern crate blobstore;
 extern crate fileblob;
 extern crate fileheads;
+extern crate filekv;
+extern crate filelinknodes;
 extern crate futures_ext;
 extern crate heads;
+extern crate linknodes;
 extern crate manifoldblob;
 extern crate mercurial;
 extern crate mercurial_types;
@@ -60,7 +63,9 @@ use blobrepo::BlobChangeset;
 use blobstore::Blobstore;
 use fileblob::Fileblob;
 use fileheads::FileHeads;
+use filelinknodes::FileLinknodes;
 use futures_ext::{BoxFuture, FutureExt};
+use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::RevlogRepo;
 use rocksblob::Rocksblob;
@@ -111,6 +116,7 @@ fn run_blobimport<In, Out>(
     input: In,
     output: Out,
     blobtype: BlobstoreType,
+    write_linknodes: bool,
     logger: &Logger,
     postpone_compaction: bool,
     channel_size: usize,
@@ -140,43 +146,46 @@ where
     // data to this thread.
     let iothread = thread::Builder::new()
         .name("iothread".to_owned())
-        .spawn(move || {
-            let receiverstream = stream::iter_ok::<_, ()>(recv);
-            let mut core = Core::new().expect("cannot create core in iothread");
-            let blobstore = open_blobstore(
-                output,
-                blobtype,
-                &core.remote(),
-                postpone_compaction,
-                max_blob_size,
-            )?;
-            // Filter only manifest entries, because changeset entries should be unique
-            let mut inserted_manifest_entries = std::collections::HashSet::new();
-            let stream = receiverstream
-                .map(move |sender_helper| match sender_helper {
-                    BlobstoreEntry::Changeset(bcs) => {
-                        bcs.save(blobstore.clone()).from_err().boxify()
-                    }
-                    BlobstoreEntry::ManifestEntry((key, value)) => {
-                        if inserted_manifest_entries.insert(key.clone()) {
-                            blobstore.put(key.clone(), value).boxify()
-                        } else {
-                            STATS::duplicates.add_value(1);
-                            Ok(()).into_future().boxify()
+        .spawn({
+            let output = output.clone();
+            move || {
+                let receiverstream = stream::iter_ok::<_, ()>(recv);
+                let mut core = Core::new().expect("cannot create core in iothread");
+                let blobstore = open_blobstore(
+                    output,
+                    blobtype,
+                    &core.remote(),
+                    postpone_compaction,
+                    max_blob_size,
+                )?;
+                // Filter only manifest entries, because changeset entries should be unique
+                let mut inserted_manifest_entries = std::collections::HashSet::new();
+                let stream = receiverstream
+                    .map(move |sender_helper| match sender_helper {
+                        BlobstoreEntry::Changeset(bcs) => {
+                            bcs.save(blobstore.clone()).from_err().boxify()
                         }
-                    }
-                })
-                .map_err(|_| Error::from("error happened"))
-                .buffer_unordered(channel_size)
-                .then(move |res| {
-                    if res.is_err() {
-                        STATS::failures.add_value(1);
-                    } else {
-                        STATS::successes.add_value(1);
-                    }
-                    res
-                });
-            core.run(stream.for_each(|_| Ok(())))
+                        BlobstoreEntry::ManifestEntry((key, value)) => {
+                            if inserted_manifest_entries.insert(key.clone()) {
+                                blobstore.put(key.clone(), value).boxify()
+                            } else {
+                                STATS::duplicates.add_value(1);
+                                Ok(()).into_future().boxify()
+                            }
+                        }
+                    })
+                    .map_err(|_| Error::from("error happened"))
+                    .buffer_unordered(channel_size)
+                    .then(move |res| {
+                        if res.is_err() {
+                            STATS::failures.add_value(1);
+                        } else {
+                            STATS::successes.add_value(1);
+                        }
+                        res
+                    });
+                core.run(stream.for_each(|_| Ok(())))
+            }
         })
         .expect("cannot start iothread");
 
@@ -188,11 +197,18 @@ where
         sender,
         headstore,
         core,
-        cpupool,
+        cpupool: cpupool.clone(),
         logger: logger.clone(),
         commits_limit: commits_limit,
     };
-    let res = convert_context.convert();
+    let res = if write_linknodes {
+        info!(logger, "Opening linknodes store: {:?}", output);
+        let linknodes_store = open_linknodes_store(&output, &cpupool)?;
+        convert_context.convert(linknodes_store)
+    } else {
+        info!(logger, "--linknodes not specified, not writing linknodes");
+        convert_context.convert(NoopLinknodes::new())
+    };
     iothread.join().expect("failed to join io thread")?;
     res
 }
@@ -216,6 +232,13 @@ fn open_headstore<P: Into<PathBuf>>(heads: P, pool: &Arc<CpuPool>) -> Result<Fil
     let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
 
     Ok(headstore)
+}
+
+fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<FileLinknodes> {
+    let mut linknodes_path = path.into();
+    linknodes_path.push("linknodes");
+    let linknodes_store = FileLinknodes::create_with_pool(linknodes_path, pool.clone())?;
+    Ok(linknodes_store)
 }
 
 fn open_blobstore<P: Into<PathBuf>>(
@@ -306,6 +329,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --postpone-compaction    '(rocksdb only) postpone auto compaction while importing'
 
             -d, --debug              'print debug level output'
+            --linknodes              'also generate linknodes'
             --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
             --max-blob-size [LIMIT]  'max size of the blob to be inserted'
@@ -403,10 +427,13 @@ fn main() {
             })
             .unwrap_or(1000);
 
+        let write_linknodes = matches.is_present("linknodes");
+
         run_blobimport(
             input,
             output,
             blobtype,
+            write_linknodes,
             &root_log,
             postpone_compaction,
             channel_size,
@@ -419,6 +446,7 @@ fn main() {
                     .expect("max-blob-size must be positive integer")
             }),
         )?;
+
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
             let options = rocksdb::Options::new().create_if_missing(false);

@@ -15,9 +15,10 @@ use tokio_core::reactor::Core;
 use blobrepo::BlobChangeset;
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
+use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{Changeset, Manifest, NodeHash};
+use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -40,7 +41,7 @@ where
     H: Heads<Key = String>,
     H::Error: Into<Error>,
 {
-    pub fn convert(self) -> Result<()> {
+    pub fn convert<L: Linknodes>(self, linknodes_store: L) -> Result<()> {
         let mut core = self.core;
         let logger_owned = self.logger;
         let logger = &logger_owned;
@@ -53,6 +54,7 @@ where
         } else {
             self.repo.changesets().boxify()
         };
+        let linknodes_store = Arc::new(linknodes_store);
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
         // blob, and the files.
@@ -65,7 +67,7 @@ where
                 move |(seq, csid)| {
                     debug!(logger, "{}: changeset {}", seq, csid);
                     STATS::changesets.add_value(1);
-                    copy_changeset(repo.clone(), sender.clone(), csid)
+                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), csid)
                 }
             }) // Stream<Future<()>>
             .map(|copy| cpupool.spawn(copy))
@@ -104,13 +106,15 @@ where
 /// The files are more complex. For each manifest, we generate a stream of entries, then flatten
 /// the entry streams from all changesets into a single stream. Then each entry is filtered
 /// against a set of entries that have already been copied, and any remaining are actually copied.
-fn copy_changeset(
+fn copy_changeset<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
+    linknodes_store: L,
     csid: NodeHash,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
+    L: Linknodes,
 {
     let put = {
         let sender = sender.clone();
@@ -134,8 +138,7 @@ where
         .and_then(move |(cs, entry)| {
             let mfid = *cs.manifestid();
             let linkrev = entry.linkrev;
-
-            put_blobs(revlog_repo, sender, mfid, linkrev)
+            put_blobs(revlog_repo, sender, linknodes_store, mfid, linkrev)
         })
         .map_err(move |err| {
             Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
@@ -150,22 +153,34 @@ where
 /// Copy manifest and filelog entries into the blob store.
 ///
 /// See the help for copy_changeset for a full description.
-fn put_blobs(
+fn put_blobs<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
+    linknodes_store: L,
     mfid: NodeHash,
     linkrev: RevIdx,
-) -> impl Future<Item = (), Error = Error> + Send + 'static {
+) -> impl Future<Item = (), Error = Error> + Send + 'static
+where
+    L: Linknodes,
+{
+    let cs_entry_fut = revlog_repo.get_changelog().get_entry(linkrev).into_future();
+
     revlog_repo
         .get_manifest_blob_by_nodeid(&mfid)
+        .join(cs_entry_fut)
         .from_err()
-        .and_then(move |blob| {
+        .and_then(move |(blob, cs_entry)| {
             let putmf = manifest::put_entry(
                 sender.clone(),
                 mfid,
                 blob.as_blob().clone(),
                 blob.parents().clone(),
             );
+
+            let linknode = cs_entry.nodeid;
+            let put_root_linknode = linknodes_store
+                .add(RepoPath::root(), &mfid, &linknode)
+                .from_err();
 
             // Get the listing of entries and fetch each of those
             let files = RevlogManifest::new(revlog_repo.clone(), blob)
@@ -186,7 +201,14 @@ fn put_blobs(
                             }
                         })
                         .flatten()
-                        .for_each(move |entry| manifest::copy_entry(entry, sender.clone()))
+                        .for_each(move |entry| {
+                            // All entries share the same linknode to the changelog.
+                            let linknode_future = linknodes_store
+                                .add(entry.get_path().clone(), entry.get_hash(), &linknode)
+                                .from_err();
+                            let copy_future = manifest::copy_entry(entry, sender.clone());
+                            copy_future.join(linknode_future).map(|_| ())
+                        })
                 })
                 .into_future()
                 .flatten();
@@ -195,7 +217,7 @@ fn put_blobs(
             // Huh? No idea why this is needed to avoid an error below.
             let files = files.boxify();
 
-            putmf.join(files).map(|_| ())
+            putmf.join3(put_root_linknode, files).map(|_| ())
         })
 }
 

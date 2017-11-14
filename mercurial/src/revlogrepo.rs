@@ -169,6 +169,11 @@ impl RevlogRepo {
         }
     }
 
+    #[inline]
+    pub fn get_changelog(&self) -> &Revlog {
+        &self.changelog
+    }
+
     pub fn changeset_exists(&self, nodeid: &NodeHash) -> FutureResult<bool> {
         Ok(self.changelog.get_idx_by_nodeid(nodeid).is_ok()).into_future()
     }
