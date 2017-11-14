@@ -1193,6 +1193,9 @@ def decodepayloadchunks(ui, fh):
     Part payload data consists of framed chunks. This function takes
     a file handle and emits those chunks.
     """
+    dolog = ui.configbool('devel', 'bundle2.debug')
+    debug = ui.debug
+
     headersize = struct.calcsize(_fpayloadsize)
     readexactly = changegroup.readexactly
 
@@ -1211,7 +1214,10 @@ def decodepayloadchunks(ui, fh):
                 'negative payload chunk size: %s' % chunksize)
 
         chunksize = _unpack(_fpayloadsize, readexactly(fh, headersize))[0]
-        indebug(ui, 'payload chunk size: %i' % chunksize)
+
+        # indebug() inlined for performance.
+        if dolog:
+            debug('bundle2-input: payload chunk size: %i\n' % chunksize)
 
 class unbundlepart(unpackermixin):
     """a bundle part read from a bundle"""
