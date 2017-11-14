@@ -555,7 +555,7 @@ def testchunkselector(testfn, ui, headerlist, operation=None):
     return chunkselector.opts
 
 _headermessages = { # {operation: text}
-    'revert': _('Select hunks to revert'),
+    'apply': _('Select hunks to apply'),
     'discard': _('Select hunks to discard'),
     None: _('Select hunks to record'),
 }
