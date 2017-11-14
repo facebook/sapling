@@ -288,18 +288,26 @@ class bundlerepository(localrepo.localrepository):
             self._bundlefile = bundle
             self._cgunpacker = None
 
-            hadchangegroup = False
+            cgpart = None
             for part in bundle.iterparts():
                 if part.type == 'changegroup':
-                    if hadchangegroup:
+                    if cgpart:
                         raise NotImplementedError("can't process "
                                                   "multiple changegroups")
-                    hadchangegroup = True
+                    cgpart = part
 
                 self._handlebundle2part(bundle, part)
 
-            if not hadchangegroup:
+            if not cgpart:
                 raise error.Abort(_("No changegroups found"))
+
+            # This is required to placate a later consumer, which expects
+            # the payload offset to be at the beginning of the changegroup.
+            # We need to do this after the iterparts() generator advances
+            # because iterparts() will seek to end of payload after the
+            # generator returns control to iterparts().
+            cgpart.seek(0, os.SEEK_SET)
+
         elif isinstance(bundle, changegroup.cg1unpacker):
             if bundle.compressed():
                 f = self._writetempbundle(bundle.read, '.hg10un',

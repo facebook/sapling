@@ -859,9 +859,7 @@ class unbundle20(unpackermixin):
             # Ensure part is fully consumed so we can start reading the next
             # part.
             part.consume()
-            # But then seek back to the beginning so the code consuming this
-            # generator has a part that starts at 0.
-            part.seek(0, os.SEEK_SET)
+
             headerblock = self._readpartheader()
         indebug(self.ui, 'end of bundle2 stream')
 
