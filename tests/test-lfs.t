@@ -514,7 +514,7 @@
   >             continue
   >         sizes = [revlog.revlog.rawsize(fl, i) for i in fl]
   >         texts = [fl.revision(i, raw=True) for i in fl]
-  >         flags = [fl.flags(i) for i in fl]
+  >         flags = [int(fl.flags(i)) for i in fl]
   >         hashes = [hash(t) for t in texts]
   >         print('  %s: rawsizes=%r flags=%r hashes=%r'
   >               % (name, sizes, flags, hashes))
