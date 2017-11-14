@@ -173,12 +173,23 @@ def uisetup(ui):
     extensions.wrapfunction(templatekw, 'showmanifest', showmanifest)
     templatekw.keywords['manifest'] = templatekw.showmanifest
 
+    # Change manifest template output
+    templatekw.defaulttempl['manifest'] = '{node}'
+
 def showmanifest(orig, **args):
-    # The normal manifest template shows a rev number, which we don't have.
-    # Let's just print the node. Note, this breaks the ability for us to do
-    # '{manifest % "{node} {rev}"}' but that's fine, since we can only show
-    # the node now anyway.
-    return hex(args[r'ctx'].manifestnode())
+    """Same implementation as the upstream showmanifest, but without the 'rev'
+    field."""
+    ctx, templ = args[r'ctx'], args[r'templ']
+    mnode = ctx.manifestnode()
+    if mnode is None:
+        # just avoid crash, we might want to use the 'ff...' hash in future
+        return
+
+    mhex = hex(mnode)
+    args = args.copy()
+    args.update({r'node': mhex})
+    f = templ('manifest', **args)
+    return templatekw._mappable(f, None, f, lambda x: { 'node': mhex})
 
 def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)

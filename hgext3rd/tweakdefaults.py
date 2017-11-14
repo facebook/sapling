@@ -80,6 +80,7 @@ from mercurial import (
     registrar,
     revsetlang,
     scmutil,
+    templatekw,
     templater,
     util,
 )
@@ -273,6 +274,9 @@ def extsetup(ui):
     # Tweak Behavior
     tweakbehaviors(ui)
     _fixpager(ui)
+
+    # Change manifest template output
+    templatekw.defaulttempl['manifest'] = '{node}'
 
 def reposetup(ui, repo):
     _fixpager(ui)
