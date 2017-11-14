@@ -9,10 +9,11 @@ from __future__ import absolute_import
 
 import re
 
+from mercurial.i18n import _
+
 from mercurial import (
     error,
 )
-from mercurial.i18n import _
 
 class InvalidPointer(error.RevlogError):
     pass

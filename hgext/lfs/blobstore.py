@@ -11,13 +11,14 @@ import json
 import os
 import re
 
+from mercurial.i18n import _
+
 from mercurial import (
     error,
     url as urlmod,
     util,
     vfs as vfsmod,
 )
-from mercurial.i18n import _
 
 # 64 bytes for SHA256
 _lfsre = re.compile(r'\A[a-f0-9]{64}\Z')
