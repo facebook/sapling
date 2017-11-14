@@ -42,7 +42,7 @@ from . import (
 )
 
 class bundlerevlog(revlog.revlog):
-    def __init__(self, opener, indexfile, bundle, linkmapper):
+    def __init__(self, opener, indexfile, cgunpacker, linkmapper):
         # How it works:
         # To retrieve a revision, we need to know the offset of the revision in
         # the bundle (an unbundle object). We store this offset in the index
@@ -52,15 +52,15 @@ class bundlerevlog(revlog.revlog):
         # check revision against repotiprev.
         opener = vfsmod.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
-        self.bundle = bundle
+        self.bundle = cgunpacker
         n = len(self)
         self.repotiprev = n - 1
         self.bundlerevs = set() # used by 'bundle()' revset expression
-        for deltadata in bundle.deltaiter():
+        for deltadata in cgunpacker.deltaiter():
             node, p1, p2, cs, deltabase, delta, flags = deltadata
 
             size = len(delta)
-            start = bundle.tell() - size
+            start = cgunpacker.tell() - size
 
             link = linkmapper(cs)
             if node in self.nodemap:
@@ -165,10 +165,10 @@ class bundlerevlog(revlog.revlog):
         raise NotImplementedError
 
 class bundlechangelog(bundlerevlog, changelog.changelog):
-    def __init__(self, opener, bundle):
+    def __init__(self, opener, cgunpacker):
         changelog.changelog.__init__(self, opener)
         linkmapper = lambda x: x
-        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
+        bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker,
                               linkmapper)
 
     def baserevision(self, nodeorrev):
@@ -186,9 +186,10 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
             self.filteredrevs = oldfilter
 
 class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
-    def __init__(self, opener, bundle, linkmapper, dirlogstarts=None, dir=''):
+    def __init__(self, opener, cgunpacker, linkmapper, dirlogstarts=None,
+                 dir=''):
         manifest.manifestrevlog.__init__(self, opener, dir=dir)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
+        bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker,
                               linkmapper)
         if dirlogstarts is None:
             dirlogstarts = {}
@@ -217,9 +218,9 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
         return super(bundlemanifest, self).dirlog(d)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
-    def __init__(self, opener, path, bundle, linkmapper):
+    def __init__(self, opener, path, cgunpacker, linkmapper):
         filelog.filelog.__init__(self, opener, path)
-        bundlerevlog.__init__(self, opener, self.indexfile, bundle,
+        bundlerevlog.__init__(self, opener, self.indexfile, cgunpacker,
                               linkmapper)
 
     def baserevision(self, nodeorrev):
@@ -246,12 +247,12 @@ class bundlephasecache(phases.phasecache):
         self.invalidate()
         self.dirty = True
 
-def _getfilestarts(bundle):
     bundlefilespos = {}
-    for chunkdata in iter(bundle.filelogheader, {}):
+def _getfilestarts(cgunpacker):
+    for chunkdata in iter(cgunpacker.filelogheader, {}):
         fname = chunkdata['filename']
         bundlefilespos[fname] = bundle.tell()
-        for chunk in iter(lambda: bundle.deltachunk(None), {}):
+        for chunk in iter(lambda: cgunpacker.deltachunk(None), {}):
             pass
     return bundlefilespos
 
