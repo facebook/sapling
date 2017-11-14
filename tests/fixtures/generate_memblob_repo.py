@@ -43,6 +43,7 @@ extern crate memblob;
 extern crate membookmarks;
 extern crate mercurial_types;
 extern crate memheads;
+extern crate memlinknodes;
 extern crate blobrepo;
 extern crate blobstore;
 extern crate ascii;
@@ -53,6 +54,7 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
 use memheads::MemHeads;
+use memlinknodes::MemLinknodes;
 use blobrepo::{BlobRepo, MemBlobState};
 use ascii::AsciiString;
 use blobstore::Blobstore;
@@ -63,6 +65,7 @@ pub fn getrepo() -> BlobRepo<MemBlobState> {
     let bookmarks: MemBookmarks<NodeHash> = MemBookmarks::new();
     let heads: MemHeads<NodeHash> = MemHeads::new();
     let blobs = Memblob::new();
+    let linknodes = MemLinknodes::new();
 
 """
         )
@@ -82,7 +85,18 @@ pub fn getrepo() -> BlobRepo<MemBlobState> {
                     '    blobs.put(String::from("{}"), b"\\x{}".to_vec()).wait().expect("Blob put failed");\n'.
                     format(key, blobdata)
                 )
-        rs.writelines("""
-    BlobRepo::new(MemBlobState::new(heads, bookmarks, blobs))
+        for linknode in glob.glob(
+            os.path.join(args.source, "linknodes", "linknode-*")
+        ):
+            with open(linknode, "rb") as data:
+                linknode_data = "\\x".join(chunk_string(data.read().hex()))
+                rs.write(
+                    '    linknodes.add_data_encoded(&b"\\x{}"[..]).expect("Linknode add failed");\n'.
+                    format(linknode_data)
+                )
+        rs.writelines(
+            """
+    BlobRepo::new(MemBlobState::new(heads, bookmarks, blobs, linknodes))
 }
-""")
+"""
+        )

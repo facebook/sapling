@@ -84,7 +84,7 @@ Add commit with a directory
   $ cd ..
   $ mkdir $TESTTMP/blobrepo
 #if files
-  $ blobimport --blobstore files repo $TESTTMP/blobrepo -d 2> out.txt
+  $ blobimport --blobstore files --linknodes repo $TESTTMP/blobrepo -d 2> out.txt
   $ grep changeset < out.txt
   D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
@@ -100,7 +100,7 @@ Heads output order is unpredictable, let's sort them by commit hash
   D* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
 
 #else
-  $ blobimport --blobstore rocksdb repo $TESTTMP/blobrepo --postpone-compaction -d 2> out.txt
+  $ blobimport --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo --postpone-compaction -d 2> out.txt
   $ grep changeset < out.txt
   D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
