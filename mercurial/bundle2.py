@@ -1196,11 +1196,14 @@ def decodepayloadchunks(ui, fh):
     dolog = ui.configbool('devel', 'bundle2.debug')
     debug = ui.debug
 
-    headersize = struct.calcsize(_fpayloadsize)
+    headerstruct = struct.Struct(_fpayloadsize)
+    headersize = headerstruct.size
+    unpack = headerstruct.unpack
+
     readexactly = changegroup.readexactly
     read = fh.read
 
-    chunksize = _unpack(_fpayloadsize, readexactly(fh, headersize))[0]
+    chunksize = unpack(readexactly(fh, headersize))[0]
     indebug(ui, 'payload chunk size: %i' % chunksize)
 
     # changegroup.readexactly() is inlined below for performance.
@@ -1227,7 +1230,7 @@ def decodepayloadchunks(ui, fh):
                                 ' (got %d bytes, expected %d)') %
                               (len(s), chunksize))
 
-        chunksize = _unpack(_fpayloadsize, s)[0]
+        chunksize = unpack(s)[0]
 
         # indebug() inlined for performance.
         if dolog:
