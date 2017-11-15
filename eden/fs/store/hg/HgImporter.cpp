@@ -554,7 +554,8 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     try {
       header = readChunkHeader();
     } catch (const std::runtime_error& ex) {
-      if (StringPiece(ex.what()) == "pull failed on remote") {
+      auto errStr = StringPiece{ex.what()};
+      if (errStr.contains("unable to download")) {
         // Most likely cause of an error here is this scenario:
         // There is a local commit which does not have a tree manifest.
         // Our request to _prefetchtrees here fails because the server
