@@ -7,15 +7,15 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/utils/IoFuture.h"
+
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <chrono>
-
-#include "eden/fs/utils/IoFuture.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 using facebook::eden::IoFuture;
 using facebook::eden::waitForIO;

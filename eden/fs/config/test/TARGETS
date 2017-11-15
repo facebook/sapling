@@ -6,8 +6,8 @@ cpp_unittest(
     deps = [
         "@/eden/fs/config:config",
         "@/eden/fs/utils:path",
-        "@/eden/fs/utils/test:test_lib",
         "@/folly:file_util",
         "@/folly/experimental:test_util",
+        "@/folly/test:test_utils",
     ],
 )

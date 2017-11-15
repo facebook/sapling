@@ -9,9 +9,10 @@
  */
 #include "eden/fs/testharness/TestUtil.h"
 
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 

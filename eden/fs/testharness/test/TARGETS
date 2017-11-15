@@ -9,10 +9,10 @@ cpp_unittest(
         "@/eden/fs/store:store",
         "@/eden/fs/testharness:testharness",
         "@/eden/fs/utils:path",
-        "@/eden/fs/utils/test:test_lib",
         "@/folly:range",
         "@/folly/experimental:test_util",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
+        "@/folly/test:test_utils",
     ],
 )

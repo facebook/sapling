@@ -20,8 +20,6 @@ cpp_unittest(
         "@/eden/fs/service:thrift_cpp",
         "@/eden/fs/testharness:testharness",
         "@/eden/fs/utils:utils",
-        "@/eden/fs/utils/test:test_lib",
-        "@/folly:bits",
         "@/folly:conv",
         "@/folly:exception_wrapper",
         "@/folly:format",

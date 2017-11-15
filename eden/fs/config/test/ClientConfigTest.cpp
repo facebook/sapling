@@ -8,11 +8,13 @@
  *
  */
 #include "eden/fs/config/ClientConfig.h"
+
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::BindMount;

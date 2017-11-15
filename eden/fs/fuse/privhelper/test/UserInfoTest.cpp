@@ -7,12 +7,13 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/fuse/privhelper/UserInfo.h"
+
 #include <folly/Optional.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/test/ScopedEnvVar.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 namespace facebook {
 namespace eden {

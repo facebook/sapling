@@ -10,8 +10,8 @@
 #include "eden/fs/utils/Bug.h"
 
 #include <folly/ExceptionWrapper.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
-#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 

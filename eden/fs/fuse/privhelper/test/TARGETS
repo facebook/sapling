@@ -20,6 +20,7 @@ cpp_unittest(
         "@/folly:range",
         "@/folly/experimental:test_util",
         "@/folly/io:iobuf",
+        "@/folly/test:test_utils",
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),

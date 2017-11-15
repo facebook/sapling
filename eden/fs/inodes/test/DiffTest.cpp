@@ -8,15 +8,16 @@
  *
  */
 #include <folly/ExceptionWrapper.h>
+#include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 using ::testing::UnorderedElementsAre;

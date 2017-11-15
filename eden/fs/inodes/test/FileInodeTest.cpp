@@ -7,16 +7,17 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "eden/fs/inodes/FileInode.h"
+
 #include <folly/Format.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <chrono>
 
-#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;

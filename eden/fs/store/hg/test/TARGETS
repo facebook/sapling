@@ -9,7 +9,6 @@ cpp_unittest(
         "@/eden/fs/store/hg:hg",
         "@/eden/fs/testharness:testharness",
         "@/eden/fs/utils:path",
-        "@/eden/fs/utils/test:test_lib",
         "@/folly/experimental:test_util",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",

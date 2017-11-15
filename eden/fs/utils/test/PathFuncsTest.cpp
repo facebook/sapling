@@ -13,12 +13,12 @@
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
-#include "eden/fs/utils/test/TestChecks.h"
 
 using facebook::eden::basename;
 using facebook::eden::dirname;

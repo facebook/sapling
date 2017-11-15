@@ -23,7 +23,6 @@
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/utils/test/TestChecks.h"
 
 DEFINE_string(logging, "", "folly::logging configuration");
 
