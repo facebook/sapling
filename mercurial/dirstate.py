@@ -127,8 +127,7 @@ class dirstate(object):
 
     @propertycache
     def _map(self):
-        '''Return the dirstate contents as a map from filename to
-        (state, mode, size, time).'''
+        """Return the dirstate contents (see documentation for dirstatemap)."""
         self._map = dirstatemap(self._ui, self._opener, self._root)
         return self._map
 
@@ -1196,6 +1195,44 @@ class dirstate(object):
         self._opener.unlink(backupname)
 
 class dirstatemap(object):
+    """Map encapsulating the dirstate's contents.
+
+    The dirstate contains the following state:
+
+    - `identity` is the identity of the dirstate file, which can be used to
+      detect when changes have occurred to the dirstate file.
+
+    - `parents` is a pair containing the parents of the working copy. The
+      parents are updated by calling `setparents`.
+
+    - the state map maps filenames to tuples of (state, mode, size, mtime),
+      where state is a single character representing 'normal', 'added',
+      'removed', or 'merged'. It is accessed by treating the dirstate as a
+      dict.
+
+    - `copymap` maps destination filenames to their source filename.
+
+    The dirstate also provides the following views onto the state:
+
+    - `nonnormalset` is a set of the filenames that have state other
+      than 'normal', or are normal but have an mtime of -1 ('normallookup').
+
+    - `otherparentset` is a set of the filenames that are marked as coming
+      from the second parent when the dirstate is currently being merged.
+
+    - `dirs` is a set-like object containing all the directories that contain
+      files in the dirstate, excluding any files that are marked as removed.
+
+    - `filefoldmap` is a dict mapping normalized filenames to the denormalized
+      form that they appear as in the dirstate.
+
+    - `dirfoldmap` is a dict mapping normalized directory names to the
+      denormalized form that they appear as in the dirstate.
+
+    Once instantiated, the nonnormalset, otherparentset, dirs, filefoldmap and
+    dirfoldmap views must be maintained by the caller.
+    """
+
     def __init__(self, ui, opener, root):
         self._ui = ui
         self._opener = opener
