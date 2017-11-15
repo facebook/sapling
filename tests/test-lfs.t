@@ -459,15 +459,26 @@
   > [lfs]
   > threshold=1
   > EOF
+  $ cat > ../patch.diff <<EOF
+  > # HG changeset patch
+  > 2
+  > 
+  > diff --git a/a b/a
+  > old mode 100644
+  > new mode 100755
+  > EOF
+
   $ for i in 1 2 3; do
   >     cp ../repo10/a a
   >     if [ $i = 3 ]; then
   >         # make a content-only change
-  >         chmod +x a
-  >         i=2
+  >         hg import -q --bypass ../patch.diff
+  >         hg update -q
+  >         rm ../patch.diff
+  >     else
+  >         echo $i >> a
+  >         hg commit -m $i -A a
   >     fi
-  >     echo $i >> a
-  >     hg commit -m $i -A a
   > done
   $ [ -d .hg/store/lfs/objects ]
 
