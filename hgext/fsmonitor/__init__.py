@@ -273,7 +273,11 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
 
     matchfn = match.matchfn
     matchalways = match.always()
-    dmap = self._map._map
+    dmap = self._map
+    if util.safehasattr(dmap, '_map'):
+        # for better performance, directly access the inner dirstate map if the
+        # standard dirstate implementation is in use.
+        dmap = dmap._map
     nonnormalset = self._map.nonnormalset
 
     copymap = self._map.copymap
