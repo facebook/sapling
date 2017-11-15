@@ -387,9 +387,6 @@ class dirstate(object):
         return self._map.copymap
 
     def _droppath(self, f):
-        if self[f] not in "?r" and "dirs" in self._map.__dict__:
-            self._map.dirs.delpath(f)
-
         if "filefoldmap" in self._map.__dict__:
             normed = util.normcase(f)
             if normed in self._map.filefoldmap:
@@ -411,11 +408,9 @@ class dirstate(object):
                 if entry is not None and entry[0] != 'r':
                     raise error.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
-        if oldstate in "?r" and "dirs" in self._map.__dict__:
-            self._map.dirs.addpath(f)
         self._dirty = True
         self._updatedfiles.add(f)
-        self._map.addfile(f, state, mode, size, mtime)
+        self._map.addfile(f, oldstate, state, mode, size, mtime)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
@@ -476,6 +471,7 @@ class dirstate(object):
         '''Mark a file removed.'''
         self._dirty = True
         self._droppath(f)
+        oldstate = self[f]
         size = 0
         if self._pl[1] != nullid:
             entry = self._map.get(f)
@@ -486,7 +482,7 @@ class dirstate(object):
                 elif entry[0] == 'n' and entry[2] == -2: # other parent
                     size = -2
                     self._map.otherparentset.add(f)
-        self._map.removefile(f, size)
+        self._map.removefile(f, oldstate, size)
         if size == 0:
             self._map.copymap.pop(f, None)
 
@@ -498,7 +494,8 @@ class dirstate(object):
 
     def drop(self, f):
         '''Drop a file from the dirstate'''
-        if self._map.dropfile(f):
+        oldstate = self[f]
+        if self._map.dropfile(f, oldstate):
             self._dirty = True
             self._droppath(f)
             self._map.copymap.pop(f, None)
@@ -1217,8 +1214,8 @@ class dirstatemap(object):
     - `dirfoldmap` is a dict mapping normalized directory names to the
       denormalized form that they appear as in the dirstate.
 
-    Once instantiated, the dirs, filefoldmap and dirfoldmap views must be
-    maintained by the caller.
+    Once instantiated, the filefoldmap and dirfoldmap views must be maintained
+    by the caller.
     """
 
     def __init__(self, ui, opener, root):
@@ -1280,15 +1277,17 @@ class dirstatemap(object):
         """Loads the underlying data, if it's not already loaded"""
         self._map
 
-    def addfile(self, f, state, mode, size, mtime):
+    def addfile(self, f, oldstate, state, mode, size, mtime):
         """Add a tracked file to the dirstate."""
+        if oldstate in "?r" and "dirs" in self.__dict__:
+            self.dirs.addpath(f)
         self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self.nonnormalset.add(f)
         if size == -2:
             self.otherparentset.add(f)
 
-    def removefile(self, f, size):
+    def removefile(self, f, oldstate, size):
         """
         Mark a file as removed in the dirstate.
 
@@ -1296,15 +1295,20 @@ class dirstatemap(object):
         the file's previous state.  In the future, we should refactor this
         to be more explicit about what that state is.
         """
+        if oldstate not in "?r" and "dirs" in self.__dict__:
+            self.dirs.delpath(f)
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self.nonnormalset.add(f)
 
-    def dropfile(self, f):
+    def dropfile(self, f, oldstate):
         """
         Remove a file from the dirstate.  Returns True if the file was
         previously recorded.
         """
         exists = self._map.pop(f, None) is not None
+        if exists:
+            if oldstate != "r" and "dirs" in self.__dict__:
+                self.dirs.delpath(f)
         self.nonnormalset.discard(f)
         return exists
 
