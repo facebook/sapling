@@ -28,12 +28,16 @@ class AddTest(EdenHgTestCase):
             'dir1/b.txt': '?',
             'dir2/c.txt': '?',
         })
+        self.assert_dirstate_empty()
 
         # `hg add dir2` should ensure only things under dir2 are added.
         self.hg('add', 'dir2')
         self.assert_status({
             'dir1/b.txt': '?',
             'dir2/c.txt': 'A',
+        })
+        self.assert_dirstate({
+            'dir2/c.txt': ('a', 0, 'MERGE_BOTH'),
         })
 
         # This is the equivalent of `hg forget dir1/a.txt`.
@@ -209,4 +213,43 @@ class AddTest(EdenHgTestCase):
                 'ignored_directory/one.txt': 'I',
                 'ignored_directory/two.txt': 'I',
             }
+        )
+
+    def test_debugdirstate(self):
+        self.touch('dir1/b.txt')
+        self.mkdir('dir2')
+        self.touch('dir2/c.txt')
+        self.assert_status({
+            'dir1/b.txt': '?',
+            'dir2/c.txt': '?',
+        })
+
+        self.assertEqual(
+            self.repo.hg('debugdirstate'),
+            '',
+            'Filesystem changes with no "hg add" commands should not '
+            'update the dirstate'
+        )
+
+        self.hg('add', 'dir2')
+        self.assertEqual(
+            self.repo.hg('debugdirstate'),
+            'a   0   MERGE_BOTH dir2/c.txt\n',
+            'Calling "hg add" should update the dirstate'
+        )
+
+        self.rm('dir1/a.txt')
+        self.hg('add', 'dir2')
+        self.assertEqual(
+            self.repo.hg('debugdirstate'),
+            'a   0   MERGE_BOTH dir2/c.txt\n',
+            'Removing a file without forgetting it should not '
+            'update the dirstate'
+        )
+
+        self.hg('forget', 'dir1/a.txt')
+        self.assertEqual(
+            self.repo.hg('debugdirstate'),
+            'r   0              dir1/a.txt\n'
+            'a   0   MERGE_BOTH dir2/c.txt\n'
         )

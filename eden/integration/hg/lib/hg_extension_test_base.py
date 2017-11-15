@@ -8,9 +8,10 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
+import json
 import os
 
 
@@ -210,9 +211,11 @@ class EdenHgTestCase(testcase.EdenTestCase):
         msg: Optional[str] = None,
         check_ignored: bool = True
     ):
-        '''Asserts the output of `hg status`. `expected` is a dict where keys
-        are paths relative to the repo root and values are the single-character
-        string that represents the status: 'M', 'A', 'R', '!', '?', 'I'.
+        '''Asserts the output of `hg status` matches the expected state.
+
+        `expected` is a dict where keys are paths relative to the repo
+        root and values are the single-character string that represents
+        the status: 'M', 'A', 'R', '!', '?', 'I'.
 
         'C' is not currently supported.
         '''
@@ -229,11 +232,50 @@ class EdenHgTestCase(testcase.EdenTestCase):
             path = entry[2:]
             actual_status[path] = flag
 
-        self.assertDictEqual(expected, actual_status)
+        self.assertDictEqual(expected, actual_status, msg=msg)
 
-    def assert_status_empty(self, msg=None, check_ignored=True):
+    def assert_status_empty(
+        self,
+        msg: Optional[str] = None,
+        check_ignored: bool = True
+    ):
         '''Ensures that `hg status` reports no modifications.'''
         self.assert_status({}, msg=msg, check_ignored=check_ignored)
+
+    def assert_dirstate(
+        self,
+        expected: Dict[str, Tuple[str, int, str]],
+        msg: Optional[str] = None
+    ):
+        '''Asserts the output of `hg debugdirstate` matches the expected state.
+
+        `expected` is a dict where keys are paths relative to the repo
+        root and values are the expected dirstate tuples.  Each dirstate tuple
+        is a 3-tuple consisting of (status, mode, merge_state)
+
+        The `status` field is one of the dirstate status characters:
+          'n', 'm', 'r', 'a', '?'
+
+        The `mode` field should be the expected file permissions, as an integer.
+
+        `merge_state` should be '' for no merge state, 'MERGE_OTHER', or
+        'MERGE_BOTH'
+        '''
+        output = self.hg('debugdirstate', '--json')
+        data = json.loads(output)
+
+        # Translate the json output into a dict that we can
+        # compare with the expected dictionary.
+        actual_dirstate = {}
+        for path, entry in data.items():
+            actual_dirstate[path] = (entry['status'], entry['mode'],
+                                     entry['merge_state_string'])
+
+        self.assertDictEqual(expected, actual_dirstate, msg=msg)
+
+    def assert_dirstate_empty(self, msg: Optional[str] = None):
+        '''Ensures that `hg debugdirstate` reports no entries.'''
+        self.assert_dirstate({}, msg=msg)
 
     def assert_copy_map(self, expected):
         stdout = self.eden.run_cmd('debug', 'hg_copy_map_get_all',
