@@ -386,9 +386,6 @@ class dirstate(object):
     def copies(self):
         return self._map.copymap
 
-    def _droppath(self, f):
-        self._updatedfiles.add(f)
-
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]
         if state == 'a' or oldstate == 'r':
@@ -465,7 +462,6 @@ class dirstate(object):
     def remove(self, f):
         '''Mark a file removed.'''
         self._dirty = True
-        self._droppath(f)
         oldstate = self[f]
         size = 0
         if self._pl[1] != nullid:
@@ -477,6 +473,7 @@ class dirstate(object):
                 elif entry[0] == 'n' and entry[2] == -2: # other parent
                     size = -2
                     self._map.otherparentset.add(f)
+        self._updatedfiles.add(f)
         self._map.removefile(f, oldstate, size)
         if size == 0:
             self._map.copymap.pop(f, None)
@@ -492,7 +489,7 @@ class dirstate(object):
         oldstate = self[f]
         if self._map.dropfile(f, oldstate):
             self._dirty = True
-            self._droppath(f)
+            self._updatedfiles.add(f)
             self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
