@@ -2,6 +2,7 @@
 import hashlib
 import os
 import random
+import resource
 import shutil
 import stat
 import struct
@@ -295,20 +296,29 @@ class datapacktestsbase(object):
             self.createPack(chain, packdir)
             deltachains.append(chain)
 
-        store = datapackstore(mercurial.ui.ui(), packdir)
+        try:
+            store = datapackstore(mercurial.ui.ui(), packdir)
 
-        random.shuffle(deltachains)
-        for randomchain in deltachains:
-            revision = random.choice(randomchain)
-            chain = store.getdeltachain(revision[0], revision[1])
+            random.shuffle(deltachains)
+            for randomchain in deltachains:
+                revision = random.choice(randomchain)
+                chain = store.getdeltachain(revision[0], revision[1])
 
-            mostrecentpack = next(iter(store.packs), None)
-            self.assertEquals(
-                mostrecentpack.getdeltachain(revision[0], revision[1]),
-                chain
-            )
+                mostrecentpack = next(iter(store.packs), None)
+                self.assertEquals(
+                    mostrecentpack.getdeltachain(revision[0], revision[1]),
+                    chain
+                )
 
-            self.assertEquals(randomchain.index(revision) + 1, len(chain))
+                self.assertEquals(randomchain.index(revision) + 1, len(chain))
+        except Exception as ex:
+            print('Exception: %r' % ex)
+            # Print out RLIMIT_NOFILE
+            print('RLIMIT_NOFILE: %r'
+                  % (resource.getrlimit(resource.RLIMIT_NOFILE),))
+            # Print debug information about what files are opened by the
+            # current process.
+            os.system('lsof -p %s' % os.getpid())
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):
