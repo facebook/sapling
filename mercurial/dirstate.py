@@ -80,6 +80,7 @@ class dirstate(object):
         self._plchangecallbacks = {}
         self._origpl = None
         self._updatedfiles = set()
+        self._mapcls = dirstatemap
 
     @contextlib.contextmanager
     def parentchange(self):
@@ -128,7 +129,7 @@ class dirstate(object):
     @propertycache
     def _map(self):
         """Return the dirstate contents (see documentation for dirstatemap)."""
-        self._map = dirstatemap(self._ui, self._opener, self._root)
+        self._map = self._mapcls(self._ui, self._opener, self._root)
         return self._map
 
     @property
