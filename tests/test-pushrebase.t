@@ -225,7 +225,7 @@ Stack with conflict in tail should abort
   searching for changes
   remote: conflicting changes in:
       a
-  
+  remote: (pull and rebase your changes locally, then try again)
   abort: push failed on remote
   [255]
 
@@ -259,7 +259,7 @@ Stack with conflict in head should abort
   searching for changes
   remote: conflicting changes in:
       a
-  
+  remote: (pull and rebase your changes locally, then try again)
   abort: push failed on remote
   [255]
 
@@ -934,6 +934,6 @@ Push a file-copy changeset and the copy source gets modified by others:
   searching for changes
   abort: conflicting changes in:
       A
-  
+  (please pull and rebase your changes locally, then try again)
   [255]
 

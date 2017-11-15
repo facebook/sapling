@@ -589,8 +589,10 @@ def _getrevs(op, bundle, onto, renamesrccache):
             conflicts = findconflictsfast()
 
         if conflicts:
-            raise error.Abort(_('conflicting changes in:\n%s') %
-                             ''.join('    %s\n' % f for f in sorted(conflicts)))
+            msg = (_('conflicting changes in:\n%s\n') %
+                    ''.join('    %s\n' % f for f in sorted(conflicts))).strip()
+            hint = _('pull and rebase your changes locally, then try again')
+            raise error.Abort(msg, hint=hint)
 
     return revs, oldonto
 
