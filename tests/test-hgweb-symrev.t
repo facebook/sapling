@@ -468,11 +468,11 @@ Set up the repo
   <a href="/graph/tip?style=gitweb">graph</a> |
   <a href="/file/tip?style=gitweb">files</a> | <a href="/archive/tip.zip">zip</a>  |
   <a href="/log/43c799df6e75?style=gitweb">(0)</a>  <a href="/log/tip?style=gitweb">tip</a> <br/>
-  <a class="title" href="/rev/9d8c40cba617?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>third<span class="logtags"> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a>
+   <a class="title" href="/rev/9d8c40cba617?style=gitweb">
   <a href="/rev/9d8c40cba617?style=gitweb">changeset</a><br/>
-  <a class="title" href="/rev/a7c1559b7bba?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a>
+   <a class="title" href="/rev/a7c1559b7bba?style=gitweb">
   <a href="/rev/a7c1559b7bba?style=gitweb">changeset</a><br/>
-  <a class="title" href="/rev/43c799df6e75?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>first<span class="logtags"> </span></a>
+   <a class="title" href="/rev/43c799df6e75?style=gitweb">
   <a href="/rev/43c799df6e75?style=gitweb">changeset</a><br/>
   <a href="/log/43c799df6e75?style=gitweb">(0)</a>  <a href="/log/tip?style=gitweb">tip</a> <br/>
 
@@ -518,11 +518,11 @@ Set up the repo
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'shortlog?style=gitweb&rev=all()' | egrep $REVLINKS
   <a href="/file?style=gitweb">files</a> | <a href="/archive/tip.zip">zip</a> 
-  <a class="title" href="/rev/9d8c40cba617?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>third<span class="logtags"> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a>
+   <a class="title" href="/rev/9d8c40cba617?style=gitweb">
   <a href="/rev/9d8c40cba617?style=gitweb">changeset</a><br/>
-  <a class="title" href="/rev/a7c1559b7bba?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a>
+   <a class="title" href="/rev/a7c1559b7bba?style=gitweb">
   <a href="/rev/a7c1559b7bba?style=gitweb">changeset</a><br/>
-  <a class="title" href="/rev/43c799df6e75?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>first<span class="logtags"> </span></a>
+   <a class="title" href="/rev/43c799df6e75?style=gitweb">
   <a href="/rev/43c799df6e75?style=gitweb">changeset</a><br/>
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'rev/xyzzy?style=gitweb' | egrep $REVLINKS
@@ -531,7 +531,7 @@ Set up the repo
   <a href="/graph/xyzzy?style=gitweb">graph</a> |
   <a href="/file/xyzzy?style=gitweb">files</a> |
   <a href="/raw-rev/xyzzy">raw</a>  | <a href="/archive/xyzzy.zip">zip</a>  |
-  <a class="title" href="/raw-rev/a7c1559b7bba">second <span class="logtags"><span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a>
+   <a class="title" href="/raw-rev/a7c1559b7bba">
    <td style="font-family:monospace"><a class="list" href="/rev/a7c1559b7bba?style=gitweb">a7c1559b7bba</a></td>
   <a class="list" href="/rev/43c799df6e75?style=gitweb">43c799df6e75</a>
   <a class="list" href="/rev/9d8c40cba617?style=gitweb">9d8c40cba617</a>
@@ -560,9 +560,9 @@ Set up the repo
   <a href="/graph/xyzzy?style=gitweb">graph</a> |
   <a href="/file/xyzzy?style=gitweb">files</a> | <a href="/archive/xyzzy.zip">zip</a>  |
   <a href="/log/43c799df6e75?style=gitweb">(0)</a>  <a href="/log/tip?style=gitweb">tip</a> <br/>
-  <a class="title" href="/rev/a7c1559b7bba?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a>
+   <a class="title" href="/rev/a7c1559b7bba?style=gitweb">
   <a href="/rev/a7c1559b7bba?style=gitweb">changeset</a><br/>
-  <a class="title" href="/rev/43c799df6e75?style=gitweb"><span class="age">Thu, 01 Jan 1970 00:00:00 +0000</span>first<span class="logtags"> </span></a>
+   <a class="title" href="/rev/43c799df6e75?style=gitweb">
   <a href="/rev/43c799df6e75?style=gitweb">changeset</a><br/>
   <a href="/log/43c799df6e75?style=gitweb">(0)</a>  <a href="/log/tip?style=gitweb">tip</a> <br/>
 
@@ -709,9 +709,9 @@ Set up the repo
               <li><a href="/graph/tip?style=monoblue">graph</a></li>
               <li><a href="/file/tip?style=monoblue">files</a></li>
               <li><a href="/archive/tip.zip">zip</a></li>
-      <h3 class="changelog"><a class="title" href="/rev/9d8c40cba617?style=monoblue">third<span class="logtags"> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></h3>
-  <h3 class="changelog"><a class="title" href="/rev/a7c1559b7bba?style=monoblue">second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a></h3>
-  <h3 class="changelog"><a class="title" href="/rev/43c799df6e75?style=monoblue">first<span class="logtags"> </span></a></h3>
+      <a class="title" href="/rev/9d8c40cba617?style=monoblue">
+      <a class="title" href="/rev/a7c1559b7bba?style=monoblue">
+      <a class="title" href="/rev/43c799df6e75?style=monoblue">
   <a href="/log/43c799df6e75?style=monoblue">(0)</a>  <a href="/log/tip?style=monoblue">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'graph?style=monoblue' | egrep $REVLINKS
@@ -753,16 +753,16 @@ Set up the repo
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'shortlog?style=monoblue&rev=all()' | egrep $REVLINKS
               <li><a href="/archive/tip.zip">zip</a></li>
-      <h3 class="changelog"><a class="title" href="/rev/9d8c40cba617?style=monoblue">third<span class="logtags"> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></a></h3>
-  <h3 class="changelog"><a class="title" href="/rev/a7c1559b7bba?style=monoblue">second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a></h3>
-  <h3 class="changelog"><a class="title" href="/rev/43c799df6e75?style=monoblue">first<span class="logtags"> </span></a></h3>
+      <a class="title" href="/rev/9d8c40cba617?style=monoblue">
+      <a class="title" href="/rev/a7c1559b7bba?style=monoblue">
+      <a class="title" href="/rev/43c799df6e75?style=monoblue">
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'rev/xyzzy?style=monoblue' | egrep $REVLINKS
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy?style=monoblue">files</a></li>
           <li><a href="/raw-rev/xyzzy">raw</a></li>
           <li><a href="/archive/xyzzy.zip">zip</a></li>
-      <h3 class="changeset"><a href="/raw-rev/a7c1559b7bba">second <span class="logtags"><span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a></h3>
+          <a href="/raw-rev/a7c1559b7bba">
           <dd><a href="/rev/a7c1559b7bba?style=monoblue">a7c1559b7bba</a></dd>
   <dd><a href="/rev/43c799df6e75?style=monoblue">43c799df6e75</a></dd>
   <dd><a href="/rev/9d8c40cba617?style=monoblue">9d8c40cba617</a></dd>
@@ -789,8 +789,8 @@ Set up the repo
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy?style=monoblue">files</a></li>
               <li><a href="/archive/xyzzy.zip">zip</a></li>
-      <h3 class="changelog"><a class="title" href="/rev/a7c1559b7bba?style=monoblue">second<span class="logtags"> <span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a></h3>
-  <h3 class="changelog"><a class="title" href="/rev/43c799df6e75?style=monoblue">first<span class="logtags"> </span></a></h3>
+      <a class="title" href="/rev/a7c1559b7bba?style=monoblue">
+      <a class="title" href="/rev/43c799df6e75?style=monoblue">
   <a href="/log/43c799df6e75?style=monoblue">(0)</a>  <a href="/log/tip?style=monoblue">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'graph/xyzzy?style=monoblue' | egrep $REVLINKS
