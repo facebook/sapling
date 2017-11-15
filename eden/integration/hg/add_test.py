@@ -253,3 +253,23 @@ class AddTest(EdenHgTestCase):
             'r   0              dir1/a.txt\n'
             'a   0   MERGE_BOTH dir2/c.txt\n'
         )
+
+    def test_rebuild_dirstate(self):
+        self.touch('dir1/b.txt')
+        self.mkdir('dir2')
+        self.touch('dir2/c.txt')
+        self.hg('add', 'dir2')
+        self.assert_dirstate({
+            'dir2/c.txt': ('a', 0, 'MERGE_BOTH'),
+        })
+        self.assert_status({
+            'dir1/b.txt': '?',
+            'dir2/c.txt': 'A',
+        })
+
+        self.repo.hg('debugrebuilddirstate')
+        self.assert_dirstate_empty()
+        self.assert_status({
+            'dir1/b.txt': '?',
+            'dir2/c.txt': '?',
+        })
