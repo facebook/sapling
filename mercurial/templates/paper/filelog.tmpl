@@ -46,7 +46,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>
  log {file|escape} @ {rev}:<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
- {branch%changelogbranchname}{tags%changelogtag}{bookmarks%changelogtag}
+ {alltags}
  {if(linerange,
 ' (following lines {linerange}{if(descend, ', descending')} <a href="{url|urlescape}log/{symrev}/{file|urlescape}{sessionvars%urlparameter}">back to filelog</a>)')}
 </h3>

@@ -740,7 +740,7 @@ before addition - error
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 7:<a href="/rev/46c1a66bd8fc">46c1a66bd8fc</a>
-   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 1:2 <a href="/log/tip/c">back to filelog</a>)
   </h3>
   
@@ -860,7 +860,7 @@ before addition - error
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 7:<a href="/rev/46c1a66bd8fc?revcount=1">46c1a66bd8fc</a>
-   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 1:2 <a href="/log/tip/c?revcount=1">back to filelog</a>)
   </h3>
   
@@ -1379,7 +1379,7 @@ filelog with 'linerange' and 'patch'
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 12:<a href="/rev/6e4182052f7b">6e4182052f7b</a>
-   <span class="branchname">a-branch</span> <span class="tag">tip</span> 
+   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 3:4 <a href="/log/tip/c">back to filelog</a>)
   </h3>
   

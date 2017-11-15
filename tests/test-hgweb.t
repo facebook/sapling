@@ -267,7 +267,7 @@ try bad style
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
-   <span class="tag">tip</span> <span class="tag">@</span> <span class="tag">a b c</span> <span class="tag">d/e/f</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">@</span> <span class="tag">a b c</span> <span class="tag">d/e/f</span> 
   </h3>
   
   

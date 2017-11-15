@@ -203,6 +203,7 @@ changesettag = '<span class="tag">{tag|escape}</span> '
 changesetbookmark = '<span class="tag">{bookmark|escape}</span> '
 changelogbranchhead = '<span class="branchhead">{name|escape}</span> '
 changelogbranchname = '<span class="branchname">{name|escape}</span> '
+alltags = '{inbranch%changelogbranchname}{branches%changelogbranchhead}{tags%changelogtag}{bookmarks%changelogtag}'
 
 filediffparent = '
   <tr>

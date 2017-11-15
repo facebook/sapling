@@ -254,7 +254,7 @@ diff removed file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    diff b @ 1:<a href="/rev/559edbd9ed20">559edbd9ed20</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -536,7 +536,7 @@ diff modified file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    diff a @ 1:<a href="/rev/559edbd9ed20">559edbd9ed20</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -772,7 +772,7 @@ comparison existing file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    comparison a @ 2:<a href="/rev/d73db4d812ff">d73db4d812ff</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -904,7 +904,7 @@ comparison removed file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    comparison a @ 3:<a href="/rev/20e80271eb7a">20e80271eb7a</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -1042,7 +1042,7 @@ comparison not-modified file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    comparison e @ 5:<a href="/rev/41d9fc4a6ae1">41d9fc4a6ae1</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   

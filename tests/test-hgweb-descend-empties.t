@@ -73,7 +73,7 @@ manifest with descending (paper)
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/c9f45f7a1659">c9f45f7a1659</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -193,7 +193,7 @@ manifest with descending (coal)
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/c9f45f7a1659?style=coal">c9f45f7a1659</a>
-   <span class="tag">tip</span> 
+   <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   

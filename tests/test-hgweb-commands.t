@@ -1312,7 +1312,7 @@ File-related
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    view foo @ 1:<a href="/rev/a4f92ed23982">a4f92ed23982</a>
-   
+   <span class="branchhead">default</span> 
   </h3>
   
   
@@ -1446,7 +1446,7 @@ File-related
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    view foo @ 2:<a href="/rev/1d22e65f027e">1d22e65f027e</a>
-   <span class="branchname">stable</span> 
+   <span class="branchhead">stable</span> 
   </h3>
   
   
