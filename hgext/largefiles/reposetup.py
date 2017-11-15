@@ -138,7 +138,7 @@ def reposetup(ui, repo):
                         sf = lfutil.standin(f)
                         if sf in dirstate:
                             newfiles.append(sf)
-                        elif sf in dirstate.dirs():
+                        elif dirstate.hasdir(sf):
                             # Directory entries could be regular or
                             # standin, check both
                             newfiles.extend((f, sf))
@@ -156,7 +156,7 @@ def reposetup(ui, repo):
                     def sfindirstate(f):
                         sf = lfutil.standin(f)
                         dirstate = self.dirstate
-                        return sf in dirstate or sf in dirstate.dirs()
+                        return sf in dirstate or dirstate.hasdir(sf)
 
                     match._files = [f for f in match._files
                                     if sfindirstate(f)]

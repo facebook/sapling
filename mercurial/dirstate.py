@@ -157,8 +157,8 @@ class dirstate(object):
     def _pl(self):
         return self._map.parents()
 
-    def dirs(self):
-        return self._map.dirs
+    def hasdir(self, d):
+        return self._map.hastrackeddir(d)
 
     @rootcache('.hgignore')
     def _ignore(self):
@@ -390,11 +390,11 @@ class dirstate(object):
         oldstate = self[f]
         if state == 'a' or oldstate == 'r':
             scmutil.checkfilename(f)
-            if f in self._map.dirs:
+            if self._map.hastrackeddir(f):
                 raise error.Abort(_('directory %r already in dirstate') % f)
             # shadows
             for d in util.finddirs(f):
-                if d in self._map.dirs:
+                if self._map.hastrackeddir(d):
                     break
                 entry = self._map.get(d)
                 if entry is not None and entry[0] != 'r':
@@ -770,7 +770,6 @@ class dirstate(object):
         results = dict.fromkeys(subrepos)
         results['.hg'] = None
 
-        alldirs = None
         for ff in files:
             # constructing the foldmap is expensive, so don't do it for the
             # common case where files is ['.']
@@ -801,9 +800,7 @@ class dirstate(object):
                 if nf in dmap: # does it exactly match a missing file?
                     results[nf] = None
                 else: # does it match a missing directory?
-                    if alldirs is None:
-                        alldirs = util.dirs(dmap._map)
-                    if nf in alldirs:
+                    if self._map.hasdir(nf):
                         if matchedir:
                             matchedir(nf)
                         notfoundadd(nf)
@@ -1197,9 +1194,6 @@ class dirstatemap(object):
     - `otherparentset` is a set of the filenames that are marked as coming
       from the second parent when the dirstate is currently being merged.
 
-    - `dirs` is a set-like object containing all the directories that contain
-      files in the dirstate, excluding any files that are marked as removed.
-
     - `filefoldmap` is a dict mapping normalized filenames to the denormalized
       form that they appear as in the dirstate.
 
@@ -1235,7 +1229,8 @@ class dirstatemap(object):
         self._map.clear()
         self.copymap.clear()
         self.setparents(nullid, nullid)
-        util.clearcachedproperty(self, "dirs")
+        util.clearcachedproperty(self, "_dirs")
+        util.clearcachedproperty(self, "_alldirs")
         util.clearcachedproperty(self, "filefoldmap")
         util.clearcachedproperty(self, "dirfoldmap")
         util.clearcachedproperty(self, "nonnormalset")
@@ -1268,8 +1263,10 @@ class dirstatemap(object):
 
     def addfile(self, f, oldstate, state, mode, size, mtime):
         """Add a tracked file to the dirstate."""
-        if oldstate in "?r" and "dirs" in self.__dict__:
-            self.dirs.addpath(f)
+        if oldstate in "?r" and "_dirs" in self.__dict__:
+            self._dirs.addpath(f)
+        if oldstate == "?" and "_alldirs" in self.__dict__:
+            self._alldirs.addpath(f)
         self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self.nonnormalset.add(f)
@@ -1284,8 +1281,10 @@ class dirstatemap(object):
         the file's previous state.  In the future, we should refactor this
         to be more explicit about what that state is.
         """
-        if oldstate not in "?r" and "dirs" in self.__dict__:
-            self.dirs.delpath(f)
+        if oldstate not in "?r" and "_dirs" in self.__dict__:
+            self._dirs.delpath(f)
+        if oldstate == "?" and "_alldirs" in self.__dict__:
+            self._alldirs.addpath(f)
         if "filefoldmap" in self.__dict__:
             normed = util.normcase(f)
             self.filefoldmap.pop(normed, None)
@@ -1299,8 +1298,10 @@ class dirstatemap(object):
         """
         exists = self._map.pop(f, None) is not None
         if exists:
-            if oldstate != "r" and "dirs" in self.__dict__:
-                self.dirs.delpath(f)
+            if oldstate != "r" and "_dirs" in self.__dict__:
+                self._dirs.delpath(f)
+            if "_alldirs" in self.__dict__:
+                self._alldirs.delpath(f)
         if "filefoldmap" in self.__dict__:
             normed = util.normcase(f)
             self.filefoldmap.pop(normed, None)
@@ -1349,12 +1350,27 @@ class dirstatemap(object):
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
-    @propertycache
-    def dirs(self):
-        """Returns a set-like object containing all the directories in the
-        current dirstate.
+    def hastrackeddir(self, d):
         """
+        Returns True if the dirstate contains a tracked (not removed) file
+        in this directory.
+        """
+        return d in self._dirs
+
+    def hasdir(self, d):
+        """
+        Returns True if the dirstate contains a file (tracked or removed)
+        in this directory.
+        """
+        return d in self._alldirs
+
+    @propertycache
+    def _dirs(self):
         return util.dirs(self._map, 'r')
+
+    @propertycache
+    def _alldirs(self):
+        return util.dirs(self._map)
 
     def _opendirstatefile(self):
         fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
@@ -1473,6 +1489,6 @@ class dirstatemap(object):
     def dirfoldmap(self):
         f = {}
         normcase = util.normcase
-        for name in self.dirs:
+        for name in self._dirs:
             f[normcase(name)] = name
         return f
