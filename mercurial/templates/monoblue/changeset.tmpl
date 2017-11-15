@@ -35,7 +35,7 @@
     <h3 class="changeset">
         <a href="{url|urlescape}raw-rev/{node|short}">
             {desc|strip|escape|firstline|nonempty}
-            <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
+            {alltags}
         </a>
     </h3>
     <p class="changeset-age"><span class="age">{date|rfc822date}</span></p>

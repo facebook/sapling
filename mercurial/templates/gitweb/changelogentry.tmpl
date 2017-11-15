@@ -2,7 +2,7 @@
  <a class="title" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
   <span class="age">{date|rfc822date}</span>
   {desc|strip|firstline|escape|nonempty}
-  <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
+  {alltags}
  </a>
 </div>
 <div class="title_text">

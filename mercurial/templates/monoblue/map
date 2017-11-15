@@ -225,6 +225,7 @@ tagtag = '<span class="tagtag" title="{name|escape}">{name|escape}</span> '
 branchtag = '<span class="branchtag" title="{name|escape}">{name|escape}</span> '
 inbranchtag = '<span class="inbranchtag" title="{name|escape}">{name|escape}</span> '
 bookmarktag = '<span class="bookmarktag" title="{name|escape}">{name|escape}</span> '
+alltags = '<span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>'
 shortlogentry = '
   <tr class="parity{parity}">
     <td class="nowrap age">{date|rfc822date}</td>
@@ -232,7 +233,7 @@ shortlogentry = '
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {desc|strip|firstline|escape|nonempty}
-        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
+        {alltags}
       </a>
     </td>
     <td class="nowrap">
@@ -247,7 +248,7 @@ filelogentry = '
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {desc|strip|firstline|escape|nonempty}
-        <span class="logtags">{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>
+        {alltags}
       </a>
     </td>
     <td class="nowrap">
