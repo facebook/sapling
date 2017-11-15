@@ -64,6 +64,7 @@ portablefilenames = ignore
 share =
 eden = {}
 sqldirstate = !
+fbsparse = !
 fsmonitor = !
 sparse = !
 '''.format(eden_ext_path)
