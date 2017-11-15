@@ -934,6 +934,6 @@ Push a file-copy changeset and the copy source gets modified by others:
   searching for changes
   abort: conflicting changes in:
       A
-  (please pull and rebase your changes locally, then try again)
+  (pull and rebase your changes locally, then try again)
   [255]
 
