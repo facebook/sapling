@@ -35,7 +35,7 @@ class UpdateTest(EdenHgTestCase):
         repo.write_file('foo/bar.txt', 'updated in commit 3\n')
         self.commit3 = repo.commit('Update foo/.gitignore')
 
-    def test_update_clean_dot(self):
+    def test_update_clean_reverts_modified_files(self):
         '''Test using `hg update --clean .` to revert file modifications.'''
         self.assert_status_empty()
 
@@ -45,6 +45,20 @@ class UpdateTest(EdenHgTestCase):
         self.repo.update('.', clean=True)
         self.assertEqual('hola', self.read_file('hello.txt'))
         self.assert_status_empty()
+
+    def test_update_clean_removes_added_and_removed_statuses(self):
+        '''Test using `hg update --clean .` in the presence of added and removed
+        files.'''
+        self.write_file('bar/some_new_file.txt', 'new file\n')
+        self.hg('add', 'bar/some_new_file.txt')
+        self.hg('remove', 'foo/bar.txt')
+        self.assertFalse(os.path.isfile(self.get_path('foo/bar.txt')))
+        self.assert_status({'foo/bar.txt': 'R', 'bar/some_new_file.txt': 'A'})
+
+        self.repo.update('.', clean=True)
+        self.assert_status({'bar/some_new_file.txt': '?'})
+        self.assertTrue(os.path.isfile(self.get_path('foo/bar.txt')))
+        # TODO: Add assert_dirstate_empty() when D6322052 lands.
 
     def test_update_with_gitignores(self):
         '''
