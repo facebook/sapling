@@ -387,11 +387,6 @@ class dirstate(object):
         return self._map.copymap
 
     def _droppath(self, f):
-        if "filefoldmap" in self._map.__dict__:
-            normed = util.normcase(f)
-            if normed in self._map.filefoldmap:
-                del self._map.filefoldmap[normed]
-
         self._updatedfiles.add(f)
 
     def _addpath(self, f, state, mode, size, mtime):
@@ -1213,9 +1208,6 @@ class dirstatemap(object):
 
     - `dirfoldmap` is a dict mapping normalized directory names to the
       denormalized form that they appear as in the dirstate.
-
-    Once instantiated, the filefoldmap and dirfoldmap views must be maintained
-    by the caller.
     """
 
     def __init__(self, ui, opener, root):
@@ -1297,6 +1289,9 @@ class dirstatemap(object):
         """
         if oldstate not in "?r" and "dirs" in self.__dict__:
             self.dirs.delpath(f)
+        if "filefoldmap" in self.__dict__:
+            normed = util.normcase(f)
+            self.filefoldmap.pop(normed, None)
         self._map[f] = dirstatetuple('r', 0, size, 0)
         self.nonnormalset.add(f)
 
@@ -1309,6 +1304,9 @@ class dirstatemap(object):
         if exists:
             if oldstate != "r" and "dirs" in self.__dict__:
                 self.dirs.delpath(f)
+        if "filefoldmap" in self.__dict__:
+            normed = util.normcase(f)
+            self.filefoldmap.pop(normed, None)
         self.nonnormalset.discard(f)
         return exists
 
