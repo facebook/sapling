@@ -415,11 +415,11 @@ class dirstate(object):
             self._map.dirs.addpath(f)
         self._dirty = True
         self._updatedfiles.add(f)
-        self._map[f] = dirstatetuple(state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self._map.nonnormalset.add(f)
         if size == -2:
             self._map.otherparentset.add(f)
+        self._map.addfile(f, state, mode, size, mtime)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
@@ -490,8 +490,8 @@ class dirstate(object):
                 elif entry[0] == 'n' and entry[2] == -2: # other parent
                     size = -2
                     self._map.otherparentset.add(f)
-        self._map[f] = dirstatetuple('r', 0, size, 0)
         self._map.nonnormalset.add(f)
+        self._map.removefile(f, size)
         if size == 0:
             self._map.copymap.pop(f, None)
 
@@ -503,10 +503,9 @@ class dirstate(object):
 
     def drop(self, f):
         '''Drop a file from the dirstate'''
-        if f in self._map:
+        if self._map.dropfile(f):
             self._dirty = True
             self._droppath(f)
-            del self._map[f]
             if f in self._map.nonnormalset:
                 self._map.nonnormalset.remove(f)
             self._map.copymap.pop(f, None)
@@ -636,7 +635,7 @@ class dirstate(object):
             for f in self._updatedfiles:
                 e = dmap.get(f)
                 if e is not None and e[0] == 'n' and e[3] == now:
-                    dmap[f] = dirstatetuple(e[0], e[1], e[2], -1)
+                    dmap.addfile(f, e[0], e[1], e[2], -1)
                     self._map.nonnormalset.add(f)
 
             # emulate that all 'dirstate.normal' results are written out
@@ -1207,8 +1206,9 @@ class dirstatemap(object):
 
     - the state map maps filenames to tuples of (state, mode, size, mtime),
       where state is a single character representing 'normal', 'added',
-      'removed', or 'merged'. It is accessed by treating the dirstate as a
-      dict.
+      'removed', or 'merged'. It is read by treating the dirstate as a
+      dict.  File state is updated by calling the `addfile`, `removefile` and
+      `dropfile` methods.
 
     - `copymap` maps destination filenames to their source filename.
 
@@ -1282,14 +1282,8 @@ class dirstatemap(object):
     def __contains__(self, key):
         return key in self._map
 
-    def __setitem__(self, key, value):
-        self._map[key] = value
-
     def __getitem__(self, key):
         return self._map[key]
-
-    def __delitem__(self, key):
-        del self._map[key]
 
     def keys(self):
         return self._map.keys()
@@ -1297,6 +1291,27 @@ class dirstatemap(object):
     def preload(self):
         """Loads the underlying data, if it's not already loaded"""
         self._map
+
+    def addfile(self, f, state, mode, size, mtime):
+        """Add a tracked file to the dirstate."""
+        self._map[f] = dirstatetuple(state, mode, size, mtime)
+
+    def removefile(self, f, size):
+        """
+        Mark a file as removed in the dirstate.
+
+        The `size` parameter is used to store sentinel values that indicate
+        the file's previous state.  In the future, we should refactor this
+        to be more explicit about what that state is.
+        """
+        self._map[f] = dirstatetuple('r', 0, size, 0)
+
+    def dropfile(self, f):
+        """
+        Remove a file from the dirstate.  Returns True if the file was
+        previously recorded.
+        """
+        return self._map.pop(f, None) is not None
 
     def nonnormalentries(self):
         '''Compute the nonnormal dirstate entries from the dmap'''
@@ -1427,8 +1442,6 @@ class dirstatemap(object):
         # Avoid excess attribute lookups by fast pathing certain checks
         self.__contains__ = self._map.__contains__
         self.__getitem__ = self._map.__getitem__
-        self.__setitem__ = self._map.__setitem__
-        self.__delitem__ = self._map.__delitem__
         self.get = self._map.get
 
     def write(self, st, now):
