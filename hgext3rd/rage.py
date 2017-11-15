@@ -297,7 +297,7 @@ def rage(ui, repo, *pats, **opts):
                 detailed.append((
                     "%s packs (%s)" % (loc, constants.getunits(category)),
                     "%s:\n%s" %
-                    (path, _failsafe(lambda: shcmd("ls -lh %s" % path)))
+                    (path, _failsafe(lambda: shcmd("ls -lhS %s" % path)))
                 ))
 
     # This is quite slow, so we don't want to do it by default
