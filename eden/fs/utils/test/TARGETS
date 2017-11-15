@@ -28,13 +28,9 @@ cpp_library(
     ),
     headers = glob(["*.h"]),
     deps = [
-        "@/folly:conv",
         "@/folly:exception",
-        "@/folly:exception_string",
         "@/folly:optional",
         "@/folly:range",
-    ],
-    external_deps = [
-        ("googletest", None, "gtest"),
+        "@/folly/test:test_utils",
     ],
 )
