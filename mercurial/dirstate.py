@@ -415,10 +415,6 @@ class dirstate(object):
             self._map.dirs.addpath(f)
         self._dirty = True
         self._updatedfiles.add(f)
-        if state != 'n' or mtime == -1:
-            self._map.nonnormalset.add(f)
-        if size == -2:
-            self._map.otherparentset.add(f)
         self._map.addfile(f, state, mode, size, mtime)
 
     def normal(self, f):
@@ -490,7 +486,6 @@ class dirstate(object):
                 elif entry[0] == 'n' and entry[2] == -2: # other parent
                     size = -2
                     self._map.otherparentset.add(f)
-        self._map.nonnormalset.add(f)
         self._map.removefile(f, size)
         if size == 0:
             self._map.copymap.pop(f, None)
@@ -506,8 +501,6 @@ class dirstate(object):
         if self._map.dropfile(f):
             self._dirty = True
             self._droppath(f)
-            if f in self._map.nonnormalset:
-                self._map.nonnormalset.remove(f)
             self._map.copymap.pop(f, None)
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
@@ -631,12 +624,7 @@ class dirstate(object):
 
             # emulate dropping timestamp in 'parsers.pack_dirstate'
             now = _getfsnow(self._opener)
-            dmap = self._map
-            for f in self._updatedfiles:
-                e = dmap.get(f)
-                if e is not None and e[0] == 'n' and e[3] == now:
-                    dmap.addfile(f, e[0], e[1], e[2], -1)
-                    self._map.nonnormalset.add(f)
+            self._map.clearambiguoustimes(self._updatedfiles, now)
 
             # emulate that all 'dirstate.normal' results are written out
             self._lastnormaltime = 0
@@ -1229,8 +1217,8 @@ class dirstatemap(object):
     - `dirfoldmap` is a dict mapping normalized directory names to the
       denormalized form that they appear as in the dirstate.
 
-    Once instantiated, the nonnormalset, otherparentset, dirs, filefoldmap and
-    dirfoldmap views must be maintained by the caller.
+    Once instantiated, the dirs, filefoldmap and dirfoldmap views must be
+    maintained by the caller.
     """
 
     def __init__(self, ui, opener, root):
@@ -1295,6 +1283,10 @@ class dirstatemap(object):
     def addfile(self, f, state, mode, size, mtime):
         """Add a tracked file to the dirstate."""
         self._map[f] = dirstatetuple(state, mode, size, mtime)
+        if state != 'n' or mtime == -1:
+            self.nonnormalset.add(f)
+        if size == -2:
+            self.otherparentset.add(f)
 
     def removefile(self, f, size):
         """
@@ -1305,13 +1297,23 @@ class dirstatemap(object):
         to be more explicit about what that state is.
         """
         self._map[f] = dirstatetuple('r', 0, size, 0)
+        self.nonnormalset.add(f)
 
     def dropfile(self, f):
         """
         Remove a file from the dirstate.  Returns True if the file was
         previously recorded.
         """
-        return self._map.pop(f, None) is not None
+        exists = self._map.pop(f, None) is not None
+        self.nonnormalset.discard(f)
+        return exists
+
+    def clearambiguoustimes(self, files, now):
+        for f in files:
+            e = self.get(f)
+            if e is not None and e[0] == 'n' and e[3] == now:
+                self._map[f] = dirstatetuple(e[0], e[1], e[2], -1)
+                self.nonnormalset.add(f)
 
     def nonnormalentries(self):
         '''Compute the nonnormal dirstate entries from the dmap'''
