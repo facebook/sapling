@@ -1,6 +1,4 @@
-Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
-
-  $ hash lfs-test-server || { echo 'skipped: missing lfs-test-server'; exit 80; }
+#require lfs-test-server
 
   $ LFS_LISTEN="tcp://:$HGPORT"
   $ LFS_HOST="localhost:$HGPORT"
