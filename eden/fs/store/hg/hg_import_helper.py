@@ -207,7 +207,7 @@ class HgServer(object):
         except Exception as ex:
             # If an error occurs during initialization (say, if the repository
             # path is invalid), send an error response.
-            self.send_error(request=None, message=str(ex))
+            self.send_exception(request=None, exc=ex)
             return 1
 
         # Send a CMD_STARTED response to indicate we have started,
@@ -276,14 +276,15 @@ class HgServer(object):
         cmd_function = self._commands.get(command)
         if cmd_function is None:
             logging.warning('unknown command %r', command)
-            self.send_error(req, 'unknown command %r' % (command,))
+            self.send_error(req, 'CommandError',
+                            'unknown command %r' % (command,))
             return True
 
         try:
             cmd_function(req)
         except Exception as ex:
             logging.exception('error processing command %r', command)
-            self.send_error(req, str(ex))
+            self.send_exception(req, ex)
 
         # Return True to indicate that we should continue serving
         return True
@@ -379,7 +380,7 @@ class HgServer(object):
             # Handle lookup errors explicitly, just so we avoid printing
             # a backtrace in the log if we let this bubble all the way up
             # to the unexpected exception handling code in process_request()
-            self.send_error(request, str(ex))
+            self.send_exception(request, ex)
             return
 
         self.send_chunk(request, node)
@@ -424,12 +425,22 @@ class HgServer(object):
         self._send_chunk(request.txn_id, command=CMD_RESPONSE,
                          flags=flags, data=data)
 
-    def send_error(self, request, message):
+    def send_exception(self, request, exc):
+        self.send_error(request, type(exc).__name__, str(exc))
+
+    def send_error(self, request, error_type, message):
         txn_id = 0
         if request is not None:
             txn_id = request.txn_id
+
+        data = b''.join([
+            struct.pack(b'>I', len(error_type)),
+            error_type,
+            struct.pack(b'>I', len(message)),
+            message,
+        ])
         self._send_chunk(txn_id, command=CMD_RESPONSE,
-                         flags=FLAG_ERROR, data=message)
+                         flags=FLAG_ERROR, data=data)
 
     def _send_chunk(self, txn_id, command, flags, data):
         header = struct.pack(HEADER_FORMAT, txn_id, command, flags,

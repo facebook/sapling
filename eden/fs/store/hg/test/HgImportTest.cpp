@@ -19,6 +19,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/testharness/HgRepo.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -174,8 +175,8 @@ void HgImportTest::importTest(bool treemanifest) {
   Hash noSuchHash = makeTestHash("123");
   EXPECT_THROW_RE(
       importer.importFlatManifest(noSuchHash.toString()),
-      std::exception,
-      "unknown revision");
+      HgImportPyError,
+      "RepoLookupError: unknown revision");
   EXPECT_THROW_RE(
       importer.importFileContents(noSuchHash),
       std::exception,
@@ -184,8 +185,8 @@ void HgImportTest::importTest(bool treemanifest) {
   // Test trying to import manifests using blob hashes, and vice-versa
   EXPECT_THROW_RE(
       importer.importFlatManifest(barEntry.getHash().toString()),
-      std::exception,
-      "unknown revision");
+      HgImportPyError,
+      "RepoLookupError: unknown revision");
   EXPECT_THROW_RE(
       importer.importFileContents(commit1),
       std::exception,

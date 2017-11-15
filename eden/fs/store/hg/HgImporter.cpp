@@ -29,6 +29,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
@@ -853,14 +854,30 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(int fd) {
   // If the header indicates an error, read the error message
   // and throw an exception.
   if ((header.flags & FLAG_ERROR) != 0) {
-    std::vector<char> errMsg(header.dataLength);
-    folly::readFull(fd, &errMsg.front(), header.dataLength);
-    string errStr(&errMsg.front(), errMsg.size());
-    XLOG(WARNING) << "error received from hg helper process: " << errStr;
-    throw std::runtime_error(errStr);
+    readErrorAndThrow(fd, header);
   }
 
   return header;
+}
+
+[[noreturn]] void HgImporter::readErrorAndThrow(
+    int fd,
+    const ChunkHeader& header) {
+  auto buf = IOBuf{IOBuf::CREATE, header.dataLength};
+  folly::readFull(fd, buf.writableTail(), header.dataLength);
+  buf.append(header.dataLength);
+
+  Cursor cursor(&buf);
+  auto errorTypeLength = cursor.readBE<uint32_t>();
+  StringPiece errorType{cursor.peekBytes().subpiece(0, errorTypeLength)};
+  cursor.skip(errorTypeLength);
+  auto messageLength = cursor.readBE<uint32_t>();
+  StringPiece message{cursor.peekBytes().subpiece(0, messageLength)};
+  cursor.skip(messageLength);
+
+  XLOG(WARNING) << "error received from hg helper process: " << errorType
+                << ": " << message;
+  throw HgImportPyError(errorType, message);
 }
 
 void HgImporter::sendManifestRequest(folly::StringPiece revName) {

@@ -221,6 +221,11 @@ class HgImporter {
   static ChunkHeader readChunkHeader(int fd);
 
   /**
+   * Read the body of an error message, and throw it as an exception.
+   */
+  [[noreturn]] static void readErrorAndThrow(int fd, const ChunkHeader& header);
+
+  /**
    * Wait for the helper process to send a CMD_STARTED response to indicate
    * that it has started successfully.  Process the response and finish
    * setting up member variables based on the data included in the response.
