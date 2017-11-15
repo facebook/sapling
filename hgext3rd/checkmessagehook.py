@@ -17,10 +17,17 @@ def checkcommitmessage(ui, repo, **kwargs):
         return True
 
     printable = set(string.printable)
-    for c in hg_commit_message:
-        if ord(c) < 128 and c not in printable:
-            ui.warn(_('non-printable characters in commit message\n'))
-            return True
+    badlines = []
+    for lnum, line in enumerate(hg_commit_message.splitlines()):
+        for c in line:
+            if ord(c) < 128 and c not in printable:
+                badlines.append((lnum + 1, line))
+                break
+
+    if badlines:
+        ui.warn(_('non-printable characters in commit message\n'))
+        for num, l in badlines:
+            ui.warn(_('Line {}: {!r}\n'.format(num, l)))
 
     # False means success
-    return False
+    return bool(badlines)
