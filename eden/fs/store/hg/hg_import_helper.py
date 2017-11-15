@@ -575,6 +575,10 @@ def main():
                         metavar='REVISION',
                         help='Dump the binary manifest data for the specified '
                         'revision.')
+    parser.add_argument('--get-manifest-node',
+                        metavar='REVISION',
+                        help='Print the manifest node ID for the specified '
+                        'revision.')
     parser.add_argument('--cat-file',
                         metavar='PATH:REV',
                         help='Dump the file contents for the specified file '
@@ -604,6 +608,12 @@ def main():
 
     server = HgServer(args.repo, config_overrides,
                       in_fd=args.in_fd, out_fd=args.out_fd)
+
+    if args.get_manifest_node:
+        server.initialize()
+        node = server.get_manifest_node(args.get_manifest_node)
+        print(binascii.hexlify(node))
+        return 0
 
     if args.manifest is not None:
         server.initialize()
