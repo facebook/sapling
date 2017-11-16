@@ -301,3 +301,7 @@ class CorruptedState(Exception):
 
 class PeerTransportError(Abort):
     """Transport-level I/O error when communicating with a peer repo."""
+
+class InMemoryMergeConflictsError(Exception):
+    """Exception raised when merge conflicts arose during an in-memory merge."""
+    __bytes__ = _tobytes
