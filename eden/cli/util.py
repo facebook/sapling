@@ -124,9 +124,9 @@ def get_hg_repo(path):
 def get_hg_commit(repo):
     env = os.environ.copy()
     env['HGPLAIN'] = '1'
-    cmd = ['hg', '--cwd', repo, 'log', '-T{node}\\n', '-r.']
+    cmd = ['hg', '--cwd', repo, 'log', '-T{node}', '-r.']
     out = subprocess.check_output(cmd, env=env)
-    return out.strip().decode('utf-8', errors='surrogateescape')
+    return out.decode('utf-8', errors='strict')
 
 
 def get_repo_source_and_type(path):
