@@ -89,6 +89,19 @@ class RepoConfig:
         self.bind_mounts = bind_mounts
 
 
+class ClientConfig:
+    '''Configuration for a client as determined by a config.toml file under
+    ~/local/.eden/clients/.
+    '''
+    __slots__ = ['path', 'scm_type', 'hooks_path', 'bind_mounts']
+
+    def __init__(self, path, scm_type, hooks_path, bind_mounts):
+        self.path = path
+        self.scm_type = scm_type
+        self.hooks_path = hooks_path
+        self.bind_mounts = bind_mounts
+
+
 class Config:
     def __init__(self, config_dir, etc_eden_dir, home_dir):
         self._config_dir = config_dir
@@ -217,12 +230,11 @@ class Config:
     def get_client_info(self, path):
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
-        repo_name = self._get_repo_name(client_dir)
-        repo_config = self.get_repo_config(repo_name)
+        client_config = self._get_client_config(client_dir)
         snapshot = self._get_snapshot(client_dir)
 
         return collections.OrderedDict([
-            ['bind-mounts', repo_config.bind_mounts],
+            ['bind-mounts', client_config.bind_mounts],
             ['mount', path],
             ['snapshot', snapshot],
             ['client-dir', client_dir],
@@ -313,7 +325,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         config_path = os.path.join(client_dir, MOUNT_CONFIG)
-        self._save_repo_config(repo_config, repo_name, config_path)
+        self._save_repo_config(repo_config, config_path)
 
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
@@ -381,17 +393,10 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with open(clone_success_path, 'a'):
             os.utime(clone_success_path, None)
 
-    def _save_repo_config(self, repo_config: RepoConfig, repo_name: str,
-                          config_path: str):
+    def _save_repo_config(self, repo_config: RepoConfig, config_path: str):
         # Store information about the mount in the config.toml file.
         config_data = {
             'repository': {
-                # Note that "name" is currently an alias for a predefined
-                # config, but we are planning to add support for creating
-                # clients from an existing directory rather than a config, in
-                # which case there will not always be an appropriate value for
-                # this field, so this will have to be reexamined.
-                'name': repo_name,
                 'path': repo_config.path,
                 'type': repo_config.type,
                 'hooks': repo_config.hooks_path,
@@ -419,7 +424,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             repo_name = parser.get('repository', 'name')
             repo_config = self.get_repo_config(repo_name)
             config_path = os.path.join(clients_dir, entry, MOUNT_CONFIG)
-            self._save_repo_config(repo_config, repo_name, config_path)
+            self._save_repo_config(repo_config, config_path)
             os.remove(edenrc)
 
     def mount(self, path):
@@ -427,7 +432,10 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         # know about the client.
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
-        self._get_repo_name(client_dir)
+
+        # Call _get_client_config() for the side-effect of it raising an
+        # Exception if the config is in an invalid state.
+        self._get_client_config(client_dir)
 
         # Make sure the mount path exists
         util.mkdir_p(path)
@@ -701,17 +709,42 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
         return util.mkdir_p(rocks_db_dir)
 
-    def _get_repo_name(self, client_dir):
+    def _get_client_config(self, client_dir) -> ClientConfig:
+        '''Returns ClientConfig or raises an Exception if the config.toml
+        under the client_dir is not properly formatted or does not exist.
+        '''
         config_toml = os.path.join(client_dir, MOUNT_CONFIG)
         with open(config_toml, 'r') as f:
             config = toml.load(f)
         repository = config.get('repository')
-        if isinstance(repository, dict):
-            name = repository.get('name')
-            if isinstance(name, str):
-                return name
+        if not isinstance(repository, dict):
+            raise Exception(f'{config_toml} is missing [repository]')
 
-        raise Exception('could not find repository for %s' % client_dir)
+        def get_field(key: str):
+            value = repository.get(key)
+            if not isinstance(value, str):
+                raise Exception(f'{config_toml} is missing {key} in '
+                                '[repository]')
+            return value
+
+        path = get_field('path')
+        scm_type = get_field('type')
+        hooks_path = get_field('hooks')
+
+        bind_mounts = {}
+        bind_mounts_dict = config.get('bind-mounts')
+        if bind_mounts_dict is not None:
+            if not isinstance(bind_mounts_dict, dict):
+                raise Exception(f'{config_toml} has an invalid '
+                                '[bind-mounts] section')
+            for key, value in bind_mounts_dict.items():
+                if not isinstance(value, str):
+                    raise Exception(f'{config_toml} has invalid value in '
+                                    f'[bind-mounts] for {key}: {value} '
+                                    '(string expected)')
+                bind_mounts[key] = value
+
+        return ClientConfig(path, scm_type, hooks_path, bind_mounts)
 
     def _get_directory_map(self):
         '''
