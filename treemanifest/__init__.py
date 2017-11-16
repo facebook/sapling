@@ -82,6 +82,7 @@ from mercurial import (
     registrar,
     repair,
     revlog,
+    scmutil,
     sshserver,
     templatekw,
     util,
@@ -90,6 +91,10 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 
+from remotefilelog import (
+    cmdtable as remotefilelogcmdtable,
+    resolveprefetchopts,
+)
 from remotefilelog.contentstore import (
     manifestrevlogstore,
     unioncontentstore,
@@ -176,6 +181,22 @@ def uisetup(ui):
 
     # Change manifest template output
     templatekw.defaulttempl['manifest'] = '{node}'
+
+    def _wrapremotefilelog(loaded):
+        if loaded:
+            remotefilelogmod = extensions.find('remotefilelog')
+            extensions.wrapcommand(
+                remotefilelogmod.cmdtable, 'prefetch', _prefetchwrapper)
+        else:
+            # There is no prefetch command to wrap around. In this case, we use
+            # the command table entry for prefetch in the remotefilelog to
+            # define the prefetch command, wrap it, and then override it
+            # completely.  This ensures that the options to the prefetch command
+            # are consistent.
+            cmdtable['prefetch'] = remotefilelogcmdtable['prefetch']
+            extensions.wrapcommand(cmdtable, 'prefetch', _overrideprefetch)
+
+    extensions.afterloaded('remotefilelog', _wrapremotefilelog)
 
 def showmanifest(orig, **args):
     """Same implementation as the upstream showmanifest, but without the 'rev'
@@ -998,27 +1019,46 @@ def wrappropertycache(cls, propname, wrapper):
         raise AttributeError(_("%s has no property '%s'") %
                              (type(currcls), propname))
 
-@command('prefetchtrees', [
-    ('r', 'rev', '', _("revs to prefetch the trees for")),
-    ('', 'repack', False, _('run repack after prefetch')),
-    ('b', 'base', '', _("rev that is assumed to already be local")),
-    ] + commands.walkopts, _('--rev REVS PATTERN..'))
-def prefetchtrees(ui, repo, *args, **opts):
-    revs = repo.revs(opts.get('rev'))
+# Wrapper around the 'prefetch' command which also allows for prefetching the
+# trees along with the files.
+def _prefetchwrapper(orig, ui, repo, *pats, **opts):
+    # The wrapper will take care of the repacking.
+    repackrequested = opts.pop('repack')
+
+    _prefetchonlytrees(repo, opts)
+    _prefetchonlyfiles(orig, ui, repo, *pats, **opts)
+
+    if repackrequested:
+        backgroundrepack(repo, incremental=True)
+
+# Wrapper around the 'prefetch' command which overrides the command completely
+# and only allows for prefetching trees. This is only required when the
+# 'prefetch' command is not available because the remotefilelog extension is not
+# loaded and we want to be able to at least prefetch trees. The wrapping just
+# ensures that we get a consistent interface to the 'prefetch' command.
+def _overrideprefetch(orig, ui, repo, *pats, **opts):
+    if opts.get('repack'):
+        raise error.Abort(_('repack requires remotefilelog extension'))
+
+    _prefetchonlytrees(repo, opts)
+
+def _prefetchonlyfiles(orig, ui, repo, *pats, **opts):
+    if shallowrepo.requirement in repo.requirements:
+        orig(ui, repo, *pats, **opts)
+
+def _prefetchonlytrees(repo, opts):
+    opts = resolveprefetchopts(repo.ui, opts)
+    revs = scmutil.revrange(repo, opts.get('rev'))
     mfnodes = set()
     for rev in revs:
         mfnodes.add(repo[rev].manifestnode())
 
     basemfnode = set()
     base = opts.get('base')
-    if base:
+    if base is not None:
         basemfnode.add(repo[base].manifestnode())
 
     _prefetchtrees(repo, '', mfnodes, basemfnode, [])
-
-    # Run repack in background
-    if opts.get('repack'):
-        backgroundrepack(repo, incremental=True)
 
 def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     # If possible, use remotefilelog's more expressive fallbackpath
