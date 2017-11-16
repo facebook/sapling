@@ -136,7 +136,7 @@ def do_clone(args):
             snapshot_id = util.get_hg_commit(client_config.path)
         else:
             print_stderr(
-                '%s does not look like a git or hg repository' % args.path)
+                '%s does not look like a git or hg repository' % client_config.path)
             return 1
 
     try:
@@ -159,8 +159,16 @@ def try_create_config_from_repo(
         ex = config.create_no_such_repository_exception(repo)
         raise ex
 
-    # TODO(mbolin): Check whether path_to_repo is an Eden mount. Note this could
-    # theoretically be an Eden mount owned by a different user.
+    # Check whether path_to_repo is an Eden mount. Note this could theoretically
+    # be an Eden mount owned by a different user, so we must be sure it is
+    # defined in our own config.
+    client_config = config.get_client_config_for_path(path_to_repo)
+    if client_config is not None:
+        return client_config
+
+    # TODO(mbolin): Check whether there is a config alias whose path matches
+    # path_to_repo.
+
     if os.path.isdir(os.path.join(path_to_repo, '.hg')):
         scm_type = 'hg'
     elif os.path.isdir(os.path.join(path_to_repo, '.git')):

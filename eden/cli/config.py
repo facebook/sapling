@@ -732,6 +732,14 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
         return ClientConfig(path, scm_type, hooks_path, bind_mounts)
 
+    def get_client_config_for_path(self, path: str) -> Optional[ClientConfig]:
+        directory_map = self._get_directory_map()
+        client_dir_component = directory_map.get(path)
+        if client_dir_component is None:
+            return None
+        client_dir = os.path.join(self._get_clients_dir(), client_dir_component)
+        return self._get_client_config(client_dir)
+
     def _get_directory_map(self):
         '''
         Parse config.json which holds a mapping of mount paths to their

@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from .lib import edenclient, testcase
+from textwrap import dedent
 import errno
 import os
 import subprocess
@@ -49,6 +50,38 @@ class CloneTest:
         self.eden.run_cmd('clone', self.repo.path, destination_dir)
         self.assertTrue(os.path.isfile(os.path.join(destination_dir, 'hello')),
                         msg='clone should succeed in empty directory')
+
+    def test_clone_from_eden_repo(self):
+        # Add a config alias for a repo with some bind mounts.
+        edenrc = os.path.join(os.environ['HOME'], '.edenrc')
+        with open(edenrc, 'w') as f:
+            f.write(
+                dedent(
+                    f'''\
+            [repository {repo_name}]
+            path = {self.repo.get_canonical_root()}
+            type = {self.repo.get_type()}
+
+            [bindmounts {repo_name}]
+            bm1 = tmp/bm1
+            bm2 = tmp/bm2
+            '''
+                )
+            )
+
+        # Create an Eden mount from the config alias.
+        eden_clone1 = self._new_tmp_dir()
+        self.eden.run_cmd('clone', repo_name, eden_clone1)
+        self.assertTrue(os.path.isdir(os.path.join(eden_clone1, 'tmp/bm1')),
+                        msg='clone should create bind mount')
+
+        # Clone the Eden clone! Note it should inherit its config.
+        eden_clone2 = self._new_tmp_dir()
+        self.eden.run_cmd('clone', '--snapshot', self.repo.get_head_hash(),
+                          eden_clone1, eden_clone2)
+        self.assertTrue(os.path.isdir(os.path.join(eden_clone2, 'tmp/bm1')),
+                        msg='clone should inherit its config from eden_clone1, '
+                            'which should include the bind mounts.')
 
     def test_clone_to_non_empty_directory_fails(self):
         tmp = self._new_tmp_dir()
