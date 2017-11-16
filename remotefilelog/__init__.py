@@ -955,6 +955,7 @@ def debugwaitonprefetch(ui, repo, **opts):
 @command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
     ('', 'repack', False, _('run repack after prefetch')),
+    ('b', 'base', '', _("rev that is assumed to already be local")),
     ] + commands.walkopts, _('hg prefetch [OPTIONS] [FILE...]'))
 def prefetch(ui, repo, *pats, **opts):
     """prefetch file revisions from the server
@@ -987,7 +988,11 @@ def prefetch(ui, repo, *pats, **opts):
 
     revs = scmutil.revrange(repo, opts.get('rev'))
 
-    repo.prefetch(revs, pats=pats, opts=opts)
+    base = opts.get('base')
+    if not base:
+        base = None
+
+    repo.prefetch(revs, base, pats, opts)
 
     # Run repack in background
     if opts.get('repack'):

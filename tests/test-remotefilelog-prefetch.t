@@ -35,6 +35,29 @@
   $ hg cat -r 0 x
   x
 
+# prefetch with base
+
+  $ clearcache
+  $ hg prefetch -r 0::1 -b 0
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+
+  $ hg cat -r 1 x
+  x2
+  $ hg cat -r 1 y
+  y
+
+  $ hg cat -r 0 x
+  x
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+  $ hg cat -r 0 z
+  z
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+  $ hg prefetch -r 0::1 --base 0
+  $ hg prefetch -r 0::1 -b 1
+  $ hg prefetch -r 0::1
+
 # prefetch a range of revisions
 
   $ clearcache
