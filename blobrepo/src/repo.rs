@@ -21,7 +21,7 @@ use BlobChangeset;
 use BlobManifest;
 use BlobState;
 use errors::*;
-use file::fetch_file_blob_from_blobstore;
+use file::fetch_blob_from_blobstore;
 
 pub struct BlobRepo<State> {
     inner: Arc<State>,
@@ -39,8 +39,8 @@ impl<State> BlobRepo<State>
 where
     State: BlobState,
 {
-    pub fn get_file_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
-        fetch_file_blob_from_blobstore(self.inner.blobstore().clone(), *key)
+    pub fn get_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
+        fetch_blob_from_blobstore(self.inner.blobstore().clone(), *key)
     }
 }
 

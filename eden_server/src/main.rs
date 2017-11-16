@@ -239,7 +239,7 @@ where
             }
         };
 
-        repo.get_file_blob(hash)
+        repo.get_blob(hash)
             .from_err()
             .and_then(|content| futures::future::ok(content))
             .boxify()

@@ -28,10 +28,7 @@ pub struct BlobEntry<B> {
     ty: Type,
 }
 
-pub fn fetch_file_blob_from_blobstore<B>(
-    blobstore: B,
-    nodeid: NodeHash,
-) -> BoxFuture<Vec<u8>, Error>
+pub fn fetch_blob_from_blobstore<B>(blobstore: B, nodeid: NodeHash) -> BoxFuture<Vec<u8>, Error>
 where
     B: Blobstore<Key = String> + Clone,
 {
