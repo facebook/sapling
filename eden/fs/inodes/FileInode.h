@@ -141,17 +141,6 @@ class FileInode : public InodeBase {
   FOLLY_NODISCARD folly::Future<std::string> readAll();
 
   /**
-   * Materialize the file data.
-   * openFlags has the same meaning as the flags parameter to
-   * open(2).  Materialization depends on the write mode specified
-   * in those flags; if we are writing to the file then we need to
-   * copy it locally to the overlay.  If we are truncating we just
-   * need to create an empty file in the overlay.  Otherwise we
-   * need to go out to the LocalStore to obtain the backing data.
-   */
-  FOLLY_NODISCARD folly::Future<folly::Unit> materializeForWrite(int openFlags);
-
-  /**
    * Read up to size bytes from the file at the specified offset.
    *
    * Returns an IOBuf containing the data.  This may return fewer bytes than
@@ -180,6 +169,17 @@ class FileInode : public InodeBase {
    * ObjectStore.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
+
+  /**
+   * Materialize the file data.
+   * openFlags has the same meaning as the flags parameter to
+   * open(2).  Materialization depends on the write mode specified
+   * in those flags; if we are writing to the file then we need to
+   * copy it locally to the overlay.  If we are truncating we just
+   * need to create an empty file in the overlay.  Otherwise we
+   * need to go out to the LocalStore to obtain the backing data.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> materializeForWrite(int openFlags);
 
   /**
    * Ensures the inode transitions to or stays in the 'materialized' state,

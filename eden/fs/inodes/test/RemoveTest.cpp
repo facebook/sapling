@@ -10,6 +10,7 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -92,13 +93,16 @@ TEST_F(UnlinkTest, modified) {
   // Modify the child, so it is materialized before we remove it
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
-  file->materializeForWrite(O_WRONLY).get();
+  fuse_file_info ffi;
+  memset(&ffi, 0, sizeof(ffi));
+  ffi.flags = O_WRONLY;
+  auto handle = file->open(ffi).get();
   auto newContents = StringPiece{
       "new contents for the file\n"
       "testing testing\n"
       "123\n"
       "testing testing\n"};
-  auto writeResult = file->write(newContents, 0);
+  auto writeResult = handle->write(newContents, 0).get();
   EXPECT_EQ(newContents.size(), writeResult);
 
   // Now remove the child
