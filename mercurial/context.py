@@ -615,10 +615,13 @@ class changectx(basectx):
     def closesbranch(self):
         return 'close' in self._changeset.extra
     def extra(self):
+        """Return a dict of extra information."""
         return self._changeset.extra
     def tags(self):
+        """Return a list of byte tag names"""
         return self._repo.nodetags(self._node)
     def bookmarks(self):
+        """Return a list of byte bookmark names."""
         return self._repo.nodebookmarks(self._node)
     def phase(self):
         return self._repo._phasecache.phase(self._repo, self._rev)
@@ -629,7 +632,11 @@ class changectx(basectx):
         return False
 
     def children(self):
-        """return contexts for each child changeset"""
+        """return list of changectx contexts for each child changeset.
+
+        This returns only the immediate child changesets. Use descendants() to
+        recursively walk children.
+        """
         c = self._repo.changelog.children(self._node)
         return [changectx(self._repo, x) for x in c]
 
@@ -638,6 +645,10 @@ class changectx(basectx):
             yield changectx(self._repo, a)
 
     def descendants(self):
+        """Recursively yield all children of the changeset.
+
+        For just the immediate children, use children()
+        """
         for d in self._repo.changelog.descendants([self._rev]):
             yield changectx(self._repo, d)
 

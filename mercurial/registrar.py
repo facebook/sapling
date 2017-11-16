@@ -112,35 +112,53 @@ class command(_funcregistrarbase):
     The created object can be used as a decorator for adding commands to
     that command table. This accepts multiple arguments to define a command.
 
-    The first argument is the command name.
+    The first argument is the command name (as bytes).
 
-    The options argument is an iterable of tuples defining command arguments.
-    See ``mercurial.fancyopts.fancyopts()`` for the format of each tuple.
+    The `options` keyword argument is an iterable of tuples defining command
+    arguments. See ``mercurial.fancyopts.fancyopts()`` for the format of each
+    tuple.
 
-    The synopsis argument defines a short, one line summary of how to use the
+    The `synopsis` argument defines a short, one line summary of how to use the
     command. This shows up in the help output.
 
-    The norepo argument defines whether the command does not require a
+    There are three arguments that control what repository (if any) is found
+    and passed to the decorated function: `norepo`, `optionalrepo`, and
+    `inferrepo`.
+
+    The `norepo` argument defines whether the command does not require a
     local repository. Most commands operate against a repository, thus the
-    default is False.
+    default is False. When True, no repository will be passed.
 
-    The optionalrepo argument defines whether the command optionally requires
-    a local repository.
+    The `optionalrepo` argument defines whether the command optionally requires
+    a local repository. If no repository can be found, None will be passed
+    to the decorated function.
 
-    The inferrepo argument defines whether to try to find a repository from the
-    command line arguments. If True, arguments will be examined for potential
-    repository locations. See ``findrepo()``. If a repository is found, it
-    will be used.
+    The `inferrepo` argument defines whether to try to find a repository from
+    the command line arguments. If True, arguments will be examined for
+    potential repository locations. See ``findrepo()``. If a repository is
+    found, it will be used and passed to the decorated function.
 
     There are three constants in the class which tells what type of the command
     that is. That information will be helpful at various places. It will be also
     be used to decide what level of access the command has on hidden commits.
     The constants are:
 
-    unrecoverablewrite is for those write commands which can't be recovered like
-    push.
-    recoverablewrite is for write commands which can be recovered like commit.
-    readonly is for commands which are read only.
+    `unrecoverablewrite` is for those write commands which can't be recovered
+    like push.
+    `recoverablewrite` is for write commands which can be recovered like commit.
+    `readonly` is for commands which are read only.
+
+    The signature of the decorated function looks like this:
+        def cmd(ui[, repo] [, <args>] [, <options>])
+
+      `repo` is required if `norepo` is False.
+      `<args>` are positional args (or `*args`) arguments, of non-option
+      arguments from the command line.
+      `<options>` are keyword arguments (or `**options`) of option arguments
+      from the command line.
+
+    See the WritingExtensions and MercurialApi documentation for more exhaustive
+    descriptions and examples.
     """
 
     unrecoverablewrite = "unrecoverable"

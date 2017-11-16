@@ -1850,7 +1850,13 @@ class jsonchangeset(changeset_printer):
         self.ui.write("\n }")
 
 class changeset_templater(changeset_printer):
-    '''format changeset information.'''
+    '''format changeset information.
+
+    Note: there are a variety of convenience functions to build a
+    changeset_templater for common cases. See functions such as:
+    makelogtemplater, show_changeset, buildcommittemplate, or other
+    functions that use changesest_templater.
+    '''
 
     # Arguments before "buffered" used to be positional. Consider not
     # adding/removing arguments before "buffered" to not break callers.
@@ -1972,7 +1978,8 @@ def _lookuplogtemplate(ui, tmpl, style):
     return formatter.lookuptemplate(ui, 'changeset', tmpl)
 
 def makelogtemplater(ui, repo, tmpl, buffered=False):
-    """Create a changeset_templater from a literal template 'tmpl'"""
+    """Create a changeset_templater from a literal template 'tmpl'
+    byte-string."""
     spec = logtemplatespec(tmpl, None)
     return changeset_templater(ui, repo, spec, buffered=buffered)
 
@@ -3860,6 +3867,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
             repo.dirstate.copy(copied[f], f)
 
 class command(registrar.command):
+    """deprecated: used registrar.command instead"""
     def _doregister(self, func, name, *args, **kwargs):
         func._deprecatedregistrar = True  # flag for deprecwarn in extensions.py
         return super(command, self)._doregister(func, name, *args, **kwargs)
