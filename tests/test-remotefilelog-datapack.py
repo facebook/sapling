@@ -389,3 +389,4 @@ class fastdatapacktests(datapacktestsbase, unittest.TestCase):
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
+
