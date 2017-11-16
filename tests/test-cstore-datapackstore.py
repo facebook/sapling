@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+from __future__ import absolute_import
 
 import hashlib
 import os
@@ -12,8 +13,9 @@ import unittest
 import silenttestrunner
 
 # Load the local cstore, not the system one
-fullpath = os.path.join(os.getcwd(), __file__)
-sys.path.insert(0, os.path.dirname(os.path.dirname(fullpath)))
+sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
+import pythonpath
+pythonpath.setcstorepath()
 
 from cstore import (
     datapackstore,

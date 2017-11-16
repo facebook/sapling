@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, print_function
+
 import hashlib
 import os
 import random
@@ -14,6 +16,8 @@ import silenttestrunner
 
 # Load the local remotefilelog, not the system one
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
+import pythonpath
+pythonpath.setcstorepath()
 
 from remotefilelog.datapack import (
     datapack,
@@ -316,7 +320,7 @@ class datapacktestsbase(object):
     # perf test off by default since it's slow
     def _testIndexPerf(self):
         random.seed(0)
-        print "Multi-get perf test"
+        print("Multi-get perf test")
         packsizes = [
             100,
             10000,
@@ -361,7 +365,7 @@ class datapacktestsbase(object):
                         ('%s' % lookupsize).rjust(7),
                         elapsed))
 
-            print ""
+            print("")
             gc.enable()
 
         # The perf test is meant to produce output, so we always fail the test

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+
 import hashlib
 import os
 import random
@@ -13,6 +15,9 @@ import silenttestrunner
 
 # Load the local remotefilelog, not the system one
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
+import pythonpath
+pythonpath.setcstorepath()
+
 from remotefilelog.historypack import historypack, mutablehistorypack
 
 from mercurial.node import nullid

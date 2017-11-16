@@ -95,9 +95,6 @@ This file is backported from mercurial/tests/test-check-py3-compat.t.
   setup.py not using absolute_import
   tests/bundlerepologger.py not using absolute_import
   tests/conduithttp.py not using absolute_import
-  tests/cstore-datapackstore.py not using absolute_import
-  tests/cstore-treemanifest.py not using absolute_import
-  tests/cstore-uniondatapackstore.py not using absolute_import
   tests/dummyext1.py not using absolute_import
   tests/dummyext2.py not using absolute_import
   tests/get-with-headers.py not using absolute_import
@@ -110,9 +107,6 @@ This file is backported from mercurial/tests/test-check-py3-compat.t.
   tests/ls-l.py requires print_function
   tests/perftest.py not using absolute_import
   tests/perftest.py requires print_function
-  tests/remotefilelog-datapack.py not using absolute_import
-  tests/remotefilelog-datapack.py requires print_function
-  tests/remotefilelog-histpack.py not using absolute_import
   tests/test-absorb-filefixupstate.py not using absolute_import
   tests/test-extutil.py not using absolute_import
   tests/test-fastmanifest.py not using absolute_import
