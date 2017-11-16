@@ -233,9 +233,9 @@ class EdenFS(object):
 
     def unmount(self, path):
         '''
-        Run "eden unmount <path>"
+        Run "eden unmount --destroy <path>"
         '''
-        self.run_cmd('unmount', path)
+        self.run_cmd('unmount', '--destroy', path)
 
     def in_proc_mounts(self, mount_path):
         '''Gets all eden mounts found in /proc/mounts, and returns

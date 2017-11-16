@@ -394,7 +394,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-    def unmount(self, path, delete_config=True):
+    def unmount(self, path, delete_config):
         path = os.path.realpath(path)
         with self.get_thrift_client() as client:
             client.unmount(path)

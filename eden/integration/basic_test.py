@@ -208,8 +208,8 @@ class BasicTest:
                          entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
-        # Unmount the client with --no-forget
-        self.eden.run_cmd('unmount', '-n', self.mount)
+        # do a normal user-facing unmount, preserving state
+        self.eden.run_cmd('unmount', self.mount)
 
         self.assertFalse(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
@@ -227,10 +227,10 @@ class BasicTest:
             self.assertEqual('foo!\n', f.read(), msg='overlay file is correct')
 
     def test_double_unmount(self):
-        # Test calling "unmount -n" twice.  The second should fail, but edenfs
+        # Test calling "unmount" twice.  The second should fail, but edenfs
         # should still work normally afterwards
-        self.eden.run_cmd('unmount', '-n', self.mount)
-        self.eden.run_unchecked('unmount', '-n', self.mount)
+        self.eden.run_cmd('unmount', self.mount)
+        self.eden.run_unchecked('unmount', self.mount)
 
         # Now remount it with the mount command
         self.eden.run_cmd('mount', self.mount)

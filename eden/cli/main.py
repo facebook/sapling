@@ -166,7 +166,7 @@ def do_unmount(args):
     args.path = normalize_path_arg(args.path)
     config = create_config(args)
     try:
-        return config.unmount(args.path, delete_config=not args.no_forget)
+        return config.unmount(args.path, delete_config=args.destroy)
     except EdenService.EdenError as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -465,11 +465,9 @@ def create_parser():
     unmount_parser = subparsers.add_parser(
         'unmount', help='Unmount a specific client')
     unmount_parser.add_argument(
-        '-n', '--no-forget',
+        '--destroy',
         action='store_true',
-        help='Only unmount the client, without forgetting about its '
-        'configuration.  The client can be re-mounted later using the mount '
-        'command.')
+        help='Permanently delete all state associated with the client.')
     unmount_parser.add_argument(
         'path', help='Path where client should be unmounted from')
     unmount_parser.set_defaults(func=do_unmount)
