@@ -952,6 +952,28 @@ def debugwaitonrepack(ui, repo, **opts):
 def debugwaitonprefetch(ui, repo, **opts):
     return debugcommands.debugwaitonprefetch(repo)
 
+def resolveprefetchopts(ui, opts):
+    if not opts.get('rev'):
+        revset = ['.', 'draft()']
+
+        prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
+        if prefetchrevset:
+            revset.append('(%s)' % prefetchrevset)
+        bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
+        if bgprefetchrevs:
+            revset.append('(%s)' % bgprefetchrevs)
+        revset = '+'.join(revset)
+
+        # update a revset with a date limit
+        revset = revdatelimit(ui, revset)
+
+        opts['rev'] = [revset]
+
+    if not opts.get('base'):
+        opts['base'] = None
+
+    return opts
+
 @command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
     ('', 'repack', False, _('run repack after prefetch')),
@@ -970,29 +992,9 @@ def prefetch(ui, repo, *pats, **opts):
     if not shallowrepo.requirement in repo.requirements:
         raise error.Abort(_("repo is not shallow"))
 
-    if not opts.get('rev'):
-        revset = ['.', 'draft()']
-
-        prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
-        if prefetchrevset:
-            revset.append('(%s)' % prefetchrevset)
-        bgprefetchrevs = ui.config('remotefilelog', 'bgprefetchrevs', None)
-        if bgprefetchrevs:
-            revset.append('(%s)' % bgprefetchrevs)
-        revset = '+'.join(revset)
-
-        # update a revset with a date limit
-        revset = revdatelimit(ui, revset)
-
-        opts['rev'] = [revset]
-
+    opts = resolveprefetchopts(ui, opts)
     revs = scmutil.revrange(repo, opts.get('rev'))
-
-    base = opts.get('base')
-    if not base:
-        base = None
-
-    repo.prefetch(revs, base, pats, opts)
+    repo.prefetch(revs, opts.get('base'), pats, opts)
 
     # Run repack in background
     if opts.get('repack'):
