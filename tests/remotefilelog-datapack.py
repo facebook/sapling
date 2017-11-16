@@ -2,7 +2,6 @@
 import hashlib
 import os
 import random
-import resource
 import shutil
 import stat
 import struct
@@ -276,8 +275,7 @@ class datapacktestsbase(object):
         packdir = self.makeTempDir()
         deltachains = []
 
-        # Ensures that we are not keeping everything in the cache.
-        numpacks = datapackstore.DEFAULTCACHESIZE * 2
+        numpacks = 10
         revisionsperpack = 100
 
         for i in range(numpacks):
@@ -296,29 +294,24 @@ class datapacktestsbase(object):
             self.createPack(chain, packdir)
             deltachains.append(chain)
 
-        try:
-            store = datapackstore(mercurial.ui.ui(), packdir)
+        class testdatapackstore(datapackstore):
+            # Ensures that we are not keeping everything in the cache.
+            DEFAULTCACHESIZE = numpacks / 2
 
-            random.shuffle(deltachains)
-            for randomchain in deltachains:
-                revision = random.choice(randomchain)
-                chain = store.getdeltachain(revision[0], revision[1])
+        store = testdatapackstore(mercurial.ui.ui(), packdir)
 
-                mostrecentpack = next(iter(store.packs), None)
-                self.assertEquals(
-                    mostrecentpack.getdeltachain(revision[0], revision[1]),
-                    chain
-                )
+        random.shuffle(deltachains)
+        for randomchain in deltachains:
+            revision = random.choice(randomchain)
+            chain = store.getdeltachain(revision[0], revision[1])
 
-                self.assertEquals(randomchain.index(revision) + 1, len(chain))
-        except Exception as ex:
-            print('Exception: %r' % ex)
-            # Print out RLIMIT_NOFILE
-            print('RLIMIT_NOFILE: %r'
-                  % (resource.getrlimit(resource.RLIMIT_NOFILE),))
-            # Print debug information about what files are opened by the
-            # current process.
-            os.system('lsof -p %s' % os.getpid())
+            mostrecentpack = next(iter(store.packs), None)
+            self.assertEquals(
+                mostrecentpack.getdeltachain(revision[0], revision[1]),
+                chain
+            )
+
+            self.assertEquals(randomchain.index(revision) + 1, len(chain))
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):
