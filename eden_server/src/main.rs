@@ -201,7 +201,7 @@ where
         };
         repo.get_changeset_by_nodeid(&hash)
             .map(|cs| cs.manifestid().to_string().into_bytes())
-            .map_err(Error::from)
+            .from_err()
             .boxify()
     }
 
@@ -223,7 +223,7 @@ where
             .flatten_stream()
             .map(move |entry| cpupool.spawn(TreeMetadata::from_entry(entry)))
             .buffer_unordered(100) // Schedules 100 futures on cpupool
-            .map_err(Error::from)
+            .from_err()
             .boxify()
     }
 
@@ -240,7 +240,7 @@ where
         };
 
         repo.get_file_blob(hash)
-            .map_err(Error::from)
+            .from_err()
             .and_then(|content| futures::future::ok(content))
             .boxify()
     }
