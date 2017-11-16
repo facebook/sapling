@@ -72,14 +72,15 @@ pub enum InnerPart {
 
 impl InnerPart {
     pub fn is_cg2(&self) -> bool {
-        match self {
-            &InnerPart::Cg2(_) => true,
+        match *self {
+            InnerPart::Cg2(_) => true,
         }
     }
 
-    pub fn cg2_part(self) -> changegroup::Part {
+    #[cfg(test)]
+    pub(crate) fn into_cg2_part(self) -> Option<changegroup::Part> {
         match self {
-            InnerPart::Cg2(part) => part,
+            InnerPart::Cg2(part) => Some(part),
         }
     }
 }

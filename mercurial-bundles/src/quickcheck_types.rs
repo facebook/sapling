@@ -18,6 +18,7 @@ use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use mercurial_types::{Delta, MPath, NodeHash};
 
+use InnerPart;
 use changegroup;
 use errors::*;
 
@@ -93,6 +94,16 @@ impl Cg2PartSequence {
 impl PartialEq<[changegroup::Part]> for Cg2PartSequence {
     fn eq(&self, other: &[changegroup::Part]) -> bool {
         self.as_iter().eq(other.iter())
+    }
+}
+
+impl PartialEq<[InnerPart]> for Cg2PartSequence {
+    fn eq(&self, other: &[InnerPart]) -> bool {
+        self.as_iter()
+            .zip(other.iter())
+            .all(|(part, other_part)| match *other_part {
+                InnerPart::Cg2(ref other_cg2) => part == other_cg2,
+            })
     }
 }
 

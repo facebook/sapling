@@ -365,7 +365,7 @@ fn next_cg2_part<'a, R: AsyncRead + 'a>(
     stream: Bundle2Stream<'a, R>,
 ) -> (changegroup::Part, Bundle2Stream<'a, R>) {
     let (res, stream) = core.next_stream(stream);
-    (res.unwrap().inner_part().cg2_part(), stream)
+    (res.unwrap().inner_part().into_cg2_part().unwrap(), stream)
 }
 
 trait CoreExt {

@@ -74,8 +74,8 @@ mod test {
         // - WouldBlock would require parking and unparking the task, which
         //   isn't yet supported in partial-io.
         quickcheck.quickcheck(
-            roundtrip as
-                fn(
+            roundtrip
+                as fn(
                     Cg2PartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,
@@ -89,8 +89,8 @@ mod test {
         let rng = StdGen::new(rand::thread_rng(), 200);
         let mut quickcheck = QuickCheck::new().gen(rng).tests(1);
         quickcheck.quickcheck(
-            roundtrip as
-                fn(
+            roundtrip
+                as fn(
                     Cg2PartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,
@@ -128,7 +128,6 @@ mod test {
         let parts = Vec::new();
         let decode_fut = part_stream
             .map_err(|e| -> () { panic!("unexpected error: {}", e) })
-            .map(|x| x.cg2_part())
             .forward(parts);
 
         let (_, parts) = core.run(decode_fut).unwrap();
