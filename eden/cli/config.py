@@ -262,7 +262,9 @@ by hand to make changes to the repository or remove it.''' % name)
 
     def clone(self, repo_name, path, snapshot_id):
         if path in self._get_directory_map():
-            raise Exception('mount path %s already exists.' % path)
+            raise Exception('''\
+mount path %s is already configured (see `eden list`). \
+Do you want to run `eden mount %s` instead?''' % (path, path))
 
         # Make sure that path is a valid destination for the clone.
         st = None
