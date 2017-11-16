@@ -535,6 +535,9 @@ coreconfigitem('experimental', 'rebase.multidest',
 coreconfigitem('experimental', 'revlogv2',
     default=None,
 )
+coreconfigitem('experimental', 'single-head-per-branch',
+    default=False,
+)
 coreconfigitem('experimental', 'spacemovesdown',
     default=False,
 )
