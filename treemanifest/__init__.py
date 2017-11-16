@@ -113,6 +113,7 @@ from remotefilelog.repack import (
     _computeincrementalhistorypack,
     _runrepack,
     _topacks,
+    backgroundrepack,
 )
 import cstore
 
@@ -999,6 +1000,7 @@ def wrappropertycache(cls, propname, wrapper):
 
 @command('prefetchtrees', [
     ('r', 'rev', '', _("revs to prefetch the trees for")),
+    ('', 'repack', False, _('run repack after prefetch')),
     ('b', 'base', '', _("rev that is assumed to already be local")),
     ] + commands.walkopts, _('--rev REVS PATTERN..'))
 def prefetchtrees(ui, repo, *args, **opts):
@@ -1013,6 +1015,10 @@ def prefetchtrees(ui, repo, *args, **opts):
         basemfnode.add(repo[base].manifestnode())
 
     _prefetchtrees(repo, '', mfnodes, basemfnode, [])
+
+    # Run repack in background
+    if opts.get('repack'):
+        backgroundrepack(repo, incremental=True)
 
 def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     # If possible, use remotefilelog's more expressive fallbackpath

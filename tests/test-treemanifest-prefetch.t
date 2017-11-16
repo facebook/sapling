@@ -368,3 +368,20 @@ trees - in this case 3 trees for commit 2, and 2 for commit 4 despite it having
   $ rm -rf $CACHEDIR/master
   $ hg prefetchtrees -r '2 + 4'
   5 trees fetched over * (glob)
+
+Test repack option
+  $ rm -rf $CACHEDIR/master
+
+  $ hg prefetchtrees -r '0'
+  2 trees fetched over *s (glob)
+  $ hg prefetchtrees -r '2'
+  3 trees fetched over *s (glob)
+
+  $ hg prefetchtrees -r '4' --repack
+  3 trees fetched over *s (glob)
+  (running background incremental repack)
+
+  $ sleep 0.5
+  $ hg debugwaitonrepack
+  $ ls_l $CACHEDIR/master/packs/manifests | grep datapack | wc -l
+  \s*1 (re)
