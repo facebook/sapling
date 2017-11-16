@@ -189,7 +189,7 @@ tip - two revisions
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="branchname">a-branch</span> 
+   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
    
   </h3>
   
@@ -220,7 +220,7 @@ tip - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    
@@ -229,7 +229,7 @@ tip - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+     <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
    
@@ -312,7 +312,7 @@ second version - two revisions
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="branchname">a-branch</span> 
+   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
    
   </h3>
   
@@ -343,7 +343,7 @@ second version - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    
@@ -352,7 +352,7 @@ second version - two revisions
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+     <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
    
@@ -435,7 +435,7 @@ first deleted - one revision
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
-   <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
    
   </h3>
   
@@ -466,7 +466,7 @@ first deleted - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+     <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
    
@@ -549,7 +549,7 @@ first version - one revision
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
-   <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+   <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
    
   </h3>
   
@@ -580,7 +580,7 @@ first version - one revision
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+     <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
    
@@ -740,7 +740,7 @@ before addition - error
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 7:<a href="/rev/46c1a66bd8fc">46c1a66bd8fc</a>
-   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 1:2 <a href="/log/tip/c">back to filelog</a>)
   </h3>
   
@@ -771,7 +771,7 @@ before addition - error
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/46c1a66bd8fc">change c</a>
-     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     </td>
    </tr>
    
@@ -780,7 +780,7 @@ before addition - error
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/6563da9dcf87">b</a>
-     
+     <span class="phase">draft</span> 
     </td>
    </tr>
    
@@ -860,7 +860,7 @@ before addition - error
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 7:<a href="/rev/46c1a66bd8fc?revcount=1">46c1a66bd8fc</a>
-   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 1:2 <a href="/log/tip/c?revcount=1">back to filelog</a>)
   </h3>
   
@@ -891,7 +891,7 @@ before addition - error
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/46c1a66bd8fc?revcount=1">change c</a>
-     <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+     <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     </td>
    </tr>
    
@@ -1097,7 +1097,7 @@ filelog with patch
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
-   <span class="branchname">a-branch</span> 
+   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
    
   </h3>
   
@@ -1128,7 +1128,7 @@ filelog with patch
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/3f41bc784e7e">second a</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1141,7 +1141,7 @@ filelog with patch
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5ed941583260">first a</a>
-     <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+     <span class="phase">draft</span> <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1379,7 +1379,7 @@ filelog with 'linerange' and 'patch'
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 12:<a href="/rev/6e4182052f7b">6e4182052f7b</a>
-   <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">a-branch</span> <span class="tag">tip</span> 
     (following lines 3:4 <a href="/log/tip/c">back to filelog</a>)
   </h3>
   
@@ -1410,7 +1410,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1429,7 +1429,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/e95928d60479">touch beginning of c</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1449,7 +1449,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1473,7 +1473,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/46c1a66bd8fc">change c</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1487,7 +1487,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/6563da9dcf87">b</a>
-     
+     <span class="phase">draft</span> 
     </td>
    </tr>
    <tr><td colspan="3"><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
@@ -1636,7 +1636,7 @@ filelog with 'linerange' and 'patch'
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    log c @ 8:<a href="/rev/5c6574614c37">5c6574614c37</a>
-   <span class="branchname">a-branch</span> 
+   <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     (following lines 3:4, descending <a href="/log/8/c">back to filelog</a>)
   </h3>
   
@@ -1667,7 +1667,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/5c6574614c37">make c bigger and touch its beginning</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    
@@ -1676,7 +1676,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/e95928d60479">touch beginning of c</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    
@@ -1685,7 +1685,7 @@ filelog with 'linerange' and 'patch'
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/fb9bc322513a">touching beginning and end of c</a>
-     <span class="branchname">a-branch</span> 
+     <span class="phase">draft</span> <span class="branchname">a-branch</span> 
     </td>
    </tr>
    

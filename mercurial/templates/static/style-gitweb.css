@@ -122,6 +122,10 @@ span.logtags span {
 	background-color: #ffaaff;
 	border-color: #ffccff #ff00ee #ff00ee #ffccff;
 }
+span.logtags span.phasetag {
+	background-color: #dfafff;
+	border-color: #e2b8ff #ce48ff #ce48ff #e2b8ff;
+}
 span.logtags span.tagtag {
 	background-color: #ffffaa;
 	border-color: #ffffcc #ffee00 #ffee00 #ffffcc;

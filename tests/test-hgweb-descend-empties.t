@@ -73,7 +73,7 @@ manifest with descending (paper)
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/c9f45f7a1659">c9f45f7a1659</a>
-   <span class="branchhead">default</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -193,7 +193,7 @@ manifest with descending (coal)
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/c9f45f7a1659?style=coal">c9f45f7a1659</a>
-   <span class="branchhead">default</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -317,7 +317,7 @@ manifest with descending (monoblue)
       </ul>
   
       <h2 class="no-link no-border">files</h2>
-      <p class="files">/ <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></p>
+      <p class="files">/ <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></p>
   
       <table>
           <tr class="parity0">
@@ -431,7 +431,7 @@ manifest with descending (gitweb)
   </div>
   </div>
   
-  <div class="title">/ <span class="logtags"><span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></div>
+  <div class="title">/ <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> <span class="tagtag" title="tip">tip</span> </span></div>
   <table cellspacing="0">
   <tr class="parity0">
   <td style="font-family:monospace">drwxr-xr-x</td>

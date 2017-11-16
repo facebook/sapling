@@ -267,7 +267,7 @@ try bad style
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
-   <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">@</span> <span class="tag">a b c</span> <span class="tag">d/e/f</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> <span class="tag">@</span> <span class="tag">a b c</span> <span class="tag">d/e/f</span> 
   </h3>
   
   
@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 9044
+  content-length: 9151
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -466,6 +466,10 @@ static file
   	border: 1px solid;
   	background-color: #ffaaff;
   	border-color: #ffccff #ff00ee #ff00ee #ffccff;
+  }
+  span.logtags span.phasetag {
+  	background-color: #dfafff;
+  	border-color: #e2b8ff #ce48ff #ce48ff #e2b8ff;
   }
   span.logtags span.tagtag {
   	background-color: #ffffaa;

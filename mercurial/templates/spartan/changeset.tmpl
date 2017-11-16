@@ -33,6 +33,10 @@
  <th class="date">date:</th>
  <td class="date age">{date|rfc822date}</td>
 </tr>
+{ifeq(phase, 'public', '', '<tr>
+ <th class="phase">phase:</th>
+ <td class="phase">{phase|escape}</td>
+</tr>')}
 <tr>
  <th class="files">files:</th>
  <td class="files">{files}</td>

@@ -62,7 +62,7 @@ revision
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    changeset 1:<a href="/rev/c78f6c5cbea9">c78f6c5cbea9</a>
-   <span class="branchhead">default</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   
@@ -190,7 +190,7 @@ diff removed file
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    diff a @ 1:<a href="/rev/c78f6c5cbea9">c78f6c5cbea9</a>
-   <span class="branchhead">default</span> <span class="tag">tip</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> <span class="tag">tip</span> 
   </h3>
   
   

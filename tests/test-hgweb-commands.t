@@ -775,7 +775,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/cad8025a2e87">branch commit with null character: </a>
-     <span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> 
+     <span class="phase">draft</span> <span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> 
     </td>
    </tr>
    <tr>
@@ -783,7 +783,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/1d22e65f027e">branch</a>
-     <span class="branchhead">stable</span> 
+     <span class="phase">draft</span> <span class="branchhead">stable</span> 
     </td>
    </tr>
    <tr>
@@ -791,7 +791,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a>
-     <span class="branchhead">default</span> 
+     <span class="phase">draft</span> <span class="branchhead">default</span> 
     </td>
    </tr>
    <tr>
@@ -799,7 +799,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/2ef0ac749a14">base</a>
-     <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+     <span class="phase">draft</span> <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
     </td>
    </tr>
   
@@ -880,7 +880,7 @@ Logs and changes
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    changeset 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
-   <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+   <span class="phase">draft</span> <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
   </h3>
   
   
@@ -1054,7 +1054,7 @@ Logs and changes
     <td class="author">test</td>
     <td class="description">
      <a href="/rev/2ef0ac749a14">base</a>
-     <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+     <span class="phase">draft</span> <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
     </td>
    </tr>
   
@@ -1312,7 +1312,7 @@ File-related
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    view foo @ 1:<a href="/rev/a4f92ed23982">a4f92ed23982</a>
-   <span class="branchhead">default</span> 
+   <span class="phase">draft</span> <span class="branchhead">default</span> 
   </h3>
   
   
@@ -1446,7 +1446,7 @@ File-related
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    view foo @ 2:<a href="/rev/1d22e65f027e">1d22e65f027e</a>
-   <span class="branchhead">stable</span> 
+   <span class="phase">draft</span> <span class="branchhead">stable</span> 
   </h3>
   
   
@@ -1584,7 +1584,7 @@ Overviews
   <td>
   <a class="list" href="/rev/cad8025a2e87?style=gitweb">
   <b>branch commit with null character: </b>
-  <span class="logtags"><span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -1598,7 +1598,7 @@ Overviews
   <td>
   <a class="list" href="/rev/1d22e65f027e?style=gitweb">
   <b>branch</b>
-  <span class="logtags"><span class="branchtag" title="stable">stable</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="stable">stable</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -1612,7 +1612,7 @@ Overviews
   <td>
   <a class="list" href="/rev/a4f92ed23982?style=gitweb">
   <b>Added tag 1.0 for changeset 2ef0ac749a14</b>
-  <span class="logtags"><span class="branchtag" title="default">default</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -1626,7 +1626,7 @@ Overviews
   <td>
   <a class="list" href="/rev/2ef0ac749a14?style=gitweb">
   <b>base</b>
-  <span class="logtags"><span class="tagtag" title="1.0">1.0</span> <span class="bookmarktag" title="anotherthing">anotherthing</span> </span>
+  <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="tagtag" title="1.0">1.0</span> <span class="bookmarktag" title="anotherthing">anotherthing</span> </span>
   </a>
   </td>
   <td class="link" nowrap>

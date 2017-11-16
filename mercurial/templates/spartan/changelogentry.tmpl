@@ -18,6 +18,10 @@
   <th class="date">date:</th>
   <td class="date">{date|rfc822date}</td>
  </tr>
+ {ifeq(phase, 'public', '', '<tr>
+  <th class="phase">phase:</th>
+  <td class="phase">{phase|escape}</td>
+ </tr>')}
  <tr>
   <th class="files"><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
   <td class="files">{files}</td>
