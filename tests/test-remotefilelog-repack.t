@@ -227,8 +227,8 @@
   2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
   $ hg repack
   $ ls $TESTTMP/hgcache/master/packs
-  e634f60d2a9539fc595b1f4db480c64556a396c7.dataidx
-  e634f60d2a9539fc595b1f4db480c64556a396c7.datapack
+  e8fdf7ae22b772dcc291f905b9c6e5f381d28739.dataidx
+  e8fdf7ae22b772dcc291f905b9c6e5f381d28739.datapack
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histidx
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histpack
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx
@@ -259,14 +259,14 @@
   $ rm -rf $CACHEDIR/master/packs/*hist*
   $ hg repack
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack
-  $TESTTMP/hgcache/master/packs/055c02949317b8507cdb7aaf2e00cc00fd0c5716:
+  $TESTTMP/hgcache/master/packs/a8d86ff8e1a11a77a85f5fea567f56a757583eda:
   x:
   Node          Delta Base    Delta Length  Blob Size
   1bb2e6237e03  000000000000  8             8
-  aee31534993a  000000000000  4             4
-  d4a3ed9310e5  000000000000  6             6
+  d4a3ed9310e5  1bb2e6237e03  12            6
+  aee31534993a  d4a3ed9310e5  12            4
   
-  Total:                      18            18        (0.0% bigger)
+  Total:                      32            18        (77.8% bigger)
   y:
   Node          Delta Base    Delta Length  Blob Size
   577959738234  000000000000  70            8

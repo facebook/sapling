@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import os
-from collections import defaultdict
 from hgext3rd.extutil import runshellcommand
 from mercurial import (
     error,
@@ -11,7 +10,10 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.node import nullid
+from mercurial.node import (
+    nullid,
+    short,
+)
 from mercurial.i18n import _
 from . import (
     constants,
@@ -426,6 +428,45 @@ class repacker(object):
             for source in ledger.sources:
                 source.cleanup(ledger)
 
+    def _chainorphans(self, ui, filename, nodes, orphans, deltabases):
+        """Reorderes ``orphans`` into a single chain inside ``nodes`` and
+        ``deltabases``.
+
+        We often have orphan entries (nodes without a base that aren't
+        referenced by other nodes -- i.e., part of a chain) due to gaps in
+        history. Rather than store them as individual fulltexts, we prefer to
+        insert them as one chain sorted by size.
+        """
+        if not orphans:
+            return nodes
+
+        def getsize(node, default=0):
+            meta = self.data.getmeta(filename, node)
+            if constants.METAKEYSIZE in meta:
+                return meta[constants.METAKEYSIZE]
+            else:
+                return default
+
+        # Sort orphans by size; biggest first is preferred, since it's more
+        # likely to be the newest version assuming files grow over time.
+        # (Sort by node first to ensure the sort is stable.)
+        orphans = sorted(orphans)
+        orphans = list(sorted(orphans, key=getsize, reverse=True))
+        if ui.debugflag:
+            ui.debug("%s: orphan chain: %s\n" % (filename,
+                ", ".join([short(s) for s in orphans])))
+
+        # Create one contiguous chain and reassign deltabases.
+        for i, node in enumerate(orphans):
+            if i == 0:
+                deltabases[node] = (nullid, 0)
+            else:
+                parent = orphans[i - 1]
+                deltabases[node] = (parent, deltabases[parent][1] + 1)
+        nodes = filter(lambda node: node not in orphans, nodes)
+        nodes += orphans
+        return nodes
+
     def repackdata(self, ledger, target):
         ui = self.repo.ui
         maxchainlen = ui.configint('packs', 'maxchainlen', 1000)
@@ -465,29 +506,42 @@ class repacker(object):
                          len(nohistory))
             orderednodes.extend(sorted(nohistory))
 
-            # Compute deltas and write to the pack
-            deltabases = defaultdict(lambda: (nullid, 0))
-            nodes = set(nodes)
-            for i, node in enumerate(orderednodes):
-                # orderednodes is all ancestors, but we only want to serialize
-                # the files we have.
-                if node not in nodes:
-                    continue
+            # Filter orderednodes to just the nodes we want to serialize (it
+            # currently also has the edge nodes' ancestors).
+            orderednodes = filter(lambda node: node in nodes, orderednodes)
 
-                if self.garbagecollect:
-                    # If the node is old and is not in the keepset
-                    # we skip it and mark as garbage collected
+            # Garbage collect old nodes:
+            if self.garbagecollect:
+                neworderednodes = []
+                for node in orderednodes:
+                    # If the node is old and is not in the keepset, we skip it,
+                    # and mark as garbage collected
                     if ((filename, node) not in self.keepkeys and
-                                        self.isold(self.repo, filename, node)):
+                        self.isold(self.repo, filename, node)):
                         entries[node].gced = True
                         continue
+                    neworderednodes.append(node)
+                orderednodes = neworderednodes
 
+            # Compute delta bases for nodes:
+            deltabases = {}
+            nobase = set()
+            referenced = set()
+            nodes = set(nodes)
+            for i, node in enumerate(orderednodes):
                 ui.progress(_("processing nodes"), i, unit='nodes',
                             total=len(orderednodes))
                 # Find delta base
                 # TODO: allow delta'ing against most recent descendant instead
                 # of immediate child
-                deltabase, chainlen = deltabases[node]
+                deltatuple = deltabases.get(node, None)
+                if deltatuple is None:
+                    deltabase, chainlen = nullid, 0
+                    deltabases[node] = (nullid, 0)
+                    nobase.add(node)
+                else:
+                    deltabase, chainlen = deltatuple
+                    referenced.add(deltabase)
 
                 # Use available ancestor information to inform our delta choices
                 ancestorinfo = ancestors.get(node)
@@ -511,6 +565,15 @@ class repacker(object):
                         if p2 != nullid:
                             deltabases[p2] = (node, chainlen + 1)
 
+            # experimental config: repack.chainorphansbysize
+            if ui.configbool('repack', 'chainorphansbysize', True):
+                orphans = nobase - referenced
+                orderednodes = self._chainorphans(ui, filename, orderednodes,
+                    orphans, deltabases)
+
+            # Compute deltas and write to the pack
+            for i, node in enumerate(orderednodes):
+                deltabase, chainlen = deltabases[node]
                 # Compute delta
                 # TODO: Optimize the deltachain fetching. Since we're
                 # iterating over the different version of the file, we may
