@@ -36,6 +36,19 @@ class FileInode : public InodeBase {
  public:
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
 
+  /**
+   * The FUSE create request wants both the inode and a file handle.  This
+   * constructor simultaneously allocates a FileInode given the File and
+   * returns a new FileHandle to it.
+   */
+  static std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> create(
+      fuse_ino_t ino,
+      TreeInodePtr parentInode,
+      PathComponentPiece name,
+      mode_t mode,
+      folly::File&& file,
+      dev_t rdev = 0);
+
   /** Construct an inode using an overlay entry */
   FileInode(
       fuse_ino_t ino,
@@ -63,12 +76,6 @@ class FileInode : public InodeBase {
 
   folly::Future<std::shared_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi);
-
-  /** Specialized helper to finish a file creation operation.
-   * Intended to be called immediately after invoking the constructor
-   * that accepts a File object, this returns an opened FileHandle
-   * for the file that was passed to the constructor. */
-  std::shared_ptr<FileHandle> finishCreate();
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;

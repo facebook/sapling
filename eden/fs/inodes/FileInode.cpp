@@ -104,6 +104,22 @@ void FileInode::State::State::checkInvariants() {
  */
 FileInode::State::~State() = default;
 
+std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
+    fuse_ino_t ino,
+    TreeInodePtr parentInode,
+    PathComponentPiece name,
+    mode_t mode,
+    folly::File&& file,
+    dev_t rdev) {
+  auto inode = FileInodePtr::makeNew(
+      ino, parentInode, name, mode, std::move(file), rdev);
+
+  SCOPE_EXIT {
+    inode->fileHandleDidClose();
+  };
+  return std::make_tuple(inode, std::make_shared<FileHandle>(inode));
+}
+
 FileInode::FileInode(
     fuse_ino_t ino,
     TreeInodePtr parentInode,
@@ -338,13 +354,6 @@ void FileInode::materializeInParent() {
   if (loc.parent && !loc.unlinked) {
     loc.parent->childMaterialized(renameLock, loc.name, getNodeId());
   }
-}
-
-std::shared_ptr<FileHandle> FileInode::finishCreate() {
-  SCOPE_EXIT {
-    fileHandleDidClose();
-  };
-  return std::make_shared<FileHandle>(inodePtrFromThis());
 }
 
 Future<vector<string>> FileInode::listxattr() {

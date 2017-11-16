@@ -700,15 +700,11 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     entry = std::make_unique<Entry>(mode, childNumber);
 
     // build a corresponding FileInode
-    inode = FileInodePtr::makeNew(
+    std::tie(inode, handle) = FileInode::create(
         childNumber, this->inodePtrFromThis(), name, mode, std::move(file));
+
     entry->setInode(inode.get());
     inodeMap->inodeCreated(inode);
-
-    // The kernel wants an open operation to return the inode,
-    // the file handle and some attribute information.
-    // Let's open a file handle now.
-    handle = inode->finishCreate();
 
     clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
     contents->timeStamps.ctime = contents->timeStamps.mtime;
