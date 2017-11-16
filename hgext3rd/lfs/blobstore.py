@@ -216,7 +216,6 @@ class _gitlfsremote(object):
             raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
 
         response = self._batchrequest(pointers, action)
-        prunningsize = [0]
         objects = self._extractobjects(response, pointers, action)
         total = sum(x.get('size', 0) for x in objects)
         sizes = {}
@@ -236,7 +235,8 @@ class _gitlfsremote(object):
                         msg = _('lfs: downloading %s (%s)\n')
                     elif action == 'upload':
                         msg = _('lfs: uploading %s (%s)\n')
-                    self.ui.write(msg % (obj.get('oid'), util.bytecount(objsize)))
+                    self.ui.write(msg % (obj.get('oid'),
+                                  util.bytecount(objsize)))
                 retry = self.retry
                 while True:
                     try:
