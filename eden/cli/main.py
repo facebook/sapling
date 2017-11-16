@@ -114,29 +114,64 @@ def do_list(args):
 
 
 def do_clone(args):
-    args.path = normalize_path_arg(args.path)
     config = create_config(args)
+    try:
+        client_config = config.find_config_for_alias(args.repo)
+    except Exception as e:
+        print_stderr('error: {}', e)
+        return 1
+
+    if client_config is None:
+        # If args.repo does not identify a named repository defined in .edenrc,
+        # see if the argument corresponds to a local path that contains a
+        # repository.
+        client_config = try_create_config_from_repo(args.repo, config)
+
+    args.path = normalize_path_arg(args.path)
     snapshot_id = args.snapshot
     if not snapshot_id:
-        try:
-            repo_config = config.get_repo_config(args.repo)
-        except Exception as ex:
-            print_stderr('error: {}', ex)
-            return 1
-
-        if repo_config.type == 'git':
-            snapshot_id = util.get_git_commit(repo_config.path)
-        elif repo_config.type == 'hg':
-            snapshot_id = util.get_hg_commit(repo_config.path)
+        if client_config.scm_type == 'git':
+            snapshot_id = util.get_git_commit(client_config.path)
+        elif client_config.scm_type == 'hg':
+            snapshot_id = util.get_hg_commit(client_config.path)
         else:
             print_stderr(
                 '%s does not look like a git or hg repository' % args.path)
             return 1
+
     try:
-        return config.clone(args.repo, args.path, snapshot_id)
+        return config.clone(client_config, args.path, snapshot_id)
     except Exception as ex:
         print_stderr('error: {}', ex)
         return 1
+
+
+def try_create_config_from_repo(
+        repo: str,
+        config: config_mod.Config
+) -> config_mod.ClientConfig:
+    '''Checks if repo is a path to a Git or Hg repository, and if so, creates an
+    appropriate ClientConfig for that repository. Throws an Exception if repo
+    does not identify a Git or Hg repository.
+    '''
+    path_to_repo = normalize_path_arg(repo)
+    if not path_to_repo or not os.path.isdir(path_to_repo):
+        ex = config.create_no_such_repository_exception(repo)
+        raise ex
+
+    # TODO(mbolin): Check whether path_to_repo is an Eden mount. Note this could
+    # theoretically be an Eden mount owned by a different user.
+    if os.path.isdir(os.path.join(path_to_repo, '.hg')):
+        scm_type = 'hg'
+    elif os.path.isdir(os.path.join(path_to_repo, '.git')):
+        scm_type = 'git'
+    else:
+        raise Exception(f'Could not determine repo type for: {path_to_repo}')
+
+    hooks_path = config.get_default_hooks_path()
+    bind_mounts = {}
+    return config_mod.ClientConfig(path_to_repo, scm_type, hooks_path,
+                                   bind_mounts)
 
 
 def do_config(args):

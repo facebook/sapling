@@ -67,31 +67,16 @@ class UsageError(Exception):
     pass
 
 
-class RepoConfig:
-    '''Configuration for a repo as determined by an ~/.edenrc file or
-    equivalent.
+class ClientConfig:
+    '''Configuration for a client. A client stores its config in config.toml
+    under ~/local/.eden/clients/.
 
-    - name used to identify the repository, e.g., "fbsource"
     - path real path where the true repo resides on disk
-    - type "hg" or "git"
+    - scm_type "hg" or "git"
     - hooks_path path to where the hooks scripts are for the repo
     - bind_mounts dict where keys are private pathnames under ~/.eden where the
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
-    '''
-    __slots__ = ['name', 'path', 'type', 'hooks_path', 'bind_mounts']
-
-    def __init__(self, name, path, type, hooks_path, bind_mounts):
-        self.name = name
-        self.path = path
-        self.type = type
-        self.hooks_path = hooks_path
-        self.bind_mounts = bind_mounts
-
-
-class ClientConfig:
-    '''Configuration for a client as determined by a config.toml file under
-    ~/local/.eden/clients/.
     '''
     __slots__ = ['path', 'scm_type', 'hooks_path', 'bind_mounts']
 
@@ -161,19 +146,21 @@ class Config:
             for k, v in parser.items(section):
                 print('%s=%s' % (k, v))
 
-    def get_repo_config(self, name) -> RepoConfig:
-        '''Returns a RepoConfig for the specified name or raises an Exception.
+    def find_config_for_alias(self, alias) -> Optional[ClientConfig]:
+        '''Looks through the existing config files and searches for a
+        [repository <alias>] section that defines a config:
+        - If no such section is found, returns None.
+        - If the appropriate section is found, returns a ClientConfig if all of
+          the fields for the config data are present and well-formed.
+        - Otherwise, throws an Exception.
         '''
-        repo_data = {}
         parser = self._loadConfig()
-        repository_header = f'repository {name}'
-        if repository_header in parser:
-            repo_data.update(parser[repository_header])
-        if not repo_data:
-            # At a minimum, "type" and "path" should have been assigned.
-            self._throw_suggest_other_repositories(name, parser)
+        repository_header = f'repository {alias}'
+        if repository_header not in parser:
+            return None
+        repo_data = parser[repository_header]
 
-        bind_mounts_header = 'bindmounts ' + name
+        bind_mounts_header = f'bindmounts {alias}'
         if bind_mounts_header in parser:
             # Convert the ConfigParser section into a dict so it is JSON
             # serializable for the `eden info` command.
@@ -182,27 +169,27 @@ class Config:
             bind_mounts = {}
 
         if 'type' not in repo_data:
-            raise Exception(f'repository "{name}" missing key "type".')
+            raise Exception(f'repository "{alias}" missing key "type".')
         elif 'path' not in repo_data:
-            raise Exception(f'repository "{name}" missing key "path".')
+            raise Exception(f'repository "{alias}" missing key "path".')
 
         hooks_path = repo_data.get('hooks')
         if hooks_path is None:
-            hooks_path = os.path.join(self._etc_eden_dir, 'hooks')
+            hooks_path = self.get_default_hooks_path()
 
-        return RepoConfig(name, repo_data['path'], repo_data['type'],
-                          hooks_path, bind_mounts)
+        return ClientConfig(repo_data['path'], repo_data['type'], hooks_path,
+                            bind_mounts)
 
-    @staticmethod
-    def _throw_suggest_other_repositories(
-        name: str, config: configparser.ConfigParser
-    ):
-        '''Invoke this to throw an exception that says no repository is
-        configured with the specified name and suggest other repos that are
-        defined in the specified config.
+    def get_default_hooks_path(self) -> str:
+        return os.path.join(self._etc_eden_dir, 'hooks')
+
+    def create_no_such_repository_exception(self, name: str) -> Exception:
+        '''Creates an exception that says no repository is configured with the
+        specified name and suggests other repos that are defined in this Config.
         '''
         repos = []
         prefix = 'repository '
+        config = self._loadConfig()
         for key in config:
             if key.startswith(prefix):
                 repos.append(key[len(prefix):])
@@ -211,7 +198,7 @@ class Config:
             repos.sort()
             all_repos = ', '.join(map(lambda r: f'"{r}"', repos))
             msg += f' Try one of: {all_repos}.'
-        raise Exception(msg)
+        return Exception(msg)
 
     def get_mount_paths(self):
         '''Return the paths of the set mount points stored in config.json'''
@@ -273,7 +260,7 @@ by hand to make changes to the repository or remove it.''' % name)
                 config['bindmounts ' + name] = bind_mounts
             config.save()
 
-    def clone(self, repo_name, path, snapshot_id):
+    def clone(self, client_config: ClientConfig, path: str, snapshot_id: str):
         if path in self._get_directory_map():
             raise Exception('''\
 mount path %s is already configured (see `eden list`). \
@@ -318,14 +305,13 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             raise Exception('snapshot id not provided')
 
         # Create bind mounts directories
-        repo_config = self.get_repo_config(repo_name)
         bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
         util.mkdir_p(bind_mounts_dir)
-        for mount in repo_config.bind_mounts:
+        for mount in client_config.bind_mounts:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         config_path = os.path.join(client_dir, MOUNT_CONFIG)
-        self._save_repo_config(repo_config, config_path)
+        self._save_client_config(client_config, config_path)
 
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
@@ -333,7 +319,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-        self._run_post_clone_hooks(path, client_dir, repo_config)
+        self._run_post_clone_hooks(path, client_dir, client_config)
 
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
@@ -365,20 +351,20 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                 raise
 
     def _run_post_clone_hooks(self, eden_mount_path: str, client_dir: str,
-                              repo_config: RepoConfig):
+                              client_config: ClientConfig):
         # First, check to see if the post-clone hook has been run successfully
         # before.
         clone_success_path = os.path.join(client_dir, CLONE_SUCCEEDED)
         is_initial_mount = not os.path.isfile(clone_success_path)
         if is_initial_mount:
-            post_clone = os.path.join(repo_config.hooks_path, 'post-clone')
+            post_clone = os.path.join(client_config.hooks_path, 'post-clone')
             snapshot = self._get_snapshot(client_dir)
             try:
                 subprocess.run([
                     post_clone,
-                    repo_config.type,
+                    client_config.scm_type,
                     eden_mount_path,
-                    repo_config.path,
+                    client_config.path,
                     snapshot,
                 ], pass_fds=[1, 2], check=True)
             except OSError as e:
@@ -387,21 +373,21 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                     # the mount.
                     raise
                 print_stderr(f'Did not run post-clone hook "{post_clone}" for '
-                             f'{repo_config.path} because it was not found.')
+                             f'{client_config.path} because it was not found.')
 
         # "touch" the clone_success_path.
         with open(clone_success_path, 'a'):
             os.utime(clone_success_path, None)
 
-    def _save_repo_config(self, repo_config: RepoConfig, config_path: str):
+    def _save_client_config(self, client_config: ClientConfig, config_path: str):
         # Store information about the mount in the config.toml file.
         config_data = {
             'repository': {
-                'path': repo_config.path,
-                'type': repo_config.type,
-                'hooks': repo_config.hooks_path,
+                'path': client_config.path,
+                'type': client_config.scm_type,
+                'hooks': client_config.hooks_path,
             },
-            'bind-mounts': repo_config.bind_mounts,
+            'bind-mounts': client_config.bind_mounts,
         }
         with open(config_path, 'w') as f:
             toml.dump(config_data, f)
@@ -422,9 +408,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             parser = configparser.ConfigParser()
             parser.read(edenrc)
             repo_name = parser.get('repository', 'name')
-            repo_config = self.get_repo_config(repo_name)
+            client_config = self.get_repo_config(repo_name)
             config_path = os.path.join(clients_dir, entry, MOUNT_CONFIG)
-            self._save_repo_config(repo_config, config_path)
+            self._save_client_config(client_config, config_path)
             os.remove(edenrc)
 
     def mount(self, path):

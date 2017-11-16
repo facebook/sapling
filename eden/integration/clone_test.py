@@ -42,6 +42,14 @@ class CloneTest:
         self.assertTrue(os.path.isfile(os.path.join(empty_dir, 'hello')),
                         msg='clone should succeed in empty directory')
 
+    def test_clone_from_repo(self):
+        # Specify the source of the clone as an existing local repo rather than
+        # an alias for a config.
+        destination_dir = self._new_tmp_dir()
+        self.eden.run_cmd('clone', self.repo.path, destination_dir)
+        self.assertTrue(os.path.isfile(os.path.join(destination_dir, 'hello')),
+                        msg='clone should succeed in empty directory')
+
     def test_clone_to_non_empty_directory_fails(self):
         tmp = self._new_tmp_dir()
         non_empty_dir = os.path.join(tmp, 'foo/bar/baz')
