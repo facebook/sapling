@@ -195,6 +195,8 @@ def do_daemon(args):
     # we want to avoid creating ~/.eden as root.
     _ensure_dot_eden_folder_exists(config)
 
+    config.migrate_internal_edenrc_files_to_config_toml_files()
+
     # If the user put an "--" argument before the edenfs args, argparse passes
     # that through to us.  Strip it out.
     edenfs_args = args.edenfs_args
@@ -373,7 +375,8 @@ def create_parser():
     clone_parser = subparsers.add_parser(
         'clone', help='Create a clone of a specific repo')
     clone_parser.add_argument(
-        'repo', help='Name of repository to clone')
+        'repo',
+        help='Name of a repository config or path to an existing repo to clone')
     clone_parser.add_argument(
         'path', help='Path where the client should be mounted')
     clone_parser.add_argument(

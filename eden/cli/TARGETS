@@ -22,6 +22,9 @@ python_library(
         "stats_print.py",
         "util.py",
     ],
+    external_deps = [
+        "toml",
+    ],
 )
 
 python_library(

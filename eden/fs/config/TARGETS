@@ -14,11 +14,9 @@ cpp_library(
         "@/folly:optional",
         "@/folly:range",
         "@/folly:string",
-        "@/folly/experimental:string_keyed_unordered_map",
         "@/folly/io:iobuf",
     ],
     external_deps = [
-        ("boost", None, "boost_filesystem"),
-        "boost",
+        ("cpptoml", None),
     ],
 )

@@ -223,8 +223,6 @@ void EdenServer::prepare() {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
-  reloadConfig();
-
   // Remount existing mount points
   folly::dynamic dirs = folly::dynamic::object();
   try {
@@ -325,11 +323,9 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     const MountInfo& info) {
-  reloadConfig();
   auto initialConfig = ClientConfig::loadFromClientDirectory(
       AbsolutePathPiece{info.mountPoint},
-      AbsolutePathPiece{info.edenClientPath},
-      getConfig().get());
+      AbsolutePathPiece{info.edenClientPath});
 
   auto repoType = initialConfig->getRepoType();
   auto backingStore = getBackingStore(repoType, initialConfig->getRepoSource());
@@ -465,15 +461,6 @@ shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
     return nullptr;
   }
   return it->second.edenMount;
-}
-
-void EdenServer::reloadConfig() {
-  *configData_.wlock() = make_shared<ConfigData>(
-      ClientConfig::loadConfigData(etcEdenDir_.piece(), configPath_.piece()));
-}
-
-shared_ptr<EdenServer::ConfigData> EdenServer::getConfig() {
-  return *configData_.rlock();
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(

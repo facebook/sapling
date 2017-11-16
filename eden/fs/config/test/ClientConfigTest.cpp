@@ -32,21 +32,13 @@ class ClientConfigTest : public ::testing::Test {
  protected:
   std::unique_ptr<TemporaryDirectory> edenDir_;
   folly::fs::path clientDir_;
-  folly::fs::path etcEdenPath_;
-  folly::fs::path edenConfigDotDPath_;
   folly::fs::path mountPoint_;
-  folly::fs::path userConfigPath_;
+  folly::fs::path configDotToml_;
 
   void SetUp() override {
     edenDir_ = std::make_unique<TemporaryDirectory>("eden_config_test_");
     clientDir_ = edenDir_->path() / "client";
     folly::fs::create_directory(clientDir_);
-
-    etcEdenPath_ = edenDir_->path() / "etc-eden";
-    folly::fs::create_directory(etcEdenPath_);
-
-    edenConfigDotDPath_ = etcEdenPath_ / "config.d";
-    folly::fs::create_directory(edenConfigDotDPath_);
     mountPoint_ = "/tmp/someplace";
 
     auto snapshotPath = clientDir_ / "SNAPSHOT";
@@ -57,21 +49,14 @@ class ClientConfigTest : public ::testing::Test {
         28};
     folly::writeFile(snapshotContents, snapshotPath.c_str());
 
-    userConfigPath_ = edenDir_->path() / ".edenrc";
-    auto data =
-        "; This INI has a comment\n"
-        "[repository fbsource]\n"
-        "path = /data/users/carenthomas/fbsource\n"
-        "type = git\n"
-        "[bindmounts fbsource]\n"
-        "my-path = path/to-my-path\n";
-    folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
-
-    auto localConfigPath = clientDir_ / "edenrc";
+    configDotToml_ = clientDir_ / "config.toml";
     auto localData =
         "[repository]\n"
-        "name = fbsource\n";
-    folly::writeFile(folly::StringPiece{localData}, localConfigPath.c_str());
+        "path = \"/data/users/carenthomas/fbsource\"\n"
+        "type = \"git\"\n"
+        "[bind-mounts]\n"
+        "my-path = \"path/to-my-path\"\n";
+    folly::writeFile(folly::StringPiece{localData}, configDotToml_.c_str());
   }
 
   void TearDown() override {
@@ -84,13 +69,8 @@ class ClientConfigTest : public ::testing::Test {
 } // namespace
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
+      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -108,21 +88,15 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
 }
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
-  // Overwrite .edenrc with no bind-mounts entry.
+  // Overwrite config.toml with no bind-mounts entry.
   auto data =
-      "; This INI has a comment\n"
-      "[repository fbsource]\n"
-      "path = /data/users/carenthomas/fbsource\n"
-      "type = git\n";
-  folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
+      "[repository]\n"
+      "path = \"/data/users/carenthomas/fbsource\"\n"
+      "type = \"git\"\n";
+  folly::writeFile(folly::StringPiece{data}, configDotToml_.c_str());
 
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
+      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -131,92 +105,12 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
-  EXPECT_EQ(expectedBindMounts, config->getBindMounts());
-}
-
-TEST_F(ClientConfigTest, testOverrideSystemConfigData) {
-  auto systemConfigPath = edenConfigDotDPath_ / "config.d";
-  auto data =
-      "; This INI has a comment\n"
-      "[repository fbsource]\n"
-      "path = /data/users/carenthomas/linux\n"
-      "type = git\n"
-      "[bindmounts fbsource]\n"
-      "my-path = path/to-my-path\n";
-  folly::writeFile(folly::StringPiece{data}, systemConfigPath.c_str());
-
-  data =
-      "; This INI has a comment\n"
-      "[repository fbsource]\n"
-      "path = /data/users/carenthomas/fbsource\n"
-      "type = git\n";
-  folly::writeFile(folly::StringPiece{data}, userConfigPath_.c_str());
-
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
-  auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
-
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
-  EXPECT_EQ("/tmp/someplace", config->getMountPath());
-
-  std::vector<BindMount> expectedBindMounts;
-  auto pathInClientDir = clientDir_ / "bind-mounts" / "my-path";
-  expectedBindMounts.emplace_back(
-      BindMount{AbsolutePath{pathInClientDir.c_str()},
-                AbsolutePath{"/tmp/someplace/path/to-my-path"}});
-  EXPECT_EQ(expectedBindMounts, config->getBindMounts());
-}
-
-TEST_F(ClientConfigTest, testOnlySystemConfigData) {
-  auto systemConfigPath = edenConfigDotDPath_ / "config.d";
-  auto data =
-      "; This INI has a comment\n"
-      "[repository fbsource]\n"
-      "path = /data/users/carenthomas/linux\n"
-      "type = git\n"
-      "[bindmounts fbsource]\n"
-      "my-path = path/to-my-path\n";
-  folly::writeFile(folly::StringPiece{data}, systemConfigPath.c_str());
-
-  folly::writeFile(folly::StringPiece{""}, userConfigPath_.c_str());
-
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
-  auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
-
-  auto parents = config->getParentCommits();
-  EXPECT_EQ(
-      Hash{"1234567812345678123456781234567812345678"}, parents.parent1());
-  EXPECT_EQ(Optional<Hash>{}, parents.parent2());
-  EXPECT_EQ("/tmp/someplace", config->getMountPath());
-
-  std::vector<BindMount> expectedBindMounts;
-  auto pathInClientDir = clientDir_ / "bind-mounts" / "my-path";
-  expectedBindMounts.emplace_back(
-      BindMount{AbsolutePath{pathInClientDir.c_str()},
-                AbsolutePath{"/tmp/someplace/path/to-my-path"}});
   EXPECT_EQ(expectedBindMounts, config->getBindMounts());
 }
 
 TEST_F(ClientConfigTest, testMultipleParents) {
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
+      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   // Overwrite the SNAPSHOT file to indicate that there are two parents
   auto snapshotContents = folly::StringPiece{
@@ -237,13 +131,8 @@ TEST_F(ClientConfigTest, testMultipleParents) {
 }
 
 TEST_F(ClientConfigTest, testWriteSnapshot) {
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
+      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
 
   Hash hash1{"99887766554433221100aabbccddeeffabcdef99"};
   Hash hash2{"abcdef98765432100123456789abcdef00112233"};
@@ -289,13 +178,8 @@ void ClientConfigTest::testBadSnapshot(
       folly::to<std::string>("SNAPSHOT contents: ", folly::hexlify(contents)));
   folly::writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
 
-  auto configData = ClientConfig::loadConfigData(
-      AbsolutePath{etcEdenPath_.string()},
-      AbsolutePath{userConfigPath_.string()});
   auto config = ClientConfig::loadFromClientDirectory(
-      AbsolutePath{mountPoint_.string()},
-      AbsolutePath{clientDir_.string()},
-      &configData);
+      AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
   EXPECT_THROW_RE(config->getParentCommits(), ExceptionType, errorRegex);
 }
 

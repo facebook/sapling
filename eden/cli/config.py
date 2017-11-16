@@ -12,7 +12,7 @@ import collections
 import configparser
 import errno
 import fcntl
-import hashlib
+import itertools
 import json
 import os
 import shutil
@@ -20,6 +20,7 @@ import stat
 import subprocess
 import tempfile
 import time
+import toml
 
 from . import configinterpolator, util
 from .util import print_stderr
@@ -47,8 +48,8 @@ ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
 CONFIG_JSON = 'config.json'
 
 # These are files in a client directory.
-LOCAL_CONFIG = 'edenrc'
 CLONE_SUCCEEDED = 'clone-succeeded'
+MOUNT_CONFIG = 'config.toml'
 SNAPSHOT = 'SNAPSHOT'
 SNAPSHOT_MAGIC = b'eden\x00\x00\x00\x01'
 
@@ -291,12 +292,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                 raise OSError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), path)
 
         # Create client directory
-        dir_name = hashlib.sha1(path.encode('utf-8')).hexdigest()
-        client_dir = os.path.join(self._get_clients_dir(), dir_name)
-        util.mkdir_p(client_dir)
-
-        # Store repository name in local edenrc config file
-        self._store_repo_name(client_dir, repo_name)
+        clients_dir = self._get_clients_dir()
+        util.mkdir_p(clients_dir)  # This directory probably already exists.
+        client_dir = self._create_client_dir_for_path(clients_dir, path)
 
         # Store snapshot ID
         if snapshot_id:
@@ -314,6 +312,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         for mount in repo_config.bind_mounts:
             util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
+        config_path = os.path.join(client_dir, MOUNT_CONFIG)
+        self._save_repo_config(repo_config, repo_name, config_path)
+
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
                                            edenClientPath=client_dir)
@@ -323,7 +324,33 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         self._run_post_clone_hooks(path, client_dir, repo_config)
 
         # Add mapping of mount path to client directory in config.json
-        self._add_path_to_directory_map(path, dir_name)
+        self._add_path_to_directory_map(path, os.path.basename(client_dir))
+
+    def _create_client_dir_for_path(self, clients_dir, path) -> str:
+        '''Tries to create a new subdirectory of clients_dir based on the
+        basename of the specified path. Tries appending an increasing sequence
+        of integers to the basename if there is a collision until it finds an
+        available directory name.
+        '''
+        basename = os.path.basename(path)
+        if basename == '':
+            raise Exception('Suspicious attempt to clone into: %s' % path)
+        for i in itertools.count(start=0):
+            if i == 0:
+                dir_name = basename
+            else:
+                dir_name = f'{basename}-{i}'
+
+            client_dir = os.path.join(clients_dir, dir_name)
+            try:
+                os.mkdir(client_dir)
+                return client_dir
+            except OSError as e:
+                if e.errno == errno.EEXIST:
+                    # A directory with the specified name already exists: try
+                    # again with the next candidate name.
+                    continue
+                raise
 
     def _run_post_clone_hooks(self, eden_mount_path: str, client_dir: str,
                               repo_config: RepoConfig):
@@ -353,6 +380,47 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         # "touch" the clone_success_path.
         with open(clone_success_path, 'a'):
             os.utime(clone_success_path, None)
+
+    def _save_repo_config(self, repo_config: RepoConfig, repo_name: str,
+                          config_path: str):
+        # Store information about the mount in the config.toml file.
+        config_data = {
+            'repository': {
+                # Note that "name" is currently an alias for a predefined
+                # config, but we are planning to add support for creating
+                # clients from an existing directory rather than a config, in
+                # which case there will not always be an appropriate value for
+                # this field, so this will have to be reexamined.
+                'name': repo_name,
+                'path': repo_config.path,
+                'type': repo_config.type,
+                'hooks': repo_config.hooks_path,
+            },
+            'bind-mounts': repo_config.bind_mounts,
+        }
+        with open(config_path, 'w') as f:
+            toml.dump(config_data, f)
+
+    # TODO(mbolin): Delete this code in December 2017: Let's just assume
+    # everyone has been migrated by then.
+    def migrate_internal_edenrc_files_to_config_toml_files(self):
+        '''If a client has a legacy edenrc file under ~/local/.eden/clients/*/,
+        migrate it to a config.toml file.'''
+        clients_dir = self._get_clients_dir()
+        if not os.path.isdir(clients_dir):
+            return
+        for entry in os.listdir(clients_dir):
+            edenrc = os.path.join(clients_dir, entry, 'edenrc')
+            if not os.path.isfile(edenrc):
+                continue
+
+            parser = configparser.ConfigParser()
+            parser.read(edenrc)
+            repo_name = parser.get('repository', 'name')
+            repo_config = self.get_repo_config(repo_name)
+            config_path = os.path.join(clients_dir, entry, MOUNT_CONFIG)
+            self._save_repo_config(repo_config, repo_name, config_path)
+            os.remove(edenrc)
 
     def mount(self, path):
         # Load the config info for this client, to make sure we
@@ -633,19 +701,16 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
         return util.mkdir_p(rocks_db_dir)
 
-    def _store_repo_name(self, client_dir, repo_name):
-        config_path = os.path.join(client_dir, LOCAL_CONFIG)
-        with ConfigUpdater(config_path) as config:
-            config['repository'] = {'name': repo_name}
-            config.save()
-
     def _get_repo_name(self, client_dir):
-        config = os.path.join(client_dir, LOCAL_CONFIG)
-        parser = configparser.ConfigParser()
-        parser.read(config)
-        name = parser.get('repository', 'name')
-        if name:
-            return name
+        config_toml = os.path.join(client_dir, MOUNT_CONFIG)
+        with open(config_toml, 'r') as f:
+            config = toml.load(f)
+        repository = config.get('repository')
+        if isinstance(repository, dict):
+            name = repository.get('name')
+            if isinstance(name, str):
+                return name
+
         raise Exception('could not find repository for %s' % client_dir)
 
     def _get_directory_map(self):

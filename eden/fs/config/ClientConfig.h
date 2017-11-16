@@ -9,10 +9,8 @@
  */
 #pragma once
 
-#include <boost/property_tree/ini_parser.hpp>
 #include <folly/Optional.h>
 #include <folly/dynamic.h>
-#include "InterpolatedPropertyTree.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -40,7 +38,6 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
 
 class ClientConfig {
  public:
-  using ConfigData = InterpolatedPropertyTree;
 
   /**
    * Manually construct a ClientConfig object.
@@ -59,22 +56,10 @@ class ClientConfig {
    * @param clientDirectory  The eden client data directory, where the client
    *     configuration file can be found (along with its overlay and other
    *     data).
-   * @param configData  The eden server configuration data.  (This is the
-   *     global server configuration rather than the client-specific config
-   *     data.  This function will load the client-specific config data from
-   *     the clientDirectory.)
    */
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
       AbsolutePathPiece mountPath,
-      AbsolutePathPiece clientDirectory,
-      const ConfigData* configData);
-
-  /**
-   * Load the global server configuration data.
-   */
-  static ConfigData loadConfigData(
-      AbsolutePathPiece etcEdenDirectory,
-      AbsolutePathPiece configPath);
+      AbsolutePathPiece clientDirectory);
 
   static folly::dynamic loadClientDirectoryMap(AbsolutePathPiece edenDir);
 

@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from .lib import testcase
-import hashlib
 import json
 import os
 
@@ -25,34 +24,39 @@ class InfoTest:
     def test_info_with_bind_mounts(self):
         edenrc = os.path.join(os.environ['HOME'], '.edenrc')
         with open(edenrc, 'w') as f:
-            f.write('''\
+            f.write(
+                '''\
 [repository {repo_name}]
 path = {repo_path}
 type = {repo_type}
 
 [bindmounts {repo_name}]
 buck-out = buck-out
-'''.format(repo_name=repo_name,
-             repo_path=self.repo.get_canonical_root(),
-             repo_type=self.repo.get_type()))
+'''.format(
+                    repo_name=repo_name,
+                    repo_path=self.repo.get_canonical_root(),
+                    repo_type=self.repo.get_type()
+                )
+            )
 
-        tmp = os.path.join(self.tmp_dir, 'eden_mount')
+        basename = 'eden_mount'
+        tmp = os.path.join(self.tmp_dir, basename)
 
         self.eden.run_cmd('clone', repo_name, tmp)
         info = self.eden.run_cmd('info', tmp)
 
         client_info = json.loads(info)
-        client_dir = os.path.join(self.eden_dir,
-                                  'clients',
-                                  hashlib.sha1(tmp.encode('utf-8')).hexdigest())
-        self.assertEqual({
-            'bind-mounts': {
-                'buck-out': 'buck-out',
-            },
-            'client-dir': client_dir,
-            'mount': tmp,
-            'snapshot': self.repo.get_head_hash(),
-        }, client_info)
+        client_dir = os.path.join(self.eden_dir, 'clients', basename)
+        self.assertEqual(
+            {
+                'bind-mounts': {
+                    'buck-out': 'buck-out',
+                },
+                'client-dir': client_dir,
+                'mount': tmp,
+                'snapshot': self.repo.get_head_hash(),
+            }, client_info
+        )
 
     def test_relative_path(self):
         '''
@@ -63,15 +67,16 @@ buck-out = buck-out
 
         client_info = json.loads(info)
         client_dir = os.path.join(
-            self.eden_dir,
-            'clients',
-            hashlib.sha1(self.mount.encode('utf-8')).hexdigest())
-        self.assertEqual({
-            'bind-mounts': {},
-            'client-dir': client_dir,
-            'mount': self.mount,
-            'snapshot': self.repo.get_head_hash(),
-        }, client_info)
+            self.eden_dir, 'clients', os.path.basename(self.mount)
+        )
+        self.assertEqual(
+            {
+                'bind-mounts': {},
+                'client-dir': client_dir,
+                'mount': self.mount,
+                'snapshot': self.repo.get_head_hash(),
+            }, client_info
+        )
 
     def test_through_symlink(self):
         '''

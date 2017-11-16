@@ -23,7 +23,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "eden/fs/config/InterpolatedPropertyTree.h"
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
@@ -59,7 +58,6 @@ class MountInfo;
  */
 class EdenServer {
  public:
-  using ConfigData = InterpolatedPropertyTree;
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
@@ -140,9 +138,6 @@ class EdenServer {
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
   }
-
-  void reloadConfig();
-  std::shared_ptr<ConfigData> getConfig();
 
   /**
    * Look up the BackingStore object for the specified repository type+name.
@@ -265,7 +260,6 @@ class EdenServer {
   AbsolutePath configPath_;
   AbsolutePath rocksPath_;
   folly::File lockFile_;
-  folly::Synchronized<std::shared_ptr<ConfigData>> configData_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
   std::shared_ptr<ThriftServerEventHandler> serverEventHandler_;
