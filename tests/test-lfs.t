@@ -20,7 +20,11 @@
 
 # Commit large file
   $ echo $LONG > largefile
+  $ grep lfs .hg/requires
+  [1]
   $ hg commit --traceback -Aqm "add large file"
+  $ grep lfs .hg/requires
+  lfs
 
 # Ensure metadata is stored
   $ hg debugdata largefile 0

@@ -37,6 +37,7 @@ from mercurial import (
     exchange,
     extensions,
     filelog,
+    localrepo,
     registrar,
     revlog,
     scmutil,
@@ -84,6 +85,13 @@ command = registrar.command(cmdtable)
 
 templatekeyword = registrar.templatekeyword()
 
+def featuresetup(ui, supported):
+    # don't die on seeing a repo with the lfs requirement
+    supported |= {'lfs'}
+
+def uisetup(ui):
+    localrepo.localrepository.featuresetupfuncs.add(featuresetup)
+
 def reposetup(ui, repo):
     # Nothing to do with a remote repo
     if not repo.local():
@@ -97,6 +105,17 @@ def reposetup(ui, repo):
 
     # Push hook
     repo.prepushoutgoinghooks.add('lfs', wrapper.prepush)
+
+    if 'lfs' not in repo.requirements:
+        def checkrequireslfs(ui, repo, **kwargs):
+            if 'lfs' not in repo.requirements:
+                ctx = repo[kwargs['node']]
+                # TODO: is there a way to just walk the files in the commit?
+                if any(ctx[f].islfs() for f in ctx.files()):
+                    repo.requirements.add('lfs')
+                    repo._writerequirements()
+
+        ui.setconfig('hooks', 'commit.lfs', checkrequireslfs, 'lfs')
 
 def wrapfilelog(filelog):
     wrapfunction = extensions.wrapfunction
