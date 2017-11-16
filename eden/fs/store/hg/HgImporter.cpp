@@ -458,7 +458,11 @@ void HgImporter::initializeTreeManifestImport(const Options& options) {
   std::vector<DataStore*> storePtrs;
   for (const auto& path : options.treeManifestPackPaths) {
     XLOG(DBG5) << "treemanifest pack path: " << path;
-    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path));
+    // Create a new DatapackStore for path.  Note that we enable removing
+    // dead pack files.  This is only guaranteed to be safe so long as we copy
+    // the relevant data out of the datapack objects before we issue a
+    // subsequent call into the unionStore_.
+    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path, true));
     storePtrs.emplace_back(dataPackStores_.back().get());
   }
 
