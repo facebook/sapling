@@ -10,7 +10,6 @@ from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
 from mercurial import error, localrepo, util, match, scmutil
 from . import remotefilelog, remotefilectx, fileserverclient
-import repack as repackmod
 import constants, shallowutil
 from contentstore import remotefilelogcontentstore, unioncontentstore
 from contentstore import remotecontentstore
@@ -187,20 +186,15 @@ def wraprepo(repo):
 
             runshellcommand(cmd, os.environ)
 
-        def prefetch(self, revs, base=None, repack=False, pats=None, opts=None):
+        def prefetch(self, revs, base=None, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs
             Optionally runs repack in background
             """
             with repo._lock(repo.svfs, 'prefetchlock', True, None, None,
                             _('prefetching in %s') % repo.origroot):
-                self._prefetch(revs, base, repack, pats, opts)
+                self._prefetch(revs, base, pats, opts)
 
-            # Run repack in background
-            if repack:
-                repackmod.backgroundrepack(repo, incremental=True)
-
-        def _prefetch(self, revs, base=None, repack=False, pats=None,
-                      opts=None):
+        def _prefetch(self, revs, base=None, pats=None, opts=None):
             fallbackpath = self.fallbackpath
             if fallbackpath:
                 # If we know a rev is on the server, we should fetch the server

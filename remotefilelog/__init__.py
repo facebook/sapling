@@ -987,7 +987,11 @@ def prefetch(ui, repo, *pats, **opts):
 
     revs = scmutil.revrange(repo, opts.get('rev'))
 
-    repo.prefetch(revs, repack=opts.get('repack'), pats=pats, opts=opts)
+    repo.prefetch(revs, pats=pats, opts=opts)
+
+    # Run repack in background
+    if opts.get('repack'):
+        repackmod.backgroundrepack(repo, incremental=True)
 
 @command('repack', [
      ('', 'background', None, _('run in a background process'), None),
