@@ -21,6 +21,7 @@ from . import (
     branchmap,
     error,
     phases,
+    scmutil,
     setdiscovery,
     treediscovery,
     util,
@@ -365,11 +366,8 @@ def checkheads(pushop):
             if None in unsyncedheads:
                 # old remote, no heads data
                 heads = None
-            elif len(unsyncedheads) <= 4 or repo.ui.verbose:
-                heads = ' '.join(short(h) for h in unsyncedheads)
             else:
-                heads = (' '.join(short(h) for h in unsyncedheads[:4]) +
-                         ' ' + _("and %s others") % (len(unsyncedheads) - 4))
+                heads = scmutil.nodesummaries(repo, unsyncedheads)
             if heads is None:
                 repo.ui.status(_("remote has heads that are "
                                  "not known locally\n"))
