@@ -36,8 +36,9 @@ from mercurial.node import nullid
 import mercurial.ui
 
 class datapacktestsbase(object):
-    def __init__(self, datapackreader, paramsavailable):
+    def __init__(self, datapackreader, paramsavailable, iscdatapack):
         self.datapackreader = datapackreader
+        self.iscdatapack = iscdatapack
         self.paramsavailable = paramsavailable
 
     def setUp(self):
@@ -302,7 +303,7 @@ class datapacktestsbase(object):
             # Ensures that we are not keeping everything in the cache.
             DEFAULTCACHESIZE = numpacks / 2
 
-        store = testdatapackstore(mercurial.ui.ui(), packdir)
+        store = testdatapackstore(mercurial.ui.ui(), packdir, self.iscdatapack)
 
         random.shuffle(deltachains)
         for randomchain in deltachains:
@@ -374,12 +375,12 @@ class datapacktestsbase(object):
 
 class datapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, datapack, True)
+        datapacktestsbase.__init__(self, datapack, True, False)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 class fastdatapacktests(datapacktestsbase, unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        datapacktestsbase.__init__(self, fastdatapack, False)
+        datapacktestsbase.__init__(self, fastdatapack, False, True)
         unittest.TestCase.__init__(self, *args, **kwargs)
 
 # TODO:
