@@ -1049,8 +1049,11 @@ def _prefetchonlyfiles(orig, ui, repo, *pats, **opts):
 def _prefetchonlytrees(repo, opts):
     opts = resolveprefetchopts(repo.ui, opts)
     revs = scmutil.revrange(repo, opts.get('rev'))
+    draftrevs = repo.revs('draft()')
     mfnodes = set()
-    for rev in revs:
+
+    # No trees need to be downloaded for the draft commits.
+    for rev in revs - draftrevs:
         mfnodes.add(repo[rev].manifestnode())
 
     basemfnode = set()

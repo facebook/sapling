@@ -82,6 +82,7 @@ There are three cases which are of interest in this test:
   > fastmanifest=$TESTDIR/../fastmanifest
   > [remotefilelog]
   > reponame = master
+  > prefetchdays=0
   > cachepath = $CACHEDIR
   > [fastmanifest]
   > usetree = True
@@ -469,4 +470,26 @@ Test repack option
   $ hg debugwaitonrepack
   $ ls_l $CACHEDIR/master/packs/manifests | grep datapack | wc -l
   \s*1 (re)
+#endif
+
+Test prefetching with no options works. The expectation is to prefetch the stuff
+required for working with the draft commits which happens to be only revision 5
+in this case.
+
+  $ rm -rf $CACHEDIR/master
+
+#if remotefilelog.true.shallowrepo.true
+The tree prefetching code path fetches no trees for revision 5. However, the
+file prefetching code path fetches 1 file for revision 5 and while doing so,
+also fetches 3 trees dealing with the tree manifest of the base revision 2.
+
+  $ hg prefetch
+  0 trees fetched over * (glob)
+  3 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+#else
+The tree prefetching code path fetches no trees for revision 5. And there is no
+prefetching of files in this test case.
+  $ hg prefetch
+  0 trees fetched over * (glob)
 #endif
