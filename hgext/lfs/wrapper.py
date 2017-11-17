@@ -221,6 +221,14 @@ def hgclone(orig, ui, opts, *args, **kwargs):
 
     return result
 
+def hgpostshare(orig, sourcerepo, destrepo, bookmarks=True, defaultpath=None):
+    orig(sourcerepo, destrepo, bookmarks, defaultpath)
+
+    # If lfs is required for this repo, permanently enable it locally
+    if 'lfs' in destrepo.requirements:
+        with destrepo.vfs('hgrc', 'a', text=True) as fp:
+            fp.write('\n[extensions]\nlfs=\n')
+
 def _canskipupload(repo):
     # if remotestore is a null store, upload is a no-op and can be skipped
     return isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)

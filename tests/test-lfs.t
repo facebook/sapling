@@ -208,6 +208,12 @@
 
   $ cd ..
 
+  $ hg --config extensions.share= share repo7 sharedrepo
+  updating working directory
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R sharedrepo config extensions --debug | grep lfs
+  $TESTTMP/sharedrepo/.hg/hgrc:*: extensions.lfs= (glob)
+
 # Test rename and status
 
   $ hg init repo8

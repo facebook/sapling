@@ -153,6 +153,7 @@ def extsetup(ui):
     )
 
     wrapfunction(hg, 'clone', wrapper.hgclone)
+    wrapfunction(hg, 'postshare', wrapper.hgpostshare)
 
     # Make bundle choose changegroup3 instead of changegroup2. This affects
     # "hg bundle" command. Note: it does not cover all bundle formats like
