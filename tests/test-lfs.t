@@ -199,6 +199,8 @@
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo7
+  $ hg config extensions --debug | grep lfs
+  $TESTTMP/repo7/.hg/hgrc:*: extensions.lfs= (glob)
   $ cat large
   LARGE-BECAUSE-IT-IS-MORE-THAN-30-BYTES
   $ cat small

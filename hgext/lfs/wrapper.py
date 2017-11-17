@@ -202,6 +202,25 @@ def vfsinit(orig, self, othervfs):
         if util.safehasattr(othervfs, name):
             setattr(self, name, getattr(othervfs, name))
 
+def hgclone(orig, ui, opts, *args, **kwargs):
+    result = orig(ui, opts, *args, **kwargs)
+
+    if result is not None:
+        sourcerepo, destrepo = result
+        repo = destrepo.local()
+
+        # When cloning to a remote repo (like through SSH), no repo is available
+        # from the peer.  Therefore the hgrc can't be updated.
+        if not repo:
+            return result
+
+        # If lfs is required for this repo, permanently enable it locally
+        if 'lfs' in repo.requirements:
+            with repo.vfs('hgrc', 'a', text=True) as fp:
+                fp.write('\n[extensions]\nlfs=\n')
+
+    return result
+
 def _canskipupload(repo):
     # if remotestore is a null store, upload is a no-op and can be skipped
     return isinstance(repo.svfs.lfsremoteblobstore, blobstore._nullremote)

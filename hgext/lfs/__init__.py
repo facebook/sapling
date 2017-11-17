@@ -37,6 +37,7 @@ from mercurial import (
     exchange,
     extensions,
     filelog,
+    hg,
     localrepo,
     registrar,
     revlog,
@@ -150,6 +151,8 @@ def extsetup(ui):
             wrapper.bypasscheckhash,
         ),
     )
+
+    wrapfunction(hg, 'clone', wrapper.hgclone)
 
     # Make bundle choose changegroup3 instead of changegroup2. This affects
     # "hg bundle" command. Note: it does not cover all bundle formats like
