@@ -296,6 +296,15 @@ else:
                 ] + cflags),
             ),
         ],
+        'clindex': [
+            Extension('hgext3rd.clindex',
+                sources=['hgext3rd/clindex.pyx'],
+                include_dirs=['hgext3rd'],
+                extra_compile_args=filter(None, [
+                    STDC99, WALL, WEXTRA, WCONVERSION, PEDANTIC,
+                ]),
+            ),
+        ],
         'linelog' : [
             Extension('linelog',
                 sources=['linelog/pyext/linelog.pyx'],
@@ -321,7 +330,7 @@ else:
                     PRODUCEDEBUGSYMBOLS
                 ]),
             ),
-        ]
+        ],
     }
 
 allnames = availablepackages + availableextmodules.keys() + availablepymodules
@@ -354,6 +363,7 @@ if iswindows:
     cythonmodules = ['linelog']
 else:
     cythonmodules = [
+        'clindex',
         'linelog',
         'patchrmdir',
         'traceprof',
