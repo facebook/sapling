@@ -49,6 +49,8 @@ tweakrc = """
 [ui]
 # The rollback command is dangerous. As a rule, don't use it.
 rollback = False
+# Make `hg status` report copy information
+statuscopies = yes
 
 [commands]
 # Make `hg status` emit cwd-relative paths by default.

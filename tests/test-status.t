@@ -572,6 +572,10 @@ using ui.statuscopies setting
   $ hg st --config ui.statuscopies=false
   M a
   R b
+  $ hg st --config ui.tweakdefaults=yes
+  M a
+    b
+  R b
 
 using log status template (issue5155)
   $ hg log -Tstatus -r 'wdir()' -C
