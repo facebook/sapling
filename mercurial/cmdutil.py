@@ -2982,8 +2982,9 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
         for f in remaining:
             count += 1
             ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            warnings.append(_('not removing %s: file still exists\n')
-                    % m.rel(f))
+            if ui.verbose or (f in files):
+                warnings.append(_('not removing %s: file still exists\n')
+                                % m.rel(f))
             ret = 1
         ui.progress(_('skipping'), None)
     else:

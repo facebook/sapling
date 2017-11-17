@@ -189,9 +189,9 @@ the table cases
                                                               \r (no-eol) (esc)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-21 state clean, options -A
+21 state clean, options -Av
 
-  $ remove -A foo
+  $ remove -Av foo
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
@@ -205,10 +205,10 @@ the table cases
   ./foo
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-22 state modified, options -A
+22 state modified, options -Av
 
   $ echo b >> foo
-  $ remove -A foo
+  $ remove -Av foo
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
@@ -357,8 +357,31 @@ dir, options -f
                                                               \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-dir, options -A
+dir, options -Av
 
+  $ rm test/bar
+  $ remove -Av test
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  removing test/bar (glob)
+  not removing test/foo: file still exists (glob)
+  exit code: 1
+  R test/bar
+  ./foo
+  ./test/foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+dir, options -A <dir>
   $ rm test/bar
   $ remove -A test
   \r (no-eol) (esc)
@@ -371,7 +394,26 @@ dir, options -A
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   removing test/bar (glob)
-  not removing test/foo: file still exists (glob)
+  exit code: 1
+  R test/bar
+  ./foo
+  ./test/foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+without any files/dirs, options -A
+  $ rm test/bar
+  $ remove -A
+  \r (no-eol) (esc)
+  skipping [=====================>                      ] 1/2\r (no-eol) (esc)
+  skipping [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  removing test/bar (glob)
   exit code: 1
   R test/bar
   ./foo
