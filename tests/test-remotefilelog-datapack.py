@@ -280,7 +280,10 @@ class datapacktestsbase(object):
         packdir = self.makeTempDir()
         deltachains = []
 
-        numpacks = 10
+        if self.iscdatapack:
+            numpacks = 200
+        else:
+            numpacks = 10
         revisionsperpack = 100
 
         for i in range(numpacks):
