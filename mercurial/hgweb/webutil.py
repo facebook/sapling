@@ -361,6 +361,7 @@ def commonentry(repo, ctx):
         'date': ctx.date(),
         'extra': ctx.extra(),
         'phase': ctx.phasestr(),
+        'obsolete': ctx.obsolete(),
         'branch': nodebranchnodefault(ctx),
         'inbranch': nodeinbranch(repo, ctx),
         'branches': nodebranchdict(repo, ctx),
