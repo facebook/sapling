@@ -1281,6 +1281,7 @@ support for automatically discovering test if arg is a folder
 
 support for running run-tests.py from another directory
   $ mkdir tmp && cd tmp
+
   $ cat > useful-file.sh << EOF
   > important command
   > EOF
@@ -1290,10 +1291,27 @@ support for running run-tests.py from another directory
   >   important command
   > EOF
 
+  $ cat > test-folder-fail.t << EOF
+  >   $ cat \$TESTDIR/useful-file.sh
+  >   important commando
+  > EOF
+
   $ cd ..
-  $ $PYTHON $TESTDIR/run-tests.py tmp/test-folder.t
-  .
-  # Ran 1 tests, 0 skipped, 0 failed.
+  $ $PYTHON $TESTDIR/run-tests.py tmp/test-*.t
+  
+  --- $TESTTMP/anothertests/tmp/test-folder-fail.t
+  +++ $TESTTMP/anothertests/tmp/test-folder-fail.t.err
+  @@ -1,2 +1,2 @@
+     $ cat $TESTDIR/useful-file.sh
+  -  important commando
+  +  important command
+  
+  ERROR: test-folder-fail.t output changed
+  !.
+  Failed test-folder-fail.t: output changed
+  # Ran 2 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
 
 support for bisecting failed tests automatically
   $ hg init bisect

@@ -2373,6 +2373,8 @@ class TestRunner(object):
             self._outputdir = canonpath(_bytespath(self.options.outputdir))
         else:
             self._outputdir = self._testdir
+            if testdescs and pathname:
+                self._outputdir = os.path.join(self._outputdir, pathname)
 
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
