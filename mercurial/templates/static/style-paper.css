@@ -146,6 +146,15 @@ a { text-decoration:none; }
   vertical-align: baseline;
 }
 
+.obsolete {
+  color: #999;
+  font-size: 70%;
+  border-bottom: 1px dashed #999;
+  font-weight: normal;
+  margin-left: .5em;
+  vertical-align: baseline;
+}
+
 .tag {
   color: #999;
   font-size: 70%;

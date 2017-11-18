@@ -22,6 +22,10 @@
   <th class="phase">phase:</th>
   <td class="phase">{phase|escape}</td>
  </tr>')}
+ {if(obsolete, '<tr>
+  <th class="obsolete">obsolete:</th>
+  <td class="obsolete">yes</td>
+ </tr>')}
  <tr>
   <th class="files"><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
   <td class="files">{files}</td>

@@ -1015,6 +1015,30 @@ test summary output
   orphan: 2 changesets
   phase-divergent: 1 changesets
 
+#if serve
+
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+check obsolete changeset
+
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(obsolete())&style=paper' | grep '<span class="obsolete">'
+     <span class="phase">draft</span> <span class="obsolete">obsolete</span> 
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(obsolete())&style=coal' | grep '<span class="obsolete">'
+     <span class="phase">draft</span> <span class="obsolete">obsolete</span> 
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(obsolete())&style=gitweb' | grep '<span class="logtags">'
+    <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="obsoletetag" title="obsolete">obsolete</span> </span>
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(obsolete())&style=monoblue' | grep '<span class="logtags">'
+          <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="obsoletetag" title="obsolete">obsolete</span> </span>
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(obsolete())&style=spartan' | grep 'class="obsolete"'
+    <th class="obsolete">obsolete:</th>
+    <td class="obsolete">yes</td>
+
+  $ killdaemons.py
+
+  $ rm hg.pid access.log errors.log
+#endif
+
 Test incoming/outcoming with changesets obsoleted remotely, known locally
 ===============================================================================
 
