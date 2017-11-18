@@ -348,7 +348,7 @@ fn parse_stream_start<'a, R: AsyncRead + 'a>(
     match core.run(stream.into_future()) {
         Ok((item, stream)) => {
             let stream_start = item.unwrap();
-            assert_eq!(stream_start.stream_header(), expected);
+            assert_eq!(stream_start.unwrap_start(), expected);
             Ok(stream)
         }
         Err((e, _)) => Err(e),
@@ -365,7 +365,7 @@ fn next_cg2_part<'a, R: AsyncRead + 'a>(
     stream: Bundle2Stream<'a, R>,
 ) -> (changegroup::Part, Bundle2Stream<'a, R>) {
     let (res, stream) = core.next_stream(stream);
-    (res.unwrap().inner_part().into_cg2_part().unwrap(), stream)
+    (res.unwrap().unwrap_inner().unwrap_cg2(), stream)
 }
 
 trait CoreExt {

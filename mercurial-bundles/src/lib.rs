@@ -88,17 +88,19 @@ impl Bundle2Item {
         }
     }
 
-    pub fn stream_header(self) -> StreamHeader {
+    #[cfg(test)]
+    pub(crate) fn unwrap_start(self) -> StreamHeader {
         match self {
             Bundle2Item::Start(stream_header) => stream_header,
-            _ => panic!("stream_header called on a Bundle2Item that isn't Start!"),
+            other => panic!("expected item to be Start, was {:?}", other),
         }
     }
 
-    pub fn inner_part(self) -> InnerPart {
+    #[cfg(test)]
+    pub(crate) fn unwrap_inner(self) -> InnerPart {
         match self {
             Bundle2Item::Inner(inner_part) => inner_part,
-            _ => panic!("inner_part called on a Bundle2Item that isn't Inner!"),
+            other => panic!("expected item to be Inner, was {:?}", other),
         }
     }
 }

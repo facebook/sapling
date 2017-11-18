@@ -78,9 +78,9 @@ impl InnerPart {
     }
 
     #[cfg(test)]
-    pub(crate) fn into_cg2_part(self) -> Option<changegroup::Part> {
+    pub(crate) fn unwrap_cg2(self) -> changegroup::Part {
         match self {
-            InnerPart::Cg2(part) => Some(part),
+            InnerPart::Cg2(part) => part,
         }
     }
 }
