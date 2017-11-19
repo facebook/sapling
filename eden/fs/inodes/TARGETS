@@ -48,6 +48,7 @@ cpp_library(
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly:unit",
+        "@/folly/chrono:conv",
         "@/folly/executors:cpu_thread_pool_executor",
         "@/folly/executors:global_executor",
         "@/folly/experimental/logging:logging",

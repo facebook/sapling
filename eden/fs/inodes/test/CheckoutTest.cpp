@@ -8,6 +8,8 @@
  *
  */
 #include <folly/Conv.h>
+#include <folly/Optional.h>
+#include <folly/chrono/Conv.h>
 #include <folly/container/Array.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
@@ -22,14 +24,46 @@
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 using namespace facebook::eden;
+using namespace std::chrono_literals;
 using folly::Future;
+using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
 using folly::makeFuture;
+using std::chrono::system_clock;
 using std::string;
 using testing::UnorderedElementsAre;
+
+namespace std {
+template <typename Rep, typename Period>
+inline void PrintTo(
+    std::chrono::duration<Rep, Period> duration,
+    ::std::ostream* os) {
+  *os << facebook::eden::durationStr(duration);
+}
+
+inline void PrintTo(
+    const std::chrono::system_clock::time_point& t,
+    ::std::ostream* os) {
+  auto ts = folly::to<struct timespec>(t);
+
+  struct tm localTime;
+  if (!localtime_r(&ts.tv_sec, &localTime)) {
+    folly::throwSystemError("localtime_r failed");
+  }
+
+  std::array<char, 64> buf;
+  if (strftime(buf.data(), buf.size(), "%FT%T", &localTime) == 0) {
+    // errno is not necessarily set
+    throw std::runtime_error("strftime failed");
+  }
+
+  *os << buf.data() << folly::sformat(".{:09d}", ts.tv_nsec);
+}
+} // namespace std
 
 namespace {
 
@@ -310,6 +344,15 @@ void testModifyFile(
 
   loadInodes(testMount, path, loadType, contents1, perms1);
 
+  Optional<struct stat> preStat;
+  // If we were supposed to load this inode before the checkout,
+  // also store its stat information so we can compare it after the checkout.
+  if (loadType == LoadBehavior::INODE || loadType == LoadBehavior::ALL) {
+    auto preInode = testMount.getFileInode(path);
+    preStat = preInode->getattr().get(10ms).st;
+  }
+
+  auto checkoutStart = system_clock::now();
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = checkoutResult.get();
@@ -318,6 +361,27 @@ void testModifyFile(
   // Make sure the path is updated as expected
   auto postInode = testMount.getFileInode(path);
   EXPECT_FILE_INODE(postInode, contents2, perms2);
+
+  // Check the stat() information on the inode.
+  // The timestamps should not be earlier than when the checkout started.
+  auto postStat = postInode->getattr().get(10ms).st;
+  EXPECT_GE(
+      folly::to<system_clock::time_point>(postStat.st_atim), checkoutStart);
+  EXPECT_GE(
+      folly::to<system_clock::time_point>(postStat.st_mtim), checkoutStart);
+  EXPECT_GE(
+      folly::to<system_clock::time_point>(postStat.st_ctim), checkoutStart);
+  if (preStat.hasValue()) {
+    EXPECT_GE(
+        folly::to<system_clock::time_point>(postStat.st_atim),
+        folly::to<system_clock::time_point>(preStat->st_atim));
+    EXPECT_GE(
+        folly::to<system_clock::time_point>(postStat.st_mtim),
+        folly::to<system_clock::time_point>(preStat->st_mtim));
+    EXPECT_GE(
+        folly::to<system_clock::time_point>(postStat.st_ctim),
+        folly::to<system_clock::time_point>(preStat->st_ctim));
+  }
 
   // Unmount and remount the mount point, and verify that the file changes
   // persisted across remount correctly.

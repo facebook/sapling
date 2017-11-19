@@ -85,9 +85,9 @@ void TestMount::initialize(
                    std::move(config_),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_,
-                   lastCheckoutTime)
+                   &stats_)
                    .get();
+  edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
 
 void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {

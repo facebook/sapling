@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "EdenMount.h"
+#include "eden/fs/inodes/EdenMount.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -15,6 +15,7 @@
 #include <folly/FBString.h>
 #include <folly/File.h>
 #include <folly/Subprocess.h>
+#include <folly/chrono/Conv.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
@@ -46,6 +47,7 @@ using folly::Unit;
 using folly::makeFuture;
 using folly::setThreadName;
 using folly::to;
+using std::chrono::system_clock;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -154,14 +156,11 @@ folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats,
-    std::chrono::system_clock::time_point lastCheckoutTime) {
-  auto mount = std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
-                                                        std::move(objectStore),
-                                                        socketPath,
-                                                        globalStats,
-                                                        lastCheckoutTime},
-                                          EdenMountDeleter{}};
+    fusell::ThreadLocalEdenStats* globalStats) {
+  auto mount = std::shared_ptr<EdenMount>{
+      new EdenMount{
+          std::move(config), std::move(objectStore), socketPath, globalStats},
+      EdenMountDeleter{}};
   return mount->initialize().then([mount] { return mount; });
 }
 
@@ -169,8 +168,7 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats,
-    std::chrono::system_clock::time_point lastCheckOutTime)
+    fusell::ThreadLocalEdenStats* globalStats)
     : globalEdenStats_(globalStats),
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
@@ -182,7 +180,6 @@ EdenMount::EdenMount(
       socketPath_(socketPath),
       straceLogger_{kEdenStracePrefix.str() +
                     config_->getMountPath().value().toStdString()},
-      lastCheckoutTime_(lastCheckOutTime),
       path_(config_->getMountPath()),
       uid_(getuid()),
       gid_(getgid()) {}
@@ -399,6 +396,12 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
              << oldParents << " to " << snapshotHash;
 
+  // Update lastCheckoutTime_ before starting the checkout operation.
+  // This ensures that any inode objects created once the checkout starts will
+  // get the current checkout time, rather than the time from the previous
+  // checkout
+  *lastCheckoutTime_.wlock() = getCurrentCheckoutTime();
+
   auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
 
@@ -492,18 +495,17 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   journal_.addDelta(std::move(journalDelta));
 }
 
-struct timespec EdenMount::getLastCheckoutTime() {
-  auto lastCheckoutTime = lastCheckoutTime_;
-  auto epochTime = lastCheckoutTime.time_since_epoch();
-  auto epochSeconds =
-      std::chrono::duration_cast<std::chrono::seconds>(epochTime);
-  auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      epochTime - epochSeconds);
+struct timespec EdenMount::getCurrentCheckoutTime() {
+  return folly::to<struct timespec>(system_clock::now());
+}
 
-  struct timespec time;
-  time.tv_sec = epochSeconds.count();
-  time.tv_nsec = nsec.count();
-  return time;
+struct timespec EdenMount::getLastCheckoutTime() {
+  return *lastCheckoutTime_.rlock();
+}
+
+void EdenMount::setLastCheckoutTime(
+    std::chrono::system_clock::time_point time) {
+  *lastCheckoutTime_.wlock() = folly::to<struct timespec>(time);
 }
 
 void EdenMount::resetParent(const Hash& parent) {

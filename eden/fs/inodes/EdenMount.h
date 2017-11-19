@@ -15,6 +15,7 @@
 #include <folly/ThreadLocal.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/futures/Promise.h>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -90,9 +91,7 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats,
-      std::chrono::system_clock::time_point lastCheckoutTime =
-          std::chrono::system_clock::now());
+      fusell::ThreadLocalEdenStats* globalStats);
 
   /**
    * Destroy the EdenMount.
@@ -318,10 +317,18 @@ class EdenMount {
   folly::Logger& getStraceLogger() {
     return straceLogger_;
   }
+
   /**
    * Returns the last checkout time in the Eden mount.
    */
   struct timespec getLastCheckoutTime();
+
+  /**
+   * Set the last checkout time.
+   *
+   * This is intended primarily for use in test code.
+   */
+  void setLastCheckoutTime(std::chrono::system_clock::time_point time);
 
   /**
    * Returns the key value to an fb303 counter.
@@ -330,7 +337,6 @@ class EdenMount {
 
   struct ParentInfo {
     ParentCommits parents;
-    std::chrono::system_clock::time_point lastCheckoutTime;
   };
 
   /**
@@ -463,9 +469,7 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats,
-      std::chrono::system_clock::time_point lastCheckoutTime =
-          std::chrono::system_clock::now());
+      fusell::ThreadLocalEdenStats* globalStats);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -483,6 +487,8 @@ class EdenMount {
 
   // Dispatches fuse requests
   void fuseWorkerThread();
+
+  static struct timespec getCurrentCheckoutTime();
 
   /**
    * Private destructor.
@@ -554,11 +560,21 @@ class EdenMount {
   folly::Logger straceLogger_;
 
   /**
-   * This needs to use system_clock rather than steady_clock
-   * since this is used for filesystem timestamps that
-   * get displayed to users.
+   * The timestamp of the last time that a checkout operation was performed in
+   * this mount.  This is used to initialize the timestamps of newly loaded
+   * inodes.  (Since the file contents might have logically been update by the
+   * checkout operation.)
+   *
+   * We store this as a struct timespec rather than a std::chrono::time_point
+   * since this is primarily used by FUSE APIs which need a timespec.
+   *
+   * This is managed with its own Synchronized lock separate from other state
+   * since it needs to be accessed when constructing inodes.  This is a very
+   * low level lock in our lock ordering hierarchy: No other locks should be
+   * acquired while holding this lock.
    */
-  std::chrono::system_clock::time_point lastCheckoutTime_;
+  folly::Synchronized<struct timespec> lastCheckoutTime_{
+      getCurrentCheckoutTime()};
 
   /**
    * The current state of the mount point.
