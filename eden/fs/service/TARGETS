@@ -47,6 +47,7 @@ cpp_library(
         "@/eden/fs/inodes:inodes",
         "@/eden/fs/store/git:git",
         "@/eden/fs/store/hg:hg",
+        "@/eden/fs/takeover:takeover",
         "@/folly:conv",
         "@/folly:file_util",
         "@/folly:network_address",

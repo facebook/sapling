@@ -32,6 +32,8 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/takeover/TakeoverServer.h"
 
 DEFINE_bool(debug, false, "run fuse in debug mode");
 
@@ -126,7 +128,6 @@ EdenServer::EdenServer(
           make_shared<folly::CPUThreadPoolExecutor>(FLAGS_num_eden_threads)) {}
 
 EdenServer::~EdenServer() {
-  shutdown();
 }
 
 folly::Future<Unit> EdenServer::unmountAll() {
@@ -254,24 +255,84 @@ void EdenServer::run() {
   // Acquire the eden lock, prepare the thrift server, and start our mounts
   prepare();
 
+  // Start listening for graceful takeover requests
+  auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
+  takeoverServer_.reset(
+      new TakeoverServer(getMainEventBase(), takeoverPath, this));
+  takeoverServer_->start();
+
   // Run the thrift server
+  state_.wlock()->state = State::RUNNING;
   runServer(*this);
 
-  // Clean up all the server mount points before shutting down the privhelper.
-  // This is made a little bit more complicated because we're running on
-  // the main event base thread here, and the unmount handling relies on
-  // scheduling the unmount to run in our thread; we can't simply block
-  // on the future returned from unmountAll() as that would prevent those
-  // actions from completing, so we perform a somewhat inelegant polling
-  // loop on both the eventBase and the future.
-  auto unmounted = unmountAll();
+  bool takeover;
+  {
+    auto state = state_.wlock();
+    takeover = state->takeoverShutdown;
+    state->state = State::SHUTTING_DOWN;
+  }
+  auto shutdownFuture =
+      takeover ? performTakeoverShutdown() : performNormalShutdown();
 
+  // Drive the main event base until shutdownFuture completes
   CHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
-  while (!unmounted.isReady()) {
+  while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
-  unmounted.get();
+  shutdownFuture.get();
+}
 
+Future<Unit> EdenServer::performTakeoverShutdown() {
+  TakeoverData data;
+
+  // TODO: Actually perform graceful shutdown.
+  // For now we simply return some fake data just for testing purposes.
+  data.mountPoints.emplace_back(
+      AbsolutePath{"/foo/bar"},
+      std::vector<AbsolutePath>{},
+      folly::File(STDERR_FILENO));
+  data.mountPoints.emplace_back(
+      AbsolutePath{"/hello/world"},
+      std::vector<AbsolutePath>{AbsolutePath{"/hello/world/foo"},
+                                AbsolutePath{"/hello/world/bar/sub/mount"}},
+      folly::File(STDERR_FILENO));
+  data.mountPoints.emplace_back(
+      AbsolutePath{"/a/b/c/d/efg/hij/klmnopq/rstuv/wxyz"},
+      std::vector<AbsolutePath>{},
+      folly::File(STDERR_FILENO));
+  data.mountPoints.emplace_back(
+      AbsolutePath{"/123456"},
+      std::vector<AbsolutePath>{},
+      folly::File(STDERR_FILENO));
+  data.mountPoints.emplace_back(
+      AbsolutePath{"/mnt/test"},
+      std::vector<AbsolutePath>{},
+      folly::File(STDERR_FILENO));
+
+  // TODO: Message the privhelper process to tell it not to unmount our mount
+  // points on shutdown.
+
+  data.lockFile = std::move(lockFile_);
+  auto future = data.takeoverComplete.getFuture();
+
+  shutdownPrivhelper();
+
+  takeoverPromise_.setValue(std::move(data));
+  return future;
+}
+
+Future<Unit> EdenServer::performNormalShutdown() {
+  takeoverServer_.reset();
+
+  // Clean up all the server mount points before shutting down the privhelper.
+  auto shutdownFuture = unmountAll();
+
+  shutdownPrivhelper();
+
+  return shutdownFuture;
+}
+
+void EdenServer::shutdownPrivhelper() {
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
   auto privhelperExitCode = fusell::stopPrivHelper();
@@ -565,8 +626,33 @@ void EdenServer::stop() const {
   server_->stop();
 }
 
-void EdenServer::shutdown() {
-  unmountAll().get();
+folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
+  // Make sure we aren't already shutting down, then update our state
+  // to indicate that we should perform mount point takeover shutdown
+  // once runServer() returns.
+  {
+    auto state = state_.wlock();
+    if (state->state != State::RUNNING) {
+      // We are either still in the process of starting,
+      // or already shutting down.
+      return makeFuture<TakeoverData>(std::runtime_error(folly::to<string>(
+          "can only perform graceful restart when running normally; "
+          "current state is ",
+          static_cast<int>(state->state))));
+    }
+    if (state->takeoverShutdown) {
+      // This can happen if startTakeoverShutdown() is called twice
+      // before runServer() exits.
+      return makeFuture<TakeoverData>(std::runtime_error(
+          "another takeover shutdown has already been started"));
+    }
+
+    state->takeoverShutdown = true;
+  }
+
+  // Stop the thrift server.  We will fulfill takeoverPromise_ once it stops.
+  server_->stop();
+  return takeoverPromise_.getFuture();
 }
 
 void EdenServer::flushStatsNow() const {

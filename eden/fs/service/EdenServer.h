@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
 
@@ -48,6 +49,7 @@ class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
+class TakeoverServer;
 
 /*
  * EdenServer contains logic for running the Eden main loop.
@@ -56,7 +58,7 @@ class MountInfo;
  * for a particular location, then starts the thrift management server
  * and the fuse session.
  */
-class EdenServer {
+class EdenServer : private TakeoverHandler {
  public:
   using MountList = std::vector<std::shared_ptr<EdenMount>>;
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
@@ -91,6 +93,20 @@ class EdenServer {
    * and will cause run() to return.
    */
   void stop() const;
+
+  /**
+   * Request to shutdown the server for a graceful restart operation,
+   * allowing a remote process to take over the existing mount points.
+   *
+   * This pauses FUSE I/O processing, writes filesystem state to disk,
+   * and returns the FUSE file descriptors for each mount.  This allows the
+   * FUSE FDs to be handed off to a new eden instance so it can take over
+   * existing mount points with minimal disruption to other processes using the
+   * mounts.
+   *
+   * Returns a Future that will return a map of (mount path -> FUSE fd)
+   */
+  folly::Future<TakeoverData> startTakeoverShutdown() override;
 
   /**
    * Mount and return an EdenMount.
@@ -233,8 +249,9 @@ class EdenServer {
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(EdenMount* mountPoint);
 
-  // Called before destructing EdenServer
-  void shutdown();
+  folly::Future<folly::Unit> performNormalShutdown();
+  folly::Future<folly::Unit> performTakeoverShutdown();
+  void shutdownPrivhelper();
 
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already.
@@ -269,6 +286,24 @@ class EdenServer {
 
   folly::Synchronized<MountMap> mountPoints_;
   mutable fusell::ThreadLocalEdenStats edenStats_;
+
+  /**
+   * A server that waits on a new edenfs process to attempt
+   * a graceful restart, taking over our running mount points.
+   */
+  std::unique_ptr<TakeoverServer> takeoverServer_;
+  folly::Promise<TakeoverData> takeoverPromise_;
+
+  enum class State {
+    STARTING,
+    RUNNING,
+    SHUTTING_DOWN,
+  };
+  struct StateData {
+    State state{State::STARTING};
+    bool takeoverShutdown{false};
+  };
+  folly::Synchronized<StateData> state_;
 
   /**
    * The EventBase driving the main thread loop.
