@@ -264,11 +264,12 @@ shortlog = shortlog.tmpl
 graph = graph.tmpl
 phasetag = '{ifeq(phase, 'public', '', '<span class="phasetag" title="{phase|escape}">{phase|escape}</span> ')}'
 obsoletetag = '{if(obsolete, '<span class="obsoletetag" title="obsolete">obsolete</span> ')}'
+instabilitytag = '<span class="instabilitytag" title="{name|escape}">{name|escape}</span> '
 tagtag = '<span class="tagtag" title="{name|escape}">{name|escape}</span> '
 branchtag = '<span class="branchtag" title="{name|escape}">{name|escape}</span> '
 inbranchtag = '<span class="inbranchtag" title="{name|escape}">{name|escape}</span> '
 bookmarktag = '<span class="bookmarktag" title="{name|escape}">{name|escape}</span> '
-alltags = '<span class="logtags">{phasetag}{obsoletetag}{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>'
+alltags = '<span class="logtags">{phasetag}{obsoletetag}{instabilities%instabilitytag}{inbranch%inbranchtag}{branches%branchtag}{tags%tagtag}{bookmarks%bookmarktag}</span>'
 shortlogentry = '
   <tr class="parity{parity}">
     <td class="age"><i class="age">{date|rfc822date}</i></td>

@@ -41,6 +41,10 @@
  <th class="obsolete">obsolete:</th>
  <td class="obsolete">yes</td>
 </tr>')}
+{ifeq(count(instabilities), '0', '', '<tr>
+ <th class="instabilities">instabilities:</th>
+ <td class="instabilities">{instabilities%"{name} "|escape}</td>
+</tr>')}
 <tr>
  <th class="files">files:</th>
  <td class="files">{files}</td>

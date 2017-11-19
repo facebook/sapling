@@ -130,6 +130,10 @@ span.logtags span.obsoletetag {
 	background-color: #dddddd;
 	border-color: #e4e4e4 #a3a3a3 #a3a3a3 #e4e4e4;
 }
+span.logtags span.instabilitytag {
+	background-color: #ffb1c0;
+	border-color: #ffbbc8 #ff4476 #ff4476 #ffbbc8;
+}
 span.logtags span.tagtag {
 	background-color: #ffffaa;
 	border-color: #ffffcc #ffee00 #ffee00 #ffffcc;

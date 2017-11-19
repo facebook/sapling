@@ -155,6 +155,15 @@ a { text-decoration:none; }
   vertical-align: baseline;
 }
 
+.instability {
+  color: #000;
+  font-size: 70%;
+  border-bottom: 1px solid #000;
+  font-weight: normal;
+  margin-left: .5em;
+  vertical-align: baseline;
+}
+
 .tag {
   color: #999;
   font-size: 70%;

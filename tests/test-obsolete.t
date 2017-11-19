@@ -1034,6 +1034,20 @@ check obsolete changeset
     <th class="obsolete">obsolete:</th>
     <td class="obsolete">yes</td>
 
+check changeset with instabilities
+
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(phasedivergent())&style=paper' | grep '<span class="instability">'
+     <span class="phase">draft</span> <span class="instability">orphan</span> <span class="instability">phase-divergent</span> 
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(phasedivergent())&style=coal' | grep '<span class="instability">'
+     <span class="phase">draft</span> <span class="instability">orphan</span> <span class="instability">phase-divergent</span> 
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(phasedivergent())&style=gitweb' | grep '<span class="logtags">'
+    <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="instabilitytag" title="orphan">orphan</span> <span class="instabilitytag" title="phase-divergent">phase-divergent</span> </span>
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(phasedivergent())&style=monoblue' | grep '<span class="logtags">'
+          <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="instabilitytag" title="orphan">orphan</span> <span class="instabilitytag" title="phase-divergent">phase-divergent</span> </span>
+  $ get-with-headers.py localhost:$HGPORT 'log?rev=first(phasedivergent())&style=spartan' | grep 'class="instabilities"'
+    <th class="instabilities">instabilities:</th>
+    <td class="instabilities">orphan phase-divergent </td>
+
   $ killdaemons.py
 
   $ rm hg.pid access.log errors.log

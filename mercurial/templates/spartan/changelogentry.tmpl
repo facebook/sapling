@@ -26,6 +26,10 @@
   <th class="obsolete">obsolete:</th>
   <td class="obsolete">yes</td>
  </tr>')}
+ {ifeq(count(instabilities), '0', '', '<tr>
+  <th class="instabilities">instabilities:</th>
+  <td class="instabilities">{instabilities%"{name} "|escape}</td>
+ </tr>')}
  <tr>
   <th class="files"><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
   <td class="files">{files}</td>
