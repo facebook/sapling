@@ -973,8 +973,11 @@ class Test(unittest.TestCase):
 
         if os.path.exists(replacementfile):
             data = {}
-            execfile(replacementfile, data)
-            r.extend(data.get('substitutions', ()))
+            with open(replacementfile, mode='rb') as source:
+                # the intermediate 'compile' step help with debugging
+                code = compile(source.read(), replacementfile, 'exec')
+                exec(code, data)
+                r.extend(data.get('substitutions', ()))
         return r
 
     def _escapepath(self, p):
