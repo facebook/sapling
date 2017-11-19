@@ -1,0 +1,24 @@
+# @autodeps
+
+cpp_library(
+    name = "takeover",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/eden/fs/utils:io",
+        "@/eden/fs/utils:path",
+        "@/folly:exception",
+        "@/folly:file",
+        "@/folly:file_util",
+        "@/folly:format",
+        "@/folly:network_address",
+        "@/folly:range",
+        "@/folly/experimental/logging:logging",
+        "@/folly/futures:core",
+        "@/folly/io:iobuf",
+        "@/folly/io/async:async",
+        "@/folly/io/async:server_socket",
+        "@/folly/portability:fcntl",
+        "@/folly/portability:sockets",
+    ],
+)
