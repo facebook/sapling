@@ -821,6 +821,8 @@ class basefilectx(object):
         return self._changectx.phasestr()
     def obsolete(self):
         return self._changectx.obsolete()
+    def instabilities(self):
+        return self._changectx.instabilities()
     def manifest(self):
         return self._changectx.manifest()
     def changectx(self):
