@@ -250,7 +250,7 @@ class EdenServer : private TakeoverHandler {
   void mountFinished(EdenMount* mountPoint);
 
   folly::Future<folly::Unit> performNormalShutdown();
-  folly::Future<folly::Unit> performTakeoverShutdown();
+  folly::Future<folly::Unit> performTakeoverShutdown(folly::File thriftSocket);
   void shutdownPrivhelper();
 
   // Add the mount point to mountPoints_.
@@ -302,6 +302,7 @@ class EdenServer : private TakeoverHandler {
   struct StateData {
     State state{State::STARTING};
     bool takeoverShutdown{false};
+    folly::File takeoverThriftSocket;
   };
   folly::Synchronized<StateData> state_;
 

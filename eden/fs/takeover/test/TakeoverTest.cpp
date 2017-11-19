@@ -157,6 +157,10 @@ TEST(Takeover, simple) {
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
 
+  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
   auto mount1Path = tmpDirPath + PathComponentPiece{"mount1"};
   auto mount1FusePath = tmpDirPath + PathComponentPiece{"fuse1"};
   serverData.mountPoints.emplace_back(
@@ -186,6 +190,8 @@ TEST(Takeover, simple) {
 
   // Make sure the received lock file refers to the expected file.
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  // And the thrift socket FD
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -209,6 +215,9 @@ TEST(Takeover, noMounts) {
   auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
@@ -218,8 +227,10 @@ TEST(Takeover, noMounts) {
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
 
-  // Make sure the received lock file refers to the expected file.
+  // Make sure the received lock file and thrift socket FD refer to the
+  // expected files.
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
 
   // Make sure the received mount information is empty
   EXPECT_EQ(0, clientData.mountPoints.size());
@@ -234,6 +245,9 @@ TEST(Takeover, manyMounts) {
   auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
   serverData.lockFile =
       folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   // Build info for 10,000 mounts
   // This exercises the code where we send more FDs than ControlMsg::kMaxFDs.
@@ -268,8 +282,9 @@ TEST(Takeover, manyMounts) {
   EXPECT_TRUE(result.hasValue());
   const auto& clientData = result.value();
 
-  // Make sure the received lock file refers to the expected file.
+  // Make sure the received lock file and thrift socket FDs are correct
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(numMounts, clientData.mountPoints.size());

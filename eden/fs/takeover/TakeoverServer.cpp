@@ -213,8 +213,12 @@ folly::Future<folly::Unit> TakeoverServer::ConnHandler::sendNormalData() {
 }
 
 folly::Future<folly::Unit> TakeoverServer::ConnHandler::sendFDs() {
+  // We need to send all of the mount point FDs,
+  // plus the lock file and the thrift socket.
+  auto totalFDs = takeoverData_.mountPoints.size() + 2;
+
   while (true) {
-    auto fdsLeft = takeoverData_.mountPoints.size() + 1 - fdIndex_;
+    auto fdsLeft = totalFDs - fdIndex_;
     if (fdsLeft == 0) {
       break;
     }
@@ -227,10 +231,13 @@ folly::Future<folly::Unit> TakeoverServer::ConnHandler::sendFDs() {
     auto* fds = cmsg.getData<int>();
     for (size_t n = 0; n < fdsToSend; ++n) {
       auto mountIndex = fdIndex_ + n;
-      if (mountIndex >= takeoverData_.mountPoints.size()) {
+      if (mountIndex < takeoverData_.mountPoints.size()) {
+        fds[n] = takeoverData_.mountPoints[mountIndex].fuseFD.fd();
+      } else if (mountIndex == takeoverData_.mountPoints.size()) {
         fds[n] = takeoverData_.lockFile.fd();
       } else {
-        fds[n] = takeoverData_.mountPoints[mountIndex].fuseFD.fd();
+        CHECK_EQ(mountIndex, takeoverData_.mountPoints.size() + 1);
+        fds[n] = takeoverData_.thriftSocket.fd();
       }
     }
 

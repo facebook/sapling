@@ -11,6 +11,7 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
@@ -266,13 +267,18 @@ void EdenServer::run() {
   runServer(*this);
 
   bool takeover;
+  folly::File thriftSocket;
   {
     auto state = state_.wlock();
     takeover = state->takeoverShutdown;
+    if (takeover) {
+      thriftSocket = std::move(state->takeoverThriftSocket);
+    }
     state->state = State::SHUTTING_DOWN;
   }
-  auto shutdownFuture =
-      takeover ? performTakeoverShutdown() : performNormalShutdown();
+  auto shutdownFuture = takeover
+      ? performTakeoverShutdown(std::move(thriftSocket))
+      : performNormalShutdown();
 
   // Drive the main event base until shutdownFuture completes
   CHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
@@ -282,7 +288,7 @@ void EdenServer::run() {
   shutdownFuture.get();
 }
 
-Future<Unit> EdenServer::performTakeoverShutdown() {
+Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
   TakeoverData data;
 
   // TODO: Actually perform graceful shutdown.
@@ -314,6 +320,7 @@ Future<Unit> EdenServer::performTakeoverShutdown() {
 
   data.lockFile = std::move(lockFile_);
   auto future = data.takeoverComplete.getFuture();
+  data.thriftSocket = std::move(thriftSocket);
 
   shutdownPrivhelper();
 
@@ -648,6 +655,18 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     }
 
     state->takeoverShutdown = true;
+
+    // Make a copy of the thrift server socket so we can transfer it to the new
+    // edenfs process.  Our local thrift will close its own socket when we stop
+    // the server.  The easiest way to avoid completely closing the server
+    // socket for now is simply by duplicating the socket to a new fd.
+    // We will transfer this duplicated FD to the new edenfs process.
+    int takeoverThriftSocket = dup(server_->getListenSocket());
+    folly::checkUnixError(
+        takeoverThriftSocket,
+        "error duplicating thrift server socket during graceful takeover");
+    state->takeoverThriftSocket =
+        folly::File{takeoverThriftSocket, /* ownsFd */ true};
   }
 
   // Stop the thrift server.  We will fulfill takeoverPromise_ once it stops.

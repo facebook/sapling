@@ -186,7 +186,8 @@ TakeoverData takeoverMounts(AbsolutePathPiece socketPath) {
   // Receive the mount paths and file descriptors
   auto data = recvTakeoverData(fd);
   auto fds = recvMountFDs(fd);
-  if (data.mountPoints.size() + 1 != fds.size()) {
+  // Add 2 here for the lock file and the thrift socket
+  if (data.mountPoints.size() + 2 != fds.size()) {
     throw std::runtime_error(folly::to<string>(
         "received ",
         data.mountPoints.size(),
@@ -198,7 +199,9 @@ TakeoverData takeoverMounts(AbsolutePathPiece socketPath) {
     auto& mountInfo = data.mountPoints[n];
     mountInfo.fuseFD = std::move(fds[n]);
   }
-  // The final FD is for the lock file
+  // The final two FDs are for the lock file and the thrift socket
+  data.thriftSocket = std::move(fds.back());
+  fds.pop_back();
   data.lockFile = std::move(fds.back());
 
   return data;

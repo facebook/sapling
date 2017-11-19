@@ -92,6 +92,11 @@ class TakeoverData {
   folly::File lockFile;
 
   /**
+   * The thrift server socket.
+   */
+  folly::File thriftSocket;
+
+  /**
    * The list of mount points.
    */
   std::vector<MountInfo> mountPoints;
