@@ -1023,8 +1023,10 @@ def _computecontentdivergentset(repo):
     divergent = set()
     obsstore = repo.obsstore
     newermap = {}
-    for ctx in repo.set('(not public()) - obsolete()'):
-        mark = obsstore.predecessors.get(ctx.node(), ())
+    tonode = repo.changelog.node
+    for rev in repo.revs('(not public()) - obsolete()'):
+        node = tonode(rev)
+        mark = obsstore.predecessors.get(node, ())
         toprocess = set(mark)
         seen = set()
         while toprocess:
@@ -1036,7 +1038,7 @@ def _computecontentdivergentset(repo):
                 obsutil.successorssets(repo, prec, cache=newermap)
             newer = [n for n in newermap[prec] if n]
             if len(newer) > 1:
-                divergent.add(ctx.rev())
+                divergent.add(rev)
                 break
             toprocess.update(obsstore.predecessors.get(prec, ()))
     return divergent
