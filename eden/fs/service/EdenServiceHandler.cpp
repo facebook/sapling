@@ -142,18 +142,6 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   }
 }
 
-void EdenServiceHandler::getParentCommits(
-    WorkingDirectoryParents& result,
-    std::unique_ptr<std::string> mountPoint) {
-  INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
-  auto edenMount = server_->getMount(*mountPoint);
-  auto parents = edenMount->getParentCommits();
-  result.set_parent1(thriftHash(parents.parent1()));
-  if (parents.parent2().hasValue()) {
-    result.set_parent2(thriftHash(parents.parent2().value()));
-  }
-}
-
 void EdenServiceHandler::checkOutRevision(
     std::vector<CheckoutConflict>& results,
     std::unique_ptr<std::string> mountPoint,

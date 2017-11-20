@@ -285,12 +285,6 @@ service EdenService extends fb303.FacebookService {
   void unmount(1: string mountPoint) throws (1: EdenError ex)
 
   /**
-   * Get the parent commit(s) of the working directory
-   */
-  WorkingDirectoryParents getParentCommits(1: string mountPoint)
-    throws (1: EdenError ex)
-
-  /**
    * Check out the specified snapshot.
    *
    * This updates the contents of the mount point so that they match the

@@ -42,10 +42,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   void listMounts(std::vector<MountInfo>& results) override;
 
-  void getParentCommits(
-      WorkingDirectoryParents& result,
-      std::unique_ptr<std::string> mountPoint) override;
-
   void checkOutRevision(
       std::vector<CheckoutConflict>& results,
       std::unique_ptr<std::string> mountPoint,
