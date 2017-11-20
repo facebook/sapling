@@ -199,7 +199,7 @@ largefiles since it hooks cmdutil.add() and lfs hooks the filelog write in the
 commit.  By the time the commit occurs, the tracked file is smaller than the
 threshold (assuming it is > 41, so the standins don't become lfs objects).
 
-  $ yes | head -n 1048576 > large_by_size.bin
+  $ $PYTHON -c 'import sys ; sys.stdout.write("y\n" * 1048576)' > large_by_size.bin
   $ hg --config largefiles.minsize=1 ci -Am 'large by size'
   adding large_by_size.bin as a largefile
   $ hg manifest
