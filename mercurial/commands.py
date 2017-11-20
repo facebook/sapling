@@ -65,6 +65,7 @@ table = {}
 table.update(debugcommandsmod.command._table)
 
 command = registrar.command(table)
+readonly = registrar.command.readonly
 
 # common command options
 
@@ -1060,7 +1061,7 @@ def branch(ui, repo, label=None, **opts):
       _('show only branches that have unmerged heads (DEPRECATED)')),
      ('c', 'closed', False, _('show normal and closed branches')),
     ] + formatteropts,
-    _('[-c]'))
+    _('[-c]'), cmdtype=readonly)
 def branches(ui, repo, active=False, closed=False, **opts):
     """list repository named branches
 
@@ -1254,7 +1255,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     ('', 'decode', None, _('apply any matching decode filter')),
     ] + walkopts + formatteropts,
     _('[OPTION]... FILE...'),
-    inferrepo=True)
+    inferrepo=True, cmdtype=readonly)
 def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
 
@@ -1600,7 +1601,7 @@ def _docommit(ui, repo, *pats, **opts):
      ('l', 'local', None, _('edit repository config')),
      ('g', 'global', None, _('edit global config'))] + formatteropts,
     _('[-u] [NAME]...'),
-    optionalrepo=True)
+    optionalrepo=True, cmdtype=readonly)
 def config(ui, repo, *values, **opts):
     """show combined config settings from all hgrc files
 
@@ -1773,7 +1774,7 @@ def debugcomplete(ui, cmd='', **opts):
     ('c', 'change', '', _('change made by revision'), _('REV'))
     ] + diffopts + diffopts2 + walkopts + subrepoopts,
     _('[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...'),
-    inferrepo=True)
+    inferrepo=True, cmdtype=readonly)
 def diff(ui, repo, *pats, **opts):
     """diff repository (or selected files)
 
@@ -1863,7 +1864,7 @@ def diff(ui, repo, *pats, **opts):
     ('', 'switch-parent', None, _('diff against the second parent')),
     ('r', 'rev', [], _('revisions to export'), _('REV')),
     ] + diffopts,
-    _('[OPTION]... [-o OUTFILESPEC] [-r] [REV]...'))
+    _('[OPTION]... [-o OUTFILESPEC] [-r] [REV]...'), cmdtype=readonly)
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
 
@@ -1944,7 +1945,7 @@ def export(ui, repo, *changesets, **opts):
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
      ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
     ] + walkopts + formatteropts + subrepoopts,
-    _('[OPTION]... [FILE]...'))
+    _('[OPTION]... [FILE]...'), cmdtype=readonly)
 def files(ui, repo, *pats, **opts):
     """list tracked files
 
@@ -2317,7 +2318,7 @@ def _dograft(ui, repo, *revs, **opts):
     ('d', 'date', None, _('list the date (short with -q)')),
     ] + formatteropts + walkopts,
     _('[OPTION]... PATTERN [FILE]...'),
-    inferrepo=True)
+    inferrepo=True, cmdtype=readonly)
 def grep(ui, repo, pattern, *pats, **opts):
     """search revision history for a pattern in specified files
 
@@ -2560,7 +2561,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     ('a', 'active', False, _('show active branchheads only (DEPRECATED)')),
     ('c', 'closed', False, _('show normal and closed branch heads')),
     ] + templateopts,
-    _('[-ct] [-r STARTREV] [REV]...'))
+    _('[-ct] [-r STARTREV] [REV]...'), cmdtype=readonly)
 def heads(ui, repo, *branchrevs, **opts):
     """show branch heads
 
@@ -2633,7 +2634,7 @@ def heads(ui, repo, *branchrevs, **opts):
      ('s', 'system', [], _('show help for specific platform(s)')),
      ],
     _('[-ecks] [TOPIC]'),
-    norepo=True)
+    norepo=True, cmdtype=readonly)
 def help_(ui, name=None, **opts):
     """show help for a given topic or a help overview
 
@@ -2675,7 +2676,7 @@ def help_(ui, name=None, **opts):
     ('B', 'bookmarks', None, _('show bookmarks')),
     ] + remoteopts + formatteropts,
     _('[-nibtB] [-r REV] [SOURCE]'),
-    optionalrepo=True)
+    optionalrepo=True, cmdtype=readonly)
 def identify(ui, repo, source=None, rev=None,
              num=None, id=None, branch=None, tags=None, bookmarks=None, **opts):
     """identify the working directory or specified revision
@@ -3249,7 +3250,7 @@ def locate(ui, repo, *pats, **opts):
      _('do not display revision or any of its ancestors'), _('REV')),
     ] + logopts + walkopts,
     _('[OPTION]... [FILE]'),
-    inferrepo=True)
+    inferrepo=True, cmdtype=readonly)
 def log(ui, repo, *pats, **opts):
     """show revision history of entire repository or files
 
@@ -3457,7 +3458,7 @@ def log(ui, repo, *pats, **opts):
     [('r', 'rev', '', _('revision to display'), _('REV')),
      ('', 'all', False, _("list files from all revisions"))]
          + formatteropts,
-    _('[-r REV]'))
+    _('[-r REV]'), cmdtype=readonly)
 def manifest(ui, repo, node=None, rev=None, **opts):
     """output the current or given revision of the project manifest
 
@@ -3721,7 +3722,8 @@ def parents(ui, repo, file_=None, **opts):
             displayer.show(repo[n])
     displayer.close()
 
-@command('paths', formatteropts, _('[NAME]'), optionalrepo=True)
+@command('paths', formatteropts, _('[NAME]'), optionalrepo=True,
+    cmdtype=readonly)
 def paths(ui, repo, search=None, **opts):
     """show aliases for remote repositories
 
@@ -4648,7 +4650,7 @@ def rollback(ui, repo, **opts):
     return repo.rollback(dryrun=opts.get(r'dry_run'),
                          force=opts.get(r'force'))
 
-@command('root', [])
+@command('root', [], cmdtype=readonly)
 def root(ui, repo):
     """print the root (top) of the current working directory
 
@@ -4742,7 +4744,7 @@ def serve(ui, repo, **opts):
     ('', 'change', '', _('list the changed files of a revision'), _('REV')),
     ] + walkopts + subrepoopts + formatteropts,
     _('[OPTION]... [FILE]...'),
-    inferrepo=True)
+    inferrepo=True, cmdtype=readonly)
 def status(ui, repo, *pats, **opts):
     """show changed files in the working directory
 
@@ -4907,7 +4909,8 @@ def status(ui, repo, *pats, **opts):
     fm.end()
 
 @command('^summary|sum',
-    [('', 'remote', None, _('check for push and pull'))], '[--remote]')
+    [('', 'remote', None, _('check for push and pull'))],
+    '[--remote]', cmdtype=readonly)
 def summary(ui, repo, **opts):
     """summarize working directory state
 
@@ -5308,7 +5311,7 @@ def tag(ui, repo, name1, *names, **opts):
     finally:
         release(lock, wlock)
 
-@command('tags', formatteropts, '')
+@command('tags', formatteropts, '', cmdtype=readonly)
 def tags(ui, repo, **opts):
     """list repository tags
 
@@ -5531,7 +5534,7 @@ def verify(ui, repo):
     """
     return hg.verify(repo)
 
-@command('version', [] + formatteropts, norepo=True)
+@command('version', [] + formatteropts, norepo=True, cmdtype=readonly)
 def version_(ui, **opts):
     """output version and copyright information"""
     opts = pycompat.byteskwargs(opts)
