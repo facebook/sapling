@@ -33,10 +33,16 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
 
 DEFINE_bool(debug, false, "run fuse in debug mode");
+DEFINE_bool(
+    takeover,
+    false,
+    "If another edenfs process is already running, "
+    "attempt to gracefully takeover its mount points.");
 
 DEFINE_int32(num_eden_threads, 12, "the number of eden CPU worker threads");
 
@@ -199,15 +205,26 @@ void EdenServer::scheduleInodeUnload(std::chrono::milliseconds timeout) {
 }
 
 void EdenServer::prepare() {
-  acquireEdenLock();
+  bool doingTakeover = false;
+  if (!acquireEdenLock()) {
+    // Another edenfs process is already running.
+    //
+    // If --takeover was specified, fall through and attempt to gracefully
+    // takeover mount points from the existing daemon.
+    //
+    // If --takeover was not specified, fail now.
+    if (!FLAGS_takeover) {
+      throw std::runtime_error(
+          "another instance of Eden appears to be running for " +
+          edenDir_.stringPiece().str());
+    }
+    doingTakeover = true;
+  }
+
   // Store a pointer to the EventBase that will be used to drive
   // the main thread.  The runServer() code will end up driving this EventBase.
   mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   createThriftServer();
-
-  XLOG(DBG2) << "opening local RocksDB store";
-  localStore_ = make_shared<LocalStore>(rocksPath_);
-  XLOG(DBG2) << "done opening local RocksDB store";
 
   // Start stats aggregation
   scheduleFlushStats();
@@ -225,7 +242,33 @@ void EdenServer::prepare() {
     scheduleInodeUnload(std::chrono::minutes(FLAGS_start_delay_minutes));
   }
 
+  // If we are gracefully taking over from an existing edenfs process,
+  // receive its lock, thrift socket, and mount points now.
+  // This will shut down the old process.
+  auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
+  TakeoverData takeoverData;
+  if (doingTakeover) {
+    takeoverData = takeoverMounts(takeoverPath);
+
+    // Take over the eden lock file and the thrift server socket.
+    lockFile_ = std::move(takeoverData.lockFile);
+    server_->useExistingSocket(takeoverData.thriftSocket.release());
+  } else {
+    // Remove any old thrift socket from a previous (now dead) edenfs daemon.
+    prepareThriftAddress();
+  }
+
+  XLOG(DBG2) << "opening local RocksDB store";
+  localStore_ = make_shared<LocalStore>(rocksPath_);
+  XLOG(DBG2) << "done opening local RocksDB store";
+
+  // Start listening for graceful takeover requests
+  takeoverServer_.reset(
+      new TakeoverServer(getMainEventBase(), takeoverPath, this));
+  takeoverServer_->start();
+
   // Remount existing mount points
+  // TODO: if doingTakeover is true, use the mounts received in TakeoverData
   folly::dynamic dirs = folly::dynamic::object();
   try {
     dirs = ClientConfig::loadClientDirectoryMap(edenDir_);
@@ -246,7 +289,6 @@ void EdenServer::prepare() {
                 << ": " << ex.what();
     }
   }
-  prepareThriftAddress();
 }
 
 // Defined separately in RunServer.cpp
@@ -255,12 +297,6 @@ void runServer(const EdenServer& server);
 void EdenServer::run() {
   // Acquire the eden lock, prepare the thrift server, and start our mounts
   prepare();
-
-  // Start listening for graceful takeover requests
-  auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
-  takeoverServer_.reset(
-      new TakeoverServer(getMainEventBase(), takeoverPath, this));
-  takeoverServer_->start();
 
   // Run the thrift server
   state_.wlock()->state = State::RUNNING;
@@ -289,43 +325,40 @@ void EdenServer::run() {
 }
 
 Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
-  TakeoverData data;
+  // TODO: Just stop processing new FUSE requests for the mounts,
+  // and wait for outstanding requests to finish, rather than actually
+  // unmounting.
+  return unmountAll().then([this, socket = std::move(thriftSocket)]() mutable {
+    TakeoverData data;
 
-  // TODO: Actually perform graceful shutdown.
-  // For now we simply return some fake data just for testing purposes.
-  data.mountPoints.emplace_back(
-      AbsolutePath{"/foo/bar"},
-      std::vector<AbsolutePath>{},
-      folly::File(STDERR_FILENO));
-  data.mountPoints.emplace_back(
-      AbsolutePath{"/hello/world"},
-      std::vector<AbsolutePath>{AbsolutePath{"/hello/world/foo"},
-                                AbsolutePath{"/hello/world/bar/sub/mount"}},
-      folly::File(STDERR_FILENO));
-  data.mountPoints.emplace_back(
-      AbsolutePath{"/a/b/c/d/efg/hij/klmnopq/rstuv/wxyz"},
-      std::vector<AbsolutePath>{},
-      folly::File(STDERR_FILENO));
-  data.mountPoints.emplace_back(
-      AbsolutePath{"/123456"},
-      std::vector<AbsolutePath>{},
-      folly::File(STDERR_FILENO));
-  data.mountPoints.emplace_back(
-      AbsolutePath{"/mnt/test"},
-      std::vector<AbsolutePath>{},
-      folly::File(STDERR_FILENO));
+    // TODO: Update data.mountPoints with the mount point information to take
+    // over.  We will also need to add a field to TakeoverData::MountInfo
+    // indicating the client config directory for each mount point.
 
-  // TODO: Message the privhelper process to tell it not to unmount our mount
-  // points on shutdown.
+    // Destroy the local store and backing stores.
+    // We shouldn't access the local store any more after giving up our lock,
+    // and we need to close it to release its lock before the new edenfs
+    // process tries to open it.
+    backingStores_.wlock()->clear();
+    // Explicit close the LocalStore before we reset our pointer, to ensure we
+    // release the RocksDB lock.  Since this is managed with a shared_ptr it is
+    // somewhat hard to confirm if we really have the last reference to it.
+    localStore_->close();
+    localStore_.reset();
 
-  data.lockFile = std::move(lockFile_);
-  auto future = data.takeoverComplete.getFuture();
-  data.thriftSocket = std::move(thriftSocket);
+    // Stop the privhelper process.
+    //
+    // TODO: We will also need to message the privhelper process to tell it not
+    // to unmount our mount points when it shuts down.
+    shutdownPrivhelper();
 
-  shutdownPrivhelper();
+    data.lockFile = std::move(lockFile_);
+    auto future = data.takeoverComplete.getFuture();
+    data.thriftSocket = std::move(socket);
 
-  takeoverPromise_.setValue(std::move(data));
-  return future;
+    takeoverPromise_.setValue(std::move(data));
+    return future;
+  });
 }
 
 Future<Unit> EdenServer::performNormalShutdown() {
@@ -587,14 +620,13 @@ void EdenServer::createThriftServer() {
   server_->setServerEventHandler(serverEventHandler_);
 }
 
-void EdenServer::acquireEdenLock() {
+bool EdenServer::acquireEdenLock() {
   boost::filesystem::path edenPath{edenDir_.stringPiece().str()};
   boost::filesystem::path lockPath = edenPath / "lock";
   lockFile_ = folly::File(lockPath.string(), O_WRONLY | O_CREAT);
   if (!lockFile_.try_lock()) {
-    throw std::runtime_error(
-        "another instance of Eden appears to be running for " +
-        edenDir_.stringPiece().str());
+    lockFile_.close();
+    return false;
   }
 
   // Write the PID (with a newline) to the lockfile.
@@ -602,6 +634,8 @@ void EdenServer::acquireEdenLock() {
   folly::ftruncateNoInt(fd, /* len */ 0);
   auto pidContents = folly::to<std::string>(getpid(), "\n");
   folly::writeNoInt(fd, pidContents.data(), pidContents.size());
+
+  return true;
 }
 
 AbsolutePath EdenServer::getSocketPath() const {

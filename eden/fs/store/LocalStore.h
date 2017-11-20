@@ -61,6 +61,11 @@ class LocalStore {
   };
 
   /**
+   * Close the underlying RocksDB.
+   */
+  void close();
+
+  /**
    * Get arbitrary unserialized data from the store.
    *
    * StoreResult::isValid() will be true if the key was found, and false

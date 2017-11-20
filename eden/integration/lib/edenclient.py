@@ -11,8 +11,10 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
+from typing import Optional, Union
 
 import eden.thrift
 from fb303.ttypes import fb_status
@@ -58,17 +60,31 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def _wait_for_healthy(self, timeout):
-        '''Wait for edenfs to start and report that it is health.
+    def _wait_for_healthy(
+        self, timeout: Union[int, float], exclude_pid: Optional[int]=None
+    ):
+        '''Wait for edenfs to start and report that it is healthy.
 
         Throws an error if it doesn't come up within the specified time.
+
+        If exclude_pid, wait until edenfs reports a process ID different than
+        the one specified by exclude_pid.  This allows us to wait until the
+        edenfs process changes when performing graceful restart.
         '''
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
                 with self.get_thrift_client() as client:
                     if client.getStatus() == fb_status.ALIVE:
-                        return
+                        if exclude_pid is None:
+                            return
+                        # Also wait until the PID is different
+                        pid = client.getPid()
+                        if pid == exclude_pid:
+                            print('healthy, but wrong pid (%d)' % exclude_pid,
+                                  file=sys.stderr)
+                        else:
+                            return
             except eden.thrift.EdenNotRunningError as ex:
                 pass
 
@@ -137,10 +153,27 @@ class EdenFS(object):
         cmd.extend(args)
         return cmd
 
-    def start(self, timeout=30):
+    def start(
+        self, timeout: Union[int, float]=30, takeover_from: Optional[int]=None
+    ):
         '''
         Run "eden daemon" to start the eden daemon.
         '''
+        use_gdb = False
+        if os.environ.get('EDEN_GDB'):
+            use_gdb = True
+            # Starting up under GDB takes longer than normal.
+            # Allow an extra 90 seconds (for some reason GDB can take a very
+            # long time to load symbol information, particularly on dynamically
+            # linked builds).
+            timeout += 90
+
+        takeover = (takeover_from is not None)
+        self._spawn(gdb=use_gdb, takeover=takeover)
+
+        self._wait_for_healthy(timeout, exclude_pid=takeover_from)
+
+    def _spawn(self, gdb=False, takeover=False):
         if self._process is not None:
             raise Exception('cannot start an already-running eden client')
 
@@ -149,6 +182,9 @@ class EdenFS(object):
             '--daemon-binary', EDEN_DAEMON,
             '--foreground',
         )
+        if takeover:
+            args.append('--takeover')
+
         # If the EDEN_GDB environment variable is set, run eden inside gdb
         # so a developer can debug crashes
         if os.environ.get('EDEN_GDB'):
@@ -171,12 +207,6 @@ class EdenFS(object):
             for arg in gdb_args:
                 args.append('--gdb-arg=' + arg)
 
-            # Starting up under GDB takes longer than normal.
-            # Allow an extra 90 seconds (for some reason GDB can take a very
-            # long time to load symbol information, particularly on dynamically
-            # linked builds).
-            timeout += 90
-
         # Turn up the VLOG level for the fuse server so that errors are logged
         # with an explanation when they bubble up to RequestData::catchErrors
         if self._logging_settings:
@@ -188,7 +218,6 @@ class EdenFS(object):
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
         self._process = subprocess.Popen(args)
-        self._wait_for_healthy(timeout)
 
     def shutdown(self):
         '''
@@ -197,6 +226,25 @@ class EdenFS(object):
         self.run_cmd('shutdown')
         return_code = self._process.wait()
         self._process = None
+        if return_code != 0:
+            raise Exception('eden exited unsuccessfully with status {}'.format(
+                return_code))
+
+    def graceful_restart(self, timeout=30):
+        # Get the process ID of the old edenfs process.
+        # Note that this is not necessarily self._process.pid, since the eden
+        # CLI may have spawned eden using sudo, and self._process may refer to
+        # a sudo parent process.
+        with self.get_thrift_client() as client:
+            old_pid = client.getPid()
+
+        old_process = self._process
+        self._process = None
+
+        self.start(timeout=timeout, takeover_from=old_pid)
+
+        # Check the return code from the old edenfs process
+        return_code = old_process.wait()
         if return_code != 0:
             raise Exception('eden exited unsuccessfully with status {}'.format(
                 return_code))

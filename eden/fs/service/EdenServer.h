@@ -11,6 +11,7 @@
 
 #include <folly/Executor.h>
 #include <folly/File.h>
+#include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
@@ -243,7 +244,17 @@ class EdenServer : private TakeoverHandler {
       folly::StringPiece type,
       folly::StringPiece name);
   void createThriftServer();
-  void acquireEdenLock();
+
+  /**
+   * Acquire the main edenfs lock.
+   *
+   * Returns true if the lock was acquired successfully, or false if we failed
+   * to acquire the lock (likely due to another process holding it).
+   * May throw an exception on other errors (e.g., insufficient permissions to
+   * create the lock file, out of disk space, etc).
+   */
+  FOLLY_NODISCARD bool acquireEdenLock();
+
   void prepareThriftAddress();
 
   // Called when a mount has been unmounted and has stopped.

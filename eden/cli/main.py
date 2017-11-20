@@ -248,6 +248,7 @@ def do_daemon(args):
 
     try:
         health_info = config.spawn(daemon_binary, edenfs_args,
+                                   takeover=args.takeover,
                                    gdb=args.gdb, gdb_args=args.gdb_arg,
                                    strace_file=args.strace,
                                    foreground=args.foreground)
@@ -440,6 +441,10 @@ def create_parser():
     daemon_parser.add_argument(
         '--foreground', '-F', action='store_true',
         help='Run eden in the foreground, rather than daemonizing')
+    daemon_parser.add_argument(
+        '--takeover', '-t', action='store_true',
+        help='If an existing edenfs daemon is running, gracefully take over '
+        'its mount points.')
     daemon_parser.add_argument(
         '--gdb', '-g', action='store_true', help='Run under gdb')
     daemon_parser.add_argument(

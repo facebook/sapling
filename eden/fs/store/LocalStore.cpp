@@ -158,6 +158,11 @@ LocalStore::~LocalStore() {
 #endif
 }
 
+void LocalStore::close() {
+  dbHandles_.columns.clear();
+  dbHandles_.db.reset();
+}
+
 StoreResult LocalStore::get(KeySpace keySpace, ByteRange key) const {
   string value;
   auto status = dbHandles_.db.get()->Get(

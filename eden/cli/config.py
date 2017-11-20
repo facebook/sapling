@@ -539,6 +539,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
     def spawn(self,
               daemon_binary,
               extra_args=None,
+              takeover=False,
               gdb=False,
               gdb_args=None,
               strace_file=None,
@@ -552,11 +553,13 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         Otherwise, this function waits for edenfs to become healthy, and
         returns a HealthStatus object.  On error an exception will be raised.
         '''
-        # Check to see if edenfs is already running
-        health_info = self.check_health()
-        if health_info.is_healthy():
-            raise EdenStartError('edenfs is already running (pid {})'.format(
-                health_info.pid))
+        if not takeover:
+            # Check to see if edenfs is already running
+            health_info = self.check_health()
+            if health_info.is_healthy():
+                msg = 'edenfs is already running (pid {})'.format(
+                    health_info.pid)
+                raise EdenStartError(msg)
 
         if gdb and strace_file is not None:
             raise EdenStartError('cannot run eden under gdb and '
@@ -574,6 +577,8 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             cmd = ['strace', '-fttT', '-o', strace_file] + cmd
         if extra_args:
             cmd.extend(extra_args)
+        if takeover:
+            cmd.append('--takeover')
 
         eden_env = self._build_eden_environment()
 
