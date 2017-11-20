@@ -51,8 +51,10 @@ FileInode::State::State(
     auto filePath = inode->getLocalPath();
     file = Overlay::openFile(
         filePath.c_str(), Overlay::kHeaderIdentifierFile, timeStamps);
+    tag = MATERIALIZED_IN_OVERLAY;
   } else {
     timeStamps.setTimestampValues(lastCheckoutTime);
+    tag = NOT_LOADED;
   }
 
   checkInvariants();
@@ -64,40 +66,47 @@ FileInode::State::State(
     folly::File&& file,
     const timespec& lastCheckoutTime,
     dev_t rdev)
-    : mode(m), rdev(rdev), file(std::move(file)) {
+    : tag(MATERIALIZED_IN_OVERLAY), mode(m), rdev(rdev), file(std::move(file)) {
   timeStamps.setTimestampValues(lastCheckoutTime);
   checkInvariants();
 }
 
 void FileInode::State::State::checkInvariants() {
-  if (blob) {
-    // 'loaded'
-    CHECK(hash);
-    CHECK(!blobLoadingPromise);
-    CHECK(!file);
-    CHECK(!sha1Valid);
-    DCHECK_EQ(blob->getHash(), hash.value());
-  } else if (blobLoadingPromise) {
-    // 'loading'
-    CHECK(hash);
-    CHECK(!blob);
-    CHECK(!file);
-    CHECK(!sha1Valid);
-  } else if (file) {
-    // 'materialized'
-    CHECK(!hash);
-    CHECK(!blobLoadingPromise);
-    CHECK(!blob);
-    CHECK(file);
-  } else {
-    // 'not loaded'
-    CHECK(hash);
-    CHECK(!blobLoadingPromise);
-    CHECK(!blob);
-    CHECK(!file);
-    CHECK(!sha1Valid);
+  switch (tag) {
+    case NOT_LOADED:
+      CHECK(hash);
+      CHECK(!blobLoadingPromise);
+      CHECK(!blob);
+      CHECK(!file);
+      CHECK(!sha1Valid);
+      return;
+    case BLOB_LOADING:
+      CHECK(hash);
+      CHECK(blobLoadingPromise);
+      CHECK(!blob);
+      CHECK(!file);
+      CHECK(!sha1Valid);
+      return;
+    case BLOB_LOADED:
+      CHECK(hash);
+      CHECK(!blobLoadingPromise);
+      CHECK(blob);
+      CHECK(!file);
+      CHECK(!sha1Valid);
+      DCHECK_EQ(blob->getHash(), hash.value());
+      return;
+    case MATERIALIZED_IN_OVERLAY:
+      // 'materialized'
+      CHECK(!hash);
+      CHECK(!blobLoadingPromise);
+      CHECK(!blob);
+      CHECK(file);
+      return;
   }
+
+  XLOG(FATAL) << "Unexpected tag value: " << tag;
 }
+
 /*
  * Defined State Destructor explicitly to avoid including
  * some header files in FileInode.h
@@ -111,6 +120,7 @@ std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
     mode_t mode,
     folly::File&& file,
     dev_t rdev) {
+  // The FileInode is in MATERIALIZED_IN_OVERLAY state.
   auto inode = FileInodePtr::makeNew(
       ino, parentInode, name, mode, std::move(file), rdev);
 
@@ -120,6 +130,7 @@ std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
   return std::make_tuple(inode, std::make_shared<FileHandle>(inode));
 }
 
+// The FileInode is in NOT_LOADED or MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
     fuse_ino_t ino,
     TreeInodePtr parentInode,
@@ -134,6 +145,7 @@ FileInode::FileInode(
           hash,
           getMount()->getLastCheckoutTime()) {}
 
+// The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
     fuse_ino_t ino,
     TreeInodePtr parentInode,
@@ -185,7 +197,8 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
             fusell::Dispatcher::Attr{self->getMount()->initStatData()};
 
         auto state = self->state_.wlock();
-        CHECK(state->file) << "MUST have a materialized file at this point";
+        CHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
+            << "MUST have a materialized file at this point";
 
         // Set the size of the file when FUSE_SET_ATTR_SIZE is set
         if (to_set & FUSE_SET_ATTR_SIZE) {
@@ -388,26 +401,26 @@ Future<Hash> FileInode::getSha1(bool failIfSymlink) {
     return makeFuture<Hash>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  if (state->hash.hasValue()) {
-    // If a file is not materialized it should have a hash value.
-    return getObjectStore()
-        ->getBlobMetadata(state->hash.value())
-        .then([](const BlobMetadata& metadata) { return metadata.sha1; });
-  } else if (state->file) {
-    // If the file is materialized.
-    if (state->sha1Valid) {
-      auto shaStr = fgetxattr(state->file.fd(), kXattrSha1);
-      if (!shaStr.empty()) {
-        return Hash(shaStr);
+  switch (state->tag) {
+    case State::NOT_LOADED:
+    case State::BLOB_LOADING:
+    case State::BLOB_LOADED:
+      // If a file is not materialized it should have a hash value.
+      return getObjectStore()
+          ->getBlobMetadata(state->hash.value())
+          .then([](const BlobMetadata& metadata) { return metadata.sha1; });
+    case State::MATERIALIZED_IN_OVERLAY:
+      // If the file is materialized.
+      if (state->sha1Valid) {
+        auto shaStr = fgetxattr(state->file.fd(), kXattrSha1);
+        if (!shaStr.empty()) {
+          return Hash(shaStr);
+        }
       }
-    }
-    return recomputeAndStoreSha1(state);
-  } else {
-    auto bug = EDEN_BUG()
-        << "One of state->hash and state->file must be set for the Inode :: "
-        << getNodeId() << " :Blob is " << (state->blob ? "not " : "") << "Null";
-    return folly::makeFuture<Hash>(bug.toException());
+      return recomputeAndStoreSha1(state);
   }
+
+  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
 folly::Future<struct stat> FileInode::stat() {
@@ -417,7 +430,7 @@ folly::Future<struct stat> FileInode::stat() {
 
     auto state = self->state_.rlock();
 
-    if (state->file) {
+    if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
       // We are calling fstat only to get the size of the file.
       checkUnixError(fstat(state->file.fd(), &st));
 
@@ -455,6 +468,10 @@ folly::Future<struct stat> FileInode::stat() {
 void FileInode::flush(uint64_t /* lock_owner */) {
   // We have no write buffers, so there is nothing for us to flush,
   // but let's take this opportunity to update the sha1 attribute.
+  // TODO: A program that issues a series of write() and flush() syscalls (for
+  // example, when logging to a file), would exhibit quadratic behavior here.
+  // This should either not recompute SHA-1 here or instead remember if the
+  // prior SHA-1 was actually used.
   auto state = state_.wlock();
   if (state->file && !state->sha1Valid) {
     recomputeAndStoreSha1(state);
@@ -477,6 +494,10 @@ void FileInode::fsync(bool datasync) {
   checkUnixError(res);
 
   // let's take this opportunity to update the sha1 attribute.
+  // TODO: A program that issues a series of write() and fsync() syscalls (for
+  // example, when logging to a file), would exhibit quadratic behavior here.
+  // This should either not recompute SHA-1 here or instead remember if the
+  // prior SHA-1 was actually used.
   if (!state->sha1Valid) {
     recomputeAndStoreSha1(state);
   }
@@ -532,14 +553,22 @@ folly::Future<std::string> FileInode::readAll() {
     // modifies the file offset of the file descriptor.
     auto state = self->state_.wlock();
     std::string result;
-    if (state->file) {
-      auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
-      folly::checkUnixError(rc, "unable to seek in materialized FileInode");
-      folly::readFile(state->file.fd(), result);
-    } else {
-      const auto& contentsBuf = state->blob->getContents();
-      folly::io::Cursor cursor(&contentsBuf);
-      result = cursor.readFixedString(contentsBuf.computeChainDataLength());
+    switch (state->tag) {
+      case State::MATERIALIZED_IN_OVERLAY: {
+        auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
+        folly::checkUnixError(rc, "unable to seek in materialized FileInode");
+        folly::readFile(state->file.fd(), result);
+        break;
+      }
+      case State::BLOB_LOADED: {
+        const auto& contentsBuf = state->blob->getContents();
+        folly::io::Cursor cursor(&contentsBuf);
+        result = cursor.readFixedString(contentsBuf.computeChainDataLength());
+        break;
+      }
+      default:
+        EDEN_BUG()
+            << "neither materialized nor loaded after ensureDataLoaded()";
     }
 
     // We want to update atime after the read operation.
@@ -604,31 +633,39 @@ Future<Unit> FileInode::ensureDataLoaded() {
     // the blobFuture below.
     auto state = state_.wlock();
 
+    state->checkInvariants();
     SCOPE_SUCCESS {
       state->checkInvariants();
     };
 
-    if (state->blobLoadingPromise.hasValue()) {
-      // If we're already loading, latch on to the in-progress load
-      return state->blobLoadingPromise->getFuture();
-    }
+    switch (state->tag) {
+      case State::BLOB_LOADING:
+        // If we're already loading, latch on to the in-progress load
+        return state->blobLoadingPromise->getFuture();
 
-    // Nothing to do if loaded or materialized.
-    if (state->file || state->blob) {
-      return makeFuture();
-    }
+      case State::BLOB_LOADED:
+      case State::MATERIALIZED_IN_OVERLAY:
+        // Nothing to do if loaded or materialized.
+        return makeFuture();
 
-    // We need to load the blob data.  Arrange to do so in a way that
-    // multiple callers can wait for.
-    folly::SharedPromise<Unit> promise;
-    // The resultFuture will complete after we have loaded the blob
-    // and updated state_.
-    resultFuture = promise.getFuture();
-    // Move the promise into the Optional type that we can test
-    // in a subsequent call to ensureDataLoaded().
-    state->blobLoadingPromise.emplace(std::move(promise));
-    // Start the load of the blob.
-    blobFuture = getObjectStore()->getBlob(state->hash.value());
+      case State::NOT_LOADED:
+        // Start the blob load first in case this throws an exception.
+        // Ideally the state transition is no-except in tandem with the
+        // Future's .then call.
+        blobFuture = getObjectStore()->getBlob(state->hash.value());
+
+        // We need to load the blob data.  Arrange to do so in a way that
+        // multiple callers can wait for.
+        folly::SharedPromise<Unit> promise;
+        // The resultFuture will complete after we have loaded the blob
+        // and updated state_.
+        resultFuture = promise.getFuture();
+
+        // Everything from here through blobFuture.then should be noexcept.
+        state->blobLoadingPromise.emplace(std::move(promise));
+        state->tag = State::BLOB_LOADING;
+        break;
+    }
   }
 
   auto self = inodePtrFromThis(); // separate line for formatting
@@ -642,24 +679,33 @@ Future<Unit> FileInode::ensureDataLoaded() {
         state->checkInvariants();
       };
 
-      // Since the load doesn't hold the state lock for its duration,
-      // sanity check that the inode is still in loading state.
-      //
-      // Note that FileInode can transition from loading to materialized
-      // with a concurrent materializeForWrite(O_TRUNC), in which case the
-      // state would have transitioned to 'materialized' before this
-      // callback runs.
-      if (state->blobLoadingPromise) {
-        // Transition to 'loaded' state.
-        state->blob = std::move(blob);
-        promise = std::move(*state->blobLoadingPromise);
-        state->blobLoadingPromise.clear();
-      } else {
-        CHECK(state->file);
-        // The load raced with a materializeForWrite(O_TRUNC).  Nothing left to
-        // do here: ensureDataLoaded() guarantees `blob` or `file` is defined
-        // after its completion, and the materializeForWrite(O_TRUNC) fulfilled
-        // the promise.
+      switch (state->tag) {
+        // Since the load doesn't hold the state lock for its duration,
+        // sanity check that the inode is still in loading state.
+        //
+        // Note that FileInode can transition from loading to materialized
+        // with a concurrent materializeForWrite(O_TRUNC), in which case the
+        // state would have transitioned to 'materialized' before this
+        // callback runs.
+        case State::BLOB_LOADING:
+          // Transition to 'loaded' state.
+          state->blob = std::move(blob);
+          promise = std::move(*state->blobLoadingPromise);
+          state->blobLoadingPromise.clear();
+          state->tag = State::BLOB_LOADED;
+          break;
+
+        case State::MATERIALIZED_IN_OVERLAY:
+          // The load raced with a materializeForWrite(O_TRUNC).  Nothing left
+          // to do here: ensureDataLoaded() guarantees `blob` or `file` is
+          // defined after its completion, and the materializeForWrite(O_TRUNC)
+          // fulfilled the promise.
+          CHECK(state->file);
+          break;
+
+        default:
+          EDEN_BUG()
+              << "Inode left in unexpected state after getBlob() completed";
       }
     }
 
@@ -702,7 +748,7 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
       state->checkInvariants();
     };
 
-    if (state->file) {
+    if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
       // This conditional will be hit if materializeForWrite is called without
       // O_TRUNC, issues a load, and then materializeForWrite is called _with_
       // O_TRUNC before ensureDataLoaded() completes.  The prior O_TRUNC would
@@ -754,6 +800,7 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     state->file = std::move(file);
     state->blob.reset();
     state->hash = folly::none;
+    state->tag = State::MATERIALIZED_IN_OVERLAY;
   });
 }
 
@@ -804,6 +851,7 @@ void FileInode::materializeAndTruncate() {
       state->hash.reset();
       state->file = std::move(file);
       state->sha1Valid = false;
+      state->tag = State::MATERIALIZED_IN_OVERLAY;
     }
     storeSha1(state, Hash::sha1(ByteRange{}));
   });

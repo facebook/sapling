@@ -49,7 +49,11 @@ class FileInode : public InodeBase {
       folly::File&& file,
       dev_t rdev = 0);
 
-  /** Construct an inode using an overlay entry */
+  /**
+   * If hash is none, this opens the file in the overlay and leaves the inode
+   * in MATERIALIZED_IN_OVERLAY state.  If hash is set, the inode is in
+   * NOT_LOADED state.
+   */
   FileInode(
       fuse_ino_t ino,
       TreeInodePtr parentInode,
@@ -57,10 +61,12 @@ class FileInode : public InodeBase {
       mode_t mode,
       const folly::Optional<Hash>& hash);
 
-  /** Construct an inode using a freshly created overlay file.
+  /**
+   * Construct an inode using a freshly created overlay file.
    * file must be moved in and must have been created by a call to
    * Overlay::openFile.  This constructor is used in the TreeInode::create
-   * case and is required to implement O_EXCL correctly. */
+   * case and is required to implement O_EXCL correctly.
+   */
   FileInode(
       fuse_ino_t ino,
       TreeInodePtr parentInode,
@@ -208,6 +214,13 @@ class FileInode : public InodeBase {
    *   - loaded -> materialized
    */
   struct State {
+    enum Tag : uint8_t {
+      NOT_LOADED,
+      BLOB_LOADING,
+      BLOB_LOADED,
+      MATERIALIZED_IN_OVERLAY,
+    };
+
     State(
         FileInode* inode,
         mode_t mode,
@@ -227,7 +240,9 @@ class FileInode : public InodeBase {
      */
     void checkInvariants();
 
-    mode_t mode{0};
+    Tag tag;
+
+    mode_t mode;
 
     // TODO: Since rdev is immutable, move it out of the locked state.
     const dev_t rdev{0};
