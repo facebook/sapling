@@ -62,9 +62,6 @@ cpp_library(
         "@/thrift/lib/cpp/concurrency:thread_manager",
         "@/thrift/lib/cpp2:server",
     ],
-    external_deps = [
-        ("boost", None, "boost_filesystem"),
-    ],
 )
 
 # The eden.thrift interface.

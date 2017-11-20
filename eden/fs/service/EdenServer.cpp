@@ -9,8 +9,6 @@
  */
 #include "eden/fs/service/EdenServer.h"
 
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
@@ -78,10 +76,15 @@ using std::string;
 using std::unique_ptr;
 
 namespace {
+using namespace facebook::eden;
+
+constexpr StringPiece kLockFileName{"lock"};
+constexpr StringPiece kThriftSocketName{"socket"};
+constexpr StringPiece kTakeoverSocketName{"takeover"};
+
 folly::SocketAddress getThriftAddress(
     StringPiece argument,
-    StringPiece edenDir);
-std::string getPathToUnixDomainSocket(StringPiece edenDir);
+    AbsolutePathPiece edenDir);
 } // namespace
 
 namespace facebook {
@@ -297,6 +300,12 @@ void runServer(const EdenServer& server);
 void EdenServer::run() {
   // Acquire the eden lock, prepare the thrift server, and start our mounts
   prepare();
+
+  // Start listening for graceful takeover requests
+  auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
+  takeoverServer_.reset(
+      new TakeoverServer(getMainEventBase(), takeoverPath, this));
+  takeoverServer_->start();
 
   // Run the thrift server
   state_.wlock()->state = State::RUNNING;
@@ -604,7 +613,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
 }
 
 void EdenServer::createThriftServer() {
-  auto address = getThriftAddress(FLAGS_thrift_address, edenDir_.stringPiece());
+  auto address = getThriftAddress(FLAGS_thrift_address, edenDir_);
 
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(FLAGS_thrift_max_requests);
@@ -621,9 +630,8 @@ void EdenServer::createThriftServer() {
 }
 
 bool EdenServer::acquireEdenLock() {
-  boost::filesystem::path edenPath{edenDir_.stringPiece().str()};
-  boost::filesystem::path lockPath = edenPath / "lock";
-  lockFile_ = folly::File(lockPath.string(), O_WRONLY | O_CREAT);
+  auto lockPath = edenDir_ + PathComponentPiece{kLockFileName};
+  lockFile_ = folly::File(lockPath.value(), O_WRONLY | O_CREAT);
   if (!lockFile_.try_lock()) {
     lockFile_.close();
     return false;
@@ -723,14 +731,14 @@ namespace {
  */
 folly::SocketAddress getThriftAddress(
     StringPiece argument,
-    StringPiece edenDir) {
+    AbsolutePathPiece edenDir) {
   folly::SocketAddress addr;
 
   // If the argument is empty, default to a Unix socket placed next
   // to the mount point
   if (argument.empty()) {
-    auto socketPath = getPathToUnixDomainSocket(edenDir);
-    addr.setFromPath(socketPath);
+    auto socketPath = edenDir + PathComponentPiece{kThriftSocketName};
+    addr.setFromPath(socketPath.stringPiece());
     return addr;
   }
 
@@ -753,12 +761,6 @@ folly::SocketAddress getThriftAddress(
   // Otherwise assume the address refers to a local unix socket path
   addr.setFromPath(argument);
   return addr;
-}
-
-std::string getPathToUnixDomainSocket(StringPiece edenDir) {
-  boost::filesystem::path edenPath{edenDir.str()};
-  boost::filesystem::path socketPath = edenPath / "socket";
-  return socketPath.string();
 }
 
 } // unnamed namespace
