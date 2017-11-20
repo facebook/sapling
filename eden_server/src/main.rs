@@ -26,7 +26,9 @@ extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
 extern crate mercurial_types;
+extern crate native_tls;
 extern crate regex;
+extern crate secure_utils;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -35,6 +37,7 @@ extern crate serde_json;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate tokio_core;
+extern crate tokio_tls;
 extern crate toml;
 
 use std::collections::HashMap;
@@ -43,10 +46,11 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
 use std::os::unix::ffi::OsStringExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
+use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState, TestManifoldBlobState};
@@ -59,8 +63,10 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
+use native_tls::TlsAcceptor;
 use regex::{Captures, Regex};
 use slog::{Drain, Level, Logger};
+use tokio_tls::TlsAcceptorExt;
 
 mod errors;
 
@@ -308,26 +314,57 @@ where
     }
 }
 
-fn start_server<State>(addr: &str, reponame: String, state: State, logger: Logger)
-where
+fn start_server<State, P>(
+    addr: &str,
+    reponame: String,
+    state: State,
+    logger: Logger,
+    cert: P,
+    private_key: P,
+) where
     State: BlobState,
+    P: AsRef<Path>,
 {
     let addr = addr.parse().expect("Failed to parse address");
     let mut map = HashMap::new();
     let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
+    let pkcs12 =
+        secure_utils::build_pkcs12(cert, private_key).expect("cannot build pkcs12 archive");
+    // Acceptor that has `accept_async()` method that handles tls handshake
+    // and returns decrypted stream.
+    let tlsacceptor = TlsAcceptor::builder(pkcs12)
+        .expect("cannot create TlsAcceptorBuilder")
+        .build()
+        .expect("cannot create TlsAcceptor");
+
+    let mut core = Core::new().expect("cannot create http server core");
+    let handle = core.handle();
+    let listener = TcpListener::bind(&addr, &handle).expect("cannot bind to the address");
+    let incoming = listener.incoming().from_err::<Error>();
+
     info!(logger, "started eden server");
     let cpupool = Arc::new(CpuPool::new_num_cpus());
-    let func = move || {
-        Ok(EdenServer::new(
-            map.clone(),
-            cpupool.clone(),
-            logger.clone(),
-        ))
-    };
-    let server = Http::new().bind(&addr, func).expect("Failed to run server");
-    server.run().expect("Error while running service");
+    let http_server = Http::new();
+    let conns = incoming.for_each(|stream_addr| {
+        let (tcp_stream, remote_addr) = stream_addr;
+        let http_server = http_server.clone();
+        let handle = handle.clone();
+        let service = EdenServer::new(map.clone(), cpupool.clone(), logger.clone());
+        let logger = logger.clone();
+        tlsacceptor.accept_async(tcp_stream).then(move |stream| {
+            match stream {
+                Ok(stream) => {
+                    http_server.bind_connection(&handle, stream, remote_addr, service);
+                }
+                Err(err) => error!(logger, "accept async failed {}", err),
+            };
+            Ok(())
+        })
+    });
+
+    core.run(conns).expect("http server main loop failed");
 }
 
 /// Types of repositories supported
@@ -345,6 +382,8 @@ struct RawRepoConfig {
     repotype: RawRepoType,
     reponame: String,
     addr: String,
+    cert: String,
+    private_key: String,
 }
 
 fn main() {
@@ -386,6 +425,8 @@ fn main() {
             FilesBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
+            config.cert,
+            config.private_key,
         ),
         RawRepoType::BlobRocks => start_server(
             &config.addr,
@@ -393,6 +434,8 @@ fn main() {
             RocksBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
+            config.cert,
+            config.private_key,
         ),
         RawRepoType::BlobManifold => {
             let (sender, receiver) = oneshot::channel();
@@ -421,6 +464,8 @@ fn main() {
                     &remote,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
+                config.cert,
+                config.private_key,
             )
         }
     };

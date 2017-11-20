@@ -86,6 +86,8 @@ Add commit with a directory
   $ echo 'reponame="repo"' >> $TESTTMP/config
   $ echo "path=\"$TESTTMP/blobrepo\"" >> $TESTTMP/config
   $ echo 'addr="127.0.0.1:3000"' >> $TESTTMP/config
+  $ echo "cert=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
+  $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
  
 #if files
   $ blobimport --blobstore files --linknodes repo $TESTTMP/blobrepo -d 2> out.txt
@@ -136,14 +138,15 @@ Temporary hack to make sure server is ready
   $ sleep 1
 
 Curl and debugdata output should match
-  $ curl http://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
+  $ alias curl="curl --cacert $TESTDIR/edenservertest.crt"
+  $ curl https://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   8515d4bfda768e04af4c13a69a72e28c7effbea7 (no-eol)
   $ cd repo
   $ hg debugdata -c 3903775176ed42b1458a6281db4a0ccf4d9f287a | head -n 1
   8515d4bfda768e04af4c13a69a72e28c7effbea7
   $ hg debugdata -m 8515d4bfda768e04af4c13a69a72e28c7effbea7
   a\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
-  $ curl http://localhost:3000/repo/cs/533267b0e203537fa53d2aec834b062f0b2249cd/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/533267b0e203537fa53d2aec834b062f0b2249cd/roottreemanifestid 2> /dev/null
   47827ecc7f12d2ed0c387de75947e73cf1c53afe (no-eol)
 
   $ hg debugdata -m 47827ecc7f12d2ed0c387de75947e73cf1c53afe
@@ -152,7 +155,7 @@ Curl and debugdata output should match
   c\x005d9299349fc01ddd25d0070d149b124d8f10411e (esc)
   d\x00fc702583f9c961dea176fd367862c299b4a551f2 (esc)
 
-  $ curl http://localhost:3000/repo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null| jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null| jq 'sort_by(.path)'
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -163,11 +166,11 @@ Curl and debugdata output should match
   ]
 
 Empty file
-  $ curl http://localhost:3000/repo/blob/b80de5d138758541c5f05265ad144ab9fa86d1db/ 2> /dev/null
+  $ curl https://localhost:3000/repo/blob/b80de5d138758541c5f05265ad144ab9fa86d1db/ 2> /dev/null
 
-  $ curl http://localhost:3000/repo/cs/4dabaf45f54add88ca2797dfdeb00a7d55144243/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/4dabaf45f54add88ca2797dfdeb00a7d55144243/roottreemanifestid 2> /dev/null
   b47dc781a873595c796b01e2ed5829e3fed2c887 (no-eol)
-  $ curl http://localhost:3000/repo/treenode/b47dc781a873595c796b01e2ed5829e3fed2c887/ 2> /dev/null| jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/b47dc781a873595c796b01e2ed5829e3fed2c887/ 2> /dev/null| jq 'sort_by(.path)'
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -188,9 +191,9 @@ Empty file
       "type": "File"
     }
   ]
-  $ curl http://localhost:3000/repo/blob/5d9299349fc01ddd25d0070d149b124d8f10411e/ 2> /dev/null
+  $ curl https://localhost:3000/repo/blob/5d9299349fc01ddd25d0070d149b124d8f10411e/ 2> /dev/null
   2
-  $ curl http://localhost:3000/repo/treenode/47827ecc7f12d2ed0c387de75947e73cf1c53afe/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/47827ecc7f12d2ed0c387de75947e73cf1c53afe/ 2> /dev/null | jq 'sort_by(.path)'
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -217,16 +220,16 @@ Empty file
       "type": "File"
     }
   ]
-  $ curl http://localhost:3000/repo/blob/fc702583f9c961dea176fd367862c299b4a551f2/ 2> /dev/null
+  $ curl https://localhost:3000/repo/blob/fc702583f9c961dea176fd367862c299b4a551f2/ 2> /dev/null
   2
 
-  $ curl http://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid 2> /dev/null
   ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
 
-  $ curl http://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid/ 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid/ 2> /dev/null
   ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
 
-  $ curl http://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | jq 'sort_by(.path)'
   [
     {
       "hash": "e7405b0462d8b2dd80219b713a93aea2c9a3c468",
@@ -236,7 +239,7 @@ Empty file
     }
   ]
 
-  $ curl http://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468/ 2> /dev/null | jq 'sort_by(.path)'
   [
     {
       "hash": "7108421418404a937c684d2479a34a24d2ce4757",
@@ -245,7 +248,7 @@ Empty file
       "type": "File"
     }
   ]
-  $ curl http://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | jq 'sort_by(.path)'
   [
     {
       "hash": "7108421418404a937c684d2479a34a24d2ce4757",
@@ -255,25 +258,25 @@ Empty file
     }
   ]
 
-  $ curl http://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757/ 2> /dev/null
+  $ curl https://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757/ 2> /dev/null
   content
-  $ curl http://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757 2> /dev/null
+  $ curl https://localhost:3000/repo/blob/7108421418404a937c684d2479a34a24d2ce4757 2> /dev/null
   content
 
 Send incorrect requests
-  $ curl http://localhost:3000/repo/cs/hash/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/hash/roottreemanifestid 2> /dev/null
   invalid sha-1 input: need at least 40 hex digits (no-eol)
-  $ curl http://localhost:3000/badrepo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/badrepo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   Error: unknown repo
-  $ curl http://localhost:3000/badrepo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null
+  $ curl https://localhost:3000/badrepo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null
   Error: unknown repo
-  $ curl http://localhost:3000/repo/BADURL/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
+  $ curl https://localhost:3000/repo/BADURL/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   malformed url (no-eol)
-  $ curl http://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid/more 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid/more 2> /dev/null
   malformed url (no-eol)
-  $ curl http://localhost:3000/repo/cs/ 2> /dev/null
+  $ curl https://localhost:3000/repo/cs/ 2> /dev/null
   malformed url (no-eol)
-  $ curl http://localhost:3000/ 2> /dev/null
+  $ curl https://localhost:3000/ 2> /dev/null
   malformed url (no-eol)
 
 Make sure there are no errors on the server
