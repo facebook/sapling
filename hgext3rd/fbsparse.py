@@ -173,7 +173,10 @@ def _setupcommit(ui):
         """Refresh the checkout when commits touch .hgsparse
         """
         orig(self, node)
-        repo = self._repo
+
+        # Use unfiltered to avoid computing hidden commits
+        repo = self._repo.unfiltered()
+
         if util.safehasattr(repo, 'getsparsepatterns'):
             ctx = repo[node]
             _, _, profiles = repo.getsparsepatterns(ctx.rev())
@@ -419,6 +422,8 @@ def _wraprepo(ui, repo):
             """Returns the include/exclude patterns specified by the
             given rev.
             """
+            # Use unfiltered to avoid computing hidden commits
+            repo = self.unfiltered()
             if not self.vfs.exists('sparse'):
                 return set(), set(), []
             if rev is None:
@@ -428,7 +433,7 @@ def _wraprepo(ui, repo):
             raw = self.vfs.read('sparse')
             includes, excludes, profiles = self.readsparseconfig(raw)
 
-            ctx = self[rev]
+            ctx = repo[rev]
             if profiles:
                 visited = set()
                 while profiles:
@@ -462,16 +467,19 @@ def _wraprepo(ui, repo):
             return includes, excludes, profiles
 
         def getrawprofile(self, profile, changeid):
+            repo = self.unfiltered()
             try:
                 simplecache = extensions.find('simplecache')
-                node = self[changeid].hex()
+
+                # Use unfiltered to avoid computing hidden commits
+                node = repo[changeid].hex()
                 def func():
-                    return self.filectx(profile, changeid=changeid).data()
+                    return repo.filectx(profile, changeid=changeid).data()
                 key = 'sparseprofile:%s:%s' % (profile.replace('/', '__'), node)
                 return simplecache.memoize(func, key,
                         simplecache.stringserializer, self.ui)
             except KeyError:
-                return self.filectx(profile, changeid=changeid).data()
+                return repo.filectx(profile, changeid=changeid).data()
 
         def sparsechecksum(self, filepath):
             fh = open(filepath)
@@ -579,8 +587,10 @@ def _wraprepo(ui, repo):
             return result
 
         def getactiveprofiles(self):
-            revs = [self.changelog.rev(node) for node in
-                    self.dirstate.parents() if node != nullid]
+            # Use unfiltered to avoid computing hidden commits
+            repo = self.unfiltered()
+            revs = [repo.changelog.rev(node) for node in
+                    repo.dirstate.parents() if node != nullid]
 
             activeprofiles = set()
             for rev in revs:
