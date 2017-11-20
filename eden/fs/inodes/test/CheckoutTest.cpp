@@ -593,6 +593,62 @@ TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
           makeConflict(ConflictType::MODIFIED_REMOVED, "src/test.c")));
 }
 
+TEST(Checkout, createUntrackedFileAndCheckoutAsTrackedFile) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  TestMount testMount{makeTestHash("1"), builder1};
+
+  auto builder2 = builder1.clone();
+  builder2.setFile("src/test.c", "// Unit test.\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto checkoutTo1 = testMount.getEdenMount()->checkout(makeTestHash("1"));
+  ASSERT_TRUE(checkoutTo1.isReady());
+
+  testMount.addFile("src/test.c", "temporary edit\n");
+  auto checkoutTo2 = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  ASSERT_TRUE(checkoutTo2.isReady());
+
+  EXPECT_THAT(
+      checkoutTo2.get(),
+      UnorderedElementsAre(
+          makeConflict(ConflictType::UNTRACKED_ADDED, "src/test.c")));
+}
+
+/*
+ * This is similar to createUntrackedFileAndCheckoutAsTrackedFile, except it
+ * exercises the case where the code must traverse into an untracked directory
+ * and mark its contents UNTRACKED_ADDED, as appropriate.
+ */
+TEST(
+    Checkout,
+    createUntrackedFileAsOnlyDirectoryEntryAndCheckoutAsTrackedFile) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  TestMount testMount{makeTestHash("1"), builder1};
+
+  auto builder2 = builder1.clone();
+  builder2.setFile("src/test/test.c", "// Unit test.\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  auto checkoutTo1 = testMount.getEdenMount()->checkout(makeTestHash("1"));
+  ASSERT_TRUE(checkoutTo1.isReady());
+
+  testMount.mkdir("src/test");
+  testMount.addFile("src/test/test.c", "temporary edit\n");
+  auto checkoutTo2 = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  ASSERT_TRUE(checkoutTo2.isReady());
+
+  EXPECT_THAT(
+      checkoutTo2.get(),
+      UnorderedElementsAre(
+          makeConflict(ConflictType::UNTRACKED_ADDED, "src/test/test.c")));
+}
+
 void testAddSubdirectory(folly::StringPiece newDirPath, LoadBehavior loadType) {
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");

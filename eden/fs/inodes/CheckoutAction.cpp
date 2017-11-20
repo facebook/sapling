@@ -344,10 +344,33 @@ bool CheckoutAction::hasConflict() {
 
     // This file is the same as the old source control state.
     return false;
+  }
+
+  DCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
+                           "so this file should not have an oldScmEntry_.";
+  DCHECK(newScmEntry_) << "If there is no oldScmEntry_, then there must be a "
+                          "newScmEntry_.";
+
+  auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
+  if (localIsFile) {
+    auto remoteIsFile = newScmEntry_->getFileType() != FileType::DIRECTORY;
+    if (remoteIsFile) {
+      // This entry is a file that did not exist in the old source control tree,
+      // but it exists as a tracked file in the new tree.
+      ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
+      return true;
+    } else {
+      // This entry is a file that did not exist in the old source control tree,
+      // but it exists as a tracked directory in the new tree.
+      ctx_->addConflict(ConflictType::MODIFIED_MODIFIED, inode_.get());
+      return true;
+    }
   } else {
-    // This entry did not exist in the old source control tree
-    ctx_->addConflict(ConflictType::UNTRACKED_ADDED, inode_.get());
-    return true;
+    // This entry is a directory that did not exist in the old source control
+    // tree. We must traverse the directory for UNTRACKED_ADDED and
+    // MODIFIED_MODIFIED conflicts. Returning false signals that we must
+    // recurse into this directory to continue to look for conflicts.
+    return false;
   }
 }
 } // namespace eden
