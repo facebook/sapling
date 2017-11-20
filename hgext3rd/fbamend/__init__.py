@@ -106,7 +106,6 @@ testedwith = 'ships-with-fb-hgext'
 amendopts = [
     ('', 'rebase', None, _('rebases children after the amend')),
     ('', 'fixup', None, _('rebase children from a previous amend')),
-    ('', 'to', '', _('amend to a specific commit in the current stack')),
 ]
 
 def uisetup(ui):
@@ -184,7 +183,9 @@ def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
     '''
     rebase = opts.get('rebase')
-    to = opts.get('to')
+
+    # --to is broken - T22281996
+    to = False and opts.get('to')
 
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits

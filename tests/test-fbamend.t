@@ -30,7 +30,6 @@ Test functionality is present
    -i --interactive         use interactive mode
       --rebase              rebases children after the amend
       --fixup               rebase children from a previous amend
-      --to VALUE            amend to a specific commit in the current stack
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message

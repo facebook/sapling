@@ -368,22 +368,13 @@ Test amend date when tweakdefaults.amendkeepdate is set
   $ hg log -l 1 -T "{date} {rev}\n"
   0.00 8
 
-Test amend --to doesn't give a flag error when tweakdefaults.amendkeepdate is set
-  $ echo q > new_file
-  $ hg amend --to 8 --config tweakdefaults.amendkeepdate=False
-  hg: parse error: pick "3903775176ed" changeset was not a candidate
-  (only use listed changesets)
-  [255]
-  $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 9
-
 Test commit --amend date when tweakdefaults.amendkeepdate is set
   $ echo a >> new_file
   $ hg commit -d "0 0" -Aqm "commit for amend"
   $ echo x > new_file
   $ hg commit -q --amend -m "amended message" --config tweakdefaults.amendkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 10
+  0.00 9
 
 Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date is provided
   $ echo xxx > a
@@ -391,7 +382,7 @@ Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date 
   $ echo x > a
   $ hg commit -q --amend -m "amended message" --date "1 1"
   $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 11
+  1.01 10
 
 Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ echo test_1 > rebase_dest
@@ -403,7 +394,7 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ hg bookmark rebase_source_test_1
   $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
   $ hg log -l 1 -T "{rev}\n" -d "yesterday to today"
-  13
+  12
 
 Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
@@ -415,8 +406,8 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   $ hg bookmark rebase_source_test_2
   $ hg rebase -q -s rebase_source_test_2 -d rebase_dest_test_2 --config tweakdefaults.rebasekeepdate=True
   $ hg log -l 2 -T "{date} {rev}\n"
-  0.00 15
   0.00 14
+  0.00 13
 
 Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg bookmark histedit_test
@@ -426,27 +417,27 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg commit -Aqm "commit 2 for histedit"
   $ echo test_3 > histedit_3
   $ hg commit -Aqm "commit 3 for histedit"
-  $ hg histedit 16 --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
-  > pick 16
-  > pick 18
+  $ hg histedit 15 --commands - --config tweakdefaults.histeditkeepdate=True 2>&1 <<EOF| fixbundle
+  > pick 15
   > pick 17
+  > pick 16
   > EOF
   [1]
   $ hg log -l 3 -T "{date} {rev} {desc}\n"
-  0.00 18 commit 2 for histedit
-  0.00 17 commit 3 for histedit
-  0.00 16 commit 1 for histedit
+  0.00 17 commit 2 for histedit
+  0.00 16 commit 3 for histedit
+  0.00 15 commit 1 for histedit
 
 Test histedit date when tweakdefaults.histeditkeepdate is not set
-  $ hg histedit 16 --commands - 2>&1 <<EOF| fixbundle
-  > pick 16
-  > pick 18
+  $ hg histedit 15 --commands - 2>&1 <<EOF| fixbundle
+  > pick 15
   > pick 17
+  > pick 16
   > EOF
   [1]
   $ hg log -l 2 -T "{rev} {desc}\n" -d "yesterday to today"
-  18 commit 3 for histedit
-  17 commit 2 for histedit
+  17 commit 3 for histedit
+  16 commit 2 for histedit
 
 Test reuse message flag by taking message from previous commit
   $ cd ../..

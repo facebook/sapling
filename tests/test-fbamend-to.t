@@ -1,3 +1,6 @@
+This feature is just broken right now - T22281996
+  $ exit 80
+
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
