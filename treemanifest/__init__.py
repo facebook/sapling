@@ -82,6 +82,7 @@ from mercurial import (
     registrar,
     repair,
     revlog,
+    revsetlang,
     scmutil,
     sshserver,
     templatekw,
@@ -1049,12 +1050,10 @@ def _prefetchonlyfiles(orig, ui, repo, *pats, **opts):
 def _prefetchonlytrees(repo, opts):
     opts = resolveprefetchopts(repo.ui, opts)
     revs = scmutil.revrange(repo, opts.get('rev'))
-    draftrevs = repo.revs('draft()')
-    mfnodes = set()
 
-    # No trees need to be downloaded for the draft commits.
-    for rev in revs - draftrevs:
-        mfnodes.add(repo[rev].manifestnode())
+    # No trees need to be downloaded for the non-public commits.
+    spec = revsetlang.formatspec('%ld & public()', revs)
+    mfnodes = set(ctx.manifestnode() for ctx in repo.set(spec))
 
     basemfnode = set()
     base = opts.get('base')
