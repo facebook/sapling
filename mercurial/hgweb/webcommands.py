@@ -1241,51 +1241,49 @@ def graph(web, req, tmpl):
                              max([edge[1] for edge in edges] or [0]))
         return cols
 
-    def graphdata(usetuples, encodestr):
+    def graphdata(usetuples):
+        # {jsdata} will be passed to |json, so it must be in utf-8
+        encodestr = encoding.fromlocal
         data = []
 
         row = 0
         for (id, type, ctx, vtx, edges) in tree:
             if type != graphmod.CHANGESET:
                 continue
-            node = pycompat.bytestr(ctx)
-            age = encodestr(templatefilters.age(ctx.date()))
-            desc = templatefilters.firstline(encodestr(ctx.description()))
-            desc = url.escape(templatefilters.nonempty(desc))
-            user = url.escape(templatefilters.person(encodestr(ctx.user())))
-            branch = url.escape(encodestr(ctx.branch()))
-            try:
-                branchnode = web.repo.branchtip(ctx.branch())
-            except error.RepoLookupError:
-                branchnode = None
-            branch = branch, branchnode == ctx.node()
 
             if usetuples:
+                node = pycompat.bytestr(ctx)
+                age = encodestr(templatefilters.age(ctx.date()))
+                desc = templatefilters.firstline(encodestr(ctx.description()))
+                desc = url.escape(templatefilters.nonempty(desc))
+                user = templatefilters.person(encodestr(ctx.user()))
+                user = url.escape(user)
+                branch = url.escape(encodestr(ctx.branch()))
+                try:
+                    branchnode = web.repo.branchtip(ctx.branch())
+                except error.RepoLookupError:
+                    branchnode = None
+                branch = branch, branchnode == ctx.node()
+
                 data.append((node, vtx, edges, desc, user, age, branch,
                              [url.escape(encodestr(x)) for x in ctx.tags()],
                              [url.escape(encodestr(x))
                               for x in ctx.bookmarks()]))
             else:
+                entry = webutil.commonentry(web.repo, ctx)
                 edgedata = [{'col': edge[0], 'nextcol': edge[1],
                              'color': (edge[2] - 1) % 6 + 1,
                              'width': edge[3], 'bcolor': edge[4]}
                             for edge in edges]
 
-                data.append(
-                    {'node': node,
-                     'col': vtx[0],
+                entry.update(
+                    {'col': vtx[0],
                      'color': (vtx[1] - 1) % 6 + 1,
                      'edges': edgedata,
                      'row': row,
-                     'nextrow': row + 1,
-                     'desc': desc,
-                     'user': user,
-                     'age': age,
-                     'bookmarks': webutil.nodebookmarksdict(
-                         web.repo, ctx.node()),
-                     'branches': webutil.nodebranchdict(web.repo, ctx),
-                     'inbranch': webutil.nodeinbranch(web.repo, ctx),
-                     'tags': webutil.nodetagsdict(web.repo, ctx.node())})
+                     'nextrow': row + 1})
+
+                data.append(entry)
 
             row += 1
 
@@ -1302,9 +1300,8 @@ def graph(web, req, tmpl):
                 canvaswidth=(cols + 1) * bg_height,
                 truecanvasheight=rows * bg_height,
                 canvasheight=canvasheight, bg_height=bg_height,
-                # {jsdata} will be passed to |json, so it must be in utf-8
-                jsdata=lambda **x: graphdata(True, encoding.fromlocal),
-                nodes=lambda **x: graphdata(False, pycompat.bytestr),
+                jsdata=lambda **x: graphdata(True),
+                nodes=lambda **x: graphdata(False),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
