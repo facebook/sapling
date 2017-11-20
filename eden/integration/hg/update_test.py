@@ -197,30 +197,46 @@ class UpdateTest(EdenHgTestCase):
         )
         self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
 
+    def test_update_with_added_file_that_is_tracked_in_destination(self):
+        self._test_update_with_local_file_that_is_tracked_in_destination(True)
+
     def test_update_with_untracked_file_that_is_tracked_in_destination(self):
-        base_commit = self.repo.log()[-1]
+        self._test_update_with_local_file_that_is_tracked_in_destination(False)
+
+    def _test_update_with_local_file_that_is_tracked_in_destination(
+        self, add_before_updating: bool
+    ):
+        base_commit = self.repo.get_head_hash()
         original_contents = 'Original contents.\n'
         self.write_file('some_new_file.txt', original_contents)
         self.hg('add', 'some_new_file.txt')
         commit = self.repo.commit('Commit a new file.')
+        self.assert_status_empty()
 
         # Do an `hg prev` and re-create the new file with different contents.
-        self.hg('update', base_commit)
+        self.repo.update(base_commit)
         self.assert_status_empty()
         self.assertFalse(os.path.exists('some_new_file.txt'))
         modified_contents = 'Re-create the file with different contents.\n'
         self.write_file('some_new_file.txt', modified_contents)
-        self.assert_status({
-            'some_new_file.txt': '?',
-        })
+
+        if add_before_updating:
+            self.hg('add', 'some_new_file.txt')
+            self.assert_status({
+                'some_new_file.txt': 'A',
+            })
+        else:
+            self.assert_status({
+                'some_new_file.txt': '?',
+            })
 
         # Verify `hg next` updates such that the original contents and commit
         # hash are restored. No conflicts should be reported.
         path_to_backup = '.hg/origbackups/some_new_file.txt'
         expected_backup_file = os.path.join(self.mount, path_to_backup)
         self.assertFalse(os.path.isfile(expected_backup_file))
-        self.hg('update', commit)
-        self.assertEqual(commit, self.repo.log()[-1])
+        self.repo.update(commit)
+        self.assertEqual(commit, self.repo.get_head_hash())
         self.assertEqual(original_contents, self.read_file('some_new_file.txt'))
         self.assert_status_empty()
 
