@@ -348,17 +348,20 @@ def _setupdiff(ui):
     entry = commands.table['^diff']
     entry[1].append(('s', 'sparse', None,
                      'only show changes in files in the sparse config'))
-    # wrap workingfilectx's data function to return the data for files
-    # outside the sparse checkout by fetching from the working copy parent.
+
     def workingfilectxdata(orig, self):
-        if not util.safehasattr(self.repo(), 'sparsematch'):
+        try:
+            # Try lookup working copy first.
             return orig(self)
-        sparsematch = self.repo().sparsematch()
-        if sparsematch(self._path):
-            return orig(self)
-        else:
-            basectx = self._changectx._parents[0]
-            return basectx[self._path].data()
+        except IOError:
+            # Then try working copy parent if the file is outside sparse.
+            if util.safehasattr(self._repo, 'sparsematch'):
+                sparsematch = self._repo.sparsematch()
+                if not sparsematch(self._path):
+                    basectx = self._changectx._parents[0]
+                    return basectx[self._path].data()
+            raise
+
     extensions.wrapfunction(context.workingfilectx, 'data', workingfilectxdata)
 
     # wrap trydiff to filter diffs if '--sparse' is set
