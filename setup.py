@@ -767,7 +767,7 @@ packages = ['mercurial',
             'mercurial.thirdparty.attr',
             'hgext', 'hgext.convert', 'hgext.fsmonitor',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
-            'hgext.largefiles', 'hgext.zeroconf', 'hgext3rd',
+            'hgext.largefiles', 'hgext.lfs', 'hgext.zeroconf', 'hgext3rd',
             'hgdemandimport']
 
 common_depends = ['mercurial/bitmanipulation.h',
