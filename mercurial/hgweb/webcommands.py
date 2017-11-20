@@ -1255,7 +1255,7 @@ def graph(web, req, tmpl):
             user = url.escape(templatefilters.person(encodestr(ctx.user())))
             branch = url.escape(encodestr(ctx.branch()))
             try:
-                branchnode = web.repo.branchtip(branch)
+                branchnode = web.repo.branchtip(ctx.branch())
             except error.RepoLookupError:
                 branchnode = None
             branch = branch, branchnode == ctx.node()
