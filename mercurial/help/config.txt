@@ -2188,6 +2188,10 @@ User interface controls.
 ``ssh``
     Command to use for SSH connections. (default: ``ssh``)
 
+``ssherrorhint``
+    A hint shown to the user in the case of SSH error (e.g.
+    ``Please see http://company/internalwiki/ssh.html``)
+
 ``strict``
     Require exact command names, instead of allowing unambiguous
     abbreviations. (default: False)

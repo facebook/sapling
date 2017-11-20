@@ -964,6 +964,9 @@ coreconfigitem('ui', 'slash',
 coreconfigitem('ui', 'ssh',
     default='ssh',
 )
+coreconfigitem('ui', 'ssherrorhint',
+    default=None,
+)
 coreconfigitem('ui', 'statuscopies',
     default=False,
 )
