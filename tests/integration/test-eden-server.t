@@ -88,6 +88,7 @@ Add commit with a directory
   $ echo 'addr="127.0.0.1:3000"' >> $TESTTMP/config
   $ echo "cert=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
+  $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
 #if files
   $ blobimport --blobstore files --linknodes repo $TESTTMP/blobrepo -d 2> out.txt
@@ -138,7 +139,7 @@ Temporary hack to make sure server is ready
   $ sleep 1
 
 Curl and debugdata output should match
-  $ alias curl="curl --cacert $TESTDIR/edenservertest.crt"
+  $ alias curl="curl --cert $TESTDIR/edenservertest.crt --key $TESTDIR/edenservertest.key --cacert $TESTDIR/edenservertest.crt"
   $ curl https://localhost:3000/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   8515d4bfda768e04af4c13a69a72e28c7effbea7 (no-eol)
   $ cd repo

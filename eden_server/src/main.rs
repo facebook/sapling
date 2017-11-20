@@ -27,6 +27,7 @@ extern crate hyper;
 extern crate lazy_static;
 extern crate mercurial_types;
 extern crate native_tls;
+extern crate openssl;
 extern crate regex;
 extern crate secure_utils;
 extern crate serde;
@@ -64,6 +65,8 @@ use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
 use native_tls::TlsAcceptor;
+use native_tls::backend::openssl::TlsAcceptorBuilderExt;
+use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
 use regex::{Captures, Regex};
 use slog::{Drain, Level, Logger};
 use tokio_tls::TlsAcceptorExt;
@@ -314,6 +317,40 @@ where
     }
 }
 
+
+// Builds an acceptor that has `accept_async()` method that handles tls handshake
+// and returns decrypted stream.
+fn build_tls_acceptor<P>(
+    cert_pem_file: P,
+    private_key_pem_file: P,
+    ca_pem_file: P,
+) -> Result<TlsAcceptor>
+where
+    P: AsRef<Path>,
+{
+    let pkcs12 = secure_utils::build_pkcs12(cert_pem_file, private_key_pem_file)
+        .chain_err(|| Error::from("failed to build pkcs12"))?;
+    let mut tlsacceptor_builder = TlsAcceptor::builder(pkcs12)?;
+
+    // Set up client authentication
+    {
+        let mut sslacceptorbuilder = tlsacceptor_builder.builder_mut();
+        let mut sslcontextbuilder = sslacceptorbuilder.builder_mut();
+
+        sslcontextbuilder
+            .set_ca_file(ca_pem_file)
+            .chain_err(|| Error::from("cannot set CA file"))?;
+
+        // SSL_VERIFY_PEER checks client certificate if it was supplied.
+        // Connection is terminated if certificate verification fails.
+        // SSL_VERIFY_FAIL_IF_NO_PEER_CERT terminates the connection if client did not return
+        // certificate.
+        // More about it - https://wiki.openssl.org/index.php/Manual:SSL_CTX_set_verify(3)
+        sslcontextbuilder.set_verify(SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
+    }
+    tlsacceptor_builder.build().map_err(Error::from)
+}
+
 fn start_server<State, P>(
     addr: &str,
     reponame: String,
@@ -321,6 +358,7 @@ fn start_server<State, P>(
     logger: Logger,
     cert: P,
     private_key: P,
+    ca_pem_file: P,
 ) where
     State: BlobState,
     P: AsRef<Path>,
@@ -330,14 +368,14 @@ fn start_server<State, P>(
     let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
-    let pkcs12 =
-        secure_utils::build_pkcs12(cert, private_key).expect("cannot build pkcs12 archive");
-    // Acceptor that has `accept_async()` method that handles tls handshake
-    // and returns decrypted stream.
-    let tlsacceptor = TlsAcceptor::builder(pkcs12)
-        .expect("cannot create TlsAcceptorBuilder")
-        .build()
-        .expect("cannot create TlsAcceptor");
+    let tlsacceptor = build_tls_acceptor(cert, private_key, ca_pem_file);
+    let tlsacceptor = match tlsacceptor {
+        Ok(tlsacceptor) => tlsacceptor,
+        Err(err) => {
+            error!(logger, "{}", err.display_chain());
+            return;
+        }
+    };
 
     let mut core = Core::new().expect("cannot create http server core");
     let handle = core.handle();
@@ -384,6 +422,7 @@ struct RawRepoConfig {
     addr: String,
     cert: String,
     private_key: String,
+    ca_pem_file: String,
 }
 
 fn main() {
@@ -427,6 +466,7 @@ fn main() {
             root_logger.clone(),
             config.cert,
             config.private_key,
+            config.ca_pem_file,
         ),
         RawRepoType::BlobRocks => start_server(
             &config.addr,
@@ -436,6 +476,7 @@ fn main() {
             root_logger.clone(),
             config.cert,
             config.private_key,
+            config.ca_pem_file,
         ),
         RawRepoType::BlobManifold => {
             let (sender, receiver) = oneshot::channel();
@@ -466,6 +507,7 @@ fn main() {
                 root_logger.clone(),
                 config.cert,
                 config.private_key,
+                config.ca_pem_file,
             )
         }
     };
