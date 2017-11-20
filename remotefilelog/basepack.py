@@ -140,7 +140,7 @@ class basepackstore(object):
         sizes = defaultdict(lambda: 0)
         mtimes = defaultdict(lambda: [])
         try:
-            for filename, size, stat in osutil.listdir(self.path, stat=True):
+            for filename, type, stat in osutil.listdir(self.path, stat=True):
                 id = None
                 if filename[-indexsuffixlen:] == self.INDEXSUFFIX:
                     id = filename[:-indexsuffixlen]
@@ -151,7 +151,7 @@ class basepackstore(object):
                 # (the index file and the pack file), we can yield once we see
                 # it twice.
                 if id:
-                    sizes[id] += size # Sum both files' sizes together
+                    sizes[id] += stat.st_size # Sum both files' sizes together
                     mtimes[id].append(stat.st_mtime)
                     if id in ids:
                         yield (os.path.join(self.path, id), max(mtimes[id]),
