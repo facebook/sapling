@@ -58,7 +58,7 @@ class UpdateTest(EdenHgTestCase):
         self.repo.update('.', clean=True)
         self.assert_status({'bar/some_new_file.txt': '?'})
         self.assertTrue(os.path.isfile(self.get_path('foo/bar.txt')))
-        # TODO: Add assert_dirstate_empty() when D6322052 lands.
+        self.assert_dirstate_empty()
 
     def test_update_with_gitignores(self):
         '''
