@@ -84,9 +84,15 @@ static double rdtscratio; /* set by disable() */
 
 /* fast way to get wall time */
 inline static rdtsc_t rdtsc() {
+#ifdef __aarch64__
+  unsigned long long val;
+  asm volatile("mrs %0, cntvct_el0" : "=r" (val));
+  return val;
+#else
 	unsigned long lo, hi;
 	asm volatile ("rdtsc" : "=a" (lo), "=d" (hi));
 	return (rdtsc_t)(lo | (hi << 32));
+#endif
 }
 
 /* fast, but inaccurate hashing of a Python frame */
