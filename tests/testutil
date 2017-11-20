@@ -16,6 +16,10 @@ echo 'commit = -d "0 0"' >> $HGRCPATH
 echo 'shelve = --date "0 0"\n' >> $HGRCPATH
 echo 'tag = -d "0 0"\n' >> $HGRCPATH
 
+# Enable git subrepository for hg >= 4.4.1
+echo '[subrepos]' >> $HGRCPATH
+echo 'git:allowed = yes' >> $HGRCPATH
+
 # Standard checks for external dependencies
 # We use the git command-line client and dulwich in pretty much all the tests.
 # Thus, to avoid repetitively declaring that requirement in almost every test,
