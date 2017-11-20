@@ -35,12 +35,15 @@ extern crate serde_json;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate tokio_core;
+extern crate toml;
 
 use std::collections::HashMap;
 use std::error;
 use std::ffi::OsString;
+use std::fs::File;
+use std::io::Read;
 use std::os::unix::ffi::OsStringExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
@@ -316,9 +319,32 @@ where
 
     info!(logger, "started eden server");
     let cpupool = Arc::new(CpuPool::new_num_cpus());
-    let func = move || Ok(EdenServer::new(map.clone(), cpupool.clone(), logger.clone()));
+    let func = move || {
+        Ok(EdenServer::new(
+            map.clone(),
+            cpupool.clone(),
+            logger.clone(),
+        ))
+    };
     let server = Http::new().bind(&addr, func).expect("Failed to run server");
     server.run().expect("Error while running service");
+}
+
+/// Types of repositories supported
+#[derive(Clone, Debug, Deserialize)]
+enum RawRepoType {
+    #[serde(rename = "blob:files")] BlobFiles,
+    #[serde(rename = "blob:rocks")] BlobRocks,
+    #[serde(rename = "blob:manifold")] BlobManifold,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawRepoConfig {
+    path: Option<PathBuf>,
+    manifold_bucket: Option<String>,
+    repotype: RawRepoType,
+    reponame: String,
+    addr: String,
 }
 
 fn main() {
@@ -326,28 +352,21 @@ fn main() {
         .version("0.1")
         .about("Http server that can answers a few Eden requests")
         .args_from_usage(
-            "--addr=[ADDRESS] 'Sets a listen address in the form IP:PORT'
-             --blobrepo-folder=[FOLDER] 'folder with blobrepo data'
-             --reponame=[REPONAME] 'Name of the repository'
+            "--config-file=[FILE] 'Toml config file path'
             -d, --debug              'print debug level output'
             ",
         )
-        .arg(
-            clap::Arg::with_name("repotype")
-                .long("repotype")
-                .short("T")
-                .takes_value(true)
-                .possible_values(&["files", "rocksdb", "manifold"])
-                .required(true)
-                .help("repo type"),
-        )
         .get_matches();
-    let addr = matches.value_of("addr").unwrap_or("127.0.0.1:3000");
-    let blobrepo_folder = matches.value_of("blobrepo-folder").map(Path::new);
-    let reponame = matches
-        .value_of("reponame")
-        .expect("Please specify a reponame")
-        .to_string();
+    let config_file = matches
+        .value_of("config-file")
+        .expect("config file is not specified");
+    let mut config_bytes: Vec<u8> = vec![];
+    File::open(config_file)
+        .expect("cannot open config file")
+        .read_to_end(&mut config_bytes)
+        .expect("reading config file failed");
+    let config =
+        toml::from_slice::<RawRepoConfig>(&config_bytes).expect("reading config file failed");
 
     let root_logger = {
         let level = if matches.is_present("debug") {
@@ -360,27 +379,22 @@ fn main() {
         Logger::root(drain, o![])
     };
 
-    match matches
-        .value_of("repotype")
-        .expect("required argument 'repotype' is not provided")
-    {
-        "files" => start_server(
-            addr,
-            reponame,
-            FilesBlobState::new(&blobrepo_folder
-                .expect("Please specify a path to the blobrepo"))
+    match config.repotype {
+        RawRepoType::BlobFiles => start_server(
+            &config.addr,
+            config.reponame,
+            FilesBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
         ),
-        "rocksdb" => start_server(
-            addr,
-            reponame,
-            RocksBlobState::new(&blobrepo_folder
-                .expect("Please specify a path to the blobrepo"))
+        RawRepoType::BlobRocks => start_server(
+            &config.addr,
+            config.reponame,
+            RocksBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
         ),
-        "manifold" => {
+        RawRepoType::BlobManifold => {
             let (sender, receiver) = oneshot::channel();
             // manifold requires a separate detached thread to do the IO, that's why we create a
             // separate thread to handle it.
@@ -398,14 +412,12 @@ fn main() {
                 .wait()
                 .expect("cannot get remote handle for manifold");
             start_server(
-                addr,
-                reponame,
-                TestManifoldBlobState::new(&remote)
-                    .expect("couldn't open blob state"),
+                &config.addr,
+                config.reponame,
+                TestManifoldBlobState::new(&remote).expect("couldn't open blob state"),
                 root_logger.clone(),
             )
         }
-        bad => panic!("unknown blobrepo type {:?}", bad),
     };
 }
 

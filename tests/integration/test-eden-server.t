@@ -83,6 +83,10 @@ Add commit with a directory
   
   $ cd ..
   $ mkdir $TESTTMP/blobrepo
+  $ echo 'reponame="repo"' >> $TESTTMP/config
+  $ echo "path=\"$TESTTMP/blobrepo\"" >> $TESTTMP/config
+  $ echo 'addr="127.0.0.1:3000"' >> $TESTTMP/config
+ 
 #if files
   $ blobimport --blobstore files --linknodes repo $TESTTMP/blobrepo -d 2> out.txt
   $ grep changeset < out.txt
@@ -121,9 +125,11 @@ Heads output order is unpredictable, let's sort them by commit hash
 Temporary hack because blobimport doesn't import bookmarks yet
   $ mkdir $TESTTMP/blobrepo/books
 #if files
-  $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo --repotype files
+  $ echo 'repotype="blob:files"' >> $TESTTMP/config
+  $ edenserver --config-file $TESTTMP/config
 #else
-  $ edenserver --addr 127.0.0.1:3000 --blobrepo-folder $TESTTMP/blobrepo --reponame repo --repotype rocksdb
+  $ echo 'repotype="blob:rocks"' >> $TESTTMP/config
+  $ edenserver --config-file $TESTTMP/config
 #endif
 
 Temporary hack to make sure server is ready
