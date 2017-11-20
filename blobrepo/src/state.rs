@@ -187,10 +187,10 @@ impl_blob_state! {
 }
 
 impl TestManifoldBlobState {
-    pub fn new(remote: &Remote) -> Result<Self> {
+    pub fn new<T: ToString>(bucket: T, remote: &Remote) -> Result<Self> {
         let heads = MemHeads::new();
         let bookmarks = Arc::new(MemBookmarks::new());
-        let blobstore = ManifoldBlob::new_may_panic("mononoke", remote);
+        let blobstore = ManifoldBlob::new_may_panic(bucket.to_string(), remote);
         let linknodes = Arc::new(MemLinknodes::new());
         Ok(TestManifoldBlobState {
             heads,

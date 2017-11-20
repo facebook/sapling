@@ -414,7 +414,12 @@ fn main() {
             start_server(
                 &config.addr,
                 config.reponame,
-                TestManifoldBlobState::new(&remote).expect("couldn't open blob state"),
+                TestManifoldBlobState::new(
+                    config
+                        .manifold_bucket
+                        .expect("manifold bucket is not specified"),
+                    &remote,
+                ).expect("couldn't open blob state"),
                 root_logger.clone(),
             )
         }
