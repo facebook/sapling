@@ -4,8 +4,26 @@
   $ LFS_HOST="localhost:$HGPORT"
   $ LFS_PUBLIC=1
   $ export LFS_LISTEN LFS_HOST LFS_PUBLIC
+#if no-windows
   $ lfs-test-server &> lfs-server.log &
   $ echo $! >> $DAEMON_PIDS
+#else
+  $ cat >> $TESTTMP/spawn.py <<EOF
+  > import os
+  > import subprocess
+  > import sys
+  > 
+  > for path in os.environ["PATH"].split(os.pathsep):
+  >     exe = os.path.join(path, 'lfs-test-server.exe')
+  >     if os.path.exists(exe):
+  >         with open('lfs-server.log', 'wb') as out:
+  >             p = subprocess.Popen(exe, stdout=out, stderr=out)
+  >             sys.stdout.write('%s\n' % p.pid)
+  >             sys.exit(0)
+  > sys.exit(1)
+  > EOF
+  $ $PYTHON $TESTTMP/spawn.py >> $DAEMON_PIDS
+#endif
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -104,3 +122,5 @@ Check error message when object does not exist:
   updating to branch default
   abort: LFS server error. Remote object for file data/a.i not found:(.*)! (re)
   [255]
+
+  $ $PYTHON $RUNTESTDIR/killdaemons.py $DAEMON_PIDS
