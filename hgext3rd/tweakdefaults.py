@@ -88,6 +88,7 @@ from mercurial import (
 from hgext import rebase
 import inspect
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -270,6 +271,10 @@ def extsetup(ui):
     options.append(
         ('', 'per-file-stat-json', None,
          _('show diff stat per file in json (ADVANCED)')))
+
+    pipei_bufsize = ui.configint('experimental', 'winpipebufsize', 4096)
+    if pipei_bufsize != 4096 and os.name == 'nt':
+        wrapfunction(util, 'popen4', get_winpopen4(pipei_bufsize))
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -1045,3 +1050,23 @@ def _fixpager(ui):
     # automatically.
     if ui.config('pager', 'pager', '').strip() == 'less':
         ui.setconfig('pager', 'pager', 'less -FRQX')
+
+def get_winpopen4(pipei_bufsize):
+    def winpopen4(orig, cmd, env=None, newlines=False, bufsize=-1):
+        """Same as util.popen4, but manually creates an input pipe with a
+        larger than default buffer"""
+        import msvcrt, _subprocess
+        handles = _subprocess.CreatePipe(None, pipei_bufsize)
+        rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
+        handles[0].Detach()
+        handles[1].Detach()
+        p = subprocess.Popen(cmd, shell=True, bufsize=bufsize,
+                             close_fds=False,
+                             stdin=rfd,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             universal_newlines=newlines,
+                             env=env)
+        p.stdin = os.fdopen(wfd, 'wb', bufsize)
+        return p.stdin, p.stdout, p.stderr, p
+    return winpopen4
