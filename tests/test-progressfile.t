@@ -103,6 +103,12 @@
   {"state": {"loop": {"active": true, "estimate_sec": 12, "estimate_str": "12s", "item": "item #1", "pos": 1, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {}, "topics": []}
 
+HGPLAIN=1 hides the ASCII progress bar, but not the progressfile version:
+  $ HGPLAIN=1 hg -y loop 2
+  {"state": {"loop": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
+  {"state": {"loop": {"active": true, "estimate_sec": 4, "estimate_str": "04s", "item": "item #1", "pos": 1, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
+  {"state": {}, "topics": []}
+
 Do not hide the progress if statefile is not set
 
   $ hg -y loop 5 --config progress.statefile=
