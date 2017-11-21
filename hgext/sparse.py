@@ -82,6 +82,7 @@ from mercurial import (
     extensions,
     hg,
     match as matchmod,
+    pycompat,
     registrar,
     sparse,
     util,
@@ -286,6 +287,7 @@ def debugsparse(ui, repo, *pats, **opts):
 
     Returns 0 if editing the sparse checkout succeeds.
     """
+    opts = pycompat.byteskwargs(opts)
     include = opts.get('include')
     exclude = opts.get('exclude')
     force = opts.get('force')
