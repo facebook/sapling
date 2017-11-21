@@ -391,7 +391,7 @@ def _backupheads(ui, repo):
     maxheadstobackup = ui.configint('infinitepushbackup',
                                     'maxheadstobackup', -1)
 
-    revset = 'head() & draft() & not obsolete()'
+    revset = 'heads(draft()) & not obsolete()'
 
     backupheads = [ctx.hex() for ctx in repo.set(revset)]
     if maxheadstobackup > 0:
