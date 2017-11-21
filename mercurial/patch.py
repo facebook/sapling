@@ -149,6 +149,8 @@ def split(stream):
                 raise StopIteration
             return l
 
+        __next__ = next
+
     inheader = False
     cur = []
 
