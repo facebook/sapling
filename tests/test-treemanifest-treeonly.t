@@ -419,6 +419,32 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
    y |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-
-TODO
-# log -T "{manifest}" #TODO: edit templatekw.showmanifest
+Switch back to hybrid mode
+  $ cd ../client
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > treeonly=False
+  > EOF
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  transaction abort!
+  rollback completed
+  abort: 00manifest.i@d9920715ba88: unknown parent!
+  [255]
+  $ hg backfillmanifestrevlog
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 4f84204095e0
+  (run 'hg heads .' to see heads, 'hg merge' to merge)

@@ -659,6 +659,36 @@ def debuggentrees(ui, repo, rev1, rev2, *args, **opts):
             recordmanifest(dpack, hpack, repo, mfrev1, mfrev2,
                            verify=opts.get('verify', False))
 
+@command('backfillmanifestrevlog', [
+    ], _('hg backfillmanifestrevlog'))
+def backfillmanifestrevlog(ui, repo, *args, **opts):
+    """Download any missing manifest revlog entries. This is useful when
+    transitioning back from a treeonly repo to a flat+tree hybrid repo."""
+    fallbackpath = getfallbackpath(repo)
+    with repo.connectionpool.get(fallbackpath) as conn:
+        remote = conn.peer
+
+        # _localrepo is needed for remotefilelog to work
+        if util.safehasattr(remote, '_callstream'):
+            remote._localrepo = repo
+
+        cl = repo.changelog
+        mfrevlog = repo.manifestlog._revlog
+
+        # We need to download any manifests the server has that we don't. We
+        # calculate that by saying we need all the public heads, and that we
+        # have some of them already. This might result in extra downloading but
+        # they become no-ops when attempting to be added to the revlog.
+        publicheads = repo.revs('heads(public())')
+        clnode = cl.node
+        heads = [clnode(r) for r in publicheads]
+        common = [clnode(r) for r in publicheads if
+                  cl.changelogrevision(r).manifest in mfrevlog.nodemap]
+        with repo.wlock(), repo.lock(), (
+             repo.transaction("backfillmanifest")) as tr:
+            cg = remote.getbundle('pull', common=common, heads=heads)
+            bundle2.applybundle(repo, cg, tr, 'pull', remote.url())
+
 @command('backfilltree', [
     ('l', 'limit', '10000000', _(''))
     ], _('hg backfilltree [OPTIONS]'))
