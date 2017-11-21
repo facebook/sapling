@@ -14,7 +14,7 @@
   > def uisetup(ui):
   >     def progress(orig, *args, **kwargs):
   >         orig(*args, **kwargs)
-  >         if ui.config("progress", "statefile") is not None:
+  >         if ui.config("progress", "statefile"):
   >             try:
   >                 with open(ui.config("progress", "statefile"), 'r') as f:
   >                     print(f.read())
@@ -102,3 +102,15 @@
   {"state": {"loop": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "item #0", "pos": 0, "speed_str": null, "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {"loop": {"active": true, "estimate_sec": 12, "estimate_str": "12s", "item": "item #1", "pos": 1, "speed_str": "0 loopnum/sec", "topic": "loop", "total": 2, "unit": "loopnum", "units_per_sec": null}}, "topics": ["loop"]}
   {"state": {}, "topics": []}
+
+Do not hide the progress if statefile is not set
+
+  $ hg -y loop 5 --config progress.statefile=
+  \r (no-eol) (esc)
+  loop [                                                ] 0/5\r (no-eol) (esc)
+  loop [=======>                                    ] 1/5 05s\r (no-eol) (esc)
+  loop [================>                           ] 2/5 04s\r (no-eol) (esc)
+  loop [=========================>                  ] 3/5 03s\r (no-eol) (esc)
+  loop [==================================>         ] 4/5 02s\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+

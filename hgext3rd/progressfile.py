@@ -1,9 +1,3 @@
-from __future__ import absolute_import
-import json
-import time
-
-from mercurial import progress, util
-
 """allows users to have JSON progress bar information written to a path
 
 Controlled by the `ui.progressfile` config. Mercurial will overwrite this file
@@ -33,7 +27,24 @@ config example::
     # Where to write progress information
     statefile = /some/path/to/file
 """
+
+from __future__ import absolute_import
+
+import json
+import time
+
+from mercurial import (
+    progress,
+    registrar,
+    util,
+)
+
 testedwith = 'ships-with-fb-hgext'
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem('progress', 'statefile', default='')
 
 class progbarwithfile(progress.progbar):
     def progress(self, topic, pos, item='', unit='', total=None):
@@ -101,13 +112,14 @@ class progbarwithfile(progress.progbar):
         return int(delta / elapsed)
 
 def uisetup(ui):
-    progbar = progbarwithfile(ui)
     class progressfileui(ui.__class__):
         """Redirects _progbar to our version, which always outputs if the config
         is set, and calls the default progbar if plain mode is off.
         """
         @util.propertycache
         def _progbar(self):
-            if self.config('progress', 'statefile', None):
-                return progbar
+            if self.config('progress', 'statefile'):
+                return  progbarwithfile(self)
+            else:
+                return super(progressfileui, self)._progbar
     ui.__class__ = progressfileui
