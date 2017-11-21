@@ -611,10 +611,10 @@ def _smartlog(ui, repo, *pats, **opts):
             recentdays = -1
         else:
             recentdays = 14
-        revstring = revsetlang.formatspec('smartlog(%s, %s)', masterrevset,
+        masterrev = _masterrev(repo, masterrevset)
+        revstring = revsetlang.formatspec('smartlog(%s, %s)', masterrev or '',
                                           recentdays)
         revs.update(scmutil.revrange(repo, [revstring]))
-        masterrev = _masterrev(repo, masterrevset)
     else:
         revs.update(scmutil.revrange(repo, opts.get('rev')))
         try:
