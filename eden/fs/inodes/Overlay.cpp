@@ -447,15 +447,9 @@ folly::File Overlay::openFile(
 }
 
 // Helper function to  add header to the materialized file
-void Overlay::addHeaderToOverlayFile(int fd) {
-  struct timespec currentTime;
-  clock_gettime(CLOCK_REALTIME, &currentTime);
-  auto header = createHeader(
-      kHeaderIdentifierFile,
-      kHeaderVersion,
-      currentTime,
-      currentTime,
-      currentTime);
+void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
+  auto header =
+      createHeader(kHeaderIdentifierFile, kHeaderVersion, ctime, ctime, ctime);
 
   auto data = header.coalesce();
   auto wrote = folly::writeFull(fd, data.data(), data.size());
@@ -470,7 +464,7 @@ void Overlay::addHeaderToOverlayFile(int fd) {
 }
 
 // Helper function to create an overlay file
-folly::File Overlay::createOverlayFile(fuse_ino_t childNumber) {
+folly::File Overlay::createOverlayFile(fuse_ino_t childNumber, timespec ctime) {
   auto filePath = getFilePath(childNumber);
   folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
 
@@ -478,7 +472,7 @@ folly::File Overlay::createOverlayFile(fuse_ino_t childNumber) {
     ::unlink(filePath.c_str());
   };
 
-  addHeaderToOverlayFile(file.fd());
+  addHeaderToOverlayFile(file.fd(), ctime);
   return file;
 }
 

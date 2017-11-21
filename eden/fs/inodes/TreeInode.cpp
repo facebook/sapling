@@ -690,7 +690,10 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // Since we will move this file into the underlying file data, we
     // take special care to ensure that it is opened read-write
 
-    folly::File file = getOverlay()->createOverlayFile(childNumber);
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    folly::File file =
+        getOverlay()->createOverlayFile(childNumber, currentTime);
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a regular file.
     mode = S_IFREG | (07777 & mode);
@@ -707,7 +710,12 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // However, if we support creating files via Thrift in the future we will
     // have to verify we do the right thing if O_EXCL.
     std::tie(inode, handle) = FileInode::create(
-        childNumber, this->inodePtrFromThis(), name, mode, std::move(file));
+        childNumber,
+        this->inodePtrFromThis(),
+        name,
+        mode,
+        std::move(file),
+        currentTime);
 
     entry->setInode(inode.get());
     inodeMap->inodeCreated(inode);
@@ -770,7 +778,10 @@ FileInodePtr TreeInode::symlink(
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    folly::File file = getOverlay()->createOverlayFile(childNumber);
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    folly::File file =
+        getOverlay()->createOverlayFile(childNumber, currentTime);
 
     SCOPE_FAIL {
       // If an exception is thrown, remove the in-progress file from the
@@ -806,7 +817,8 @@ FileInodePtr TreeInode::symlink(
         this->inodePtrFromThis(),
         name,
         entry->getMode(),
-        std::move(file));
+        std::move(file),
+        currentTime);
     entry->setInode(inode.get());
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));
@@ -866,7 +878,10 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    folly::File file = getOverlay()->createOverlayFile(childNumber);
+    struct timespec currentTime;
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    folly::File file =
+        getOverlay()->createOverlayFile(childNumber, currentTime);
     auto entry = std::make_unique<Entry>(mode, childNumber, rdev);
 
     // build a corresponding FileInode
@@ -875,7 +890,8 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
         this->inodePtrFromThis(),
         name,
         entry->getMode(),
-        std::move(file));
+        std::move(file),
+        currentTime);
     entry->setInode(inode.get());
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));

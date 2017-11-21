@@ -47,6 +47,7 @@ class FileInode : public InodeBase {
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
+      timespec ctime,
       dev_t rdev = 0);
 
   /**
@@ -72,6 +73,7 @@ class FileInode : public InodeBase {
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
+      timespec ctime,
       dev_t rdev = 0);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -228,7 +230,7 @@ class FileInode : public InodeBase {
     State(
         FileInode* inode,
         mode_t mode,
-        const timespec& lastCheckoutTime,
+        const timespec& creationTime,
         dev_t rdev = 0);
     ~State();
 

@@ -80,7 +80,7 @@ class Overlay {
   /**
    * Helper function that creates a new overlay file and adds header to it
    */
-  folly::File createOverlayFile(fuse_ino_t childNumber);
+  folly::File createOverlayFile(fuse_ino_t childNumber, timespec ctime);
 
   /**
    * Updates the timestamps of an overlay file appropriately
@@ -118,7 +118,7 @@ class Overlay {
   /**
    * Helper function to add header to the overlay file
    */
-  static void addHeaderToOverlayFile(int fd);
+  static void addHeaderToOverlayFile(int fd, timespec ctime);
 
   /**
    * Parses, validates and reads Timestamps from the header.

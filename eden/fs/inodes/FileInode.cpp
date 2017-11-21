@@ -63,24 +63,11 @@ FileInode::State::State(
 FileInode::State::State(
     FileInode* inode,
     mode_t m,
-    const timespec& lastCheckoutTime,
+    const timespec& creationTime,
     dev_t rdev)
     : tag(MATERIALIZED_IN_OVERLAY), mode(m), rdev(rdev) {
-  timeStamps.setTimestampValues(lastCheckoutTime);
+  timeStamps.setTimestampValues(creationTime);
   checkInvariants();
-
-  /*
-  From Adam in D6097090:
-
-  This isn't really related to your change here, but I think we have a small bug
-  here.
-
-  This code sets the in-memory file timestamps to the last checkout time, but
-  the callers have just called Overlay::createOverlayFile() which writes the
-  current time as the timestamps in the overlay file on disk. It seems like
-  these should be consistent rather than having different values in memory vs on
-  disk. The last checkout time does seem like the right value to use.
-  */
 }
 
 void FileInode::State::State::checkInvariants() {
@@ -160,10 +147,11 @@ std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
     PathComponentPiece name,
     mode_t mode,
     folly::File&& file,
+    timespec ctime,
     dev_t rdev) {
   // The FileInode is in MATERIALIZED_IN_OVERLAY state.
   auto inode = FileInodePtr::makeNew(
-      ino, parentInode, name, mode, std::move(file), rdev);
+      ino, parentInode, name, mode, std::move(file), ctime, rdev);
 
   // This next line increments openCount.
   auto fileHandle = std::make_shared<FileHandle>(inode);
@@ -202,14 +190,10 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t mode,
     folly::File&& file,
+    timespec ctime,
     dev_t rdev)
     : InodeBase(ino, std::move(parentInode), name),
-      state_(
-          folly::in_place,
-          this,
-          mode,
-          getMount()->getLastCheckoutTime(),
-          rdev) {}
+      state_(folly::in_place, this, mode, ctime, rdev) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
