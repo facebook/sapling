@@ -967,14 +967,14 @@ def prefillcaches(op, bundle, bundlerepocache):
     for dir, dircache in op.repo.manifestlog._dirmancache.iteritems():
         for mfnode in dircache:
             mfctx = dircache[mfnode]
-            newmfctx = manifest.manifestctx(bundle, mfnode)
+            newmfctx = manifest.manifestctx(bundle.manifestlog, mfnode)
             if (util.safehasattr(mfctx, '_data') and
                 util.safehasattr(newmfctx, '_data')):
                     newmfctx._data = mfctx._data
                     newdirmancache[dir][mfnode] = newmfctx
 
     for mfnode, mfdict in bundlerepocache.iteritems():
-        newmfctx = manifest.manifestctx(bundle, mfnode)
+        newmfctx = manifest.manifestctx(bundle.manifestlog, mfnode)
         newmfctx._data = mfdict
         newdirmancache[""][mfnode] = newmfctx
 
