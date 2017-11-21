@@ -699,7 +699,13 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     auto& entry = contents->entries[name];
     entry = std::make_unique<Entry>(mode, childNumber);
 
-    // build a corresponding FileInode
+    // Build a corresponding FileInode.  This code does not have to do anything
+    // special to handle O_EXCL, because the kernel and FUSE take care of making
+    // sure there is only one winner.  See the discussion in T23630298 and test
+    // program at P58653093.
+    //
+    // However, if we support creating files via Thrift in the future we will
+    // have to verify we do the right thing if O_EXCL.
     std::tie(inode, handle) = FileInode::create(
         childNumber, this->inodePtrFromThis(), name, mode, std::move(file));
 

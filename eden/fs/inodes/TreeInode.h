@@ -256,11 +256,7 @@ class TreeInode : public InodeBase {
     }
   };
 
-  /** Holds the results of a create operation.
-   *
-   * It is important that the file handle creation respect O_EXCL if
-   * it set in the flags parameter to TreeInode::create.
-   */
+  /** Holds the results of a create operation. */
   struct CreateResult {
     /// file attributes and cache ttls.
     fusell::Dispatcher::Attr attr;

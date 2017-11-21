@@ -64,8 +64,7 @@ class FileInode : public InodeBase {
   /**
    * Construct an inode using a freshly created overlay file.
    * file must be moved in and must have been created by a call to
-   * Overlay::openFile.  This constructor is used in the TreeInode::create
-   * case and is required to implement O_EXCL correctly.
+   * Overlay::openFile.
    */
   FileInode(
       fuse_ino_t ino,
