@@ -1572,7 +1572,7 @@ Overviews
   <table cellspacing="0">
   <tr><td>description</td><td>unknown</td></tr>
   <tr><td>owner</td><td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td></tr>
-  <tr><td>last change</td><td>Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
+  <tr><td>last change</td><td class="date age">Thu, 01 Jan 1970 00:00:00 +0000</td></tr>
   </table>
   
   <div><a  class="title" href="/shortlog?style=gitweb">changes</a></div>

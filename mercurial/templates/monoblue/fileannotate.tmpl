@@ -42,7 +42,7 @@
         <dt>author</dt>
         <dd>{author|obfuscate}</dd>
         <dt>date</dt>
-        <dd>{date|rfc822date}</dd>
+        <dd class="date age">{date|rfc822date}</dd>
         {branch%filerevbranch}
         <dt>changeset {rev}</dt>
         <dd><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
