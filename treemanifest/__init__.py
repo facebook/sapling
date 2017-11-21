@@ -73,6 +73,7 @@ from mercurial import (
     error,
     exchange,
     extensions,
+    hg,
     localrepo,
     manifest,
     mdiff,
@@ -1071,10 +1072,7 @@ def _prefetchonlytrees(repo, opts):
 
 def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     # If possible, use remotefilelog's more expressive fallbackpath
-    if util.safehasattr(repo, 'fallbackpath'):
-        fallbackpath = repo.fallbackpath
-    else:
-        fallbackpath = repo.ui.config('paths', 'default')
+    fallbackpath = getfallbackpath(repo)
 
     start = time.time()
     with repo.connectionpool.get(fallbackpath) as conn:
@@ -1237,11 +1235,37 @@ def createtreepackpart(repo, outgoing, partname):
 
     return part
 
-def pull(orig, ui, repo, *pats, **opts):
-    result = orig(ui, repo, *pats, **opts)
-    if not treeenabled(repo.ui):
-        return result
+def getfallbackpath(repo):
+    if util.safehasattr(repo, 'fallbackpath'):
+        return repo.fallbackpath
+    else:
+        return repo.ui.config('paths', 'default')
 
+def pull(orig, ui, repo, *pats, **opts):
+    # If special arguments were passed, we can't reuse the pull connection
+    if opts.get('ssh') or opts.get('remotecmd'):
+        return orig(ui, repo, *pats, **opts)
+
+    # Use a connection from the connection pool for the pull, so it can be
+    # reused by future requests, like tree prefetching.
+    fallbackpath = getfallbackpath(repo)
+    with repo.connectionpool.get(fallbackpath) as conn:
+        peer = conn.peer
+        def wrappedpeer(orig, uiorrepo, opts, path, *args, **kwargs):
+            if path == fallbackpath:
+                return peer
+            else:
+                return orig(uiorrepo, opts, path, *args, **kwargs)
+
+        with extensions.wrappedfunction(hg, 'peer', wrappedpeer):
+            result = orig(ui, repo, *pats, **opts)
+            if not treeenabled(repo.ui):
+                return result
+
+    _postpullprefetch(ui, repo)
+    return result
+
+def _postpullprefetch(ui, repo):
     repo = repo.unfiltered()
 
     ctxs = []
@@ -1280,8 +1304,6 @@ def pull(orig, ui, repo, *pats, **opts):
             basemfnodes = _findrecenttree(repo, len(repo.changelog) - 1)
 
         _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
-
-    return result
 
 def _findrecenttree(repo, startrev):
     cl = repo.changelog
