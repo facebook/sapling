@@ -46,6 +46,7 @@
 from __future__ import absolute_import, print_function
 
 import argparse
+import collections
 import difflib
 import distutils.version as version
 import errno
@@ -373,7 +374,7 @@ def getparser():
         help="install and use chg wrapper in place of hg")
     hgconf.add_argument("--compiler",
         help="compiler to build with")
-    hgconf.add_argument('--extra-config-opt', action="append",
+    hgconf.add_argument('--extra-config-opt', action="append", default=[],
         help='set the given config opt in the test hgrc')
     hgconf.add_argument("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg, "
@@ -404,6 +405,8 @@ def getparser():
         help="colorisation: always|auto|never (default: auto)")
     reporting.add_argument("-c", "--cover", action="store_true",
         help="print a test coverage report")
+    reporting.add_argument('--exceptions', action='store_true',
+        help='log all exceptions and generate an exception report')
     reporting.add_argument("-H", "--htmlcov", action="store_true",
         help="create an HTML report of the coverage of the files")
     reporting.add_argument("--json", action="store_true",
@@ -2115,6 +2118,18 @@ class TextTestRunner(unittest.TextTestRunner):
                     os.environ['PYTHONHASHSEED'])
             if self._runner.options.time:
                 self.printtimes(result.times)
+
+            if self._runner.options.exceptions:
+                exceptions = aggregateexceptions(
+                    os.path.join(self._runner._outputdir, b'exceptions'))
+                total = sum(exceptions.values())
+
+                self.stream.writeln('Exceptions Report:')
+                self.stream.writeln('%d total from %d frames' %
+                                    (total, len(exceptions)))
+                for (frame, line, exc), count in exceptions.most_common():
+                    self.stream.writeln('%d\t%s: %s' % (count, frame, exc))
+
             self.stream.flush()
 
         return result
@@ -2500,6 +2515,23 @@ class TestRunner(object):
             del os.environ['HGTEST_SLOW']
 
         self._coveragefile = os.path.join(self._testdir, b'.coverage')
+
+        if self.options.exceptions:
+            exceptionsdir = os.path.join(self._outputdir, b'exceptions')
+            try:
+                os.makedirs(exceptionsdir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            # Remove all existing exception reports.
+            for f in os.listdir(exceptionsdir):
+                os.unlink(os.path.join(exceptionsdir, f))
+
+            osenvironb[b'HGEXCEPTIONSDIR'] = exceptionsdir
+            logexceptions = os.path.join(self._testdir, b'logexceptions.py')
+            self.options.extra_config_opt.append(
+                'extensions.logexceptions=%s' % logexceptions.decode('utf-8'))
 
         vlog("# Using TESTDIR", self._testdir)
         vlog("# Using RUNTESTDIR", osenvironb[b'RUNTESTDIR'])
@@ -2952,6 +2984,24 @@ class TestRunner(object):
             else:
                 print("WARNING: Did not find prerequisite tool: %s " %
                       p.decode("utf-8"))
+
+def aggregateexceptions(path):
+    exceptions = collections.Counter()
+
+    for f in os.listdir(path):
+        with open(os.path.join(path, f), 'rb') as fh:
+            data = fh.read().split(b'\0')
+            if len(data) != 4:
+                continue
+
+            exc, mainframe, hgframe, hgline = data
+            exc = exc.decode('utf-8')
+            mainframe = mainframe.decode('utf-8')
+            hgframe = hgframe.decode('utf-8')
+            hgline = hgline.decode('utf-8')
+            exceptions[(hgframe, hgline, exc)] += 1
+
+    return exceptions
 
 if __name__ == '__main__':
     runner = TestRunner()

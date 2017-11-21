@@ -24,6 +24,7 @@ tests/.testtimes*
 tests/.hypothesis
 tests/hypothesis-generated
 tests/annotated
+tests/exceptions
 tests/*.err
 tests/htmlcov
 build
