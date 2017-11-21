@@ -298,123 +298,128 @@ def getparser():
     """Obtain the OptionParser used by the CLI."""
     parser = argparse.ArgumentParser(usage='%(prog)s [options] [tests]')
 
-    # keep these sorted
-    parser.add_argument("--blacklist", action="append",
+    selection = parser.add_argument_group('Test Selection')
+    selection.add_argument('--allow-slow-tests', action='store_true',
+        help='allow extremely slow tests')
+    selection.add_argument("--blacklist", action="append",
         help="skip tests listed in the specified blacklist file")
-    parser.add_argument("--whitelist", action="append",
-        help="always run tests listed in the specified whitelist file")
-    parser.add_argument("--test-list", action="append",
-        help="read tests to run from the specified file")
-    parser.add_argument("--changed",
+    selection.add_argument("--changed",
         help="run tests that are changed in parent rev or working directory")
-    parser.add_argument("-C", "--annotate", action="store_true",
-        help="output files annotated with coverage")
-    parser.add_argument("-c", "--cover", action="store_true",
-        help="print a test coverage report")
-    parser.add_argument("--color", choices=["always", "auto", "never"],
-                        default=os.environ.get('HGRUNTESTSCOLOR', 'auto'),
-                        help="colorisation: always|auto|never (default: auto)")
-    parser.add_argument("-d", "--debug", action="store_true",
-        help="debug mode: write output of test scripts to console"
-             " rather than capturing and diffing it (disables timeout)")
-    parser.add_argument("-f", "--first", action="store_true",
-        help="exit on the first test failure")
-    parser.add_argument("-H", "--htmlcov", action="store_true",
-        help="create an HTML report of the coverage of the files")
-    parser.add_argument("-i", "--interactive", action="store_true",
-        help="prompt to accept changed output")
-    parser.add_argument("-j", "--jobs", type=int,
-        help="number of jobs to run in parallel"
-             " (default: $%s or %d)" % defaults['jobs'])
-    parser.add_argument("--keep-tmpdir", action="store_true",
-        help="keep temporary directory after running tests")
-    parser.add_argument("-k", "--keywords",
+    selection.add_argument("-k", "--keywords",
         help="run tests matching keywords")
-    parser.add_argument("--list-tests", action="store_true",
-        help="list tests instead of running them")
-    parser.add_argument("-l", "--local", action="store_true",
-        help="shortcut for --with-hg=<testdir>/../hg, "
-             "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
-    parser.add_argument("--loop", action="store_true",
-        help="loop tests repeatedly")
-    parser.add_argument("--runs-per-test", type=int, dest="runs_per_test",
-        help="run each test N times (default=1)", default=1)
-    parser.add_argument("-n", "--nodiff", action="store_true",
-        help="skip showing test changes")
-    parser.add_argument("--outputdir",
-        help="directory to write error logs to (default=test directory)")
-    parser.add_argument("-p", "--port", type=int,
-        help="port on which servers should listen"
-             " (default: $%s or %d)" % defaults['port'])
-    parser.add_argument("--compiler",
-        help="compiler to build with")
-    parser.add_argument("--pure", action="store_true",
-        help="use pure Python code instead of C extensions")
-    parser.add_argument("-R", "--restart", action="store_true",
-        help="restart at last error")
-    parser.add_argument("-r", "--retest", action="store_true",
-        help="retest failed tests")
-    parser.add_argument("-S", "--noskips", action="store_true",
-        help="don't report skip tests verbosely")
-    parser.add_argument("--shell",
-        help="shell to use (default: $%s or %s)" % defaults['shell'])
-    parser.add_argument("-t", "--timeout", type=int,
-        help="kill errant tests after TIMEOUT seconds"
-             " (default: $%s or %d)" % defaults['timeout'])
-    parser.add_argument("--slowtimeout", type=int,
-        help="kill errant slow tests after SLOWTIMEOUT seconds"
-             " (default: $%s or %d)" % defaults['slowtimeout'])
-    parser.add_argument("--time", action="store_true",
-        help="time how long each test takes")
-    parser.add_argument("--json", action="store_true",
-        help="store test result data in 'report.json' file")
-    parser.add_argument("--tmpdir",
-        help="run tests in the given temporary directory"
-             " (implies --keep-tmpdir)")
-    parser.add_argument("-v", "--verbose", action="store_true",
-        help="output verbose messages")
-    parser.add_argument("--xunit",
-        help="record xunit results at specified path")
-    parser.add_argument("--view",
-        help="external diff viewer")
-    parser.add_argument("--with-hg",
-        metavar="HG",
-        help="test using specified hg script rather than a "
-             "temporary installation")
-    parser.add_argument("--chg", action="store_true",
-                        help="install and use chg wrapper in place of hg")
-    parser.add_argument("--with-chg", metavar="CHG",
-                        help="use specified chg wrapper in place of hg")
-    parser.add_argument("--ipv6", action="store_true",
-                        help="prefer IPv6 to IPv4 for network related tests")
-    parser.add_argument("-3", "--py3k-warnings", action="store_true",
-        help="enable Py3k warnings on Python 2.7+")
-    # This option should be deleted once test-check-py3-compat.t and other
-    # Python 3 tests run with Python 3.
-    parser.add_argument("--with-python3", metavar="PYTHON3",
-                        help="Python 3 interpreter (if running under Python 2)"
-                             " (TEMPORARY)")
-    parser.add_argument('--extra-config-opt', action="append",
-                        help='set the given config opt in the test hgrc')
-    parser.add_argument('--random', action="store_true",
-                        help='run tests in random order')
-    parser.add_argument('--profile-runner', action='store_true',
-                        help='run statprof on run-tests')
-    parser.add_argument('--allow-slow-tests', action='store_true',
-                        help='allow extremely slow tests')
-    parser.add_argument('--showchannels', action='store_true',
-                        help='show scheduling channels')
-    parser.add_argument('--known-good-rev',
-                        metavar="known_good_rev",
-                        help=("Automatically bisect any failures using this "
-                              "revision as a known-good revision."))
-    parser.add_argument('--bisect-repo',
+    selection.add_argument("-r", "--retest", action="store_true",
+        help = "retest failed tests")
+    selection.add_argument("--test-list", action="append",
+        help="read tests to run from the specified file")
+    selection.add_argument("--whitelist", action="append",
+        help="always run tests listed in the specified whitelist file")
+    selection.add_argument('tests', metavar='TESTS', nargs='*',
+                        help='Tests to run')
+
+    harness = parser.add_argument_group('Test Harness Behavior')
+    harness.add_argument('--bisect-repo',
                         metavar='bisect_repo',
                         help=("Path of a repo to bisect. Use together with "
                               "--known-good-rev"))
+    harness.add_argument("-d", "--debug", action="store_true",
+        help="debug mode: write output of test scripts to console"
+             " rather than capturing and diffing it (disables timeout)")
+    harness.add_argument("-f", "--first", action="store_true",
+        help="exit on the first test failure")
+    harness.add_argument("-i", "--interactive", action="store_true",
+        help="prompt to accept changed output")
+    harness.add_argument("-j", "--jobs", type=int,
+        help="number of jobs to run in parallel"
+             " (default: $%s or %d)" % defaults['jobs'])
+    harness.add_argument("--keep-tmpdir", action="store_true",
+        help="keep temporary directory after running tests")
+    harness.add_argument('--known-good-rev',
+                        metavar="known_good_rev",
+                        help=("Automatically bisect any failures using this "
+                              "revision as a known-good revision."))
+    harness.add_argument("--list-tests", action="store_true",
+        help="list tests instead of running them")
+    harness.add_argument("--loop", action="store_true",
+        help="loop tests repeatedly")
+    harness.add_argument('--random', action="store_true",
+        help='run tests in random order')
+    harness.add_argument("-p", "--port", type=int,
+        help="port on which servers should listen"
+             " (default: $%s or %d)" % defaults['port'])
+    harness.add_argument('--profile-runner', action='store_true',
+                        help='run statprof on run-tests')
+    harness.add_argument("-R", "--restart", action="store_true",
+        help="restart at last error")
+    harness.add_argument("--runs-per-test", type=int, dest="runs_per_test",
+        help="run each test N times (default=1)", default=1)
+    harness.add_argument("--shell",
+        help="shell to use (default: $%s or %s)" % defaults['shell'])
+    harness.add_argument('--showchannels', action='store_true',
+                        help='show scheduling channels')
+    harness.add_argument("--slowtimeout", type=int,
+        help="kill errant slow tests after SLOWTIMEOUT seconds"
+             " (default: $%s or %d)" % defaults['slowtimeout'])
+    harness.add_argument("-t", "--timeout", type=int,
+        help="kill errant tests after TIMEOUT seconds"
+             " (default: $%s or %d)" % defaults['timeout'])
+    harness.add_argument("--tmpdir",
+        help="run tests in the given temporary directory"
+             " (implies --keep-tmpdir)")
+    harness.add_argument("-v", "--verbose", action="store_true",
+        help="output verbose messages")
 
-    parser.add_argument('tests', metavar='TESTS', nargs='*',
-                        help='Tests to run')
+    hgconf = parser.add_argument_group('Mercurial Configuration')
+    hgconf.add_argument("--chg", action="store_true",
+        help="install and use chg wrapper in place of hg")
+    hgconf.add_argument("--compiler",
+        help="compiler to build with")
+    hgconf.add_argument('--extra-config-opt', action="append",
+        help='set the given config opt in the test hgrc')
+    hgconf.add_argument("-l", "--local", action="store_true",
+        help="shortcut for --with-hg=<testdir>/../hg, "
+             "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
+    hgconf.add_argument("--ipv6", action="store_true",
+        help="prefer IPv6 to IPv4 for network related tests")
+    hgconf.add_argument("--pure", action="store_true",
+        help="use pure Python code instead of C extensions")
+    hgconf.add_argument("-3", "--py3k-warnings", action="store_true",
+        help="enable Py3k warnings on Python 2.7+")
+    hgconf.add_argument("--with-chg", metavar="CHG",
+        help="use specified chg wrapper in place of hg")
+    hgconf.add_argument("--with-hg",
+        metavar="HG",
+        help="test using specified hg script rather than a "
+             "temporary installation")
+    # This option should be deleted once test-check-py3-compat.t and other
+    # Python 3 tests run with Python 3.
+    hgconf.add_argument("--with-python3", metavar="PYTHON3",
+        help="Python 3 interpreter (if running under Python 2)"
+             " (TEMPORARY)")
+
+    reporting = parser.add_argument_group('Results Reporting')
+    reporting.add_argument("-C", "--annotate", action="store_true",
+        help="output files annotated with coverage")
+    reporting.add_argument("--color", choices=["always", "auto", "never"],
+        default=os.environ.get('HGRUNTESTSCOLOR', 'auto'),
+        help="colorisation: always|auto|never (default: auto)")
+    reporting.add_argument("-c", "--cover", action="store_true",
+        help="print a test coverage report")
+    reporting.add_argument("-H", "--htmlcov", action="store_true",
+        help="create an HTML report of the coverage of the files")
+    reporting.add_argument("--json", action="store_true",
+        help="store test result data in 'report.json' file")
+    reporting.add_argument("--outputdir",
+        help="directory to write error logs to (default=test directory)")
+    reporting.add_argument("-n", "--nodiff", action="store_true",
+        help="skip showing test changes")
+    reporting.add_argument("-S", "--noskips", action="store_true",
+        help="don't report skip tests verbosely")
+    reporting.add_argument("--time", action="store_true",
+        help="time how long each test takes")
+    reporting.add_argument("--view",
+        help="external diff viewer")
+    reporting.add_argument("--xunit",
+        help="record xunit results at specified path")
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
