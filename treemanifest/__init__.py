@@ -73,7 +73,6 @@ from mercurial import (
     error,
     exchange,
     extensions,
-    hg,
     localrepo,
     manifest,
     mdiff,
@@ -113,7 +112,12 @@ from remotefilelog.historypack import (
     historypackstore,
     mutablehistorypack,
 )
-from remotefilelog import shallowrepo, shallowutil, wirepack
+from remotefilelog import (
+    connectionpool,
+    shallowrepo,
+    shallowutil,
+    wirepack,
+)
 from remotefilelog.repack import (
     _computeincrementaldatapack,
     _computeincrementalhistorypack,
@@ -255,6 +259,9 @@ def clientreposetup(repo):
             extensions.find('fastmanifest')
         except KeyError:
             raise error.Abort(_("cannot use treemanifest without fastmanifest"))
+
+    if not util.safehasattr(repo, 'connectionpool'):
+        repo.connectionpool = connectionpool.connectionpool(repo)
 
 def setuptreestores(repo, mfl):
     if repo.ui.configbool("treemanifest", "server"):
@@ -1070,7 +1077,12 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         fallbackpath = repo.ui.config('paths', 'default')
 
     start = time.time()
-    remote = hg.peer(repo.ui, {}, fallbackpath)
+    with repo.connectionpool.get(fallbackpath) as conn:
+        remote = conn.peer
+        _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories,
+                  start)
+
+def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
     if 'gettreepack' not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
     remote.ui.pushbuffer()
@@ -1100,14 +1112,16 @@ def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
         nodestr = '\n'.join(hexnodes[:10])
         if len(hexnodes) > 10:
             nodestr += '\n...'
+        # Give stderr some time to reach the client, so we can read it into the
+        # currently pushed ui buffer, instead of it randomly showing up in a
+        # future ui read.
+        time.sleep(0.1)
         raise error.Abort(_('unable to download the following trees from the '
                             'server:\n%s') % nodestr, hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:
-        # Manually destruct the peer, so we can collect any error output
-        remote._cleanup()
-
+        remote._readerr()
         output = remote.ui.popbuffer()
         if output:
             repo.ui.debug(output)

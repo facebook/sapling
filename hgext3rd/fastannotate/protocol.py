@@ -138,7 +138,7 @@ def annotatepeer(repo):
 
     if sharepeer and fileservice:
         ui.debug('fastannotate: using remotefilelog connection pool\n')
-        conn = fileservice.connpool.get(repo.fallbackpath)
+        conn = repo.connectionpool.get(repo.fallbackpath)
         peer = conn.peer
         stolen = True
     else:

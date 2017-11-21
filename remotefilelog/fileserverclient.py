@@ -22,7 +22,6 @@ from mercurial import (
 )
 
 from . import (
-    connectionpool,
     constants,
     shallowutil,
     wirepack,
@@ -258,7 +257,6 @@ class fileserverclient(object):
         if self.cacheprocess:
             self.cacheprocess = util.expandpath(self.cacheprocess)
 
-
         # This option causes remotefilelog to pass the full file path to the
         # cacheprocess instead of a hashed key.
         self.cacheprocesspasspath = ui.configbool(
@@ -267,7 +265,6 @@ class fileserverclient(object):
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.remotecache = cacheconnection()
-        self.connpool = connectionpool.connectionpool(repo)
 
     def setstore(self, datastore, historystore, writedata, writehistory):
         self.datastore = datastore
@@ -276,7 +273,7 @@ class fileserverclient(object):
         self.writehistory = writehistory
 
     def _connect(self):
-        return self.connpool.get(self.repo.fallbackpath)
+        return self.repo.connectionpool.get(self.repo.fallbackpath)
 
     def request(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
@@ -525,8 +522,6 @@ class fileserverclient(object):
 
         if self.remotecache.connected:
             self.remotecache.close()
-
-        self.connpool.close()
 
     def prefetch(self, fileids, force=False, fetchdata=True,
                  fetchhistory=False):
