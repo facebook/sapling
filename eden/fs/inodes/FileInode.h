@@ -229,7 +229,6 @@ class FileInode : public InodeBase {
     State(
         FileInode* inode,
         mode_t mode,
-        folly::File&& hash,
         const timespec& lastCheckoutTime,
         dev_t rdev = 0);
     ~State();
@@ -239,6 +238,25 @@ class FileInode : public InodeBase {
      * Call after construction and on every modification.
      */
     void checkInvariants();
+
+    /**
+     * Returns true if the file is materialized in the overlay.
+     */
+    bool isMaterialized() const {
+      return tag == MATERIALIZED_IN_OVERLAY;
+    }
+
+    /**
+     * Returns true if we're maintaining an open file.
+     */
+    bool isFileOpen() const {
+      return bool(file);
+    }
+
+    /**
+     * Close out the internal file descriptor.
+     */
+    void closeFile();
 
     Tag tag;
 
@@ -275,6 +293,11 @@ class FileInode : public InodeBase {
     folly::File file;
 
     /**
+     * Number of open file handles referencing us.
+     */
+    size_t openCount{0};
+
+    /**
      * Timestamps for FileInode.
      */
     InodeTimestamps timeStamps;
@@ -299,9 +322,24 @@ class FileInode : public InodeBase {
   void materializeInParent();
 
   /**
+   * Called as part of setting up an open file handle.
+   */
+  void fileHandleDidOpen();
+
+  /**
    * Called as part of shutting down an open handle.
    */
   void fileHandleDidClose();
+
+  /**
+   * Returns a file handle on the materialized file.
+   * The file handle may be a transient handle or may be our own
+   * local file instance, depending on whether we consider the
+   * file to be open or not.  Since the caller can not easily
+   * tell which is the case, the file should only be accessed
+   * while the caller holds the lock on the state.
+   */
+  folly::File getFile(FileInode::State& state) const;
 
   /**
    * Helper function for isSameAs().
@@ -317,11 +355,13 @@ class FileInode : public InodeBase {
    * Recompute the SHA1 content hash of the open file.
    */
   Hash recomputeAndStoreSha1(
-      const folly::Synchronized<FileInode::State>::LockedPtr& state);
+      const folly::Synchronized<FileInode::State>::LockedPtr& state,
+      folly::File& file);
 
   ObjectStore* getObjectStore() const;
   static void storeSha1(
       const folly::Synchronized<FileInode::State>::LockedPtr& state,
+      const folly::File& file,
       Hash sha1);
 
   fusell::BufVec read(size_t size, off_t off);

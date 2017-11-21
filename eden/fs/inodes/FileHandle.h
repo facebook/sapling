@@ -21,7 +21,7 @@ class LocalStore;
 class FileHandle : public fusell::FileHandle {
  public:
   explicit FileHandle(FileInodePtr inode);
-  ~FileHandle() override {}
+  ~FileHandle() override;
 
   fuse_ino_t getInodeNumber() override;
   folly::Future<fusell::Dispatcher::Attr> getattr() override;

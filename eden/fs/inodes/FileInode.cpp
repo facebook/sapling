@@ -46,10 +46,10 @@ FileInode::State::State(
     const folly::Optional<Hash>& h,
     const timespec& lastCheckoutTime)
     : mode(m), hash(h) {
-  if (!h.hasValue()) {
-    // File is materialized
+  if (!hash.hasValue()) {
+    // File is materialized; read out the timestamps but don't keep it open.
     auto filePath = inode->getLocalPath();
-    file = Overlay::openFile(
+    (void)Overlay::openFile(
         filePath.c_str(), Overlay::kHeaderIdentifierFile, timeStamps);
     tag = MATERIALIZED_IN_OVERLAY;
   } else {
@@ -63,12 +63,24 @@ FileInode::State::State(
 FileInode::State::State(
     FileInode* inode,
     mode_t m,
-    folly::File&& file,
     const timespec& lastCheckoutTime,
     dev_t rdev)
-    : tag(MATERIALIZED_IN_OVERLAY), mode(m), rdev(rdev), file(std::move(file)) {
+    : tag(MATERIALIZED_IN_OVERLAY), mode(m), rdev(rdev) {
   timeStamps.setTimestampValues(lastCheckoutTime);
   checkInvariants();
+
+  /*
+  From Adam in D6097090:
+
+  This isn't really related to your change here, but I think we have a small bug
+  here.
+
+  This code sets the in-memory file timestamps to the last checkout time, but
+  the callers have just called Overlay::createOverlayFile() which writes the
+  current time as the timestamps in the overlay file on disk. It seems like
+  these should be consistent rather than having different values in memory vs on
+  disk. The last checkout time does seem like the right value to use.
+  */
 }
 
 void FileInode::State::State::checkInvariants() {
@@ -100,11 +112,40 @@ void FileInode::State::State::checkInvariants() {
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
       CHECK(!blob);
-      CHECK(file);
+      if (openCount == 0) {
+        // file is lazily set, so the only interesting assertion is
+        // that it's not open if openCount is zero.
+        CHECK(!file);
+      }
       return;
   }
 
   XLOG(FATAL) << "Unexpected tag value: " << tag;
+}
+
+void FileInode::State::closeFile() {
+  file.close();
+}
+
+folly::File FileInode::getFile(FileInode::State& state) const {
+  DCHECK(state.isMaterialized())
+      << "must only be called for materialized files";
+
+  if (state.openCount > 0 && !state.isFileOpen()) {
+    // When opening a file handle to the file, the openCount is incremented but
+    // the overlay file is not actually opened.  Instead, it's opened lazily
+    // here.
+    state.file = folly::File(getLocalPath().c_str(), O_RDWR);
+  }
+
+  if (state.isFileOpen()) {
+    // Return a non-owning copy of the file object that we already have
+    return folly::File(state.file.fd(), /*ownsFd=*/false);
+  }
+
+  // We don't have and shouldn't keep a file around, so we return
+  // a File temporary instead.
+  return folly::File(getLocalPath().c_str(), O_RDWR);
 }
 
 /*
@@ -124,10 +165,19 @@ std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
   auto inode = FileInodePtr::makeNew(
       ino, parentInode, name, mode, std::move(file), rdev);
 
-  SCOPE_EXIT {
-    inode->fileHandleDidClose();
-  };
-  return std::make_tuple(inode, std::make_shared<FileHandle>(inode));
+  // This next line increments openCount.
+  auto fileHandle = std::make_shared<FileHandle>(inode);
+
+  // It would be nice to perform this move under the same wlock that we
+  // use in FileHandle::FileHandle when it calls FileInode::fileHandleDidOpen,
+  // but it feels like a lot of impact in other classes to propagate that
+  // through and around.
+  auto state = inode->state_.wlock();
+  state->file = std::move(file);
+  DCHECK_EQ(state->openCount, 1)
+      << "open count cannot be anything other than 1";
+
+  return std::make_tuple(inode, fileHandle);
 }
 
 // The FileInode is in NOT_LOADED or MATERIALIZED_IN_OVERLAY state.
@@ -158,7 +208,6 @@ FileInode::FileInode(
           folly::in_place,
           this,
           mode,
-          std::move(file),
           getMount()->getLastCheckoutTime(),
           rdev) {}
 
@@ -198,12 +247,13 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
 
         auto state = self->state_.wlock();
         CHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
-            << "MUST have a materialized file at this point";
+            << "Must have a file in the overlay at this point";
+        auto file = self->getFile(*state);
 
         // Set the size of the file when FUSE_SET_ATTR_SIZE is set
         if (to_set & FUSE_SET_ATTR_SIZE) {
-          checkUnixError(ftruncate(
-              state->file.fd(), attr.st_size + Overlay::kHeaderLength));
+          checkUnixError(
+              ftruncate(file.fd(), attr.st_size + Overlay::kHeaderLength));
         }
 
         if (to_set & FUSE_SET_ATTR_MODE) {
@@ -223,7 +273,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
         // when FUSE_SET_ATTR_SIZE flag is set but when the flag is not set we
         // have to return the correct size of the file even if some size is sent
         // in attr.st.st_size.
-        checkUnixError(fstat(state->file.fd(), &result.st));
+        checkUnixError(fstat(file.fd(), &result.st));
         result.st.st_ino = self->getNodeId();
         result.st.st_size -= Overlay::kHeaderLength;
         result.st.st_atim = state->timeStamps.atime;
@@ -255,11 +305,21 @@ folly::Future<std::string> FileInode::readlink() {
   return readAll();
 }
 
+void FileInode::fileHandleDidOpen() {
+  // Don't immediately open the file when transitioning from 0 to 1. Open it
+  // when getFile() is called.
+  state_.wlock()->openCount += 1;
+}
+
 void FileInode::fileHandleDidClose() {
-  {
-    // TODO(T20329170): We might need this function in the Future if we decide
-    // to write in memory timestamps to overlay file on
-    // file handle close.
+  auto state = state_.wlock();
+  DCHECK_GT(state->openCount, 0);
+  if (--state->openCount == 0) {
+    // TODO: Before closing the file handle, it might make sense to write
+    // in-memory timestamps into the overlay, even if the inode remains in
+    // memory. This would ensure timestamps persist even if the edenfs process
+    // crashes or otherwise exits without unloading all inodes.
+    state->closeFile();
   }
 }
 
@@ -319,19 +379,6 @@ folly::Optional<Hash> FileInode::getBlobHash() const {
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     const struct fuse_file_info& fi) {
-// TODO: We currently should ideally call fileHandleDidClose() if we fail
-// to create a FileHandle.  It's currently slightly tricky to do this right
-// on all code paths.
-//
-// I think it will be better in the long run to just refactor how we do this.
-// fileHandleDidClose() currently uses std::shared_ptr::unique(), which is
-// deprecated in future versions of C++.
-#if 0
-  SCOPE_EXIT {
-    fileHandleDidClose();
-  };
-#endif
-
   {
     // TODO: Since the type component of the mode is immutable, it could be
     // moved out of the locked state, obviating the need to acquire a lock
@@ -410,14 +457,14 @@ Future<Hash> FileInode::getSha1(bool failIfSymlink) {
           ->getBlobMetadata(state->hash.value())
           .then([](const BlobMetadata& metadata) { return metadata.sha1; });
     case State::MATERIALIZED_IN_OVERLAY:
-      // If the file is materialized.
+      auto file = getFile(*state);
       if (state->sha1Valid) {
-        auto shaStr = fgetxattr(state->file.fd(), kXattrSha1);
+        auto shaStr = fgetxattr(file.fd(), kXattrSha1);
         if (!shaStr.empty()) {
           return Hash(shaStr);
         }
       }
-      return recomputeAndStoreSha1(state);
+      return recomputeAndStoreSha1(state, file);
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
@@ -428,11 +475,12 @@ folly::Future<struct stat> FileInode::stat() {
     auto st = self->getMount()->initStatData();
     st.st_nlink = 1;
 
-    auto state = self->state_.rlock();
+    auto state = self->state_.wlock();
 
     if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+      auto file = self->getFile(*state);
       // We are calling fstat only to get the size of the file.
-      checkUnixError(fstat(state->file.fd(), &st));
+      checkUnixError(fstat(file.fd(), &st));
 
       if (st.st_size < Overlay::kHeaderLength) {
         auto filePath = self->getLocalPath();
@@ -473,15 +521,15 @@ void FileInode::flush(uint64_t /* lock_owner */) {
   // This should either not recompute SHA-1 here or instead remember if the
   // prior SHA-1 was actually used.
   auto state = state_.wlock();
-  if (state->file && !state->sha1Valid) {
-    recomputeAndStoreSha1(state);
+  if (state->isFileOpen() && !state->sha1Valid) {
+    recomputeAndStoreSha1(state, state->file);
   }
   state->checkInvariants();
 }
 
 void FileInode::fsync(bool datasync) {
   auto state = state_.wlock();
-  if (!state->file) {
+  if (!state->isFileOpen()) {
     // If we don't have an overlay file then we have nothing to sync.
     return;
   }
@@ -499,33 +547,28 @@ void FileInode::fsync(bool datasync) {
   // This should either not recompute SHA-1 here or instead remember if the
   // prior SHA-1 was actually used.
   if (!state->sha1Valid) {
-    recomputeAndStoreSha1(state);
+    recomputeAndStoreSha1(state, state->file);
   }
 }
 
 std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
     size_t size,
     off_t off) {
-  SCOPE_SUCCESS {
-    // We do not want to have a write lock on state_ during the entire io
-    // operation(read) for updating in memory timeStamps as it will block
-    // concurrent reads. Also, we want to update the timeStamps after the read
-    // operation, so in order to achieve the above two, we are using
-    // SCOPE_SUCCESS macro here
+  // It's potentially possible here to optimize a fast path here only requiring
+  // a read lock.  However, since a write lock is required to update atime and
+  // cache the file handle in the case of a materialized file, do the simple
+  // thing and just acquire a write lock.
 
-    // Update atime on read systemcall.
-    auto state = state_.wlock();
+  auto state = state_.wlock();
+  SCOPE_SUCCESS {
     clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
   };
-  auto state = state_.rlock();
 
-  if (state->file) {
+  if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+    auto file = getFile(*state);
     auto buf = folly::IOBuf::createCombined(size);
     auto res = ::pread(
-        state->file.fd(),
-        buf->writableBuffer(),
-        size,
-        off + Overlay::kHeaderLength);
+        file.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
 
     checkUnixError(res);
     buf->append(res);
@@ -544,6 +587,7 @@ std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
 
   std::unique_ptr<folly::IOBuf> result;
   cursor.cloneAtMost(result, size);
+
   return result;
 }
 
@@ -555,9 +599,10 @@ folly::Future<std::string> FileInode::readAll() {
     std::string result;
     switch (state->tag) {
       case State::MATERIALIZED_IN_OVERLAY: {
-        auto rc = lseek(state->file.fd(), Overlay::kHeaderLength, SEEK_SET);
+        auto file = self->getFile(*state);
+        auto rc = lseek(file.fd(), Overlay::kHeaderLength, SEEK_SET);
         folly::checkUnixError(rc, "unable to seek in materialized FileInode");
-        folly::readFile(state->file.fd(), result);
+        folly::readFile(file.fd(), result);
         break;
       }
       case State::BLOB_LOADED: {
@@ -585,15 +630,16 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
 size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
   auto state = state_.wlock();
 
-  if (!state->file) {
+  if (State::MATERIALIZED_IN_OVERLAY != state->tag) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
   }
+  auto file = getFile(*state);
 
   state->sha1Valid = false;
   auto vec = buf.getIov();
   auto xfer = ::pwritev(
-      state->file.fd(), vec.data(), vec.size(), off + Overlay::kHeaderLength);
+      file.fd(), vec.data(), vec.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
@@ -606,14 +652,15 @@ size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
 size_t FileInode::write(folly::StringPiece data, off_t off) {
   auto state = state_.wlock();
 
-  if (!state->file) {
+  if (State::MATERIALIZED_IN_OVERLAY != state->tag) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
   }
+  auto file = getFile(*state);
 
   state->sha1Valid = false;
   auto xfer = ::pwrite(
-      state->file.fd(), data.data(), data.size(), off + Overlay::kHeaderLength);
+      file.fd(), data.data(), data.size(), off + Overlay::kHeaderLength);
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
@@ -786,7 +833,7 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     auto metadata =
         self->getObjectStore()->getBlobMetadata(state->hash.value());
     if (metadata.isReady()) {
-      self->storeSha1(state, metadata.value().sha1);
+      self->storeSha1(state, file, metadata.value().sha1);
     } else {
       // Leave the SHA-1 attribute dirty - it is not very likely that a file
       // will be opened for writing, closed without changing, and then have its
@@ -796,10 +843,12 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
       // the file out of the overlay later.
     }
 
-    // Update the FileInode to indicate that we are materialized now
-    state->file = std::move(file);
+    // Update the FileInode to indicate that we are materialized now.
     state->blob.reset();
     state->hash = folly::none;
+    // Do not cache the file in State - it will be reopened when a FileHandle
+    // needs it.
+    // state->file = std::move(file);
     state->tag = State::MATERIALIZED_IN_OVERLAY;
   });
 }
@@ -815,9 +864,11 @@ void FileInode::materializeAndTruncate() {
       state->checkInvariants();
     };
 
-    if (state->file) { // Materialized already.
+    folly::File file;
+    if (state->isMaterialized()) { // Materialized already.
+      file = getFile(*state);
       state->sha1Valid = false;
-      checkUnixError(ftruncate(state->file.fd(), Overlay::kHeaderLength));
+      checkUnixError(ftruncate(file.fd(), Overlay::kHeaderLength));
       // The timestamps in the overlay header will get updated when the inode is
       // unloaded.
     } else {
@@ -832,7 +883,7 @@ void FileInode::materializeAndTruncate() {
       // returned by the below openFile function as we just wrote these
       // timestamps in to overlay using writeFileAtomic.
       InodeTimestamps timeStamps;
-      auto file = Overlay::openFile(
+      file = Overlay::openFile(
           filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
 
       // Everything below here in the scope should be noexcept to ensure that
@@ -849,11 +900,13 @@ void FileInode::materializeAndTruncate() {
       }
 
       state->hash.reset();
-      state->file = std::move(file);
+      // Do not cache the file in State - it will be reopened when a FileHandle
+      // needs it.
+      // state->file = std::move(file);
       state->sha1Valid = false;
       state->tag = State::MATERIALIZED_IN_OVERLAY;
     }
-    storeSha1(state, Hash::sha1(ByteRange{}));
+    storeSha1(state, file, Hash::sha1(ByteRange{}));
   });
 
   // Fulfill outside of the lock.
@@ -871,7 +924,8 @@ ObjectStore* FileInode::getObjectStore() const {
 }
 
 Hash FileInode::recomputeAndStoreSha1(
-    const folly::Synchronized<FileInode::State>::LockedPtr& state) {
+    const folly::Synchronized<FileInode::State>::LockedPtr& state,
+    folly::File& file) {
   uint8_t buf[8192];
   off_t off = Overlay::kHeaderLength;
   SHA_CTX ctx;
@@ -883,7 +937,7 @@ Hash FileInode::recomputeAndStoreSha1(
     // and while we serialize the requests to FileData, it seems
     // like a good property of this function to avoid changing that
     // state.
-    auto len = folly::preadNoInt(state->file.fd(), buf, sizeof(buf), off);
+    auto len = folly::preadNoInt(file.fd(), buf, sizeof(buf), off);
     if (len == 0) {
       break;
     }
@@ -897,15 +951,16 @@ Hash FileInode::recomputeAndStoreSha1(
   uint8_t digest[SHA_DIGEST_LENGTH];
   SHA1_Final(digest, &ctx);
   auto sha1 = Hash(folly::ByteRange(digest, sizeof(digest)));
-  storeSha1(state, sha1);
+  storeSha1(state, file, sha1);
   return sha1;
 }
 
 void FileInode::storeSha1(
     const folly::Synchronized<FileInode::State>::LockedPtr& state,
+    const folly::File& file,
     Hash sha1) {
   try {
-    fsetxattr(state->file.fd(), kXattrSha1, sha1.toString());
+    fsetxattr(file.fd(), kXattrSha1, sha1.toString());
     state->sha1Valid = true;
   } catch (const std::exception& ex) {
     // If something goes wrong storing the attribute just log a warning
@@ -933,9 +988,19 @@ folly::Future<folly::Unit> FileInode::prefetch() {
 
 void FileInode::updateOverlayHeader() const {
   auto state = state_.wlock();
-  if (state->file) {
-    // File is a materialized file
-    Overlay::updateTimestampToHeader(state->file.fd(), state->timeStamps);
+  if (state->isMaterialized()) {
+    int fd;
+    folly::File temporaryHandle;
+    if (state->isFileOpen()) {
+      fd = state->file.fd();
+    } else {
+      // We don't have and shouldn't keep a file around, so we return
+      // a temporary file instead.
+      temporaryHandle = folly::File(getLocalPath().c_str(), O_RDWR);
+      fd = temporaryHandle.fd();
+    }
+
+    Overlay::updateTimestampToHeader(fd, state->timeStamps);
   }
 }
 } // namespace eden
