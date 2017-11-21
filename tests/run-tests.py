@@ -1105,9 +1105,9 @@ class Test(unittest.TestCase):
         hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))
 
         for opt in self._extraconfigopts:
-            section, key = opt.split('.', 1)
-            assert '=' in key, ('extra config opt %s must '
-                                'have an = for assignment' % opt)
+            section, key = opt.encode('utf-8').split(b'.', 1)
+            assert b'=' in key, ('extra config opt %s must '
+                                 'have an = for assignment' % opt)
             hgrc.write(b'[%s]\n%s\n' % (section, key))
         hgrc.close()
 

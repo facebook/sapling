@@ -1566,3 +1566,14 @@ Test automatic pattern replacement
   # Ran 1 tests, 0 skipped, 1 failed.
   python hash seed: * (glob)
   [1]
+
+--extra-config-opt works
+
+  $ cat << EOF >> test-config-opt.t
+  >   $ hg init test-config-opt
+  >   $ hg -R test-config-opt purge
+  > EOF
+
+  $ rt --extra-config-opt extensions.purge= test-config-opt.t
+  .
+  # Ran 1 tests, 0 skipped, 0 failed.
