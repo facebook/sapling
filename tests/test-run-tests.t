@@ -32,8 +32,7 @@ error paths
 #if execbit
   $ touch hg
   $ run-tests.py --with-hg=./hg
-  Usage: run-tests.py [options] [tests]
-  
+  usage: run-tests.py [options] [tests]
   run-tests.py: error: --with-hg must specify an executable hg script
   [2]
   $ rm hg
@@ -1383,8 +1382,7 @@ support bisecting a separate repo
   [1]
 
   $ rt --bisect-repo=../test-bisect test-bisect-dependent.t
-  Usage: run-tests.py [options] [tests]
-  
+  usage: run-tests.py [options] [tests]
   run-tests.py: error: --bisect-repo cannot be used without --known-good-rev
   [2]
 

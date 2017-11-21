@@ -45,11 +45,11 @@
 
 from __future__ import absolute_import, print_function
 
+import argparse
 import difflib
 import distutils.version as version
 import errno
 import json
-import optparse
 import os
 import random
 import re
@@ -296,122 +296,125 @@ def parsettestcases(path):
 
 def getparser():
     """Obtain the OptionParser used by the CLI."""
-    parser = optparse.OptionParser("%prog [options] [tests]")
+    parser = argparse.ArgumentParser(usage='%(prog)s [options] [tests]')
 
     # keep these sorted
-    parser.add_option("--blacklist", action="append",
+    parser.add_argument("--blacklist", action="append",
         help="skip tests listed in the specified blacklist file")
-    parser.add_option("--whitelist", action="append",
+    parser.add_argument("--whitelist", action="append",
         help="always run tests listed in the specified whitelist file")
-    parser.add_option("--test-list", action="append",
-                      help="read tests to run from the specified file")
-    parser.add_option("--changed", type="string",
+    parser.add_argument("--test-list", action="append",
+        help="read tests to run from the specified file")
+    parser.add_argument("--changed",
         help="run tests that are changed in parent rev or working directory")
-    parser.add_option("-C", "--annotate", action="store_true",
+    parser.add_argument("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
-    parser.add_option("-c", "--cover", action="store_true",
+    parser.add_argument("-c", "--cover", action="store_true",
         help="print a test coverage report")
-    parser.add_option("--color", choices=["always", "auto", "never"],
-                      default=os.environ.get('HGRUNTESTSCOLOR', 'auto'),
-                      help="colorisation: always|auto|never (default: auto)")
-    parser.add_option("-d", "--debug", action="store_true",
+    parser.add_argument("--color", choices=["always", "auto", "never"],
+                        default=os.environ.get('HGRUNTESTSCOLOR', 'auto'),
+                        help="colorisation: always|auto|never (default: auto)")
+    parser.add_argument("-d", "--debug", action="store_true",
         help="debug mode: write output of test scripts to console"
              " rather than capturing and diffing it (disables timeout)")
-    parser.add_option("-f", "--first", action="store_true",
+    parser.add_argument("-f", "--first", action="store_true",
         help="exit on the first test failure")
-    parser.add_option("-H", "--htmlcov", action="store_true",
+    parser.add_argument("-H", "--htmlcov", action="store_true",
         help="create an HTML report of the coverage of the files")
-    parser.add_option("-i", "--interactive", action="store_true",
+    parser.add_argument("-i", "--interactive", action="store_true",
         help="prompt to accept changed output")
-    parser.add_option("-j", "--jobs", type="int",
+    parser.add_argument("-j", "--jobs", type=int,
         help="number of jobs to run in parallel"
              " (default: $%s or %d)" % defaults['jobs'])
-    parser.add_option("--keep-tmpdir", action="store_true",
+    parser.add_argument("--keep-tmpdir", action="store_true",
         help="keep temporary directory after running tests")
-    parser.add_option("-k", "--keywords",
+    parser.add_argument("-k", "--keywords",
         help="run tests matching keywords")
-    parser.add_option("--list-tests", action="store_true",
+    parser.add_argument("--list-tests", action="store_true",
         help="list tests instead of running them")
-    parser.add_option("-l", "--local", action="store_true",
+    parser.add_argument("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg, "
              "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
-    parser.add_option("--loop", action="store_true",
+    parser.add_argument("--loop", action="store_true",
         help="loop tests repeatedly")
-    parser.add_option("--runs-per-test", type="int", dest="runs_per_test",
+    parser.add_argument("--runs-per-test", type=int, dest="runs_per_test",
         help="run each test N times (default=1)", default=1)
-    parser.add_option("-n", "--nodiff", action="store_true",
+    parser.add_argument("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
-    parser.add_option("--outputdir", type="string",
+    parser.add_argument("--outputdir",
         help="directory to write error logs to (default=test directory)")
-    parser.add_option("-p", "--port", type="int",
+    parser.add_argument("-p", "--port", type=int,
         help="port on which servers should listen"
              " (default: $%s or %d)" % defaults['port'])
-    parser.add_option("--compiler", type="string",
+    parser.add_argument("--compiler",
         help="compiler to build with")
-    parser.add_option("--pure", action="store_true",
+    parser.add_argument("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
-    parser.add_option("-R", "--restart", action="store_true",
+    parser.add_argument("-R", "--restart", action="store_true",
         help="restart at last error")
-    parser.add_option("-r", "--retest", action="store_true",
+    parser.add_argument("-r", "--retest", action="store_true",
         help="retest failed tests")
-    parser.add_option("-S", "--noskips", action="store_true",
+    parser.add_argument("-S", "--noskips", action="store_true",
         help="don't report skip tests verbosely")
-    parser.add_option("--shell", type="string",
+    parser.add_argument("--shell",
         help="shell to use (default: $%s or %s)" % defaults['shell'])
-    parser.add_option("-t", "--timeout", type="int",
+    parser.add_argument("-t", "--timeout", type=int,
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
-    parser.add_option("--slowtimeout", type="int",
+    parser.add_argument("--slowtimeout", type=int,
         help="kill errant slow tests after SLOWTIMEOUT seconds"
              " (default: $%s or %d)" % defaults['slowtimeout'])
-    parser.add_option("--time", action="store_true",
+    parser.add_argument("--time", action="store_true",
         help="time how long each test takes")
-    parser.add_option("--json", action="store_true",
-                      help="store test result data in 'report.json' file")
-    parser.add_option("--tmpdir", type="string",
+    parser.add_argument("--json", action="store_true",
+        help="store test result data in 'report.json' file")
+    parser.add_argument("--tmpdir",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
-    parser.add_option("-v", "--verbose", action="store_true",
+    parser.add_argument("-v", "--verbose", action="store_true",
         help="output verbose messages")
-    parser.add_option("--xunit", type="string",
-                      help="record xunit results at specified path")
-    parser.add_option("--view", type="string",
+    parser.add_argument("--xunit",
+        help="record xunit results at specified path")
+    parser.add_argument("--view",
         help="external diff viewer")
-    parser.add_option("--with-hg", type="string",
+    parser.add_argument("--with-hg",
         metavar="HG",
         help="test using specified hg script rather than a "
              "temporary installation")
-    parser.add_option("--chg", action="store_true",
-                      help="install and use chg wrapper in place of hg")
-    parser.add_option("--with-chg", metavar="CHG",
-                      help="use specified chg wrapper in place of hg")
-    parser.add_option("--ipv6", action="store_true",
-                      help="prefer IPv6 to IPv4 for network related tests")
-    parser.add_option("-3", "--py3k-warnings", action="store_true",
+    parser.add_argument("--chg", action="store_true",
+                        help="install and use chg wrapper in place of hg")
+    parser.add_argument("--with-chg", metavar="CHG",
+                        help="use specified chg wrapper in place of hg")
+    parser.add_argument("--ipv6", action="store_true",
+                        help="prefer IPv6 to IPv4 for network related tests")
+    parser.add_argument("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.7+")
     # This option should be deleted once test-check-py3-compat.t and other
     # Python 3 tests run with Python 3.
-    parser.add_option("--with-python3", metavar="PYTHON3",
-                      help="Python 3 interpreter (if running under Python 2)"
-                           " (TEMPORARY)")
-    parser.add_option('--extra-config-opt', action="append",
-                      help='set the given config opt in the test hgrc')
-    parser.add_option('--random', action="store_true",
-                      help='run tests in random order')
-    parser.add_option('--profile-runner', action='store_true',
-                      help='run statprof on run-tests')
-    parser.add_option('--allow-slow-tests', action='store_true',
-                      help='allow extremely slow tests')
-    parser.add_option('--showchannels', action='store_true',
-                      help='show scheduling channels')
-    parser.add_option('--known-good-rev', type="string",
-                      metavar="known_good_rev",
-                      help=("Automatically bisect any failures using this "
-                            "revision as a known-good revision."))
-    parser.add_option('--bisect-repo', type="string",
-                      metavar='bisect_repo',
-                      help=("Path of a repo to bisect. Use together with "
-                            "--known-good-rev"))
+    parser.add_argument("--with-python3", metavar="PYTHON3",
+                        help="Python 3 interpreter (if running under Python 2)"
+                             " (TEMPORARY)")
+    parser.add_argument('--extra-config-opt', action="append",
+                        help='set the given config opt in the test hgrc')
+    parser.add_argument('--random', action="store_true",
+                        help='run tests in random order')
+    parser.add_argument('--profile-runner', action='store_true',
+                        help='run statprof on run-tests')
+    parser.add_argument('--allow-slow-tests', action='store_true',
+                        help='allow extremely slow tests')
+    parser.add_argument('--showchannels', action='store_true',
+                        help='show scheduling channels')
+    parser.add_argument('--known-good-rev',
+                        metavar="known_good_rev",
+                        help=("Automatically bisect any failures using this "
+                              "revision as a known-good revision."))
+    parser.add_argument('--bisect-repo',
+                        metavar='bisect_repo',
+                        help=("Path of a repo to bisect. Use together with "
+                              "--known-good-rev"))
+
+    parser.add_argument('tests', metavar='TESTS', nargs='*',
+                        help='Tests to run')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -421,7 +424,7 @@ def getparser():
 
 def parseargs(args, parser):
     """Parse arguments with our OptionParser and validate results."""
-    (options, args) = parser.parse_args(args)
+    options = parser.parse_args(args)
 
     # jython is always pure
     if 'java' in sys.platform or '__pypy__' in sys.modules:
@@ -550,7 +553,7 @@ def parseargs(args, parser):
     if options.showchannels:
         options.nodiff = True
 
-    return (options, args)
+    return options
 
 def rename(src, dst):
     """Like os.rename(), trade atomicity and opened files friendliness
@@ -2298,18 +2301,16 @@ class TestRunner(object):
         oldmask = os.umask(0o22)
         try:
             parser = parser or getparser()
-            options, args = parseargs(args, parser)
-            # positional arguments are paths to test files to run, so
-            # we make sure they're all bytestrings
-            args = [_bytespath(a) for a in args]
+            options = parseargs(args, parser)
+            tests = [_bytespath(a) for a in options.tests]
             if options.test_list is not None:
                 for listfile in options.test_list:
                     with open(listfile, 'rb') as f:
-                        args.extend(t for t in f.read().splitlines() if t)
+                        tests.extend(t for t in f.read().splitlines() if t)
             self.options = options
 
             self._checktools()
-            testdescs = self.findtests(args)
+            testdescs = self.findtests(tests)
             if options.profile_runner:
                 import statprof
                 statprof.start()
