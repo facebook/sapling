@@ -86,12 +86,13 @@ def _branchmapupdate(orig, self, repo, revgen):
         return orig(self, repo, revgen)
 
     cl = repo.changelog
+    tonode = cl.node
 
     # Since we have no branches, the default branch heads are equal to
-    # cl.headrevs().
-    branchheads = sorted(cl.headrevs())
+    # cl.headrevs(). Note: cl.headrevs() is already sorted.
+    branchheads = cl.headrevs()
 
-    self['default'] = [cl.node(rev) for rev in branchheads]
+    self['default'] = [tonode(rev) for rev in branchheads]
     tiprev = branchheads[-1]
     if tiprev > self.tiprev:
         self.tipnode = cl.node(tiprev)
