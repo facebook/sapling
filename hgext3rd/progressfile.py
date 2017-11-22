@@ -119,7 +119,7 @@ def uisetup(ui):
         @util.propertycache
         def _progbar(self):
             if self.config('progress', 'statefile'):
-                return  progbarwithfile(self)
+                return progbarwithfile(self)
             else:
                 return super(progressfileui, self)._progbar
     ui.__class__ = progressfileui
