@@ -297,12 +297,12 @@ function format(str, replacements) {
 }
 
 function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
-    xfr = new XMLHttpRequest();
-    xfr.onreadystatechange = function() {
-        if (xfr.readyState === 4) {
+    xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
             try {
-                if (xfr.status === 200) {
-                    onsuccess(xfr.responseText);
+                if (xhr.status === 200) {
+                    onsuccess(xhr.responseText);
                 } else {
                     throw 'server error';
                 }
@@ -314,11 +314,11 @@ function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
         }
     };
 
-    xfr.open(method, url);
-    xfr.overrideMimeType("text/xhtml; charset=" + document.characterSet.toLowerCase());
-    xfr.send();
+    xhr.open(method, url);
+    xhr.overrideMimeType("text/xhtml; charset=" + document.characterSet.toLowerCase());
+    xhr.send();
     onstart();
-    return xfr;
+    return xhr;
 }
 
 function removeByClassName(className) {
