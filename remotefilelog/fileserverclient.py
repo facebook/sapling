@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import hashlib, os, time, io, struct
 import itertools
+import threading
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
@@ -216,7 +217,7 @@ def _getfilesbatch(
             receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), file_, node)
             progresstick()
 
-def _getfiles(
+def _getfiles_optimistic(
     remote, receivemissing, progresstick, missed, idmap, step):
     remote._callstream("getfiles")
     i = 0
@@ -242,6 +243,34 @@ def _getfiles(
             receivemissing(pipei, file, versionid)
             progresstick()
 
+    # End the command
+    pipeo.write('\n')
+    pipeo.flush()
+
+def _getfiles_threaded(
+    remote, receivemissing, progresstick, missed, idmap, step):
+    remote._callstream("getfiles")
+    pipeo = shallowutil.trygetattr(remote, ('_pipeo', 'pipeo'))
+    pipei = shallowutil.trygetattr(remote, ('_pipei', 'pipei'))
+
+    def writer():
+        for missingid in missed:
+            versionid = missingid[-40:]
+            file = idmap[missingid]
+            sshrequest = "%s%s\n" % (versionid, file)
+            pipeo.write(sshrequest)
+        pipeo.flush()
+    writerthread = threading.Thread(target=writer)
+    writerthread.daemon = True
+    writerthread.start()
+
+    for missingid in missed:
+        versionid = missingid[-40:]
+        file = idmap[missingid]
+        receivemissing(pipei, file, versionid)
+        progresstick()
+
+    writerthread.join()
     # End the command
     pipeo.write('\n')
     pipeo.flush()
@@ -362,6 +391,13 @@ class fileserverclient(object):
                                                   'servers')
                             step = self.ui.configint('remotefilelog',
                                                      'getfilesstep', 10000)
+                            getfilestype = self.ui.config('remotefilelog',
+                                                          'getfilestype',
+                                                          'optimistic')
+                            if getfilestype == 'threaded':
+                                _getfiles = _getfiles_threaded
+                            else:
+                                _getfiles = _getfiles_optimistic
                             _getfiles(remote, self.receivemissing, progresstick,
                                       missed, idmap, step)
                         elif remote.capable("getfile"):
