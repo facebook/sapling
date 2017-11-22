@@ -306,7 +306,7 @@ Some tests for hgweb in an empty repository
   var graph = new Graph();
   graph.scale(39);
   
-  graph.vertex = function(x, y, color, parity, cur) {
+  graph.vertex = function(x, y, radius, color, parity, cur) {
   	
   	this.ctx.beginPath();
   	color = this.setColor(color, 0.25, 0.75);

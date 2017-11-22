@@ -94,6 +94,7 @@ function Graph() {
 
 		var backgrounds = '';
 		var nodedata = '';
+		var line, start, end, color, x, y, x0, y0, x1, y1, column, radius;
 
 		for (var i = 0; i < data.length; i++) {
 
@@ -146,7 +147,7 @@ function Graph() {
 			radius = this.box_size / 8;
 			x = this.cell[0] + this.box_size * column + this.box_size / 2;
 			y = this.bg[1] - this.bg_height / 2;
-			var add = this.vertex(x, y, color, parity, cur);
+			var add = this.vertex(x, y, radius, color, parity, cur);
 			backgrounds += add[0];
 			nodedata += add[1];
 
@@ -297,7 +298,7 @@ function format(str, replacements) {
 }
 
 function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
-    xhr = new XMLHttpRequest();
+    var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4) {
             try {
@@ -344,8 +345,8 @@ function ajaxScrollInit(urlFormat,
                         containerSelector,
                         messageFormat,
                         mode) {
-    updateInitiated = false;
-    container = document.querySelector(containerSelector);
+    var updateInitiated = false;
+    var container = document.querySelector(containerSelector);
 
     function scrollHandler() {
         if (updateInitiated) {
@@ -382,6 +383,7 @@ function ajaxScrollInit(urlFormat,
                 },
                 function onsuccess(htmlText) {
                     if (mode === 'graph') {
+                        var graph = window.graph;
                         var sizes = htmlText.match(/^\s*<canvas id="graph" width="(\d+)" height="(\d+)"><\/canvas>$/m);
                         var addWidth = sizes[1];
                         var addHeight = sizes[2];
@@ -468,7 +470,7 @@ function renderDiffOptsForm() {
             continue;
         }
 
-        currentValue = form.getAttribute("data-" + key);
+        var currentValue = form.getAttribute("data-" + key);
         checkbox.checked = currentValue !== "0";
 
         // ignorews implies ignorewsamount and ignorewseol.
