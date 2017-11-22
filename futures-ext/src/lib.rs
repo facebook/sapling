@@ -35,7 +35,7 @@ pub mod encode;
 
 pub use frame::{FramedStream, ReadLeadingBuffer};
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
-pub use stream_wrappers::{BoxStreamWrapper, StreamWrapper, TakeWhile};
+pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 
 /// Map `Item` and `Error` to `()`
 ///
@@ -139,6 +139,13 @@ pub trait StreamExt: Stream {
         Self: Sized,
     {
         stream_wrappers::take_while::new(self, pred)
+    }
+
+    fn collect_no_consume(self) -> CollectNoConsume<Self>
+    where
+        Self: Sized,
+    {
+        stream_wrappers::collect_no_consume::new(self)
     }
 
     fn encode<Enc>(self, encoder: Enc) -> encode::LayeredEncoder<Self, Enc>
