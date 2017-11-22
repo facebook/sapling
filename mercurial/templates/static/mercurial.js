@@ -95,7 +95,7 @@ function Graph() {
 		var backgrounds = '';
 		var nodedata = '';
 
-		for (var i in data) {
+		for (var i = 0; i < data.length; i++) {
 
 			var parity = i % 2;
 			this.cell[1] += this.bg_height;
@@ -107,7 +107,7 @@ function Graph() {
 			var fold = false;
 
 			var prevWidth = this.ctx.lineWidth;
-			for (var j in edges) {
+			for (var j = 0; j < edges.length; j++) {
 
 				line = edges[j];
 				start = line[0];
@@ -227,6 +227,7 @@ function process_dates(parentSelector){
 		}
 
 		for (var unit in scales){
+			if (!scales.hasOwnProperty(unit)) { continue; }
 			var s = scales[unit];
 			var n = Math.floor(delta / s);
 			if ((n >= 2) || (s === 1)){
