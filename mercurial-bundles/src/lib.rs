@@ -53,6 +53,7 @@ mod part_outer;
 mod quickcheck_types;
 mod stream_start;
 mod types;
+pub mod wirepack;
 
 #[cfg(test)]
 mod test;

@@ -23,6 +23,19 @@ impl Delta {
         Ok(Delta { frags: frags })
     }
 
+    /// Construct a new Delta object given a fulltext (no delta).
+    pub fn new_fulltext<T: Into<Vec<u8>>>(text: T) -> Self {
+        Self {
+            frags: vec![
+                Fragment {
+                    start: 0,
+                    end: 0,
+                    content: text.into(),
+                },
+            ],
+        }
+    }
+
     pub fn fragments(&self) -> &[Fragment] {
         self.frags.as_slice()
     }

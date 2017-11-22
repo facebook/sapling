@@ -18,7 +18,8 @@ use tokio_io::AsyncRead;
 
 use async_compression::{CompressorType, ZSTD_DEFAULT_LEVEL};
 use async_compression::membuf::MemBuf;
-use mercurial_types::{MPath, NodeHash, NULL_HASH};
+use futures_ext::StreamExt;
+use mercurial_types::{MPath, NodeHash, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
 use rand;
@@ -32,10 +33,12 @@ use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderBuilder;
 use types::StreamHeader;
 use utils::get_compression_param;
+use wirepack;
 
 const BZIP2_BUNDLE2: &[u8] = include_bytes!("fixtures/bzip2.bin");
 const UNCOMP_BUNDLE2: &[u8] = include_bytes!("fixtures/uncompressed.bin");
 const UNKNOWN_COMPRESSION_BUNDLE2: &[u8] = include_bytes!("fixtures/unknown-compression.bin");
+const WIREPACK_BUNDLE2: &[u8] = include_bytes!("fixtures/wirepack.bin");
 
 const CHANGESET1_HASH_STR: &str = "b2040b24fd5cdfaf36e3164ddc357e834167b14a";
 const CHANGESET2_HASH_STR: &str = "415ab71954c98ea93dab4b8f61f04ca57bc5c33c";
@@ -321,6 +324,112 @@ fn verify_cg2<'a, R: AsyncRead + 'a>(
     assert_matches!(res, changegroup::Part::End);
 
     stream
+}
+
+#[test]
+fn test_parse_wirepack() {
+    let rng = StdGen::new(rand::thread_rng(), 20);
+    let mut quickcheck = QuickCheck::new().gen(rng);
+    quickcheck.quickcheck(parse_wirepack as fn(PartialWithErrors<GenWouldBlock>) -> ());
+}
+
+fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
+    let mut core = Core::new().unwrap();
+
+    let cursor = Cursor::new(WIREPACK_BUNDLE2);
+    let partial_read = PartialAsyncRead::new(cursor, read_ops);
+
+    let stream = parse_stream_start(&mut core, partial_read, None).unwrap();
+    let collect_fut = stream.collect_no_consume();
+    let (parts, stream) = core.run(collect_fut).unwrap();
+
+    assert!(stream.app_errors().is_empty());
+
+    // The bundle has a changegroup as well, which we skip over.
+    let mut parts = parts.into_iter().skip_while(|part| match *part {
+        Bundle2Item::Header(ref header) if header.part_type() == "B2X:TREEGROUP2" => false,
+        _ => true,
+    });
+
+    // Header
+    let mut header = PartHeaderBuilder::new("B2X:TREEGROUP2").unwrap();
+    header.add_mparam("version", "1").unwrap();
+    header.add_mparam("cache", "False").unwrap();
+    header.add_mparam("category", "manifests").unwrap();
+    let header = header.build(1);
+
+    assert_eq!(parts.next().unwrap(), Bundle2Item::Header(header));
+
+    // These are a few identifiers present in the bundle.
+    let baz_dir = RepoPath::dir("baz").unwrap();
+    let baz_hash = NodeHash::from_str("dcb9fa4bb7cdb673cd5752088b48d4c3f9c1fc23").unwrap();
+    let root_hash = NodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
+    let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
+
+    // First entries received are for the directory "baz".
+    let (path, history_entry) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_history();
+    assert_eq!(path, baz_dir);
+    assert_eq!(history_entry.node, baz_hash);
+    assert_eq!(history_entry.p1, NULL_HASH);
+    assert_eq!(history_entry.p2, NULL_HASH);
+    assert_eq!(history_entry.linknode, NULL_HASH);
+    assert_eq!(history_entry.copy_from, None);
+
+    let (path, data_entry) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_data();
+    assert_eq!(path, baz_dir);
+    assert_eq!(data_entry.node, baz_hash);
+    assert_eq!(data_entry.delta_base, NULL_HASH);
+    let fragments = data_entry.delta.fragments();
+    assert_eq!(fragments.len(), 1);
+    assert_eq!(fragments[0].start, 0);
+    assert_eq!(fragments[0].end, 0);
+    assert_eq!(fragments[0].content.len(), 46);
+
+    // Next entries received are for the root manifest.
+    let (path, history_entry) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_history();
+    assert_eq!(path, RepoPath::root());
+    assert_eq!(history_entry.node, root_hash);
+    assert_eq!(history_entry.p1, root_p1);
+    assert_eq!(history_entry.p2, NULL_HASH);
+    assert_eq!(history_entry.linknode, NULL_HASH);
+    assert_eq!(history_entry.copy_from, None);
+
+    let (path, data_entry) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_data();
+    assert_eq!(path, RepoPath::root());
+    assert_eq!(data_entry.node, root_hash);
+    assert_eq!(data_entry.delta_base, NULL_HASH);
+    let fragments = data_entry.delta.fragments();
+    assert_eq!(fragments.len(), 1);
+    assert_eq!(fragments[0].start, 0);
+    assert_eq!(fragments[0].end, 0);
+    assert_eq!(fragments[0].content.len(), 136);
+
+    // Finally the end.
+    assert_eq!(
+        parts.next().unwrap().unwrap_inner().unwrap_wirepack(),
+        wirepack::Part::End
+    );
+    assert_eq!(parts.next(), None);
 }
 
 fn path(bytes: &[u8]) -> MPath {

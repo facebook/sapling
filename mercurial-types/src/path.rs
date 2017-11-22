@@ -112,6 +112,13 @@ impl Display for RepoPath {
     }
 }
 
+/// This trait impl allows passing in a &RepoPath where `Into<RepoPath>` is requested.
+impl<'a> From<&'a RepoPath> for RepoPath {
+    fn from(path: &'a RepoPath) -> RepoPath {
+        path.clone()
+    }
+}
+
 /// An element of a path or filename within Mercurial.
 ///
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format

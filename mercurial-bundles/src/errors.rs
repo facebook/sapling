@@ -25,6 +25,10 @@ error_chain! {
             description("changegroup2 encode error")
             display("changegroup2 encode error: {}", msg)
         }
+        WirePackDecode(msg: String) {
+            description("wire pack decode error")
+            display("wire pack decode error: {}", msg)
+        }
         Bundle2Encode(msg: String) {
             description("bundle2 encode error")
             display("{}", msg)

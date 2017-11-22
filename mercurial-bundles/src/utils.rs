@@ -37,11 +37,14 @@ impl SplitTo for BytesMut {
 
 pub trait BytesExt {
     fn drain_u8(&mut self) -> u8;
+    fn drain_u16(&mut self) -> u16;
     fn drain_u32(&mut self) -> u32;
+    fn drain_u64(&mut self) -> u64;
     fn drain_i32(&mut self) -> i32;
     fn drain_str(&mut self, len: usize) -> Result<String>;
     fn drain_path(&mut self, len: usize) -> Result<MPath>;
     fn drain_node(&mut self) -> NodeHash;
+    fn peek_u16(&self) -> u16;
     fn peek_u32(&self) -> u32;
     fn peek_i32(&self) -> i32;
 }
@@ -56,8 +59,18 @@ where
     }
 
     #[inline]
+    fn drain_u16(&mut self) -> u16 {
+        BigEndian::read_u16(self.split_to(2).as_ref())
+    }
+
+    #[inline]
     fn drain_u32(&mut self) -> u32 {
         BigEndian::read_u32(self.split_to(4).as_ref())
+    }
+
+    #[inline]
+    fn drain_u64(&mut self) -> u64 {
+        BigEndian::read_u64(self.split_to(8).as_ref())
     }
 
     #[inline]
@@ -84,6 +97,11 @@ where
         // This only fails if the size of input passed in isn't 20
         // bytes. drain_to would have panicked in that case anyway.
         NodeHash::from_bytes(self.split_to(20).as_ref()).unwrap()
+    }
+
+    #[inline]
+    fn peek_u16(&self) -> u16 {
+        BigEndian::read_u16(&self[..2])
     }
 
     #[inline]

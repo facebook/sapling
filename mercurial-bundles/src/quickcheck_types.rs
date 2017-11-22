@@ -103,6 +103,7 @@ impl PartialEq<[InnerPart]> for Cg2PartSequence {
             .zip(other.iter())
             .all(|(part, other_part)| match *other_part {
                 InnerPart::Cg2(ref other_cg2) => part == other_cg2,
+                _ => false,
             })
     }
 }

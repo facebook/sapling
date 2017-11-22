@@ -23,6 +23,7 @@ use errors::*;
 use futures_ext::{BoxStreamWrapper, StreamExt, StreamLayeredExt, TakeWhile};
 use part_header::PartHeader;
 use part_outer::{OuterFrame, OuterStream};
+use wirepack;
 
 // --- Part parameters
 
@@ -38,6 +39,7 @@ lazy_static! {
     static ref KNOWN_PARAMS: HashMap<&'static AsciiStr, HashSet<&'static str>> = {
         let mut m: HashMap<&'static AsciiStr, HashSet<&'static str>> = HashMap::new();
         add_part!(m, "changegroup", ["version", "nbchanges", "treemanifest"]);
+        add_part!(m, "b2x:treegroup2", ["version", "cache", "category"]);
         m
     };
 }
@@ -68,12 +70,14 @@ pub type BoxInnerStream<'a, T> = Box<InnerStream<'a, T, Item = InnerPart, Error 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InnerPart {
     Cg2(changegroup::Part),
+    WirePack(wirepack::Part),
 }
 
 impl InnerPart {
     pub fn is_cg2(&self) -> bool {
         match *self {
             InnerPart::Cg2(_) => true,
+            _ => false,
         }
     }
 
@@ -81,6 +85,15 @@ impl InnerPart {
     pub(crate) fn unwrap_cg2(self) -> changegroup::Part {
         match self {
             InnerPart::Cg2(part) => part,
+            other => panic!("expected part to be Cg2, was {:?}", other),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn unwrap_wirepack(self) -> wirepack::Part {
+        match self {
+            InnerPart::WirePack(part) => part,
+            other => panic!("expected part to be WirePack, was {:?}", other),
         }
     }
 }
@@ -129,6 +142,15 @@ pub fn inner_stream<'a, R: AsyncRead + 'a>(
                 logger.new(o!("stream" => "cg2")),
             ));
             Box::new(cg2_stream)
+        }
+        "b2x:treegroup2" => {
+            let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
+                logger.new(o!("stream" => "wirepack")),
+                // Mercurial only knows how to send trees at the moment.
+                // TODO: add support for file wirepacks once that's a thing
+                wirepack::Kind::Tree,
+            ));
+            Box::new(wirepack_stream)
         }
         _ => panic!("TODO: make this an error"),
     }
