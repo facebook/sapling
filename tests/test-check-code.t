@@ -44,6 +44,7 @@ Prevent adding new files in the root directory accidentally.
   .hgignore
   .hgsigs
   .hgtags
+  .jshintrc
   CONTRIBUTING
   CONTRIBUTORS
   COPYING
