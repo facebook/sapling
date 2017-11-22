@@ -1,3 +1,5 @@
+# @noautodeps
+
 include_defs("//eden/DEFS")
 
 stats_deps = ["@/common/stats:threadlocal"] if is_facebook_internal() else []

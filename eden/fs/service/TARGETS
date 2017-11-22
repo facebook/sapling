@@ -1,3 +1,5 @@
+# @noautodeps
+
 include_defs("//eden/DEFS")
 
 include_defs("//eden/fs/service/DEFS")
