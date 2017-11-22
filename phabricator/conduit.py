@@ -36,6 +36,7 @@ class Client(object):
         self._url = url or DEFAULT_URL
         self._user = user
         self._cert = cert
+        self._oauth = None
         self._actas = act_as or self._user
         self._connection = None
         self._ca_certs = ca_certs
@@ -48,12 +49,18 @@ class Client(object):
         try:
             hostconfig = config['hosts'][self._url]
             self._user = hostconfig['user']
-            self._cert = hostconfig['cert']
+            if 'oauth' in hostconfig:
+                self._oauth = hostconfig['oauth']
+            else:
+                self._cert = hostconfig['cert']
         except KeyError:
             try:
                 hostconfig = config['hosts'][config['hosts'].keys()[0]]
                 self._user = hostconfig['user']
-                self._cert = hostconfig['cert']
+                if 'oauth' in hostconfig:
+                    self._oauth = hostconfig['oauth']
+                else:
+                    self._cert = hostconfig['cert']
             except KeyError:
                 raise arcconfig.ArcConfigError(
                     'arcrc is missing user '
@@ -68,15 +75,20 @@ class Client(object):
                 timeout = DEFAULT_TIMEOUT
             else:
                 timeout = self._timeout
-        token = '%d' % time.time()
-        sig = token + self._cert
         args['__conduit__'] = {
             'authUser': self._user,
             'actAsUser': self._actas,
-            'authToken': token,
-            'authSignature': hashlib.sha1(sig.encode('utf-8')).hexdigest(),
             'caller': 'hg',
         }
+        if  self._oauth is not None:
+            args['__conduit__']['accessToken'] = self._oauth
+        else:
+            token = '%d' % time.time()
+            sig = token + self._cert
+            args['__conduit__'].update({
+                'authToken': token,
+                'authSignature': hashlib.sha1(sig.encode('utf-8')).hexdigest()
+            })
         req_data = {
                 'params': json.dumps(args),
                 'output': 'json',
