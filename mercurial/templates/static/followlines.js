@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // URL to complement with "linerange" query parameter
     var targetUri = sourcelines.dataset.logurl;
-    if (typeof targetUri === 'undefined') {
+    if (typeof targetUri === 'undefined') {
         return;
     }
 
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (parent === null) {
             return null;
         }
-        if (element.tagName == selectableTag && parent.isSameNode(sourcelines)) {
+        if (element.tagName === selectableTag && parent.isSameNode(sourcelines)) {
             return element;
         }
         return selectableParent(parent);
@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // compute line range (startId, endId)
             var endId = parseInt(endElement.id.slice(1));
-            if (endId == startId) {
+            if (endId === startId) {
                 // clicked twice the same line, cancel and reset initial state
                 // (CSS, event listener for selection start)
                 removeSelectedCSSClass();
