@@ -60,9 +60,9 @@ function Graph() {
 		// provides the multiplier that should be applied to
 		// the foreground colours.
 		var s;
-		if(typeof color == "string") {
+		if(typeof color === "string") {
 			s = "#" + color;
-		} else { //typeof color == "number"
+		} else { //typeof color === "number"
 			color %= colors.length;
 			var red = (colors[color][0] * fg) || bg;
 			var green = (colors[color][1] * fg) || bg;
@@ -124,7 +124,7 @@ function Graph() {
 					this.columns += 1;
 				}
 
-				if (start == this.columns && start > end) {
+				if (start === this.columns && start > end) {
 					fold = true;
 				}
 
@@ -229,7 +229,7 @@ function process_dates(parentSelector){
 		for (var unit in scales){
 			var s = scales[unit];
 			var n = Math.floor(delta / s);
-			if ((n >= 2) || (s == 1)){
+			if ((n >= 2) || (s === 1)){
 				if (future){
 					return format(n, unit) + ' from now';
 				} else {
@@ -257,7 +257,7 @@ function process_dates(parentSelector){
 
 function toggleDiffstat() {
     var curdetails = document.getElementById('diffstatdetails').style.display;
-    var curexpand = curdetails == 'none' ? 'inline' : 'none';
+    var curexpand = curdetails === 'none' ? 'inline' : 'none';
     document.getElementById('diffstatdetails').style.display = curexpand;
     document.getElementById('diffstatexpand').style.display = curdetails;
 }
@@ -380,7 +380,7 @@ function ajaxScrollInit(urlFormat,
                     appendFormatHTML(container, messageFormat, message);
                 },
                 function onsuccess(htmlText) {
-                    if (mode == 'graph') {
+                    if (mode === 'graph') {
                         var sizes = htmlText.match(/^\s*<canvas id="graph" width="(\d+)" height="(\d+)"><\/canvas>$/m);
                         var addWidth = sizes[1];
                         var addHeight = sizes[2];
@@ -457,7 +457,7 @@ function renderDiffOptsForm() {
         window.location.search = urlParams.toString();
     }
 
-    var allChecked = form.getAttribute("data-ignorews") == "1";
+    var allChecked = form.getAttribute("data-ignorews") === "1";
 
     for (var i = 0; i < KEYS.length; i++) {
         var key = KEYS[i];
@@ -468,10 +468,10 @@ function renderDiffOptsForm() {
         }
 
         currentValue = form.getAttribute("data-" + key);
-        checkbox.checked = currentValue != "0";
+        checkbox.checked = currentValue !== "0";
 
         // ignorews implies ignorewsamount and ignorewseol.
-        if (allChecked && (key == "ignorewsamount" || key == "ignorewseol")) {
+        if (allChecked && (key === "ignorewsamount" || key === "ignorewseol")) {
             checkbox.checked = true;
             checkbox.disabled = true;
         }
