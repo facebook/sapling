@@ -80,7 +80,7 @@ class Client(object):
             'actAsUser': self._actas,
             'caller': 'hg',
         }
-        if  self._oauth is not None:
+        if self._oauth is not None:
             args['__conduit__']['accessToken'] = self._oauth
         else:
             token = '%d' % time.time()
