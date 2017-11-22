@@ -451,7 +451,7 @@ function renderDiffOptsForm() {
         "ignoreblanklines",
     ];
 
-    var urlParams = new URLSearchParams(window.location.search);
+    var urlParams = new window.URLSearchParams(window.location.search);
 
     function updateAndRefresh(e) {
         var checkbox = e.target;
