@@ -38,7 +38,7 @@ def bisect(repo, state):
 
     def buildancestors(bad, good):
         badrev = min([changelog.rev(n) for n in bad])
-        ancestors = [None] * (len(changelog) + 1)
+        ancestors = collections.defaultdict(lambda: None)
         for rev in repo.revs("descendants(%ln) - ancestors(%ln)", good, good):
             ancestors[rev] = []
         if ancestors[badrev] is None:
