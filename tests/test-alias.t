@@ -119,6 +119,12 @@ no closing quotation
   $ hg help noclosing
   error in definition for alias 'noclosingquotation': No closing quotation
 
+"--" in alias definition should be preserved
+
+  $ hg --config alias.dash='cat --' -R alias dash -r0
+  abort: -r0 not under root '$TESTTMP/alias'
+  (consider using '--cwd alias')
+  [255]
 
 invalid options
 
@@ -147,6 +153,12 @@ invalid options
   on the command line
   $ hg no--config
   abort: error in definition for alias 'no--config': --config may only be given on the command line
+  [255]
+  $ hg no --config alias.no='--repo elsewhere --cwd elsewhere status'
+  abort: error in definition for alias 'no': --repo/--cwd may only be given on the command line
+  [255]
+  $ hg no --config alias.no='--repo elsewhere'
+  abort: error in definition for alias 'no': --repo may only be given on the command line
   [255]
 
 optional repository
@@ -351,6 +363,10 @@ shell aliases with global options
   $ hg echoall --cwd ..
   
 
+"--" passed to shell alias should be preserved
+
+  $ hg --config alias.printf='!printf "$@"' printf '%s %s %s\n' -- --cwd ..
+  -- --cwd ..
 
 repo specific shell aliases
 

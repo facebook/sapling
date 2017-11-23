@@ -466,15 +466,14 @@ class cmdalias(object):
             self.badalias = (_("error in definition for alias '%s': %s")
                              % (self.name, inst))
             return
+        earlyopts, args = _earlysplitopts(args)
+        if earlyopts:
+            self.badalias = (_("error in definition for alias '%s': %s may "
+                               "only be given on the command line")
+                             % (self.name, '/'.join(zip(*earlyopts)[0])))
+            return
         self.cmdname = cmd = args.pop(0)
         self.givenargs = args
-
-        for invalidarg in commands.earlyoptflags:
-            if _earlygetopt([invalidarg], args):
-                self.badalias = (_("error in definition for alias '%s': %s may "
-                                   "only be given on the command line")
-                                 % (self.name, invalidarg))
-                return
 
         try:
             tableentry = cmdutil.findcmd(cmd, cmdtable, False)[1]
@@ -651,91 +650,13 @@ def _earlyparseopts(ui, args):
                         optaliases={'repository': ['repo']})
     return options
 
-def _earlygetopt(aliases, args, strip=True):
-    """Return list of values for an option (or aliases).
-
-    The values are listed in the order they appear in args.
-    The options and values are removed from args if strip=True.
-
-    >>> args = [b'x', b'--cwd', b'foo', b'y']
-    >>> _earlygetopt([b'--cwd'], args), args
-    (['foo'], ['x', 'y'])
-
-    >>> args = [b'x', b'--cwd=bar', b'y']
-    >>> _earlygetopt([b'--cwd'], args), args
-    (['bar'], ['x', 'y'])
-
-    >>> args = [b'x', b'--cwd=bar', b'y']
-    >>> _earlygetopt([b'--cwd'], args, strip=False), args
-    (['bar'], ['x', '--cwd=bar', 'y'])
-
-    >>> args = [b'x', b'-R', b'foo', b'y']
-    >>> _earlygetopt([b'-R'], args), args
-    (['foo'], ['x', 'y'])
-
-    >>> args = [b'x', b'-R', b'foo', b'y']
-    >>> _earlygetopt([b'-R'], args, strip=False), args
-    (['foo'], ['x', '-R', 'foo', 'y'])
-
-    >>> args = [b'x', b'-Rbar', b'y']
-    >>> _earlygetopt([b'-R'], args), args
-    (['bar'], ['x', 'y'])
-
-    >>> args = [b'x', b'-Rbar', b'y']
-    >>> _earlygetopt([b'-R'], args, strip=False), args
-    (['bar'], ['x', '-Rbar', 'y'])
-
-    >>> args = [b'x', b'-R=bar', b'y']
-    >>> _earlygetopt([b'-R'], args), args
-    (['=bar'], ['x', 'y'])
-
-    >>> args = [b'x', b'-R', b'--', b'y']
-    >>> _earlygetopt([b'-R'], args), args
-    ([], ['x', '-R', '--', 'y'])
-    """
-    try:
-        argcount = args.index("--")
-    except ValueError:
-        argcount = len(args)
-    shortopts = [opt for opt in aliases if len(opt) == 2]
-    values = []
-    pos = 0
-    while pos < argcount:
-        fullarg = arg = args[pos]
-        equals = -1
-        if arg.startswith('--'):
-            equals = arg.find('=')
-        if equals > -1:
-            arg = arg[:equals]
-        if arg in aliases:
-            if equals > -1:
-                values.append(fullarg[equals + 1:])
-                if strip:
-                    del args[pos]
-                    argcount -= 1
-                else:
-                    pos += 1
-            else:
-                if pos + 1 >= argcount:
-                    # ignore and let getopt report an error if there is no value
-                    break
-                values.append(args[pos + 1])
-                if strip:
-                    del args[pos:pos + 2]
-                    argcount -= 2
-                else:
-                    pos += 2
-        elif arg[:2] in shortopts:
-            # short option can have no following space, e.g. hg log -Rfoo
-            values.append(args[pos][2:])
-            if strip:
-                del args[pos]
-                argcount -= 1
-            else:
-                pos += 1
-        else:
-            pos += 1
-    return values
+def _earlysplitopts(args):
+    """Split args into a list of possible early options and remainder args"""
+    shortoptions = 'R:'
+    # TODO: perhaps 'debugger' should be included
+    longoptions = ['cwd=', 'repository=', 'repo=', 'config=']
+    return fancyopts.earlygetopt(args, shortoptions, longoptions,
+                                 gnu=True, keepsep=True)
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
@@ -804,8 +725,7 @@ def _checkshellalias(lui, ui, args):
 
     if cmd and util.safehasattr(fn, 'shell'):
         # shell alias shouldn't receive early options which are consumed by hg
-        args = args[:]
-        _earlygetopt(commands.earlyoptflags, args, strip=True)
+        _earlyopts, args = _earlysplitopts(args)
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})

@@ -103,10 +103,6 @@ globalopts = [
      _("when to paginate (boolean, always, auto, or never)"), _('TYPE')),
 ]
 
-# options which must be pre-parsed before loading configs and extensions
-# TODO: perhaps --debugger should be included
-earlyoptflags = ("--cwd", "-R", "--repository", "--repo", "--config")
-
 dryrunopts = cmdutil.dryrunopts
 remoteopts = cmdutil.remoteopts
 walkopts = cmdutil.walkopts
