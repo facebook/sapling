@@ -220,16 +220,7 @@ def _loadnewui(srcui, args):
         newui._csystem = srcui._csystem
 
     # command line args
-    options = {}
-    if srcui.plain('strictflags'):
-        options.update(dispatch._earlyparseopts(args))
-    else:
-        args = args[:]
-        options['config'] = dispatch._earlygetopt(['--config'], args)
-        cwds = dispatch._earlygetopt(['--cwd'], args)
-        options['cwd'] = cwds and cwds[-1] or ''
-        rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
-        options['repository'] = rpath and rpath[-1] or ''
+    options = dispatch._earlyparseopts(newui, args)
     dispatch._parseconfig(newui, options['config'])
 
     # stolen from tortoisehg.util.copydynamicconfig()

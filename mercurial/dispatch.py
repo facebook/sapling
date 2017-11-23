@@ -55,7 +55,7 @@ class request(object):
         self.fout = fout
         self.ferr = ferr
 
-        # remember options pre-parsed by _earlyreqopt*()
+        # remember options pre-parsed by _earlyparseopts()
         self.earlyoptions = {}
 
         # reposetups which run before extensions, useful for chg to pre-fill
@@ -150,9 +150,8 @@ def dispatch(req):
     try:
         if not req.ui:
             req.ui = uimod.ui.load()
-        if req.ui.plain('strictflags'):
-            req.earlyoptions.update(_earlyparseopts(req.args))
-        if _earlyreqoptbool(req, 'traceback', ['--traceback']):
+        req.earlyoptions.update(_earlyparseopts(req.ui, req.args))
+        if req.earlyoptions['traceback']:
             req.ui.setconfig('ui', 'traceback', 'on', '--traceback')
 
         # set ui streams from the request
@@ -266,8 +265,7 @@ def _runcatch(req):
 
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
-            cfgs = _parseconfig(req.ui,
-                                _earlyreqopt(req, 'config', ['--config']))
+            cfgs = _parseconfig(req.ui, req.earlyoptions['config'])
 
             if req.repo:
                 # copy configs that were passed on the cmdline (--config) to
@@ -281,7 +279,7 @@ def _runcatch(req):
             if not debugger or ui.plain():
                 # if we are in HGPLAIN mode, then disable custom debugging
                 debugger = 'pdb'
-            elif _earlyreqoptbool(req, 'debugger', ['--debugger']):
+            elif req.earlyoptions['debugger']:
                 # This import can be slow for fancy debuggers, so only
                 # do it when absolutely necessary, i.e. when actual
                 # debugging has been requested
@@ -295,7 +293,7 @@ def _runcatch(req):
             debugmortem[debugger] = debugmod.post_mortem
 
             # enter the debugger before command execution
-            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
+            if req.earlyoptions['debugger']:
                 ui.warn(_("entering debugger - "
                         "type c to continue starting hg or h for help\n"))
 
@@ -311,7 +309,7 @@ def _runcatch(req):
                 ui.flush()
         except: # re-raises
             # enter the debugger when we hit an exception
-            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
+            if req.earlyoptions['debugger']:
                 traceback.print_exc()
                 debugmortem[debugger](sys.exc_info()[2])
             raise
@@ -646,10 +644,10 @@ def _parseconfig(ui, config):
 
     return configs
 
-def _earlyparseopts(args):
+def _earlyparseopts(ui, args):
     options = {}
     fancyopts.fancyopts(args, commands.globalopts, options,
-                        gnu=False, early=True,
+                        gnu=not ui.plain('strictflags'), early=True,
                         optaliases={'repository': ['repo']})
     return options
 
@@ -739,48 +737,6 @@ def _earlygetopt(aliases, args, strip=True):
             pos += 1
     return values
 
-def _earlyreqopt(req, name, aliases):
-    """Peek a list option without using a full options table"""
-    if req.ui.plain('strictflags'):
-        return req.earlyoptions[name]
-    values = _earlygetopt(aliases, req.args, strip=False)
-    req.earlyoptions[name] = values
-    return values
-
-def _earlyreqoptstr(req, name, aliases):
-    """Peek a string option without using a full options table"""
-    if req.ui.plain('strictflags'):
-        return req.earlyoptions[name]
-    value = (_earlygetopt(aliases, req.args, strip=False) or [''])[-1]
-    req.earlyoptions[name] = value
-    return value
-
-def _earlyreqoptbool(req, name, aliases):
-    """Peek a boolean option without using a full options table
-
-    >>> req = request([b'x', b'--debugger'], uimod.ui())
-    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
-    True
-
-    >>> req = request([b'x', b'--', b'--debugger'], uimod.ui())
-    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
-    """
-    if req.ui.plain('strictflags'):
-        return req.earlyoptions[name]
-    try:
-        argcount = req.args.index("--")
-    except ValueError:
-        argcount = len(req.args)
-    value = None
-    pos = 0
-    while pos < argcount:
-        arg = req.args[pos]
-        if arg in aliases:
-            value = True
-        pos += 1
-    req.earlyoptions[name] = value
-    return value
-
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
     hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
@@ -859,11 +815,11 @@ def _dispatch(req):
     ui = req.ui
 
     # check for cwd
-    cwd = _earlyreqoptstr(req, 'cwd', ['--cwd'])
+    cwd = req.earlyoptions['cwd']
     if cwd:
         os.chdir(cwd)
 
-    rpath = _earlyreqoptstr(req, 'repository', ["-R", "--repository", "--repo"])
+    rpath = req.earlyoptions['repository']
     path, lui = _getlocal(ui, rpath)
 
     uis = {ui, lui}
@@ -871,7 +827,7 @@ def _dispatch(req):
     if req.repo:
         uis.add(req.repo.ui)
 
-    if _earlyreqoptbool(req, 'profile', ['--profile']):
+    if req.earlyoptions['profile']:
         for ui_ in uis:
             ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
@@ -1011,6 +967,7 @@ def _dispatch(req):
                             guess = repos[0]
                             if guess and repos.count(guess) == len(repos):
                                 req.args = ['--repository', guess] + fullargs
+                                req.earlyoptions['repository'] = guess
                                 return _dispatch(req)
                         if not path:
                             raise error.RepoError(_("no repository found in"
