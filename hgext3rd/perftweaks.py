@@ -21,7 +21,6 @@ from mercurial import (
     merge,
     phases,
     revlog,
-    scmutil,
     tags,
     util,
 )
@@ -97,8 +96,18 @@ def _branchmapupdate(orig, self, repo, revgen):
     if tiprev > self.tiprev:
         self.tipnode = cl.node(tiprev)
         self.tiprev = tiprev
-        self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
 
+    # Copy and paste from branchmap.branchcache.update()
+    if not self.validfor(repo):
+        # cache key are not valid anymore
+        self.tipnode = nullid
+        self.tiprev = nullrev
+        for heads in self.values():
+            tiprev = max(cl.rev(node) for node in heads)
+            if tiprev > self.tiprev:
+                self.tipnode = cl.node(tiprev)
+                self.tiprev = tiprev
+    self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
     repo.ui.log('branchcache', 'perftweaks updated %s branch cache\n',
                 repo.filtername)
 
