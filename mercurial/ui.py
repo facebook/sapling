@@ -1603,7 +1603,7 @@ class ui(object):
         stack.
         """
         if not self.configbool('devel', 'all-warnings'):
-            if config is not None and not self.configbool('devel', config):
+            if config is None or not self.configbool('devel', config):
                 return
         msg = 'devel-warn: ' + msg
         stacklevel += 1 # get in develwarn
