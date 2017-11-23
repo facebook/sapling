@@ -854,7 +854,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 hbisect.checkstate(state)
                 # bisect
-                nodes, changesets, bgood = hbisect.bisect(repo.changelog, state)
+                nodes, changesets, bgood = hbisect.bisect(repo, state)
                 # update to next check
                 node = nodes[0]
                 mayupdate(repo, node, show_stats=False)
@@ -867,7 +867,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     hbisect.checkstate(state)
 
     # actually bisect
-    nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+    nodes, changesets, good = hbisect.bisect(repo, state)
     if extend:
         if not changesets:
             extendnode = hbisect.extendrange(repo, state, nodes, good)

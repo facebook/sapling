@@ -21,7 +21,7 @@ from . import (
     error,
 )
 
-def bisect(changelog, state):
+def bisect(repo, state):
     """find the next node (if any) for testing during a bisect search.
     returns a (nodes, number, good) tuple.
 
@@ -32,6 +32,7 @@ def bisect(changelog, state):
     if searching for a first bad one.
     """
 
+    changelog = repo.changelog
     clparents = changelog.parentrevs
     skip = set([changelog.rev(n) for n in state['skip']])
 
