@@ -37,10 +37,17 @@ Missing parameter for early option:
   hg log [OPTION]... [FILE]
   (use 'hg log -h' to show more help)
 
-  $ hg log -R -- 2>&1 | grep 'hg log'
-  hg log: option -R requires argument
-  hg log [OPTION]... [FILE]
-  (use 'hg log -h' to show more help)
+"--" may be an option value:
+
+  $ hg -R -- log
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
+  $ hg log -R --
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
+  $ hg log -T --
+  -- (no-eol)
+  $ hg log -T -- -k nomatch
 
 Parsing of early options should stop at "--":
 
