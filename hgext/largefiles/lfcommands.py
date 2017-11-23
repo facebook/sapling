@@ -177,7 +177,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             convcmd.converter = converter
 
             try:
-                convcmd.convert(ui, src, dest)
+                convcmd.convert(ui, src, dest, source_type='hg', dest_type='hg')
             finally:
                 convcmd.converter = orig
         success = True
