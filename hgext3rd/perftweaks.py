@@ -21,11 +21,12 @@ from mercurial import (
     merge,
     phases,
     revlog,
+    scmutil,
     tags,
     util,
 )
 from mercurial.extensions import wrapfunction
-from mercurial.node import bin
+from mercurial.node import bin, nullid, nullrev
 import errno
 import os
 
