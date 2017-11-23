@@ -37,29 +37,10 @@ def bisect(repo, state):
     skip = set([changelog.rev(n) for n in state['skip']])
 
     def buildancestors(bad, good):
-        # only the earliest bad revision matters
         badrev = min([changelog.rev(n) for n in bad])
-        goodrevs = [changelog.rev(n) for n in good]
-        goodrev = min(goodrevs)
-        # build visit array
-        ancestors = [None] * (len(changelog) + 1) # an extra for [-1]
-
-        # set nodes descended from goodrevs
-        for rev in goodrevs:
+        ancestors = [None] * (len(changelog) + 1)
+        for rev in repo.revs("descendants(%ln) - ancestors(%ln)", good, good):
             ancestors[rev] = []
-        for rev in changelog.revs(goodrev + 1):
-            for prev in clparents(rev):
-                if ancestors[prev] == []:
-                    ancestors[rev] = []
-
-        # clear good revs from array
-        for rev in goodrevs:
-            ancestors[rev] = None
-        for rev in changelog.revs(len(changelog), goodrev):
-            if ancestors[rev] is None:
-                for prev in clparents(rev):
-                    ancestors[prev] = None
-
         if ancestors[badrev] is None:
             return badrev, None
         return badrev, ancestors
