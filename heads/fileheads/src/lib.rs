@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 extern crate heads;
+extern crate mercurial_types;
 
 #[macro_use]
 extern crate error_chain;
@@ -16,10 +17,8 @@ extern crate futures_ext;
 #[cfg(test)]
 extern crate tempdir;
 
-use std::error;
 use std::fs::{self, File};
 use std::io;
-use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
@@ -32,6 +31,7 @@ use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use heads::Heads;
+use mercurial_types::NodeHash;
 
 mod errors {
     error_chain!{
@@ -42,6 +42,8 @@ mod errors {
 }
 pub use errors::*;
 
+use std::error;
+
 static PREFIX: &'static str = "head-";
 
 /// A basic file-based persistent head store.
@@ -49,16 +51,12 @@ static PREFIX: &'static str = "head-";
 /// Stores heads as empty files in the specified directory. File operations are dispatched to
 /// a thread pool to avoid blocking the main thread with IO. For simplicity, file accesses
 /// are unsynchronized since each operation performs just a single File IO syscall.
-pub struct FileHeads<T> {
+pub struct FileHeads {
     base: PathBuf,
     pool: Arc<CpuPool>,
-    _marker: PhantomData<T>,
 }
 
-impl<T> FileHeads<T>
-where
-    T: ToString + Send,
-{
+impl FileHeads {
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_pool(path, Arc::new(CpuPool::new_num_cpus()))
     }
@@ -73,7 +71,6 @@ where
         Ok(FileHeads {
             base: path.to_path_buf(),
             pool: pool,
-            _marker: PhantomData,
         })
     }
 
@@ -87,24 +84,13 @@ where
         Self::open_with_pool(path, pool)
     }
 
-    fn get_path(&self, key: &T) -> Result<PathBuf> {
+    fn get_path(&self, key: &NodeHash) -> Result<PathBuf> {
         Ok(self.base.join(format!("{}{}", PREFIX, key.to_string())))
     }
 }
 
-impl<T> Heads for FileHeads<T>
-where
-    T: FromStr + ToString + Send + 'static,
-    <T as FromStr>::Err: error::Error + Send,
-{
-    type Key = T;
-    type Error = Error;
-
-    type Effect = BoxFuture<(), Self::Error>;
-    type Bool = BoxFuture<bool, Self::Error>;
-    type Heads = BoxStream<Self::Key, Self::Error>;
-
-    fn add(&self, key: &Self::Key) -> Self::Effect {
+impl Heads for FileHeads {
+    fn add(&self, key: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -115,10 +101,11 @@ where
                 });
                 pool.spawn(future)
             })
+            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn remove(&self, key: &Self::Key) -> Self::Effect {
+    fn remove(&self, key: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -135,10 +122,11 @@ where
                 });
                 pool.spawn(future)
             })
+            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn is_head(&self, key: &Self::Key) -> Self::Bool {
+    fn is_head(&self, key: &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -146,10 +134,11 @@ where
                 let future = poll_fn(move || Ok(Async::Ready(path.exists())));
                 pool.spawn(future)
             })
+            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn heads(&self) -> Self::Heads {
+    fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>> {
         let names = fs::read_dir(&self.base).map(|entries| {
             entries
                 .map(|result| {
@@ -160,7 +149,7 @@ where
                 .filter_map(|result| match result {
                     Ok(ref name) if name.starts_with(PREFIX) => {
                         let name = &name[PREFIX.len()..];
-                        let name = T::from_str(name).chain_err(|| "can't parse name");
+                        let name = NodeHash::from_str(name).chain_err(|| "can't parse name");
                         Some(name)
                     }
                     Ok(_) => None,
@@ -168,8 +157,11 @@ where
                 })
         });
         match names {
-            Ok(v) => stream::iter_ok(v).and_then(|v| v).boxify(),
-            Err(e) => stream::once(Err(e.into())).boxify(),
+            Ok(v) => stream::iter_ok(v)
+                .and_then(|v| v)
+                .map_err(|e| Box::new(e) as Box<error::Error + Send>)
+                .boxify(),
+            Err(e) => stream::once(Err(Box::new(e) as Box<error::Error + Send>)).boxify(),
         }
     }
 }
@@ -183,7 +175,7 @@ mod test {
     #[test]
     fn invalid_dir() {
         let tmp = TempDir::new("filebookmarks_heads_invalid_dir").unwrap();
-        let heads = FileHeads::<String>::open(tmp.path().join("does_not_exist"));
+        let heads = FileHeads::open(tmp.path().join("does_not_exist"));
         assert!(heads.is_err());
     }
 }

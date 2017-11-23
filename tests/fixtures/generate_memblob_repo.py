@@ -63,7 +63,7 @@ use futures::future::Future;
 
 pub fn getrepo() -> BlobRepo<MemBlobState> {
     let bookmarks: MemBookmarks<NodeHash> = MemBookmarks::new();
-    let heads: MemHeads<NodeHash> = MemHeads::new();
+    let heads: MemHeads = MemHeads::new();
     let blobs = Memblob::new();
     let linknodes = MemLinknodes::new();
 

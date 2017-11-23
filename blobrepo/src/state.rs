@@ -29,7 +29,7 @@ use errors::*;
 
 /// Represents all the state used by a blob store.
 pub trait BlobState: 'static + Send + Sync {
-    type Heads: Heads<Key = NodeHash> + Sync;
+    type Heads: Heads + Sync;
     type Bookmarks: Bookmarks<Value = NodeHash> + Clone + Sync;
     type Blobstore: Blobstore<Key = String> + Clone + Sync;
     type Linknodes: Linknodes + Clone;
@@ -87,7 +87,7 @@ macro_rules! impl_blob_state {
 
 impl_blob_state! {
     FilesBlobState {
-        heads: FileHeads<NodeHash>,
+        heads: FileHeads,
         bookmarks: Arc<FileBookmarks<NodeHash>>,
         blobstore: Fileblob<String, Vec<u8>>,
         linknodes: Arc<FileLinknodes>,
@@ -120,7 +120,7 @@ impl FilesBlobState {
 
 impl_blob_state! {
     RocksBlobState {
-        heads: FileHeads<NodeHash>,
+        heads: FileHeads,
         bookmarks: Arc<FileBookmarks<NodeHash>>,
         blobstore: Rocksblob<String>,
         linknodes: Arc<FileLinknodes>,
@@ -154,7 +154,7 @@ impl RocksBlobState {
 
 impl_blob_state! {
     MemBlobState {
-        heads: MemHeads<NodeHash>,
+        heads: MemHeads,
         bookmarks: Arc<MemBookmarks<NodeHash>>,
         blobstore: Memblob,
         linknodes: Arc<MemLinknodes>,
@@ -163,7 +163,7 @@ impl_blob_state! {
 
 impl MemBlobState {
     pub fn new(
-        heads: MemHeads<NodeHash>,
+        heads: MemHeads,
         bookmarks: MemBookmarks<NodeHash>,
         blobstore: Memblob,
         linknodes: MemLinknodes,
@@ -179,7 +179,7 @@ impl MemBlobState {
 
 impl_blob_state! {
     TestManifoldBlobState {
-        heads: MemHeads<NodeHash>,
+        heads: MemHeads,
         bookmarks: Arc<MemBookmarks<NodeHash>>,
         blobstore: ManifoldBlob<String, Bytes>,
         linknodes: Arc<MemLinknodes>,

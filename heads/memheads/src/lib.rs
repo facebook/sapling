@@ -11,23 +11,25 @@ extern crate futures;
 
 extern crate futures_ext;
 extern crate heads;
+extern crate mercurial_types;
 
-use std::hash::Hash;
 use std::sync::Mutex;
 
-use futures::future::{ok, FutureResult};
+use futures::future::ok;
 use futures::stream::iter_ok;
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use std::collections::HashSet;
+use std::error;
 
 use heads::Heads;
+use mercurial_types::NodeHash;
 
 /// Generic, in-memory heads store backed by a HashSet, intended to be used in tests.
-pub struct MemHeads<T: Hash + Eq + Clone> {
-    heads: Mutex<HashSet<T>>,
+pub struct MemHeads {
+    heads: Mutex<HashSet<NodeHash>>,
 }
 
-impl<T: Hash + Eq + Clone + Send> MemHeads<T> {
+impl MemHeads {
     #[allow(dead_code)]
     pub fn new() -> Self {
         MemHeads {
@@ -36,31 +38,24 @@ impl<T: Hash + Eq + Clone + Send> MemHeads<T> {
     }
 }
 
-impl<T: Hash + Eq + Clone + Send + 'static> Heads for MemHeads<T> {
-    type Key = T;
-    type Error = !;
-
-    type Effect = FutureResult<(), Self::Error>;
-    type Bool = FutureResult<bool, Self::Error>;
-    type Heads = BoxStream<Self::Key, Self::Error>;
-
-    fn add(&self, head: &Self::Key) -> Self::Effect {
+impl Heads for MemHeads {
+    fn add(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
         self.heads.lock().unwrap().insert(head.clone());
-        ok(())
+        ok(()).boxify()
     }
 
-    fn remove(&self, head: &Self::Key) -> Self::Effect {
+    fn remove(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
         self.heads.lock().unwrap().remove(head);
-        ok(())
+        ok(()).boxify()
     }
 
-    fn is_head(&self, head: &Self::Key) -> Self::Bool {
-        ok(self.heads.lock().unwrap().contains(head))
+    fn is_head(&self, head: &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>> {
+        ok(self.heads.lock().unwrap().contains(head)).boxify()
     }
 
-    fn heads(&self) -> Self::Heads {
+    fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>> {
         let guard = self.heads.lock().unwrap();
         let heads = (*guard).clone();
-        iter_ok::<_, !>(heads).boxify()
+        iter_ok(heads).boxify()
     }
 }

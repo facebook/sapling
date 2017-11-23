@@ -79,8 +79,8 @@ error_chain! {
 // The specific Heads implementation we're using can have its own Error type,
 // so we can't treat it as a foreign link. Instead, have a local ErrorKind for
 // representing Heads errors which is chained onto the underlying error.
-pub fn heads_err<E: error::Error + Send + 'static>(err: E) -> Error {
-    ChainedError::with_chain(err, ErrorKind::Heads)
+pub fn heads_err(err: Box<error::Error + Send>) -> Error {
+    Error::with_boxed_chain(err, ErrorKind::Heads)
 }
 
 // Handle Blobstore errors in the same way as Heads.

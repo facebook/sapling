@@ -38,8 +38,7 @@ pub(crate) struct ConvertContext<H> {
 
 impl<H> ConvertContext<H>
 where
-    H: Heads<Key = String>,
-    H::Error: Into<Error>,
+    H: Heads,
 {
     pub fn convert<L: Linknodes>(self, linknodes_store: L) -> Result<()> {
         let mut core = self.core;
@@ -80,12 +79,9 @@ where
             .map(|h| {
                 debug!(logger, "head {}", h);
                 STATS::heads.add_value(1);
-                headstore
-                    .add(&format!("{}", h))
-                    .map_err(Into::into)
-                    .map_err({
-                        move |err| Error::with_chain(err, format!("Failed to create head {}", h))
-                    })
+                headstore.add(&h).map_err({
+                    move |err| Error::with_boxed_chain(err, format!("Failed to create head {}", h))
+                })
             })
             .buffer_unordered(100);
 

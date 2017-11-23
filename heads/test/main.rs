@@ -17,8 +17,6 @@ extern crate memheads;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 
-use std::str::FromStr;
-
 use futures::{Future, Stream};
 use tempdir::TempDir;
 
@@ -26,18 +24,14 @@ use fileheads::FileHeads;
 use heads::Heads;
 use memheads::MemHeads;
 use mercurial_types::NodeHash;
-use mercurial_types::hash::Sha1;
 
-fn basic<H>(heads: H)
-where
-    H: Heads<Key = String>,
-{
-    let empty: Vec<String> = Vec::new();
+fn basic<H: Heads>(heads: H) {
+    let empty: Vec<NodeHash> = Vec::new();
     assert_eq!(heads.heads().collect().wait().unwrap(), empty);
 
-    let foo = "foo".to_string();
-    let bar = "bar".to_string();
-    let baz = "baz".to_string();
+    let foo = mercurial_types_mocks::nodehash::ONES_HASH;
+    let bar = mercurial_types_mocks::nodehash::TWOS_HASH;
+    let baz = mercurial_types_mocks::nodehash::THREES_HASH;
 
     assert!(!heads.is_head(&foo).wait().unwrap());
     assert!(!heads.is_head(&bar).wait().unwrap());
@@ -53,7 +47,7 @@ where
     let mut result = heads.heads().collect().wait().unwrap();
     result.sort();
 
-    assert_eq!(result, vec![bar.clone(), foo.clone()]);
+    assert_eq!(result, vec![foo.clone(), bar.clone()]);
 
     heads.remove(&foo).wait().unwrap();
     heads.remove(&bar).wait().unwrap();
@@ -65,10 +59,10 @@ where
 fn persistence<F, H>(mut new_heads: F)
 where
     F: FnMut() -> H,
-    H: Heads<Key = String>,
+    H: Heads,
 {
-    let foo = "foo".to_string();
-    let bar = "bar".to_string();
+    let foo = mercurial_types_mocks::nodehash::ONES_HASH;
+    let bar = mercurial_types_mocks::nodehash::TWOS_HASH;
 
     {
         let heads = new_heads();
@@ -79,15 +73,11 @@ where
     let heads = new_heads();
     let mut result = heads.heads().collect().wait().unwrap();
     result.sort();
-    assert_eq!(result, vec![bar.clone(), foo.clone()]);
+    assert_eq!(result, vec![foo.clone(), bar.clone()]);
 }
 
-fn save_node_hash<H>(heads: H)
-where
-    H: Heads<Key = NodeHash>,
-{
-    let h = (0..40).map(|_| "a").collect::<String>();
-    let head = NodeHash::new(Sha1::from_str(h.as_str()).unwrap());
+fn save_node_hash<H: Heads>(heads: H) {
+    let head = mercurial_types_mocks::nodehash::AS_HASH;
     heads.add(&head).wait().unwrap();
     let mut result = heads.heads().collect().wait().unwrap();
     result.sort();

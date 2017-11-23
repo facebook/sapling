@@ -225,7 +225,7 @@ fn open_repo<P: Into<PathBuf>>(input: P) -> Result<RevlogRepo> {
     Ok(revlog)
 }
 
-fn open_headstore<P: Into<PathBuf>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileHeads<String>> {
+fn open_headstore<P: Into<PathBuf>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileHeads> {
     let mut heads = heads.into();
 
     heads.push("heads");
