@@ -290,14 +290,16 @@ works.
   0 remove large_by_size.bin
   $ cd nolargefiles
 
-BUG: This should have a requires line for 'lfs'
+The requirement is added to the destination repo
 
   $ cat .hg/requires
   dotencode
   fncache
   generaldelta
+  lfs
   revlogv1
   store
+
   $ hg log -r 'all()' -G -T '{rev} {join(lfs_files, ", ")} ({desc})\n'
   o  8  (remove large_by_size.bin)
   |

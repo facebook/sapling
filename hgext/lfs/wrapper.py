@@ -165,6 +165,31 @@ def filectxisbinary(orig, self):
 def filectxislfs(self):
     return _islfs(self.filelog(), self.filenode())
 
+def convertsink(orig, sink):
+    sink = orig(sink)
+    if sink.repotype == 'hg':
+        class lfssink(sink.__class__):
+            def putcommit(self, files, copies, parents, commit, source, revmap,
+                          full, cleanp2):
+                pc = super(lfssink, self).putcommit
+                node = pc(files, copies, parents, commit, source, revmap, full,
+                          cleanp2)
+
+                if 'lfs' not in self.repo.requirements:
+                    ctx = self.repo[node]
+
+                    # The file list may contain removed files, so check for
+                    # membership before assuming it is in the context.
+                    if any(f in ctx and ctx[f].islfs() for f, n in files):
+                        self.repo.requirements.add('lfs')
+                        self.repo._writerequirements()
+
+                return node
+
+        sink.__class__ = lfssink
+
+    return sink
+
 def vfsinit(orig, self, othervfs):
     orig(self, othervfs)
     # copy lfs related options

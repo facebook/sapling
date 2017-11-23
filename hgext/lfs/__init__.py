@@ -128,6 +128,9 @@ def extsetup(ui):
     wrapfilelog(filelog.filelog)
 
     wrapfunction = extensions.wrapfunction
+
+    wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
+
     wrapfunction(changegroup,
                  'supportedoutgoingversions',
                  wrapper.supportedoutgoingversions)
