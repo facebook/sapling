@@ -114,7 +114,7 @@ def convertsource(ui, path, type, revs):
     for name, source, sortmode in source_converters:
         try:
             if not type or name == type:
-                return source(ui, path, revs), sortmode
+                return source(ui, name, path, revs), sortmode
         except (NoRepo, MissingTool) as inst:
             exceptions.append(inst)
     if not ui.quiet:
@@ -128,7 +128,7 @@ def convertsink(ui, path, type):
     for name, sink in sink_converters:
         try:
             if not type or name == type:
-                return sink(ui, path)
+                return sink(ui, name, path)
         except NoRepo as inst:
             ui.note(_("convert: %s\n") % inst)
         except MissingTool as inst:

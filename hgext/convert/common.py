@@ -73,12 +73,13 @@ class commit(object):
 class converter_source(object):
     """Conversion source interface"""
 
-    def __init__(self, ui, path=None, revs=None):
+    def __init__(self, ui, repotype, path=None, revs=None):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
         self.ui = ui
         self.path = path
         self.revs = revs
+        self.repotype = repotype
 
         self.encoding = 'utf-8'
 
@@ -218,7 +219,7 @@ class converter_source(object):
 class converter_sink(object):
     """Conversion sink (target) interface"""
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, repotype, path):
         """Initialize conversion sink (or raise NoRepo("message")
         exception if path is not a valid repository)
 
@@ -227,6 +228,7 @@ class converter_sink(object):
         self.ui = ui
         self.path = path
         self.created = []
+        self.repotype = repotype
 
     def revmapfile(self):
         """Path to a file that will contain lines

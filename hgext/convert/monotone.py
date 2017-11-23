@@ -19,8 +19,8 @@ from mercurial import (
 from . import common
 
 class monotone_source(common.converter_source, common.commandline):
-    def __init__(self, ui, path=None, revs=None):
-        common.converter_source.__init__(self, ui, path, revs)
+    def __init__(self, ui, repotype, path=None, revs=None):
+        common.converter_source.__init__(self, ui, repotype, path, revs)
         if revs and len(revs) > 1:
             raise error.Abort(_('monotone source does not support specifying '
                                'multiple revs'))

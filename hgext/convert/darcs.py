@@ -40,8 +40,8 @@ except ImportError:
                 pass
 
 class darcs_source(common.converter_source, common.commandline):
-    def __init__(self, ui, path, revs=None):
-        common.converter_source.__init__(self, ui, path, revs=revs)
+    def __init__(self, ui, repotype, path, revs=None):
+        common.converter_source.__init__(self, ui, repotype, path, revs=revs)
         common.commandline.__init__(self, ui, 'darcs')
 
         # check for _darcs, ElementTree so that we can easily skip

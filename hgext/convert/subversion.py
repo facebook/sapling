@@ -285,8 +285,8 @@ def issvnurl(ui, url):
 # the parent module. A revision has at most one parent.
 #
 class svn_source(converter_source):
-    def __init__(self, ui, url, revs=None):
-        super(svn_source, self).__init__(ui, url, revs=revs)
+    def __init__(self, ui, repotype, url, revs=None):
+        super(svn_source, self).__init__(ui, repotype, url, revs=revs)
 
         if not (url.startswith('svn://') or url.startswith('svn+ssh://') or
                 (os.path.exists(url) and
@@ -1112,9 +1112,9 @@ class svn_sink(converter_sink, commandline):
     def authorfile(self):
         return self.join('hg-authormap')
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, repotype, path):
 
-        converter_sink.__init__(self, ui, path)
+        converter_sink.__init__(self, ui, repotype, path)
         commandline.__init__(self, ui, 'svn')
         self.delete = []
         self.setexec = []

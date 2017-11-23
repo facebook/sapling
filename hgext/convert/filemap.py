@@ -172,7 +172,7 @@ class filemapper(object):
 
 class filemap_source(common.converter_source):
     def __init__(self, ui, baseconverter, filemap):
-        super(filemap_source, self).__init__(ui)
+        super(filemap_source, self).__init__(ui, baseconverter.repotype)
         self.base = baseconverter
         self.filemapper = filemapper(ui, filemap)
         self.commits = {}

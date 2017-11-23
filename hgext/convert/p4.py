@@ -43,11 +43,11 @@ def decodefilename(filename):
     return filename
 
 class p4_source(common.converter_source):
-    def __init__(self, ui, path, revs=None):
+    def __init__(self, ui, repotype, path, revs=None):
         # avoid import cycle
         from . import convcmd
 
-        super(p4_source, self).__init__(ui, path, revs=revs)
+        super(p4_source, self).__init__(ui, repotype, path, revs=revs)
 
         if "/" in path and not path.startswith('//'):
             raise common.NoRepo(_('%s does not look like a P4 repository') %
