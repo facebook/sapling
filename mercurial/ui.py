@@ -761,6 +761,7 @@ class ui(object):
 
         The return value can either be
         - False if HGPLAIN is not set, or feature is in HGPLAINEXCEPT
+        - False if feature is disabled by default and not included in HGPLAIN
         - True otherwise
         '''
         if ('HGPLAIN' not in encoding.environ and
@@ -768,6 +769,9 @@ class ui(object):
             return False
         exceptions = encoding.environ.get('HGPLAINEXCEPT',
                 '').strip().split(',')
+        # TODO: add support for HGPLAIN=+feature,-feature syntax
+        if '+strictflags' not in encoding.environ.get('HGPLAIN', '').split(','):
+            exceptions.append('strictflags')
         if feature and exceptions:
             return feature not in exceptions
         return True

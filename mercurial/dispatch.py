@@ -150,6 +150,8 @@ def dispatch(req):
     try:
         if not req.ui:
             req.ui = uimod.ui.load()
+        if req.ui.plain('strictflags'):
+            req.earlyoptions.update(_earlyparseopts(req.args))
         if _earlyreqoptbool(req, 'traceback', ['--traceback']):
             req.ui.setconfig('ui', 'traceback', 'on', '--traceback')
 
@@ -644,6 +646,12 @@ def _parseconfig(ui, config):
 
     return configs
 
+def _earlyparseopts(args):
+    options = {}
+    fancyopts.fancyopts(args, commands.globalopts, options,
+                        gnu=False, early=True)
+    return options
+
 def _earlygetopt(aliases, args, strip=True):
     """Return list of values for an option (or aliases).
 
@@ -732,12 +740,16 @@ def _earlygetopt(aliases, args, strip=True):
 
 def _earlyreqopt(req, name, aliases):
     """Peek a list option without using a full options table"""
+    if req.ui.plain('strictflags'):
+        return req.earlyoptions[name]
     values = _earlygetopt(aliases, req.args, strip=False)
     req.earlyoptions[name] = values
     return values
 
 def _earlyreqoptstr(req, name, aliases):
     """Peek a string option without using a full options table"""
+    if req.ui.plain('strictflags'):
+        return req.earlyoptions[name]
     value = (_earlygetopt(aliases, req.args, strip=False) or [''])[-1]
     req.earlyoptions[name] = value
     return value
@@ -745,13 +757,15 @@ def _earlyreqoptstr(req, name, aliases):
 def _earlyreqoptbool(req, name, aliases):
     """Peek a boolean option without using a full options table
 
-    >>> req = request([b'x', b'--debugger'])
+    >>> req = request([b'x', b'--debugger'], uimod.ui())
     >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
     True
 
-    >>> req = request([b'x', b'--', b'--debugger'])
+    >>> req = request([b'x', b'--', b'--debugger'], uimod.ui())
     >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
     """
+    if req.ui.plain('strictflags'):
+        return req.earlyoptions[name]
     try:
         argcount = req.args.index("--")
     except ValueError:

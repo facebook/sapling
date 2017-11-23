@@ -220,8 +220,17 @@ def _loadnewui(srcui, args):
         newui._csystem = srcui._csystem
 
     # command line args
-    args = args[:]
-    dispatch._parseconfig(newui, dispatch._earlygetopt(['--config'], args))
+    options = {}
+    if srcui.plain('strictflags'):
+        options.update(dispatch._earlyparseopts(args))
+    else:
+        args = args[:]
+        options['config'] = dispatch._earlygetopt(['--config'], args)
+        cwds = dispatch._earlygetopt(['--cwd'], args)
+        options['cwd'] = cwds and cwds[-1] or ''
+        rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
+        options['repository'] = rpath and rpath[-1] or ''
+    dispatch._parseconfig(newui, options['config'])
 
     # stolen from tortoisehg.util.copydynamicconfig()
     for section, name, value in srcui.walkconfig():
@@ -232,10 +241,9 @@ def _loadnewui(srcui, args):
         newui.setconfig(section, name, value, source)
 
     # load wd and repo config, copied from dispatch.py
-    cwds = dispatch._earlygetopt(['--cwd'], args)
-    cwd = cwds and os.path.realpath(cwds[-1]) or None
-    rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
-    rpath = rpath and rpath[-1] or ''
+    cwd = options['cwd']
+    cwd = cwd and os.path.realpath(cwd) or None
+    rpath = options['repository']
     path, newlui = dispatch._getlocal(newui, rpath, wd=cwd)
 
     return (newui, newlui)

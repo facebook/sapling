@@ -74,6 +74,32 @@ HGRCPATH
     like the username and extensions that may be required to interface
     with a repository.
 
+Command-line Flags
+==================
+
+Mercurial's default command-line parser is designed for humans, and is not
+robust against malicious input. For instance, you can start a debugger by
+passing ``--debugger`` as an option value::
+
+    $ REV=--debugger sh -c 'hg log -r "$REV"'
+
+This happens because several command-line flags need to be scanned without
+using a concrete command table, which may be modified while loading repository
+settings and extensions.
+
+Since Mercurial 4.4.2, the parsing of such flags may be restricted by setting
+``HGPLAIN=+strictflags``. When this feature is enabled, all early options
+(e.g. ``-R/--repository``, ``--cwd``, ``--config``) must be specified first
+amongst the other global options, and cannot be injected to an arbitrary
+location::
+
+    $ HGPLAIN=+strictflags hg -R "$REPO" log -r "$REV"
+
+In earlier Mercurial versions where ``+strictflags`` isn't available, you
+can mitigate the issue by concatenating an option value with its flag::
+
+    $ hg log -r"$REV" --keyword="$KEYWORD"
+
 Consuming Command Output
 ========================
 
