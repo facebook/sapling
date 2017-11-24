@@ -653,7 +653,7 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
 
-def _checkunknowndirs(repo, f):
+class _unknowndirschecker(object):
     """
     Look for any unknown files or directories that may have a path conflict
     with a file.  If any path prefix of the file exists as a file or link,
@@ -663,23 +663,42 @@ def _checkunknowndirs(repo, f):
     Returns the shortest path at which a conflict occurs, or None if there is
     no conflict.
     """
+    def __init__(self):
+        # A set of paths known to be good.  This prevents repeated checking of
+        # dirs.  It will be updated with any new dirs that are checked and found
+        # to be safe.
+        self._unknowndircache = set()
 
-    # Check for path prefixes that exist as unknown files.
-    for p in reversed(list(util.finddirs(f))):
-        if (repo.wvfs.audit.check(p)
-                and repo.wvfs.isfileorlink(p)
-                and repo.dirstate.normalize(p) not in repo.dirstate):
-            return p
+        # A set of paths that are known to be absent.  This prevents repeated
+        # checking of subdirectories that are known not to exist. It will be
+        # updated with any new dirs that are checked and found to be absent.
+        self._missingdircache = set()
 
-    # Check if the file conflicts with a directory containing unknown files.
-    if repo.wvfs.audit.check(f) and repo.wvfs.isdir(f):
-        # Does the directory contain any files that are not in the dirstate?
-        for p, dirs, files in repo.wvfs.walk(f):
-            for fn in files:
-                relf = repo.dirstate.normalize(repo.wvfs.reljoin(p, fn))
-                if relf not in repo.dirstate:
-                    return f
-    return None
+    def __call__(self, repo, f):
+        # Check for path prefixes that exist as unknown files.
+        for p in reversed(list(util.finddirs(f))):
+            if p in self._missingdircache:
+                return
+            if p in self._unknowndircache:
+                continue
+            if repo.wvfs.audit.check(p):
+                if (repo.wvfs.isfileorlink(p)
+                        and repo.dirstate.normalize(p) not in repo.dirstate):
+                    return p
+                if not repo.wvfs.lexists(p):
+                    self._missingdircache.add(p)
+                    return
+                self._unknowndircache.add(p)
+
+        # Check if the file conflicts with a directory containing unknown files.
+        if repo.wvfs.audit.check(f) and repo.wvfs.isdir(f):
+            # Does the directory contain any files that are not in the dirstate?
+            for p, dirs, files in repo.wvfs.walk(f):
+                for fn in files:
+                    relf = repo.dirstate.normalize(repo.wvfs.reljoin(p, fn))
+                    if relf not in repo.dirstate:
+                        return f
+        return None
 
 def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     """
@@ -701,12 +720,13 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
             elif config == 'warn':
                 warnconflicts.update(conflicts)
 
+        checkunknowndirs = _unknowndirschecker()
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
                     fileconflicts.add(f)
                 elif pathconfig and f not in wctx:
-                    path = _checkunknowndirs(repo, f)
+                    path = checkunknowndirs(repo, f)
                     if path is not None:
                         pathconflicts.add(path)
             elif m == 'dg':
