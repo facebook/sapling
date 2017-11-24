@@ -84,12 +84,13 @@ bail if the user does not have dulwich
   $ cd gitrepo2
   $ git checkout branch1 2>&1 | grep -v 'up-to-date'
   Already on 'branch1'
+  Your branch is up to date with 'origin/branch1'. (?)
   $ echo g1 >> f1
   $ git add f1
   $ commit -m "append f1"
   $ git checkout branch2
   Switched to a new branch 'branch2'
-  Branch branch2 set up to track remote branch branch2 from origin.
+  Branch '?branch2'? set up to track remote branch '?branch2'? from '?origin'?. (re)
   $ echo g2 >> f2
   $ git add f2
   $ commit -m "append f2"
