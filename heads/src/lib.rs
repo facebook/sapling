@@ -25,3 +25,21 @@ pub trait Heads: Send + 'static {
     fn is_head(&self, &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>>;
     fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>>;
 }
+
+impl Heads for Box<Heads> {
+    fn add(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+        self.as_ref().add(head)
+    }
+
+    fn remove(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+        self.as_ref().remove(head)
+    }
+
+    fn is_head(&self, hash: &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>> {
+        self.as_ref().is_head(hash)
+    }
+
+    fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>> {
+        self.as_ref().heads()
+    }
+}
