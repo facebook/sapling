@@ -915,34 +915,21 @@ def checkpathconflicts(repo, wctx, mctx, actions):
     # can't be updated to cleanly.
     invalidconflicts = set()
 
+    # The set of directories that contain files that are being created.
+    createdfiledirs = set()
+
     # The set of files deleted by all the actions.
     deletedfiles = set()
 
     for f, (m, args, msg) in actions.items():
         if m in ('c', 'dc', 'm', 'cm'):
             # This action may create a new local file.
+            createdfiledirs.update(util.finddirs(f))
             if mf.hasdir(f):
                 # The file aliases a local directory.  This might be ok if all
                 # the files in the local directory are being deleted.  This
                 # will be checked once we know what all the deleted files are.
                 remoteconflicts.add(f)
-            for p in util.finddirs(f):
-                if p in mf:
-                    if p in mctx:
-                        # The file is in a directory which aliases both a local
-                        # and a remote file.  This is an internal inconsistency
-                        # within the remote manifest.
-                        invalidconflicts.add(p)
-                    else:
-                        # The file is in a directory which aliases a local file.
-                        # We will need to rename the local file.
-                        localconflicts.add(p)
-                if p in actions and actions[p][0] in ('c', 'dc', 'm', 'cm'):
-                    # The file is in a directory which aliases a remote file.
-                    # This is an internal inconsistency within the remote
-                    # manifest.
-                    invalidconflicts.add(p)
-
         # Track the names of all deleted files.
         if m == 'r':
             deletedfiles.add(f)
@@ -953,6 +940,24 @@ def checkpathconflicts(repo, wctx, mctx, actions):
         if m == 'dm':
             f2, flags = args
             deletedfiles.add(f2)
+
+    # Check all directories that contain created files for path conflicts.
+    for p in createdfiledirs:
+        if p in mf:
+            if p in mctx:
+                # A file is in a directory which aliases both a local
+                # and a remote file.  This is an internal inconsistency
+                # within the remote manifest.
+                invalidconflicts.add(p)
+            else:
+                # A file is in a directory which aliases a local file.
+                # We will need to rename the local file.
+                localconflicts.add(p)
+        if p in actions and actions[p][0] in ('c', 'dc', 'm', 'cm'):
+            # The file is in a directory which aliases a remote file.
+            # This is an internal inconsistency within the remote
+            # manifest.
+            invalidconflicts.add(p)
 
     # Rename all local conflicting files that have not been deleted.
     for p in localconflicts:
