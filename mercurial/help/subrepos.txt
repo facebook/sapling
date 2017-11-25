@@ -90,7 +90,7 @@ Interaction with Mercurial Commands
 :archive: archive does not recurse in subrepositories unless
     -S/--subrepos is specified.
 
-:cat: cat currently only handles exact file matches in subrepos.
+:cat: Git subrepositories only support exact file matches.
     Subversion subrepositories are currently ignored.
 
 :commit: commit creates a consistent snapshot of the state of the
