@@ -249,7 +249,13 @@ def gexport(ui, repo):
 
 @command('gclear')
 def gclear(ui, repo):
-    '''clear out the Git cached data'''
+    '''clear out the Git cached data
+
+    Strips all Git-related metadata from the repo, including the mapping
+    between Git and Mercurial changesets. This is an irreversible
+    destructive operation that may prevent further interaction with
+    other clones.
+    '''
     repo.ui.status(_("clearing out the git cache data\n"))
     repo.githandler.clear()
 
