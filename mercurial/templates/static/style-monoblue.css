@@ -321,6 +321,7 @@ pre.sourcelines.stripes > :nth-child(4n+4):hover,
 pre.sourcelines.stripes > :nth-child(4n+1):hover + :nth-child(4n+2),
 pre.sourcelines.stripes > :nth-child(4n+3):hover + :nth-child(4n+4) { background-color: #D5E1E6; }
 
+tr:target td,
 pre.sourcelines > span:target,
 pre.sourcelines.stripes > span:target {
     background-color: #bfdfff;
