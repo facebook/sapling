@@ -1,5 +1,5 @@
 GENERAL
-==========
+=======
 * work fine with eclipse plugin or tortoise-hg
 
 MAPPING ISSUES
@@ -8,7 +8,7 @@ MAPPING ISSUES
 
 
 REMOTE/BRANCH STUFF
-=====================
+===================
 * explain what branch mapping policy determined when updating refs
 * error nicer if pushing to remote without push access (over git://)
 
@@ -29,5 +29,5 @@ SPEED/EFFICIENCY
 MAYBE
 ==========
 * submodules?
-* .gitignore, etc - try to convert? 
+* .gitignore, etc - try to convert?
   - (probably not automatically, but perhaps a generator?)

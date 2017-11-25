@@ -100,25 +100,7 @@ repository.
 Commands
 ========
 
-gclear
-------
-
-TODO
-
-gimport
--------
-
-TODO
-
-gexport
--------
-
-TODO
-
-git-cleanup
------------
-
-TODO
+See `hg help -e hggit`.
 
 Hg Bookmarks Integration
 ========================
