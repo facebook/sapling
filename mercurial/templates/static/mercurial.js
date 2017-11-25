@@ -30,11 +30,9 @@ function Graph() {
 	this.ctx.strokeStyle = 'rgb(0, 0, 0)';
 	this.ctx.fillStyle = 'rgb(0, 0, 0)';
 	this.cur = [0, 0];
-	this.line_width = 3;
 	this.bg = [0, 4];
 	this.cell = [2, 0];
 	this.columns = 0;
-	this.revlink = '';
 
 	this.reset = function() {
 		this.bg = [0, 4];
