@@ -53,6 +53,7 @@ from mercurial import (
     phases,
     registrar,
     repair,
+    scmutil,
 )
 from mercurial.node import hex
 from mercurial import lock as lockmod
@@ -106,6 +107,7 @@ testedwith = 'ships-with-fb-hgext'
 amendopts = [
     ('', 'rebase', None, _('rebases children after the amend')),
     ('', 'fixup', None, _('rebase children from a previous amend')),
+    ('', 'to', '', _('amend to a specific commit in the current stack')),
 ]
 
 def uisetup(ui):
@@ -183,9 +185,7 @@ def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
     '''
     rebase = opts.get('rebase')
-
-    # --to is broken - T22281996
-    to = False and opts.get('to')
+    to = opts.get('to')
 
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits
@@ -366,30 +366,42 @@ def fixupamend(ui, repo):
     finally:
         lockmod.release(wlock, lock, tr)
 
-def amendtocommit(ui, repo, commit):
+def amendtocommit(ui, repo, commitspec):
     """amend to a specific commit
     """
     with repo.wlock(), repo.lock():
         originalcommits = list(repo.set("::. - public()"))
+        try:
+            revs = scmutil.revrange(repo, [commitspec])
+        except error.RepoLookupError:
+            raise error.Abort(_("revision '%s' cannot be found")
+                              % commitspec)
+        if len(revs) > 1:
+            raise error.Abort(_("'%s' refers to multiple changesets")
+                              % commitspec)
+        targetcommit = repo[revs.first()]
+        if targetcommit not in originalcommits:
+            raise error.Abort(_("revision '%s' is not a parent of "
+                              'the working copy' % commitspec))
+
         tempcommit = repo.commit(text="tempCommit")
 
         if not tempcommit:
-            error.Abort(_('no pending changes to amend'))
+            raise error.Abort(_('no pending changes to amend'))
 
         tempcommithex = hex(tempcommit)
 
         fp = tempfile.NamedTemporaryFile()
         try:
             found = False
-            for line in originalcommits:
-                if str(line) == commit:
-                    fp.write("pick " + str(line) + "\n")
+            for curcommit in originalcommits:
+                fp.write("pick " + str(curcommit) + "\n")
+                if curcommit == targetcommit:
                     fp.write("roll " + tempcommithex[:12] + "\n")
                     found = True
-                else:
-                    fp.write("pick " + str(line) + "\n")
             if not found:
-                error.Abort(_('the commit hash provided cannot be found'))
+                raise error.Abort(_("revision '%s' cannot be found")
+                                  % commitspec)
             fp.flush()
             try:
                 histedit.histedit(ui, repo, commands=fp.name)

@@ -1,6 +1,3 @@
-This feature is just broken right now - T22281996
-  $ exit 80
-
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -22,7 +19,12 @@ Test that amend --to option
   > }
   $ mkcommit "ROOT"
   $ hg phase --public "desc(ROOT)"
+  $ mkcommit "SIDE"
+  $ hg phase --public "desc(SIDE)"
+  $ hg update -r "desc(ROOT)"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit "A"
+  created new head
   $ mkcommit "B"
   $ mkcommit "C"
 Test
@@ -47,6 +49,12 @@ Test
   |  @@ -0,0 +1,1 @@
   |  +A
   |
+  | o  SIDE 3c489f4f07a6diff -r ea207398892e -r 3c489f4f07a6 SIDE
+  |/   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  |    +++ b/SIDE	Thu Jan 01 00:00:00 1970 +0000
+  |    @@ -0,0 +1,1 @@
+  |    +SIDE
+  |
   o  ROOT ea207398892ediff -r 000000000000 -r ea207398892e ROOT
      --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
      +++ b/ROOT	Thu Jan 01 00:00:00 1970 +0000
@@ -59,7 +67,19 @@ Test
   > line3
   > EOF
   $ hg add testFile
-  $ hg amend --to c473644ee0e9
+  $ hg amend --to dorito
+  abort: revision 'dorito' cannot be found
+  [255]
+  $ hg amend --to c473644
+  $ hg amend --to 3c489f4f07a6
+  abort: revision '3c489f4f07a6' is not a parent of the working copy
+  [255]
+  $ hg amend --to 'children(ea207398892e)'
+  abort: 'children(ea207398892e)' refers to multiple changesets
+  [255]
+  $ hg amend --to 'min(children(ea207398892e))'
+  abort: revision 'min(children(ea207398892e))' is not a parent of the working copy
+  [255]
   $ hg log -G -vp -T "{desc} {node|short}"
   @  C 86de924a3b95diff -r ce91eb673f02 -r 86de924a3b95 C
   |  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
@@ -85,6 +105,12 @@ Test
   |  +++ b/A	Thu Jan 01 00:00:00 1970 +0000
   |  @@ -0,0 +1,1 @@
   |  +A
+  |
+  | o  SIDE 3c489f4f07a6diff -r ea207398892e -r 3c489f4f07a6 SIDE
+  |/   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  |    +++ b/SIDE	Thu Jan 01 00:00:00 1970 +0000
+  |    @@ -0,0 +1,1 @@
+  |    +SIDE
   |
   o  ROOT ea207398892ediff -r 000000000000 -r ea207398892e ROOT
      --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
