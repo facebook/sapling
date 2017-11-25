@@ -40,10 +40,10 @@ Missing parameter for early option:
 "--" may be an option value:
 
   $ hg -R -- log
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: repository -- not found!
   [255]
   $ hg log -R --
-  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  abort: repository -- not found!
   [255]
   $ hg log -T --
   -- (no-eol)

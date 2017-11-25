@@ -119,7 +119,7 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
     >>> get([b'--cwd=foo', b'x', b'y', b'-R', b'bar', b'--debugger'], gnu=False)
     ([('--cwd', 'foo')], ['x', 'y', '-R', 'bar', '--debugger'])
     >>> get([b'--unknown', b'--cwd=foo', b'--', '--debugger'], gnu=False)
-    ([], ['--unknown', '--cwd=foo', '--debugger'])
+    ([], ['--unknown', '--cwd=foo', '--', '--debugger'])
 
     stripping early options (without loosing '--'):
 
@@ -140,6 +140,13 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
     ([('-q', '')], [])
     >>> get([b'-q', b'--'])
     ([('-q', '')], [])
+
+    '--' may be a value:
+
+    >>> get([b'-R', b'--', b'x'])
+    ([('-R', '--')], ['x'])
+    >>> get([b'--cwd', b'--', b'x'])
+    ([('--cwd', '--')], ['x'])
 
     value passed to bool options:
 
@@ -163,20 +170,16 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
     >>> get([b'-', b'y'])
     ([], ['-', 'y'])
     """
-    # ignoring everything just after '--' isn't correct as '--' may be an
-    # option value (e.g. ['-R', '--']), but we do that consistently.
-    try:
-        argcount = args.index('--')
-    except ValueError:
-        argcount = len(args)
-
     parsedopts = []
     parsedargs = []
     pos = 0
-    while pos < argcount:
+    while pos < len(args):
         arg = args[pos]
+        if arg == '--':
+            pos += not keepsep
+            break
         flag, hasval, val, takeval = _earlyoptarg(arg, shortlist, namelist)
-        if not hasval and takeval and pos + 1 >= argcount:
+        if not hasval and takeval and pos + 1 >= len(args):
             # missing last argument
             break
         if not flag or hasval and not takeval:
@@ -195,8 +198,7 @@ def earlygetopt(args, shortlist, namelist, gnu=False, keepsep=False):
             parsedopts.append((flag, args[pos + 1]))
             pos += 2
 
-    parsedargs.extend(args[pos:argcount])
-    parsedargs.extend(args[argcount + (not keepsep):])
+    parsedargs.extend(args[pos:])
     return parsedopts, parsedargs
 
 def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
