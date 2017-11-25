@@ -150,6 +150,10 @@ Early options must come first if HGPLAIN=+strictflags is specified:
   [255]
   $ HGPLAIN=+strictflags hg --cwd .. -q -Ra log -b default
   0:cb9a9f314b8b
+  $ HGPLAIN=+strictflags hg --cwd .. -q --repository a log -b default
+  0:cb9a9f314b8b
+  $ HGPLAIN=+strictflags hg --cwd .. -q --repo a log -b default
+  0:cb9a9f314b8b
 
 For compatibility reasons, HGPLAIN=+strictflags is not enabled by plain HGPLAIN:
 

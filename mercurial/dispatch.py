@@ -649,7 +649,8 @@ def _parseconfig(ui, config):
 def _earlyparseopts(args):
     options = {}
     fancyopts.fancyopts(args, commands.globalopts, options,
-                        gnu=False, early=True)
+                        gnu=False, early=True,
+                        optaliases={'repository': ['repo']})
     return options
 
 def _earlygetopt(aliases, args, strip=True):

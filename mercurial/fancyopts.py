@@ -226,7 +226,7 @@ def gnugetopt(args, options, longoptions):
     return opts, args
 
 
-def fancyopts(args, options, state, gnu=False, early=False):
+def fancyopts(args, options, state, gnu=False, early=False, optaliases=None):
     """
     read args, parse options, and store options in state
 
@@ -246,8 +246,15 @@ def fancyopts(args, options, state, gnu=False, early=False):
       integer - parameter strings is stored as int
       function - call function with parameter
 
+    optaliases is a mapping from a canonical option name to a list of
+    additional long options. This exists for preserving backward compatibility
+    of early options. If we want to use it extensively, please consider moving
+    the functionality to the options table (e.g separate long options by '|'.)
+
     non-option args are returned
     """
+    if optaliases is None:
+        optaliases = {}
     namelist = []
     shortlist = ''
     argmap = {}
@@ -261,10 +268,13 @@ def fancyopts(args, options, state, gnu=False, early=False):
         else:
             short, name, default, comment = option
         # convert opts to getopt format
-        oname = name
+        onames = [name]
+        onames.extend(optaliases.get(name, []))
         name = name.replace('-', '_')
 
-        argmap['-' + short] = argmap['--' + oname] = name
+        argmap['-' + short] = name
+        for n in onames:
+            argmap['--' + n] = name
         defmap[name] = default
 
         # copy defaults to state
@@ -279,24 +289,24 @@ def fancyopts(args, options, state, gnu=False, early=False):
         if not (default is None or default is True or default is False):
             if short:
                 short += ':'
-            if oname:
-                oname += '='
-        elif oname not in nevernegate:
-            if oname.startswith('no-'):
-                insert = oname[3:]
-            else:
-                insert = 'no-' + oname
-            # backout (as a practical example) has both --commit and
-            # --no-commit options, so we don't want to allow the
-            # negations of those flags.
-            if insert not in alllong:
-                assert ('--' + oname) not in negations
-                negations['--' + insert] = '--' + oname
-                namelist.append(insert)
+            onames = [n + '=' for n in onames]
+        elif name not in nevernegate:
+            for n in onames:
+                if n.startswith('no-'):
+                    insert = n[3:]
+                else:
+                    insert = 'no-' + n
+                # backout (as a practical example) has both --commit and
+                # --no-commit options, so we don't want to allow the
+                # negations of those flags.
+                if insert not in alllong:
+                    assert ('--' + n) not in negations
+                    negations['--' + insert] = '--' + n
+                    namelist.append(insert)
         if short:
             shortlist += short
         if name:
-            namelist.append(oname)
+            namelist.extend(onames)
 
     # parse arguments
     if early:
