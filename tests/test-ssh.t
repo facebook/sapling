@@ -581,17 +581,16 @@ abort during pull is properly reported as such
 
 abort with no error hint when there is a ssh problem when pulling
 
-  $ hg pull ssh://brokenrepository
+  $ hg pull ssh://brokenrepository -e "\"$PYTHON\" \"$TESTDIR/dummyssh\""
   pulling from ssh://brokenrepository/
-  remote: ssh: Could not resolve hostname brokenrepository: Name or service not known
   abort: no suitable response from remote hg!
   [255]
 
 abort with configured error hint when there is a ssh problem when pulling
 
-  $ hg pull ssh://brokenrepository --config ui.ssherrorhint="Please see http://company/internalwiki/ssh.html"
+  $ hg pull ssh://brokenrepository -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" \
+  > --config ui.ssherrorhint="Please see http://company/internalwiki/ssh.html"
   pulling from ssh://brokenrepository/
-  remote: ssh: Could not resolve hostname brokenrepository: Name or service not known
   abort: no suitable response from remote hg!
   (Please see http://company/internalwiki/ssh.html)
   [255]
