@@ -133,6 +133,7 @@ cpp_library(
     ],
     deps = [
         ":thrift-streaming-cpp2",
+        "@/folly:optional",
     ],
 )
 
