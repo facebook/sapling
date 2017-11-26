@@ -124,17 +124,6 @@ See the Makefile for a list of compatible Mercurial versions.
 Configuration
 =============
 
-git.intree
-----------
-
-hg-git keeps a git repository clone for reading and updating. By default, the
-git clone is the subdirectory `git` in your local Mercurial repository. If you
-would like this git clone to be at the same level of your Mercurial repository
-instead (named `.git`), add the following to your `hgrc`:
-
-    [git]
-    intree = True
-
 git.authors
 -----------
 
@@ -192,8 +181,8 @@ off as the bookmark is translated to a git branch:
 
     [git]
     branch_bookmark_suffix=_bookmark
-    
-Above, if an hg repo had a named branch called `release_6_maintenance`, you could 
+
+Above, if an hg repo had a named branch called `release_6_maintenance`, you could
 then link it to a bookmark called `release_6_maintenance_bookmark`.   hg-git will then
 strip off the `_bookmark` suffix from this bookmark name, and create a git branch
 called `release_6_maintenance`.   When pulling back from git to hg, the `_bookmark`
@@ -201,12 +190,30 @@ suffix is then applied back, if and only if an hg named branch of that name exis
 E.g., when changes to the `release_6_maintenance` branch are checked into git, these
 will be placed into the `release_6_maintenance_bookmark` bookmark on hg.  But if a
 new branch called `release_7_maintenance` were pulled over to hg, and there was
-not a `release_7_maintenance` named branch already, the bookmark will be named 
+not a `release_7_maintenance` named branch already, the bookmark will be named
 `release_7_maintenance` with no usage of the suffix.
 
 The `branch_bookmark_suffix` option is, like the `authors` option, intended for
-migrating legacy hg named branches.   Going forward, an hg repo that is to 
+migrating legacy hg named branches.   Going forward, an hg repo that is to
 be linked with a git repo should only use bookmarks for named branching.
+
+git.findcopiesharder
+--------------------
+
+Whether to consider unmodified files as copy sources. This is a very expensive
+operation for large projects, so use it with caution. Similar to `git diff`'s
+--find-copies-harder option.
+
+git.intree
+----------
+
+hg-git keeps a git repository clone for reading and updating. By default, the
+git clone is the subdirectory `git` in your local Mercurial repository. If you
+would like this git clone to be at the same level of your Mercurial repository
+instead (named `.git`), add the following to your `hgrc`:
+
+    [git]
+    intree = True
 
 git.mindate
 -----------
@@ -214,15 +221,6 @@ git.mindate
 If set, branches where the latest commit's commit time is older than this will
 not be imported. Accepts any date formats that Mercurial does -- see
 `hg help dates` for more.
-
-git.similarity
---------------
-
-Specify how similar files modified in a Git commit must be to be imported as
-Mercurial renames or copies, as a percentage between "0" (disabled) and "100"
-(files must be identical). For example, "90" means that a delete/add pair will
-be imported as a rename if more than 90% of the file has stayed the same. The
-default is "0" (disabled).
 
 git.renamelimit
 ---------------
@@ -233,9 +231,11 @@ limit. Detection is O(N^2) in the number of files modified, so be sure not to
 set the limit too high. Similar to Git's `diff.renameLimit` config. The default
 is "400", the same as Git.
 
-git.findcopiesharder
---------------------
+git.similarity
+--------------
 
-Whether to consider unmodified files as copy sources. This is a very expensive
-operation for large projects, so use it with caution. Similar to `git diff`'s
---find-copies-harder option.
+Specify how similar files modified in a Git commit must be to be imported as
+Mercurial renames or copies, as a percentage between "0" (disabled) and "100"
+(files must be identical). For example, "90" means that a delete/add pair will
+be imported as a rename if more than 90% of the file has stayed the same. The
+default is "0" (disabled).
