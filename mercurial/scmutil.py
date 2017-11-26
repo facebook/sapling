@@ -1279,3 +1279,9 @@ def registersummarycallback(repo, otr, txnname=''):
             else:
                 revrange = '%s:%s' % (minrev, maxrev)
             repo.ui.status(_('new changesets %s\n') % revrange)
+
+def wrapconvertsink(sink):
+    """Allow extensions to wrap the sink returned by convcmd.convertsink()
+    before it is used, whether or not the convert extension was formally loaded.
+    """
+    return sink

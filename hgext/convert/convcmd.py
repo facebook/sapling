@@ -15,6 +15,7 @@ from mercurial import (
     encoding,
     error,
     hg,
+    scmutil,
     util,
 )
 
@@ -575,6 +576,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         ui.status(_("assuming destination %s\n") % dest)
 
     destc = convertsink(ui, dest, opts.get('dest_type'))
+    destc = scmutil.wrapconvertsink(destc)
 
     try:
         srcc, defaultsort = convertsource(ui, src, opts.get('source_type'),
