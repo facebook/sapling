@@ -43,7 +43,7 @@
 </tr>')}
 {ifeq(count(instabilities), '0', '', '<tr>
  <th class="instabilities">instabilities:</th>
- <td class="instabilities">{instabilities%"{name} "|escape}</td>
+ <td class="instabilities">{instabilities%"{instability} "|escape}</td>
 </tr>')}
 <tr>
  <th class="files">files:</th>
