@@ -517,18 +517,6 @@ def wraprepo(repo):
         def _recordbadlockorder(self):
             self.ui.debug("hgsql: invalid lock order\n")
 
-            outputdir = self.ui.config('hgsql', 'profileoutput')
-            if outputdir:
-                import random, traceback
-                pid = os.getpid()
-                rand = random.random()
-                timestamp = time.time()
-                path = os.path.join(outputdir, 'hgsql-lockorder-%s-%s-%s' %
-                                               (timestamp, pid, rand))
-                with open(path, 'a+') as f:
-                    stack = traceback.format_stack()
-                    f.write(''.join(stack))
-
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
             if tr.count > 1:

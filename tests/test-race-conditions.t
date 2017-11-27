@@ -49,10 +49,6 @@
   $ printf "[hooks]\npre-changegroup.sleep = sleep 2\n" >> master/.hg/hgrc
   $ initclient client2
   $ hg pull -q -R client2 ssh://user@dummy/master
-  $ ls -l $TESTTMP/hgsql-lockorder*
-  * $TESTTMP/hgsql-lockorder-* (glob)
-  * $TESTTMP/hgsql-lockorder-* (glob)
-  * $TESTTMP/hgsql-lockorder-* (glob)
 
   $ cd client
   $ hg up -q 1
@@ -78,11 +74,3 @@
   
   $ sed -i '/hooks/d' master/.hg/hgrc
   $ sed -i '/sleep/d' master/.hg/hgrc
-
-# Verify incorrect lock order taking is logged.
-# We know that streaming clones currently hit this code path, and the hg pull in
-# the above test used that code path.
-  $ cat $TESTTMP/hgsql-lockorder* | grep generate
-    File *, line *, in generatev1wireproto (glob)
-      filecount, bytecount, it = generatev1(repo)
-    File *, line *, in generatev1 (glob)
