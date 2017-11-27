@@ -28,7 +28,7 @@ use std::convert::TryFrom;
 use std::rc::Rc;
 
 use ascii::AsciiStr;
-use futures::{future, stream, Future};
+use futures::{future, stream, Future, Stream};
 use mysql_async::{Opts, Pool, Row, TransactionOptions};
 use mysql_async::prelude::*;
 use tokio_core::reactor::Remote;
@@ -45,6 +45,7 @@ mod errors {
         links {
             Db(::db::Error, ::db::ErrorKind);
             Hg(::mercurial_types::Error, ::mercurial_types::ErrorKind);
+            Bookmarks(::bookmarks::Error, ::bookmarks::ErrorKind);
         }
 
         foreign_links {
@@ -72,40 +73,70 @@ impl DbBookmarks {
 }
 
 impl Bookmarks for DbBookmarks {
-    type Value = NodeHash;
-    type Error = Error;
-    type Get = BoxFuture<Option<(Self::Value, Version)>, Self::Error>;
-    type Keys = BoxStream<Vec<u8>, Self::Error>;
-
-    fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
         let key = key.as_ref().to_vec();
-        self.wrapper.with_inner(move |pool| get_bookmark(pool, key))
+        self.wrapper
+            .with_inner(move |pool| get_bookmark(pool, key))
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
+            .boxify()
     }
 
-    fn keys(&self) -> Self::Keys {
+    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
         self.wrapper
             .with_inner(move |pool| list_keys(pool))
             .flatten_stream()
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
             .boxify()
     }
 }
 
 impl BookmarksMut for DbBookmarks {
-    type Set = BoxFuture<Option<Version>, Self::Error>;
-
-    fn set(&self, key: &AsRef<[u8]>, value: &Self::Value, version: &Version) -> Self::Set {
+    fn set(
+        &self,
+        key: &AsRef<[u8]>,
+        value: &NodeHash,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
         let key = key.as_ref().to_vec();
         let value = value.clone();
         let version = version.clone();
         self.wrapper
             .with_inner(move |pool| set_bookmark(pool, key, value, version))
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
+            .boxify()
     }
 
-    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
+    fn delete(
+        &self,
+        key: &AsRef<[u8]>,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
         let key = key.as_ref().to_vec();
         let version = version.clone();
         self.wrapper
             .with_inner(move |pool| delete_bookmark(pool, key, version))
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
+            .boxify()
     }
 }
 

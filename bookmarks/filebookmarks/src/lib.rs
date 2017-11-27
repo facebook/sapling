@@ -13,10 +13,10 @@ extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate percent_encoding;
-extern crate serde;
 
 extern crate filekv;
 extern crate futures_ext;
+extern crate mercurial_types;
 extern crate storage_types;
 
 use std::path::PathBuf;
@@ -26,18 +26,18 @@ use std::sync::Arc;
 use futures::{Future, Stream};
 use futures_cpupool::CpuPool;
 use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 
 use bookmarks::{Bookmarks, BookmarksMut};
 use filekv::FileKV;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use mercurial_types::NodeHash;
 use storage_types::Version;
 
 mod errors {
     error_chain! {
         links {
             FileKV(::filekv::Error, ::filekv::ErrorKind);
+            Bookmarks(::bookmarks::Error, ::bookmarks::ErrorKind);
         }
     }
 }
@@ -50,14 +50,11 @@ static PREFIX: &'static str = "bookmark:";
 /// Bookmarks are stored as files in the specified base directory. File operations are dispatched
 /// to a thread pool to avoid blocking the main thread. File accesses between these threads
 /// are synchronized by a global map of per-path locks.
-pub struct FileBookmarks<V> {
-    kv: FileKV<V>,
+pub struct FileBookmarks {
+    kv: FileKV<NodeHash>,
 }
 
-impl<V> FileBookmarks<V>
-where
-    V: Send + Clone + Serialize + DeserializeOwned + 'static,
-{
+impl FileBookmarks {
     #[inline]
     pub fn open<P: Into<PathBuf>>(path: P) -> Result<Self> {
         Ok(FileBookmarks {
@@ -92,46 +89,67 @@ fn encode_key(key: &AsRef<[u8]>) -> String {
     percent_encode(key.as_ref(), DEFAULT_ENCODE_SET).to_string()
 }
 
-impl<V> Bookmarks for FileBookmarks<V>
-where
-    V: Clone + Serialize + DeserializeOwned + Send + 'static,
-{
-    type Value = V;
-    type Error = Error;
-
-    type Get = BoxFuture<Option<(Self::Value, Version)>, Self::Error>;
-    type Keys = BoxStream<Vec<u8>, Self::Error>;
-
+impl Bookmarks for FileBookmarks {
     #[inline]
-    fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
-        self.kv.get(encode_key(key)).from_err().boxify()
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
+        self.kv
+            .get(encode_key(name))
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
+            .boxify()
     }
 
-    fn keys(&self) -> Self::Keys {
+    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
         self.kv
             .keys()
             .and_then(|name| Ok(percent_decode(&name[..].as_bytes()).collect()))
-            .from_err()
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
             .boxify()
     }
 }
 
-impl<V> BookmarksMut for FileBookmarks<V>
-where
-    V: Clone + Serialize + DeserializeOwned + Send + 'static,
-{
-    type Set = BoxFuture<Option<Version>, Self::Error>;
-
+impl BookmarksMut for FileBookmarks {
     #[inline]
-    fn set(&self, key: &AsRef<[u8]>, value: &Self::Value, version: &Version) -> Self::Set {
+    fn set(
+        &self,
+        key: &AsRef<[u8]>,
+        value: &NodeHash,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
         self.kv
             .set(encode_key(key), value, version, None)
-            .from_err()
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
             .boxify()
     }
 
     #[inline]
-    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
-        self.kv.delete(encode_key(key), version).from_err().boxify()
+    fn delete(
+        &self,
+        key: &AsRef<[u8]>,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+        self.kv
+            .delete(encode_key(key), version)
+            .map_err(|e| {
+                bookmarks::Error::with_chain(
+                    Error::from(e),
+                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
+                )
+            })
+            .boxify()
     }
 }

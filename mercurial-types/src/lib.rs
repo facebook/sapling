@@ -38,7 +38,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-extern crate bookmarks;
 extern crate futures_ext;
 extern crate storage_types;
 

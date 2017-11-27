@@ -21,7 +21,6 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::NodeHash;
 use rocksblob::Rocksblob;
 use tokio_core::reactor::Remote;
 
@@ -30,7 +29,7 @@ use errors::*;
 /// Represents all the state used by a blob store.
 pub trait BlobState: 'static + Send + Sync {
     type Heads: Heads + Sync;
-    type Bookmarks: Bookmarks<Value = NodeHash> + Clone + Sync;
+    type Bookmarks: Bookmarks + Clone + Sync;
     type Blobstore: Blobstore<Key = String> + Clone + Sync;
     type Linknodes: Linknodes + Clone;
 
@@ -88,7 +87,7 @@ macro_rules! impl_blob_state {
 impl_blob_state! {
     FilesBlobState {
         heads: FileHeads,
-        bookmarks: Arc<FileBookmarks<NodeHash>>,
+        bookmarks: Arc<FileBookmarks>,
         blobstore: Fileblob<String, Vec<u8>>,
         linknodes: Arc<FileLinknodes>,
     }
@@ -121,7 +120,7 @@ impl FilesBlobState {
 impl_blob_state! {
     RocksBlobState {
         heads: FileHeads,
-        bookmarks: Arc<FileBookmarks<NodeHash>>,
+        bookmarks: Arc<FileBookmarks>,
         blobstore: Rocksblob<String>,
         linknodes: Arc<FileLinknodes>,
     }
@@ -155,7 +154,7 @@ impl RocksBlobState {
 impl_blob_state! {
     MemBlobState {
         heads: MemHeads,
-        bookmarks: Arc<MemBookmarks<NodeHash>>,
+        bookmarks: Arc<MemBookmarks>,
         blobstore: Memblob,
         linknodes: Arc<MemLinknodes>,
     }
@@ -164,7 +163,7 @@ impl_blob_state! {
 impl MemBlobState {
     pub fn new(
         heads: MemHeads,
-        bookmarks: MemBookmarks<NodeHash>,
+        bookmarks: MemBookmarks,
         blobstore: Memblob,
         linknodes: MemLinknodes,
     ) -> Self {
@@ -180,7 +179,7 @@ impl MemBlobState {
 impl_blob_state! {
     TestManifoldBlobState {
         heads: MemHeads,
-        bookmarks: Arc<MemBookmarks<NodeHash>>,
+        bookmarks: Arc<MemBookmarks>,
         blobstore: ManifoldBlob<String, Bytes>,
         linknodes: Arc<MemLinknodes>,
     }

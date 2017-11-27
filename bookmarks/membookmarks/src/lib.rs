@@ -9,18 +9,21 @@
 extern crate bookmarks;
 extern crate futures;
 extern crate futures_ext;
+extern crate mercurial_types;
 extern crate storage_types;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::error;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
-use futures::future::{ok, FutureResult};
+use futures::future::ok;
 use futures::stream::iter_ok;
 
 use bookmarks::{Bookmarks, BookmarksMut};
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use mercurial_types::NodeHash;
 use storage_types::Version;
 
 static VERSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -29,12 +32,12 @@ fn version_next() -> Version {
     Version::from(VERSION_COUNTER.fetch_add(1, Ordering::Relaxed) as u64)
 }
 
-/// Generic, in-memory bookmark store backed by a HashMap, intended to be used in tests.
-pub struct MemBookmarks<V: Clone> {
-    bookmarks: Mutex<HashMap<Vec<u8>, (V, Version)>>,
+/// In-memory bookmark store backed by a HashMap, intended to be used in tests.
+pub struct MemBookmarks {
+    bookmarks: Mutex<HashMap<Vec<u8>, (NodeHash, Version)>>,
 }
 
-impl<V: Clone> MemBookmarks<V> {
+impl MemBookmarks {
     pub fn new() -> Self {
         MemBookmarks {
             bookmarks: Mutex::new(HashMap::new()),
@@ -42,61 +45,56 @@ impl<V: Clone> MemBookmarks<V> {
     }
 }
 
-impl<V> Bookmarks for MemBookmarks<V>
-where
-    V: Clone + Send + 'static,
-{
-    type Value = V;
-    type Error = !;
-
-    type Get = FutureResult<Option<(Self::Value, Version)>, Self::Error>;
-    type Keys = BoxStream<Vec<u8>, Self::Error>;
-
-    fn get(&self, key: &AsRef<[u8]>) -> Self::Get {
+impl Bookmarks for MemBookmarks {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
         ok(
             self.bookmarks
                 .lock()
                 .unwrap()
                 .get(key.as_ref())
                 .map(Clone::clone),
-        )
+        ).boxify()
     }
 
-    fn keys(&self) -> Self::Keys {
+    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
         let guard = self.bookmarks.lock().unwrap();
         let keys = guard.keys().map(|k| k.clone()).collect::<Vec<_>>();
         iter_ok(keys.into_iter()).boxify()
     }
 }
 
-impl<V> BookmarksMut for MemBookmarks<V>
-where
-    V: Clone + Send + 'static,
-{
-    type Set = FutureResult<Option<Version>, Self::Error>;
-
-    fn set(&self, key: &AsRef<[u8]>, value: &Self::Value, version: &Version) -> Self::Set {
+impl BookmarksMut for MemBookmarks {
+    fn set(
+        &self,
+        key: &AsRef<[u8]>,
+        value: &NodeHash,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {
             Entry::Occupied(mut entry) => if *version == entry.get().1 {
                 let new = version_next();
                 entry.insert((value.clone(), new));
-                return ok(Some(new));
+                ok(Some(new))
             } else {
                 ok(None)
             },
             Entry::Vacant(entry) => if *version == Version::absent() {
                 let new = version_next();
                 entry.insert((value.clone(), new));
-                return ok(Some(new));
+                ok(Some(new))
             } else {
                 ok(None)
             },
-        }
+        }.boxify()
     }
 
-    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> Self::Set {
+    fn delete(
+        &self,
+        key: &AsRef<[u8]>,
+        version: &Version,
+    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {
@@ -111,6 +109,6 @@ where
             } else {
                 ok(None)
             },
-        }
+        }.boxify()
     }
 }

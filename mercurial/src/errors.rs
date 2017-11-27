@@ -6,6 +6,7 @@
 
 use std::io;
 
+use bookmarks;
 use mercurial_types;
 use stockbookmarks;
 
@@ -35,6 +36,7 @@ error_chain! {
     }
 
     links {
+        Bookmarks(bookmarks::Error, bookmarks::ErrorKind);
         MercurialTypes(mercurial_types::Error, mercurial_types::ErrorKind);
         StockBookmarks(stockbookmarks::Error, stockbookmarks::ErrorKind);
     }

@@ -17,6 +17,8 @@ extern crate futures_ext;
 
 extern crate bookmarks;
 extern crate mercurial_types;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 extern crate storage_types;
 
 mod errors {
@@ -38,16 +40,14 @@ mod errors {
 }
 
 use std::collections::HashMap;
-use std::error;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read};
-use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
-use futures::future::{self, FutureResult};
+use futures::future;
 use futures::stream::{self, Stream};
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
 use bookmarks::Bookmarks;
 use mercurial_types::NodeHash;
@@ -68,16 +68,12 @@ pub use errors::*;
 ///
 /// This implementation is read-only -- implementing write support would require interacting with
 /// the locking mechanism Mercurial uses, and generally seems like it wouldn't be very useful.
-#[derive(Debug)]
-pub struct StockBookmarks<E = Error> {
+#[derive(Clone, Debug)]
+pub struct StockBookmarks {
     bookmarks: HashMap<Vec<u8>, NodeHash>,
-    _phantom: PhantomData<E>,
 }
 
-impl<E> StockBookmarks<E>
-where
-    E: From<Error> + Send + error::Error,
-{
+impl StockBookmarks {
     pub fn read<P: Into<PathBuf>>(base: P) -> Result<Self> {
         let base = base.into();
 
@@ -89,7 +85,6 @@ where
                 // doesn't.
                 Ok(StockBookmarks {
                     bookmarks: HashMap::new(),
-                    _phantom: PhantomData,
                 })
             }
             Err(err) => Err(err.into()),
@@ -118,32 +113,20 @@ where
             );
         }
 
-        Ok(StockBookmarks {
-            bookmarks,
-            _phantom: PhantomData,
-        })
+        Ok(StockBookmarks { bookmarks })
     }
 }
 
-impl<E> Bookmarks for StockBookmarks<E>
-where
-    E: From<Error> + error::Error + Send + 'static,
-{
-    type Value = NodeHash;
-    type Error = E;
-
-    type Get = FutureResult<Option<(NodeHash, Version)>, E>;
-    type Keys = BoxStream<Vec<u8>, E>;
-
-    fn get(&self, name: &AsRef<[u8]>) -> Self::Get {
+impl Bookmarks for StockBookmarks {
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
             Some(hash) => Some((*hash, Version::from(1))),
             None => None,
         };
-        future::result(Ok(value))
+        Box::new(future::result(Ok(value)))
     }
 
-    fn keys(&self) -> Self::Keys {
+    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
         // collect forces evaluation early, so that the stream can safely outlive self
         stream::iter_ok(
             self.bookmarks
@@ -160,16 +143,9 @@ mod tests {
     use std::io::Cursor;
 
     use futures::Future;
+    use mercurial_types_mocks::nodehash;
 
     use super::*;
-
-    fn hash_ones() -> NodeHash {
-        "1111111111111111111111111111111111111111".parse().unwrap()
-    }
-
-    fn hash_twos() -> NodeHash {
-        "2222222222222222222222222222222222222222".parse().unwrap()
-    }
 
     fn assert_bookmark_get(
         bookmarks: &StockBookmarks,
@@ -192,9 +168,9 @@ mod tests {
         let reader = Cursor::new(&disk_bookmarks[..]);
 
         let bookmarks = StockBookmarks::from_reader(reader).unwrap();
-        assert_bookmark_get(&bookmarks, &"abc", Some(hash_ones()));
-        assert_bookmark_get(&bookmarks, &"def", Some(hash_twos()));
-        assert_bookmark_get(&bookmarks, &"test123", Some(hash_ones()));
+        assert_bookmark_get(&bookmarks, &"abc", Some(nodehash::ONES_HASH));
+        assert_bookmark_get(&bookmarks, &"def", Some(nodehash::TWOS_HASH));
+        assert_bookmark_get(&bookmarks, &"test123", Some(nodehash::ONES_HASH));
 
         // Bookmarks that aren't present
         assert_bookmark_get(&bookmarks, &"abcdef", None);
@@ -209,7 +185,7 @@ mod tests {
     #[test]
     fn test_invalid() {
         let reader = Cursor::new(&b"111\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
             bookmarks.unwrap_err().kind(),
             &ErrorKind::InvalidBookmarkLine(_)
@@ -217,7 +193,7 @@ mod tests {
 
         // no space or bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
             bookmarks.unwrap_err().kind(),
             &ErrorKind::InvalidBookmarkLine(_)
@@ -225,7 +201,7 @@ mod tests {
 
         // no bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111 \n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
             bookmarks.unwrap_err().kind(),
             &ErrorKind::InvalidBookmarkLine(_)
@@ -233,7 +209,7 @@ mod tests {
 
         // no space after hash
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111ab\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
             bookmarks.unwrap_err().kind(),
             &ErrorKind::InvalidBookmarkLine(_)
@@ -241,17 +217,17 @@ mod tests {
 
         // short hash
         let reader = Cursor::new(&b"111111111111111111111111111111111111111  1ab\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
 
         // non-ASCII
         let reader = Cursor::new(&b"111111111111111111111111111111111111111\xff test\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
 
         // not a valid hex string
         let reader = Cursor::new(&b"abcdefgabcdefgabcdefgabcdefgabcdefgabcde test\n"[..]);
-        let bookmarks = StockBookmarks::<Error>::from_reader(reader);
+        let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
     }
 }

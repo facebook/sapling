@@ -12,11 +12,11 @@ use futures::future::Future;
 use futures::stream::Stream;
 
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use storage_types::Version;
 
 use changeset::Changeset;
 use manifest::{BoxManifest, Manifest};
 use nodehash::NodeHash;
+use storage_types::Version;
 
 pub trait Repo: Send + Sync + 'static {
     type Error: error::Error + Send + 'static;

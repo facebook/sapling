@@ -32,13 +32,12 @@ use bookmarks::BookmarksMut;
 use dbbookmarks::DbBookmarks;
 use filebookmarks::FileBookmarks;
 use membookmarks::MemBookmarks;
-use mercurial_types::NodeHash;
 use mercurial_types_mocks::nodehash;
 use storage_types::Version;
 
 fn basic<B>(bookmarks: B, core: &mut Core)
 where
-    B: BookmarksMut<Value = NodeHash>,
+    B: BookmarksMut,
 {
     let foo = b"foo";
     let one = nodehash::ONES_HASH;
@@ -84,7 +83,7 @@ where
 
 fn list<B>(bookmarks: B, core: &mut Core)
 where
-    B: BookmarksMut<Value = NodeHash>,
+    B: BookmarksMut,
 {
     let one = b"1";
     let two = b"2";
@@ -105,7 +104,7 @@ where
 fn persistence<F, B>(mut new_bookmarks: F, core: Rc<RefCell<Core>>)
 where
     F: FnMut() -> B,
-    B: BookmarksMut<Value = NodeHash>,
+    B: BookmarksMut,
 {
     let foo = b"foo";
     let bar = nodehash::ONES_HASH;
