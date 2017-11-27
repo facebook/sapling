@@ -201,7 +201,7 @@ def apply(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command('import')
+    cmd = Command('import --no-commit')
     if (opts.get('p')):
         cmd['-p'] = opts.get('p')
     cmd.extend(args)
