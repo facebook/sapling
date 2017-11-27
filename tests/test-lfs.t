@@ -644,3 +644,6 @@ This convert is trickier, because it contains deleted files (via `hg mv`)
   oid sha256:66100b384bf761271b407d79fc30cdd0554f3b2c5d944836e936d584b88ce88e
   size 39
   x-is-binary 0
+
+  $ hg -R convert_lfs2 config --debug extensions | grep lfs
+  $TESTTMP/convert_lfs2/.hg/hgrc:*: extensions.lfs= (glob)
