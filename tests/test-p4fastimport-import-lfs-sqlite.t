@@ -5,9 +5,10 @@
   > [extensions]
   > lfs=$TESTDIR/../hgext3rd/lfs
   > [p4fastimport]
+  > lfspointeronly=True
+  > lfsmetadata=lfs.sql
   > [lfs]
   > threshold=10
-  > url=file:$TESTTMP/dummy-remote/
   > EOF
 
 populate the depot
@@ -15,7 +16,7 @@ populate the depot
   $ mkdir Main/b
   $ echo a > Main/a
   $ echo c > Main/b/c
-  $ echo thisisasuperlargefilebewithmorethank10Bsize >> Main/largefile
+  $ echo thisisasuperlargefilebewithmorethank10ksize >> Main/largefile
   $ p4 add Main/a Main/b/c Main/largefile
   //depot/Main/a#1 - opened for add
   //depot/Main/b/c#1 - opened for add
@@ -34,7 +35,7 @@ populate the depot
   //depot/Main/largefile#1 - opened for edit
   $ echo a >> Main/a
   $ echo c >> Main/b/c
-  $ echo thisisasuperlargefilebewithmorethank10Bsize >> Main/largefile
+  $ echo thisisasuperlargefilebewithmorethank10ksize >> Main/largefile
   $ p4 submit -d second
   Submitting change 2.
   Locking 3 files ...
@@ -60,16 +61,16 @@ Simple import
   writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
   writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
   writing filelog: b11e10a88bfa, p1 149da44f2a4e, linkrev 1, 4 bytes, src: *, path: Main/b/c (glob)
-  updating the branch cache (?)
-  writing filelog: ee08366a1a83, p1 000000000000, linkrev 0, 44 bytes, src: rcs, path: Main/largefile
-  largefile: Main/largefile, oid: dde0d1d11f099d6572fa47fcbd1cae324aeaad7409cb107461b09ba4eb2177ac
-  writing filelog: a33f052256c3, p1 ee08366a1a83, linkrev 1, 88 bytes, src: rcs, path: Main/largefile
-  largefile: Main/largefile, oid: 595efb640da040786d840fbae4675925fd4621f3498b849744ce0d4446674e3f
-  changelist 1: writing manifest. node: e970866c1151 p1: 000000000000 p2: 000000000000 linkrev: 0
+  writing filelog: b3a729dd094e, p1 000000000000, linkrev 0, 44 bytes, src: *, path: Main/largefile (glob)
+  largefile: Main/largefile, oid: 37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9
+  writing filelog: 9f14f96519e1, p1 b3a729dd094e, linkrev 1, 88 bytes, src: *, path: Main/largefile (glob)
+  largefile: Main/largefile, oid: b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c
+  changelist 1: writing manifest. node: 0637b0361958 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial
-  changelist 2: writing manifest. node: 628c61b1c54a p1: e970866c1151 p2: 000000000000 linkrev: 1
+  changelist 2: writing manifest. node: 31c95d82cc49 p1: 0637b0361958 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
-  updating the branch cache
+  writing lfs metadata to sqlite
+  updating the branch cache (?)
   2 revision(s), 3 file(s) imported.
 
 Verify
@@ -84,26 +85,10 @@ Verify
   3 files, 2 changesets, 6 total revisions
 
   $ test -d .hg/store/lfs/objects
-
-# Ensure metadata is stored
-  $ hg debugdata Main/largefile 0
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:dde0d1d11f099d6572fa47fcbd1cae324aeaad7409cb107461b09ba4eb2177ac
-  size 44
-  x-is-binary 0
-
-# Check the blobstore is populated
-  $ find .hg/store/lfs/objects | sort
-  .hg/store/lfs/objects
-  .hg/store/lfs/objects/59
-  .hg/store/lfs/objects/59/5efb640da040786d840fbae4675925fd4621f3498b849744ce0d4446674e3f
-  .hg/store/lfs/objects/dd
-  .hg/store/lfs/objects/dd/e0d1d11f099d6572fa47fcbd1cae324aeaad7409cb107461b09ba4eb2177ac
-
-# Check the blob stored contains the actual contents of the file
-  $ cat .hg/store/lfs/objects/59/5efb640da040786d840fbae4675925fd4621f3498b849744ce0d4446674e3f
-  thisisasuperlargefilebewithmorethank10Bsize
-  thisisasuperlargefilebewithmorethank10Bsize
+  [1]
+  $ sqlite3 lfs.sql "SELECT * FROM p4_lfs_map"
+  1|1|*|37a7b43abd9e105a0e6b22088b140735a02f288767fe7a6f4f436cb46b064ca9|//depot/Main/largefile (glob)
+  2|2|*|b0d5c1968efbabbff9d94160f284cd7b52686ca3c46cfffdd351de07384fce9c|//depot/Main/largefile (glob)
 
 End Test
 
