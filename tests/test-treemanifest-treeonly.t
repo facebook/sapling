@@ -425,20 +425,35 @@ Switch back to hybrid mode
   > [treemanifest]
   > treeonly=False
   > EOF
+  $ cp .hg/store/00manifest.i .hg/store/00manifest.i.bak
+  $ cp .hg/store/00changelog.i .hg/store/00changelog.i.bak
+
+- Auto-backfill on pull
   $ hg pull
+  backfilling missing flat manifests
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
   pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests
-  transaction abort!
-  rollback completed
-  abort: 00manifest.i@d9920715ba88: unknown parent!
-  [255]
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 4f84204095e0
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+  $ cp .hg/store/00manifest.i.bak .hg/store/00manifest.i
+  $ cp .hg/store/00changelog.i.bak .hg/store/00changelog.i
+
+- Manually backfill via command
   $ hg backfillmanifestrevlog
   adding changesets
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
+
   $ hg pull
   pulling from ssh://user@dummy/master
   searching for changes

@@ -1272,6 +1272,18 @@ def getfallbackpath(repo):
         return repo.ui.config('paths', 'default')
 
 def pull(orig, ui, repo, *pats, **opts):
+    # If we're not in treeonly mode, and we're missing public commits from the
+    # revlog, backfill them.
+    if not ui.configbool('treemanifest', 'treeonly'):
+        tippublicrevs = repo.revs('last(public())')
+        if tippublicrevs:
+            ctx = repo[tippublicrevs.first()]
+            mfnode = ctx.manifestnode()
+            mfrevlog = repo.manifestlog._revlog
+            if mfnode not in mfrevlog.nodemap:
+                ui.status(_("backfilling missing flat manifests\n"))
+                backfillmanifestrevlog(ui, repo)
+
     # If special arguments were passed, we can't reuse the pull connection
     if opts.get('ssh') or opts.get('remotecmd'):
         return orig(ui, repo, *pats, **opts)
