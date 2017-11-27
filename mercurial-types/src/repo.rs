@@ -11,22 +11,12 @@ use std::sync::Arc;
 use futures::future::Future;
 use futures::stream::Stream;
 
-use bookmarks::{self, Bookmarks};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use storage_types::Version;
 
 use changeset::Changeset;
 use manifest::{BoxManifest, Manifest};
 use nodehash::NodeHash;
-
-pub type BoxedBookmarks<E> = Box<
-    Bookmarks<
-        Error = E,
-        Value = NodeHash,
-        Get = BoxFuture<Option<(NodeHash, Version)>, E>,
-        Keys = BoxStream<Vec<u8>, E>,
-    >,
->;
 
 pub trait Repo: Send + Sync + 'static {
     type Error: error::Error + Send + 'static;
@@ -42,7 +32,11 @@ pub trait Repo: Send + Sync + 'static {
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error>;
 
     fn get_heads(&self) -> BoxStream<NodeHash, Self::Error>;
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error>;
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error>;
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error>;
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error>;
     fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error>;
     fn get_manifest_by_nodeid(
@@ -115,10 +109,18 @@ where
         self.repo.get_heads().map_err(self.cvterr).boxify()
     }
 
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
-        let bookmarks = self.repo.get_bookmarks().map_err(self.cvterr)?;
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        self.repo.get_bookmark_keys().map_err(self.cvterr).boxify()
+    }
 
-        Ok(bookmarks::BoxedBookmarks::new_cvt(bookmarks, self.cvterr))
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        self.repo
+            .get_bookmark_value(key)
+            .map_err(self.cvterr)
+            .boxify()
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -165,8 +167,15 @@ where
         (**self).get_heads()
     }
 
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
-        (**self).get_bookmarks()
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        (**self).get_bookmark_keys()
+    }
+
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        (**self).get_bookmark_value(key)
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -199,8 +208,15 @@ where
         (**self).get_heads()
     }
 
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
-        (**self).get_bookmarks()
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        (**self).get_bookmark_keys()
+    }
+
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        (**self).get_bookmark_value(key)
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -233,8 +249,15 @@ where
         (**self).get_heads()
     }
 
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
-        (**self).get_bookmarks()
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        (**self).get_bookmark_keys()
+    }
+
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        (**self).get_bookmark_value(key)
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -267,8 +290,15 @@ where
         (**self).get_heads()
     }
 
-    fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
-        (**self).get_bookmarks()
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        (**self).get_bookmark_keys()
+    }
+
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        (**self).get_bookmark_value(key)
     }
 
     fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
@@ -305,7 +335,14 @@ mod test {
             unimplemented!("dummy impl")
         }
 
-        fn get_bookmarks(&self) -> Result<BoxedBookmarks<Self::Error>, Self::Error> {
+        fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+            unimplemented!("dummy impl")
+        }
+
+        fn get_bookmark_value(
+            &self,
+            _key: &AsRef<[u8]>,
+        ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
             unimplemented!("dummy impl")
         }
 

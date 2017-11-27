@@ -173,11 +173,11 @@ impl RepoClient {
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
-            let bookmarks = self.repo.hgrepo.get_bookmarks()?;
-            let bookmark_names = bookmarks.keys();
+            let hgrepo = self.repo.hgrepo.clone();
+            let bookmark_names = hgrepo.get_bookmark_keys();
             let items = bookmark_names.and_then(move |name| {
                 // For each bookmark name, grab the corresponding value.
-                bookmarks.get(&name).and_then(|result| {
+                hgrepo.get_bookmark_value(&name).and_then(|result| {
                     // If the name somehow wasn't found, it's possible a race happened. where the
                     // bookmark was deleted from underneath. Skip it.
                     // Boxing is necessary here to make the match arms return the same types.

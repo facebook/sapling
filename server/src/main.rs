@@ -191,8 +191,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
     let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
         config_repo
-            .get_bookmarks()?
-            .get(&bookmark)
+            .get_bookmark_value(&bookmark)
             .wait()?
             .ok_or_else(|| Error::from("bookmark for config repo not found"))?
             .0

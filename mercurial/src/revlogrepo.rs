@@ -19,7 +19,7 @@ use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use asyncmemo::{Asyncmemo, Filler};
-use bookmarks::{Bookmarks, BoxedBookmarks};
+use bookmarks::Bookmarks;
 use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash,
                       Repo, RepoPath, NULL_HASH};
 use stockbookmarks::StockBookmarks;
@@ -414,21 +414,21 @@ impl Repo for RevlogRepo {
         self.get_heads().boxify()
     }
 
-    fn get_bookmarks(
-        &self,
-    ) -> Result<
-        Box<
-            Bookmarks<
-                Error = Self::Error,
-                Value = NodeHash,
-                Get = BoxFuture<Option<(NodeHash, Version)>, Self::Error>,
-                Keys = BoxStream<Vec<u8>, Self::Error>,
-            >,
-        >,
-    > {
-        let res = StockBookmarks::<Error>::read(self.basepath.clone())?;
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        match self.bookmarks() {
+            Ok(bms) => bms.keys().from_err().boxify(),
+            Err(e) => stream::once(Err(e.into())).boxify(),
+        }
+    }
 
-        Ok(BoxedBookmarks::new(res))
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        match self.bookmarks() {
+            Ok(bms) => bms.get(key).from_err().boxify(),
+            Err(e) => future::err(e.into()).boxify(),
+        }
     }
 
     fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {

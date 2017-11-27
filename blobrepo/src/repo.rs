@@ -13,9 +13,10 @@ use futures::future::Future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use bookmarks::BoxedBookmarks;
+use bookmarks::Bookmarks;
 use heads::Heads;
-use mercurial_types::{repo, Changeset, Manifest, NodeHash, Repo};
+use mercurial_types::{Changeset, Manifest, NodeHash, Repo};
+use storage_types::Version;
 
 use BlobChangeset;
 use BlobManifest;
@@ -94,10 +95,23 @@ where
             .boxify()
     }
 
-    fn get_bookmarks(&self) -> Result<repo::BoxedBookmarks<Self::Error>> {
-        let res = self.inner.bookmarks().clone();
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+        self.inner
+            .bookmarks()
+            .keys()
+            .map_err(|e| bookmarks_err(e))
+            .boxify()
+    }
 
-        Ok(BoxedBookmarks::new_cvt(res, bookmarks_err))
+    fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+        self.inner
+            .bookmarks()
+            .get(key)
+            .map_err(|e| bookmarks_err(e))
+            .boxify()
     }
 }
 
