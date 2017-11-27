@@ -8,7 +8,8 @@ Config example:
     useworker = false
     # trace copies?
     copytrace = false
-    # path to sqlite output file for lfs metadata
+    # Instead of uploading to LFS, store lfs metadata in this sqlite output
+    # file. Some other process will upload from there to the LFS server later.
     lfsmetadata = PATH
     # path to sqlite output file for metadata
     metadata = PATH
@@ -52,7 +53,7 @@ def extsetup():
     # workaround by not allowing inlined revlogs at all.
     revlog.REVLOG_DEFAULT_VERSION = revlog.REVLOG_DEFAULT_FORMAT
 
-def _reposetup(ui, repo):
+def reposetup(ui, repo):
     def nothing(orig, *args, **kwargs):
         pass
     def yoloverify(orig, *args, **kwargs):
@@ -63,13 +64,14 @@ def _reposetup(ui, repo):
 
     extensions.wrapfunction(verify.verifier, 'verify', yoloverify)
 
-    try:
-        lfs = extensions.find('lfs')
-    except KeyError:
-        pass
-    else:
-        extensions.wrapfunction(lfs.blobstore.local, 'write', nothing)
-        extensions.wrapfunction(lfs.blobstore.local, 'read', nothing)
+    if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
+        try:
+            lfs = extensions.find('lfs')
+        except KeyError:
+            pass
+        else:
+            extensions.wrapfunction(lfs.blobstore.local, 'write', nothing)
+            extensions.wrapfunction(lfs.blobstore.local, 'read', nothing)
 
 def writebookmark(tr, repo, revisions, name):
     if len(revisions) > 0:
@@ -192,8 +194,6 @@ command = registrar.command(cmdtable)
     _('[-P PATH] [-B NAME] [--limit N] [CLIENT]'),
     inferrepo=True)
 def p4fastimport(ui, repo, client, **opts):
-    _reposetup(ui, repo)
-
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
 
@@ -340,8 +340,6 @@ def p4fastimport(ui, repo, client, **opts):
         _('[-P PATH] client [-B NAME] bookmarkname'),
         )
 def p4syncimport(ui, repo, client, **opts):
-    _reposetup(ui, repo)
-
     if opts.get('bookmark'):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
 
@@ -411,8 +409,6 @@ def p4syncimport(ui, repo, client, **opts):
           ('r', 'rev', '.', _('display LFS files in REV')),
           ('A', 'all', None, _('display LFS files all revisions'))])
 def debugscanlfs(ui, repo, **opts):
-    _reposetup(ui, repo)
-
     lfs = extensions.find('lfs')
     def display(repo, filename, flog, rev):
         filenode = flog.node(rev)
