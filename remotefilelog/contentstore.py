@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import threading
+
 from . import (
     basestore,
     constants,
@@ -139,7 +141,8 @@ class unioncontentstore(object):
 class remotefilelogcontentstore(basestore.basestore):
     def __init__(self, *args, **kwargs):
         super(remotefilelogcontentstore, self).__init__(*args, **kwargs)
-        self._metacache = (None, None) # (node, meta)
+        self._threaddata = threading.local()
+        self._threaddata.metacache = (None, None) # (node, meta)
 
     def get(self, name, node):
         # return raw revision text
@@ -172,22 +175,25 @@ class remotefilelogcontentstore(basestore.basestore):
         return [(name, node, None, nullid, revision)]
 
     def getmeta(self, name, node):
-        if node != self._metacache[0]:
+        if node != self._threaddata.metacache[0]:
             data = self._getdata(name, node)
             offset, size, flags = shallowutil.parsesizeflags(data)
             self._updatemetacache(node, size, flags)
-        return self._metacache[1]
+        return self._threaddata.metacache[1]
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
                            "contentstore")
 
     def _updatemetacache(self, node, size, flags):
-        if node == self._metacache[0]:
+        metacache = getattr(self._threaddata, 'metacache', None)
+        if metacache is None:
+            self._threaddata.metacache = (None, None)
+        if node == self._threaddata.metacache[0]:
             return
         meta = {constants.METAKEYFLAG: flags,
                 constants.METAKEYSIZE: size}
-        self._metacache = (node, meta)
+        self._threaddata.metacache = (node, meta)
 
 class remotecontentstore(object):
     def __init__(self, ui, fileservice, shared):
