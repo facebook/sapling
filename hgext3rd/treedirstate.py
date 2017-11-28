@@ -530,6 +530,15 @@ class treedirstatemap(object):
 def istreedirstate(repo):
     return 'treedirstate' in getattr(repo, 'requirements', set())
 
+def activealternativedirstates(repo):
+    """
+    Returns a set containing the names of any alternative dirstate
+    implementations in use.
+    """
+    alternatives = {'eden', 'sqldirstate'}
+    requirements = getattr(repo, 'requirements', set())
+    return alternatives & requirements
+
 def newtree(opener):
     while True:
         treeid = ''.join([random.choice(string.digits) for _c in range(8)])
@@ -551,6 +560,10 @@ def gettreeid(opener, dirstatefile):
 def upgrade(ui, repo):
     if istreedirstate(repo):
         raise error.Abort('repo already has treedirstate')
+    alternatives = activealternativedirstates(repo)
+    if alternatives:
+        raise error.Abort('repo has alternative dirstate active: %s'
+                          % ', '.join(alternatives))
     with repo.wlock():
         newmap = treedirstatemap(ui, repo.dirstate._opener, repo.root,
                                  importmap=repo.dirstate._map)
@@ -687,7 +700,7 @@ def wrappull(orig, ui, repo, *args, **kwargs):
         ui.status(_('disabling treedirstate...\n'))
         downgrade(ui, repo)
     elif (ui.configbool('treedirstate', 'upgradeonpull') and
-            not istreedirstate(repo)):
+            not istreedirstate(repo) and not activealternativedirstates(repo)):
         ui.status(_('migrating your repo to treedirstate which will make your '
                     'hg commands faster...\n'))
         upgrade(ui, repo)

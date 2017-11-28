@@ -133,7 +133,7 @@ After the second repack, the tree is replaced by a new tree and then deleted.
   .hg/dirstate.tree.* (glob)
   .hg/dirstate.tree.* (glob)
 
-Test downgrade and upgrade on pull
+Test downgrade on pull
 
   $ for f in 1 2 3 4 5 ; do mkdir dir$f ; echo $f > dir$f/file$f ; hg add dir$f/file$f ; done
   $ echo x > a
@@ -172,6 +172,29 @@ Test downgrade and upgrade on pull
   a   0         -1 * newfile (glob)
   $ grep treedirstate .hg/requires
   [1]
+
+Test upgrade on pull with conflicting dirstate reimplementation
+
+  $ cat > $TESTTMP/fakesqldirstate.py << EOF
+  > from mercurial import localrepo
+  > def featuresetup(ui, supported):
+  >     supported |= {'sqldirstate'}
+  > def extsetup(ui):
+  >     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
+  > EOF
+  $ cp .hg/requires .hg/requires.test-backup
+  $ echo sqldirstate >> .hg/requires
+  $ hg pull --config treedirstate.upgradeonpull=true --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  no changes found
+  $ hg debugtreedirstate on --config extensions.fakesqldirstate=$TESTTMP/fakesqldirstate.py
+  abort: repo has alternative dirstate active: sqldirstate
+  [255]
+  $ mv -f .hg/requires.test-backup .hg/requires
+
+Test upgrade on pull
+
   $ hg pull --config treedirstate.upgradeonpull=true
   migrating your repo to treedirstate which will make your hg commands faster...
   pulling from $TESTTMP/repo (glob)
