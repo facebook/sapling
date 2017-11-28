@@ -5,11 +5,12 @@ use cpython::*;
 use cpython::exc;
 use dirstate::Dirstate;
 use errors::ErrorKind;
+use errors;
 use filestate::FileState;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use store::BlockId;
-use tree::KeyRef;
+use tree::{Key, KeyRef};
 
 py_module_initializer!(
     rusttreedirstate,
@@ -345,6 +346,27 @@ py_class!(class RustDirstateMap |py| {
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
 
         Ok(py.None())
+    }
+
+    def getcasefoldedtracked(
+        &self,
+        filename: PyBytes,
+        casefolder: PyObject
+    ) -> PyResult<Option<PyObject>> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        let mut filter = |filename: KeyRef| -> errors::Result<Key> {
+            let unfolded = PyBytes::new(py, filename);
+            let folded = casefolder.call(py, (unfolded,), None)
+                                   .map_err(|e| callback_error(py, e))?
+                                   .extract::<PyBytes>(py)
+                                   .map_err(|e| callback_error(py, e))?;
+            Ok(folded.data(py).to_vec())
+        };
+
+        dirstate
+            .get_tracked_filtered_key(filename.data(py), &mut filter)
+            .map(|o| o.map(|k| PyBytes::new(py, &k).into_object()))
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))
     }
 
 });

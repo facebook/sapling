@@ -45,6 +45,11 @@ struct Node<T> {
     /// then the ID must not be None, and the entries are yet to be loaded from the back-end
     /// store.
     entries: Option<NodeEntryMap<T>>,
+
+    /// A map from keys that have been filtered through a case-folding filter function to the
+    /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
+    /// only a single filter function can be used with a tree.
+    filtered_keys: Option<VecMap<Key, Key>>,
 }
 
 /// The root of the tree.  The count of files in the tree is maintained for fast size
@@ -117,6 +122,7 @@ impl<T: Storable + Clone> Node<T> {
         Node {
             id: None,
             entries: Some(NodeEntryMap::new()),
+            filtered_keys: None,
         }
     }
 
@@ -126,6 +132,7 @@ impl<T: Storable + Clone> Node<T> {
         Node {
             id: Some(id),
             entries: None,
+            filtered_keys: None,
         }
     }
 
@@ -441,6 +448,7 @@ impl<T: Storable + Clone> Node<T> {
         };
         if let Some((new_key, new_entry)) = new_entry {
             self.load_entries(store)?.insert(new_key, new_entry);
+            self.filtered_keys = None;
         }
         self.id = None;
         Ok(file_added)
@@ -465,12 +473,65 @@ impl<T: Storable + Clone> Node<T> {
         };
         if let Some(entry) = remove_entry {
             self.load_entries(store)?.remove(entry);
+            self.filtered_keys = None;
             self.id = None;
         }
         if file_removed {
             self.id = None;
         }
         Ok((file_removed, self.load_entries(store)?.is_empty()))
+    }
+
+    /// Performs a key lookup using filtered keys.
+    ///
+    /// Applies the filter function to each key in the node, then returns the real key that
+    /// matches the name provided.  The name may contain a path, in which case the subdirectories
+    /// of this node are also queried.
+    ///
+    /// Returns a reversed vector of key references for each path element, or None if no file
+    /// matches the requested name after filtering.
+    fn get_filtered_key<'a, F>(
+        &'a mut self,
+        store: &StoreView,
+        name: KeyRef,
+        filter: &mut F,
+    ) -> Result<Option<Vec<KeyRef<'a>>>>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        let (elem, path) = split_key(name);
+        if self.filtered_keys.is_none() {
+            let new_map = {
+                let entries = self.load_entries(store)?;
+                let mut new_map = VecMap::with_capacity(entries.len());
+                for (k, _v) in entries.iter() {
+                    new_map.insert(filter(k)?, k.to_vec());
+                }
+                new_map
+            };
+            self.filtered_keys = Some(new_map);
+        }
+        if let Some(path) = path {
+            if let Some(mapped_elem) = self.filtered_keys.as_ref().unwrap().get(elem) {
+                if let Some(&mut NodeEntry::Directory(ref mut node)) =
+                    self.entries.as_mut().unwrap().get_mut(mapped_elem)
+                {
+                    if let Some(mut mapped_path) = node.get_filtered_key(store, path, filter)? {
+                        mapped_path.push(mapped_elem);
+                        return Ok(Some(mapped_path));
+                    }
+                }
+            }
+            Ok(None)
+        } else {
+            Ok(
+                self.filtered_keys
+                    .as_ref()
+                    .unwrap()
+                    .get(elem)
+                    .map(|e| vec![e.as_ref()]),
+            )
+        }
     }
 }
 
@@ -572,6 +633,23 @@ impl<T: Storable + Clone> Tree<T> {
         }
         Ok(removed)
     }
+
+    pub fn get_filtered_key<F>(
+        &mut self,
+        store: &StoreView,
+        name: KeyRef,
+        filter: &mut F,
+    ) -> Result<Option<Key>>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        Ok(self.root.get_filtered_key(store, name, filter)?.map(
+            |mut path| {
+                path.reverse();
+                path.concat()
+            },
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -579,8 +657,9 @@ mod tests {
 
     use store::NullStore;
     use store::tests::MapStore;
-    use tree::{KeyRef, Tree};
+    use tree::{Key, KeyRef, Tree};
     use filestate::FileState;
+    use errors::*;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [
@@ -792,6 +871,36 @@ mod tests {
                 b"dirB/subdira/subsubdirx/file5".to_vec(),
                 b"file16".to_vec(),
             ]
+        );
+    }
+
+    #[test]
+    fn filtered_keys() {
+        let ms = MapStore::new();
+        let mut t = Tree::new();
+        populate(&mut t, &ms);
+
+        // Define a mapping function that upper-cases 'A' characters:
+        fn map_upper_a(k: KeyRef) -> Result<Key> {
+            Ok(
+                k.iter()
+                    .map(|c| if *c == b'a' { b'A' } else { *c })
+                    .collect(),
+            )
+        }
+
+        // Look-up with normalized name should give non-normalized version.
+        assert_eq!(
+            t.get_filtered_key(&ms, b"dirA/subdirA/file1", &mut map_upper_a)
+                .expect("should succeed"),
+            Some(b"dirA/subdira/file1".to_vec())
+        );
+
+        // Look-up with non-normalized name should match nothing.
+        assert_eq!(
+            t.get_filtered_key(&ms, b"dirA/subdira/file1", &mut map_upper_a)
+                .expect("should succeed"),
+            None
         );
     }
 }

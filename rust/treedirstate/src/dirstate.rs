@@ -186,6 +186,18 @@ impl<T: Storable + Clone> Dirstate<T> {
         self.tracked.get(self.store.store_view(), name)
     }
 
+    pub fn get_tracked_filtered_key<F>(
+        &mut self,
+        name: KeyRef,
+        filter: &mut F,
+    ) -> Result<Option<Key>>
+    where
+        F: FnMut(KeyRef) -> Result<Key>,
+    {
+        self.tracked
+            .get_filtered_key(self.store.store_view(), name, filter)
+    }
+
     /// Visit all tracked files with a visitor.
     pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where

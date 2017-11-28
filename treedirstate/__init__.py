@@ -7,12 +7,14 @@
 from __future__ import absolute_import
 from mercurial import (
     dirstate,
+    encoding,
     error,
     extensions,
     localrepo,
     node,
     pycompat,
     registrar,
+    scmutil,
     txnutil,
     util,
 )
@@ -145,6 +147,9 @@ class treedirstatemap(object):
     def get(self, filename, default=None):
         return (self._rmap.gettracked(filename, None) or
                 self._rmap.getremoved(filename, default))
+
+    def getcasefoldedtracked(self, filename, foldfunc):
+        return self._rmap.getcasefoldedtracked(filename, foldfunc)
 
     def __getitem__(self, filename):
         item = (self._rmap.gettracked(filename, None) or
@@ -452,6 +457,37 @@ def wrapdirstate(orig, self):
         ds._mapcls = treedirstatemap
     return ds
 
+class casecollisionauditor(object):
+    def __init__(self, ui, abort, dirstate):
+        self._ui = ui
+        self._abort = abort
+        self._dirstate = dirstate
+        # The purpose of _newfiles is so that we don't complain about
+        # case collisions if someone were to call this object with the
+        # same filename twice.
+        self._newfiles = set()
+        self._newfilesfolded = set()
+
+    def __call__(self, f):
+        if f in self._newfiles:
+            return
+        fl = encoding.lower(f)
+        if (f not in self._dirstate and
+                (fl in self._newfilesfolded or
+                 self._dirstate._map.getcasefoldedtracked(fl, encoding.lower))):
+            msg = _('possible case-folding collision for %s') % f
+            if self._abort:
+                raise error.Abort(msg)
+            self._ui.warn(_("warning: %s\n") % msg)
+        self._newfiles.add(f)
+        self._newfilesfolded.add(fl)
+
+def wrapcca(orig, ui, abort, dirstate):
+    if util.safehasattr(dirstate._map, 'getcasefoldedtracked'):
+        return casecollisionauditor(ui, abort, dirstate)
+    else:
+        return orig(ui, abort, dirstate)
+
 def wrapnewreporequirements(orig, repo):
     reqs = orig(repo)
     if useinnewrepos:
@@ -474,6 +510,7 @@ def extsetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
     extensions.wrapfilecache(localrepo.localrepository, 'dirstate',
                              wrapdirstate)
+    extensions.wrapfunction(scmutil, 'casecollisionauditor', wrapcca)
 
 def reposetup(ui, repo):
     ui.log('treedirstate_enabled', '',
