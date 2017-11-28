@@ -2,6 +2,7 @@ from distutils.version import LooseVersion
 from distutils.cmd import Command
 from distutils.core import setup, Extension
 import distutils
+from distutils_rust import RustExtension, BuildRustExt
 import fnmatch
 from glob import glob
 
@@ -21,6 +22,28 @@ SHA1_LIBRARY = "sha1detectcoll"
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
 OPTIMIZATION = "" if iswindows else "-O2"
 PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
+
+if 'USERUST' in os.environ:
+    USERUST = int(os.environ['USERUST'])
+else:
+    import subprocess
+    USERUST = False
+    try:
+        cargo_version = subprocess.check_output(
+                ['cargo', '--version']).split()[1]
+    except Exception:
+        sys.stderr.write(
+                "not compiling Rust extensions: cargo is not available\n")
+    else:
+        required_cargo_version = '0.21'
+        if (LooseVersion(cargo_version) >=
+                LooseVersion(required_cargo_version)):
+            USERUST = True
+        else:
+            sys.stderr.write(
+                    "not compiling Rust extensions: cargo is too old " +
+                    "(found %s, need %s or higher)\n"
+                    % (cargo_version, required_cargo_version))
 
 # whether to use Cython to recompile .pyx to .c/.cpp at build time.
 # if False, fallback to .c/.cpp in the repo and .pyx files are ignored.
@@ -496,6 +519,15 @@ class CleanExtCommand(Command):
             for name in fnmatch.filter(files, patten):
                 yield os.path.join(dirname, name)
 
+rust_ext_modules = []
+if USERUST:
+    rust_ext_modules.extend([
+        RustExtension('treedirstate',
+            package='hgext3rd.rust',
+            manifest='rust/treedirstate/Cargo.toml',
+        ),
+    ])
+
 setup(
     name='fbhgext',
     version='1.0',
@@ -510,9 +542,11 @@ setup(
     packages=packages,
     install_requires=requires,
     py_modules=py_modules,
-    ext_modules = ext_modules,
+    ext_modules=ext_modules,
     libraries=libraries,
+    rust_ext_modules=rust_ext_modules,
     cmdclass={
         'clean_ext': CleanExtCommand,
+        'build_rust_ext': BuildRustExt,
     }
 )

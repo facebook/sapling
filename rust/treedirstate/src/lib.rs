@@ -38,6 +38,7 @@ pub mod errors;
 pub mod filestate;
 pub mod filestore;
 #[cfg(not(test))]
+#[allow(non_camel_case_types)]
 pub mod python;
 pub mod store;
 pub mod tree;

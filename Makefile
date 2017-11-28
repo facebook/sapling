@@ -15,7 +15,8 @@ local:
 	$(PYTHON) setup.py \
 	  build_py -c -d . \
 	  build_clib \
-	  build_ext -i
+	  build_ext -i \
+	  build_rust_ext -i
 
 install:
 	$(PYTHON) setup.py $(PURE) install --prefix="$(PREFIX)" --force

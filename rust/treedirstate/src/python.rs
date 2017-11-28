@@ -13,11 +13,11 @@ use store::BlockId;
 use tree::{Key, KeyRef};
 
 py_module_initializer!(
-    rusttreedirstate,
-    initrusttreedirstate,
-    PyInit_rusttreedirstate,
+    treedirstate,
+    inittreedirstate,
+    PyInit_treedirstate,
     |py, m| {
-        m.add_class::<RustDirstateMap>(py)?;
+        m.add_class::<treedirstatemap>(py)?;
         Ok(())
     }
 );
@@ -29,7 +29,7 @@ fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
     ErrorKind::CallbackError(s)
 }
 
-py_class!(class RustDirstateMap |py| {
+py_class!(class treedirstatemap |py| {
     data repodir: PathBuf;
     data dirstate: RefCell<Dirstate<FileState>>;
     data casefolderid: RefCell<Option<usize>>;
@@ -38,10 +38,10 @@ py_class!(class RustDirstateMap |py| {
         _cls,
         _ui: &PyObject,
         opener: &PyObject
-    ) -> PyResult<RustDirstateMap> {
+    ) -> PyResult<treedirstatemap> {
         let repodir = opener.getattr(py, "base")?.extract::<String>(py)?;
         let dirstate = Dirstate::new();
-        RustDirstateMap::create_instance(
+        treedirstatemap::create_instance(
             py,
             repodir.into(),
             RefCell::new(dirstate),
