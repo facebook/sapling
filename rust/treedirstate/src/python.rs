@@ -132,6 +132,12 @@ py_class!(class RustDirstateMap |py| {
         Ok(None)
     }
 
+    def storeoffset(&self) -> PyResult<u64> {
+        let dirstate = self.dirstate(py).borrow();
+        let offset = dirstate.store_offset();
+        Ok(offset.unwrap_or(0))
+    }
+
     def filecount(&self) -> PyResult<usize> {
         let dirstate = self.dirstate(py).borrow();
         Ok((dirstate.tracked_count() + dirstate.removed_count()) as usize)

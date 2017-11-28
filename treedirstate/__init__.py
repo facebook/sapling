@@ -22,16 +22,27 @@ from mercurial.i18n import _
 import errno
 import heapq
 import itertools
+import os
+import random
 import struct
+import string
 
 from .rusttreedirstate import RustDirstateMap
 
 dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1
+treefileprefix = 'dirstate.tree.'
 useinnewrepos = True
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
 setabsent = 0xffffffff
+
+# Minimum size the treedirstate file can be before auto-repacking.
+minrepackthreshold = 1024 * 1024
+
+# Number of times the treedirstate file can grow by, compared to its initial
+# size, before auto-repacking.
+repackfactor = 3
 
 class _reader(object):
     def __init__(self, data, offset):
@@ -97,6 +108,7 @@ class treedirstatemap(object):
         self._dirtyparents = False
         self._nonnormalset = set()
         self._otherparentset = set()
+        self._packedsize = 0
 
         if importmap is not None:
             self._rmap.importmap(importmap)
@@ -339,7 +351,8 @@ class treedirstatemap(object):
 
         self._treeid = r.readstr()
         rootid = r.readuint()
-        self._rmap.read('dirstate.tree.000', rootid)
+        self._packedsize = r.readuint()
+        self._rmap.read(treefileprefix + self._treeid, rootid)
         clen = r.readuint()
         copymap = {}
         for _i in range(clen):
@@ -374,9 +387,20 @@ class treedirstatemap(object):
         else:
             def nonnormadd(f):
                 pass
+        repackthreshold = max(self._packedsize * repackfactor,
+                              minrepackthreshold)
+        if self._rmap.storeoffset() > repackthreshold:
+            self._ui.note(_("auto-repacking treedirstate\n"))
+            self._ui.log('treedirstate_repacking', '',
+                         treedirstate_repacking=True)
+            self._repacked = True
+            self._treeid = None
+        else:
+            self._extended = True
         if self._treeid is None:
-            self._treeid = '000'
-            self._rmap.write('dirstate.tree.000', now, nonnormadd)
+            self._treeid = newtree(self._opener)
+            self._rmap.write(treefileprefix + self._treeid, now, nonnormadd)
+            self._packedsize = self._rmap.storeoffset()
         else:
             self._rmap.writedelta(now, nonnormadd)
         st.write(self._genrootdata())
@@ -406,6 +430,7 @@ class treedirstatemap(object):
         w.writeuint(treedirstateversion)
         w.writestr(self._treeid)
         w.writeuint(self._rmap.rootid())
+        w.writeuint(self._packedsize)
         w.writeuint(len(self.copymap))
         for k, v in self.copymap.iteritems():
             w.writestr(k)
@@ -430,6 +455,24 @@ class treedirstatemap(object):
 def istreedirstate(repo):
     return 'treedirstate' in getattr(repo, 'requirements', set())
 
+def newtree(opener):
+    while True:
+        treeid = ''.join([random.choice(string.digits) for _c in range(8)])
+        if not opener.exists(treefileprefix + treeid):
+            return treeid
+
+def gettreeid(opener, dirstatefile):
+    # The treeid is located within the first 128 bytes.
+    with opener(dirstatefile) as fp:
+        data = fp.read(128)
+    if data[40:80] != dirstateheader:
+        return None
+    r = _reader(data, 80)
+    version = r.readuint()
+    if version != treedirstateversion:
+        return None
+    return r.readstr()
+
 def upgrade(ui, repo):
     if istreedirstate(repo):
         raise error.Abort('repo already has treedirstate')
@@ -450,6 +493,50 @@ def downgrade(ui, repo):
         repo.requirements.remove('treedirstate')
         repo._writerequirements()
         del repo.dirstate
+
+def repack(ui, repo):
+    if not istreedirstate(repo):
+        ui.note(_("not repacking because repo does not have treedirstate"))
+        return
+    with repo.wlock():
+        repo.dirstate._map._treeid = None
+        repo.dirstate._dirty = True
+
+dirstatefiles = [
+    'dirstate',
+    'dirstate.pending',
+    'undo.dirstate',
+    'undo.backup.dirstate',
+]
+
+def cleanup(ui, repo):
+    """Clean up old tree files.
+
+    When repacking, we write out the tree data to a new file.  This allows us
+    to rollback transactions without fear of losing dirstate information, as
+    the old dirstate file points at the old tree file.
+
+    This leaves old tree files lying around.  We must periodically clean up
+    any tree files that are not referred to by any of the dirstate files.
+    """
+    with repo.wlock():
+        treesinuse = {}
+        for f in dirstatefiles:
+            try:
+                treeid = gettreeid(repo.vfs, f)
+                if treeid is not None:
+                    treesinuse.setdefault(treeid, set()).add(f)
+            except Exception:
+                pass
+        for f in repo.vfs.listdir():
+            if f.startswith(treefileprefix):
+                treeid = f[len(treefileprefix):]
+                if treeid not in treesinuse:
+                    ui.debug("dirstate tree %s unused, deleting\n" % treeid)
+                    repo.vfs.unlink(f)
+                else:
+                    ui.debug("dirstate tree %s in use by %s\n"
+                             % (treeid, ', '.join(treesinuse[treeid])))
 
 def wrapdirstate(orig, self):
     ds = orig(self)
@@ -488,6 +575,27 @@ def wrapcca(orig, ui, abort, dirstate):
     else:
         return orig(ui, abort, dirstate)
 
+def wrapclose(orig, self):
+    """
+    Wraps repo.close to perform cleanup of old dirstate tree files.  This
+    happens whenever the treefile is repacked, and also on 1% of other
+    invocations that involve writing to treedirstate.
+    """
+    # For chg, do not clean up on the "serve" command
+    if 'CHGINTERNALMARK' in os.environ:
+        return orig(self)
+
+    try:
+        return orig(self)
+    finally:
+        istreedirstate = ("_map" in self.dirstate.__dict__ and
+                          isinstance(self.dirstate._map, treedirstatemap))
+        if istreedirstate:
+            haverepacked = getattr(self.dirstate._map, "_repacked", False)
+            haveextended = getattr(self.dirstate._map, "_extended", False)
+            if haverepacked or (haveextended and random.random() < 0.01):
+                cleanup(self.ui, self)
+
 def wrapnewreporequirements(orig, repo):
     reqs = orig(repo)
     if useinnewrepos:
@@ -511,6 +619,7 @@ def extsetup(ui):
     extensions.wrapfilecache(localrepo.localrepository, 'dirstate',
                              wrapdirstate)
     extensions.wrapfunction(scmutil, 'casecollisionauditor', wrapcca)
+    extensions.wrapfunction(localrepo.localrepository, 'close', wrapclose)
 
 def reposetup(ui, repo):
     ui.log('treedirstate_enabled', '',
@@ -520,13 +629,20 @@ def reposetup(ui, repo):
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-@command('debugtreedirstate', [], 'hg debugtreedirstate [on|off|status]')
+@command('debugtreedirstate', [],
+         'hg debugtreedirstate [on|off|status|repack|cleanup]')
 def debugtreedirstate(ui, repo, cmd, **opts):
-    """migrate to treedirstate"""
+    """manage treedirstate"""
     if cmd == "on":
         upgrade(ui, repo)
     elif cmd == "off":
         downgrade(ui, repo)
+        cleanup(ui, repo)
+    elif cmd == "repack":
+        repack(ui, repo)
+        cleanup(ui, repo)
+    elif cmd == "cleanup":
+        cleanup(ui, repo)
     elif cmd == "status":
         if istreedirstate(repo):
             ui.status(_("treedirstate enabled " +

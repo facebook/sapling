@@ -43,6 +43,13 @@ impl Backend {
             Backend::File(ref mut file) => file.cache(),
         }
     }
+
+    pub fn offset(&self) -> Option<u64> {
+        match *self {
+            Backend::Empty(ref _null) => None,
+            Backend::File(ref file) => Some(file.position()),
+        }
+    }
 }
 
 /// A dirstate object.  This contains the state of all files in the dirstate, stored in tree
@@ -147,6 +154,11 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// Returns the ID of the root block.
     pub fn root_id(&self) -> Option<BlockId> {
         self.root_id
+    }
+
+    /// Returns the current append offset for the file store.
+    pub fn store_offset(&self) -> Option<u64> {
+        self.store.offset()
     }
 
     /// Add or update a file entry in the dirstate.

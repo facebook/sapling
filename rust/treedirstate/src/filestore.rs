@@ -125,6 +125,10 @@ impl FileStore {
         }
         Ok(())
     }
+
+    pub fn position(&self) -> u64 {
+        self.position
+    }
 }
 
 impl Store for FileStore {
