@@ -259,10 +259,10 @@ def _trackdirstatesizes(runcommand, lui, repo, *args):
         dirstate = repo.dirstate
         # if the _map attribute is missing on the map, the dirstate was not
         # loaded.
-        if '_map' in vars(dirstate) and '_map' in vars(dirstate._map):
-            map_ = dirstate._map._map
+        if (('_map' in vars(dirstate) and '_map' in vars(dirstate._map)) or
+                ('treedirstate' in getattr(repo, 'requirements', set()))):
             lui.log('dirstate_size', '',
-                    dirstate_size=len(map_))
+                    dirstate_size=len(dirstate._map))
     return res
 
 def _tracksparseprofiles(runcommand, lui, repo, *args):
