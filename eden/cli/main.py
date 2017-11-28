@@ -24,6 +24,7 @@ from . import util
 from .cmd_util import create_config
 from .util import print_stderr
 from facebook.eden import EdenService
+from typing import List, Optional
 
 
 def infer_client_from_cwd(config, clientname):
@@ -109,11 +110,11 @@ def do_repository(args):
 
 def do_list(args):
     config = create_config(args)
-    for path in config.get_mount_paths():
+    for path in sorted(config.get_mount_paths()):
         print(path)
 
 
-def do_clone(args):
+def do_clone(args) -> int:
     config = create_config(args)
     try:
         client_config = config.find_config_for_alias(args.repo)
@@ -138,6 +139,15 @@ def do_clone(args):
             print_stderr(
                 '%s does not look like a git or hg repository' % client_config.path)
             return 1
+
+    # Attempt to start the daemon if it is not already running.
+    health_info = config.check_health()
+    if not health_info.is_healthy():
+        # Sometimes this returns a non-zero exit code if it does not finish
+        # startup within the default timeout.
+        exit_code = start_daemon(config)
+        if exit_code != 0:
+            return exit_code
 
     try:
         return config.clone(client_config, args.path, snapshot_id)
@@ -228,10 +238,35 @@ def do_checkout(args):
         sys.exit(1)
 
 
-def do_daemon(args):
+def do_daemon(args) -> int:
     config = create_config(args)
-    daemon_binary = args.daemon_binary or _find_default_daemon_binary()
 
+    # If the user put an "--" argument before the edenfs args, argparse passes
+    # that through to us.  Strip it out.
+    edenfs_args = args.edenfs_args
+    if edenfs_args and edenfs_args[0] == '--':
+        edenfs_args = edenfs_args[1:]
+
+    return start_daemon(config,
+                        args.daemon_binary,
+                        edenfs_args,
+                        takeover=args.takeover,
+                        gdb=args.gdb,
+                        gdb_args=args.gdb_arg,
+                        strace_file=args.strace,
+                        foreground=args.foreground)
+
+
+def start_daemon(
+    config: config_mod.Config,
+    daemon_binary: Optional[str]=None,
+    edenfs_args: Optional[List[str]]=None,
+    takeover: bool=False,
+    gdb: bool=False,
+    gdb_args: Optional[List[str]]=None,
+    strace_file: Optional[str]=None,
+    foreground: bool=False,
+) -> int:
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
     # TODO(mbolin): Check whether the user is running as sudo/root. In general,
@@ -240,18 +275,13 @@ def do_daemon(args):
 
     config.migrate_internal_edenrc_files_to_config_toml_files()
 
-    # If the user put an "--" argument before the edenfs args, argparse passes
-    # that through to us.  Strip it out.
-    edenfs_args = args.edenfs_args
-    if edenfs_args and edenfs_args[0] == '--':
-        edenfs_args = edenfs_args[1:]
-
+    if daemon_binary is None:
+        daemon_binary = _find_default_daemon_binary()
     try:
         health_info = config.spawn(daemon_binary, edenfs_args,
-                                   takeover=args.takeover,
-                                   gdb=args.gdb, gdb_args=args.gdb_arg,
-                                   strace_file=args.strace,
-                                   foreground=args.foreground)
+                                   takeover=takeover, gdb=gdb,
+                                   gdb_args=gdb_args, strace_file=strace_file,
+                                   foreground=foreground)
     except config_mod.EdenStartError as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -304,14 +334,11 @@ def _find_default_daemon_binary():
         return None
 
 
-def _ensure_dot_eden_folder_exists(config):
+def _ensure_dot_eden_folder_exists(config) -> None:
     '''Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
     If the ~/.eden folder already exists, it will be left alone.
-
-    Returns the path to the RocksDB.
     '''
-    db = config.get_or_create_path_to_rocks_db()
-    return db
+    config.get_or_create_path_to_rocks_db()
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0

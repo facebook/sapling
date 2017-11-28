@@ -175,6 +175,27 @@ echo -n "$1" >> "{scratch_file}"
             f'No repository configured named "{repo_name}". '
             'Try one of: "main".', context.exception.stderr.decode())
 
+    def test_clone_should_start_daemon(self):
+        # Shut down Eden.
+        self.assertTrue(self.eden.is_healthy())
+        self.eden.shutdown()
+        self.assertFalse(self.eden.is_healthy())
+
+        # Check `eden list`.
+        expected_list_output = f'{self.mount}\n'
+        list_output = self.eden.list_cmd()
+        self.assertEqual(expected_list_output, list_output,
+                         msg='Eden should have one mount.')
+
+        # Verify that clone starts the daemon.
+        tmp = self._new_tmp_dir()
+        self.eden.run_cmd('clone', self.repo.path, tmp)
+        self.assertTrue(self.eden.is_healthy(), msg='clone should start Eden.')
+        mount_points = '\n'.join(sorted([self.mount, tmp])) + '\n'
+        self.assertEqual(mount_points, self.eden.list_cmd(),
+                         msg='Eden should have two mounts.')
+        self.assertEqual('hola\n', _read_all(os.path.join(tmp, 'hello')))
+
     def _new_tmp_dir(self):
         return tempfile.mkdtemp(dir=self.tmp_dir)
 
