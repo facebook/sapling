@@ -4,12 +4,6 @@ cpp_unittest(
     name = "test",
     srcs = ["main.cpp"] + glob(
         ["*Test.cpp"],
-        excludes = [
-            # TODO(mbolin): Figure out what is salvagable from these tests and
-            # then re-enable them.
-            "DirstateTest.cpp",
-            "DirstatePersistenceTest.cpp",
-        ],
     ),
     deps = [
         "@/eden/fs/config:config",
