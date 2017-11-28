@@ -318,4 +318,33 @@ py_class!(class RustDirstateMap |py| {
         Ok(self.dirstate(py).borrow().root_id().map(|id| id.0))
     }
 
+    def computenonnormals(&self, nonnormal: PyObject, otherparent: PyObject) -> PyResult<PyObject> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        let mut tracked_visitor = |filepath: &Vec<KeyRef>, state: &mut FileState| {
+            if state.state != b'n' || state.mtime == -1 {
+                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                nonnormal.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            }
+            if state.state == b'n' && state.mtime == -2 {
+                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                otherparent.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            }
+            Ok(())
+        };
+        dirstate
+            .visit_tracked(&mut tracked_visitor)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+
+        let mut removed_visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
+            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            nonnormal.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            Ok(())
+        };
+        dirstate
+            .visit_removed(&mut removed_visitor)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+
+        Ok(py.None())
+    }
+
 });

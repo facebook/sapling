@@ -28,6 +28,9 @@ dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1
 useinnewrepos = True
 
+# Sentinel length value for when a nonnormalset or otherparentset is absent.
+setabsent = 0xffffffff
+
 class _reader(object):
     def __init__(self, data, offset):
         self.data = data
@@ -207,19 +210,22 @@ class treedirstatemap(object):
 
     def addfile(self, f, oldstate, state, mode, size, mtime):
         self._rmap.addfile(f, oldstate, state, mode, size, mtime)
-        if state != 'n' or mtime == -1:
-            self._nonnormalset.add(f)
-        else:
-            self._nonnormalset.discard(f)
-        if size == -2:
-            self._otherparentset.add(f)
-        else:
-            self._otherparentset.discard(f)
+        if self._nonnormalset is not None:
+            if state != 'n' or mtime == -1:
+                self._nonnormalset.add(f)
+            else:
+                self._nonnormalset.discard(f)
+        if self._otherparentset is not None:
+            if size == -2:
+                self._otherparentset.add(f)
+            else:
+                self._otherparentset.discard(f)
 
     def removefile(self, f, oldstate, size):
         self._rmap.removefile(f, oldstate, size)
-        self._nonnormalset.add(f)
-        if size == -2:
+        if self._nonnormalset is not None:
+            self._nonnormalset.add(f)
+        if size == -2 and self._otherparentset is not None:
             self._otherparentset.add(f)
 
     def dropfile(self, f, oldstate):
@@ -227,8 +233,10 @@ class treedirstatemap(object):
         Drops a file from the dirstate.  Returns True if it was previously
         recorded.
         """
-        self._nonnormalset.discard(f)
-        self._otherparentset.discard(f)
+        if self._nonnormalset is not None:
+            self._nonnormalset.discard(f)
+        if self._otherparentset is not None:
+            self._otherparentset.discard(f)
         return self._rmap.dropfile(f)
 
     def clearambiguoustimes(self, files, now):
@@ -256,12 +264,22 @@ class treedirstatemap(object):
         self._parents = (p1, p2)
         self._dirtyparents = True
 
+    def _computenonnormals(self):
+        self._nonnormalset = set()
+        self._otherparentset = set()
+        self._rmap.computenonnormals(self._nonnormalset.add,
+                                     self._otherparentset.add)
+
     @property
     def nonnormalset(self):
+        if self._nonnormalset is None:
+            self._computenonnormals()
         return self._nonnormalset
 
     @property
     def otherparentset(self):
+        if self._otherparentset is None:
+            self._computenonnormals()
         return self._otherparentset
 
     def getfilefoldmap(self):
@@ -326,6 +344,8 @@ class treedirstatemap(object):
 
         def readset():
             slen = r.readuint()
+            if slen == setabsent:
+                return None
             s = set()
             for _i in range(slen):
                 s.add(r.readstr())
@@ -344,11 +364,16 @@ class treedirstatemap(object):
 
     def write(self, st, now):
         """Write the dirstate to the filehandle st."""
+        if self._nonnormalset is not None:
+            nonnormadd = self._nonnormalset.add
+        else:
+            def nonnormadd(f):
+                pass
         if self._treeid is None:
             self._treeid = '000'
-            self._rmap.write('dirstate.tree.000', now, self._nonnormalset.add)
+            self._rmap.write('dirstate.tree.000', now, nonnormadd)
         else:
-            self._rmap.writedelta(now, self._nonnormalset.add)
+            self._rmap.writedelta(now, nonnormadd)
         st.write(self._genrootdata())
         st.close()
         self._dirtyparents = False
@@ -380,12 +405,20 @@ class treedirstatemap(object):
         for k, v in self.copymap.iteritems():
             w.writestr(k)
             w.writestr(v)
-        w.writeuint(len(self._nonnormalset))
-        for v in self._nonnormalset:
-            w.writestr(v)
-        w.writeuint(len(self._otherparentset))
-        for v in self._otherparentset:
-            w.writestr(v)
+
+        setthreshold = max(1000, self._rmap.filecount() / 3)
+
+        def writeset(s):
+            if s is None or len(s) > setthreshold:
+                # The set is absent or too large.  Mark it as absent.
+                w.writeuint(setabsent)
+            else:
+                w.writeuint(len(s))
+                for v in s:
+                    w.writestr(v)
+
+        writeset(self._nonnormalset)
+        writeset(self._otherparentset)
 
         return w.buffer.getvalue()
 
