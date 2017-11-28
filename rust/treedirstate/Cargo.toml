@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 byteorder = "*"
 error-chain = "*"
+vlqencoding = { version = "*", path = "../vlqencoding" }
 
 [dev-dependencies]
 itertools = "0.7.2"

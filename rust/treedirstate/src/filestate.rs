@@ -1,10 +1,11 @@
 // Copyright Facebook, Inc. 2017
 //! File State.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use errors::*;
 use std::io::{Read, Write};
 use tree::Storable;
+use vlqencoding::{VLQDecode, VLQEncode};
 
 /// Information relating to a file in the dirstate.
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -38,20 +39,20 @@ impl FileState {
 
 impl Storable for FileState {
     /// Write a file entry to the store.
-    fn write(&self, w: &mut Write) -> Result<()> {
+    fn write(&self, mut w: &mut Write) -> Result<()> {
         w.write_u8(self.state)?;
-        w.write_u32::<BigEndian>(self.mode)?;
-        w.write_i32::<BigEndian>(self.size)?;
-        w.write_i32::<BigEndian>(self.mtime)?;
+        w.write_vlq(self.mode)?;
+        w.write_vlq(self.size)?;
+        w.write_vlq(self.mtime)?;
         Ok(())
     }
 
     /// Read an entry from the store.
-    fn read(r: &mut Read) -> Result<FileState> {
+    fn read(mut r: &mut Read) -> Result<FileState> {
         let state = r.read_u8()?;
-        let mode = r.read_u32::<BigEndian>()?;
-        let size = r.read_i32::<BigEndian>()?;
-        let mtime = r.read_i32::<BigEndian>()?;
+        let mode = r.read_vlq()?;
+        let size = r.read_vlq()?;
+        let mtime = r.read_vlq()?;
         Ok(FileState {
             state,
             mode,

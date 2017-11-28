@@ -31,6 +31,8 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate tempdir;
 
+extern crate vlqencoding;
+
 pub mod dirstate;
 pub mod errors;
 pub mod filestate;

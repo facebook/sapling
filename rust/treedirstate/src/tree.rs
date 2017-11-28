@@ -1,12 +1,13 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State Tree.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use errors::*;
 use std::collections::Bound;
 use std::io::{Cursor, Read, Write};
 use store::{BlockId, Store, StoreView};
 use vecmap::VecMap;
+use vlqencoding::{VLQDecode, VLQEncode};
 
 /// Trait that must be implemented by types that can be stored as the value in the tree.
 pub trait Storable
@@ -82,29 +83,29 @@ fn split_key<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
 
 impl<T: Storable + Clone> NodeEntry<T> {
     /// Read an entry from the store.  Returns the name and the entry.
-    fn read(r: &mut Read) -> Result<(Key, NodeEntry<T>)> {
+    fn read(mut r: &mut Read) -> Result<(Key, NodeEntry<T>)> {
         let entry_type = r.read_u8()?;
         match entry_type {
             b'f' => {
                 // File entry.
                 let data = T::read(r)?;
-                let name_len = r.read_u32::<BigEndian>()?;
-                let mut name = Vec::with_capacity(name_len as usize);
+                let name_len = r.read_vlq()?;
+                let mut name = Vec::with_capacity(name_len);
                 unsafe {
                     // Safe as we've just allocated the buffer and are about to read into it.
-                    name.set_len(name_len as usize);
+                    name.set_len(name_len);
                 }
                 r.read_exact(name.as_mut_slice())?;
                 Ok((name, NodeEntry::File(data)))
             }
             b'd' => {
                 // Directory entry.
-                let id = r.read_u64::<BigEndian>()?;
-                let name_len = r.read_u32::<BigEndian>()?;
-                let mut name = Vec::with_capacity(name_len as usize);
+                let id = r.read_vlq()?;
+                let name_len = r.read_vlq()?;
+                let mut name = Vec::with_capacity(name_len);
                 unsafe {
                     // Safe as we've just allocated the buffer and are about to read into it.
-                    name.set_len(name_len as usize);
+                    name.set_len(name_len);
                 }
                 r.read_exact(name.as_mut_slice())?;
                 Ok((name, NodeEntry::Directory(Node::open(BlockId(id)))))
@@ -146,7 +147,7 @@ impl<T: Storable + Clone> Node<T> {
         let data = store.read(id)?;
         let len = data.len() as u64;
         let mut cursor = Cursor::new(data);
-        let count = cursor.read_u32::<BigEndian>()? as usize;
+        let count = cursor.read_vlq()?;
         let mut entries = NodeEntryMap::with_capacity(count);
         while cursor.position() < len {
             let (name, entry) = NodeEntry::read(&mut cursor)?;
@@ -173,7 +174,7 @@ impl<T: Storable + Clone> Node<T> {
         let entries = self.entries
             .as_mut()
             .expect("Node should have entries populated before writing out.");
-        data.write_u32::<BigEndian>(entries.len() as u32)?;
+        data.write_vlq(entries.len())?;
         for (name, entry) in entries.iter_mut() {
             match entry {
                 &mut NodeEntry::File(ref file) => {
@@ -182,10 +183,10 @@ impl<T: Storable + Clone> Node<T> {
                 }
                 &mut NodeEntry::Directory(ref mut node) => {
                     data.write_u8(b'd')?;
-                    data.write_u64::<BigEndian>(node.id.unwrap().0)?;
+                    data.write_vlq(node.id.unwrap().0)?;
                 }
             }
-            data.write_u32::<BigEndian>(name.len() as u32)?;
+            data.write_vlq(name.len())?;
             data.write(name)?;
         }
         self.id = Some(store.append(&data)?);
