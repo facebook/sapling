@@ -565,7 +565,7 @@ class queue(object):
                 return index
         return None
 
-    guard_re = re.compile(r'\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)')
+    guard_re = re.compile(br'\s?#([-+][^-+# \t\r\n\f][^# \t\r\n\f]*)')
 
     def parseseries(self):
         self.series = []

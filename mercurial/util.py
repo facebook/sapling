@@ -2667,7 +2667,7 @@ def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
         else:
             prefix_char = prefix
         mapping[prefix_char] = prefix_char
-    r = remod.compile(r'%s(%s)' % (prefix, patterns))
+    r = remod.compile(br'%s(%s)' % (prefix, patterns))
     return r.sub(lambda x: fn(mapping[x.group()[1:]]), s)
 
 def getport(port):

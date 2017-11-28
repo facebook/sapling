@@ -404,7 +404,7 @@ def aliasinterpolate(name, args, cmd):
     # tokenize each argument into exactly one word.
     replacemap['"$@"'] = ' '.join(util.shellquote(arg) for arg in args)
     # escape '\$' for regex
-    regex = '|'.join(replacemap.keys()).replace('$', r'\$')
+    regex = '|'.join(replacemap.keys()).replace('$', br'\$')
     r = re.compile(regex)
     return r.sub(lambda x: replacemap[x.group()], cmd)
 
@@ -449,7 +449,7 @@ class cmdalias(object):
                                  "of %i variable in alias '%s' definition."
                                  % (int(m.groups()[0]), self.name))
                         return ''
-                cmd = re.sub(r'\$(\d+|\$)', _checkvar, self.definition[1:])
+                cmd = re.sub(br'\$(\d+|\$)', _checkvar, self.definition[1:])
                 cmd = aliasinterpolate(self.name, args, cmd)
                 return ui.system(cmd, environ=env,
                                  blockedtag='alias_%s' % self.name)
