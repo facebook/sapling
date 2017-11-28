@@ -14,6 +14,10 @@
 
 extern crate byteorder;
 
+#[cfg(not(test))]
+#[macro_use]
+extern crate cpython;
+
 #[macro_use]
 extern crate error_chain;
 
@@ -31,6 +35,8 @@ pub mod dirstate;
 pub mod errors;
 pub mod filestate;
 pub mod filestore;
+#[cfg(not(test))]
+pub mod python;
 pub mod store;
 pub mod tree;
 pub mod vecmap;
