@@ -17,6 +17,9 @@ error_chain! {
         ReadOnlyStore {
             description("store is read-only"),
         }
+        CorruptTree {
+            description("treedirstate is corrupt"),
+        }
     }
     foreign_links {
         Io(::std::io::Error);

@@ -28,8 +28,10 @@ extern crate quickcheck;
 extern crate tempdir;
 
 pub mod errors;
+pub mod filestate;
 pub mod filestore;
 pub mod store;
+pub mod tree;
 pub mod vecmap;
 
 pub use errors::*;
