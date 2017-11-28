@@ -87,18 +87,18 @@ class remotefilectx(context.filectx):
 
     @propertycache
     def _linkrev(self):
-        if self._fileid == nullid:
+        if self._filenode == nullid:
             return nullrev
 
         ancestormap = self.ancestormap()
-        p1, p2, linknode, copyfrom = ancestormap[self._fileid]
+        p1, p2, linknode, copyfrom = ancestormap[self._filenode]
         rev = self._repo.changelog.nodemap.get(linknode)
         if rev is not None:
             return rev
 
         # Search all commits for the appropriate linkrev (slow, but uncommon)
         path = self._path
-        fileid = self._fileid
+        fileid = self._filenode
         cl = self._repo.unfiltered().changelog
         mfl = self._repo.manifestlog
 
@@ -483,7 +483,7 @@ class remotefilectx(context.filectx):
             if self.rev() != introrev:
                 introctx = remotefilectx(self._repo, self._path,
                                          changeid=introrev,
-                                         fileid=self._fileid,
+                                         fileid=self._filenode,
                                          filelog=self._filelog,
                                          ancestormap=self._ancestormap)
 
