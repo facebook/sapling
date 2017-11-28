@@ -5,7 +5,7 @@ use errors::*;
 use std::borrow::Cow;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct BlockId(u64);
+pub struct BlockId(pub u64);
 
 /// Append-only storage.  Blocks of data may be stored in an instance of a Store.  Once written,
 /// blocks are immutable.

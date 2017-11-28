@@ -11,8 +11,10 @@ name = "rusttreedirstate"
 crate-type = ["cdylib"]
 
 [dependencies]
+byteorder = "*"
 error-chain = "*"
 
 [dev-dependencies]
 itertools = "0.7.2"
 quickcheck = "*"
+tempdir = "*"

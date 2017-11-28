@@ -3,9 +3,19 @@
 
 error_chain! {
     errors {
+        NotAStoreFile {
+            description("the provided store file is not a valid store file"),
+        }
+        UnsupportedVersion(v: u32) {
+            description("store file version not supported"),
+            display("store file version not supported: {}", v),
+        }
         InvalidStoreId(id: u64) {
             description("invalid store id"),
             display("invalid store id: {}", id),
+        }
+        ReadOnlyStore {
+            description("store is read-only"),
         }
     }
     foreign_links {
