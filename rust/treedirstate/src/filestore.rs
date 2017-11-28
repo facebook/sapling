@@ -1,7 +1,7 @@
 // Copyright Facebook, Inc. 2017
 //! Implementation of a store using file I/O.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
 use errors::*;
 use std;
 use std::borrow::Cow;
@@ -41,6 +41,9 @@ pub struct FileStore {
 
     /// True if the file is read-only.
     read_only: bool,
+
+    /// Cache of data loaded from disk.  Used when iterating over the whole dirstate.
+    cache: Option<Vec<u8>>,
 }
 
 impl FileStore {
@@ -59,6 +62,7 @@ impl FileStore {
             position: HEADER_LEN,
             at_end: RefCell::new(true),
             read_only: false,
+            cache: None,
         })
     }
 
@@ -99,7 +103,27 @@ impl FileStore {
             position,
             at_end: RefCell::new(true),
             read_only,
+            cache: None,
         })
+    }
+
+    pub fn cache(&mut self) -> Result<()> {
+        if self.cache.is_none() {
+            let file = self.file.get_mut();
+            file.flush()?;
+            file.seek(SeekFrom::Start(0))?;
+            *self.at_end.get_mut() = false;
+            let mut buffer = Vec::with_capacity(self.position as usize);
+            unsafe {
+                // This is safe as we've just allocated the buffer and are about to read into it.
+                buffer.set_len(self.position as usize);
+            }
+            file.get_mut().read_exact(buffer.as_mut_slice())?;
+            file.seek(SeekFrom::Start(self.position))?;
+            *self.at_end.get_mut() = true;
+            self.cache = Some(buffer);
+        }
+        Ok(())
     }
 }
 
@@ -134,6 +158,24 @@ impl StoreView for FileStore {
         // Check the ID is in range.
         if id.0 < HEADER_LEN || id.0 > self.position - 4 {
             bail!(ErrorKind::InvalidStoreId(id.0));
+        }
+
+        if let Some(ref cache) = self.cache {
+            if (id.0) < cache.len() as u64 {
+                if (id.0) > cache.len() as u64 - 4 {
+                    // The ID falls in the last 3 bytes of the cache.  This is invalid.
+                    bail!(ErrorKind::InvalidStoreId(id.0));
+                }
+                let header_start = id.0 as usize;
+                let data_start = header_start + 4;
+                let size = BigEndian::read_u32(&cache[header_start..data_start]) as usize;
+                if size as u64 > cache.len() as u64 - data_start as u64 {
+                    // The stored size of this block exceeds the number of bytes left in the
+                    // cache.  We must have been given an invalid ID.
+                    bail!(ErrorKind::InvalidStoreId(id.0));
+                }
+                return Ok(Cow::from(&cache[data_start..data_start + size]));
+            }
         }
 
         // Get mutable access to the file, and seek to the right location.
@@ -274,6 +316,32 @@ mod tests {
                 .expect("file should not be opened")
                 .to_string(),
             "store file version not supported: 0"
+        );
+    }
+
+    #[test]
+    fn cache() {
+        let dir = TempDir::new("filestore_test").expect("create temp dir");
+        let p = dir.path().join("store");
+        let mut s = FileStore::create(&p).expect("create store");
+        let id1 = s.append("data block 1".as_bytes()).expect("write block 1");
+        let id2 = s.append("data block two".as_bytes())
+            .expect("write block 2");
+        s.flush().expect("flush");
+        assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
+        assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
+        drop(s);
+        let mut s = FileStore::open(&p).expect("open store");
+        s.cache().expect("can cache");
+        assert_eq!(s.read(id1).expect("read 1"), "data block 1".as_bytes());
+        assert_eq!(s.read(id2).expect("read 2"), "data block two".as_bytes());
+        let id3 = s.append("third data block".as_bytes())
+            .expect("write block 3");
+        s.flush().expect("flush");
+        assert_eq!(s.read(id3).expect("read 3"), "third data block".as_bytes());
+        assert_eq!(
+            s.read(BlockId(id3.0 - 2)).unwrap_err().to_string(),
+            format!("invalid store id: {}", id3.0 - 2)
         );
     }
 

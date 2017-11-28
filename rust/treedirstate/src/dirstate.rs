@@ -36,6 +36,13 @@ impl Backend {
             Backend::File(ref file) => file,
         }
     }
+
+    pub fn cache(&mut self) -> Result<()> {
+        match *self {
+            Backend::Empty(ref _null) => Ok(()),
+            Backend::File(ref mut file) => file.cache(),
+        }
+    }
 }
 
 /// A dirstate object.  This contains the state of all files in the dirstate, stored in tree
@@ -181,6 +188,7 @@ impl<T: Storable + Clone> Dirstate<T> {
 
     /// Get the name and state of the first file in the tracked tree.
     pub fn get_first_tracked<'a>(&'a mut self) -> Result<Option<(Key, &'a T)>> {
+        self.store.cache()?;
         self.tracked.get_first(self.store.store_view())
     }
 
