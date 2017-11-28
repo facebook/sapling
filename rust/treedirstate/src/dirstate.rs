@@ -186,6 +186,15 @@ impl<T: Storable + Clone> Dirstate<T> {
         self.tracked.get(self.store.store_view(), name)
     }
 
+    /// Visit all tracked files with a visitor.
+    pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+    {
+        self.store.cache()?;
+        self.tracked.visit(self.store.store_view(), visitor)
+    }
+
     /// Get the name and state of the first file in the tracked tree.
     pub fn get_first_tracked<'a>(&'a mut self) -> Result<Option<(Key, &'a T)>> {
         self.store.cache()?;
@@ -204,6 +213,14 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// Get an entry from the removed tree.
     pub fn get_removed<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a T>> {
         self.removed.get(self.store.store_view(), name)
+    }
+
+    /// Visit all removed files with a visitor.
+    pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+    {
+        self.removed.visit(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the removed tree.

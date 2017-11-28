@@ -18,6 +18,7 @@ from mercurial import (
 )
 from mercurial.i18n import _
 import errno
+import heapq
 import itertools
 import struct
 
@@ -59,10 +60,9 @@ class _writer(object):
 # tree each time.  A future improvement is to keep the state between each
 # call to avoid these extra searches.
 class treedirstatemapiterator(object):
-    def __init__(self, map_, removed=False, items=False):
+    def __init__(self, map_, removed=False):
         self._rmap = map_
         self._removed = removed
-        self._items = items
         self._at = None
 
     def __iter__(self):
@@ -73,7 +73,7 @@ class treedirstatemapiterator(object):
         if nextitem is None:
             raise StopIteration
         self._at = nextitem[0]
-        return nextitem if self._items else nextitem[0]
+        return nextitem
 
     def next(self):
         return self.__next__()
@@ -118,14 +118,14 @@ class treedirstatemap(object):
 
     def itertrackeditems(self):
         """Returns an iterator over (filename, (state, mode, size, mtime))."""
-        return treedirstatemapiterator(self._rmap, removed=False, items=True)
+        return treedirstatemapiterator(self._rmap, removed=False)
 
     def iterremoveditems(self):
         """
         Returns an iterator over (filename, (state, mode, size, mtime)) for
         files that have been marked as removed.
         """
-        return treedirstatemapiterator(self._rmap, removed=True, items=True)
+        return treedirstatemapiterator(self._rmap, removed=True)
 
     def iteritems(self):
         return itertools.chain(self.itertrackeditems(),
@@ -162,16 +162,25 @@ class treedirstatemap(object):
         return self.hastrackedfile(filename) or self.hasremovedfile(filename)
 
     def trackedfiles(self):
-        """Returns an iterator of all filenames tracked by the dirstate."""
-        return treedirstatemapiterator(self._rmap, removed=False, items=False)
+        """Returns a list of all filenames tracked by the dirstate."""
+        trackedfiles = []
+        self._rmap.visittrackedfiles(trackedfiles.append)
+        return iter(trackedfiles)
 
     def removedfiles(self):
-        """Returns an iterator of all removed files in the dirstate."""
-        return treedirstatemapiterator(self._rmap, removed=True, items=False)
+        """Returns a list of all removed files in the dirstate."""
+        removedfiles = []
+        self._rmap.visitremovedfiles(removedfiles.append)
+        return removedfiles
 
     def __iter__(self):
         """Returns an iterator of all files in the dirstate."""
-        return itertools.chain(self.trackedfiles(), self.removedfiles())
+        trackedfiles = self.trackedfiles()
+        removedfiles = self.removedfiles()
+        if removedfiles:
+            return heapq.merge(iter(trackedfiles), iter(removedfiles))
+        else:
+            return iter(trackedfiles)
 
     def keys(self):
         return list(iter(self))

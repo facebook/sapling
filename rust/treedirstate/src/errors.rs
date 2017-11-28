@@ -20,6 +20,10 @@ error_chain! {
         CorruptTree {
             description("treedirstate is corrupt"),
         }
+        CallbackError(desc: String) {
+            description("callback error"),
+            display("callback error: {}", desc),
+        }
     }
     foreign_links {
         Io(::std::io::Error);

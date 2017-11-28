@@ -224,6 +224,31 @@ impl<T: Storable + Clone> Node<T> {
         }
     }
 
+    // Visit all of the files in under this node, by calling the visitor function on each one.
+    fn visit<'a, F>(
+        &'a mut self,
+        store: &StoreView,
+        path: &mut Vec<KeyRef<'a>>,
+        visitor: &mut F,
+    ) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+    {
+        for (name, entry) in self.load_entries(store)?.iter_mut() {
+            path.push(name);
+            match entry {
+                &mut NodeEntry::Directory(ref mut node) => {
+                    node.visit(store, path, visitor)?;
+                }
+                &mut NodeEntry::File(ref file) => {
+                    visitor(path, file)?;
+                }
+            }
+            path.pop();
+        }
+        Ok(())
+    }
+
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
     /// pair containing the path to the file as a reversed vector of key references for each path
     /// element, and a reference to the file.
@@ -463,6 +488,14 @@ impl<T: Storable + Clone> Tree<T> {
         Ok(self.root.get(store, name)?)
     }
 
+    pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+    {
+        let mut path = Vec::new();
+        self.root.visit(store, &mut path, visitor)
+    }
+
     pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
         Ok(self.root.get_first(store)?.map(|(mut path, file)| {
             path.reverse();
@@ -507,7 +540,7 @@ mod tests {
 
     use store::NullStore;
     use store::tests::MapStore;
-    use tree::Tree;
+    use tree::{KeyRef, Tree};
     use filestate::FileState;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
@@ -667,4 +700,25 @@ mod tests {
         );
     }
 
+    #[test]
+    fn visit() {
+        let mut ms = MapStore::new();
+        let mut t = Tree::new();
+        populate(&mut t, &ms);
+        let mut files = Vec::new();
+        {
+            let mut v = |path: &Vec<KeyRef>, _fs: &FileState| {
+                files.push(path.concat());
+                Ok(())
+            };
+            t.visit(&mut ms, &mut v).expect("can visit");
+        }
+        assert_eq!(
+            files,
+            TEST_FILES
+                .iter()
+                .map(|t| t.0.to_vec())
+                .collect::<Vec<Vec<u8>>>()
+        );
+    }
 }

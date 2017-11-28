@@ -4,10 +4,12 @@
 use cpython::*;
 use cpython::exc;
 use dirstate::Dirstate;
+use errors::ErrorKind;
 use filestate::FileState;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use store::BlockId;
+use tree::KeyRef;
 
 py_module_initializer!(
     rusttreedirstate,
@@ -18,6 +20,13 @@ py_module_initializer!(
         Ok(())
     }
 );
+
+fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
+    let s = e.instance(py)
+        .extract::<String>(py)
+        .unwrap_or_else(|_e| "unknown exception".to_string());
+    ErrorKind::CallbackError(s)
+}
 
 py_class!(class RustDirstateMap |py| {
     data repodir: PathBuf;
@@ -170,6 +179,32 @@ py_class!(class RustDirstateMap |py| {
         dirstate
             .has_removed_dir(dirname.data(py))
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))
+    }
+
+    def visittrackedfiles(&self, target: PyObject) -> PyResult<PyObject> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        let mut visitor = |filepath: &Vec<KeyRef>, _state: &FileState| {
+            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            Ok(())
+        };
+        dirstate
+            .visit_tracked(&mut visitor)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        Ok(py.None())
+    }
+
+    def visitremovedfiles(&self, target: PyObject) -> PyResult<PyObject> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        let mut visitor = |filepath: &Vec<KeyRef>, _state: &FileState| {
+            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            Ok(())
+        };
+        dirstate
+            .visit_removed(&mut visitor)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        Ok(py.None())
     }
 
     // Get the next dirstate object after the provided filename.  If the filename is None,
