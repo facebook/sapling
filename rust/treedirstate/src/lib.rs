@@ -12,6 +12,9 @@
 //! The directory state also stores files that are in the working copy parent manifest but have
 //! been marked as removed.
 
+#[macro_use]
+extern crate error_chain;
+
 #[cfg(test)]
 extern crate itertools;
 
@@ -19,4 +22,8 @@ extern crate itertools;
 #[macro_use]
 extern crate quickcheck;
 
+pub mod errors;
+pub mod store;
 pub mod vecmap;
+
+pub use errors::*;
