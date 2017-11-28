@@ -28,10 +28,10 @@ from mercurial import (
     copies,
     error,
     node,
-    obsolete,
     obsutil,
     pycompat,
     registrar,
+    rewriteutil,
     scmutil,
 )
 
@@ -155,23 +155,14 @@ def uncommit(ui, repo, *pats, **opts):
     opts = pycompat.byteskwargs(opts)
 
     with repo.wlock(), repo.lock():
-        wctx = repo[None]
 
         if not pats and not repo.ui.configbool('experimental',
                                                 'uncommitondirtywdir'):
             cmdutil.bailifchanged(repo)
-        if wctx.parents()[0].node() == node.nullid:
-            raise error.Abort(_("cannot uncommit null changeset"))
-        if len(wctx.parents()) > 1:
-            raise error.Abort(_("cannot uncommit while merging"))
         old = repo['.']
-        if not old.mutable():
-            raise error.Abort(_('cannot uncommit public changesets'))
+        rewriteutil.precheck(repo, [old.rev()], 'uncommit')
         if len(old.parents()) > 1:
             raise error.Abort(_("cannot uncommit merge changeset"))
-        allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
-        if not allowunstable and old.children():
-            raise error.Abort(_('cannot uncommit changeset with children'))
 
         with repo.transaction('uncommit'):
             match = scmutil.match(old, pats, opts)

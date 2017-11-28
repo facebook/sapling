@@ -49,6 +49,7 @@ from . import (
     rcutil,
     registrar,
     revsetlang,
+    rewriteutil,
     scmutil,
     server,
     sshserver,
@@ -1541,13 +1542,7 @@ def _docommit(ui, repo, *pats, **opts):
             raise error.Abort(_('cannot amend with ui.commitsubrepos enabled'))
 
         old = repo['.']
-        if not old.mutable():
-            raise error.Abort(_('cannot amend public changesets'))
-        if len(repo[None].parents()) > 1:
-            raise error.Abort(_('cannot amend while merging'))
-        allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
-        if not allowunstable and old.children():
-            raise error.Abort(_('cannot amend changeset with children'))
+        rewriteutil.precheck(repo, [old.rev()], 'amend')
 
         # Currently histedit gets confused if an amend happens while histedit
         # is in progress. Since we have a checkunfinished command, we are

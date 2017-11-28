@@ -41,6 +41,7 @@ Uncommit with no commits should fail
 
   $ hg uncommit
   abort: cannot uncommit null changeset
+  (no changeset checked out)
   [255]
 
 Create some commits

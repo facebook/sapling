@@ -16,6 +16,7 @@ Refuse to amend public csets:
   $ hg phase -r . -p
   $ hg ci --amend
   abort: cannot amend public changesets
+  (see 'hg help phases' for details)
   [255]
   $ hg phase -r . -f -d
 

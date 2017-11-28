@@ -213,6 +213,7 @@ Cannot amend public changeset
   $ hg update -C -q A
   $ hg amend -m AMEND
   abort: cannot amend public changesets
+  (see 'hg help phases' for details)
   [255]
 
 Amend a merge changeset
