@@ -71,6 +71,29 @@ class _writer(object):
         self.writeuint(len(v))
         self.buffer.write(v)
 
+class _overlaydict(dict):
+    def __init__(self, lookup, *args, **kwargs):
+        super(_overlaydict, self).__init__(*args, **kwargs)
+        self.lookup = lookup
+
+    def get(self, key, default=None):
+        s = super(_overlaydict, self)
+        if s.__contains__(key):
+            return s.__getitem__(key)
+        r = self.lookup(key)
+        if r is not None:
+            return r
+        return default
+
+    def __getitem__(self, key):
+        s = super(_overlaydict, self)
+        if s.__contains__(key):
+            return s[key]
+        r = self.lookup(key)
+        if r is not None:
+            return r
+        raise KeyError(key)
+
 # The treedirstatemap iterator uses the getnext method on the dirstatemap
 # to find the next item on each call.  This involves searching down the
 # tree each time.  A future improvement is to keep the state between each
@@ -128,6 +151,8 @@ class treedirstatemap(object):
         self._nonnormalset.clear()
         self._otherparentset.clear()
         self.setparents(node.nullid, node.nullid)
+        util.clearcachedproperty(self, "filefoldmap")
+        util.clearcachedproperty(self, "dirfoldmap")
 
     def __len__(self):
         """Returns the number of files, including removed files."""
@@ -161,7 +186,7 @@ class treedirstatemap(object):
                 self._rmap.getremoved(filename, default))
 
     def getcasefoldedtracked(self, filename, foldfunc):
-        return self._rmap.getcasefoldedtracked(filename, foldfunc)
+        return self._rmap.getcasefoldedtracked(filename, foldfunc, id(foldfunc))
 
     def __getitem__(self, filename):
         item = (self._rmap.gettracked(filename, None) or
@@ -299,18 +324,32 @@ class treedirstatemap(object):
             self._computenonnormals()
         return self._otherparentset
 
-    def getfilefoldmap(self):
+    @util.propertycache
+    def filefoldmap(self):
         """Returns a dictionary mapping normalized case paths to their
         non-normalized versions.
         """
-        raise NotImplementedError()
+        def lookup(key):
+            f = self.getcasefoldedtracked(key, util.normcase)
+            if f is not None and self._rmap.hastrackedfile(f):
+                return f
+            else:
+                return None
+        return _overlaydict(lookup)
 
-    def getdirfoldmap(self):
+    @util.propertycache
+    def dirfoldmap(self):
         """
         Returns a dictionary mapping normalized case paths to their
         non-normalized versions for directories.
         """
-        raise NotImplementedError()
+        def lookup(key):
+            d = self.getcasefoldedtracked(key + '/', util.normcase)
+            if d is not None and self._rmap.hastrackeddir(d):
+                return d.rstrip('/')
+            else:
+                return None
+        return _overlaydict(lookup)
 
     def identity(self):
         if self._identity is None:

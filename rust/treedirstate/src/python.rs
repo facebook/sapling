@@ -32,6 +32,7 @@ fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
 py_class!(class RustDirstateMap |py| {
     data repodir: PathBuf;
     data dirstate: RefCell<Dirstate<FileState>>;
+    data casefolderid: RefCell<Option<usize>>;
 
     def __new__(
         _cls,
@@ -43,7 +44,8 @@ py_class!(class RustDirstateMap |py| {
         RustDirstateMap::create_instance(
             py,
             repodir.into(),
-            RefCell::new(dirstate))
+            RefCell::new(dirstate),
+            RefCell::new(None))
     }
 
     def clear(&self) -> PyResult<PyObject> {
@@ -357,9 +359,11 @@ py_class!(class RustDirstateMap |py| {
     def getcasefoldedtracked(
         &self,
         filename: PyBytes,
-        casefolder: PyObject
+        casefolder: PyObject,
+        casefolderid: usize
     ) -> PyResult<Option<PyObject>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
+        let mut curcasefolderid = self.casefolderid(py).borrow_mut();
         let mut filter = |filename: KeyRef| -> errors::Result<Key> {
             let unfolded = PyBytes::new(py, filename);
             let folded = casefolder.call(py, (unfolded,), None)
@@ -369,6 +373,12 @@ py_class!(class RustDirstateMap |py| {
             Ok(folded.data(py).to_vec())
         };
 
+        if let Some(id) = *curcasefolderid {
+            if id != casefolderid {
+                dirstate.clear_filtered_keys();
+            }
+        }
+        *curcasefolderid = Some(casefolderid);
         dirstate
             .get_tracked_filtered_key(filename.data(py), &mut filter)
             .map(|o| o.map(|k| PyBytes::new(py, &k).into_object()))

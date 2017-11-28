@@ -49,7 +49,8 @@ struct Node<T> {
 
     /// A map from keys that have been filtered through a case-folding filter function to the
     /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
-    /// only a single filter function can be used with a tree.
+    /// only a single filter function can be used with a tree.  Call `clear_filtered_keys` to
+    /// clear the cache in order to use a different filter function.
     filtered_keys: Option<VecMap<Key, Key>>,
 }
 
@@ -534,6 +535,17 @@ impl<T: Storable + Clone> Node<T> {
             )
         }
     }
+
+    fn clear_filtered_keys(&mut self) {
+        self.filtered_keys = None;
+        if let Some(ref mut entries) = self.entries {
+            for (_k, v) in entries.iter_mut() {
+                if let &mut NodeEntry::Directory(ref mut node) = v {
+                    node.clear_filtered_keys();
+                }
+            }
+        }
+    }
 }
 
 impl<T: Storable + Clone> Tree<T> {
@@ -650,6 +662,10 @@ impl<T: Storable + Clone> Tree<T> {
                 path.concat()
             },
         ))
+    }
+
+    pub fn clear_filtered_keys(&mut self) {
+        self.root.clear_filtered_keys();
     }
 }
 

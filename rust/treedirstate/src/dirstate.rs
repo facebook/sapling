@@ -269,6 +269,10 @@ impl<T: Storable + Clone> Dirstate<T> {
     pub fn has_removed_dir(&mut self, name: KeyRef) -> Result<bool> {
         self.removed.has_dir(self.store.store_view(), name)
     }
+
+    pub fn clear_filtered_keys(&mut self) {
+        self.tracked.clear_filtered_keys();
+    }
 }
 
 #[cfg(test)]
