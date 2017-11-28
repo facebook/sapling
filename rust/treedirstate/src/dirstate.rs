@@ -2,6 +2,7 @@
 //! Directory State.
 
 use errors::*;
+use filestate::FileState;
 use filestore::FileStore;
 use serialization::Serializable;
 use std::io::Cursor;
@@ -50,15 +51,15 @@ impl Backend {
 
 /// A dirstate object.  This contains the state of all files in the dirstate, stored in tree
 /// structures, and backed by an append-only store on disk.
-pub struct Dirstate<T> {
+pub struct Dirstate {
     /// The store currently in use by the Dirstate.
     store: Backend,
 
     /// The tree of tracked files.
-    tracked: Tree<T>,
+    tracked: Tree<FileState>,
 
     /// The tree of removed files.
-    removed: Tree<T>,
+    removed: Tree<FileState>,
 
     /// The ID of the root block.
     root_id: Option<BlockId>,
@@ -72,9 +73,9 @@ pub(crate) struct DirstateRoot {
     pub(crate) removed_file_count: u32,
 }
 
-impl<T: Serializable + Clone> Dirstate<T> {
+impl Dirstate {
     /// Create a new, empty dirstate, with no backend store.
-    pub fn new() -> Dirstate<T> {
+    pub fn new() -> Dirstate {
         Dirstate {
             store: Backend::Empty(NullStore::new()),
             tracked: Tree::new(),
@@ -153,7 +154,7 @@ impl<T: Serializable + Clone> Dirstate<T> {
     }
 
     /// Add or update a file entry in the dirstate.
-    pub fn add_file(&mut self, name: KeyRef, state: &T) -> Result<()> {
+    pub fn add_file(&mut self, name: KeyRef, state: &FileState) -> Result<()> {
         let store = self.store.store_view();
         self.removed.remove(store, name)?;
         self.tracked.add(store, name, state)?;
@@ -161,7 +162,7 @@ impl<T: Serializable + Clone> Dirstate<T> {
     }
 
     /// Mark a file as removed in the dirstate.
-    pub fn remove_file(&mut self, name: KeyRef, state: &T) -> Result<()> {
+    pub fn remove_file(&mut self, name: KeyRef, state: &FileState) -> Result<()> {
         let store = self.store.store_view();
         self.tracked.remove(store, name)?;
         self.removed.add(store, name, state)?;
@@ -185,7 +186,7 @@ impl<T: Serializable + Clone> Dirstate<T> {
     }
 
     /// Get an entry from the tracked tree.
-    pub fn get_tracked<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a T>> {
+    pub fn get_tracked<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a FileState>> {
         self.tracked.get(self.store.store_view(), name)
     }
 
@@ -204,7 +205,7 @@ impl<T: Serializable + Clone> Dirstate<T> {
     /// Visit all tracked files with a visitor.
     pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
     {
         self.store.cache()?;
         self.tracked.visit(self.store.store_view(), visitor)
@@ -213,20 +214,23 @@ impl<T: Serializable + Clone> Dirstate<T> {
     /// Visit all tracked files in changed nodes with a visitor.
     pub fn visit_changed_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
     {
         self.store.cache()?;
         self.tracked.visit_changed(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the tracked tree.
-    pub fn get_first_tracked<'a>(&'a mut self) -> Result<Option<(Key, &'a T)>> {
+    pub fn get_first_tracked<'a>(&'a mut self) -> Result<Option<(Key, &'a FileState)>> {
         self.store.cache()?;
         self.tracked.get_first(self.store.store_view())
     }
 
     /// Get the name and state of the next file in the tracked tree after the named file.
-    pub fn get_next_tracked<'a>(&'a mut self, name: KeyRef) -> Result<Option<(Key, &'a T)>> {
+    pub fn get_next_tracked<'a>(
+        &'a mut self,
+        name: KeyRef,
+    ) -> Result<Option<(Key, &'a FileState)>> {
         self.tracked.get_next(self.store.store_view(), name)
     }
 
@@ -235,25 +239,28 @@ impl<T: Serializable + Clone> Dirstate<T> {
     }
 
     /// Get an entry from the removed tree.
-    pub fn get_removed<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a T>> {
+    pub fn get_removed<'a>(&'a mut self, name: KeyRef) -> Result<Option<&'a FileState>> {
         self.removed.get(self.store.store_view(), name)
     }
 
     /// Visit all removed files with a visitor.
     pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut FileState) -> Result<()>,
     {
         self.removed.visit(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the removed tree.
-    pub fn get_first_removed<'a>(&'a mut self) -> Result<Option<(Key, &'a T)>> {
+    pub fn get_first_removed<'a>(&'a mut self) -> Result<Option<(Key, &'a FileState)>> {
         self.removed.get_first(self.store.store_view())
     }
 
     /// Get the name and state of the next file in the removed tree after the named file.
-    pub fn get_next_removed<'a>(&'a mut self, name: KeyRef) -> Result<Option<(Key, &'a T)>> {
+    pub fn get_next_removed<'a>(
+        &'a mut self,
+        name: KeyRef,
+    ) -> Result<Option<(Key, &'a FileState)>> {
         self.removed.get_next(self.store.store_view(), name)
     }
 
@@ -270,54 +277,44 @@ impl<T: Serializable + Clone> Dirstate<T> {
 mod tests {
     use dirstate::Dirstate;
     use tempdir::TempDir;
-    use std::io::{Read, Write};
-    use byteorder::{ReadBytesExt, WriteBytesExt};
-    use serialization::Serializable;
-    use errors::*;
+    use filestate::FileState;
 
-    #[derive(PartialEq, Clone, Debug)]
-    struct State(char);
-
-    impl Serializable for State {
-        fn serialize(&self, w: &mut Write) -> Result<()> {
-            w.write_u8(self.0 as u8)?;
-            Ok(())
-        }
-
-        fn deserialize(r: &mut Read) -> Result<State> {
-            Ok(State(r.read_u8()? as char))
-        }
+    fn make_state(state: u8) -> FileState {
+        FileState::new(state, 0, 0, 0)
     }
 
     #[test]
     fn goodpath() {
         let dir = TempDir::new("dirstate_test").expect("create temp dir");
         let p = dir.path().join("store");
-        let mut ds = Dirstate::<State>::new();
+        let mut ds = Dirstate::new();
         ds.write_full(&p).expect("can write full empty dirstate");
-        ds.add_file(b"dirA/file1", &State('n')).expect("can add");
-        ds.remove_file(b"dirA/file2", &State('r'))
+        ds.add_file(b"dirA/file1", &make_state(b'n'))
+            .expect("can add");
+        ds.remove_file(b"dirA/file2", &make_state(b'r'))
             .expect("can remove");
         ds.write_delta().expect("can write delta");
-        ds.add_file(b"dirA/file2", &State('n')).expect("can add");
-        ds.remove_file(b"dirA/file1", &State('r'))
+        ds.add_file(b"dirA/file2", &make_state(b'n'))
+            .expect("can add");
+        ds.remove_file(b"dirA/file1", &make_state(b'r'))
             .expect("can remove");
         ds.write_delta().expect("can write delta");
         let ds_root = ds.root_id().unwrap();
         drop(ds);
-        let mut ds2 = Dirstate::<State>::new();
+        let mut ds2 = Dirstate::new();
         ds2.open(&p, ds_root).expect("can re-open");
-        ds2.add_file(b"dirB/file3", &State('m')).expect("can add");
-        ds2.remove_file(b"dirC/file4", &State('r'))
+        ds2.add_file(b"dirB/file3", &make_state(b'm'))
+            .expect("can add");
+        ds2.remove_file(b"dirC/file4", &make_state(b'r'))
             .expect("can remove");
         assert_eq!(ds2.get_tracked(b"dirA/file1").expect("can get"), None);
         assert_eq!(
             ds2.get_tracked(b"dirA/file2").expect("can get"),
-            Some(&State('n'))
+            Some(&make_state(b'n'))
         );
         assert_eq!(
             ds2.get_removed(b"dirA/file1").expect("can get"),
-            Some(&State('r'))
+            Some(&make_state(b'r'))
         );
         assert_eq!(ds2.get_removed(b"dirA/file2").expect("can get"), None);
         assert_eq!(ds2.tracked_count(), 2);

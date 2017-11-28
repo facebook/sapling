@@ -31,7 +31,7 @@ fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
 
 py_class!(class treedirstatemap |py| {
     data repodir: PathBuf;
-    data dirstate: RefCell<Dirstate<FileState>>;
+    data dirstate: RefCell<Dirstate>;
     data casefolderid: RefCell<Option<usize>>;
 
     def __new__(
