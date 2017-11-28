@@ -258,11 +258,11 @@ githelp for reuse message using the the long version
 
 githelp for apply with no options
   $ hg githelp -- apply
-  hg import
+  hg import --no-commit
 
 githelp for apply with directory strip custom
   $ hg githelp -- apply -p 5
-  hg import -p 5
+  hg import --no-commit -p 5
 
 git merge-base
   $ hg githelp -- git merge-base --is-ancestor
