@@ -65,6 +65,8 @@ HGPLAINEXCEPT
 
     ``alias``
         Don't remove aliases.
+    ``color``
+        Don't disable colored output.
     ``i18n``
         Preserve internationalization.
     ``revsetalias``

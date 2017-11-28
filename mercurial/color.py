@@ -181,7 +181,7 @@ def setup(ui):
         configstyles(ui)
 
 def _modesetup(ui):
-    if ui.plain():
+    if ui.plain('color'):
         return None
     config = ui.config('ui', 'color')
     if config == 'debug':
