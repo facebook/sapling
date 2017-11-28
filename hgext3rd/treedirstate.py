@@ -2,10 +2,37 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""tree-based dirstate implementation"""
+"""tree-based dirstate implementation
+
+::
+
+    [treedirstate]
+    # Whether treedirstate is currently being used.
+    enabled = False
+
+    # Whether new repos should have treedirstate enabled.
+    useinnewrepos = False
+
+    # Whether to upgrade repos to treedirstate on pull.
+    upgradeonpull = False
+
+    # Whether to downgrade repos away from treedirstate on pull.
+    downgradeonpull = False
+
+    # Minimum size before a tree file will be repacked.
+    minrepackthreshold = 1048576
+
+    # Number of times a tree file can grow by before it is repacked.
+    repackfactor = 3
+
+    # Percentage probability of performing a cleanup after a write to a
+    # treedirstate file that doesn't involve a repack.
+    cleanuppercent = 1
+"""
 
 from __future__ import absolute_import
 from mercurial import (
+    commands,
     dirstate,
     encoding,
     error,
@@ -32,17 +59,23 @@ from hgext3rd.rust.treedirstate import treedirstatemap as rusttreedirstatemap
 dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1
 treefileprefix = 'dirstate.tree.'
-useinnewrepos = True
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+configitem('treedirstate', 'useinnewrepos', default=False)
+configitem('treedirstate', 'upgradeonpull', default=False)
+configitem('treedirstate', 'downgradeonpull', default=False)
+configitem('treedirstate', 'cleanuppercent', default=1)
 
 # Sentinel length value for when a nonnormalset or otherparentset is absent.
 setabsent = 0xffffffff
 
 # Minimum size the treedirstate file can be before auto-repacking.
-minrepackthreshold = 1024 * 1024
+configitem('treedirstate', 'minrepackthreshold', default=1024 * 1024)
 
 # Number of times the treedirstate file can grow by, compared to its initial
 # size, before auto-repacking.
-repackfactor = 3
+configitem('treedirstate', 'repackfactor', default=3)
 
 class _reader(object):
     def __init__(self, data, offset):
@@ -426,6 +459,9 @@ class treedirstatemap(object):
         else:
             def nonnormadd(f):
                 pass
+        repackfactor = self._ui.configint('treedirstate', 'repackfactor')
+        minrepackthreshold = self._ui.configint('treedirstate',
+                                                'minrepackthreshold')
         repackthreshold = max(self._packedsize * repackfactor,
                               minrepackthreshold)
         if self._rmap.storeoffset() > repackthreshold:
@@ -632,14 +668,31 @@ def wrapclose(orig, self):
         if istreedirstate:
             haverepacked = getattr(self.dirstate._map, "_repacked", False)
             haveextended = getattr(self.dirstate._map, "_extended", False)
-            if haverepacked or (haveextended and random.random() < 0.01):
+            cleanuppercent = self.ui.configint('treedirstate', 'cleanuppercent')
+            if (haverepacked or
+                    (haveextended and random.randint(0, 99) < cleanuppercent)):
+                # We have written to the dirstate as part of this command, so
+                # cleaning up should also be able to write to the repo.
                 cleanup(self.ui, self)
 
 def wrapnewreporequirements(orig, repo):
     reqs = orig(repo)
-    if useinnewrepos:
+    if repo.ui.configbool('treedirstate', 'useinnewrepos'):
         reqs.add('treedirstate')
     return reqs
+
+def wrappull(orig, ui, repo, *args, **kwargs):
+    if (ui.configbool('treedirstate', 'downgradeonpull') and
+            istreedirstate(repo)):
+        ui.status(_('disabling treedirstate...\n'))
+        downgrade(ui, repo)
+    elif (ui.configbool('treedirstate', 'upgradeonpull') and
+            not istreedirstate(repo)):
+        ui.status(_('migrating your repo to treedirstate which will make your '
+                    'hg commands faster...\n'))
+        upgrade(ui, repo)
+
+    return orig(ui, repo, *args, **kwargs)
 
 def featuresetup(ui, supported):
     supported |= {'treedirstate'}
@@ -659,6 +712,7 @@ def extsetup(ui):
                              wrapdirstate)
     extensions.wrapfunction(scmutil, 'casecollisionauditor', wrapcca)
     extensions.wrapfunction(localrepo.localrepository, 'close', wrapclose)
+    extensions.wrapcommand(commands.table, 'pull', wrappull)
 
 def reposetup(ui, repo):
     ui.log('treedirstate_enabled', '',
