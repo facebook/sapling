@@ -224,16 +224,21 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     Whenever full is False, ignored is False, and the Watchman client is
     available, use Watchman combined with saved state to possibly return only a
     subset of files.'''
-    def bail():
+    def bail(reason):
+        self._ui.debug('fsmonitor: fallback to core status, %s\n' % reason)
         return orig(match, subrepos, unknown, ignored, full=True)
 
-    if full or ignored or not self._watchmanclient.available():
-        return bail()
+    if full:
+        return bail('full rewalk requested')
+    if ignored:
+        return bail('listing ignored files')
+    if not self._watchmanclient.available():
+        return bail('client unavailable')
     state = self._fsmonitorstate
     clock, ignorehash, notefiles = state.get()
     if not clock:
         if state.walk_on_invalidate:
-            return bail()
+            return bail('no clock')
         # Initial NULL clock value, see
         # https://facebook.github.io/watchman/docs/clockspec.html
         clock = 'c:0:0'
@@ -263,7 +268,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         if _hashignore(ignore) != ignorehash and clock != 'c:0:0':
             # ignore list changed -- can't rely on Watchman state any more
             if state.walk_on_invalidate:
-                return bail()
+                return bail('ignore rules changed')
             notefiles = []
             clock = 'c:0:0'
     else:
@@ -338,7 +343,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     except Exception as ex:
         _handleunavailable(self._ui, state, ex)
         self._watchmanclient.clearconnection()
-        return bail()
+        return bail('exception during run')
     else:
         # We need to propagate the last observed clock up so that we
         # can use it for our next query
@@ -346,7 +351,7 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
         if result['is_fresh_instance']:
             if state.walk_on_invalidate:
                 state.invalidate()
-                return bail()
+                return bail('fresh instance')
             fresh_instance = True
             # Ignore any prior noteable files from the state info
             notefiles = []
