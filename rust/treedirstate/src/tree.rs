@@ -1,29 +1,16 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State Tree.
 
-use byteorder::{ReadBytesExt, WriteBytesExt};
 use errors::*;
+use serialization::Serializable;
 use std::collections::Bound;
-use std::io::{Cursor, Read, Write};
+use std::io::Cursor;
 use store::{BlockId, Store, StoreView};
 use vecmap::VecMap;
-use vlqencoding::{VLQDecode, VLQEncode};
-
-/// Trait that must be implemented by types that can be stored as the value in the tree.
-pub trait Storable
-where
-    Self: Sized,
-{
-    /// Serialize the storable data to a `Write` stream.
-    fn write(&self, w: &mut Write) -> Result<()>;
-
-    /// Deserialize a new data item from a `Read` stream.
-    fn read(r: &mut Read) -> Result<Self>;
-}
 
 /// A node entry is an entry in a directory, either a file or another directory.
 #[derive(Debug)]
-enum NodeEntry<T> {
+pub(crate) enum NodeEntry<T> {
     Directory(Node<T>),
     File(T),
 }
@@ -33,19 +20,19 @@ pub type Key = Vec<u8>;
 pub type KeyRef<'a> = &'a [u8];
 
 /// Store the node entries in an ordered map from name to node entry.
-type NodeEntryMap<T> = VecMap<Key, NodeEntry<T>>;
+pub(crate) type NodeEntryMap<T> = VecMap<Key, NodeEntry<T>>;
 
 /// The contents of a directory.
 #[derive(Debug)]
-struct Node<T> {
+pub(crate) struct Node<T> {
     /// The ID of the directory in the store.  If None, this directory has not yet been
     /// written to the back-end store in its current state.
-    id: Option<BlockId>,
+    pub(crate) id: Option<BlockId>,
 
     /// The set of files and directories in this directory, indexed by their name.  If None,
     /// then the ID must not be None, and the entries are yet to be loaded from the back-end
     /// store.
-    entries: Option<NodeEntryMap<T>>,
+    pub(crate) entries: Option<NodeEntryMap<T>>,
 
     /// A map from keys that have been filtered through a case-folding filter function to the
     /// original key.  This is used for case-folded look-ups.  Filtered values are cached, so
@@ -82,43 +69,7 @@ fn split_key<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
     (key, None)
 }
 
-impl<T: Storable + Clone> NodeEntry<T> {
-    /// Read an entry from the store.  Returns the name and the entry.
-    fn read(mut r: &mut Read) -> Result<(Key, NodeEntry<T>)> {
-        let entry_type = r.read_u8()?;
-        match entry_type {
-            b'f' => {
-                // File entry.
-                let data = T::read(r)?;
-                let name_len = r.read_vlq()?;
-                let mut name = Vec::with_capacity(name_len);
-                unsafe {
-                    // Safe as we've just allocated the buffer and are about to read into it.
-                    name.set_len(name_len);
-                }
-                r.read_exact(name.as_mut_slice())?;
-                Ok((name, NodeEntry::File(data)))
-            }
-            b'd' => {
-                // Directory entry.
-                let id = r.read_vlq()?;
-                let name_len = r.read_vlq()?;
-                let mut name = Vec::with_capacity(name_len);
-                unsafe {
-                    // Safe as we've just allocated the buffer and are about to read into it.
-                    name.set_len(name_len);
-                }
-                r.read_exact(name.as_mut_slice())?;
-                Ok((name, NodeEntry::Directory(Node::open(BlockId(id)))))
-            }
-            _ => {
-                bail!(ErrorKind::CorruptTree);
-            }
-        }
-    }
-}
-
-impl<T: Storable + Clone> Node<T> {
+impl<T: Serializable + Clone> Node<T> {
     /// Create a new empty Node.  This has no ID as it is not yet written to the store.
     fn new() -> Node<T> {
         Node {
@@ -130,7 +81,7 @@ impl<T: Storable + Clone> Node<T> {
 
     /// Create a new Node for an existing entry in the store.  The entries are not loaded until
     /// the load method is called.
-    fn open(id: BlockId) -> Node<T> {
+    pub(crate) fn open(id: BlockId) -> Node<T> {
         Node {
             id: Some(id),
             entries: None,
@@ -146,15 +97,7 @@ impl<T: Storable + Clone> Node<T> {
         }
         let id = self.id.expect("Node must have a valid ID to be loaded");
         let data = store.read(id)?;
-        let len = data.len() as u64;
-        let mut cursor = Cursor::new(data);
-        let count = cursor.read_vlq()?;
-        let mut entries = NodeEntryMap::with_capacity(count);
-        while cursor.position() < len {
-            let (name, entry) = NodeEntry::read(&mut cursor)?;
-            entries.insert_hint_end(name, entry);
-        }
-        self.entries = Some(entries);
+        self.entries = Some(NodeEntryMap::<T>::deserialize(&mut Cursor::new(data))?);
         Ok(())
     }
 
@@ -175,21 +118,7 @@ impl<T: Storable + Clone> Node<T> {
         let entries = self.entries
             .as_mut()
             .expect("Node should have entries populated before writing out.");
-        data.write_vlq(entries.len())?;
-        for (name, entry) in entries.iter_mut() {
-            match entry {
-                &mut NodeEntry::File(ref file) => {
-                    data.write_u8(b'f')?;
-                    file.write(&mut data)?;
-                }
-                &mut NodeEntry::Directory(ref mut node) => {
-                    data.write_u8(b'd')?;
-                    data.write_vlq(node.id.unwrap().0)?;
-                }
-            }
-            data.write_vlq(name.len())?;
-            data.write(name)?;
-        }
+        entries.serialize(&mut data)?;
         self.id = Some(store.append(&data)?);
         Ok(())
     }
@@ -548,7 +477,7 @@ impl<T: Storable + Clone> Node<T> {
     }
 }
 
-impl<T: Storable + Clone> Tree<T> {
+impl<T: Serializable + Clone> Tree<T> {
     /// Create a new empty tree.
     pub fn new() -> Tree<T> {
         Tree {

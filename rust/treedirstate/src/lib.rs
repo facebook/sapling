@@ -40,6 +40,7 @@ pub mod filestore;
 #[cfg(not(test))]
 #[allow(non_camel_case_types)]
 pub mod python;
+pub mod serialization;
 pub mod store;
 pub mod tree;
 pub mod vecmap;

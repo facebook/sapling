@@ -1,17 +1,13 @@
 // Copyright Facebook, Inc. 2017
 //! Directory State.
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use errors::*;
 use filestore::FileStore;
-use std::io::{Cursor, Read, Write};
+use serialization::Serializable;
+use std::io::Cursor;
 use std::path::Path;
 use store::{BlockId, NullStore, Store, StoreView};
-use tree::{Key, KeyRef, Storable, Tree};
-
-/// Marker indicating that a block is probably a root node.
-const MAGIC: &[u8] = b"////";
-const MAGIC_LEN: usize = 4;
+use tree::{Key, KeyRef, Tree};
 
 /// Selected backend implementation for the dirstate.
 enum Backend {
@@ -68,7 +64,15 @@ pub struct Dirstate<T> {
     root_id: Option<BlockId>,
 }
 
-impl<T: Storable + Clone> Dirstate<T> {
+/// Representation of the root of a dirstate tree that can be serialized to disk.
+pub(crate) struct DirstateRoot {
+    pub(crate) tracked_root_id: BlockId,
+    pub(crate) tracked_file_count: u32,
+    pub(crate) removed_root_id: BlockId,
+    pub(crate) removed_file_count: u32,
+}
+
+impl<T: Serializable + Clone> Dirstate<T> {
     /// Create a new, empty dirstate, with no backend store.
     pub fn new() -> Dirstate<T> {
         Dirstate {
@@ -83,24 +87,9 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// the disk until they are accessed.
     pub fn open<P: AsRef<Path>>(&mut self, filename: P, root_id: BlockId) -> Result<()> {
         let store = FileStore::open(filename)?;
-        {
-            let root_data = store.read(root_id)?;
-            let mut root = Cursor::new(root_data);
-
-            // Sanity check that this is a root
-            let mut buffer = [0; MAGIC_LEN];
-            root.read_exact(&mut buffer)?;
-            if buffer != MAGIC {
-                bail!(ErrorKind::InvalidStoreId(root_id.0));
-            }
-
-            let tracked_root_id = BlockId(root.read_u64::<BigEndian>()?);
-            let tracked_file_count = root.read_u32::<BigEndian>()?;
-            let removed_root_id = BlockId(root.read_u64::<BigEndian>()?);
-            let removed_file_count = root.read_u32::<BigEndian>()?;
-            self.tracked = Tree::open(tracked_root_id, tracked_file_count);
-            self.removed = Tree::open(removed_root_id, removed_file_count);
-        }
+        let root = DirstateRoot::deserialize(&mut Cursor::new(store.read(root_id)?))?;
+        self.tracked = Tree::open(root.tracked_root_id, root.tracked_file_count);
+        self.removed = Tree::open(root.removed_root_id, root.removed_file_count);
         self.store = Backend::File(store);
         self.root_id = Some(root_id);
         Ok(())
@@ -109,13 +98,15 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// Write a new root block to the store.  This contains the identities of the tree roots
     /// and the tree sizes.
     fn write_root(&mut self) -> Result<()> {
+        let root = DirstateRoot {
+            tracked_root_id: self.tracked.root_id().unwrap(),
+            tracked_file_count: self.tracked.file_count(),
+            removed_root_id: self.removed.root_id().unwrap(),
+            removed_file_count: self.removed.file_count(),
+        };
         let store = self.store.store();
         let mut data = Vec::new();
-        data.write(MAGIC)?;
-        data.write_u64::<BigEndian>(self.tracked.root_id().unwrap().0)?;
-        data.write_u32::<BigEndian>(self.tracked.file_count())?;
-        data.write_u64::<BigEndian>(self.removed.root_id().unwrap().0)?;
-        data.write_u32::<BigEndian>(self.removed.file_count())?;
+        root.serialize(&mut data)?;
         self.root_id = Some(store.append(&data)?);
         store.flush()?;
         Ok(())
@@ -279,21 +270,21 @@ impl<T: Storable + Clone> Dirstate<T> {
 mod tests {
     use dirstate::Dirstate;
     use tempdir::TempDir;
-    use tree::Storable;
     use std::io::{Read, Write};
     use byteorder::{ReadBytesExt, WriteBytesExt};
+    use serialization::Serializable;
     use errors::*;
 
     #[derive(PartialEq, Clone, Debug)]
     struct State(char);
 
-    impl Storable for State {
-        fn write(&self, w: &mut Write) -> Result<()> {
+    impl Serializable for State {
+        fn serialize(&self, w: &mut Write) -> Result<()> {
             w.write_u8(self.0 as u8)?;
             Ok(())
         }
 
-        fn read(r: &mut Read) -> Result<State> {
+        fn deserialize(r: &mut Read) -> Result<State> {
             Ok(State(r.read_u8()? as char))
         }
     }
