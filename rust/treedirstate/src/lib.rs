@@ -27,6 +27,7 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate tempdir;
 
+pub mod dirstate;
 pub mod errors;
 pub mod filestate;
 pub mod filestore;
