@@ -163,6 +163,20 @@ coming from Git back to Mercurial will not translate back into hg usernames, so
 it's best that the same username/email combination be used on both the hg and git sides;
 the author file is mostly useful for translating legacy changesets.
 
+git.blockdotgit
+---------------
+
+Blocks exporting revisions to Git that contain a directory named .git or any
+letter-case variation thereof. This prevents creating repositories that newer
+versions of Git and many Git hosting services block due to security
+concerns. Defaults to True.
+
+git.blockdothg
+--------------
+
+Blocks importing revisions from Git that contain a directory named .hg. Defaults
+to True.
+
 git.branch_bookmark_suffix
 ---------------------------
 
@@ -222,6 +236,13 @@ If set, branches where the latest commit's commit time is older than this will
 not be imported. Accepts any date formats that Mercurial does -- see
 `hg help dates` for more.
 
+git.public
+----------
+
+A list of Git branches that should be considered "published", and therefore
+converted to Mercurial in the 'public' phase. This is only used if
+hggit.usephases is set.
+
 git.renamelimit
 ---------------
 
@@ -239,3 +260,21 @@ Mercurial renames or copies, as a percentage between "0" (disabled) and "100"
 (files must be identical). For example, "90" means that a delete/add pair will
 be imported as a rename if more than 90% of the file has stayed the same. The
 default is "0" (disabled).
+
+hggit.mapsavefrequency
+----------------------
+
+Controls how often the mapping between Git and Mercurial commit hashes gets
+saved when importing or exporting changesets. Set this to a number greater than
+0 to save the mapping after converting that many commits. This can help when the
+conversion encounters an error partway through a large batch of
+changes. Defaults to 0, so that the mapping is saved once at the end.
+
+hggit.usephases
+---------------
+
+When converting Git revisions to Mercurial, place them in the 'public' phase as
+appropriate. Namely, revisions that are reachable from the remote Git
+repository's HEAD will be marked 'public'. For most repositories, this means the
+remote 'master' will be converted as public. This speeds up some local Mercurial
+operations including `hg shelve`.
