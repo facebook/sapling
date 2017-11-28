@@ -206,14 +206,14 @@ else:
 
 # modules that are single files in hgext3rd
 hgext3rd = [
-    p[:-3].replace('/', '.')
+    p[:-3].replace('\\', '/').replace('/', '.')
     for p in glob('hgext3rd/*.py')
     if p != 'hgext3rd/__init__.py'
 ]
 
 # packages that are directories in hgext3rd
 hgext3rdpkgs = [
-    p[:-12].replace('/', '.')
+    p[:-12].replace('\\', '/').replace('/', '.')
     for p in glob('hgext3rd/*/__init__.py')
 ]
 
