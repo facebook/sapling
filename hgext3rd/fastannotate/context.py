@@ -97,8 +97,22 @@ def resolvefctx(repo, rev, path, resolverev=False, adjustctx=None):
         ctx = _revsingle(repo, rev)
     else:
         ctx = repo[rev]
-    fctx = ctx[path]
-    if adjustctx is not None:
+
+    # If we don't need to adjust the linkrev, create the filectx using the
+    # changectx instead of using ctx[path]. This means it already has the
+    # changectx information, so blame -u will be able to look directly at the
+    # commitctx object instead of having to resolve it by going through the
+    # manifest. In a lazy-manifest world this can prevent us from downloading a
+    # lot of data.
+    if adjustctx is None:
+        # ctx.rev() is None means it's the working copy, which is a special
+        # case.
+        if ctx.rev() is None:
+            fctx = ctx[path]
+        else:
+            fctx = repo.filectx(path, changeid=ctx.rev())
+    else:
+        fctx = ctx[path]
         if adjustctx == 'linkrev':
             introrev = fctx.linkrev()
         else:
