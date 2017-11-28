@@ -1,0 +1,46 @@
+# These tests do not work with treedirstate overriding the dirstate
+# implementation.
+#
+# To run the core hg tests with treedirstate, use:
+#   python run-tests.py \
+#       --extra-config extensions.treedirstate=<path to treedirstate.py> \
+#       --extra-config treedirstate.useinnewrepos=True \
+#       --blacklist <path to blacklist-treedirstate>
+
+# These tests do not support the existence of an extra extension or new entries
+# in repo requirements.
+test-basic.t
+test-blackbox.t
+test-command-template.t
+test-commandserver.t
+test-completion.t
+test-debugextensions.t
+test-devel-warnings.t
+test-extension.t
+test-fncache.t
+test-globalopts.t
+test-hardlinks.t
+test-help.t
+test-hgrc.t
+test-inherit-mode.t
+test-init.t
+test-keyword.t
+test-lfconvert.t
+test-repo-compengines.t
+test-revlog-v2.t
+test-run-tests.t
+test-sparse-requirement.t
+test-static-http.t
+test-upgrade-repo.t
+test-wireproto.t
+
+# These tests monkey-patch or modify internal state of the core dirstate
+# implementation.
+test-merge-tools.t
+test-merge1.t
+test-revert.t
+test-subrepo.t
+test-contrib-perf.t
+
+# These tests rely on specific behaviour of the core dirstate implementation.
+test-dirstate-backup.t
