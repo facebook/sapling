@@ -9,3 +9,7 @@ lto = true
 [lib]
 name = "rusttreedirstate"
 crate-type = ["cdylib"]
+
+[dev-dependencies]
+itertools = "0.7.2"
+quickcheck = "*"

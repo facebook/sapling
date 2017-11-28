@@ -11,3 +11,12 @@
 //!
 //! The directory state also stores files that are in the working copy parent manifest but have
 //! been marked as removed.
+
+#[cfg(test)]
+extern crate itertools;
+
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
+pub mod vecmap;
