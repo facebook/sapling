@@ -296,7 +296,7 @@ def _debugobsmarkers(ui, part, indent=0, **opts):
         msg %= indent_string, exc.version, len(data)
         ui.write(msg)
     else:
-        msg = "%sversion: %s (%d bytes)\n"
+        msg = "%sversion: %d (%d bytes)\n"
         msg %= indent_string, version, len(data)
         ui.write(msg)
         fm = ui.formatter('debugobsolete', opts)
