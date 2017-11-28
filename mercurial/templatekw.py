@@ -608,6 +608,7 @@ def showobsfate(**args):
     # the verbosity templatekw available.
     succsandmarkers = showsuccsandmarkers(**args)
 
+    args = pycompat.byteskwargs(args)
     ui = args['ui']
 
     values = []
