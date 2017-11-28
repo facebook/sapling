@@ -89,17 +89,45 @@ py_class!(class RustDirstateMap |py| {
         Ok(None)
     }
 
-    def write(&self, name: &str) -> PyResult<Option<PyObject>> {
+    def write(&self, name: &str, fsnow: i32, nonnorm: PyObject) -> PyResult<Option<PyObject>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
+        // Mark files with an mtime of `fsnow` as being out of date.  See
+        // mercurial/pure/parsers.py:pack_dirstate in core Mercurial for why this is done.
+        let mut filter = |filepath: &Vec<KeyRef>, state: &mut FileState| {
+            if state.state == b'n' && state.mtime == fsnow {
+                state.mtime = -1;
+                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            }
+            Ok(())
+        };
+        dirstate
+            .visit_tracked(&mut filter)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
         dirstate
             .write_full(self.repodir(py).join(name))
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
         Ok(None)
     }
 
-    def writedelta(&self) -> PyResult<Option<PyObject>> {
+    def writedelta(&self, fsnow: i32, nonnorm: PyObject) -> PyResult<Option<PyObject>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        dirstate.write_delta().map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        // Mark files with an mtime of `fsnow` as being out of date.  See
+        // mercurial/pure/parsers.py:pack_dirstate in core Mercurial for why this is done.
+        let mut filter = |filepath: &Vec<KeyRef>, state: &mut FileState| {
+            if state.state == b'n' && state.mtime == fsnow {
+                state.mtime = -1;
+                let filename = PyBytes::new(py, &filepath.concat()).into_object();
+                nonnorm.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            }
+            Ok(())
+        };
+        dirstate
+            .visit_changed_tracked(&mut filter)
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        dirstate
+            .write_delta()
+            .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
         Ok(None)
     }
 
@@ -183,7 +211,7 @@ py_class!(class RustDirstateMap |py| {
 
     def visittrackedfiles(&self, target: PyObject) -> PyResult<PyObject> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        let mut visitor = |filepath: &Vec<KeyRef>, _state: &FileState| {
+        let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(())
@@ -196,7 +224,7 @@ py_class!(class RustDirstateMap |py| {
 
     def visitremovedfiles(&self, target: PyObject) -> PyResult<PyObject> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        let mut visitor = |filepath: &Vec<KeyRef>, _state: &FileState| {
+        let mut visitor = |filepath: &Vec<KeyRef>, _state: &mut FileState| {
             let filename = PyBytes::new(py, &filepath.concat()).into_object();
             target.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
             Ok(())

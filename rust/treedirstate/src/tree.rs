@@ -232,7 +232,7 @@ impl<T: Storable + Clone> Node<T> {
         visitor: &mut F,
     ) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         for (name, entry) in self.load_entries(store)?.iter_mut() {
             path.push(name);
@@ -240,7 +240,7 @@ impl<T: Storable + Clone> Node<T> {
                 &mut NodeEntry::Directory(ref mut node) => {
                     node.visit(store, path, visitor)?;
                 }
-                &mut NodeEntry::File(ref file) => {
+                &mut NodeEntry::File(ref mut file) => {
                     visitor(path, file)?;
                 }
             }
@@ -249,6 +249,37 @@ impl<T: Storable + Clone> Node<T> {
         Ok(())
     }
 
+    // Visit all of the files in changed nodes under this node, by calling the visitor function
+    // on each one.
+    fn visit_changed<'a, F>(
+        &'a mut self,
+        store: &StoreView,
+        path: &mut Vec<KeyRef<'a>>,
+        visitor: &mut F,
+    ) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+    {
+        if self.id.is_none() {
+            // This node has been modified. The entries list must already have been populated when
+            // the node was modified, so no need to load it here.
+            if let Some(ref mut entries) = self.entries {
+                for (name, entry) in entries.iter_mut() {
+                    path.push(name);
+                    match entry {
+                        &mut NodeEntry::Directory(ref mut node) => {
+                            node.visit_changed(store, path, visitor)?;
+                        }
+                        &mut NodeEntry::File(ref mut file) => {
+                            visitor(path, file)?;
+                        }
+                    }
+                    path.pop();
+                }
+            }
+        }
+        Ok(())
+    }
     /// Get the first file in the subtree under this node.  If the subtree is not empty, returns a
     /// pair containing the path to the file as a reversed vector of key references for each path
     /// element, and a reference to the file.
@@ -490,10 +521,18 @@ impl<T: Storable + Clone> Tree<T> {
 
     pub fn visit<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         let mut path = Vec::new();
         self.root.visit(store, &mut path, visitor)
+    }
+
+    pub fn visit_changed<F>(&mut self, store: &StoreView, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+    {
+        let mut path = Vec::new();
+        self.root.visit_changed(store, &mut path, visitor)
     }
 
     pub fn get_first<'a>(&'a mut self, store: &StoreView) -> Result<Option<(Key, &'a T)>> {
@@ -707,7 +746,7 @@ mod tests {
         populate(&mut t, &ms);
         let mut files = Vec::new();
         {
-            let mut v = |path: &Vec<KeyRef>, _fs: &FileState| {
+            let mut v = |path: &Vec<KeyRef>, _fs: &mut FileState| {
                 files.push(path.concat());
                 Ok(())
             };
@@ -719,6 +758,40 @@ mod tests {
                 .iter()
                 .map(|t| t.0.to_vec())
                 .collect::<Vec<Vec<u8>>>()
+        );
+    }
+
+    #[test]
+    fn visit_changed() {
+        let ns = NullStore::new();
+        let mut ms = MapStore::new();
+        let mut t = Tree::new();
+        populate(&mut t, &ms);
+        t.write_full(&mut ms, &ns).expect("can write full");
+
+        // Touch file5.  This file, and any file in an ancestor directory (file4, file5 and file16)
+        // will be in directories marked as changed.
+        t.add(
+            &ms,
+            b"dirB/subdira/subsubdirx/file5",
+            &FileState::new(b'm', 0o644, 200, 2000),
+        ).expect("can add");
+
+        let mut files = Vec::new();
+        {
+            let mut v = |path: &Vec<KeyRef>, _fs: &mut FileState| {
+                files.push(path.concat());
+                Ok(())
+            };
+            t.visit_changed(&mut ms, &mut v).expect("can visit_changed");
+        }
+        assert_eq!(
+            files,
+            vec![
+                b"dirB/subdira/file4".to_vec(),
+                b"dirB/subdira/subsubdirx/file5".to_vec(),
+                b"file16".to_vec(),
+            ]
         );
     }
 }

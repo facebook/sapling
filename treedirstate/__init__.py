@@ -232,8 +232,16 @@ class treedirstatemap(object):
         return self._rmap.dropfile(f)
 
     def clearambiguoustimes(self, files, now):
-        ### TODO
-        pass
+        """Mark files with an mtime of `now` as being out of date.
+
+        See mercurial/pure/parsers.py:pack_dirstate in core Mercurial for why
+        this is done.
+        """
+        for f in files:
+            e = self.gettracked(f)
+            if e is not None and e[0] == 'n' and e[3] == now:
+                self._rmap.addfile(f, e[0], e[0], e[1], e[2], -1)
+                self.nonnormalset.add(f)
 
     def parents(self):
         """
@@ -338,9 +346,9 @@ class treedirstatemap(object):
         """Write the dirstate to the filehandle st."""
         if self._treeid is None:
             self._treeid = '000'
-            self._rmap.write('dirstate.tree.000')
+            self._rmap.write('dirstate.tree.000', now, self._nonnormalset.add)
         else:
-            self._rmap.writedelta()
+            self._rmap.writedelta(now, self._nonnormalset.add)
         st.write(self._genrootdata())
         st.close()
         self._dirtyparents = False

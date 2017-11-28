@@ -189,10 +189,19 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// Visit all tracked files with a visitor.
     pub fn visit_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         self.store.cache()?;
         self.tracked.visit(self.store.store_view(), visitor)
+    }
+
+    /// Visit all tracked files in changed nodes with a visitor.
+    pub fn visit_changed_tracked<F>(&mut self, visitor: &mut F) -> Result<()>
+    where
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
+    {
+        self.store.cache()?;
+        self.tracked.visit_changed(self.store.store_view(), visitor)
     }
 
     /// Get the name and state of the first file in the tracked tree.
@@ -218,7 +227,7 @@ impl<T: Storable + Clone> Dirstate<T> {
     /// Visit all removed files with a visitor.
     pub fn visit_removed<F>(&mut self, visitor: &mut F) -> Result<()>
     where
-        F: FnMut(&Vec<KeyRef>, &T) -> Result<()>,
+        F: FnMut(&Vec<KeyRef>, &mut T) -> Result<()>,
     {
         self.removed.visit(self.store.store_view(), visitor)
     }
