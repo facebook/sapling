@@ -913,7 +913,7 @@ def _dispatch(req):
                     if not func.optionalrepo:
                         if func.inferrepo and args and not path:
                             # try to infer -R from command args
-                            repos = map(cmdutil.findrepo, args)
+                            repos = pycompat.maplist(cmdutil.findrepo, args)
                             guess = repos[0]
                             if guess and repos.count(guess) == len(repos):
                                 req.args = ['--repository', guess] + fullargs
