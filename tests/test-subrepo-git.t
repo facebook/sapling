@@ -847,8 +847,8 @@ execute a diffstat
 the output contains a regex, because git 1.7.10 and 1.7.11
  change the amount of whitespace
   $ hg diff --subrepos --stat
-  \s*barfoo |\s*1 + (re)
-  \s*foobar |\s*2 +- (re)
+  \s*barfoo \|\s+1 \+ (re)
+  \s*foobar \|\s+2 \+- (re)
    2 files changed, 2 insertions\(\+\), 1 deletions?\(-\) (re)
 
 adding an include should ignore the other elements
