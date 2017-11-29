@@ -9,6 +9,7 @@ from __future__ import absolute_import
 from mercurial import error, filelog, revlog
 from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
+from hgext3rd import extutil
 from . import (
     constants,
     datapack,
@@ -18,7 +19,7 @@ from . import (
     shallowutil,
 )
 from .lz4wrapper import lz4decompress
-import hashlib, os
+import hashlib, os, time
 
 def debugremotefilelog(ui, path, **opts):
     decompress = opts.get('decompress')
@@ -358,9 +359,12 @@ def debughistorypack(ui, path):
             short(p2node), short(linknode), copyfrom))
 
 def debugwaitonrepack(repo):
-    with repo._lock(repo.svfs, "repacklock", True, None,
-                         None, _('repacking %s') % repo.origroot):
-        pass
+    while True:
+        try:
+            with extutil.fcntllock(repo.svfs, 'repacklock', ''):
+                return
+        except error.LockHeld:
+            time.sleep(0.1)
 
 def debugwaitonprefetch(repo):
     with repo._lock(repo.svfs, "prefetchlock", True, None,

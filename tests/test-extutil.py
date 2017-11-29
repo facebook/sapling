@@ -8,10 +8,19 @@ import unittest
 
 import silenttestrunner
 
+from mercurial import (
+    error,
+    vfs,
+    worker,
+)
+
 if __name__ == '__main__':
     sys.path.insert(0, os.path.join(os.environ["TESTDIR"], "..", "hgext3rd"))
 
 import extutil
+
+locktimeout = 25
+locksuccess = 24
 
 class ExtutilTests(unittest.TestCase):
     def testbgcommandnoblock(self):
@@ -42,6 +51,33 @@ class ExtutilTests(unittest.TestCase):
             self.fail('expected runbgcommand to fail with EACCES')
         except OSError as ex:
             self.assertEqual(ex.errno, errno.EACCES)
+
+    def testfcntllock(self):
+        testtmp = os.environ["TESTTMP"]
+        opener = vfs.vfs(testtmp)
+        name = 'testlock'
+
+        with extutil.fcntllock(opener, name, 'testing a lock'):
+            otherlock = self.otherprocesslock(opener, name)
+            self.assertEquals(otherlock, locktimeout,
+                              "other process should not have taken the lock")
+
+        otherlock = self.otherprocesslock(opener, name)
+        self.assertEquals(otherlock, locksuccess,
+                        "other process should have taken the lock")
+
+    def otherprocesslock(self, opener, name):
+        pid = os.fork()
+        if pid == 0:
+            try:
+                with extutil.fcntllock(opener, name, 'other process lock'):
+                    os._exit(locksuccess)
+            except error.LockHeld:
+                os._exit(locktimeout)
+        else:
+            p, st = os.waitpid(pid, 0)
+            st = worker._exitstatus(st) # Convert back to an int
+            return st
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)

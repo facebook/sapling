@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import os
-from hgext3rd.extutil import runshellcommand
+from hgext3rd.extutil import runshellcommand, fcntllock
 from mercurial import (
     error,
     extensions,
@@ -412,8 +412,8 @@ class repacker(object):
     def run(self, targetdata, targethistory):
         ledger = repackledger()
 
-        with self.repo._lock(self.repo.svfs, "repacklock", False, None,
-                             None, _('repacking %s') % self.repo.origroot):
+        with fcntllock(self.repo.svfs, "repacklock",
+                       _('repacking %s') % self.repo.origroot):
             self.repo.hook('prerepack')
 
             # Populate ledger from source
