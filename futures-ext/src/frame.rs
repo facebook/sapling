@@ -119,7 +119,7 @@ where
                 // more input it needs to make progress.)
                 // TODO: (jsgf) T23239742 Either fix decode to return amount needed or
                 // completely rewrite as a streaming command parser.
-                let mut buf = &mut self.buf;
+                let buf = &mut self.buf;
                 let n = {
                     let b = &mut buf.bytes_mut()[..1];
 

@@ -334,8 +334,8 @@ where
 
     // Set up client authentication
     {
-        let mut sslacceptorbuilder = tlsacceptor_builder.builder_mut();
-        let mut sslcontextbuilder = sslacceptorbuilder.builder_mut();
+        let sslacceptorbuilder = tlsacceptor_builder.builder_mut();
+        let sslcontextbuilder = sslacceptorbuilder.builder_mut();
 
         sslcontextbuilder
             .set_ca_file(ca_pem_file)

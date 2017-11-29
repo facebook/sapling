@@ -14,7 +14,6 @@ extern crate storage_types;
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::error;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
