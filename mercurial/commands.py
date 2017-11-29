@@ -4560,6 +4560,7 @@ def revert(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
 
+    opts = pycompat.byteskwargs(opts)
     if opts.get("date"):
         if opts.get("rev"):
             raise error.Abort(_("you can't specify a revision and a date"))
@@ -4595,7 +4596,8 @@ def revert(ui, repo, *pats, **opts):
             hint = _("use --all to revert all files")
         raise error.Abort(msg, hint=hint)
 
-    return cmdutil.revert(ui, repo, ctx, (parent, p2), *pats, **opts)
+    return cmdutil.revert(ui, repo, ctx, (parent, p2), *pats,
+                          **pycompat.strkwargs(opts))
 
 @command('rollback', dryrunopts +
          [('f', 'force', False, _('ignore safety measures'))])

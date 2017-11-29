@@ -1089,24 +1089,24 @@ class hgsubrepo(abstractsubrepo):
         # 2. update the subrepo to the revision specified in
         #    the corresponding substate dictionary
         self.ui.status(_('reverting subrepo %s\n') % substate[0])
-        if not opts.get('no_backup'):
+        if not opts.get(r'no_backup'):
             # Revert all files on the subrepo, creating backups
             # Note that this will not recursively revert subrepos
             # We could do it if there was a set:subrepos() predicate
             opts = opts.copy()
-            opts['date'] = None
-            opts['rev'] = substate[1]
+            opts[r'date'] = None
+            opts[r'rev'] = substate[1]
 
             self.filerevert(*pats, **opts)
 
         # Update the repo to the revision specified in the given substate
-        if not opts.get('dry_run'):
+        if not opts.get(r'dry_run'):
             self.get(substate, overwrite=True)
 
     def filerevert(self, *pats, **opts):
-        ctx = self._repo[opts['rev']]
+        ctx = self._repo[opts[r'rev']]
         parents = self._repo.dirstate.parents()
-        if opts.get('all'):
+        if opts.get(r'all'):
             pats = ['set:modified()']
         else:
             pats = []

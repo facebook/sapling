@@ -3445,6 +3445,7 @@ def postcommitstatus(repo, pats, opts):
     return repo.status(match=scmutil.match(repo[None], pats, opts))
 
 def revert(ui, repo, ctx, parents, *pats, **opts):
+    opts = pycompat.byteskwargs(opts)
     parent, p2 = parents
     node = ctx.node()
 
@@ -3722,7 +3723,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Revert the subrepos on the revert list
             for sub in targetsubs:
                 try:
-                    wctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
+                    wctx.sub(sub).revert(ctx.substate[sub], *pats,
+                                         **pycompat.strkwargs(opts))
                 except KeyError:
                     raise error.Abort("subrepository '%s' does not exist in %s!"
                                       % (sub, short(ctx.node())))
