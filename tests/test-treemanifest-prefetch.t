@@ -493,3 +493,10 @@ prefetching of files in this test case.
   $ hg prefetch
   0 trees fetched over * (glob)
 #endif
+
+Running prefetch in the master repository should fail gracefully
+
+  $ cd ../master
+  $ hg prefetch
+  abort: no remote server configured to fetch trees from
+  [255]

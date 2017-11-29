@@ -1274,7 +1274,11 @@ def getfallbackpath(repo):
     if util.safehasattr(repo, 'fallbackpath'):
         return repo.fallbackpath
     else:
-        return repo.ui.config('paths', 'default')
+        path = repo.ui.config('paths', 'default')
+        if not path:
+            raise error.Abort(
+                "no remote server configured to fetch trees from")
+        return path
 
 def pull(orig, ui, repo, *pats, **opts):
     # If we're not in treeonly mode, and we're missing public commits from the
