@@ -719,7 +719,7 @@ def debugstate(ui, repo, **opts):
         elif nodates:
             timestr = 'set                 '
         else:
-            timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
+            timestr = time.strftime(r"%Y-%m-%d %H:%M:%S ",
                                     time.localtime(ent[3]))
         if ent[1] & 0o20000:
             mode = 'lnk'

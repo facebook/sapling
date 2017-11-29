@@ -152,7 +152,7 @@ def _mbox(mbox, sender, recipients, msg):
     fp = open(mbox, 'ab+')
     # Should be time.asctime(), but Windows prints 2-characters day
     # of month instead of one. Make them print the same thing.
-    date = time.strftime('%a %b %d %H:%M:%S %Y', time.localtime())
+    date = time.strftime(r'%a %b %d %H:%M:%S %Y', time.localtime())
     fp.write('From %s %s\n' % (sender, date))
     fp.write(msg)
     fp.write('\n\n')
