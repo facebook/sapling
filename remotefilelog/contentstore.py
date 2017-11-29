@@ -142,7 +142,6 @@ class remotefilelogcontentstore(basestore.basestore):
     def __init__(self, *args, **kwargs):
         super(remotefilelogcontentstore, self).__init__(*args, **kwargs)
         self._threaddata = threading.local()
-        self._threaddata.metacache = (None, None) # (node, meta)
 
     def get(self, name, node):
         # return raw revision text
@@ -175,6 +174,7 @@ class remotefilelogcontentstore(basestore.basestore):
         return [(name, node, None, nullid, revision)]
 
     def getmeta(self, name, node):
+        self._sanitizemetacache()
         if node != self._threaddata.metacache[0]:
             data = self._getdata(name, node)
             offset, size, flags = shallowutil.parsesizeflags(data)
@@ -185,10 +185,13 @@ class remotefilelogcontentstore(basestore.basestore):
         raise RuntimeError("cannot add content only to remotefilelog "
                            "contentstore")
 
-    def _updatemetacache(self, node, size, flags):
+    def _sanitizemetacache(self):
         metacache = getattr(self._threaddata, 'metacache', None)
         if metacache is None:
-            self._threaddata.metacache = (None, None)
+            self._threaddata.metacache = (None, None) # (node, meta)
+
+    def _updatemetacache(self, node, size, flags):
+        self._sanitizemetacache()
         if node == self._threaddata.metacache[0]:
             return
         meta = {constants.METAKEYFLAG: flags,
