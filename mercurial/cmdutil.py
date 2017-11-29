@@ -823,9 +823,9 @@ def makefilename(repo, pat, node, desc=None,
                   total=None, seqno=None, revwidth=None, pathname=None):
     node_expander = {
         'H': lambda: hex(node),
-        'R': lambda: str(repo.changelog.rev(node)),
+        'R': lambda: '%d' % repo.changelog.rev(node),
         'h': lambda: short(node),
-        'm': lambda: re.sub('[^\w]', '_', str(desc))
+        'm': lambda: re.sub('[^\w]', '_', desc or '')
         }
     expander = {
         '%': lambda: '%',
@@ -837,13 +837,13 @@ def makefilename(repo, pat, node, desc=None,
             expander.update(node_expander)
         if node:
             expander['r'] = (lambda:
-                    str(repo.changelog.rev(node)).zfill(revwidth or 0))
+                    ('%d' % repo.changelog.rev(node)).zfill(revwidth or 0))
         if total is not None:
-            expander['N'] = lambda: str(total)
+            expander['N'] = lambda: '%d' % total
         if seqno is not None:
-            expander['n'] = lambda: str(seqno)
+            expander['n'] = lambda: '%d' % seqno
         if total is not None and seqno is not None:
-            expander['n'] = lambda: str(seqno).zfill(len(str(total)))
+            expander['n'] = (lambda: ('%d' % seqno).zfill(len('%d' % total)))
         if pathname is not None:
             expander['s'] = lambda: os.path.basename(pathname)
             expander['d'] = lambda: os.path.dirname(pathname) or '.'
