@@ -8,8 +8,11 @@
  *
  */
 #include "eden/fs/inodes/EdenMount.h"
+
 #include <folly/Range.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/journal/Journal.h"
@@ -24,6 +27,16 @@ using folly::Optional;
 
 namespace facebook {
 namespace eden {
+
+TEST(EdenMount, initFailure) {
+  // Test initializing an EdenMount with a commit hash that does not exist.
+  // This should fail with an exception, and not crash.
+  TestMount testMount;
+  EXPECT_THROW_RE(
+      testMount.initialize(makeTestHash("1")),
+      std::domain_error,
+      "commit 0{39}1 not found");
+}
 
 TEST(EdenMount, resetParents) {
   TestMount testMount;

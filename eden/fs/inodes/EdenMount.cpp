@@ -272,16 +272,26 @@ bool EdenMount::doStateTransition(State expected, State newState) {
 void EdenMount::destroy() {
   auto oldState = state_.exchange(State::DESTROYING);
   switch (oldState) {
+    case State::UNINITIALIZED: {
+      // The root inode may still be null here if we failed to load the root
+      // inode.  In this case just delete ourselves immediately since we don't
+      // have any inodes to unload.  shutdownImpl() requires the root inode be
+      // loaded.
+      if (!getRootInode()) {
+        delete this;
+      } else {
+        // Call shutdownImpl() to destroy all loaded inodes.
+        shutdownImpl().then([this] { delete this; });
+      }
+      return;
+    }
     case State::RUNNING:
     case State::STARTING:
-    case State::UNINITIALIZED: {
-      // Start the shutdown ourselves.
-      // Use shutdownImpl() since we have already updated state_ to DESTROYING.
-      auto shutdownFuture = shutdownImpl();
-      // We intentionally ignore the returned future.
-      // shutdown() will automatically destroy us when it completes now that
-      // we have set the state to DESTROYING
-      (void)shutdownFuture;
+    case State::FUSE_ERROR:
+    case State::FUSE_DONE: {
+      // Call shutdownImpl() to destroy all loaded inodes,
+      // and delete ourselves when it completes.
+      shutdownImpl().then([this] { delete this; });
       return;
     }
     case State::SHUTTING_DOWN:
@@ -292,11 +302,13 @@ void EdenMount::destroy() {
       XLOG(DBG1) << "destroying shut-down EdenMount " << getPath();
       delete this;
       return;
-    default:
-      // No other states should be possible.
-      XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
-                  << " in unexpected state " << static_cast<uint32_t>(oldState);
+    case State::DESTROYING:
+      // Fall through to the error handling code below.
+      break;
   }
+
+  XLOG(FATAL) << "EdenMount::destroy() called on mount " << getPath()
+              << " in unexpected state " << static_cast<uint32_t>(oldState);
 }
 
 Future<Unit> EdenMount::shutdown() {
@@ -317,14 +329,8 @@ Future<Unit> EdenMount::shutdownImpl() {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
   return inodeMap_->shutdown().then([this] {
-    auto oldState = state_.exchange(State::SHUT_DOWN);
-    if (oldState == State::DESTROYING) {
-      XLOG(DBG1) << "destroying EdenMount " << getPath()
-                 << " after shutdown completion";
-      delete this;
-      return;
-    }
     XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
+    state_.store(State::SHUT_DOWN);
   });
 }
 
