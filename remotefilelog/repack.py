@@ -9,6 +9,7 @@ from mercurial import (
     policy,
     scmutil,
     util,
+    vfs,
 )
 from mercurial.node import (
     nullid,
@@ -412,7 +413,7 @@ class repacker(object):
     def run(self, targetdata, targethistory):
         ledger = repackledger()
 
-        with fcntllock(self.repo.svfs, "repacklock",
+        with fcntllock(repacklockvfs(self.repo), "repacklock",
                        _('repacking %s') % self.repo.origroot):
             self.repo.hook('prerepack')
 
@@ -739,3 +740,14 @@ class repackentry(object):
         self.historyrepacked = False
         # If garbage collected
         self.gced = False
+
+def repacklockvfs(repo):
+    if util.safehasattr(repo, 'name'):
+        # Lock in the shared cache so repacks across multiple copies of the same
+        # repo are coordinated.
+        sharedcachepath = shallowutil.getcachepackpath(
+            repo,
+            constants.FILEPACK_CATEGORY)
+        return vfs.vfs(sharedcachepath)
+    else:
+        return repo.svfs

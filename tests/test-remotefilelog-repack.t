@@ -49,6 +49,7 @@
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # Test that the packs are readonly
@@ -57,6 +58,7 @@
   -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
   -r--r--r--    1074 8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
   -r--r--r--      69 8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  -rw-r--r--       0 repacklock
 
 # Test that the data in the new packs is accessible
   $ hg cat -r . x
@@ -80,6 +82,7 @@
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # First assert that with --packsonly, the loose object will be ignored:
@@ -92,6 +95,7 @@
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
   $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
   $ hg repack --traceback
@@ -101,6 +105,7 @@
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # Verify all the file data is still available
@@ -120,6 +125,7 @@
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # Run two repacks at once
@@ -144,6 +150,7 @@
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.dataidx
   $TESTTMP/hgcache/master/packs/935861cae0be6ce41a0d47a529e4d097e9e68a69.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
   $ hg repack --background
@@ -155,6 +162,7 @@
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
   $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.dataidx
   $TESTTMP/hgcache/master/packs/8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
 # Test debug commands
@@ -231,6 +239,7 @@
   e8fdf7ae22b772dcc291f905b9c6e5f381d28739.datapack
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histidx
   ebbd7411e00456c0eec8d1150a77e2b3ef490f3f.histpack
+  repacklock
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx
   
   x

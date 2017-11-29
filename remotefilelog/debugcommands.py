@@ -18,6 +18,7 @@ from . import (
     shallowrepo,
     shallowutil,
 )
+from .repack import repacklockvfs
 from .lz4wrapper import lz4decompress
 import hashlib, os, time
 
@@ -361,7 +362,7 @@ def debughistorypack(ui, path):
 def debugwaitonrepack(repo):
     while True:
         try:
-            with extutil.fcntllock(repo.svfs, 'repacklock', ''):
+            with extutil.fcntllock(repacklockvfs(repo), 'repacklock', ''):
                 return
         except error.LockHeld:
             time.sleep(0.1)
