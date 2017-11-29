@@ -558,20 +558,23 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     ChunkHeader header;
     try {
       header = readChunkHeader();
-    } catch (const std::runtime_error& ex) {
-      auto errStr = StringPiece{ex.what()};
-      if (errStr.contains("unable to download")) {
-        // Most likely cause of an error here is this scenario:
-        // There is a local commit which does not have a tree manifest.
-        // Our request to _prefetchtrees here fails because the server
-        // cannot possibly have a tree for this local commit.
-        // Let's treat this as a MissingKeyError so that someone else
-        // further up the call stack will re-try this import using
-        // the flat manifest code path.
-        throw MissingKeyError(ex.what());
-      } else {
-        throw;
-      }
+    } catch (const HgImportPyError& ex) {
+      // For now translate any error thrown into a MissingKeyError,
+      // so that our caller will retry this tree import using flatmanifest
+      // import if possible.
+      //
+      // The mercurial code can throw a wide variety of errors here that all
+      // effectively mean mean it couldn't fetch the tree data.
+      //
+      // We most commonly expect to get a MissingNodesError if the remote
+      // server does not know about these trees (for instance if they are only
+      // available locally, but simply only have flatmanifest information
+      // rather than treemanifest info).
+      //
+      // However we can also get lots of other errors: no remote server
+      // configured, remote repository does not exist, remote repository does
+      // not support fetching tree info, etc.
+      throw MissingKeyError(ex.what());
     }
 
     if (header.dataLength != 0) {

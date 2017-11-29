@@ -48,6 +48,42 @@ POST_CLONE = _find_post_clone()
 EDEN_EXT_DIR = _eden_ext_dir()
 
 
+def get_default_hgrc() -> configparser.ConfigParser:
+    '''
+    Get the default hgrc settings to use in the backing store repository.
+
+    This returns the base settings, which can then be further adjusted by test
+    cases and test case variants.
+    '''
+    hgrc = configparser.ConfigParser()
+    hgrc['ui'] = {
+        'origbackuppath': '.hg/origbackups',
+        'username': 'Kevin Flynn <lightcyclist@example.com>',
+    }
+    hgrc['experimental'] = {
+        'evolution': 'createmarkers',
+        'evolutioncommands': 'prev next split fold obsolete metaedit',
+    }
+    hgrc['extensions'] = {
+        'absorb': '',
+        'directaccess': '',
+        'fbamend': '',
+        'fbhistedit': '',
+        'histedit': '',
+        'inhibit': '',
+        'purge': '',
+        'rebase': '',
+        'reset': '',
+        'strip': '',
+        'tweakdefaults': '',
+        'undo': '',
+    }
+    hgrc['directaccess'] = {
+        'loadsafter': 'tweakdefaults',
+    }
+    return hgrc
+
+
 class EdenHgTestCase(testcase.EdenTestCase):
     '''
     A test case class for integration tests that exercise mercurial commands
@@ -68,32 +104,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
         super().setup_eden_test()
 
         # Create an hgrc to use as the $HGRCPATH.
-        hgrc = configparser.ConfigParser()
-        hgrc['ui'] = {
-            'origbackuppath': '.hg/origbackups',
-            'username': 'Kevin Flynn <lightcyclist@example.com>',
-        }
-        hgrc['experimental'] = {
-            'evolution': 'createmarkers',
-            'evolutioncommands': 'prev next split fold obsolete metaedit',
-        }
-        hgrc['extensions'] = {
-            'absorb': '',
-            'directaccess': '',
-            'fbamend': '',
-            'fbhistedit': '',
-            'histedit': '',
-            'inhibit': '',
-            'purge': '',
-            'rebase': '',
-            'reset': '',
-            'strip': '',
-            'tweakdefaults': '',
-            'undo': '',
-        }
-        hgrc['directaccess'] = {
-            'loadsafter': 'tweakdefaults',
-        }
+        hgrc = get_default_hgrc()
         self.apply_hg_config_variant(hgrc)
 
         # Create the backing repository
