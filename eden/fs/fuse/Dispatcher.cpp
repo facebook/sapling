@@ -104,7 +104,12 @@ void Dispatcher::disp_init(void* userdata, struct fuse_conn_info* conn) {
 #ifdef FUSE_CAP_IOCTL_DIR
           FUSE_CAP_IOCTL_DIR |
 #endif
-          FUSE_CAP_ATOMIC_O_TRUNC | FUSE_CAP_BIG_WRITES | FUSE_CAP_ASYNC_READ);
+          // It would be great to enable FUSE_CAP_ATOMIC_O_TRUNC but it seems
+          // to trigger a kernel/FUSE bug.  See
+          // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay in
+          // mmap_test.py.
+          // FUSE_CAP_ATOMIC_O_TRUNC |
+          FUSE_CAP_BIG_WRITES | FUSE_CAP_ASYNC_READ);
 
   disp->initConnection(*conn);
   disp->connInfo_ = *conn;
