@@ -196,8 +196,16 @@ def validaterevset(repo, revset):
     if not repo.revs(revset):
         raise error.Abort(_('nothing to rebase'))
 
-    if repo.revs('%r and public()', revset):
-        raise error.Abort(_('cannot rebase public changesets'))
+    revs = repo.revs('%r and public()', revset)
+    if revs:
+        nodes = []
+        for count, rev in enumerate(revs):
+            if count >= 3:
+                nodes.append('...')
+                break
+            nodes.append(str(repo[rev]))
+        revstring = ', '.join(nodes)
+        raise error.Abort(_('cannot rebase public changesets: %s') % revstring)
 
     if repo.revs('%r and obsolete()', revset):
         raise error.Abort(_('cannot rebase obsolete changesets'))

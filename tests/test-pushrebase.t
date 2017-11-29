@@ -937,3 +937,28 @@ Push a file-copy changeset and the copy source gets modified by others:
   (pull and rebase your changes locally, then try again)
   [255]
 
+Push an already-public changeset and confirm it is rejected
+
+  $ hg update -q '.^'
+  $ echo 2 > C
+  $ hg commit -m C -A C
+  created new head
+  $ hg phase -r. --public
+  $ hg push -r . --to default
+  pushing to $TESTTMP/server2 (glob)
+  searching for changes
+  abort: cannot rebase public changesets: 3850a85c4706
+  [255]
+
+  $ echo 3 >> C
+  $ hg commit -m C2
+  $ echo 4 >> C
+  $ hg commit -m C3
+  $ echo 5 >> C
+  $ hg commit -m C4
+  $ hg phase -r. --public
+  $ hg push -r . --to default
+  pushing to $TESTTMP/server2 (glob)
+  searching for changes
+  abort: cannot rebase public changesets: 3850a85c4706, 50b1220b7c4e, de211a1843b7, ...
+  [255]
