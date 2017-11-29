@@ -28,7 +28,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
-from typing import Optional
+from typing import List, Optional
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -536,14 +536,17 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         return HealthStatus(fb_status.DEAD, pid=None,
                             detail='edenfs not running')
 
-    def spawn(self,
-              daemon_binary,
-              extra_args=None,
-              takeover=False,
-              gdb=False,
-              gdb_args=None,
-              strace_file=None,
-              foreground=False):
+    def spawn(
+        self,
+        daemon_binary: str,
+        extra_args: List[str] = None,
+        takeover: bool = False,
+        gdb: bool = False,
+        gdb_args: Optional[List[str]] = None,
+        strace_file: Optional[str] = None,
+        foreground: bool = False,
+        timeout: float = 60,
+    ) -> 'HealthStatus':
         '''
         Start edenfs.
 
@@ -616,13 +619,15 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                                     stdout=log_file, stderr=log_file)
 
         # Wait for edenfs to start
-        return self._wait_for_daemon_healthy(proc)
+        return self._wait_for_daemon_healthy(proc, timeout)
 
-    def _wait_for_daemon_healthy(self, proc):
+    def _wait_for_daemon_healthy(
+        self, proc: subprocess.Popen, timeout: float
+    ) -> 'HealthStatus':
         '''
         Wait for edenfs to become healthy.
         '''
-        def check_health():
+        def check_health() -> Optional['HealthStatus']:
             # Check the thrift status
             health_info = self.check_health()
             if health_info.is_healthy():
@@ -643,7 +648,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
         timeout_ex = EdenStartError('timed out waiting for edenfs to become '
                                     'healthy')
-        return util.poll_until(check_health, timeout=5, timeout_ex=timeout_ex)
+        return util.poll_until(check_health,
+                               timeout=timeout,
+                               timeout_ex=timeout_ex)
 
     def get_log_path(self) -> str:
         return os.path.join(self._config_dir, 'logs', 'edenfs.log')
@@ -790,7 +797,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
 
 class HealthStatus(object):
-    def __init__(self, status: fb_status, pid: Optional[int], detail: str) -> None:
+    def __init__(self, status: int, pid: Optional[int], detail: str) -> None:
         self.status = status
         self.pid = pid  # The process ID, or None if not running
         self.detail = detail  # a human-readable message

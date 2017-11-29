@@ -266,6 +266,7 @@ def start_daemon(
     gdb_args: Optional[List[str]]=None,
     strace_file: Optional[str]=None,
     foreground: bool=False,
+    timeout: float=60,
 ) -> int:
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
@@ -281,7 +282,8 @@ def start_daemon(
         health_info = config.spawn(daemon_binary, edenfs_args,
                                    takeover=takeover, gdb=gdb,
                                    gdb_args=gdb_args, strace_file=strace_file,
-                                   foreground=foreground)
+                                   foreground=foreground,
+                                   timeout=timeout)
     except config_mod.EdenStartError as ex:
         print_stderr('error: {}', ex)
         return 1
