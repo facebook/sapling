@@ -13,13 +13,23 @@ import pwd
 import subprocess
 import sys
 import time
+import typing
+from typing import Any, Callable, Optional, Tuple, TypeVar
 
 
 class TimeoutError(Exception):
     pass
 
 
-def poll_until(function, timeout, interval=0.2, timeout_ex=None):
+T = TypeVar('T')
+
+
+def poll_until(
+    function: Callable[[], Optional[T]],
+    timeout: float,
+    interval: float=0.2,
+    timeout_ex: Optional[Exception]=None
+) -> T:
     '''
     Call the specified function repeatedly until it returns non-None.
     Returns the function result.
@@ -44,7 +54,7 @@ def poll_until(function, timeout, interval=0.2, timeout_ex=None):
         time.sleep(interval)
 
 
-def get_home_dir():
+def get_home_dir() -> str:
     home_dir = None
     if os.name == 'nt':
         home_dir = os.getenv('USERPROFILE')
@@ -55,7 +65,7 @@ def get_home_dir():
     return home_dir
 
 
-def mkdir_p(path):
+def mkdir_p(path: str) -> str:
     '''Performs `mkdir -p <path>` and returns the path.'''
     try:
         os.makedirs(path)
@@ -65,13 +75,13 @@ def mkdir_p(path):
     return path
 
 
-def is_git_dir(path):
+def is_git_dir(path: str) -> bool:
     return (os.path.isdir(os.path.join(path, 'objects')) and
             os.path.isdir(os.path.join(path, 'refs')) and
             os.path.exists(os.path.join(path, 'HEAD')))
 
 
-def get_git_dir(path):
+def get_git_dir(path: str) -> Optional[str]:
     '''
     If path points to a git repository, return the path to the repository .git
     directory.  Otherwise, if the path is not a git repository, return None.
@@ -87,13 +97,13 @@ def get_git_dir(path):
     return None
 
 
-def get_git_commit(git_dir):
+def get_git_commit(git_dir: str) -> str:
     cmd = ['git', 'rev-parse', 'HEAD']
-    out = subprocess.check_output(cmd, cwd=git_dir)
+    out = typing.cast(bytes, subprocess.check_output(cmd, cwd=git_dir))
     return out.strip().decode('utf-8', errors='surrogateescape')
 
 
-def get_hg_repo(path):
+def get_hg_repo(path: str) -> Optional[str]:
     '''
     If path points to a mercurial repository, return a normalized path to the
     repository root.  Otherwise, if path is not a mercurial repository, return
@@ -121,15 +131,15 @@ def get_hg_repo(path):
     return repo_path
 
 
-def get_hg_commit(repo):
+def get_hg_commit(repo: str) -> str:
     env = os.environ.copy()
     env['HGPLAIN'] = '1'
     cmd = ['hg', '--cwd', repo, 'log', '-T{node}', '-r.']
-    out = subprocess.check_output(cmd, env=env)
+    out = typing.cast(bytes, subprocess.check_output(cmd, env=env))
     return out.decode('utf-8', errors='strict')
 
 
-def get_repo_source_and_type(path):
+def get_repo_source_and_type(path: str) -> Tuple[str, Optional[str]]:
     repo_source = ''
     repo_type = None
     git_dir = get_git_dir(path)
@@ -144,7 +154,7 @@ def get_repo_source_and_type(path):
     return (repo_source, repo_type)
 
 
-def print_stderr(message, *args, **kwargs):
+def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:
     '''Prints the message to stderr.'''
     if args or kwargs:
         message = message.format(*args, **kwargs)
