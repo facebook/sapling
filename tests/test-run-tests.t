@@ -98,19 +98,22 @@ failing test
 
 test churn with globs
   $ cat > test-failure.t <<EOF
-  >   $ echo "bar-baz"; echo "bar-bad"
+  >   $ echo "bar-baz"; echo "bar-bad"; echo foo
   >   bar*bad (glob)
   >   bar*baz (glob)
+  >   | fo (re)
   > EOF
   $ rt test-failure.t
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,3 +1,3 @@
-     $ echo "bar-baz"; echo "bar-bad"
+  @@ -1,4 +1,4 @@
+     $ echo "bar-baz"; echo "bar-bad"; echo foo
   +  bar*baz (glob)
      bar*bad (glob)
   -  bar*baz (glob)
+  -  | fo (re)
+  +  foo
   
   ERROR: test-failure.t output changed
   !
@@ -126,11 +129,13 @@ test diff colorisation
   
   \x1b[38;5;124m--- $TESTTMP/test-failure.t\x1b[39m (esc)
   \x1b[38;5;34m+++ $TESTTMP/test-failure.t.err\x1b[39m (esc)
-  \x1b[38;5;90;01m@@ -1,3 +1,3 @@\x1b[39;00m (esc)
-     $ echo "bar-baz"; echo "bar-bad"
+  \x1b[38;5;90;01m@@ -1,4 +1,4 @@\x1b[39;00m (esc)
+     $ echo "bar-baz"; echo "bar-bad"; echo foo
   \x1b[38;5;34m+  bar*baz (glob)\x1b[39m (esc)
      bar*bad (glob)
   \x1b[38;5;124m-  bar*baz (glob)\x1b[39m (esc)
+  \x1b[38;5;124m-  | fo (re)\x1b[39m (esc)
+  \x1b[38;5;34m+  foo\x1b[39m (esc)
   
   \x1b[38;5;88mERROR: \x1b[39m\x1b[38;5;9mtest-failure.t\x1b[39m\x1b[38;5;88m output changed\x1b[39m (esc)
   !
@@ -145,11 +150,13 @@ test diff colorisation
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,3 +1,3 @@
-     $ echo "bar-baz"; echo "bar-bad"
+  @@ -1,4 +1,4 @@
+     $ echo "bar-baz"; echo "bar-bad"; echo foo
   +  bar*baz (glob)
      bar*bad (glob)
   -  bar*baz (glob)
+  -  | fo (re)
+  +  foo
   
   ERROR: test-failure.t output changed
   !
