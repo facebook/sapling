@@ -721,6 +721,7 @@ def debugstate(ui, repo, **opts):
         else:
             timestr = time.strftime(r"%Y-%m-%d %H:%M:%S ",
                                     time.localtime(ent[3]))
+            timestr = encoding.strtolocal(timestr)
         if ent[1] & 0o20000:
             mode = 'lnk'
         else:
