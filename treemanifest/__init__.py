@@ -1098,9 +1098,19 @@ def _prefetchonlytrees(repo, opts):
     if base is not None:
         basemfnode.add(repo[base].manifestnode())
 
-    _prefetchtrees(repo, '', mfnodes, basemfnode, [])
+    prefetchtrees(repo, '', mfnodes, basemfnode, [])
 
 def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
+    '''
+    This is a legacy name for prefetchtrees(), to help transition other modules
+    that call this using the old (private) _prefetchtrees() name.
+
+    This can be deleted once everything has been switched to use the public
+    prefetchtrees() name.
+    '''
+    return prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories)
+
+def prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
     # If possible, use remotefilelog's more expressive fallbackpath
     fallbackpath = getfallbackpath(repo)
 
@@ -1132,20 +1142,15 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
                             (count, time.time() - start))
 
         if missingnodes:
-            raise error.Abort(_("unable to download %d trees (%s,...)") %
-                               (len(missingnodes), list(missingnodes)[0]))
+            raise MissingNodesError(missingnodes,
+                                    'nodes missing from server response')
     except bundle2.AbortFromPart as exc:
         repo.ui.debug('remote: abort: %s\n' % exc)
-        hexnodes = list(hex(mfnode) for mfnode in mfnodes)
-        nodestr = '\n'.join(hexnodes[:10])
-        if len(hexnodes) > 10:
-            nodestr += '\n...'
         # Give stderr some time to reach the client, so we can read it into the
         # currently pushed ui buffer, instead of it randomly showing up in a
         # future ui read.
         time.sleep(0.1)
-        raise error.Abort(_('unable to download the following trees from the '
-                            'server:\n%s') % nodestr, hint=exc.hint)
+        raise MissingNodesError(mfnodes, hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:
@@ -1345,7 +1350,7 @@ def _postpullprefetch(ui, repo):
         if not basemfnodes:
             basemfnodes = _findrecenttree(repo, len(repo.changelog) - 1)
 
-        _prefetchtrees(repo, '', mfnodes, basemfnodes, [])
+        prefetchtrees(repo, '', mfnodes, basemfnodes, [])
 
 def _findrecenttree(repo, startrev):
     cl = repo.changelog
@@ -1594,7 +1599,7 @@ class remotetreedatastore(object):
             # Find a recent tree that we already have
             basemfnodes = _findrecenttree(self._repo, linkrev)
 
-        _prefetchtrees(self._repo, name, [node], basemfnodes, [])
+        prefetchtrees(self._repo, name, [node], basemfnodes, [])
         self._shared.markforrefresh()
         return self._shared.get(name, node)
 
@@ -1702,3 +1707,15 @@ def _handlebundle2part(orig, self, part):
             mfl.historystore)
     else:
         orig(self, part)
+
+class MissingNodesError(error.Abort):
+    def __init__(self, nodes, message=None, hint=None):
+        nodestr = '\n'.join(hex(mfnode) for mfnode in nodes[:10])
+        if len(nodes) > 10:
+            nodestr += '\n...'
+        fullmessage = _(
+            'unable to download the following trees from the server:')
+        if message is not None:
+            fullmessage += ' ' + message
+        fullmessage += '\n' + nodestr
+        super(MissingNodesError, self).__init__(fullmessage, hint=hint)
