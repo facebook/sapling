@@ -15,11 +15,10 @@ import json
 import os
 
 
-def _find_post_clone():
-    post_clone = os.environ.get('EDENFS_POST_CLONE_PATH')
-    if not post_clone:
-        post_clone = os.path.join(find_executables.BUCK_OUT,
-                              'gen/eden/hooks/hg/post-clone.par')
+def _find_post_clone() -> str:
+    post_clone = (os.environ.get('EDENFS_POST_CLONE_PATH') or
+                  os.path.join(find_executables.BUCK_OUT,
+                               'gen/eden/hooks/hg/post-clone.par'))
     if not os.access(post_clone, os.X_OK):
         msg = ('unable to find post-clone script for integration testing: {!r}'
                 .format(post_clone))
@@ -27,7 +26,7 @@ def _find_post_clone():
     return post_clone
 
 
-def _eden_ext_dir():
+def _eden_ext_dir() -> str:
     check_locations = [
         # In dev mode, the python_binary link-tree can be found here:
         'buck-out/gen/eden/hg/eden/eden#link-tree',

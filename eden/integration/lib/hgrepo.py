@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import configparser
 import datetime
 import distutils.spawn
 import os
@@ -27,7 +28,7 @@ class HgError(subprocess.CalledProcessError):
         super().__init__(orig.returncode, orig.cmd,
                          output=orig.output, stderr=orig.stderr)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if not self.stderr:
             return super().__str__()
 
@@ -47,7 +48,7 @@ class HgError(subprocess.CalledProcessError):
 
 
 class HgRepository(repobase.Repository):
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         '''
         If hgrc is specified, it will be used as the value of the HGRCPATH
         environment variable when `hg` is run.
@@ -98,7 +99,7 @@ class HgRepository(repobase.Repository):
         else:
             return None
 
-    def init(self, hgrc=None):
+    def init(self, hgrc: configparser.ConfigParser = None) -> None:
         '''
         Initialize a new hg repository by running 'hg init'
 
@@ -108,17 +109,20 @@ class HgRepository(repobase.Repository):
         '''
         self.hg('init')
         if hgrc is not None:
-            hgrc_path = os.path.join(self.path, '.hg', 'hgrc')
-            with open(hgrc_path, 'a') as f:
-                hgrc.write(f)
+            self.write_hgrc(hgrc)
 
-    def get_type(self):
+    def write_hgrc(self, hgrc: configparser.ConfigParser) -> None:
+        hgrc_path = os.path.join(self.path, '.hg', 'hgrc')
+        with open(hgrc_path, 'a') as f:
+            hgrc.write(f)
+
+    def get_type(self) -> str:
         return 'hg'
 
-    def get_head_hash(self):
+    def get_head_hash(self) -> str:
         return self.hg('log', '-r.', '-T{node}')
 
-    def get_canonical_root(self):
+    def get_canonical_root(self) -> str:
         return self.path
 
     def add_files(self, paths: List[str]) -> None:
@@ -173,7 +177,7 @@ class HgRepository(repobase.Repository):
         # Get the commit ID and return it
         return self.hg('log', '-T{node}', '-r.')
 
-    def log(self, template='{node}', revset='::.'):
+    def log(self, template: str = '{node}', revset: str = '::.') -> List[str]:
         '''Runs `hg log` with the specified template and revset.
 
         Returns the log output, as a list with one entry per commit.'''
@@ -188,18 +192,18 @@ class HgRepository(repobase.Repository):
         output = self.hg('log', '-T', template, '-r', revset)
         return output.split(delimiter)[:-1]
 
-    def status(self):
+    def status(self) -> str:
         '''Returns the output of `hg status` as a string.'''
         return self.hg('status')
 
-    def update(self, rev, clean=False):
+    def update(self, rev: str, clean: bool = False) -> None:
         if clean:
             args = ['update', '--clean', rev]
         else:
             args = ['update', rev]
         self.hg(*args, stdout=None, stderr=None)
 
-    def reset(self, rev, keep=True):
+    def reset(self, rev: str, keep: bool = True) -> None:
         if keep:
             args = ['reset', '--keep', rev]
         else:

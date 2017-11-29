@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Optional, Union
+from typing import Optional
 
 import eden.thrift
 from fb303.ttypes import fb_status
@@ -61,7 +61,7 @@ class EdenFS(object):
         self.shutdown()
 
     def _wait_for_healthy(
-        self, timeout: Union[int, float], exclude_pid: Optional[int]=None
+        self, timeout: float, exclude_pid: Optional[int]=None
     ):
         '''Wait for edenfs to start and report that it is healthy.
 
@@ -154,7 +154,7 @@ class EdenFS(object):
         return cmd
 
     def start(
-        self, timeout: Union[int, float]=30, takeover_from: Optional[int]=None
+        self, timeout: float=30, takeover_from: Optional[int]=None
     ):
         '''
         Run "eden daemon" to start the eden daemon.

@@ -15,6 +15,7 @@ import os
 import shutil
 import tempfile
 import time
+import typing
 import unittest
 from hypothesis import settings, HealthCheck
 import hypothesis.strategies as st
@@ -70,7 +71,7 @@ if is_sandcastle() and not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.
-    TestParent = object
+    TestParent = typing.cast(unittest.TestCase, object)
 else:
     TestParent = unittest.TestCase
 
@@ -126,7 +127,6 @@ class EdenTestCase(TestParent):
         self.start = time.time()
         self.last_event = self.start
 
-        self.tmp_dir = None
         self.eden = None
         self.old_home = None
 
@@ -240,17 +240,17 @@ class EdenTestCase(TestParent):
 
         return repo
 
-    def get_path(self, path):
+    def get_path(self, path: str) -> str:
         '''Resolves the path against self.mount.'''
         return os.path.join(self.mount, path)
 
-    def touch(self, path):
+    def touch(self, path: str) -> None:
         '''Touch the file at the specified path relative to the clone.'''
         fullpath = self.get_path(path)
         with open(fullpath, 'a'):
             os.utime(fullpath)
 
-    def write_file(self, path, contents, mode=0o644):
+    def write_file(self, path: str, contents: str, mode: int = 0o644) -> None:
         '''Create or overwrite a file with the given contents.'''
         fullpath = self.get_path(path)
         self.make_parent_dir(fullpath)
@@ -258,7 +258,7 @@ class EdenTestCase(TestParent):
             f.write(contents)
         os.chmod(fullpath, mode)
 
-    def read_file(self, path):
+    def read_file(self, path: str) -> str:
         '''Read the file with the specified path inside the eden repository,
         and return its contents.
         '''
@@ -266,7 +266,7 @@ class EdenTestCase(TestParent):
         with open(fullpath, 'r') as f:
             return f.read()
 
-    def mkdir(self, path):
+    def mkdir(self, path: str) -> None:
         '''Call mkdir for the specified path relative to the clone.'''
         full_path = self.get_path(path)
         try:
@@ -275,12 +275,12 @@ class EdenTestCase(TestParent):
             if ex.errno != errno.EEXIST:
                 raise
 
-    def make_parent_dir(self, path):
+    def make_parent_dir(self, path: str) -> None:
         dirname = os.path.dirname(path)
         if dirname:
             self.mkdir(dirname)
 
-    def rm(self, path):
+    def rm(self, path: str) -> None:
         '''Unlink the file at the specified path relative to the clone.'''
         os.unlink(self.get_path(path))
 

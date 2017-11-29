@@ -8,20 +8,24 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
-from ..lib import hgrepo
-from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
+from eden.integration.hg.lib.hg_extension_test_base import (
+    EdenHgTestCase,
+    hg_test
+)
+from eden.integration.lib import hgrepo
 from textwrap import dedent
+from typing import Dict
 
 
 @hg_test
 class UpdateTest(EdenHgTestCase):
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Dict[str, str]:
         return {
             'eden.fs.inodes.TreeInode': 'DBG5',
             'eden.fs.inodes.CheckoutAction': 'DBG5',
         }
 
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file('hello.txt', 'hola')
         repo.write_file('.gitignore', 'ignoreme\n')
         repo.write_file('foo/.gitignore', '*.log\n')
@@ -35,7 +39,7 @@ class UpdateTest(EdenHgTestCase):
         repo.write_file('foo/bar.txt', 'updated in commit 3\n')
         self.commit3 = repo.commit('Update foo/.gitignore')
 
-    def test_update_clean_reverts_modified_files(self):
+    def test_update_clean_reverts_modified_files(self) -> None:
         '''Test using `hg update --clean .` to revert file modifications.'''
         self.assert_status_empty()
 
@@ -46,7 +50,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertEqual('hola', self.read_file('hello.txt'))
         self.assert_status_empty()
 
-    def test_update_clean_removes_added_and_removed_statuses(self):
+    def test_update_clean_removes_added_and_removed_statuses(self) -> None:
         '''Test using `hg update --clean .` in the presence of added and removed
         files.'''
         self.write_file('bar/some_new_file.txt', 'new file\n')
@@ -60,7 +64,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertTrue(os.path.isfile(self.get_path('foo/bar.txt')))
         self.assert_dirstate_empty()
 
-    def test_update_with_gitignores(self):
+    def test_update_with_gitignores(self) -> None:
         '''
         Test `hg update` with gitignore files.
 
@@ -104,7 +108,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertEqual('*.log\n', self.read_file('foo/.gitignore'))
         self.assertEqual('test\n', self.read_file('foo/bar.txt'))
 
-    def test_update_with_new_commits(self):
+    def test_update_with_new_commits(self) -> None:
         '''
         Test running `hg update` to check out commits that were created after
         the edenfs daemon originally started.
@@ -123,7 +127,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertEqual(new_contents, self.read_file('foo/bar.txt'))
         self.assert_status_empty()
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         '''
         Test `hg reset`
         '''
@@ -138,7 +142,7 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assertEqual('test\n', self.read_file('foo/bar.txt'))
 
-    def test_update_replace_untracked_dir(self):
+    def test_update_replace_untracked_dir(self) -> None:
         '''
         Create a local untracked directory, then run "hg update -C" to
         checkout a commit where this directory exists in source control.
@@ -175,7 +179,7 @@ class UpdateTest(EdenHgTestCase):
             'new_project/newcode.o': 'I',
         })
 
-    def test_update_with_merge_flag_and_conflict(self):
+    def test_update_with_merge_flag_and_conflict(self) -> None:
         self.write_file('foo/bar.txt', 'changing yet again\n')
         with self.assertRaises(hgrepo.HgError) as context:
             self.hg('update', '.^', '--merge')
@@ -197,15 +201,19 @@ class UpdateTest(EdenHgTestCase):
         )
         self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
 
-    def test_update_with_added_file_that_is_tracked_in_destination(self):
+    def test_update_with_added_file_that_is_tracked_in_destination(
+        self
+    ) -> None:
         self._test_update_with_local_file_that_is_tracked_in_destination(True)
 
-    def test_update_with_untracked_file_that_is_tracked_in_destination(self):
+    def test_update_with_untracked_file_that_is_tracked_in_destination(
+        self
+    ) -> None:
         self._test_update_with_local_file_that_is_tracked_in_destination(False)
 
     def _test_update_with_local_file_that_is_tracked_in_destination(
         self, add_before_updating: bool
-    ):
+    ) -> None:
         base_commit = self.repo.get_head_hash()
         original_contents = 'Original contents.\n'
         self.write_file('some_new_file.txt', original_contents)
@@ -216,7 +224,7 @@ class UpdateTest(EdenHgTestCase):
         # Do an `hg prev` and re-create the new file with different contents.
         self.repo.update(base_commit)
         self.assert_status_empty()
-        self.assertFalse(os.path.exists('some_new_file.txt'))
+        self.assertFalse(os.path.exists(self.get_path('some_new_file.txt')))
         modified_contents = 'Re-create the file with different contents.\n'
         self.write_file('some_new_file.txt', modified_contents)
 
@@ -244,7 +252,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertTrue(os.path.isfile(expected_backup_file))
         self.assertEqual(modified_contents, self.read_file(path_to_backup))
 
-    def test_update_modified_file_to_removed_file_taking_other(self):
+    def test_update_modified_file_to_removed_file_taking_other(self) -> None:
         self.write_file('some_new_file.txt', 'I am new!\n')
         self.hg('add', 'some_new_file.txt')
         self.repo.commit('Commit a new file.')
@@ -262,7 +270,7 @@ class UpdateTest(EdenHgTestCase):
             ':other was specified explicitly.'
         )
 
-    def test_update_modified_file_to_removed_file_taking_local(self):
+    def test_update_modified_file_to_removed_file_taking_local(self) -> None:
         self.write_file('some_new_file.txt', 'I am new!\n')
         self.hg('add', 'some_new_file.txt')
         self.repo.commit('Commit a new file.')
@@ -275,7 +283,7 @@ class UpdateTest(EdenHgTestCase):
         self.assertEqual(new_contents, self.read_file('some_new_file.txt'))
         self.assert_status({'some_new_file.txt': 'A'})
 
-    def test_update_ignores_untracked_directory(self):
+    def test_update_ignores_untracked_directory(self) -> None:
         head = self.repo.log()[-1]
         self.mkdir('foo/bar')
         self.write_file('foo/bar/a.txt', 'File in directory two levels deep.\n')
