@@ -389,6 +389,16 @@ service EdenService extends fb303.FacebookService {
     2: bool listIgnored,
   ) throws (1: EdenError ex)
 
+  /**
+   * Computes the status between two specified revisions.
+   * This does not care about the state of the working copy.
+   */
+  ScmStatus getScmStatusBetweenRevisions(
+    1: string mountPoint,
+    2: BinaryHash oldHash,
+    3: BinaryHash newHash,
+  ) throws (1: EdenError ex)
+
   //////// SCM Commit-Related APIs ////////
 
   /**

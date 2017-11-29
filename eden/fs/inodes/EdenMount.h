@@ -268,16 +268,33 @@ class EdenMount {
    *     multiple different threads, and the callback is responsible for
    *     performing synchronization (if it is needed).
    * @param listIgnored Whether or not to inform the callback of ignored files.
-   *     When listIgnored to false can speed up the diff computation, as the
-   *     code does not need to descend into ignord directories at all.
+   *     When listIgnored is set to false can speed up the diff computation, as
+   *     the code does not need to descend into ignored directories at all.
    *
    * @return Returns a folly::Future that will be fulfilled when the diff
    *     operation is complete.  This is marked FOLLY_NODISCARD to
-   *     make sure callers do not forget to wait for the operatio to complete.
+   *     make sure callers do not forget to wait for the operation to complete.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       InodeDiffCallback* callback,
       bool listIgnored = false) const;
+
+  /**
+   * Compute the differences between the trees in the specified commits.
+   * This does not care about the working copy aside from using it as the
+   * source of the backing store for the commits.
+   *
+   * @param callback This callback will be invoked as differences are found.
+   *     Note that the callback methods may be invoked simultaneously from
+   *     multiple different threads, and the callback is responsible for
+   *     performing synchronization (if it is needed).
+   *
+   * @return Returns a folly::Future that will be fulfilled when the diff
+   *     operation is complete.  This is marked FOLLY_NODISCARD to
+   *     make sure callers do not forget to wait for the operation to complete.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit>
+  diffRevisions(InodeDiffCallback* callback, Hash fromHash, Hash toHash);
 
   /**
    * Reset the state to point to the specified parent commit(s), without

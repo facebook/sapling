@@ -428,6 +428,19 @@ EdenServiceHandler::future_getScmStatus(
   return diffMountForStatus(mount.get(), listIgnored);
 }
 
+folly::Future<std::unique_ptr<ScmStatus>>
+EdenServiceHandler::future_getScmStatusBetweenRevisions(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::string> oldHash,
+    std::unique_ptr<std::string> newHash) {
+  INSTRUMENT_THRIFT_CALL(
+      DBG2,
+      *mountPoint,
+      folly::format("oldHash={}, newHash={}", *oldHash, *newHash));
+  auto mount = server_->getMount(*mountPoint);
+  return diffRevisions(mount.get(), Hash{*oldHash}, Hash{*newHash});
+}
+
 void EdenServiceHandler::debugGetScmTree(
     vector<ScmTreeEntry>& entries,
     unique_ptr<string> mountPoint,

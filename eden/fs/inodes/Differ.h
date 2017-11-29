@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <iosfwd>
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/service/gen-cpp2/EdenService.h"
 
 namespace folly {
@@ -32,6 +33,9 @@ std::ostream& operator<<(std::ostream& os, const ScmStatus& status);
 folly::Future<std::unique_ptr<ScmStatus>> diffMountForStatus(
     const EdenMount* mount,
     bool listIgnored);
+
+folly::Future<std::unique_ptr<ScmStatus>>
+diffRevisions(EdenMount* mount, const Hash& fromHash, const Hash& toHash);
 
 } // namespace eden
 } // namespace facebook
