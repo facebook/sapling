@@ -29,6 +29,15 @@ folly::fbvector<struct iovec> BufVec::getIov() const {
 
   return vec;
 }
+
+size_t BufVec::size() const {
+  size_t total = 0;
+  for (const auto& b : items_) {
+    total += b->buf->computeChainDataLength();
+  }
+  return total;
+}
+
 } // namespace fusell
 } // namespace eden
 } // namespace facebook

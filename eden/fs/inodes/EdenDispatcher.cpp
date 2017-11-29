@@ -117,7 +117,8 @@ folly::Future<folly::Unit> EdenDispatcher::forget(
 folly::Future<std::shared_ptr<fusell::FileHandle>> EdenDispatcher::open(
     fuse_ino_t ino,
     const struct fuse_file_info& fi) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "open({})", ino);
+  FB_LOGF(
+      mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, fi.flags);
   return inodeMap_->lookupFileInode(ino).then(
       [fi](const FileInodePtr& inode) { return inode->open(fi); });
 }

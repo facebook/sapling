@@ -52,6 +52,11 @@ class BufVec {
    *   auto xfer = writev(fd, iov.data(), iov.size());
    */
   folly::fbvector<struct iovec> getIov() const;
+
+  /**
+   * Returns the total number of bytes in the BufVec.
+   */
+  size_t size() const;
 };
 } // namespace fusell
 } // namespace eden
