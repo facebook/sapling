@@ -68,7 +68,6 @@ test-revlog-packentry.t
 test-run-tests.py
 test-show-stack.t
 test-status-terse.t
-test-terse-status.t
 test-unified-test.t
 test-update-issue1456.t
 test-update-reverse.t
