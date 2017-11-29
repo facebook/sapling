@@ -10,6 +10,9 @@
 from __future__ import absolute_import, print_function
 import sys
 
+if sys.version_info[0] >= 3:
+    xrange = range
+
 start = 1
 if len(sys.argv) > 2:
     start = int(sys.argv[1])
