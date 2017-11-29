@@ -197,7 +197,7 @@ utestpats = [
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
     (r'^  [^$>].*27\.0\.0\.1',
      'use $LOCALIP not an explicit loopback address'),
-    (r'^  [^$>].*\$LOCALIP.*[^)]$',
+    (r'^  (?![>$] ).*\$LOCALIP.*[^)]$',
      'mark $LOCALIP output lines with (glob) to help tests in BSD jails'),
     (r'^  (cat|find): .*: No such file or directory',
      'use test -f to test for file existence'),
