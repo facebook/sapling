@@ -233,9 +233,10 @@ add another largefile to the new largefiles repo
   $ cd ..
 
 round-trip: converting back to a normal (non-largefiles) repo with
-"lfconvert --to-normal" should give the same as ../bigfile-repo
+"lfconvert --to-normal" should give the same as ../bigfile-repo.  The
+convert extension is disabled to show config items can be loaded without it.
   $ cd largefiles-repo
-  $ hg lfconvert --to-normal . ../normal-repo
+  $ hg --config extensions.convert=! lfconvert --to-normal . ../normal-repo
   initializing destination ../normal-repo
   0 additional largefiles cached
   scanning source...

@@ -44,6 +44,9 @@ def decodefilename(filename):
 
 class p4_source(common.converter_source):
     def __init__(self, ui, path, revs=None):
+        # avoid import cycle
+        from . import convcmd
+
         super(p4_source, self).__init__(ui, path, revs=revs)
 
         if "/" in path and not path.startswith('//'):
@@ -53,7 +56,8 @@ class p4_source(common.converter_source):
         common.checktool('p4', abort=False)
 
         self.revmap = {}
-        self.encoding = self.ui.config('convert', 'p4.encoding')
+        self.encoding = self.ui.config('convert', 'p4.encoding',
+                                       convcmd.orig_encoding)
         self.re_type = re.compile(
             "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
             "(\+\w+)?$")
