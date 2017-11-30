@@ -2,6 +2,19 @@
 
   $ CACHEDIR=$PWD/hgcache
   $ . $TESTDIR/library.sh
+
+  $ cat >> $TESTTMP/json_pretty_print.py <<EOF
+  > import sys
+  > import json
+  > inp = json.loads(sys.stdin.read())
+  > inp = sorted(inp, key=lambda entry: entry['path'])
+  > print(json.dumps(inp, sort_keys=True, indent=2, separators=(',', ': ')))
+  > EOF
+
+  $ json_print() {
+  >   python $TESTTMP/json_pretty_print.py
+  > }
+
   $ hg init repo
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
@@ -156,7 +169,7 @@ Curl and debugdata output should match
   c\x005d9299349fc01ddd25d0070d149b124d8f10411e (esc)
   d\x00fc702583f9c961dea176fd367862c299b4a551f2 (esc)
 
-  $ curl https://localhost:3000/repo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null| jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/8515d4bfda768e04af4c13a69a72e28c7effbea7/ 2> /dev/null| json_print
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -171,7 +184,7 @@ Empty file
 
   $ curl https://localhost:3000/repo/cs/4dabaf45f54add88ca2797dfdeb00a7d55144243/roottreemanifestid 2> /dev/null
   b47dc781a873595c796b01e2ed5829e3fed2c887 (no-eol)
-  $ curl https://localhost:3000/repo/treenode/b47dc781a873595c796b01e2ed5829e3fed2c887/ 2> /dev/null| jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/b47dc781a873595c796b01e2ed5829e3fed2c887/ 2> /dev/null| json_print
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -194,7 +207,7 @@ Empty file
   ]
   $ curl https://localhost:3000/repo/blob/5d9299349fc01ddd25d0070d149b124d8f10411e/ 2> /dev/null
   2
-  $ curl https://localhost:3000/repo/treenode/47827ecc7f12d2ed0c387de75947e73cf1c53afe/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/47827ecc7f12d2ed0c387de75947e73cf1c53afe/ 2> /dev/null | json_print
   [
     {
       "hash": "b80de5d138758541c5f05265ad144ab9fa86d1db",
@@ -230,7 +243,7 @@ Empty file
   $ curl https://localhost:3000/repo/cs/617e87e2aa2fe36508e8d5e15a162bcd2e79808e/roottreemanifestid/ 2> /dev/null
   ed8f515856d818e78bd52edac84a97568de65e0f (no-eol)
 
-  $ curl https://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/ed8f515856d818e78bd52edac84a97568de65e0f/ 2> /dev/null | json_print
   [
     {
       "hash": "e7405b0462d8b2dd80219b713a93aea2c9a3c468",
@@ -240,7 +253,7 @@ Empty file
     }
   ]
 
-  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468/ 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468/ 2> /dev/null | json_print
   [
     {
       "hash": "7108421418404a937c684d2479a34a24d2ce4757",
@@ -249,7 +262,7 @@ Empty file
       "type": "File"
     }
   ]
-  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | jq 'sort_by(.path)'
+  $ curl https://localhost:3000/repo/treenode/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | json_print
   [
     {
       "hash": "7108421418404a937c684d2479a34a24d2ce4757",
