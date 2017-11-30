@@ -31,9 +31,6 @@ if sys.version_info[0] >= 3:
             # Only handle Mercurial-related modules.
             if not fullname.startswith(('mercurial.', 'hgext.', 'hgext3rd.')):
                 return None
-            # selectors2 is already dual-version clean, don't try and mangle it
-            if fullname.startswith('mercurial.selectors2'):
-                return None
             # third-party packages are expected to be dual-version clean
             if fullname.startswith('mercurial.thirdparty'):
                 return None

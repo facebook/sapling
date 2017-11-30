@@ -17,11 +17,11 @@ import struct
 import traceback
 
 from .i18n import _
+from .thirdparty import selectors2
 from . import (
     encoding,
     error,
     pycompat,
-    selectors2,
     util,
 )
 

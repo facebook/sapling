@@ -22,8 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# no-check-code
-
 from __future__ import absolute_import
 
 import collections
@@ -34,7 +32,7 @@ import socket
 import sys
 import time
 
-from . import pycompat
+from .. import pycompat
 
 namedtuple = collections.namedtuple
 Mapping = collections.Mapping
