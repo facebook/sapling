@@ -64,6 +64,7 @@ portablefilenames = ignore
 share =
 eden = {}
 sqldirstate = !
+treedirstate = !
 fbsparse = !
 fsmonitor = !
 sparse = !
@@ -82,6 +83,9 @@ sparse = !
     requires = set(requires_data.splitlines())
     requires.add('eden')
     requires.discard('sqldirstate')
+    # If the old repo required treedirstate, drop that requirement as eden will
+    # be replacing the dirstate.
+    requires.discard('treedirstate')
     with open(os.path.join(eden_hg_dir, 'requires'), 'w') as outf:
         outf.write('\n'.join(sorted(requires)) + '\n')
 
