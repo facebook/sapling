@@ -1648,3 +1648,28 @@ help/{topic} shows an individual help topic
     "rawdoc": "Working with Phases\n*", (glob)
     "topic": "phases"
   }
+
+Commit message with Japanese Kanji 'Noh', which ends with '\x5c'
+
+  $ echo foo >> da/foo
+  $ HGENCODING=cp932 hg ci -m `$PYTHON -c 'print("\x94\x5c")'`
+
+Commit message with null character
+
+  $ echo foo >> da/foo
+  >>> open('msg', 'wb').write('commit with null character: \0\n')
+  $ hg ci -l msg
+  $ rm msg
+
+Stop and restart with HGENCODING=cp932
+
+  $ killdaemons.py
+  $ HGENCODING=cp932 hg serve -p $HGPORT -d --pid-file=hg.pid \
+  > -A access.log -E error.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+Test json escape of multibyte characters
+
+  $ request json-filelog/tip/da/foo?revcount=2 | grep '"desc":'
+        "desc": "commit with null character: \u0000",
+        "desc": "\u80fd",
