@@ -126,7 +126,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 # the user use unbundle instead.
                 # Force load the filelog data.
                 bundlerepo.bundlerepository.file(repo, 'foo')
-                if repo.bundlefilespos:
+                if repo._cgfilespos:
                     raise error.Abort("cannot pull from full bundles",
                                       hint="use `hg unbundle` instead")
                 return []
