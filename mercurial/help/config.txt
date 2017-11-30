@@ -2215,6 +2215,10 @@ User interface controls.
     The timeout used when a lock is held (in seconds), a negative value
     means no timeout. (default: 600)
 
+``timeout.warn``
+    Time (in seconds) before a warning is printed about held lock. A negative
+    value means no warning. (default: 0)
+
 ``traceback``
     Mercurial always prints a traceback when an unknown exception
     occurs. Setting this to True will make Mercurial print a traceback

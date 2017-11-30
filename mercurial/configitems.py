@@ -1081,6 +1081,9 @@ coreconfigitem('ui', 'textwidth',
 coreconfigitem('ui', 'timeout',
     default='600',
 )
+coreconfigitem('ui', 'timeout.warn',
+    default=0,
+)
 coreconfigitem('ui', 'traceback',
     default=False,
 )

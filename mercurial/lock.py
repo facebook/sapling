@@ -41,11 +41,11 @@ def _getlockprefix():
                 raise
     return result
 
-def trylock(ui, vfs, lockname, timeout, *args, **kwargs):
+def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception
 
-    This function is responsible to issue warnings about the held lock while
-    trying to acquires it."""
+    This function is responsible to issue warnings and or debug messages about
+    the held lock while trying to acquires it."""
 
     def printwarning(printer, locker):
         """issue the usual "waiting on lock" message through any channel"""
@@ -60,9 +60,12 @@ def trylock(ui, vfs, lockname, timeout, *args, **kwargs):
 
     l = lock(vfs, lockname, 0, *args, dolock=False, **kwargs)
 
+    debugidx = 0 if (warntimeout and timeout) else -1
     warningidx = 0
     if not timeout:
         warningidx = -1
+    elif warntimeout:
+        warningidx = warntimeout
 
     delay = 0
     while True:
@@ -70,6 +73,8 @@ def trylock(ui, vfs, lockname, timeout, *args, **kwargs):
             l._trylock()
             break
         except error.LockHeld as inst:
+            if delay == debugidx:
+                printwarning(ui.debug, inst.locker)
             if delay == warningidx:
                 printwarning(ui.warn, inst.locker)
             if timeout <= delay:
@@ -80,7 +85,10 @@ def trylock(ui, vfs, lockname, timeout, *args, **kwargs):
 
     l.delay = delay
     if l.delay:
-        ui.warn(_("got lock after %s seconds\n") % l.delay)
+        if 0 <= warningidx <= l.delay:
+            ui.warn(_("got lock after %s seconds\n") % l.delay)
+        else:
+            ui.debug("got lock after %s seconds\n" % l.delay)
     if l.acquirefn:
         l.acquirefn()
     return l

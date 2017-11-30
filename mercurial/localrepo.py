@@ -1594,10 +1594,12 @@ class localrepository(object):
             parentlock = encoding.environ.get(parentenvvar)
 
         timeout = 0
+        warntimeout = 0
         if wait:
             timeout = self.ui.configint("ui", "timeout")
+            warntimeout = self.ui.configint("ui", "timeout.warn")
 
-        l = lockmod.trylock(self.ui, vfs, lockname, timeout,
+        l = lockmod.trylock(self.ui, vfs, lockname, timeout, warntimeout,
                             releasefn=releasefn,
                             acquirefn=acquirefn, desc=desc,
                             inheritchecker=inheritchecker,
