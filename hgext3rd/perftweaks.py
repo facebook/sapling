@@ -298,8 +298,12 @@ def _tracksparseprofiles(runcommand, lui, repo, *args):
 
 def _trackupdatesize(orig, repo, node, branchmerge, *args, **kwargs):
     if not branchmerge:
-        distance = len(repo.revs('(%s %% .) + (. %% %s)', node, node))
-        repo.ui.log('update_size', '', update_distance=distance)
+        try:
+            distance = len(repo.revs('(%s %% .) + (. %% %s)', node, node))
+            repo.ui.log('update_size', '', update_distance=distance)
+        except Exception:
+            # error may happen like: RepoLookupError: unknown revision '-1'
+            pass
 
     stats = orig(repo, node, branchmerge, *args, **kwargs)
     repo.ui.log('update_size', '', update_filecount=sum(stats))
