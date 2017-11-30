@@ -73,7 +73,6 @@ from mercurial import (
     error,
     exchange,
     extensions,
-    hg,
     localrepo,
     manifest,
     mdiff,
@@ -1293,27 +1292,9 @@ def pull(orig, ui, repo, *pats, **opts):
                 ui.status(_("backfilling missing flat manifests\n"))
                 backfillmanifestrevlog(ui, repo)
 
-    # If special arguments were passed, we can't reuse the pull connection
-    if opts.get('ssh') or opts.get('remotecmd'):
-        return orig(ui, repo, *pats, **opts)
-
-    # Use a connection from the connection pool for the pull, so it can be
-    # reused by future requests, like tree prefetching.
-    fallbackpath = getfallbackpath(repo)
-    with repo.connectionpool.get(fallbackpath) as conn:
-        peer = conn.peer
-        def wrappedpeer(orig, uiorrepo, opts, path, *args, **kwargs):
-            if path == fallbackpath:
-                return peer
-            else:
-                return orig(uiorrepo, opts, path, *args, **kwargs)
-
-        with extensions.wrappedfunction(hg, 'peer', wrappedpeer):
-            result = orig(ui, repo, *pats, **opts)
-            if not treeenabled(repo.ui):
-                return result
-
-    _postpullprefetch(ui, repo)
+    result = orig(ui, repo, *pats, **opts)
+    if treeenabled(repo.ui):
+        _postpullprefetch(ui, repo)
     return result
 
 def _postpullprefetch(ui, repo):
