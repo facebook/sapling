@@ -40,6 +40,7 @@ cpp_library(
         "GlobNode.h",
         "StreamingSubscriber.h",
     ],
+    undefined_symbols = True,  # TODO(T23121628): fix deps and remove
     deps = [
         ":thrift_cpp",
         "@/common/fb303/cpp:fb303",
