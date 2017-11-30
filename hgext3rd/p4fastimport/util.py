@@ -4,7 +4,10 @@ from __future__ import absolute_import
 import collections
 import os
 
-from mercurial import worker
+from mercurial import (
+    util,
+    worker,
+)
 
 def localpath(p):
     return p.lstrip('/')
@@ -48,9 +51,10 @@ def runworker(ui, fn, wargs, items):
     # drawback of spwaning. We are overwritign this if we force a
     # worker to run with a ridiculous high number.
     weight = 0.0  # disable worker
-    if ui.config('p4fastimport', 'useworker', None) == 'force':
+    useworker = ui.config('p4fastimport', 'useworker')
+    if useworker == 'force':
         weight = 100000.0  # force worker
-    elif ui.configbool('p4fastimport', 'useworker', False):
+    elif util.parsebool(useworker or ''):
         weight = 0.04  # normal weight
 
     # Fix duplicated messages before
