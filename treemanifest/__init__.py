@@ -1697,7 +1697,7 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
         part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
         bundler.addpart(part)
 
-def _handlebundle2part(orig, self, part):
+def _handlebundle2part(orig, self, bundle, part):
     if part.type == TREEGROUP_PARTTYPE2:
         tempstore = wirepack.wirepackstore(part.read())
 
@@ -1710,7 +1710,7 @@ def _handlebundle2part(orig, self, part):
             tempstore,
             mfl.historystore)
     else:
-        orig(self, part)
+        orig(self, bundle, part)
 
 class MissingNodesError(error.Abort):
     def __init__(self, nodes, message=None, hint=None):
