@@ -233,45 +233,12 @@ Test overriding master
   |    a2
   |
 
-Test draft branches
-
-  $ hg branch foo
-  marked working directory as branch foo
-  (branches are permanent and global, did you want a bookmark?)
-  $ hg commit -m 'create branch foo'
-  $ hg sl
-  @  changeset:   6:26d4a421c339
-  |  branch:      foo
-  |  bookmark:    feature2
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  .  summary:     create branch foo
-  .
-  o  changeset:   4:38d85b506754
-  |  bookmark:    master
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  .  summary:     c2
-  .
-  | o  changeset:   2:49cdb4091aca
-  |/   bookmark:    feature1
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     b
-  |
-  o  changeset:   1:b68836a6e2ca
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     a2
-  |
-
 Test with weird bookmark names
 
   $ hg book -r 2 foo-bar
   $ hg smartlog -r 'foo-bar + .' -T compact
-  @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  .    create branch foo
+  @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  .    d
   .
   | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
@@ -283,9 +250,9 @@ Test with weird bookmark names
   o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |    b
   |
-  | @  6[tip][feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  | .    create branch foo
-  | .
+  | @  5[tip][feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  | |    d
+  | |
   | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
   | |    c2
   | |
@@ -308,15 +275,15 @@ Test with two unrelated histories
   $ touch u2 && hg add u2 && hg ci -mu2
 
   $ hg smartlog  -T compact
-  @  8[tip]   806aaef35296   1970-01-01 00:00 +0000   test
+  @  7[tip]   806aaef35296   1970-01-01 00:00 +0000   test
   |    u2
   |
-  o  7:-1   8749dc393678   1970-01-01 00:00 +0000   test
+  o  6:-1   8749dc393678   1970-01-01 00:00 +0000   test
        u1
   
-  o  6[feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  .    create branch foo
-  .
+  o  5[feature2]   05d10250273e   1970-01-01 00:00 +0000   test
+  |    d
+  |
   o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
   .    c2
   .
@@ -326,11 +293,6 @@ Test with two unrelated histories
   o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
   |    a2
   |
-  note: hiding 1 old heads without bookmarks
-  (use --all to see them)
-
-  $ hg update 26d4a421c339
-  5 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 Test singlepublicsuccessor  template keyword
   $ echo "[extensions]" >> $HGRCPATH

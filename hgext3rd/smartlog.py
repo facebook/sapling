@@ -457,7 +457,6 @@ def smartlogrevset(repo, subset, x):
     heads = set()
 
     rev = repo.changelog.rev
-    branchinfo = repo.changelog.branchinfo
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
     parentrevs = repo.changelog.parentrevs
@@ -482,13 +481,13 @@ def smartlogrevset(repo, subset, x):
     heads.update(repo.revs('.'))
 
     global hiddenchanges
-    headquery = 'head() & branch(.)'
+    headquery = 'head()'
     if remotebooks:
         # When we have remote bookmarks, only show draft heads, since public
         # heads should have a remote bookmark indicating them. This allows us
         # to force push server bookmarks to new locations, and not have the
         # commits clutter the user's smartlog.
-        headquery = 'heads(draft()) & branch(.)'
+        headquery = 'heads(draft())'
 
     allheads = set(repo.revs(headquery))
     if recentdays >= 0:
@@ -500,69 +499,36 @@ def smartlogrevset(repo, subset, x):
     else:
         heads.update(allheads)
 
-    branches = set()
-    for head in heads:
-        branches.add(branchinfo(head)[0])
-
     masterrevset = _masterrevset(repo.ui, repo, masterstring)
     masterrev = _masterrev(repo, masterrevset)
 
     if masterrev is None:
-        masterbranch = None
-    else:
-        masterbranch = branchinfo(masterrev)[0]
+        masterrev = repo['tip'].rev()
 
-    for branch in branches:
-        if branch != masterbranch:
-            try:
-                rs = 'first(reverse(branch("%s")) & public())' % branch
-                branchmaster = repo.revs(rs).first()
-                if branchmaster is None:
-                    # local-only (draft) branch
-                    rs = 'branch("%s")' % branch
-                    branchmaster = repo.revs(rs).first()
-            except Exception:
-                branchmaster = repo.revs('tip').first()
-        else:
-            branchmaster = masterrev
+    masternode = node(masterrev)
 
-        # Find all draft ancestors and latest public ancestor of heads
-        # that are not in master.
-        # We don't want to draw all public commits because there can be too
-        # many of them.
-        # Don't use revsets, they are too slow
-        for head in heads:
-            if branchinfo(head)[0] != branch:
-                continue
-            anc = rev(ancestor(node(head), node(branchmaster)))
-            queue = [head]
-            while queue:
-                current = queue.pop(0)
-                if current not in revs:
-                    revs.add(current)
-                    # stop as soon as we find public commit
-                    ispublic = repo[current].phase() == phases.public
-                    if current != anc and not ispublic:
-                        parents = parentrevs(current)
-                        for p in parents:
-                            if p > anc:
-                                queue.append(p)
+    # Find all draft ancestors and latest public ancestor of heads
+    # that are not in master.
+    # We don't want to draw all public commits because there can be too
+    # many of them.
+    # Don't use revsets, they are too slow
+    for head in heads:
+        anc = rev(ancestor(node(head), masternode))
+        queue = [head]
+        while queue:
+            current = queue.pop(0)
+            if current not in revs:
+                revs.add(current)
+                # stop as soon as we find public commit
+                ispublic = repo[current].phase() == phases.public
+                if current != anc and not ispublic:
+                    parents = parentrevs(current)
+                    for p in parents:
+                        if p > anc:
+                            queue.append(p)
 
-        # add context: master, current commit, and the common ancestor
-        revs.add(branchmaster)
-
-        # get common branch ancestor
-        if branch != masterbranch:
-            anc = None
-            for r in revs:
-                if branchinfo(r)[0] != branch:
-                    continue
-                if anc is None:
-                    anc = r
-                else:
-                    anc = rev(ancestor(node(anc), node(r)))
-            if anc:
-                revs.add(anc)
+    # add context: master, current commit, and the common ancestor
+    revs.add(masterrev)
 
     return subset & revs
 

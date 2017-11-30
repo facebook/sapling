@@ -39,5 +39,4 @@ with the inhibit extension enabled.
   |
   o  1 59cf2bc6d22f.preamend
   |
-  o  0
-  
+  ~
