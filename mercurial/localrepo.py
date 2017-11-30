@@ -1611,7 +1611,7 @@ class localrepository(object):
                              (desc, inst.locker))
             # default to 600 seconds timeout
             l = lockmod.lock(vfs, lockname,
-                             int(self.ui.config("ui", "timeout")),
+                             self.ui.configint("ui", "timeout"),
                              releasefn=releasefn, acquirefn=acquirefn,
                              desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
