@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import errno, hashlib, heapq, os, shutil, time
+import errno, hashlib, os, shutil, stat, time
 
 from . import (
     constants,
@@ -10,6 +10,7 @@ from . import (
 from mercurial import error
 from mercurial.i18n import _
 from mercurial.node import bin, hex
+from mercurial.util import osutil
 
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
@@ -69,14 +70,11 @@ class basestore(object):
         ui = self.ui
         entries = ledger.sources.get(self, [])
         count = 0
-        directories = set()
         for entry in entries:
             if entry.gced or (entry.datarepacked and entry.historyrepacked):
                 ui.progress(_("cleaning up"), count, unit="files",
                             total=len(entries))
                 path = self._getfilepath(entry.filename, entry.node)
-                dirpath = os.path.dirname(path)
-                directories.add((-len(dirpath), dirpath))
                 try:
                     os.remove(path)
                 except OSError as ex:
@@ -86,23 +84,29 @@ class basestore(object):
             count += 1
         ui.progress(_("cleaning up"), None)
 
-        # Clean up directories
-        cachepath = shallowutil.getcachepath(ui)
-        dirheap = list(directories)
-        heapq.heapify(dirheap)
-        seen = set([cachepath])
-        while dirheap:
-            length, dirpath = heapq.heappop(dirheap)
-            try:
-                os.rmdir(dirpath)
-                parent = os.path.dirname(dirpath)
-                if parent not in seen:
-                    seen.add(parent)
-                    heapq.heappush(dirheap, (-len(parent), parent))
-            except OSError:
-                pass
+        # Clean up leftover empty directories
+        self._removeemptydirectories(self._getrepocachepath())
 
     # BELOW THIS ARE NON-STANDARD APIS
+
+    def _removeemptydirectories(self, rootdir):
+        """Removes the empty directories within the root directory recursively.
+        Note that this method does not remove the root directory itself.
+        """
+
+        # osutil.listdir returns stat information which saves some rmdir/listdir
+        # syscalls.
+        for name, mode in osutil.listdir(rootdir):
+            if stat.S_ISDIR(mode):
+                dirpath = os.path.join(rootdir, name)
+                self._removeemptydirectories(dirpath)
+
+                # Now that the directory specified by dirpath is potentially
+                # empty, try and remove it.
+                try:
+                    os.rmdir(dirpath)
+                except OSError:
+                    pass
 
     def _getfiles(self):
         """Return a list of (filename, [node,...]) for all the revisions that
@@ -155,17 +159,17 @@ class basestore(object):
 
         return filenames
 
+    def _getrepocachepath(self):
+        return os.path.join(
+            self._path, self._reponame) if self._shared else self._path
+
     def _listkeys(self):
         """List all the remotefilelog keys that exist in the store.
 
         Returns a iterator of (filename hash, filecontent hash) tuples.
         """
-        if self._shared:
-            path = os.path.join(self._path, self._reponame)
-        else:
-            path = self._path
 
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(self._getrepocachepath()):
             for filename in files:
                 if len(filename) != 40:
                     continue
