@@ -42,12 +42,12 @@ from functools import partial
 from hgext3rd.generic_bisect import bisect
 
 from mercurial import (
+    changelog,
     dispatch,
     error,
     extensions,
     localrepo,
     registrar,
-    revlog,
     util,
     vfs as vfsmod,
 )
@@ -87,7 +87,7 @@ _unsortedthreshold = 1000
 _needrebuildfile = 'partialindexneedrebuild'
 
 def extsetup(ui):
-    extensions.wrapfunction(revlog.revlog, '_partialmatch', _partialmatch)
+    extensions.wrapfunction(changelog.changelog, '_partialmatch', _partialmatch)
     extensions.wrapfunction(localrepo.localrepository, 'commit',
                             _localrepocommit)
     extensions.wrapfunction(localrepo.localrepository, 'transaction',
