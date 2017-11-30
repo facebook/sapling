@@ -208,6 +208,99 @@ coreconfigitem('committemplate', '.*',
     default=None,
     generic=True,
 )
+coreconfigitem('convert', 'cvsps.cache',
+    default=True,
+)
+coreconfigitem('convert', 'cvsps.fuzz',
+    default=60,
+)
+coreconfigitem('convert', 'cvsps.logencoding',
+    default=None,
+)
+coreconfigitem('convert', 'cvsps.mergefrom',
+    default=None,
+)
+coreconfigitem('convert', 'cvsps.mergeto',
+    default=None,
+)
+coreconfigitem('convert', 'git.committeractions',
+    default=lambda: ['messagedifferent'],
+)
+coreconfigitem('convert', 'git.extrakeys',
+    default=list,
+)
+coreconfigitem('convert', 'git.findcopiesharder',
+    default=False,
+)
+coreconfigitem('convert', 'git.remoteprefix',
+    default='remote',
+)
+coreconfigitem('convert', 'git.renamelimit',
+    default=400,
+)
+coreconfigitem('convert', 'git.saverev',
+    default=True,
+)
+coreconfigitem('convert', 'git.similarity',
+    default=50,
+)
+coreconfigitem('convert', 'git.skipsubmodules',
+    default=False,
+)
+coreconfigitem('convert', 'hg.clonebranches',
+    default=False,
+)
+coreconfigitem('convert', 'hg.ignoreerrors',
+    default=False,
+)
+coreconfigitem('convert', 'hg.revs',
+    default=None,
+)
+coreconfigitem('convert', 'hg.saverev',
+    default=False,
+)
+coreconfigitem('convert', 'hg.sourcename',
+    default=None,
+)
+coreconfigitem('convert', 'hg.startrev',
+    default=None,
+)
+coreconfigitem('convert', 'hg.tagsbranch',
+    default='default',
+)
+coreconfigitem('convert', 'hg.usebranchnames',
+    default=True,
+)
+coreconfigitem('convert', 'ignoreancestorcheck',
+    default=False,
+)
+coreconfigitem('convert', 'localtimezone',
+    default=False,
+)
+coreconfigitem('convert', 'p4.encoding',
+    default=dynamicdefault,
+)
+coreconfigitem('convert', 'p4.startrev',
+    default=0,
+)
+coreconfigitem('convert', 'skiptags',
+    default=False,
+)
+coreconfigitem('convert', 'svn.debugsvnlog',
+    default=True,
+)
+coreconfigitem('convert', 'svn.trunk',
+    default=None,
+)
+coreconfigitem('convert', 'svn.tags',
+    default=None,
+)
+coreconfigitem('convert', 'svn.branches',
+    default=None,
+)
+coreconfigitem('convert', 'svn.startrev',
+    default=0,
+)
 coreconfigitem('debug', 'dirstate.delaywrite',
     default=0,
 )

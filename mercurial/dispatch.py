@@ -55,6 +55,9 @@ class request(object):
         self.fout = fout
         self.ferr = ferr
 
+        # remember options pre-parsed by _earlyreqopt*()
+        self.earlyoptions = {}
+
         # reposetups which run before extensions, useful for chg to pre-fill
         # low-level repo state (for example, changelog) before extensions.
         self.prereposetups = prereposetups or []
@@ -147,7 +150,7 @@ def dispatch(req):
     try:
         if not req.ui:
             req.ui = uimod.ui.load()
-        if '--traceback' in req.args:
+        if _earlyreqoptbool(req, 'traceback', ['--traceback']):
             req.ui.setconfig('ui', 'traceback', 'on', '--traceback')
 
         # set ui streams from the request
@@ -261,7 +264,8 @@ def _runcatch(req):
 
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
-            cfgs = _parseconfig(req.ui, _earlygetopt(['--config'], req.args))
+            cfgs = _parseconfig(req.ui,
+                                _earlyreqopt(req, 'config', ['--config']))
 
             if req.repo:
                 # copy configs that were passed on the cmdline (--config) to
@@ -275,7 +279,7 @@ def _runcatch(req):
             if not debugger or ui.plain():
                 # if we are in HGPLAIN mode, then disable custom debugging
                 debugger = 'pdb'
-            elif '--debugger' in req.args:
+            elif _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 # This import can be slow for fancy debuggers, so only
                 # do it when absolutely necessary, i.e. when actual
                 # debugging has been requested
@@ -289,7 +293,7 @@ def _runcatch(req):
             debugmortem[debugger] = debugmod.post_mortem
 
             # enter the debugger before command execution
-            if '--debugger' in req.args:
+            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 ui.warn(_("entering debugger - "
                         "type c to continue starting hg or h for help\n"))
 
@@ -305,7 +309,7 @@ def _runcatch(req):
                 ui.flush()
         except: # re-raises
             # enter the debugger when we hit an exception
-            if '--debugger' in req.args:
+            if _earlyreqoptbool(req, 'debugger', ['--debugger']):
                 traceback.print_exc()
                 debugmortem[debugger](sys.exc_info()[2])
             raise
@@ -465,7 +469,7 @@ class cmdalias(object):
         self.cmdname = cmd = args.pop(0)
         self.givenargs = args
 
-        for invalidarg in ("--cwd", "-R", "--repository", "--repo", "--config"):
+        for invalidarg in commands.earlyoptflags:
             if _earlygetopt([invalidarg], args):
                 self.badalias = (_("error in definition for alias '%s': %s may "
                                    "only be given on the command line")
@@ -640,11 +644,11 @@ def _parseconfig(ui, config):
 
     return configs
 
-def _earlygetopt(aliases, args):
+def _earlygetopt(aliases, args, strip=True):
     """Return list of values for an option (or aliases).
 
     The values are listed in the order they appear in args.
-    The options and values are removed from args.
+    The options and values are removed from args if strip=True.
 
     >>> args = [b'x', b'--cwd', b'foo', b'y']
     >>> _earlygetopt([b'--cwd'], args), args
@@ -654,13 +658,33 @@ def _earlygetopt(aliases, args):
     >>> _earlygetopt([b'--cwd'], args), args
     (['bar'], ['x', 'y'])
 
+    >>> args = [b'x', b'--cwd=bar', b'y']
+    >>> _earlygetopt([b'--cwd'], args, strip=False), args
+    (['bar'], ['x', '--cwd=bar', 'y'])
+
     >>> args = [b'x', b'-R', b'foo', b'y']
     >>> _earlygetopt([b'-R'], args), args
     (['foo'], ['x', 'y'])
 
+    >>> args = [b'x', b'-R', b'foo', b'y']
+    >>> _earlygetopt([b'-R'], args, strip=False), args
+    (['foo'], ['x', '-R', 'foo', 'y'])
+
     >>> args = [b'x', b'-Rbar', b'y']
     >>> _earlygetopt([b'-R'], args), args
     (['bar'], ['x', 'y'])
+
+    >>> args = [b'x', b'-Rbar', b'y']
+    >>> _earlygetopt([b'-R'], args, strip=False), args
+    (['bar'], ['x', '-Rbar', 'y'])
+
+    >>> args = [b'x', b'-R=bar', b'y']
+    >>> _earlygetopt([b'-R'], args), args
+    (['=bar'], ['x', 'y'])
+
+    >>> args = [b'x', b'-R', b'--', b'y']
+    >>> _earlygetopt([b'-R'], args), args
+    ([], ['x', '-R', '--', 'y'])
     """
     try:
         argcount = args.index("--")
@@ -671,27 +695,76 @@ def _earlygetopt(aliases, args):
     pos = 0
     while pos < argcount:
         fullarg = arg = args[pos]
-        equals = arg.find('=')
+        equals = -1
+        if arg.startswith('--'):
+            equals = arg.find('=')
         if equals > -1:
             arg = arg[:equals]
         if arg in aliases:
-            del args[pos]
             if equals > -1:
                 values.append(fullarg[equals + 1:])
-                argcount -= 1
+                if strip:
+                    del args[pos]
+                    argcount -= 1
+                else:
+                    pos += 1
             else:
                 if pos + 1 >= argcount:
                     # ignore and let getopt report an error if there is no value
                     break
-                values.append(args.pop(pos))
-                argcount -= 2
+                values.append(args[pos + 1])
+                if strip:
+                    del args[pos:pos + 2]
+                    argcount -= 2
+                else:
+                    pos += 2
         elif arg[:2] in shortopts:
             # short option can have no following space, e.g. hg log -Rfoo
-            values.append(args.pop(pos)[2:])
-            argcount -= 1
+            values.append(args[pos][2:])
+            if strip:
+                del args[pos]
+                argcount -= 1
+            else:
+                pos += 1
         else:
             pos += 1
     return values
+
+def _earlyreqopt(req, name, aliases):
+    """Peek a list option without using a full options table"""
+    values = _earlygetopt(aliases, req.args, strip=False)
+    req.earlyoptions[name] = values
+    return values
+
+def _earlyreqoptstr(req, name, aliases):
+    """Peek a string option without using a full options table"""
+    value = (_earlygetopt(aliases, req.args, strip=False) or [''])[-1]
+    req.earlyoptions[name] = value
+    return value
+
+def _earlyreqoptbool(req, name, aliases):
+    """Peek a boolean option without using a full options table
+
+    >>> req = request([b'x', b'--debugger'])
+    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
+    True
+
+    >>> req = request([b'x', b'--', b'--debugger'])
+    >>> _earlyreqoptbool(req, b'debugger', [b'--debugger'])
+    """
+    try:
+        argcount = req.args.index("--")
+    except ValueError:
+        argcount = len(req.args)
+    value = None
+    pos = 0
+    while pos < argcount:
+        arg = req.args[pos]
+        if arg in aliases:
+            value = True
+        pos += 1
+    req.earlyoptions[name] = value
+    return value
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
@@ -727,8 +800,8 @@ def _getlocal(ui, rpath, wd=None):
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
-    if rpath and rpath[-1]:
-        path = lui.expandpath(rpath[-1])
+    if rpath:
+        path = lui.expandpath(rpath)
         lui = ui.copy()
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
@@ -759,6 +832,9 @@ def _checkshellalias(lui, ui, args):
     fn = entry[0]
 
     if cmd and util.safehasattr(fn, 'shell'):
+        # shell alias shouldn't receive early options which are consumed by hg
+        args = args[:]
+        _earlygetopt(commands.earlyoptflags, args, strip=True)
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})
@@ -768,11 +844,11 @@ def _dispatch(req):
     ui = req.ui
 
     # check for cwd
-    cwd = _earlygetopt(['--cwd'], args)
+    cwd = _earlyreqoptstr(req, 'cwd', ['--cwd'])
     if cwd:
-        os.chdir(cwd[-1])
+        os.chdir(cwd)
 
-    rpath = _earlygetopt(["-R", "--repository", "--repo"], args)
+    rpath = _earlyreqoptstr(req, 'repository', ["-R", "--repository", "--repo"])
     path, lui = _getlocal(ui, rpath)
 
     uis = {ui, lui}
@@ -780,7 +856,7 @@ def _dispatch(req):
     if req.repo:
         uis.add(req.repo.ui)
 
-    if '--profile' in args:
+    if _earlyreqoptbool(req, 'profile', ['--profile']):
         for ui_ in uis:
             ui_.setconfig('profiling', 'enabled', 'true', '--profile')
 
@@ -812,14 +888,17 @@ def _dispatch(req):
         fullargs = args
         cmd, func, args, options, cmdoptions = _parse(lui, args)
 
-        if options["config"]:
+        if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(_("option --config may not be abbreviated!"))
-        if options["cwd"]:
+        if options["cwd"] != req.earlyoptions["cwd"]:
             raise error.Abort(_("option --cwd may not be abbreviated!"))
-        if options["repository"]:
+        if options["repository"] != req.earlyoptions["repository"]:
             raise error.Abort(_(
                 "option -R has to be separated from other options (e.g. not "
                 "-qR) and --repository may only be abbreviated as --repo!"))
+        if options["debugger"] != req.earlyoptions["debugger"]:
+            raise error.Abort(_("option --debugger may not be abbreviated!"))
+        # don't validate --profile/--traceback, which can be enabled from now
 
         if options["encoding"]:
             encoding.encoding = options["encoding"]
@@ -908,7 +987,7 @@ def _dispatch(req):
                 except error.RequirementError:
                     raise
                 except error.RepoError:
-                    if rpath and rpath[-1]: # invalid -R path
+                    if rpath: # invalid -R path
                         raise
                     if not func.optionalrepo:
                         if func.inferrepo and args and not path:

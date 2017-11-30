@@ -1233,9 +1233,17 @@ def registersummarycallback(repo, otr, txnname=''):
 
     def reportsummary(func):
         """decorator for report callbacks."""
-        reporef = weakref.ref(repo)
+        # The repoview life cycle is shorter than the one of the actual
+        # underlying repository. So the filtered object can die before the
+        # weakref is used leading to troubles. We keep a reference to the
+        # unfiltered object and restore the filtering when retrieving the
+        # repository through the weakref.
+        filtername = repo.filtername
+        reporef = weakref.ref(repo.unfiltered())
         def wrapped(tr):
             repo = reporef()
+            if filtername:
+                repo = repo.filtered(filtername)
             func(repo, tr)
         newcat = '%2i-txnreport' % len(categories)
         otr.addpostclose(newcat, wrapped)

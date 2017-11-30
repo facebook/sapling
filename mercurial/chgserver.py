@@ -235,6 +235,7 @@ def _loadnewui(srcui, args):
     cwds = dispatch._earlygetopt(['--cwd'], args)
     cwd = cwds and os.path.realpath(cwds[-1]) or None
     rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
+    rpath = rpath and rpath[-1] or ''
     path, newlui = dispatch._getlocal(newui, rpath, wd=cwd)
 
     return (newui, newlui)
