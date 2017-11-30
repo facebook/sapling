@@ -22,6 +22,7 @@ extern crate error_chain;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate futures_ext;
+extern crate futures_stats;
 extern crate hyper;
 #[macro_use]
 extern crate lazy_static;
@@ -29,6 +30,7 @@ extern crate mercurial_types;
 extern crate native_tls;
 extern crate openssl;
 extern crate regex;
+extern crate scuba;
 extern crate secure_utils;
 extern crate serde;
 #[macro_use]
@@ -61,6 +63,7 @@ use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
 use mercurial_types::{NodeHash, Repo};
@@ -68,9 +71,9 @@ use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
 use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
 use regex::{Captures, Regex};
+use scuba::{ScubaClient, ScubaSample};
 use slog::{Drain, Level, Logger};
 use tokio_tls::TlsAcceptorExt;
-
 mod errors;
 
 use errors::*;
@@ -79,6 +82,15 @@ type NameToRepo<State> = HashMap<String, Arc<BlobRepo<State>>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
 
 struct Route(Regex, UrlParseFunc);
+
+const SCUBA_TABLE: &'static str = "mononoke_eden_server";
+const SCUBA_COL_POLL_TIME: &'static str = "poll_time_ns";
+const SCUBA_COL_POLL_COUNT: &'static str = "poll_count";
+const SCUBA_COL_HASH: &'static str = "hash";
+const SCUBA_COL_OPERATION: &'static str = "operation";
+const SCUBA_OPERATION_GET_TREE_CONTENT: &'static str = "get_tree_content";
+const SCUBA_OPERATION_GET_MENIFEST: &'static str = "get_root_tree_manifest_id";
+const SCUBA_OPERATION_GET_BLOB_CONTENT: &'static str = "get_blob_content";
 
 fn parse_capture<T>(caps: &Captures, index: usize) -> Result<T>
 where
@@ -181,6 +193,7 @@ struct EdenServer<State> {
     name_to_repo: NameToRepo<State>,
     cpupool: Arc<CpuPool>,
     logger: Logger,
+    scuba: Arc<ScubaClient>,
 }
 
 impl<State> EdenServer<State>
@@ -197,6 +210,7 @@ where
             name_to_repo,
             cpupool,
             logger,
+            scuba: Arc::new(ScubaClient::new(SCUBA_TABLE)),
         }
     }
 
@@ -258,6 +272,18 @@ where
     }
 }
 
+/// Add values from the given Stats struct to the given Scuba sample.
+fn add_common_stats(sample: &mut ScubaSample, stats: &Stats) {
+    sample.add(
+        SCUBA_COL_POLL_TIME,
+        stats.completion_time.num_milliseconds(),
+    );
+    if let Some(nanos) = stats.poll_time.num_nanoseconds() {
+        sample.add(SCUBA_COL_POLL_TIME, nanos);
+    }
+    sample.add(SCUBA_COL_POLL_COUNT, stats.poll_count);
+}
+
 impl<State> Service for EdenServer<State>
 where
     State: BlobState,
@@ -269,6 +295,10 @@ where
 
     fn call(&self, req: Request) -> Self::Future {
         debug!(self.logger, "request: {}", req.uri().path());
+
+        let scuba = self.scuba.clone();
+        let mut sample = ScubaSample::new();
+
         let mut resp = Response::new();
         let parsed_req = match parse_url(req.uri().path(), &ROUTES) {
             Ok(req) => req,
@@ -281,24 +311,36 @@ where
 
         let result_future = match parsed_req {
             ParsedUrl::RootTreeManifestId(reponame, hash) => {
+                sample.add(SCUBA_COL_HASH, hash.to_string());
+                sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_MENIFEST);
                 self.get_root_tree_manifest_id(reponame, &hash)
             }
-            ParsedUrl::TreeContent(reponame, hash) => self.get_tree_content(reponame, &hash)
-                .map(|metadata| {
-                    let err_msg = format!(
-                        "failed to get metadata for {}",
-                        metadata.path.to_string_lossy()
-                    );
-                    serde_json::to_value(&metadata).unwrap_or(err_msg.into())
-                })
-                .collect()
-                .map(|entries| {
-                    let x: serde_json::Value = entries.into();
-                    x.to_string().into_bytes()
-                })
-                .boxify(),
-            ParsedUrl::BlobContent(reponame, hash) => self.get_blob_content(reponame, &hash),
+            ParsedUrl::TreeContent(reponame, hash) => {
+                sample.add(SCUBA_COL_HASH, hash.to_string());
+                sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_TREE_CONTENT);
+
+                self.get_tree_content(reponame, &hash)
+                    .map(|metadata| {
+                        let err_msg = format!(
+                            "failed to get metadata for {}",
+                            metadata.path.to_string_lossy()
+                        );
+                        serde_json::to_value(&metadata).unwrap_or(err_msg.into())
+                    })
+                    .collect()
+                    .map(|entries| {
+                        let x: serde_json::Value = entries.into();
+                        x.to_string().into_bytes()
+                    })
+                    .boxify()
+            }
+            ParsedUrl::BlobContent(reponame, hash) => {
+                sample.add(SCUBA_COL_HASH, hash.to_string());
+                sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_BLOB_CONTENT);
+                self.get_blob_content(reponame, &hash)
+            }
         };
+
         result_future
             .then(|res| {
                 match res {
@@ -312,6 +354,10 @@ where
                     }
                 };
                 futures::future::ok(resp)
+            })
+            .timed(move |stats, _| {
+                add_common_stats(&mut sample, &stats);
+                scuba.log(&sample);
             })
             .boxify()
     }
