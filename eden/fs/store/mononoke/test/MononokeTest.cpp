@@ -160,20 +160,14 @@ class MononokeBackingStoreTest : public ::testing::Test {
 TEST_F(MononokeBackingStoreTest, testGetBlob) {
   auto server = createServer();
   auto blobs = getBlobs();
-  std::thread t([&]() {
-    server->start([&server, &blobs]() {
-      MononokeBackingStore store(
-          server->addresses()[0].address,
-          "repo",
-          std::chrono::milliseconds(400));
-      auto blob = store.getBlob(kZeroHash).get();
-      auto buf = blob->getContents();
-      EXPECT_EQ(blobs[kZeroHash.toString()], buf.moveToFbString());
-      server->stop();
-    });
+  server->start([&server, &blobs]() {
+    MononokeBackingStore store(
+        server->addresses()[0].address, "repo", std::chrono::milliseconds(400));
+    auto blob = store.getBlob(kZeroHash).get();
+    auto buf = blob->getContents();
+    EXPECT_EQ(blobs[kZeroHash.toString()], buf.moveToFbString());
+    server->stop();
   });
-
-  t.join();
 }
 
 TEST_F(MononokeBackingStoreTest, testConnectFailed) {
@@ -195,88 +189,70 @@ TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto emptyhash = this->emptyhash;
-  std::thread t([&]() {
-    server->start([&server, &blobs, emptyhash]() {
-      MononokeBackingStore store(
-          server->addresses()[0].address,
-          "repo",
-          std::chrono::milliseconds(300));
-      auto blob = store.getBlob(emptyhash).get();
-      auto buf = blob->getContents();
-      EXPECT_EQ(blobs[emptyhash.toString()], buf.moveToFbString());
-      server->stop();
-    });
+  server->start([&server, &blobs, emptyhash]() {
+    MononokeBackingStore store(
+        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+    auto blob = store.getBlob(emptyhash).get();
+    auto buf = blob->getContents();
+    EXPECT_EQ(blobs[emptyhash.toString()], buf.moveToFbString());
+    server->stop();
   });
-
-  t.join();
 }
 
 TEST_F(MononokeBackingStoreTest, testGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->treehash;
-  std::thread t([&]() {
-    server->start([&server, &blobs, treehash]() {
-      MononokeBackingStore store(
-          server->addresses()[0].address,
-          "repo",
-          std::chrono::milliseconds(300));
-      auto tree = store.getTree(treehash).get();
-      auto tree_entries = tree->getTreeEntries();
+  server->start([&server, &blobs, treehash]() {
+    MononokeBackingStore store(
+        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+    auto tree = store.getTree(treehash).get();
+    auto tree_entries = tree->getTreeEntries();
 
-      std::vector<TreeEntry> expected_entries{
-          TreeEntry(
-              Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
-              "a",
-              FileType::REGULAR_FILE,
-              0b110),
-          TreeEntry(
-              Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
-              "b",
-              FileType::REGULAR_FILE,
-              0b110),
-          TreeEntry(
-              Hash("3333333333333333333333333333333333333333"),
-              "dir",
-              FileType::DIRECTORY,
-              0b111),
-          TreeEntry(
-              Hash("4444444444444444444444444444444444444444"),
-              "exec",
-              FileType::REGULAR_FILE,
-              0b111),
-          TreeEntry(
-              Hash("5555555555555555555555555555555555555555"),
-              "link",
-              FileType::SYMLINK,
-              0b111),
-      };
+    std::vector<TreeEntry> expected_entries{
+        TreeEntry(
+            Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
+            "a",
+            FileType::REGULAR_FILE,
+            0b110),
+        TreeEntry(
+            Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
+            "b",
+            FileType::REGULAR_FILE,
+            0b110),
+        TreeEntry(
+            Hash("3333333333333333333333333333333333333333"),
+            "dir",
+            FileType::DIRECTORY,
+            0b111),
+        TreeEntry(
+            Hash("4444444444444444444444444444444444444444"),
+            "exec",
+            FileType::REGULAR_FILE,
+            0b111),
+        TreeEntry(
+            Hash("5555555555555555555555555555555555555555"),
+            "link",
+            FileType::SYMLINK,
+            0b111),
+    };
 
-      Tree expected_tree(std::move(expected_entries), treehash);
-      EXPECT_TRUE(expected_tree == *tree);
-      server->stop();
-    });
+    Tree expected_tree(std::move(expected_entries), treehash);
+    EXPECT_TRUE(expected_tree == *tree);
+    server->stop();
   });
-
-  t.join();
 }
 
 TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->malformedhash;
-  std::thread t([&]() {
-    server->start([&server, &blobs, treehash]() {
-      MononokeBackingStore store(
-          server->addresses()[0].address,
-          "repo",
-          std::chrono::milliseconds(300));
-      EXPECT_THROW(store.getTree(treehash).get(), std::exception);
-      server->stop();
-    });
+  server->start([&server, &blobs, treehash]() {
+    MononokeBackingStore store(
+        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+    EXPECT_THROW(store.getTree(treehash).get(), std::exception);
+    server->stop();
   });
-
-  t.join();
 }
 
 TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
@@ -284,48 +260,42 @@ TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
   auto blobs = getBlobs();
   auto commithash = this->commithash;
   auto treehash = this->treehash;
-  std::thread t([&]() {
-    server->start([&server, commithash, treehash]() {
-      MononokeBackingStore store(
-          server->addresses()[0].address,
-          "repo",
-          std::chrono::milliseconds(300));
-      auto tree = store.getTreeForCommit(commithash).get();
-      auto tree_entries = tree->getTreeEntries();
+  server->start([&server, commithash, treehash]() {
+    MononokeBackingStore store(
+        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+    auto tree = store.getTreeForCommit(commithash).get();
+    auto tree_entries = tree->getTreeEntries();
 
-      std::vector<TreeEntry> expected_entries{
-          TreeEntry(
-              Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
-              "a",
-              FileType::REGULAR_FILE,
-              0b110),
-          TreeEntry(
-              Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
-              "b",
-              FileType::REGULAR_FILE,
-              0b110),
-          TreeEntry(
-              Hash("3333333333333333333333333333333333333333"),
-              "dir",
-              FileType::DIRECTORY,
-              0b111),
-          TreeEntry(
-              Hash("4444444444444444444444444444444444444444"),
-              "exec",
-              FileType::REGULAR_FILE,
-              0b111),
-          TreeEntry(
-              Hash("5555555555555555555555555555555555555555"),
-              "link",
-              FileType::SYMLINK,
-              0b111),
-      };
+    std::vector<TreeEntry> expected_entries{
+        TreeEntry(
+            Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
+            "a",
+            FileType::REGULAR_FILE,
+            0b110),
+        TreeEntry(
+            Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
+            "b",
+            FileType::REGULAR_FILE,
+            0b110),
+        TreeEntry(
+            Hash("3333333333333333333333333333333333333333"),
+            "dir",
+            FileType::DIRECTORY,
+            0b111),
+        TreeEntry(
+            Hash("4444444444444444444444444444444444444444"),
+            "exec",
+            FileType::REGULAR_FILE,
+            0b111),
+        TreeEntry(
+            Hash("5555555555555555555555555555555555555555"),
+            "link",
+            FileType::SYMLINK,
+            0b111),
+    };
 
-      Tree expected_tree(std::move(expected_entries), treehash);
-      EXPECT_TRUE(expected_tree == *tree);
-      server->stop();
-    });
+    Tree expected_tree(std::move(expected_entries), treehash);
+    EXPECT_TRUE(expected_tree == *tree);
+    server->stop();
   });
-
-  t.join();
 }
