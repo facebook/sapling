@@ -305,9 +305,6 @@ class basematcher(object):
         Returns the string 'all' if the given directory and all subdirectories
         should be visited. Otherwise returns True or False indicating whether
         the given directory should be visited.
-
-        This function's behavior is undefined if it has returned False for
-        one of the dir's parent directories.
         '''
         return True
 
