@@ -836,10 +836,11 @@ def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
     Unlike upstream rebase, we don't want to skip purely pruned commits.
     We also want to explain why some particular commit was skipped."""
     res = orig(repo, rebaseobsrevs, dest)
-    for key in res.keys():
-        if res[key] is None:
+    obsoletenotrebased = res[0]
+    for key in obsoletenotrebased.keys():
+        if obsoletenotrebased[key] is None:
             # key => None is a sign of a pruned commit
-            del res[key]
+            del obsoletenotrebased[key]
     return res
 
 def _checkobsrebasewrapper(orig, repo, ui, *args):
