@@ -150,12 +150,39 @@ def _topacks(packpath, files, constructor):
     packs = list(constructor(p) for p in paths)
     return packs
 
+def _deletebigpacks(repo, folder, files):
+    """Deletes packfiles that are bigger than ``packs.maxpacksize``.
+
+    Returns ``files` with the removed files omitted."""
+    maxsize = repo.ui.configbytes("packs", "maxpacksize")
+    if maxsize <= 0:
+        return files
+
+    # This only considers datapacks today, but we could broaden it to include
+    # historypacks.
+    VALIDEXTS = [".datapack", ".dataidx"]
+
+    # Either an oversize index or datapack will trigger cleanup of the whole
+    # pack:
+    oversized = set([os.path.splitext(path)[0] for path, ftype, stat in files
+        if (stat.st_size > maxsize and (os.path.splitext(path)[1]
+                                        in VALIDEXTS))])
+
+    for rootfname in oversized:
+        rootpath = os.path.join(folder, rootfname)
+        for ext in VALIDEXTS:
+            path = rootpath + ext
+            repo.ui.debug('removing oversize packfile %s (%s)\n' %
+                          (path, util.bytecount(os.stat(path).st_size)))
+            os.unlink(path)
+    return [row for row in files if os.path.basename(row[0]) not in oversized]
+
 def _incrementalrepack(repo, datastore, historystore, packpath, category,
         allowincompletedata=False, options=None):
     shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
-
+    files = _deletebigpacks(repo, packpath, files)
     datapacks = _topacks(packpath,
         _computeincrementaldatapack(repo.ui, files),
         datapack.datapack)

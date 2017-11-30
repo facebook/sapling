@@ -427,3 +427,9 @@ Test limiting the max delta chain length
   577959738234  000000000000  8             8
   
   Total:                      8             8         (0.0% bigger)
+
+Test huge pack cleanup using different values of packs.maxpacksize:
+  $ hg repack --incremental --debug
+  $ hg repack --incremental --debug --config packs.maxpacksize=512
+  removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.datapack (365 bytes)
+  removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.dataidx (1.21 KB)

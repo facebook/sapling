@@ -11,6 +11,7 @@ only download them ondemand as needed.
 Configs:
 
     ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
+    ``packs.maxpacksize`` specifies the maximum pack file size
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
     ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
       update, and on other commands that use them. Different from pullprefetch.
