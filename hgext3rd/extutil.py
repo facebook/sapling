@@ -9,12 +9,10 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
-import fcntl
 import os
 import subprocess
 import time
 
-from mercurial.i18n import _
 from mercurial import (
     error,
     lock as lockmod,
@@ -135,45 +133,6 @@ def replaceclass(container, classname):
         setattr(container, classname, cls)
         return cls
     return wrap
-
-class fcntllock(object):
-    """A fcntllock based lock object. Currently it is always non-blocking.
-
-    Note that since it is fcntllock based, you can accidentally take it multiple
-    times within one process and the first one to be released will release all
-    of them. So the caller needs to be careful to not create more than one
-    instance per lock.
-    """
-    def __init__(self, opener, name, description):
-        self.path = opener.join(name)
-        self.description = description
-        self.fp = None
-
-    def __enter__(self):
-        path = self.path
-        if self.fp is not None:
-            raise error.Abort(_("unable to re-enter lock '%s'") % path)
-        try:
-            self.fp = open(path, 'w+')
-        except (IOError, OSError) as ex:
-            raise error.Abort(_("unable to create lock file '%s': %s") %
-                              (path, str(ex)))
-
-        try:
-            fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except IOError:
-            self.fp.close()
-            self.fp = None
-            raise error.LockHeld(errno.EAGAIN, path, self.description, '')
-
-        return self
-
-    def __exit__(self, type, value, traceback):
-        fp = self.fp
-        if fp is not None:
-            fcntl.lockf(fp, fcntl.LOCK_UN)
-            fp.close()
-            self.fp = None
 
 @contextlib.contextmanager
 def flock(lockpath, description, timeout=-1):

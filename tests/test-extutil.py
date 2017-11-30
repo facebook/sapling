@@ -52,12 +52,13 @@ class ExtutilTests(unittest.TestCase):
         except OSError as ex:
             self.assertEqual(ex.errno, errno.EACCES)
 
-    def testfcntllock(self):
+    def testflock(self):
         testtmp = os.environ["TESTTMP"]
         opener = vfs.vfs(testtmp)
         name = 'testlock'
 
-        with extutil.fcntllock(opener, name, 'testing a lock'):
+        with extutil.flock(opener.join(name), 'testing a lock',
+                           timeout=0):
             otherlock = self.otherprocesslock(opener, name)
             self.assertEquals(otherlock, locktimeout,
                               "other process should not have taken the lock")
@@ -70,7 +71,8 @@ class ExtutilTests(unittest.TestCase):
         pid = os.fork()
         if pid == 0:
             try:
-                with extutil.fcntllock(opener, name, 'other process lock'):
+                with extutil.flock(opener.join(name), 'other process lock',
+                                   timeout=0):
                     os._exit(locksuccess)
             except error.LockHeld:
                 os._exit(locktimeout)

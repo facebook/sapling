@@ -20,7 +20,7 @@ from . import (
 )
 from .repack import repacklockvfs
 from .lz4wrapper import lz4decompress
-import hashlib, os, time
+import hashlib, os
 
 def debugremotefilelog(ui, path, **opts):
     decompress = opts.get('decompress')
@@ -360,12 +360,8 @@ def debughistorypack(ui, path):
             short(p2node), short(linknode), copyfrom))
 
 def debugwaitonrepack(repo):
-    while True:
-        try:
-            with extutil.fcntllock(repacklockvfs(repo), 'repacklock', ''):
-                return
-        except error.LockHeld:
-            time.sleep(0.1)
+    with extutil.flock(repacklockvfs(repo).join('repacklock'), ''):
+        return
 
 def debugwaitonprefetch(repo):
     with repo._lock(repo.svfs, "prefetchlock", True, None,
