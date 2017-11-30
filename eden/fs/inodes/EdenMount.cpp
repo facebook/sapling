@@ -392,13 +392,14 @@ FileInodePtr EdenMount::getFileInodeBlocking(RelativePathPiece path) const {
 
 folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
     Hash snapshotHash,
-    bool force) {
+    CheckoutMode checkoutMode) {
   // Hold the snapshot lock for the duration of the entire checkout operation.
   //
   // This prevents multiple checkout operations from running in parallel.
   auto parentsLock = parentInfo_.wlock();
   auto oldParents = parentsLock->parents;
-  auto ctx = std::make_shared<CheckoutContext>(std::move(parentsLock), force);
+  auto ctx =
+      std::make_shared<CheckoutContext>(std::move(parentsLock), checkoutMode);
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
              << oldParents << " to " << snapshotHash;
 
@@ -434,8 +435,15 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // Save the new snapshot hash
         XLOG(DBG1) << "updating snapshot for " << this->getPath() << " from "
                    << oldParents << " to " << snapshotHash;
-        this->config_->setParentCommits(snapshotHash);
         auto conflicts = ctx->finish(snapshotHash);
+        if (ctx->isDryRun()) {
+          // This is a dry run, so all we need to do is tell the caller about
+          // the conflicts: we should not modify any files or add any entries to
+          // the journal.
+          return folly::makeFuture(conflicts);
+        }
+
+        this->config_->setParentCommits(snapshotHash);
 
         // Write a journal entry
         return journalDiffCallback

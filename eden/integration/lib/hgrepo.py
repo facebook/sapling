@@ -196,12 +196,16 @@ class HgRepository(repobase.Repository):
         '''Returns the output of `hg status` as a string.'''
         return self.hg('status')
 
-    def update(self, rev: str, clean: bool = False) -> None:
+    def update(
+        self, rev: str, clean: bool = False, merge: bool = False
+    ) -> None:
+        args = ['update']
         if clean:
-            args = ['update', '--clean', rev]
-        else:
-            args = ['update', rev]
-        self.hg(*args, stdout=None, stderr=None)
+            args.append('--clean')
+        if merge:
+            args.append('--merge')
+        args.append(rev)
+        self.hg(*args)
 
     def reset(self, rev: str, keep: bool = True) -> None:
         if keep:

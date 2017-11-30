@@ -283,8 +283,15 @@ Future<Unit> CheckoutAction::doAction() {
   // All the data is ready and we're ready to go!
 
   // Check for conflicts first.
-  if (hasConflict() && !ctx_->forceUpdate()) {
-    // hasConflict will have added the conflict information to ctx_
+  auto conflictWasAddedToCtx = hasConflict();
+  // Note that even if we know we are not going to apply the changes, we must
+  // still run hasConflict() first because we rely on its side-effects.
+  if (conflictWasAddedToCtx && !ctx_->forceUpdate()) {
+    // We only report conflicts for files, not directories. The only possible
+    // conflict that can occur here if this inode is a TreeInode is that the old
+    // source control state was for a file. There aren't really any other
+    // conflicts than this to report, even if we recurse. Anything inside this
+    // directory is basically just untracked (or possibly ignored) files.
     return makeFuture();
   }
 

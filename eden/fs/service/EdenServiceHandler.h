@@ -46,7 +46,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::vector<CheckoutConflict>& results,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> hash,
-      bool force) override;
+      CheckoutMode checkoutMode) override;
 
   void resetParentCommits(
       std::unique_ptr<std::string> mountPoint,

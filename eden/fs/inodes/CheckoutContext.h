@@ -37,17 +37,17 @@ class CheckoutContext {
  public:
   CheckoutContext(
       folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
-      bool force);
+      CheckoutMode checkoutMode);
   ~CheckoutContext();
 
   /**
-   * Returns true if the checkout operation should actually update the inodes,
-   * or false if it should do a dry run, looking for conflicts without actually
-   * updating the inode contents.
+   * Returns true if the checkout operation should do a dry run, looking for
+   * conflicts without actually updating the inode contents. If it returns
+   * false, it should actually update the inodes as part of the checkout.
    */
-  bool shouldApplyChanges() const {
+  bool isDryRun() const {
     // TODO: make this configurable on checkout start
-    return true;
+    return checkoutMode_ == CheckoutMode::DRY_RUN;
   }
 
   /**
@@ -59,10 +59,10 @@ class CheckoutContext {
    * new contents, rather than just reporting and skipping files with
    * conflicts.
    *
-   * forceUpdate() can only return true when shouldApplyChanges() is also true.
+   * forceUpdate() can only return true when isDryRun() is false.
    */
   bool forceUpdate() const {
-    return force_;
+    return checkoutMode_ == CheckoutMode::FORCE;
   }
 
   /**
@@ -99,7 +99,7 @@ class CheckoutContext {
   }
 
  private:
-  bool const force_{false};
+  CheckoutMode checkoutMode_;
   folly::Synchronized<EdenMount::ParentInfo>::LockedPtr parentsLock_;
   RenameLock renameLock_;
 

@@ -139,6 +139,29 @@ struct ScmStatus {
   1: map<string, ScmFileStatus> entries
 }
 
+/** Option for use with checkOutRevision(). */
+enum CheckoutMode {
+  /**
+   * Perform a "normal" checkout, analogous to `hg checkout` in Mercurial. Files
+   * in the working copy will be changed to reflect the destination snapshot,
+   * though files with conflicts will not be modified.
+   */
+  NORMAL = 0,
+
+  /**
+   * Do not checkout: exercise the checkout logic to discover potential
+   * conflicts.
+   */
+  DRY_RUN = 1,
+
+  /**
+   * Perform a "forced" checkout, analogous to `hg checkout --clean` in
+   * Mercurial. Conflicts between the working copy and destination snapshot will
+   * be forcibly ignored in favor of the state of the new snapshot.
+   */
+  FORCE = 2,
+}
+
 enum ConflictType {
   /**
    * We failed to update this particular path due to an error
@@ -285,31 +308,31 @@ service EdenService extends fb303.FacebookService {
   void unmount(1: string mountPoint) throws (1: EdenError ex)
 
   /**
-   * Check out the specified snapshot.
+   * Potentially check out the specified snapshot, reporting conflicts (and
+   * possibly errors), as appropriate.
    *
-   * This updates the contents of the mount point so that they match the
-   * contents of the given snapshot.
-   *
-   * Returns a list of conflicts and errors that occurred when performing the
-   * checkout operation.
-   *
-   * If the force parameter is true, the working directory will be forcibly
+   * If the checkoutMode is FORCE, the working directory will be forcibly
    * updated to the contents of the new snapshot, even if there were conflicts.
-   * Conflicts will still be reported in the return value, but the files will
-   * be updated to their new state.  If the force parameter is false files with
-   * conflicts will be left unmodified.  Files that are untracked in both the
-   * source and destination snapshots are always left unchanged, even if force
-   * is true.
+   * Conflicts will still be reported in the return value, but the files will be
+   * updated to their new state.
    *
-   * On successful return from this function the mount point will point to the
-   * new commit, even if some paths had conflicts or errors.  The caller is
-   * responsible for taking appropriate action to update these paths as desired
-   * after checkOutRevision() returns.
+   * If the checkoutMode is NORMAL, files with conflicts will be left
+   * unmodified. Files that are untracked in both the source and destination
+   * snapshots are always left unchanged, even if force is true.
+   *
+   * If the checkoutMode is DRY_RUN, then no files are modified in the working
+   * copy and the current snapshot does not change. However, potential conflicts
+   * are still reported in the return value.
+   *
+   * On successful return from this function (unless it is a DRY_RUN), the mount
+   * point will point to the new snapshot, even if some paths had conflicts or
+   * errors. The caller is responsible for taking appropriate action to update
+   * these paths as desired after checkOutRevision() returns.
    */
   list<CheckoutConflict> checkOutRevision(
     1: string mountPoint,
     2: BinaryHash snapshotHash,
-    3: bool force)
+    3: CheckoutMode checkoutMode)
       throws (1: EdenError ex)
 
   /**

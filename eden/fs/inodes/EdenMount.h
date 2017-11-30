@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/ParentCommits.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -257,7 +258,7 @@ class EdenMount {
    */
   folly::Future<std::vector<CheckoutConflict>> checkout(
       Hash snapshotHash,
-      bool force = false);
+      CheckoutMode checkoutMode = CheckoutMode::NORMAL);
 
   /**
    * Compute differences between the current commit and the working directory

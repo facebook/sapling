@@ -9,8 +9,7 @@
 
 import os
 from eden.integration.hg.lib.hg_extension_test_base import (
-    EdenHgTestCase,
-    hg_test
+    EdenHgTestCase, hg_test
 )
 from eden.integration.lib import hgrepo
 from textwrap import dedent
@@ -201,23 +200,68 @@ class UpdateTest(EdenHgTestCase):
         )
         self.assertEqual(expected_contents, self.read_file('foo/bar.txt'))
 
-    def test_update_with_added_file_that_is_tracked_in_destination(
+    def test_merge_update_added_file_with_same_contents_in_destination(
         self
     ) -> None:
-        self._test_update_with_local_file_that_is_tracked_in_destination(True)
+        base_commit = self.repo.get_head_hash()
 
-    def test_update_with_untracked_file_that_is_tracked_in_destination(
+        file_contents = 'new file\n'
+        self.write_file('bar/some_new_file.txt', file_contents)
+        self.hg('add', 'bar/some_new_file.txt')
+        self.write_file('foo/bar.txt', 'Modify existing file.\n')
+        new_commit = self.repo.commit('add some_new_file.txt')
+        self.assert_status_empty()
+
+        self.repo.update(base_commit)
+        self.assert_status_empty()
+        self.write_file('bar/some_new_file.txt', file_contents)
+        self.hg('add', 'bar/some_new_file.txt')
+        self.assert_status({'bar/some_new_file.txt': 'A'})
+
+        # Note the update fails even though some_new_file.txt is the same in
+        # both the working copy and the destination.
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(new_commit)
+        self.assertIn(b'abort: conflicting changes', context.exception.stderr)
+        self.assertEqual(
+            base_commit,
+            self.repo.get_head_hash(),
+            msg='We should still be on the base commit because '
+            'the merge was aborted.'
+        )
+        self.assert_dirstate(
+            {
+                'bar/some_new_file.txt': ('a', 0, 'MERGE_BOTH'),
+            }
+        )
+        self.assert_status({'bar/some_new_file.txt': 'A'})
+        self.assertEqual(file_contents, self.read_file('bar/some_new_file.txt'))
+
+        # Now do the update with --merge specified.
+        self.repo.update(new_commit, merge=True)
+        self.assert_status_empty()
+        self.assertEqual(
+            new_commit,
+            self.repo.get_head_hash(),
+            msg='Should be expected commit hash because nothing has changed.'
+        )
+
+    def test_merge_update_added_file_with_conflict_in_destination(self) -> None:
+        self._test_merge_update_file_with_conflict_in_destination(True)
+
+    def test_merge_update_untracked_file_with_conflict_in_destination(
         self
     ) -> None:
-        self._test_update_with_local_file_that_is_tracked_in_destination(False)
+        self._test_merge_update_file_with_conflict_in_destination(False)
 
-    def _test_update_with_local_file_that_is_tracked_in_destination(
+    def _test_merge_update_file_with_conflict_in_destination(
         self, add_before_updating: bool
     ) -> None:
         base_commit = self.repo.get_head_hash()
         original_contents = 'Original contents.\n'
         self.write_file('some_new_file.txt', original_contents)
         self.hg('add', 'some_new_file.txt')
+        self.write_file('foo/bar.txt', 'Modify existing file.\n')
         commit = self.repo.commit('Commit a new file.')
         self.assert_status_empty()
 
@@ -243,10 +287,34 @@ class UpdateTest(EdenHgTestCase):
         path_to_backup = '.hg/origbackups/some_new_file.txt'
         expected_backup_file = os.path.join(self.mount, path_to_backup)
         self.assertFalse(os.path.isfile(expected_backup_file))
-        self.repo.update(commit)
-        self.assertEqual(commit, self.repo.get_head_hash())
-        self.assertEqual(original_contents, self.read_file('some_new_file.txt'))
-        self.assert_status_empty()
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.repo.update(commit, merge=True)
+        self.assertIn(
+            b'warning: conflicts while merging some_new_file.txt! '
+            b'(edit, then use \'hg resolve --mark\')', context.exception.stderr
+        )
+        self.assertEqual(
+            commit,
+            self.repo.get_head_hash(),
+            msg='Even though we have a merge conflict, '
+            'we should still be at the new commit.'
+        )
+        self.assert_dirstate({
+            'some_new_file.txt': ('n', 0, 'MERGE_BOTH'),
+        })
+        self.assert_status({
+            'some_new_file.txt': 'M',
+        })
+        merge_contents = dedent(
+            '''\
+        <<<<<<< working copy
+        Re-create the file with different contents.
+        =======
+        Original contents.
+        >>>>>>> destination
+        '''
+        )
+        self.assertEqual(merge_contents, self.read_file('some_new_file.txt'))
 
         # Verify the previous version of the file was backed up as expected.
         self.assertTrue(os.path.isfile(expected_backup_file))
@@ -275,16 +343,14 @@ class UpdateTest(EdenHgTestCase):
         self.hg('add', 'some_new_file.txt')
         self.repo.commit('Commit a new file.')
         new_contents = 'Make some changes to that new file.\n'
-        self.write_file(
-            'some_new_file.txt', new_contents
-        )
+        self.write_file('some_new_file.txt', new_contents)
 
         self.hg('update', '.^', '--merge', '--tool', ':local')
         self.assertEqual(new_contents, self.read_file('some_new_file.txt'))
         self.assert_status({'some_new_file.txt': 'A'})
 
     def test_update_ignores_untracked_directory(self) -> None:
-        head = self.repo.log()[-1]
+        base_commit = self.repo.get_head_hash()
         self.mkdir('foo/bar')
         self.write_file('foo/bar/a.txt', 'File in directory two levels deep.\n')
         self.write_file('foo/bar/b.txt', 'Another file.\n')
@@ -297,7 +363,7 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status({
             'foo/bar/b.txt': '?',
         })
-        self.hg('update', head)
+        self.repo.update(base_commit)
         self.assert_status({
             'foo/bar/b.txt': '?',
         })

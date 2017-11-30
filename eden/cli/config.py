@@ -238,7 +238,8 @@ class Config:
     def checkout(self, path, snapshot_id):
         '''Switch the active snapshot id for a given client'''
         with self.get_thrift_client() as client:
-            client.checkOutRevision(path, snapshot_id)
+            client.checkOutRevision(path, snapshot_id,
+                                    eden_ttypes.CheckoutMode.NORMAL)
 
     def add_repository(self, name, repo_type, source, with_buck=False):
         # Check if repository already exists

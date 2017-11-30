@@ -435,7 +435,7 @@ TEST(Checkout, modifyFile) {
 void testModifyConflict(
     folly::StringPiece path,
     LoadBehavior loadType,
-    bool force,
+    CheckoutMode checkoutMode,
     folly::StringPiece contents1,
     int perms1,
     folly::StringPiece currentContents,
@@ -470,6 +470,7 @@ void testModifyConflict(
   // Prepare the destination tree
   auto builder2 = builder1.clone();
   builder2.replaceFile(path, contents2, perms2);
+  builder2.replaceFile("a/b/dddd.c", "new dddd contents\n");
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("b", builder2);
   commit2->setReady();
@@ -477,7 +478,7 @@ void testModifyConflict(
   loadInodes(testMount, path, loadType, currentContents, currentPerms);
 
   auto checkoutResult =
-      testMount.getEdenMount()->checkout(makeTestHash("b"), force);
+      testMount.getEdenMount()->checkout(makeTestHash("b"), checkoutMode);
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = checkoutResult.get();
   ASSERT_EQ(1, results.size());
@@ -486,12 +487,16 @@ void testModifyConflict(
   EXPECT_EQ(ConflictType::MODIFIED_MODIFIED, results[0].type);
 
   auto postInode = testMount.getFileInode(path);
-  if (force) {
-    // Make sure the path is updated as expected
-    EXPECT_FILE_INODE(postInode, contents2, perms2);
-  } else {
-    // Make sure the path has not been changed
-    EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+  switch (checkoutMode) {
+    case CheckoutMode::FORCE:
+      // Make sure the path is updated as expected
+      EXPECT_FILE_INODE(postInode, contents2, perms2);
+      break;
+    case CheckoutMode::DRY_RUN:
+    case CheckoutMode::NORMAL:
+      // Make sure the path has not been changed
+      EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+      break;
   }
 
   // Unmount and remount the mount point, and verify the changes persisted
@@ -499,22 +504,33 @@ void testModifyConflict(
   postInode.reset();
   testMount.remount();
   postInode = testMount.getFileInode(path);
-  if (force) {
-    EXPECT_FILE_INODE(postInode, contents2, perms2);
-  } else {
-    EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+  auto ddddInode = testMount.getFileInode("a/b/dddd.c");
+  switch (checkoutMode) {
+    case CheckoutMode::FORCE:
+      EXPECT_FILE_INODE(postInode, contents2, perms2);
+      EXPECT_FILE_INODE(ddddInode, "new dddd contents\n", 0644);
+      break;
+    case CheckoutMode::DRY_RUN:
+      EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+      EXPECT_FILE_INODE(ddddInode, "this is dddd.c\n", 0644);
+      break;
+    case CheckoutMode::NORMAL:
+      EXPECT_FILE_INODE(postInode, currentContents, currentPerms);
+      EXPECT_FILE_INODE(ddddInode, "new dddd contents\n", 0644);
+      break;
   }
 }
 
 void runModifyConflictTests(folly::StringPiece path) {
   for (auto loadType : kAllLoadTypes) {
-    for (bool force : {true, false}) {
+    for (auto checkoutMode :
+         {CheckoutMode::NORMAL, CheckoutMode::DRY_RUN, CheckoutMode::FORCE}) {
       SCOPED_TRACE(folly::to<string>(
-          "path ", path, " load type ", loadType, " force=", force));
+          "path ", path, " load type ", loadType, " force=", checkoutMode));
       testModifyConflict(
           path,
           loadType,
-          force,
+          checkoutMode,
           "orig file contents.txt",
           0644,
           "current file contents.txt",
@@ -550,9 +566,8 @@ TEST(Checkout, modifyThenRevert) {
 
   // Now perform a forced checkout to the current commit,
   // which should discard our edits.
-  bool force = true;
   auto checkoutResult =
-      testMount.getEdenMount()->checkout(originalCommit, force);
+      testMount.getEdenMount()->checkout(originalCommit, CheckoutMode::FORCE);
   ASSERT_TRUE(checkoutResult.isReady());
   // The checkout should report a/test.txt as a conflict
   EXPECT_THAT(

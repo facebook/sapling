@@ -22,8 +22,8 @@ namespace eden {
 
 CheckoutContext::CheckoutContext(
     folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
-    bool force)
-    : force_{force}, parentsLock_(std::move(parentsLock)) {}
+    CheckoutMode checkoutMode)
+    : checkoutMode_{checkoutMode}, parentsLock_(std::move(parentsLock)) {}
 
 CheckoutContext::~CheckoutContext() {}
 
@@ -32,8 +32,11 @@ void CheckoutContext::start(RenameLock&& renameLock) {
 }
 
 vector<CheckoutConflict> CheckoutContext::finish(Hash newSnapshot) {
-  // Update the in-memory snapshot ID
-  parentsLock_->parents.setParents(newSnapshot);
+  // Only update the parents if it is not a dry run.
+  if (!isDryRun()) {
+    // Update the in-memory snapshot ID
+    parentsLock_->parents.setParents(newSnapshot);
+  }
 
   // Release our locks.
   // This would release automatically when the CheckoutContext is destroyed,

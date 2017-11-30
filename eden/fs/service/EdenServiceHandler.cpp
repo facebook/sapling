@@ -146,16 +146,17 @@ void EdenServiceHandler::checkOutRevision(
     std::vector<CheckoutConflict>& results,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
-    bool force) {
+    CheckoutMode checkoutMode) {
   INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
       hashFromThrift(*hash).toString(),
-      folly::format("force={}", force ? "true" : "false"));
+      folly::get_default(
+          _CheckoutMode_VALUES_TO_NAMES, checkoutMode, "(unknown)"));
   auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);
-  auto checkoutFuture = edenMount->checkout(hashObj, force);
+  auto checkoutFuture = edenMount->checkout(hashObj, checkoutMode);
   results = checkoutFuture.get();
 }
 

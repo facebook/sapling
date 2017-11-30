@@ -2194,7 +2194,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // This is a new entry being added, that did not exist in the old tree
       // and does not currently exist in the filesystem.  Go ahead and add it
       // now.
-      if (ctx->shouldApplyChanges()) {
+      if (!ctx->isDryRun()) {
         auto newEntry =
             make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
         contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
@@ -2212,7 +2212,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       ctx->addConflict(
           ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
       if (ctx->forceUpdate()) {
-        DCHECK(ctx->shouldApplyChanges());
+        DCHECK(!ctx->isDryRun());
         auto newEntry =
             make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
         contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
@@ -2275,7 +2275,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   // Bail out now if we aren't actually supposed to apply changes.
-  if (!ctx->shouldApplyChanges()) {
+  if (ctx->isDryRun()) {
     return nullptr;
   }
 
@@ -2303,10 +2303,14 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     std::shared_ptr<const Tree> oldTree,
     std::shared_ptr<const Tree> newTree,
     const folly::Optional<TreeEntry>& newScmEntry) {
-  CHECK(ctx->shouldApplyChanges());
-
   auto treeInode = inode.asTreePtrOrNull();
   if (!treeInode) {
+    // If the target of the update is not a directory, then we know we do not
+    // need to recurse into it, looking for more conflicts, so we can exit here.
+    if (ctx->isDryRun()) {
+      return makeFuture();
+    }
+
     std::unique_ptr<InodeBase> deletedInode;
     auto contents = contents_.wlock();
 
@@ -2357,6 +2361,15 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     CHECK(newScmEntry.hasValue());
     CHECK_EQ(TreeEntryType::TREE, newScmEntry->getType());
     return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree));
+  }
+
+  if (ctx->isDryRun()) {
+    // TODO(mbolin): As it stands, if this is a dry run, we will not report a
+    // DIRECTORY_NOT_EMPTY conflict if it exists. We need to do further
+    // investigation to determine whether this is acceptible behavior.
+    // Currently, the Hg extension ignores DIRECTORY_NOT_EMPTY conflicts, but
+    // that may not be the right thing to do.
+    return makeFuture();
   }
 
   // We need to remove this directory (and possibly replace it with a file).
@@ -2411,6 +2424,12 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
 void TreeInode::saveOverlayPostCheckout(
     CheckoutContext* ctx,
     const Tree* tree) {
+  if (ctx->isDryRun()) {
+    // If this is a dry run, then we do not want to update the parents or make
+    // any sort of unnecessary writes to the overlay, so we bail out.
+    return;
+  }
+
   bool isMaterialized;
   bool stateChanged;
   bool deleteSelf;
