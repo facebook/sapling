@@ -18,6 +18,9 @@ New errors are not allowed. Warnings are strongly discouraged.
       elif ui.configbool('p4fastimport', 'useworker', False):
   conflict on p4fastimport.useworker: ('bool', '') != ('str', '')
   at hgext3rd/p4fastimport/util.py:*: (glob)
+          self.retry = ui.configint('lfs', 'retry')
+  conflict on lfs.retry: ('int', '') != ('int', '5')
+  at /data/users/quark/facebook-hg-rpms/hg-crew/tests/../hgext/lfs/blobstore.py:94:
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)
