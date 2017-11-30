@@ -754,10 +754,29 @@ def _sendbundle(bundler, other):
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 
-def findcommonoutgoing(repo, other, heads):
+def findcommonoutgoing(repo, ui, other, heads):
     if heads:
-        nodes = map(repo.changelog.node, heads)
-        return discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
+        # Avoid using remotenames fastheaddiscovery heuristic. It uses
+        # remotenames file to quickly find commonoutgoing set, but it can
+        # result in sending public commits to infinitepush servers.
+        # For example:
+        #
+        #        o draft
+        #       /
+        #      o C1
+        #      |
+        #     ...
+        #      |
+        #      o remote/master
+        #
+        # pushbackup in that case results in sending to the infinitepush server
+        # all public commits from 'remote/master' to C1. It increases size of
+        # the bundle + it may result in storing data about public commits
+        # in infinitepush table.
+
+        with ui.configoverride({("remotenames", "fastheaddiscovery"): False}):
+            nodes = map(repo.changelog.node, heads)
+            return discovery.findcommonoutgoing(repo, other, onlyheads=nodes)
     else:
         return None
 
@@ -782,7 +801,7 @@ def _getrevstobackup(repo, ui, other, headstobackup):
                            headstobackup)
 
     revs = list(repo[hexnode].rev() for hexnode in headstobackup)
-    outgoing = findcommonoutgoing(repo, other, revs)
+    outgoing = findcommonoutgoing(repo, ui, other, revs)
     nodeslimit = 1000
     if outgoing and len(outgoing.missing) > nodeslimit:
         # trying to push too many nodes usually means that there is a bug
