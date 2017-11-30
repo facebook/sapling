@@ -20,6 +20,7 @@ from mercurial import (
     extensions,
     merge,
     namespaces,
+    obsutil,
     phases,
     revlog,
     scmutil,
@@ -40,6 +41,7 @@ def extsetup(ui):
     if ui.configbool('perftweaks', 'preferdeltas'):
         wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
 
+    wrapfunction(obsutil, 'geteffectflag', _geteffectflag)
     wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
     wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
     wrapfunction(merge, 'update', _trackupdatesize)
@@ -221,6 +223,11 @@ def _isgooddelta(orig, self, d, textlen):
 
 def _cachefilename(name):
     return 'noderevs/%s' % name
+
+def _geteffectflag(orig, relation):
+    # Do not calculate effectflags, which is not that cheap especially when
+    # calculating diffs.
+    return 0
 
 def _preloadrevs(repo):
     # Preloading the node-rev map for likely to be used revs saves 100ms on
