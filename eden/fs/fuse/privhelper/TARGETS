@@ -18,6 +18,7 @@ cpp_library(
         "@/folly:string",
         "@/folly/experimental/logging:glog_style_formatter",
         "@/folly/experimental/logging:immediate_file_writer",
+        "@/folly/experimental/logging:log_handler",
         "@/folly/experimental/logging:logging",
         "@/folly/experimental/logging:standard_log_handler",
         "@/folly/io:iobuf",

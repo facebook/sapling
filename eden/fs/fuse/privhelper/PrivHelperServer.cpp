@@ -19,6 +19,7 @@
 #include <folly/String.h>
 #include <folly/experimental/logging/GlogStyleFormatter.h>
 #include <folly/experimental/logging/ImmediateFileWriter.h>
+#include <folly/experimental/logging/LogHandlerConfig.h>
 #include <folly/experimental/logging/StandardLogHandler.h>
 #include <folly/experimental/logging/xlog.h>
 #include <signal.h>
@@ -64,10 +65,14 @@ void PrivHelperServer::initLogging() {
 
   // We always use a non-async file writer, rather than the threaded async
   // writer.
+  folly::LogHandlerConfig handlerConfig{
+      "file", {{"stream", "stderr"}, {"async", "false"}}};
   auto writer = std::make_shared<folly::ImmediateFileWriter>(
       folly::File{STDERR_FILENO, false});
   auto handler = std::make_shared<folly::StandardLogHandler>(
-      std::make_shared<folly::GlogStyleFormatter>(), std::move(writer));
+      handlerConfig,
+      std::make_shared<folly::GlogStyleFormatter>(),
+      std::move(writer));
 
   // Add the handler to the root category.
   rootCategory->setLevel(folly::LogLevel::WARNING);
