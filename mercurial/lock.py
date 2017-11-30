@@ -14,6 +14,8 @@ import socket
 import time
 import warnings
 
+from .i18n import _
+
 from . import (
     encoding,
     error,
@@ -39,6 +41,50 @@ def _getlockprefix():
                 raise
     return result
 
+def trylock(ui, vfs, lockname, timeout, *args, **kwargs):
+    """return an acquired lock or raise an a LockHeld exception
+
+    This function is responsible to issue warnings about the held lock while
+    trying to acquires it."""
+
+    def printwarning(printer, locker):
+        """issue the usual "waiting on lock" message through any channel"""
+        # show more details for new-style locks
+        if ':' in locker:
+            host, pid = locker.split(":", 1)
+            msg = _("waiting for lock on %s held by process %r "
+                    "on host %r\n") % (l.desc, pid, host)
+        else:
+            msg = _("waiting for lock on %s held by %r\n") % (l.desc, locker)
+        printer(msg)
+
+    l = lock(vfs, lockname, 0, *args, dolock=False, **kwargs)
+
+    warningidx = 0
+    if not timeout:
+        warningidx = -1
+
+    delay = 0
+    while True:
+        try:
+            l._trylock()
+            break
+        except error.LockHeld as inst:
+            if delay == warningidx:
+                printwarning(ui.warn, inst.locker)
+            if timeout <= delay:
+                raise error.LockHeld(errno.ETIMEDOUT, inst.filename,
+                                     l.desc, inst.locker)
+            time.sleep(1)
+            delay += 1
+
+    l.delay = delay
+    if l.delay:
+        ui.warn(_("got lock after %s seconds\n") % l.delay)
+    if l.acquirefn:
+        l.acquirefn()
+    return l
+
 class lock(object):
     '''An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts
@@ -60,7 +106,8 @@ class lock(object):
     _host = None
 
     def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
-                 desc=None, inheritchecker=None, parentlock=None):
+                 desc=None, inheritchecker=None, parentlock=None,
+                 dolock=True):
         self.vfs = vfs
         self.f = file
         self.held = 0
@@ -74,9 +121,10 @@ class lock(object):
         self._inherited = False
         self.postrelease  = []
         self.pid = self._getpid()
-        self.delay = self.lock()
-        if self.acquirefn:
-            self.acquirefn()
+        if dolock:
+            self.delay = self.lock()
+            if self.acquirefn:
+                self.acquirefn()
 
     def __enter__(self):
         return self

@@ -1592,29 +1592,16 @@ class localrepository(object):
         # determine whether it can be inherited
         if parentenvvar is not None:
             parentlock = encoding.environ.get(parentenvvar)
-        try:
-            l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn,
-                             acquirefn=acquirefn, desc=desc,
-                             inheritchecker=inheritchecker,
-                             parentlock=parentlock)
-        except error.LockHeld as inst:
-            if not wait:
-                raise
-            # show more details for new-style locks
-            if ':' in inst.locker:
-                host, pid = inst.locker.split(":", 1)
-                self.ui.warn(
-                    _("waiting for lock on %s held by process %r "
-                      "on host %r\n") % (desc, pid, host))
-            else:
-                self.ui.warn(_("waiting for lock on %s held by %r\n") %
-                             (desc, inst.locker))
-            # default to 600 seconds timeout
-            l = lockmod.lock(vfs, lockname,
-                             self.ui.configint("ui", "timeout"),
-                             releasefn=releasefn, acquirefn=acquirefn,
-                             desc=desc)
-            self.ui.warn(_("got lock after %s seconds\n") % l.delay)
+
+        timeout = 0
+        if wait:
+            timeout = self.ui.configint("ui", "timeout")
+
+        l = lockmod.trylock(self.ui, vfs, lockname, timeout,
+                            releasefn=releasefn,
+                            acquirefn=acquirefn, desc=desc,
+                            inheritchecker=inheritchecker,
+                            parentlock=parentlock)
         return l
 
     def _afterlock(self, callback):
