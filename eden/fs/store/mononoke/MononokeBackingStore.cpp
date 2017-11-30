@@ -141,6 +141,42 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   folly::IOBuf* last_{nullptr};
   folly::exception_wrapper error_{nullptr};
 };
+
+std::unique_ptr<Tree> convertBufToTree(
+    std::unique_ptr<folly::IOBuf>&& buf,
+    const Hash& id) {
+  auto s = buf->moveToFbString();
+  auto parsed = folly::parseJson(s);
+  if (!parsed.isArray()) {
+    throw std::runtime_error("malformed json: should be array");
+  }
+
+  std::vector<TreeEntry> entries;
+  for (auto i = parsed.begin(); i != parsed.end(); ++i) {
+    auto path_elem = i->at("path").asString();
+    auto hash = Hash(i->at("hash").asString());
+    auto str_type = i->at("type").asString();
+    FileType file_type;
+    uint8_t owner_permissions = 0b110;
+    if (str_type == "File") {
+      file_type = FileType::REGULAR_FILE;
+    } else if (str_type == "Tree") {
+      file_type = FileType::DIRECTORY;
+      owner_permissions = 0b111;
+    } else if (str_type == "Executable") {
+      file_type = FileType::REGULAR_FILE;
+      owner_permissions = 0b111;
+    } else if (str_type == "Symlink") {
+      file_type = FileType::SYMLINK;
+      owner_permissions = 0b111;
+    } else {
+      throw std::runtime_error("unknown file type");
+    }
+    entries.push_back(TreeEntry(hash, path_elem, file_type, owner_permissions));
+  }
+  return std::make_unique<Tree>(std::move(entries), id);
+}
+
 } // namespace
 
 MononokeBackingStore::MononokeBackingStore(
@@ -157,37 +193,7 @@ folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
   auto future = sendRequest(url);
 
   return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
-    auto s = buf->moveToFbString();
-    auto parsed = folly::parseJson(s);
-    if (!parsed.isArray()) {
-      throw std::runtime_error("malformed json: should be array");
-    }
-
-    std::vector<TreeEntry> entries;
-    for (auto i = parsed.begin(); i != parsed.end(); ++i) {
-      auto path_elem = i->at("path").asString();
-      auto hash = Hash(i->at("hash").asString());
-      auto str_type = i->at("type").asString();
-      FileType file_type;
-      uint8_t owner_permissions = 0b110;
-      if (str_type == "File") {
-        file_type = FileType::REGULAR_FILE;
-      } else if (str_type == "Tree") {
-        file_type = FileType::DIRECTORY;
-        owner_permissions = 0b111;
-      } else if (str_type == "Executable") {
-        file_type = FileType::REGULAR_FILE;
-        owner_permissions = 0b111;
-      } else if (str_type == "Symlink") {
-        file_type = FileType::SYMLINK;
-        owner_permissions = 0b111;
-      } else {
-        throw std::runtime_error("unknown file type");
-      }
-      entries.push_back(
-          TreeEntry(hash, path_elem, file_type, owner_permissions));
-    }
-    return makeFuture(std::make_unique<Tree>(std::move(entries), id));
+    return convertBufToTree(std::move(buf), id);
   });
 }
 
@@ -197,7 +203,7 @@ folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
   auto future = sendRequest(url);
 
   return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
-    return makeFuture(std::make_unique<Blob>(id, *buf));
+    return std::make_unique<Blob>(id, *buf);
   });
 }
 
