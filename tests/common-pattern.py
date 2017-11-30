@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 substitutions = [
     # list of possible compressions
-    (br'zstd,zlib,none,bzip2',
+    (br'(zstd,)?zlib,none,bzip2',
      br'$USUAL_COMPRESSIONS$'
     ),
     # capabilities sent through http
