@@ -19,6 +19,7 @@ from mercurial import (
     dispatch,
     extensions,
     merge,
+    namespaces,
     phases,
     revlog,
     scmutil,
@@ -64,9 +65,29 @@ def extsetup(ui):
     except KeyError:
         pass
 
+    wrapfunction(namespaces.namespaces, 'singlenode', _singlenode)
+
 def reposetup(ui, repo):
     if repo.local() is not None:
         _preloadrevs(repo)
+
+def _singlenode(orig, self, repo, name):
+    """Skips reading branches namespace if unnecessary"""
+    # developer config: perftweaks.disableresolvingbranches
+    if not repo.ui.configbool('perftweaks', 'disableresolvingbranches'):
+        return orig(self, repo, name)
+
+    # If branches are disabled, only resolve the 'default' branch. Loading
+    # 'branches' is O(len(changelog)) time complexity because it calls
+    # headrevs() which scans the entire changelog.
+    names = self._names
+    namesbak = names.copy()
+    if name != 'default' and 'branches' in names:
+        del names['branches']
+    try:
+        return orig(self, repo, name)
+    finally:
+        self.names = namesbak
 
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
