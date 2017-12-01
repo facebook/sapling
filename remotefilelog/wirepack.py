@@ -19,8 +19,8 @@ def sendpackpart(filename, history, data):
     """A wirepack is formatted as follows:
 
     wirepack = <filename len: 2 byte unsigned int><filename>
-               <history len: 2 byte unsigned int>[<history rev>,...]
-               <data len: 2 byte unsigned int>[<data rev>,...]
+               <history len: 4 byte unsigned int>[<history rev>,...]
+               <data len: 4 byte unsigned int>[<data rev>,...]
 
     hist rev = <node: 20 byte>
                <p1node: 20 byte>
