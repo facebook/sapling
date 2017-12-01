@@ -42,7 +42,6 @@ This file is backported from mercurial/tests/test-check-py3-compat.t.
   hgext3rd/gitlookup.py not using absolute_import
   hgext3rd/grepdiff.py not using absolute_import
   hgext3rd/grpcheck.py not using absolute_import
-  hgext3rd/hiddenerror.py not using absolute_import
   hgext3rd/linkrevcache.py not using absolute_import
   hgext3rd/logginghelper.py not using absolute_import
   hgext3rd/morestatus.py not using absolute_import

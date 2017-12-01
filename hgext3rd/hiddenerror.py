@@ -17,10 +17,14 @@
    The message and hint can contain an optional `{0}` which will be substituted
    with the hash of the hidden changeset.
 """
+from __future__ import absolute_import
 
-import re
-
-from mercurial import context, error
+from mercurial import (
+    chgserver,
+    context,
+    error,
+    extensions,
+)
 from mercurial.i18n import _
 from mercurial.node import short
 
@@ -28,40 +32,31 @@ testedwith = 'ships-with-fb-hgext'
 
 def uisetup(ui):
     """Wrap context.changectx to catch FilteredRepoLookupError."""
-    class changectxwrapper(context.changectx):
-        def __init__(self, repo, *args, **kwargs):
-            try:
-                # Attempt to call constructor normally.
-                super(changectxwrapper, self).__init__(repo, *args, **kwargs)
-            except error.FilteredRepoLookupError as e:
-                # If we get a FilteredRepoLookupError, attempt to rewrite
-                # the error message and re-raise the exception.
-                match = re.match(r"hidden revision '(\d+)'", str(e))
-                if not match:
-                    raise
+    # uisetup has side effects depending on config. chg only runs uisetup once.
+    # Tell chg to reload if [hiddenerror] config section changes.
+    chgserver._configsections.append('hiddenerror')
 
-                rev = int(match.group(1))
-                cl = repo.unfiltered().changelog
+    # Get the error messages from the user's configuration and substitute the
+    # hash in.
+    msgfmt, hintfmt = _getstrings(ui)
 
-                # If the number is beyond the changelog, it's a short hash that
-                # just happened to be a number.
-                if rev >= len(cl):
-                    raise
+    def _filterederror(orig, repo, rev):
+        # If the number is beyond the changelog, it's a short hash that
+        # just happened to be a number.
+        intrev = None
+        try:
+            intrev = int(rev)
+        except ValueError:
+            pass
+        if intrev is not None and intrev < len(repo):
+            node = repo.unfiltered()[rev].node()
+            shorthash = short(node)
+            msg = msgfmt.format(shorthash)
+            hint = hintfmt and hintfmt.format(shorthash)
+            return error.FilteredRepoLookupError(msg, hint=hint)
+        return orig(repo, rev)
 
-                node = cl.node(rev)
-                shorthash = short(node)
-
-                # Get the error messages from the user's configuration and
-                # substitute the hash in. Use a dict for the hint argument
-                # to make it optional via keyword argument unpacking.
-                msg, hint = _getstrings(ui)
-                msg = msg.format(shorthash)
-                hintarg = {}
-                if hint:
-                    hintarg['hint'] = hint.format(shorthash)
-
-                raise error.FilteredRepoLookupError(msg, **hintarg)
-    setattr(context, 'changectx', changectxwrapper)
+    extensions.wrapfunction(context, '_filterederror', _filterederror)
 
 def _getstrings(ui):
     """Lood the error messages to show when the user tries to access a
