@@ -69,6 +69,6 @@ Traces are logged in blackbox
   [255]
   $ hg blackbox -l 12 | grep '\[command'
   * @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 2 (glob)
-  * @0000000000000000000000000000000000000000 (*) [command]> crash (glob)
+  * @0000000000000000000000000000000000000000 (*) [command]> crash* (glob)
   * @0000000000000000000000000000000000000000 (*) [commandexception]> * (glob)
   * @0000000000000000000000000000000000000000 (*) [command]> blackbox -l 12 (glob)
