@@ -117,6 +117,4 @@ ul#graphnodes {
 ul#graphnodes li .info {
 	display: block;
 	font-size: 70%;
-	position: relative;
-	top: -1px;
 }

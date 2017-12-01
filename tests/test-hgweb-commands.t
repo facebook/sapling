@@ -2093,8 +2093,6 @@ Static files
   ul#graphnodes li .info {
   	display: block;
   	font-size: 70%;
-  	position: relative;
-  	top: -1px;
   }
 
 Stop and restart the server at the directory different from the repository
