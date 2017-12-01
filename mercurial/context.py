@@ -1993,8 +1993,8 @@ class overlayworkingctx(workingctx):
     def __init__(self, repo, wrappedctx):
         super(overlayworkingctx, self).__init__(repo)
         self._repo = repo
+        self.clean()
         self._wrappedctx = wrappedctx
-        self._clean()
 
     def data(self, path):
         if self.isdirty(path):
@@ -2074,7 +2074,7 @@ class overlayworkingctx(workingctx):
     def isdirty(self, path):
         return path in self._cache
 
-    def _clean(self):
+    def clean(self):
         self._cache = {}
 
     def _markdirty(self, path, exists, data=None, date=None, flags=''):
