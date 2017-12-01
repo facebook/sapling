@@ -1078,7 +1078,12 @@ def processparts(orig, repo, op, unbundler):
                                    True)
             elif part.type == scratchbookmarksparttype:
                 # Save this for later processing. Details below.
-                scratchbookpart = part
+                #
+                # Upstream https://phab.mercurial-scm.org/D1389 and its
+                # follow-ups stop part.seek support to reduce memory usage
+                # (https://bz.mercurial-scm.org/5691). So we need to copy
+                # the part so it can be consumed later.
+                scratchbookpart = bundleparts.copiedpart(part)
             else:
                 if handleallparts or part.type in partforwardingwhitelist:
                     # Ideally we would not process any parts, and instead just
@@ -1128,7 +1133,7 @@ def processparts(orig, repo, op, unbundler):
     # processed after the main bundle has been stored, so that any commits it
     # references are available in the store.
     if scratchbookpart:
-        bundle2._processpart(op, part)
+        bundle2._processpart(op, scratchbookpart)
 
 def storebundle(op, params, bundlefile):
     log = _getorcreateinfinitepushlogger(op)

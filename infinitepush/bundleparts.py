@@ -13,6 +13,7 @@ from mercurial import (
     error,
     extensions,
     revsetlang,
+    util,
 )
 from mercurial.i18n import _
 
@@ -112,3 +113,27 @@ def _handlelfs(repo, missing):
     except KeyError:
         # Ignore if lfs extension is not enabled
         return
+
+class copiedpart(object):
+    """a copy of unbundlepart content that can be consumed later"""
+
+    def __init__(self, part):
+        # copy "public properties"
+        self.type = part.type
+        self.id = part.id
+        self.mandatory = part.mandatory
+        self.mandatoryparams = part.mandatoryparams
+        self.advisoryparams = part.advisoryparams
+        self.params = part.params
+        self.mandatorykeys = part.mandatorykeys
+        # copy the buffer
+        self._io = util.stringio(part.read())
+
+    def consume(self):
+        return
+
+    def read(self, size=None):
+        if size is None:
+            return self._io.read()
+        else:
+            return self._io.read(size)
