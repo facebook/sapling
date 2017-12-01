@@ -1218,9 +1218,7 @@ class TTest(Test):
 
     def __init__(self, path, *args, **kwds):
         # accept an extra "case" parameter
-        case = None
-        if 'case' in kwds:
-            case = kwds.pop('case')
+        case = kwds.pop('case', None)
         self._case = case
         self._allcases = parsettestcases(path)
         super(TTest, self).__init__(path, *args, **kwds)
