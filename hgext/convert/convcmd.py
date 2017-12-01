@@ -450,7 +450,7 @@ class converter(object):
         commit = self.commitcache[rev]
         full = self.opts.get('full')
         changes = self.source.getchanges(rev, full)
-        if isinstance(changes, basestring):
+        if isinstance(changes, bytes):
             if changes == SKIPREV:
                 dest = SKIPREV
             else:

@@ -222,7 +222,7 @@ class httppeer(wireproto.wirepeer):
             if not data:
                 data = strargs
             else:
-                if isinstance(data, basestring):
+                if isinstance(data, bytes):
                     i = io.BytesIO(data)
                     i.length = len(data)
                     data = i
