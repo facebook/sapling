@@ -262,6 +262,7 @@ class fileit(object):
     def __init__(self, name, mtime):
         self.basedir = name
         self.opener = vfsmod.vfs(self.basedir)
+        self.mtime = mtime
 
     def addfile(self, name, mode, islink, data):
         if islink:
@@ -272,6 +273,8 @@ class fileit(object):
         f.close()
         destfile = os.path.join(self.basedir, name)
         os.chmod(destfile, mode)
+        if self.mtime is not None:
+            os.utime(destfile, (self.mtime, self.mtime))
 
     def done(self):
         pass
@@ -299,7 +302,12 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     matchfn is function to filter names of files to write to archive.
 
-    prefix is name of path to put before every archive member.'''
+    prefix is name of path to put before every archive member.
+
+    mtime is the modified time, in seconds, or None to use the changeset time.
+
+    subrepos tells whether to include subrepos.
+    '''
 
     if kind == 'files':
         if prefix:
