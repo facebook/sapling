@@ -141,10 +141,18 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   // This helps ensure that the unmount actually succeeds.
   // This is the same behavior as "umount --force".
   //
-  // In the future we might want to add an option for callers to request
-  // an unforced unmount (without passing in MNT_FORCE).  However for now we
-  // always do forced unmount.
-  int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE;
+  // MNT_DETACH asks Linux to remove the mount from the filesystem immediately.
+  // This is the same behavior as "umount --lazy".
+  // This is required for the unmount to succeed in some cases, particularly if
+  // something has gone wrong and a bind mount still exists inside this mount
+  // for some reason.
+  //
+  // In the future it might be nice to provide smarter unmount options,
+  // such as unmounting only if the mount point is not currently in use.
+  // However for now we always do forced unmount.  This helps ensure that
+  // edenfs does not get stuck waiting on unmounts to complete when shutting
+  // down.
+  int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE | MNT_DETACH;
   auto rc = umount2(mountPath, umountFlags);
   if (rc != 0) {
     int errnum = errno;
