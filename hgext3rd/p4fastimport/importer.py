@@ -132,8 +132,9 @@ class ChangeManifestImporter(object):
                     raise error.Abort("can't find rev %d for %s cl %d" % (
                         baserev, localname, change.cl))
                 changed.add(localname)
-                if change.cl in info['flags']:
-                    mf.setflag(localname, info['flags'][change.cl])
+                flags = info['flags'].get(change.cl, '')
+                if flags != mf.flags(localname):
+                    mf.setflag(localname, flags)
                 fileinfo[depotname]['baserev'] += 1
 
             linkrev = self._importset.linkrev(change.cl)
@@ -416,7 +417,6 @@ class FileImporter(object):
                     c.cl, self.relpath))
 
             meta = {}
-            fileflags[c.cl] = ''
             if self._p4filelog.isexec(c.cl):
                 fileflags[c.cl] = 'x'
             if self._p4filelog.issymlink(c.cl):
@@ -481,13 +481,9 @@ class SyncFileImporter(FileImporter):
         meta = {}
         if self._p4filelog.isexec(self._cl):
             fileflags[self._cl] = 'x'
-        else:
-            fileflags[self._cl] = ''
 
         if self._p4filelog.issymlink(self._cl):
             fileflags[self._cl] = 'l'
-        else:
-            fileflags[self._cl] = ''
 
         if self._p4filelog.iskeyworded(self._cl):
             text = re.sub(KEYWORD_REGEX, r'$\1$', text)
