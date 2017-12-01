@@ -36,9 +36,7 @@ from .. import (
     revsetlang,
     scmutil,
     smartset,
-    templatefilters,
     templater,
-    url,
     util,
 )
 
@@ -1242,8 +1240,6 @@ def graph(web, req, tmpl):
         return cols
 
     def graphdata(usetuples):
-        # {jsdata} will be passed to |json, so it must be in utf-8
-        encodestr = encoding.fromlocal
         data = []
 
         row = 0
@@ -1253,22 +1249,7 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 node = pycompat.bytestr(ctx)
-                age = encodestr(templatefilters.age(ctx.date()))
-                desc = templatefilters.firstline(encodestr(ctx.description()))
-                desc = url.escape(templatefilters.nonempty(desc))
-                user = templatefilters.person(encodestr(ctx.user()))
-                user = url.escape(user)
-                branch = url.escape(encodestr(ctx.branch()))
-                try:
-                    branchnode = web.repo.branchtip(ctx.branch())
-                except error.RepoLookupError:
-                    branchnode = None
-                branch = branch, branchnode == ctx.node()
-
-                data.append((node, vtx, edges, desc, user, age, branch,
-                             [url.escape(encodestr(x)) for x in ctx.tags()],
-                             [url.escape(encodestr(x))
-                              for x in ctx.bookmarks()]))
+                data.append({'node': node, 'vertex': vtx, 'edges': edges})
             else:
                 entry = webutil.commonentry(web.repo, ctx)
                 edgedata = [{'col': edge[0], 'nextcol': edge[1],

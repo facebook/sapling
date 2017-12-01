@@ -103,14 +103,12 @@ function Graph() {
 			this.bg[1] += this.bg_height;
 
 			var cur = data[i];
-			var node = cur[1];
-			var edges = cur[2];
 			var fold = false;
 
 			var prevWidth = this.ctx.lineWidth;
-			for (var j = 0; j < edges.length; j++) {
+			for (var j = 0; j < cur.edges.length; j++) {
 
-				line = edges[j];
+				line = cur.edges[j];
 				start = line[0];
 				end = line[1];
 				color = line[2];
@@ -141,8 +139,8 @@ function Graph() {
 
 			// Draw the revision node in the right column
 
-			column = node[0];
-			color = node[1];
+			column = cur.vertex[0];
+			color = cur.vertex[1];
 
 			radius = this.box_size / 8;
 			x = this.cell[0] + this.box_size * column + this.box_size / 2;
