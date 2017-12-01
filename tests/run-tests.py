@@ -979,8 +979,7 @@ class Test(unittest.TestCase):
             ]
         r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
-        testdir = os.path.dirname(self.path)
-        replacementfile = os.path.join(testdir, b'common-pattern.py')
+        replacementfile = os.path.join(self._testdir, b'common-pattern.py')
 
         if os.path.exists(replacementfile):
             data = {}
