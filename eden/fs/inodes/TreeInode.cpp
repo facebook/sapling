@@ -2104,6 +2104,28 @@ void TreeInode::computeCheckoutActions(
   // Grab the contents_ lock for the duration of this function
   auto contents = contents_.wlock();
 
+  // If we aren't materialized, look at our source control hash to see
+  // if we can short-circuit early if we have nothing to do.
+  if (contents->treeHash.hasValue() && toTree &&
+      contents->treeHash.value() == toTree->getHash()) {
+    // Our contents already match the desired toTree state.
+    // If they also match fromTree state we are guaranteed that we also don't
+    // have conflicts, and can stop here.
+    if (fromTree && contents->treeHash.value() == fromTree->getHash()) {
+      return;
+    }
+
+    // We match the desired toTree state, but not the original fromTree state,
+    // so there are conflicts to report.  We have to keep going just to report
+    // conflicts.
+    //
+    // TODO: It might be nice to return early here if we are doing a FORCE
+    // checkout.  For FORCE checkouts the caller generally doesn't care about
+    // the list of conflicts.  We should perhaps change the API contract for
+    // checkout operations so that we don't need to return conflicts for FORCE
+    // checkouts.
+  }
+
   // Walk through fromTree and toTree, and call the above helper functions as
   // appropriate.
   //
