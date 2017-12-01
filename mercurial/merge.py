@@ -1333,10 +1333,6 @@ def batchremove(repo, wctx, actions):
         repo.ui.warn(_("current directory was removed\n"
                        "(consider changing to repo root: %s)\n") % repo.root)
 
-    # It's necessary to flush here in case we're inside a worker fork and will
-    # quit after this function.
-    wctx.flushall()
-
 def batchget(repo, mctx, wctx, actions):
     """apply gets to the working directory
 
@@ -1376,9 +1372,6 @@ def batchget(repo, mctx, wctx, actions):
     if i > 0:
         yield i, f
 
-    # It's necessary to flush here in case we're inside a worker fork and will
-    # quit after this function.
-    wctx.flushall()
 
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """apply the merge action list to the working directory
@@ -1478,10 +1471,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             wctx[f0].remove()
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
-
-    # We should flush before forking into worker processes, since those workers
-    # flush when they complete, and we don't want to duplicate work.
-    wctx.flushall()
 
     # get in parallel
     prog = worker.worker(repo.ui, cost, batchget, (repo, mctx, wctx),
@@ -2004,7 +1993,6 @@ def update(repo, node, branchmerge, force, ancestor=None,
                   'see "hg help -e fsmonitor")\n'))
 
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
-        wc.flushall()
 
         if not partial:
             with repo.dirstate.parentchange():
