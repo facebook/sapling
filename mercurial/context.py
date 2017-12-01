@@ -1653,9 +1653,6 @@ class workingctx(committablectx):
                               listsubrepos=listsubrepos, badfn=badfn,
                               icasefs=icasefs)
 
-    def flushall(self):
-        pass # For overlayworkingfilectx compatibility.
-
     def _filtersuspectsymlink(self, files):
         if not files or self._repo.dirstate._checklink:
             return files
@@ -2074,36 +2071,13 @@ class overlayworkingctx(workingctx):
                                              self._path)
         return self._wrappedctx[path].size()
 
-    def flushall(self):
-        for path in self._writeorder:
-            entry = self._cache[path]
-            if entry['exists']:
-                self._wrappedctx[path].clearunknown()
-                if entry['data'] is not None:
-                    if entry['flags'] is None:
-                        raise error.ProgrammingError('data set but not flags')
-                    self._wrappedctx[path].write(
-                        entry['data'],
-                        entry['flags'])
-                else:
-                    self._wrappedctx[path].setflags(
-                        'l' in entry['flags'],
-                        'x' in entry['flags'])
-            else:
-                self._wrappedctx[path].remove(path)
-        self._clean()
-
     def isdirty(self, path):
         return path in self._cache
 
     def _clean(self):
         self._cache = {}
-        self._writeorder = []
 
     def _markdirty(self, path, exists, data=None, date=None, flags=''):
-        if path not in self._cache:
-            self._writeorder.append(path)
-
         self._cache[path] = {
             'exists': exists,
             'data': data,
