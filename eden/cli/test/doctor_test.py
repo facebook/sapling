@@ -126,11 +126,11 @@ Number of issues that could not be fixed: 2.
         calls = []
 
         calls.append(call(['watch-list']))
-        side_effects.append({'version': '4.9.0', 'roots': [edenfs_path]})
+        side_effects.append({'roots': [edenfs_path]})
         calls.append(call(['watch-project', edenfs_path]))
-        side_effects.append({'version': '4.9.0', 'watcher': 'eden'})
+        side_effects.append({'watcher': 'eden'})
         calls.append(call(['debug-get-subscriptions', edenfs_path]))
-        side_effects.append({'version': '4.9.0'})
+        side_effects.append({})
         mock_watchman.side_effect = side_effects
 
         out = io.StringIO()
@@ -168,7 +168,7 @@ Number of issues that could not be fixed: 2.
         calls = []
 
         calls.append(call(['watch-list']))
-        side_effects.append({'version': '4.9.0', 'roots': [edenfs_path]})
+        side_effects.append({'roots': [edenfs_path]})
         mock_watchman.side_effect = side_effects
 
         out = io.StringIO()
@@ -258,7 +258,6 @@ Number of issues that could not be fixed: 2.
         calls.append(call(['watch-project', edenfs_path]))
         side_effects.append(
             {
-                'version': '4.9.0',
                 'watch': edenfs_path,
                 'watcher': initial_watcher
             }
@@ -268,7 +267,6 @@ Number of issues that could not be fixed: 2.
             calls.append(call(['watch-del', edenfs_path]))
             side_effects.append(
                 {
-                    'version': '4.9.0',
                     'watch-del': True,
                     'root': edenfs_path
                 }
@@ -281,7 +279,6 @@ Number of issues that could not be fixed: 2.
             calls.append(call(['watch-project', edenfs_path]))
             side_effects.append(
                 {
-                    'version': '4.9.0',
                     'watch': edenfs_path,
                     'watcher': new_watcher
                 }
@@ -442,7 +439,6 @@ def _create_watchman_subscription(
             }
         )
     return {
-        'version': '4.9.0',
         'subscribers': subscribers,
     }
 
