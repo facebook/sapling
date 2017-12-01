@@ -2129,7 +2129,7 @@ class overlayworkingfilectx(workingfilectx):
     def cmp(self, fctx):
         return self.data() != fctx.data()
 
-    def ctx(self):
+    def changectx(self):
         return self._parent
 
     def data(self):
