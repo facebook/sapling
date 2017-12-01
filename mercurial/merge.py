@@ -1839,8 +1839,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
             if not force and (wc.files() or wc.deleted()):
                 raise error.Abort(_("uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
-            for s in sorted(wc.substate):
-                wc.sub(s).bailifchanged()
+            if not wc.isinmemory():
+                for s in sorted(wc.substate):
+                    wc.sub(s).bailifchanged()
 
         elif not overwrite:
             if p1 == p2: # no-op update
@@ -1955,7 +1956,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
         ### apply phase
         if not branchmerge: # just jump to the new rev
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
-        if not partial:
+        if not partial and not wc.isinmemory():
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
             # note that we're in the middle of an update
             repo.vfs.write('updatestate', p2.hex())
@@ -1994,7 +1995,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
 
         stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
-        if not partial:
+        if not partial and not wc.isinmemory():
             with repo.dirstate.parentchange():
                 repo.setparents(fp1, fp2)
                 recordupdates(repo, actions, branchmerge)
