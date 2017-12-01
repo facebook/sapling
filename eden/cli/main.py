@@ -18,6 +18,7 @@ import sys
 
 from . import config as config_mod
 from . import debug as debug_mod
+from . import doctor as doctor_mod
 from . import rage as rage_mod
 from . import stats as stats_mod
 from . import util
@@ -204,6 +205,11 @@ def do_config(args):
     else:
         config.print_full_config()
     return 0
+
+
+def do_doctor(args) -> int:
+    config = create_config(args)
+    return doctor_mod.cure_what_ails_you(config, args.dry_run, out=sys.stdout)
 
 
 def do_mount(args):
@@ -488,6 +494,13 @@ def create_parser():
         help='Any extra arguments after an "--" argument will be passed to the '
         'edenfs daemon.')
     daemon_parser.set_defaults(func=do_daemon)
+
+    doctor_parser = subparsers.add_parser(
+        'doctor', help='Debug and fix issues with Eden')
+    doctor_parser.add_argument(
+        '--dry-run', '-n', action='store_true',
+        help='Do not try to fix any issues: only report them.')
+    doctor_parser.set_defaults(func=do_doctor)
 
     health_parser = subparsers.add_parser(
         'health', help='Check the health of the Eden service')

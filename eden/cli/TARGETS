@@ -5,8 +5,8 @@ python_binary(
     srcs = ["main.py"],
     main_module = "eden/cli/main",
     deps = [
-        "@/eden/cli:debug",
-        "@/eden/cli:lib",
+        ":debug",
+        ":lib",
         "@/eden/fs/service:py-client",
     ],
 )
@@ -17,10 +17,15 @@ python_library(
         "cmd_util.py",
         "config.py",
         "configinterpolator.py",
+        "doctor.py",
         "rage.py",
         "stats.py",
         "stats_print.py",
         "util.py",
+    ],
+    deps = [
+        "@/eden/fs/service:py-client",
+        "@/eden/py:py",
     ],
     external_deps = [
         "toml",
@@ -37,12 +42,6 @@ python_library(
         "@/eden/fs/inodes:serialization-py",
         "@/eden/py:py",
     ],
-)
-
-python_unittest(
-    name = "test",
-    srcs = glob(["test/*.py"]),
-    deps = [":lib"],
 )
 
 for build_target, suffix in get_daemon_versions():

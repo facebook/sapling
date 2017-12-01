@@ -223,6 +223,7 @@ class Config:
         return collections.OrderedDict([
             ['bind-mounts', client_config.bind_mounts],
             ['mount', path],
+            ['scm_type', client_config.scm_type],
             ['snapshot', snapshot],
             ['client-dir', client_dir],
         ])

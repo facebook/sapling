@@ -1,0 +1,8 @@
+python_unittest(
+    name = "test",
+    srcs = glob(["*.py"]),
+    deps = [
+        "@/eden/cli:lib",
+        "@/eden/py:py",
+    ],
+)
