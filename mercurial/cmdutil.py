@@ -3137,6 +3137,8 @@ def amend(ui, repo, old, extra, pats, opts):
         # base     o - first parent of the changeset to amend
         wctx = repo[None]
 
+        # Copy to avoid mutating input
+        extra = extra.copy()
         # Update extra dict from amended commit (e.g. to preserve graft
         # source)
         extra.update(old.extra())
