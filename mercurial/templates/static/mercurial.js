@@ -339,6 +339,18 @@ function appendFormatHTML(element, formatStr, replacements) {
     element.insertAdjacentHTML('beforeend', format(formatStr, replacements));
 }
 
+function adoptChildren(from, to) {
+    var nodes = from.children;
+    var curClass = 'c' + Date.now();
+    while (nodes.length) {
+        var node = nodes[0];
+        node = document.adoptNode(node);
+        node.classList.add(curClass);
+        to.appendChild(node);
+    }
+    process_dates('.' + curClass);
+}
+
 function ajaxScrollInit(urlFormat,
                         nextPageVar,
                         nextPageVarGet,
@@ -382,6 +394,8 @@ function ajaxScrollInit(urlFormat,
                     appendFormatHTML(container, messageFormat, message);
                 },
                 function onsuccess(htmlText) {
+                    var doc = docFromHTML(htmlText);
+
                     if (mode === 'graph') {
                         var graph = window.graph;
                         var sizes = htmlText.match(/^\s*<canvas id="graph" width="(\d+)" height="(\d+)"><\/canvas>$/m);
@@ -398,18 +412,10 @@ function ajaxScrollInit(urlFormat,
                             nextPageVar = undefined;
                         }
                         graph.reset();
+                        adoptChildren(doc.querySelector('#graphnodes'), container.querySelector('#graphnodes'));
                         graph.render(data);
                     } else {
-                        var doc = docFromHTML(htmlText);
-                        var nodes = doc.querySelector(containerSelector).children;
-                        var curClass = 'c' + Date.now();
-                        while (nodes.length) {
-                            var node = nodes[0];
-                            node = document.adoptNode(node);
-                            node.classList.add(curClass);
-                            container.appendChild(node);
-                        }
-                        process_dates('.' + curClass);
+                        adoptChildren(doc.querySelector(containerSelector), container);
                     }
 
                     nextPageVar = nextPageVarGet(htmlText, nextPageVar);
