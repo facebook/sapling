@@ -81,22 +81,24 @@ class basestore(object):
             count += 1
         ui.progress(_("cleaning up"), None)
 
-        # Clean up leftover empty directories
-        self._removeemptydirectories(self._getrepocachepath())
+        # Clean up the repo cache directory.
+        self._cleanupdirectory(self._getrepocachepath())
 
     # BELOW THIS ARE NON-STANDARD APIS
 
-    def _removeemptydirectories(self, rootdir):
-        """Removes the empty directories within the root directory recursively.
-        Note that this method does not remove the root directory itself.
-        """
+    def _cleanupdirectory(self, rootdir):
+        """Removes the empty directories and unnecessary files within the root
+        directory recursively. Note that this method does not remove the root
+        directory itself. """
 
+        oldfiles = set()
+        otherfiles = set()
         # osutil.listdir returns stat information which saves some rmdir/listdir
         # syscalls.
         for name, mode in util.osutil.listdir(rootdir):
             if stat.S_ISDIR(mode):
                 dirpath = os.path.join(rootdir, name)
-                self._removeemptydirectories(dirpath)
+                self._cleanupdirectory(dirpath)
 
                 # Now that the directory specified by dirpath is potentially
                 # empty, try and remove it.
@@ -104,6 +106,19 @@ class basestore(object):
                     os.rmdir(dirpath)
                 except OSError:
                     pass
+
+            elif stat.S_ISREG(mode):
+                if name.endswith('_old'):
+                    oldfiles.add(name[:-4])
+                else:
+                    otherfiles.add(name)
+
+        # Remove the files which end with suffix '_old' and have no
+        # corresponding file without the suffix '_old'. See addremotefilelognode
+        # method for the generation/purpose of files with '_old' suffix.
+        for filename in oldfiles - otherfiles:
+            filepath = os.path.join(rootdir, filename + '_old')
+            util.tryunlink(filepath)
 
     def _getfiles(self):
         """Return a list of (filename, [node,...]) for all the revisions that
