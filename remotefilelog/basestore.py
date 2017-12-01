@@ -7,10 +7,12 @@ from . import (
     shallowutil,
 )
 
-from mercurial import error
+from mercurial import (
+    error,
+    util,
+)
 from mercurial.i18n import _
 from mercurial.node import bin, hex
-from mercurial.util import osutil
 
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
@@ -75,12 +77,7 @@ class basestore(object):
                 ui.progress(_("cleaning up"), count, unit="files",
                             total=len(entries))
                 path = self._getfilepath(entry.filename, entry.node)
-                try:
-                    os.remove(path)
-                except OSError as ex:
-                    # If the file is already gone, no big deal
-                    if ex.errno != errno.ENOENT:
-                        raise
+                util.tryunlink(path)
             count += 1
         ui.progress(_("cleaning up"), None)
 
@@ -96,7 +93,7 @@ class basestore(object):
 
         # osutil.listdir returns stat information which saves some rmdir/listdir
         # syscalls.
-        for name, mode in osutil.listdir(rootdir):
+        for name, mode in util.osutil.listdir(rootdir):
             if stat.S_ISDIR(mode):
                 dirpath = os.path.join(rootdir, name)
                 self._removeemptydirectories(dirpath)
