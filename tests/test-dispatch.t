@@ -113,6 +113,51 @@ Shell aliases bypass any command parsing rules but for the early one:
   $ hg log -b '--config=alias.log=!echo howdy'
   howdy
 
+Early options must come first if HGPLAIN=+strictflags is specified:
+(BUG: chg cherry-picks early options to pass them as a server command)
+
+#if no-chg
+  $ HGPLAIN=+strictflags hg log -b --config='hooks.pre-log=false' default
+  abort: unknown revision '--config=hooks.pre-log=false'!
+  [255]
+  $ HGPLAIN=+strictflags hg log -b -R. default
+  abort: unknown revision '-R.'!
+  [255]
+  $ HGPLAIN=+strictflags hg log -b --cwd=. default
+  abort: unknown revision '--cwd=.'!
+  [255]
+#endif
+  $ HGPLAIN=+strictflags hg log -b --debugger default
+  abort: unknown revision '--debugger'!
+  [255]
+  $ HGPLAIN=+strictflags hg log -b --config='alias.log=!echo pwned' default
+  abort: unknown revision '--config=alias.log=!echo pwned'!
+  [255]
+
+  $ HGPLAIN=+strictflags hg log --config='hooks.pre-log=false' -b default
+  abort: option --config may not be abbreviated!
+  [255]
+  $ HGPLAIN=+strictflags hg log -q --cwd=.. -b default
+  abort: option --cwd may not be abbreviated!
+  [255]
+  $ HGPLAIN=+strictflags hg log -q -R . -b default
+  abort: option -R has to be separated from other options (e.g. not -qR) and --repository may only be abbreviated as --repo!
+  [255]
+
+  $ HGPLAIN=+strictflags hg --config='hooks.pre-log=false' log -b default
+  abort: pre-log hook exited with status 1
+  [255]
+  $ HGPLAIN=+strictflags hg --cwd .. -q -Ra log -b default
+  0:cb9a9f314b8b
+
+For compatibility reasons, HGPLAIN=+strictflags is not enabled by plain HGPLAIN:
+
+  $ HGPLAIN= hg log --config='hooks.pre-log=false' -b default
+  abort: pre-log hook exited with status 1
+  [255]
+  $ HGPLAINEXCEPT= hg log --cwd .. -q -Ra -b default
+  0:cb9a9f314b8b
+
 [defaults]
 
   $ hg cat a

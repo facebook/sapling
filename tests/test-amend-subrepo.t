@@ -58,7 +58,7 @@ amend with dirty subrepo
 
   $ echo a >> s/a
   $ hg add -R s
-  adding s/a
+  adding s/a (glob)
   $ hg amend
   abort: uncommitted changes in subrepository "s"
   (use --subrepos for recursive commit)

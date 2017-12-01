@@ -972,6 +972,7 @@ test import with similarity and git and strip (issue295 et al.)
   adding b
   recording removal of a as rename to b (88% similar)
   applied to working directory
+  $ echo 'mod b' > b
   $ hg st -C
   A b
     a
@@ -979,6 +980,8 @@ test import with similarity and git and strip (issue295 et al.)
   $ hg revert -a
   undeleting a
   forgetting b
+  $ cat b
+  mod b
   $ rm b
   $ hg import --no-commit -v -s 100 ../rename.diff -p2
   applying ../rename.diff

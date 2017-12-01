@@ -1071,6 +1071,18 @@ Prepare a repo with subrepo
     "path": "sub/repo/foo"
    }
   ]
+
+ non-exact match:
+
+  $ hg cat -T '{path}\n' 'glob:**'
+  .hgsub
+  .hgsubstate
+  sub/repo/foo (glob)
+  $ hg cat -T '{path}\n' 're:^sub'
+  sub/repo/foo (glob)
+
+ missing subrepos in working directory:
+
   $ mkdir -p tmp/sub/repo
   $ hg cat -r 0 --output tmp/%p_p sub/repo/foo
   $ cat tmp/sub/repo/foo_p

@@ -56,8 +56,16 @@ HGPLAIN
     localization. This can be useful when scripting against Mercurial
     in the face of existing user configuration.
 
+    In addition to the features disabled by ``HGPLAIN=``, the following
+    values can be specified to adjust behavior:
+
+    ``+strictflags``
+        Restrict parsing of command line flags.
+
     Equivalent options set via command line flags or environment
     variables are not overridden.
+
+    See :hg:`help scripting` for details.
 
 HGPLAINEXCEPT
     This is a comma-separated list of features to preserve when
