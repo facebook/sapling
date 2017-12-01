@@ -1008,7 +1008,8 @@ def prefetch(ui, repo, *pats, **opts):
     ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     if opts.get('background'):
-        repackmod.backgroundrepack(repo, incremental=opts.get('incremental'))
+        repackmod.backgroundrepack(repo, incremental=opts.get('incremental'),
+                                   packsonly=opts.get('packsonly', False))
         return
 
     options = {'packsonly': opts.get('packsonly')}

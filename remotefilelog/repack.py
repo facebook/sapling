@@ -28,12 +28,14 @@ import time
 
 osutil = policy.importmod(r'osutil')
 
-def backgroundrepack(repo, incremental=True):
+def backgroundrepack(repo, incremental=True, packsonly=False):
     cmd = [util.hgexecutable(), '-R', repo.origroot, 'repack']
     msg = _("(running background repack)\n")
     if incremental:
         cmd.append('--incremental')
         msg = _("(running background incremental repack)\n")
+    if packsonly:
+        cmd.append('--packsonly')
     cmd = ' '.join(map(util.shellquote, cmd))
 
     repo.ui.warn(msg)
