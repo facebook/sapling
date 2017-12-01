@@ -241,6 +241,12 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     ui = repo.ui
     fd = fcd.path()
 
+    # Avoid prompting during an in-memory merge since it doesn't support merge
+    # conflicts.
+    if fcd.changectx().isinmemory():
+        raise error.InMemoryMergeConflictsError('in-memory merge does not '
+                                                'support file conflicts')
+
     prompts = partextras(labels)
     prompts['fd'] = fd
     try:
@@ -465,11 +471,10 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     a = _workingpath(repo, fcd)
     fd = fcd.path()
 
-    # Run ``flushall()`` to make any missing folders the following wwrite
-    # calls might be depending on.
     from . import context
     if isinstance(fcd, context.overlayworkingfilectx):
-        fcd.changectx().flushall()
+        raise error.InMemoryMergeConflictsError('in-memory merge does not '
+                                                'support the :dump tool.')
 
     util.writefile(a + ".local", fcd.decodeddata())
     repo.wwrite(fd + ".other", fco.data(), fco.flags())
@@ -688,10 +693,10 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         onfailure = _("merging %s failed!\n")
         precheck = None
 
-        # If using deferred writes, must flush any deferred contents if running
-        # an external merge tool since it has arbitrary access to the working
-        # copy.
-        wctx.flushall()
+        if wctx.isinmemory():
+            raise error.InMemoryMergeConflictsError('in-memory merge does not '
+                                                    'support external merge '
+                                                    'tools')
 
     toolconf = tool, toolpath, binary, symlink
 
@@ -710,6 +715,10 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
     if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
                                  toolconf):
         if onfailure:
+            if wctx.isinmemory():
+                raise error.InMemoryMergeConflictsError('in-memory merge does '
+                                                        'not support merge '
+                                                        'conflicts')
             ui.warn(onfailure % fd)
         return True, 1, False
 
@@ -736,6 +745,10 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
         if r:
             if onfailure:
+                if wctx.isinmemory():
+                    raise error.InMemoryMergeConflictsError('in-memory merge '
+                                                            'does not support '
+                                                            'merge conflicts')
                 ui.warn(onfailure % fd)
             _onfilemergefailure(ui)
 
