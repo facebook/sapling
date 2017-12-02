@@ -131,6 +131,12 @@ class MononokeBackingStoreTest : public ::testing::Test {
         RequestHandlerChain().addThen<HandlerFactory>(blobs).build();
     auto server = folly::make_unique<HTTPServer>(std::move(options));
     server->bind(IPs);
+
+    mainEventBaseThread.reset(new std::thread([this] {
+      folly::EventBaseManager::get()->setEventBase(
+          &mainEventBase, false /* takeOwnership */);
+      mainEventBase.loopForever();
+    }));
     return server;
   }
 
@@ -151,18 +157,29 @@ class MononokeBackingStoreTest : public ::testing::Test {
     return blobs;
   }
 
+  void TearDown() override {
+    mainEventBase.terminateLoopSoon();
+    mainEventBaseThread->join();
+  }
+
   Hash emptyhash{"1111111111111111111111111111111111111111"};
   Hash treehash{"2222222222222222222222222222222222222222"};
   Hash commithash{"3333333333333333333333333333333333333333"};
   Hash malformedhash{"9999999999999999999999999999999999999999"};
+  folly::EventBase mainEventBase;
+  std::unique_ptr<std::thread> mainEventBaseThread;
 };
 
 TEST_F(MononokeBackingStoreTest, testGetBlob) {
   auto server = createServer();
   auto blobs = getBlobs();
-  server->start([&server, &blobs]() {
+
+  server->start([&server, &blobs, this]() {
     MononokeBackingStore store(
-        server->addresses()[0].address, "repo", std::chrono::milliseconds(400));
+        server->addresses()[0].address,
+        "repo",
+        std::chrono::milliseconds(400),
+        &mainEventBase);
     auto blob = store.getBlob(kZeroHash).get();
     auto buf = blob->getContents();
     EXPECT_EQ(blobs[kZeroHash.toString()], buf.moveToFbString());
@@ -176,7 +193,8 @@ TEST_F(MononokeBackingStoreTest, testConnectFailed) {
 
   auto port = server->addresses()[0].address.getPort();
   auto sa = SocketAddress("localhost", port, true);
-  MononokeBackingStore store(sa, "repo", std::chrono::milliseconds(300));
+  MononokeBackingStore store(
+      sa, "repo", std::chrono::milliseconds(300), &mainEventBase);
   try {
     store.getBlob(kZeroHash).get();
     // Request should fail
@@ -189,9 +207,12 @@ TEST_F(MononokeBackingStoreTest, testEmptyBuffer) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto emptyhash = this->emptyhash;
-  server->start([&server, &blobs, emptyhash]() {
+  server->start([&server, &blobs, emptyhash, this]() {
     MononokeBackingStore store(
-        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+        server->addresses()[0].address,
+        "repo",
+        std::chrono::milliseconds(300),
+        &mainEventBase);
     auto blob = store.getBlob(emptyhash).get();
     auto buf = blob->getContents();
     EXPECT_EQ(blobs[emptyhash.toString()], buf.moveToFbString());
@@ -203,9 +224,12 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->treehash;
-  server->start([&server, &blobs, treehash]() {
+  server->start([&server, &blobs, treehash, this]() {
     MononokeBackingStore store(
-        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+        server->addresses()[0].address,
+        "repo",
+        std::chrono::milliseconds(300),
+        &mainEventBase);
     auto tree = store.getTree(treehash).get();
     auto tree_entries = tree->getTreeEntries();
 
@@ -247,9 +271,12 @@ TEST_F(MononokeBackingStoreTest, testMalformedGetTree) {
   auto server = createServer();
   auto blobs = getBlobs();
   auto treehash = this->malformedhash;
-  server->start([&server, &blobs, treehash]() {
+  server->start([&server, &blobs, treehash, this]() {
     MononokeBackingStore store(
-        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+        server->addresses()[0].address,
+        "repo",
+        std::chrono::milliseconds(300),
+        &mainEventBase);
     EXPECT_THROW(store.getTree(treehash).get(), std::exception);
     server->stop();
   });
@@ -260,9 +287,12 @@ TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
   auto blobs = getBlobs();
   auto commithash = this->commithash;
   auto treehash = this->treehash;
-  server->start([&server, commithash, treehash]() {
+  server->start([&server, commithash, treehash, this]() {
     MononokeBackingStore store(
-        server->addresses()[0].address, "repo", std::chrono::milliseconds(300));
+        server->addresses()[0].address,
+        "repo",
+        std::chrono::milliseconds(300),
+        &mainEventBase);
     auto tree = store.getTreeForCommit(commithash).get();
     auto tree_entries = tree->getTreeEntries();
 

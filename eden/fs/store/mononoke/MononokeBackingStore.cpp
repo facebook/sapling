@@ -15,6 +15,7 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/io/async/EventBaseManager.h>
 #include <folly/json.h>
 #include <proxygen/lib/http/HTTPConnector.h>
 #include <proxygen/lib/http/session/HTTPUpstreamSession.h>
@@ -39,6 +40,7 @@ namespace {
 using IOBufPromise = folly::Promise<std::unique_ptr<folly::IOBuf>>;
 
 // Callback that processes response for getblob request.
+// Note: because this callback deletes itself, it must be allocated on the heap!
 class MononokeCallback : public proxygen::HTTPConnector::Callback,
                          public proxygen::HTTPTransaction::Handler {
  public:
@@ -56,8 +58,10 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
   }
 
   void connectError(const folly::AsyncSocketException& /* ex */) override {
+    // handler won't be used anymore, should be safe to delete
     promise_.setException(
         make_exception_wrapper<std::runtime_error>("connect error"));
+    delete this;
   }
 
   // We don't send anything back, so ignore this callback
@@ -84,6 +88,16 @@ class MononokeCallback : public proxygen::HTTPConnector::Callback,
             make_exception_wrapper<std::runtime_error>(error_msg));
       }
     }
+
+    /*
+    From proxygen source code comments (HTTPTransaction.h):
+        The Handler deletes itself at some point after the Transaction
+        has detached from it.
+
+    After detachTransaction() call Handler won't be used and should be safe to
+    delete.
+    */
+    delete this;
   }
 
   void onHeadersComplete(std::unique_ptr<HTTPMessage> msg) noexcept override {
@@ -182,63 +196,71 @@ std::unique_ptr<Tree> convertBufToTree(
 MononokeBackingStore::MononokeBackingStore(
     const folly::SocketAddress& sa,
     const std::string& repo,
-    const std::chrono::milliseconds& timeout)
-    : sa_(sa), repo_(repo), timeout_(timeout) {}
+    const std::chrono::milliseconds& timeout,
+    folly::Executor* executor)
+    : sa_(sa), repo_(repo), timeout_(timeout), executor_(executor) {}
 
 MononokeBackingStore::~MononokeBackingStore() {}
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTree(
     const Hash& id) {
   URL url(folly::sformat("/{}/treenode/{}/", repo_, id.toString()));
-  auto future = sendRequest(url);
 
-  return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
-    return convertBufToTree(std::move(buf), id);
-  });
+  return folly::via(executor_)
+      .then([this, url] { return sendRequest(url); })
+      .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+        return convertBufToTree(std::move(buf), id);
+      });
 }
 
 folly::Future<std::unique_ptr<Blob>> MononokeBackingStore::getBlob(
     const Hash& id) {
   URL url(folly::sformat("/{}/blob/{}/", repo_, id.toString()));
-  auto future = sendRequest(url);
-
-  return future.then([id](std::unique_ptr<folly::IOBuf>&& buf) {
-    return std::make_unique<Blob>(id, *buf);
-  });
+  return folly::via(executor_)
+      .then([this, url] { return sendRequest(url); })
+      .then([id](std::unique_ptr<folly::IOBuf>&& buf) {
+        return std::make_unique<Blob>(id, *buf);
+      });
 }
 
 folly::Future<std::unique_ptr<Tree>> MononokeBackingStore::getTreeForCommit(
     const Hash& commitID) {
   URL url(folly::sformat(
       "/{}/cs/{}/roottreemanifestid/", repo_, commitID.toString()));
-  auto future = sendRequest(url);
-  return future.then([&](std::unique_ptr<folly::IOBuf>&& buf) {
-    auto treeId = Hash(buf->moveToFbString());
-    return getTree(treeId);
-  });
+  return folly::via(executor_)
+      .then([this, url] { return sendRequest(url); })
+      .then([&](std::unique_ptr<folly::IOBuf>&& buf) {
+        auto treeId = Hash(buf->moveToFbString());
+        return getTree(treeId);
+      });
 }
 
-// TODO(stash): make the call async
 Future<std::unique_ptr<IOBuf>> MononokeBackingStore::sendRequest(
     const URL& url) {
-  folly::EventBase evb;
-
+  auto eventBase = folly::EventBaseManager::get()->getEventBase();
   IOBufPromise promise;
   auto future = promise.getFuture();
-  MononokeCallback callback(url, std::move(promise));
-
+  // MononokeCallback deletes itself - see detachTransaction() method
+  MononokeCallback* callback = new MononokeCallback(url, std::move(promise));
+  // It is moved into the .then() lambda below and destroyed there
   folly::HHWheelTimer::UniquePtr timer{folly::HHWheelTimer::newTimer(
-      &evb,
+      eventBase,
       std::chrono::milliseconds(folly::HHWheelTimer::DEFAULT_TICK_INTERVAL),
       folly::AsyncTimeout::InternalEnum::NORMAL,
       timeout_)};
 
-  proxygen::HTTPConnector connector(&callback, timer.get());
+  // It is moved into the .then() lambda below and deleted there
+  auto connector =
+      std::make_unique<proxygen::HTTPConnector>(callback, timer.get());
 
   const folly::AsyncSocket::OptionMap opts{{{SOL_SOCKET, SO_REUSEADDR}, 1}};
-  connector.connect(&evb, this->sa_, timeout_, opts);
-  evb.loop();
-  return future;
+  connector->connect(eventBase, sa_, timeout_, opts);
+
+  /* capture `connector` to make sure it stays alive for the duration of the
+     connection */
+  return future.then(
+      [connector = std::move(connector), timer = std::move(timer)](
+          std::unique_ptr<folly::IOBuf>&& buf) { return std::move(buf); });
 }
 
 } // namespace eden

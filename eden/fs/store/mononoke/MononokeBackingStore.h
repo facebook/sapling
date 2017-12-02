@@ -18,6 +18,7 @@
 
 namespace folly {
 class IOBuf;
+class Executor;
 } // namespace folly
 
 namespace proxygen {
@@ -40,7 +41,8 @@ class MononokeBackingStore : public BackingStore {
   MononokeBackingStore(
       const folly::SocketAddress& sa,
       const std::string& repo,
-      const std::chrono::milliseconds& timeout);
+      const std::chrono::milliseconds& timeout,
+      folly::Executor* executor);
   virtual ~MononokeBackingStore();
 
   virtual folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
@@ -59,6 +61,7 @@ class MononokeBackingStore : public BackingStore {
   folly::SocketAddress sa_;
   std::string repo_;
   std::chrono::milliseconds timeout_;
+  folly::Executor* executor_;
 };
 } // namespace eden
 } // namespace facebook
