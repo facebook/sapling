@@ -266,14 +266,8 @@ A largefiles repo can be converted to lfs.  The lfconvert command uses the
 convert extension under the hood with --to-normal.  So the --config based
 parameters are available, but not --authormap, --branchmap, etc.
 
-XXX: The default configitems are registered in convert.__init__, and I have no
-idea how to load that before lfconvert starts using other convert modules and
-incurring a devel-warn.  Even if the convert extension is enabled on the command
-line, it complains.  I have no idea how this fails, and the test in fcd2f9b06629
-works.
-
   $ cd ..
-  $ hg lfconvert --to-normal largefiles nolargefiles 2>&1 | grep -v 'devel-warn'
+  $ hg lfconvert --to-normal largefiles nolargefiles 2>&1
   initializing destination nolargefiles
   0 additional largefiles cached
   scanning source...
