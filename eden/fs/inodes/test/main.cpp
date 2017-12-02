@@ -16,7 +16,7 @@ DEFINE_string(logging, "", "folly::logging configuration");
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   folly::init(&argc, &argv);
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::INFO);
+  folly::initLogging(FLAGS_logging);
 
   return RUN_ALL_TESTS();
 }

@@ -32,7 +32,7 @@ using namespace facebook::eden;
  */
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
+  folly::initLogging(FLAGS_logging);
 
   auto info = UserInfo::lookup();
   printf("Username: %s\n", info.getUsername().c_str());

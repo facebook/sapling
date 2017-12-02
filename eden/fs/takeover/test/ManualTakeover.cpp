@@ -28,7 +28,7 @@ DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
  */
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
+  folly::initLogging(FLAGS_logging);
 
   if (FLAGS_edenDir.empty()) {
     fprintf(stderr, "error: the --edenDir argument is required\n");

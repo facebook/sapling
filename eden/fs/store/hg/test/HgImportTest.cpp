@@ -220,7 +220,7 @@ TEST_F(HgImportTest, importTreeManifest) {
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   folly::init(&argc, &argv);
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::INFO);
+  folly::initLogging(FLAGS_logging);
   gflags::SetCommandLineOptionWithMode(
       "use_hg_tree_manifest", "true", gflags::SET_FLAGS_DEFAULT);
 

@@ -161,7 +161,7 @@ int importTree(
 
 int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::INFO, false);
+  folly::initLogging(FLAGS_logging);
 
   if (argc != 2) {
     fprintf(stderr, "usage: hg_import <repository>\n");

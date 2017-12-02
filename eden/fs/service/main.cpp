@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   fusell::startPrivHelper(identity);
   identity.dropPrivileges();
 
-  folly::initLoggingGlogStyle(FLAGS_logging, folly::LogLevel::WARNING);
+  folly::initLogging(FLAGS_logging);
 
   XLOG(INFO) << "Starting edenfs.  UID=" << identity.getUid()
              << ", GID=" << identity.getGid() << ", PID=" << getpid();
