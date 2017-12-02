@@ -1571,6 +1571,7 @@ class changeset_printer(object):
         self.hunk = {}
         self.lastheader = None
         self.footer = None
+        self._columns = templatekw.getlogcolumns()
 
     def flush(self, ctx):
         rev = ctx.rev()
@@ -1610,8 +1611,8 @@ class changeset_printer(object):
                           label='log.node')
             return
 
-        # i18n: column positioning for "hg log"
-        self.ui.write(_("changeset:   %s\n") % scmutil.formatchangeid(ctx),
+        columns = self._columns
+        self.ui.write(columns['changeset'] % scmutil.formatchangeid(ctx),
                       label=_changesetlabels(ctx))
 
         # branches are shown first before any other names due to backwards
@@ -1619,9 +1620,7 @@ class changeset_printer(object):
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("branch:      %s\n") % branch,
-                          label='log.branch')
+            self.ui.write(columns['branch'] % branch, label='log.branch')
 
         for nsname, ns in self.repo.names.iteritems():
             # branches has special logic already handled above, so here we just
@@ -1634,33 +1633,25 @@ class changeset_printer(object):
                 self.ui.write(ns.logfmt % name,
                               label='log.%s' % ns.colorname)
         if self.ui.debugflag:
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("phase:       %s\n") % ctx.phasestr(),
-                          label='log.phase')
+            self.ui.write(columns['phase'] % ctx.phasestr(), label='log.phase')
         for pctx in scmutil.meaningfulparents(self.repo, ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("parent:      %s\n") % scmutil.formatchangeid(pctx),
+            self.ui.write(columns['parent'] % scmutil.formatchangeid(pctx),
                           label=label)
 
         if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()
             mrev = self.repo.manifestlog._revlog.rev(mnode)
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("manifest:    %s\n")
+            self.ui.write(columns['manifest']
                           % scmutil.formatrevnode(self.ui, mrev, mnode),
                           label='ui.debug log.manifest')
-        # i18n: column positioning for "hg log"
-        self.ui.write(_("user:        %s\n") % ctx.user(),
-                      label='log.user')
-        # i18n: column positioning for "hg log"
-        self.ui.write(_("date:        %s\n") % util.datestr(ctx.date()),
+        self.ui.write(columns['user'] % ctx.user(), label='log.user')
+        self.ui.write(columns['date'] % util.datestr(ctx.date()),
                       label='log.date')
 
         if ctx.isunstable():
-            # i18n: column positioning for "hg log"
             instabilities = ctx.instabilities()
-            self.ui.write(_("instability: %s\n") % ', '.join(instabilities),
+            self.ui.write(columns['instability'] % ', '.join(instabilities),
                           label='log.instability')
 
         elif ctx.obsolete():
@@ -1670,31 +1661,22 @@ class changeset_printer(object):
 
         if self.ui.debugflag:
             files = ctx.p1().status(ctx)[:3]
-            for key, value in zip([# i18n: column positioning for "hg log"
-                                   _("files:"),
-                                   # i18n: column positioning for "hg log"
-                                   _("files+:"),
-                                   # i18n: column positioning for "hg log"
-                                   _("files-:")], files):
+            for key, value in zip(['files', 'files+', 'files-'], files):
                 if value:
-                    self.ui.write("%-12s %s\n" % (key, " ".join(value)),
+                    self.ui.write(columns[key] % " ".join(value),
                                   label='ui.debug log.files')
         elif ctx.files() and self.ui.verbose:
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("files:       %s\n") % " ".join(ctx.files()),
+            self.ui.write(columns['files'] % " ".join(ctx.files()),
                           label='ui.note log.files')
         if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
-            # i18n: column positioning for "hg log"
-            self.ui.write(_("copies:      %s\n") % ' '.join(copies),
+            self.ui.write(columns['copies'] % ' '.join(copies),
                           label='ui.note log.copies')
 
         extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
-                # i18n: column positioning for "hg log"
-                self.ui.write(_("extra:       %s=%s\n")
-                              % (key, util.escapestr(value)),
+                self.ui.write(columns['extra'] % (key, util.escapestr(value)),
                               label='ui.debug log.extra')
 
         description = ctx.description().strip()
@@ -1706,9 +1688,7 @@ class changeset_printer(object):
                               label='ui.note log.description')
                 self.ui.write("\n\n")
             else:
-                # i18n: column positioning for "hg log"
-                self.ui.write(_("summary:     %s\n") %
-                              description.splitlines()[0],
+                self.ui.write(columns['summary'] % description.splitlines()[0],
                               label='log.summary')
         self.ui.write("\n")
 
@@ -1719,8 +1699,7 @@ class changeset_printer(object):
 
         if obsfate:
             for obsfateline in obsfate:
-                # i18n: column positioning for "hg log"
-                self.ui.write(_("obsolete:    %s\n") % obsfateline,
+                self.ui.write(self._columns['obsolete'] % obsfateline,
                               label='log.obsfate')
 
     def _exthook(self, ctx):

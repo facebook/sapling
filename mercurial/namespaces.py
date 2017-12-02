@@ -25,6 +25,7 @@ class namespaces(object):
 
     def __init__(self):
         self._names = util.sortdict()
+        columns = templatekw.getlogcolumns()
 
         # we need current mercurial named objects (bookmarks, tags, and
         # branches) to be initialized somewhere, so that place is here
@@ -32,8 +33,7 @@ class namespaces(object):
         bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
         bmknodemap = lambda repo, node: repo.nodebookmarks(node)
         n = namespace("bookmarks", templatename="bookmark",
-                      # i18n: column positioning for "hg log"
-                      logfmt=_("bookmark:    %s\n"),
+                      logfmt=columns['bookmark'],
                       listnames=bmknames,
                       namemap=bmknamemap, nodemap=bmknodemap,
                       builtin=True)
@@ -43,8 +43,7 @@ class namespaces(object):
         tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
         tagnodemap = lambda repo, node: repo.nodetags(node)
         n = namespace("tags", templatename="tag",
-                      # i18n: column positioning for "hg log"
-                      logfmt=_("tag:         %s\n"),
+                      logfmt=columns['tag'],
                       listnames=tagnames,
                       namemap=tagnamemap, nodemap=tagnodemap,
                       deprecated={'tip'},
@@ -55,8 +54,7 @@ class namespaces(object):
         bnamemap = lambda repo, name: tolist(repo.branchtip(name, True))
         bnodemap = lambda repo, node: [repo[node].branch()]
         n = namespace("branches", templatename="branch",
-                      # i18n: column positioning for "hg log"
-                      logfmt=_("branch:      %s\n"),
+                      logfmt=columns['branch'],
                       listnames=bnames,
                       namemap=bnamemap, nodemap=bnodemap,
                       builtin=True)

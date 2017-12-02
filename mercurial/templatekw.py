@@ -17,6 +17,7 @@ from . import (
     encoding,
     error,
     hbisect,
+    i18n,
     obsutil,
     patch,
     pycompat,
@@ -300,6 +301,30 @@ def getrenamedfn(repo, endrev=None):
             return None
 
     return getrenamed
+
+def getlogcolumns():
+    """Return a dict of log column labels"""
+    _ = pycompat.identity  # temporarily disable gettext
+    # i18n: column positioning for "hg log"
+    columns = _('bookmark:    %s\n'
+                'branch:      %s\n'
+                'changeset:   %s\n'
+                'copies:      %s\n'
+                'date:        %s\n'
+                'extra:       %s=%s\n'
+                'files+:      %s\n'
+                'files-:      %s\n'
+                'files:       %s\n'
+                'instability: %s\n'
+                'manifest:    %s\n'
+                'obsolete:    %s\n'
+                'parent:      %s\n'
+                'phase:       %s\n'
+                'summary:     %s\n'
+                'tag:         %s\n'
+                'user:        %s\n')
+    return dict(zip([s.split(':', 1)[0] for s in columns.splitlines()],
+                    i18n._(columns).splitlines(True)))
 
 # default templates internally used for rendering of lists
 defaulttempl = {

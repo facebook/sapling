@@ -9744,85 +9744,8 @@ msgstr "(erwäge die Option --after)\n"
 msgid "child process failed to start"
 msgstr ""
 
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "changeset:   %s\n"
-msgstr "Änderung:        %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "branch:      %s\n"
-msgstr "Zweig:           %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "bookmark:    %s\n"
-msgstr "Lesezeichen:     %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "tag:         %s\n"
-msgstr "Marke:           %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "phase:       %s\n"
-msgstr "Phase:       %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "parent:      %s\n"
-msgstr "Vorgänger:       %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "manifest:    %d:%s\n"
-msgstr "Manifest:        %d:%s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "user:        %s\n"
-msgstr "Nutzer:          %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "date:        %s\n"
-msgstr "Datum:           %s\n"
-
-#. i18n: column positioning for "hg log"
-msgid "files:"
-msgstr "Dateien:"
-
-#. i18n: column positioning for "hg log"
-msgid "files+:"
-msgstr "Dateien+:"
-
-#. i18n: column positioning for "hg log"
-msgid "files-:"
-msgstr "Dateien-:"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "files:       %s\n"
-msgstr "Dateien:         %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "copies:      %s\n"
-msgstr "Kopien:          %s\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "extra:       %s=%s\n"
-msgstr "Extra:           %s=%s\n"
-
 msgid "description:\n"
 msgstr "Beschreibung:\n"
-
-#. i18n: column positioning for "hg log"
-#, python-format
-msgid "summary:     %s\n"
-msgstr "Zusammenfassung: %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -23193,6 +23116,45 @@ msgid ":emailuser: Any text. Returns the user portion of an email address."
 msgstr ""
 ":emailuser: Beliebiger Text. Gibt den Nutzerteil einer E-Mail-Adresse\n"
 "    (vor dem @-Zeichen) zurück."
+
+#. i18n: column positioning for "hg log"
+#, python-format
+msgid ""
+"bookmark:    %s\n"
+"branch:      %s\n"
+"changeset:   %s\n"
+"copies:      %s\n"
+"date:        %s\n"
+"extra:       %s=%s\n"
+"files+:      %s\n"
+"files-:      %s\n"
+"files:       %s\n"
+"instability: %s\n"
+"manifest:    %s\n"
+"obsolete:    %s\n"
+"parent:      %s\n"
+"phase:       %s\n"
+"summary:     %s\n"
+"tag:         %s\n"
+"user:        %s\n"
+msgstr ""
+"Lesezeichen:     %s\n"
+"Zweig:           %s\n"
+"Änderung:        %s\n"
+"Kopien:          %s\n"
+"Datum:           %s\n"
+"Extra:           %s=%s\n"
+"Dateien+:        %s\n"
+"Dateien-:        %s\n"
+"Dateien:         %s\n"
+"instability:     %s\n"
+"Manifest:        %s\n"
+"obsolete:        %s\n"
+"Vorgänger:       %s\n"
+"Phase:           %s\n"
+"Zusammenfassung: %s\n"
+"Marke:           %s\n"
+"Nutzer:          %s\n"
 
 msgid ":author: String. The unmodified author of the changeset."
 msgstr ":author: Zeichenkette. Der unveränderte Autor eines Änderungssatzes."
