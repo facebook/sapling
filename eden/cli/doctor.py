@@ -193,8 +193,17 @@ class NuclideHasExpectedWatchmanSubscriptions:
         # files from self._path are being edited in Nuclide.
         if 'hg-repository-watchman-subscription-primary' not in names:
             return self._report(CheckResultType.NO_ISSUE)
-        all_files_subscription = f'filewatcher-{self._path}'
-        if all_files_subscription in names:
+
+        whole_repo_subscription = f'filewatcher-{self._path}'
+        if whole_repo_subscription in names:
+            has_proper_watchman_subscription = True
+        else:
+            subrepo_subscription_prefix = whole_repo_subscription + '/'
+            has_proper_watchman_subscription = any(
+                s.startswith(subrepo_subscription_prefix) for s in names
+            )
+
+        if has_proper_watchman_subscription:
             return self._report(CheckResultType.NO_ISSUE)
         elif dry_run:
             return self._report(CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN)

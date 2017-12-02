@@ -47,7 +47,7 @@ class DoctorTest(unittest.TestCase):
             calls.append(call(['debug-get-subscriptions', edenfs_path1]))
             side_effects.append(
                 _create_watchman_subscription(
-                    filewatcher_subscription=edenfs_path1,
+                    filewatcher_subscription=f'filewatcher-{edenfs_path1}',
                 )
             )
 
@@ -256,33 +256,18 @@ Number of issues that could not be fixed: 2.
         calls = []
 
         calls.append(call(['watch-project', edenfs_path]))
-        side_effects.append(
-            {
-                'watch': edenfs_path,
-                'watcher': initial_watcher
-            }
-        )
+        side_effects.append({'watch': edenfs_path, 'watcher': initial_watcher})
 
         if initial_watcher != 'eden' and not dry_run:
             calls.append(call(['watch-del', edenfs_path]))
-            side_effects.append(
-                {
-                    'watch-del': True,
-                    'root': edenfs_path
-                }
-            )
+            side_effects.append({'watch-del': True, 'root': edenfs_path})
 
             self.assertIsNotNone(
                 new_watcher,
                 msg='Must specify new_watcher when initial_watcher is "eden".'
             )
             calls.append(call(['watch-project', edenfs_path]))
-            side_effects.append(
-                {
-                    'watch': edenfs_path,
-                    'watcher': new_watcher
-                }
-            )
+            side_effects.append({'watch': edenfs_path, 'watcher': new_watcher})
         mock_watchman.side_effect = side_effects
 
         watchman_roots = set([edenfs_path])
@@ -345,7 +330,12 @@ Number of issues that could not be fixed: 2.
 
         calls.append(call(['debug-get-subscriptions', edenfs_path]))
         if include_filewatcher_subscription:
-            filewatcher_subscription: Optional[str] = edenfs_path
+            # Note that a "filewatcher-" subscription in a subdirectory of the
+            # Eden mount should signal that the proper Watchman subscription is
+            # set up.
+            filewatcher_subscription: Optional[
+                str
+            ] = f'filewatcher-{os.path.join(edenfs_path, "subdirectory")}'
         else:
             filewatcher_subscription = None
 
@@ -415,7 +405,7 @@ def _create_watchman_subscription(
         subscribers.append(
             {
                 'info': {
-                    'name': 'filewatcher-%s' % filewatcher_subscription,
+                    'name': filewatcher_subscription,
                     'query': {
                         'empty_on_fresh_instance': True,
                         'defer_vcs': False,
