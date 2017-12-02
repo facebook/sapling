@@ -83,7 +83,7 @@ Unamend on clean wdir and tip
   
   $ hg unamend
   $ hg glog --hidden
-  @  9:8da14a1fd653  Added h
+  @  9:46d02d47eec6  Added h
   |
   | x  8:c9fa1a715c1b  Added h
   |/
@@ -104,7 +104,7 @@ Unamend on clean wdir and tip
   o  0:18d04c59bb5d  Added a
   
   $ hg diff
-  diff -r 8da14a1fd653 h
+  diff -r 46d02d47eec6 h
   --- a/h	Thu Jan 01 00:00:00 1970 +0000
   +++ b/h	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -116,11 +116,11 @@ Unamend on clean wdir and tip
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 8da14a1fd653c3f07fdad5760511c9e12652a306
+  # Node ID 46d02d47eec6ca096b8dcab3f8f5579c40c3dd9a
   # Parent  87d6d66763085b629e6d7ed56778c79827273022
   Added h
   
-  diff -r 87d6d6676308 -r 8da14a1fd653 h
+  diff -r 87d6d6676308 -r 46d02d47eec6 h
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/h	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
@@ -131,7 +131,7 @@ Unamend on clean wdir and tip
 
   $ hg log -r . -T '{extras % "{extra}\n"}' --config alias.log=log
   branch=default
-  unamend_source=\xc9\xfa\x1aq\\\x1bva\xc0\xfa\xfb6*\x9f0\xbdu\x87\x8d}
+  unamend_source=c9fa1a715c1b7661c0fafb362a9f30bd75878d7d
 
 Using unamend to undo an unamed (intentional)
 
@@ -141,11 +141,11 @@ Using unamend to undo an unamed (intentional)
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 1c09887216571a9755fc9d2e7f0e41c2b49e341b
+  # Node ID 850ddfc1bc662997ec6094ada958f01f0cc8070a
   # Parent  87d6d66763085b629e6d7ed56778c79827273022
   Added h
   
-  diff -r 87d6d6676308 -r 1c0988721657 h
+  diff -r 87d6d6676308 -r 850ddfc1bc66 h
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/h	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,2 @@
@@ -170,14 +170,14 @@ Unamend on a dirty working directory
   M b
 
   $ hg diff
-  diff -r 956548224719 a
+  diff -r ec338db45d51 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,3 @@
    foo
   +bar
   +foobar
-  diff -r 956548224719 b
+  diff -r ec338db45d51 b
   --- a/b	Thu Jan 01 00:00:00 1970 +0000
   +++ b/b	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
@@ -223,7 +223,7 @@ Unamending an added file with dirty wdir status
   $ hg status
   A bar
   $ hg diff
-  diff -r ff917aa01c86 bar
+  diff -r 7f79409af972 bar
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/bar	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,2 @@
@@ -236,9 +236,9 @@ Unamending an added file with dirty wdir status
 Unamending in middle of a stack
 
   $ hg glog
-  @  19:ff917aa01c86  Added things to a and b
+  @  19:7f79409af972  Added things to a and b
   |
-  o  12:956548224719  Added h
+  o  12:ec338db45d51  Added h
   |
   o  6:87d6d6676308  Added g
   |
@@ -261,9 +261,9 @@ Unamending in middle of a stack
   $ hg rebase -s 6 -d . -q
 
   $ hg glog
-  o  23:2b41b42e192a  Added things to a and b
+  o  23:03ddd6fc5af1  Added things to a and b
   |
-  o  22:1860df151f01  Added h
+  o  22:3e7b64ee157b  Added h
   |
   o  21:49635b68477e  Added g
   |
@@ -306,8 +306,8 @@ Testing whether unamend retains copies or not
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID b087c66cada118d6c5487d3d7cb29cac239bd98a
-  # Parent  2b41b42e192adc425b106643c3fc89170d6b8add
+  # Node ID cfef290346fbee5126313d7e1aab51d877679b09
+  # Parent  03ddd6fc5af19e028c44a2fd6d790dd22712f231
   Moved a to foo
   
   diff --git a/a b/foo
@@ -326,8 +326,8 @@ Testing whether unamend retains copies or not
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 9fa06fb09a83a86ec7368d15004dbc52ac1a5d2e
-  # Parent  2b41b42e192adc425b106643c3fc89170d6b8add
+  # Node ID eca050985275bb271ce3092b54e56ea5c85d29a3
+  # Parent  03ddd6fc5af19e028c44a2fd6d790dd22712f231
   Moved a to foo
   
   diff --git a/a b/foo
@@ -347,8 +347,8 @@ Retained copies in new prdecessor commit
   # User test
   # Date 0 0
   #      Thu Jan 01 00:00:00 1970 +0000
-  # Node ID 4cf9987c9b941f615930e7c46307b4dbf35697cf
-  # Parent  2b41b42e192adc425b106643c3fc89170d6b8add
+  # Node ID 552e3af4f01f620f88ca27be1f898316235b736a
+  # Parent  03ddd6fc5af19e028c44a2fd6d790dd22712f231
   Moved a to foo
   
   diff --git a/a b/foo

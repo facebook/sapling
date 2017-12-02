@@ -212,11 +212,11 @@ def unamend(ui, repo, **opts):
     """
 
     unfi = repo.unfiltered()
-
-    # identify the commit from which to unamend
-    curctx = repo['.']
-
     with repo.wlock(), repo.lock(), repo.transaction('unamend'):
+
+        # identify the commit from which to unamend
+        curctx = repo['.']
+
         if not curctx.mutable():
             raise error.Abort(_('cannot unamend public changesets'))
 
@@ -235,7 +235,7 @@ def unamend(ui, repo, **opts):
         # add an extra so that we get a new hash
         # note: allowing unamend to undo an unamend is an intentional feature
         extras = predctx.extra()
-        extras['unamend_source'] = curctx.node()
+        extras['unamend_source'] = curctx.hex()
 
         def filectxfn(repo, ctx_, path):
             try:
@@ -259,14 +259,7 @@ def unamend(ui, repo, **opts):
             newprednode = repo.commitctx(newctx)
 
         newpredctx = repo[newprednode]
-
-        changedfiles = []
-        wctx = repo[None]
-        wm = wctx.manifest()
-        cm = newpredctx.manifest()
         dirstate = repo.dirstate
-        diff = cm.diff(wm)
-        changedfiles.extend(diff.iterkeys())
 
         with dirstate.parentchange():
             dirstate.setparents(newprednode, node.nullid)
