@@ -1,15 +1,14 @@
-# Copyright (c) 2017-present, Facebook, Inc.
+#!/usr/bin/env python3
+#
+# Copyright (c) 2016-present, Facebook, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 import configparser
+from typing import Dict
 
 
 class EdenConfigInterpolator(configparser.Interpolation):
@@ -23,23 +22,23 @@ class EdenConfigInterpolator(configparser.Interpolation):
         this approach in the C++ implementation of the parser.
     '''
 
-    def __init__(self, defaults):
-        self._defaults = {}
+    def __init__(self, defaults) -> None:
+        self._defaults: Dict[str, str] = {}
         ''' pre-construct the token name that we're going to substitute.
             eg: {"foo": "bar"} is stored as {"${foo}": "bar"} internally
         '''
         for k, v in defaults.items():
             self._defaults['${' + k + '}'] = v
 
-    def _interpolate(self, value):
+    def _interpolate(self, value: str) -> str:
         ''' simple brute force replacement using the defaults that were
             provided to us during construction '''
         for k, v in self._defaults.items():
             value = value.replace(k, v)
         return value
 
-    def before_get(self, parser, section, option, value, defaults):
+    def before_get(self, parser, section, option, value, defaults) -> str:
         return self._interpolate(value)
 
-    def before_read(self, parser, section, option, value):
+    def before_read(self, parser, section, option, value) -> str:
         return self._interpolate(value)
