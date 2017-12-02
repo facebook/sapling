@@ -7,6 +7,9 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from typing import List, Set, Union
+
+from eden.integration.lib.hgrepo import HgRepository
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -15,7 +18,7 @@ class MergeTest(EdenHgTestCase):
     '''Note that Mercurial has a number of built-in merge tools:
     https://www.mercurial-scm.org/repo/hg/help/merge-tools
     '''
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file('foo', 'original')
         self.commit0 = repo.commit('root commit')
 
@@ -26,25 +29,72 @@ class MergeTest(EdenHgTestCase):
         repo.write_file('foo', '2')
         self.commit2 = repo.commit('commit2')
 
-    def test_merge_local(self):
+    def test_merge_local(self) -> None:
         self._do_merge_and_commit(':local')
         self._verify_tip('2')
 
-    def test_merge_other(self):
+    def test_merge_other(self) -> None:
         self._do_merge_and_commit(':other')
         self._verify_tip('1')
 
-    def test_merge_union(self):
+    def test_merge_union(self) -> None:
         self._do_merge_and_commit(':union')
         self._verify_tip('21')
 
-    def _do_merge_and_commit(self, tool):
+    def _do_merge_and_commit(self, tool: str) -> None:
         self.hg('merge', '--tool', tool, '-r', self.commit1)
         self.assert_status({'foo': 'M'})
         self.repo.commit('merge commit1 into commit2')
         self.assert_status_empty()
 
-    def _verify_tip(self, expected_contents):
+    def test_resolve_merge(self) -> None:
+        # Perform the merge and let it fail with the file unresolved
+        self.hg('merge', '--tool', ':fail', '-r', self.commit1, check=False)
+        self.assert_status({'foo': 'M'})
+        self._assert_unresolved(['foo'])
+
+        self.write_file('foo', '3')
+        self.hg('resolve', '--mark', 'foo')
+        self._assert_unresolved(unresolved=[], resolved=['foo'])
+        self.assert_status({'foo': 'M'})
+        self.repo.commit('merge commit1 into commit2')
+        self._verify_tip('3')
+
+    def test_clear_merge_state(self) -> None:
+        # Perform the merge and let it fail with the file unresolved
+        self.hg('merge', '--tool', ':fail', '-r', self.commit1, check=False)
+        self.assert_status({'foo': 'M'})
+        self._assert_unresolved(['foo'])
+
+        # "hg update --clean ." should reset is back to a clean state
+        # with no outstanding merge conflicts.
+        self.hg('update', '--clean', '.')
+        self.assertEqual(self.commit2, self.repo.get_head_hash())
+        self.assert_status_empty()
+        self._assert_unresolved([])
+
+    def _assert_unresolved(
+        self,
+        unresolved: Union[List[str], Set[str]],
+        resolved: Union[List[str], Set[str]] = None
+    ) -> None:
+        out = self.hg('resolve', '--list')
+        actual_resolved = set()
+        actual_unresolved = set()
+        for line in out.splitlines():
+            status, path = line.split(None, 1)
+            if status == 'U':
+                actual_unresolved.add(path)
+            elif status == 'R':
+                actual_resolved.add(path)
+            else:
+                self.fail('unexpected entry in `hg resolve --list` output: %r'
+                          % line)
+
+        self.assertEqual(actual_unresolved, set(unresolved))
+        self.assertEqual(actual_resolved, set(resolved or []))
+
+    def _verify_tip(self, expected_contents: str) -> None:
         files = self.repo.log(template='{files}', revset='tip')[0]
         self.assertEqual('foo', files)
 

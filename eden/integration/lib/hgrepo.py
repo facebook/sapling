@@ -74,7 +74,8 @@ class HgRepository(repobase.Repository):
         stderr: Any = subprocess.PIPE,
         shell: bool = False,
         hgeditor: Optional[str] = None,
-        cwd: Optional[str] = None
+        cwd: Optional[str] = None,
+        check: bool = True
     ) -> Optional[str]:
         if shell:
             cmd = self.hg_bin + ' ' + args[0]
@@ -90,7 +91,7 @@ class HgRepository(repobase.Repository):
         try:
             completed_process = subprocess.run(cmd, stdout=stdout,
                                                stderr=stderr,
-                                               check=True, cwd=cwd,
+                                               check=check, cwd=cwd,
                                                env=env, shell=shell)
         except subprocess.CalledProcessError as ex:
             raise HgError(ex) from ex

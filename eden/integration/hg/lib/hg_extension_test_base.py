@@ -161,7 +161,8 @@ class EdenHgTestCase(testcase.EdenTestCase):
         stdout_charset: str = 'utf-8',
         cwd: Optional[str] = None,
         shell: bool = False,
-        hgeditor: Optional[str] = None
+        hgeditor: Optional[str] = None,
+        check: bool = True
     ) -> str:
         '''Runs `hg.real` with the specified args in the Eden mount.
 
@@ -173,7 +174,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
         specify the `stdout_charset` as a keyword argument.
         '''
         return self.repo.hg(*args, stdout_charset=stdout_charset, cwd=cwd,
-                            shell=shell, hgeditor=hgeditor)
+                            shell=shell, hgeditor=hgeditor, check=check)
 
     def create_editor_that_writes_commit_messages(self,
                                                   messages: List[str]) -> str:
