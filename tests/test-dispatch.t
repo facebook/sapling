@@ -83,11 +83,12 @@ However, we can't prevent it from loading extensions and configs:
   $ mkdir -p badrepo/.hg
   $ echo 'invalid-syntax' > badrepo/.hg/hgrc
   $ hg log -b -Rbadrepo default
-  hg: parse error at badrepo/.hg/hgrc:1: invalid-syntax
+  hg: parse error at badrepo/.hg/hgrc:1: invalid-syntax (glob)
   [255]
 
   $ hg log -b --cwd=inexistent default
-  abort: No such file or directory: 'inexistent'
+  abort: No such file or directory: 'inexistent' (no-windows !)
+  abort: The system cannot find the file specified: 'inexistent' (windows !)
   [255]
 
   $ hg log -b '--config=ui.traceback=yes' 2>&1 | grep '^Traceback'

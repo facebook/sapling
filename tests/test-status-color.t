@@ -31,19 +31,19 @@ hg status in repo root:
   [status.unknown|? ][status.unknown|in_root]
 HGPLAIN disables color
   $ HGPLAIN=1 hg status --color=debug
-  ? a/1/in_a_1
-  ? a/in_a
-  ? b/1/in_b_1
-  ? b/2/in_b_2
-  ? b/in_b
+  ? a/1/in_a_1 (glob)
+  ? a/in_a (glob)
+  ? b/1/in_b_1 (glob)
+  ? b/2/in_b_2 (glob)
+  ? b/in_b (glob)
   ? in_root
 HGPLAINEXCEPT=color does not disable color
   $ HGPLAINEXCEPT=color hg status --color=debug
-  [status.unknown|? ][status.unknown|a/1/in_a_1]
-  [status.unknown|? ][status.unknown|a/in_a]
-  [status.unknown|? ][status.unknown|b/1/in_b_1]
-  [status.unknown|? ][status.unknown|b/2/in_b_2]
-  [status.unknown|? ][status.unknown|b/in_b]
+  [status.unknown|? ][status.unknown|a/1/in_a_1] (glob)
+  [status.unknown|? ][status.unknown|a/in_a] (glob)
+  [status.unknown|? ][status.unknown|b/1/in_b_1] (glob)
+  [status.unknown|? ][status.unknown|b/2/in_b_2] (glob)
+  [status.unknown|? ][status.unknown|b/in_b] (glob)
   [status.unknown|? ][status.unknown|in_root]
 
 hg status with template
