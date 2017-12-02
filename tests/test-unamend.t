@@ -16,7 +16,7 @@ Repo Setup
 
   $ hg init repo
   $ cd repo
-  $ for ch in {a..h}; do touch $ch; echo "foo" >> $ch; hg ci -Aqm "Added "$ch; done
+  $ for ch in a b c d e f g h; do touch $ch; echo "foo" >> $ch; hg ci -Aqm "Added "$ch; done
 
   $ hg glog
   @  7:ec2426147f0e  Added h
