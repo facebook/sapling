@@ -13,15 +13,14 @@ from typing import TextIO
 
 
 def write_heading(heading: str, out: TextIO) -> None:
-    format_str = '{:^80}\n'
     border = '*' * len(heading)
-    out.write(format_str.format(border))
-    out.write(format_str.format(heading))
-    out.write(format_str.format(border) + '\n')
+    out.write(_center_strip_right(border, 80))
+    out.write(_center_strip_right(heading, 80))
+    out.write(_center_strip_right(border, 80) + '\n')
 
 
 def write_mem_status_table(fuse_counters, out: TextIO) -> None:
-    format_str = '{:>40} {:^1} {:<20}\n'
+    format_str = '{:>40} {:^1} {:<20}'
     keys = [
         'memory_free', 'memory_free_percent', 'memory_usage',
         'memory_usage_percent'
@@ -31,7 +30,8 @@ def write_mem_status_table(fuse_counters, out: TextIO) -> None:
             value = '%d%s' % (fuse_counters[key], '%')
         else:
             value = '%f(GB)' % (fuse_counters[key] / (10**6))
-        out.write(format_str.format(key.replace('_', ' '), ':', value))
+        centered_text = format_str.format(key.replace('_', ' '), ':', value)
+        out.write(centered_text.rstrip() + '\n')
 
 
 LATENCY_FORMAT_STR = '{:<12} {:^4} {:^10}  {:>10}  {:>15}  {:>10} {:>10}\n'
@@ -84,3 +84,10 @@ def write_table(table, heading: str, out: TextIO) -> None:
         out.write(
             format_str.format(key, key_width, value[0], value[1], value[2], value[3])
         )
+
+
+def _center_strip_right(text: str, width: int) -> str:
+    '''Returns a string with sufficient leading whitespace such that `text`
+    would be centered within the specified `width` plus a trailing newline.'''
+    space = (width - len(text)) // 2
+    return space * ' ' + text + '\n'

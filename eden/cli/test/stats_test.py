@@ -16,26 +16,25 @@ class StatsTest(unittest.TestCase):
     maxDiff = None
 
     def test_print_heading(self):
-        expected_output = (
-            '                                   **********                      '
-            '             \n'
-            '                                   TheHeading                      '
-            '             \n'
-            '                                   **********                      '
-            '             \n\n'
-        )
+        expected_output = '''\
+                                   **********
+                                   TheHeading
+                                   **********
+
+'''
         out = StringIO()
         stats_print.write_heading('TheHeading', out)
         self.assertEqual(out.getvalue(), expected_output)
 
     def test_print_latency_record(self):
         matrix = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
-        expected_output = (
-            '              |      p50               1                2           3          4\n'
-            'access        |      p90               5                6           7          8\n'
-            '              |      p99               9               10          11         12\n'
-            '--------------------------------------------------------------------------------\n'
-        )
+        expected_output = '''\
+              |      p50               1                2           3          4
+access        |      p90               5                6           7          8
+              |      p99               9               10          11         12
+--------------------------------------------------------------------------------
+'''
+
         out = StringIO()
         stats_print.write_latency_record('access', matrix, out)
         self.assertEqual(out.getvalue(), expected_output)
@@ -47,12 +46,12 @@ class StatsTest(unittest.TestCase):
             'memory_usage': 45678912,
             'memory_usage_percent': 70
         }
-        expected_output = (
-            '                             memory free : 1.234567(GB)        \n'
-            '                     memory free percent : 50%                 \n'
-            '                            memory usage : 45.678912(GB)       \n'
-            '                    memory usage percent : 70%                 \n'
-        )
+        expected_output = '''\
+                             memory free : 1.234567(GB)
+                     memory free percent : 50%
+                            memory usage : 45.678912(GB)
+                    memory usage percent : 70%
+'''
         out = StringIO()
         stats_print.write_mem_status_table(dictionary, out)
         self.assertEqual(expected_output, out.getvalue())
@@ -64,14 +63,14 @@ class StatsTest(unittest.TestCase):
             'key3': [9, 10, 11, 12],
             'key4': [13, 14, 15, 16]
         }
-        expected_output = (
-            'SystemCall      Last Minute       Last 10m      Last Hour       All Time\n'
-            '------------------------------------------------------------------------\n'
-            'key1                      1              2              3              4\n'
-            'key2                      5              6              7              8\n'
-            'key3                      9             10             11             12\n'
-            'key4                     13             14             15             16\n'
-        )
+        expected_output = '''\
+SystemCall      Last Minute       Last 10m      Last Hour       All Time
+------------------------------------------------------------------------
+key1                      1              2              3              4
+key2                      5              6              7              8
+key3                      9             10             11             12
+key4                     13             14             15             16
+'''
         out = StringIO()
         stats_print.write_table(table, 'SystemCall', out)
         self.assertEqual(expected_output, out.getvalue())
@@ -82,11 +81,11 @@ class StatsTest(unittest.TestCase):
         }
         # Verifies the width of the first column depends on the header's and
         # key's lengths.
-        expected_output = (
-            'SC       Last Minute       Last 10m      Last Hour       All Time\n'
-            '-----------------------------------------------------------------\n'
-            'key                1              2              3              4\n'
-        )
+        expected_output = '''\
+SC       Last Minute       Last 10m      Last Hour       All Time
+-----------------------------------------------------------------
+key                1              2              3              4
+'''
         out = StringIO()
         stats_print.write_table(table, 'SC', out)
         self.assertEqual(expected_output, out.getvalue())
