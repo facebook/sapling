@@ -1610,8 +1610,6 @@ class changeset_printer(object):
                           label='log.node')
             return
 
-        date = util.datestr(ctx.date())
-
         # i18n: column positioning for "hg log"
         self.ui.write(_("changeset:   %s\n") % scmutil.formatchangeid(ctx),
                       label=_changesetlabels(ctx))
@@ -1656,7 +1654,7 @@ class changeset_printer(object):
         self.ui.write(_("user:        %s\n") % ctx.user(),
                       label='log.user')
         # i18n: column positioning for "hg log"
-        self.ui.write(_("date:        %s\n") % date,
+        self.ui.write(_("date:        %s\n") % util.datestr(ctx.date()),
                       label='log.date')
 
         if ctx.isunstable():
