@@ -53,6 +53,7 @@ buck-out = buck-out
                     'buck-out': 'buck-out',
                 },
                 'client-dir': client_dir,
+                'scm_type': self.repo.get_type(),
                 'mount': tmp,
                 'snapshot': self.repo.get_head_hash(),
             }, client_info
@@ -73,6 +74,7 @@ buck-out = buck-out
             {
                 'bind-mounts': {},
                 'client-dir': client_dir,
+                'scm_type': self.repo.get_type(),
                 'mount': self.mount,
                 'snapshot': self.repo.get_head_hash(),
             }, client_info
