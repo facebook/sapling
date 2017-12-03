@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use path::{fsencode, MPath};
+use path::{fncache_fsencode, MPath};
 use std::path::PathBuf;
 
 
@@ -13,7 +13,7 @@ fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let path = &MPath::new(path).unwrap();
     elements.extend(path.into_iter().cloned());
 
-    assert_eq!(fsencode(&elements, true), PathBuf::from(expected));
+    assert_eq!(fncache_fsencode(&elements, true), PathBuf::from(expected));
 }
 
 #[test]

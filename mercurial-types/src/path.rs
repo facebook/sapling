@@ -259,7 +259,7 @@ impl IntoIterator for MPath {
 
 /// Perform the mapping to a filesystem path used in a .hg directory
 /// Assumes that this path is a file.
-pub fn fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBuf {
+pub fn fncache_fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let path = path.rev();
@@ -699,7 +699,7 @@ mod test {
         let path = &MPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
-        assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
+        assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
     #[test]
@@ -767,7 +767,7 @@ mod test {
         let mut elements = vec![];
         let joined = &prefix.join(&MPath::new(suffix).unwrap());
         elements.extend(joined.into_iter().cloned());
-        assert_eq!(fsencode(&elements, false), PathBuf::from(expected));
+        assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
     #[test]

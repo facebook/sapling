@@ -20,8 +20,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
-use mercurial_types::{fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest, NodeHash,
-                      Repo, RepoPath, NULL_HASH};
+use mercurial_types::{fncache_fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest,
+                      NodeHash, Repo, RepoPath, NULL_HASH};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -324,7 +324,7 @@ impl RevlogRepo {
         elements.push(MPathElement::new(Vec::from(filename)));
         self.basepath
             .join("store")
-            .join(fsencode(&elements, dotencode))
+            .join(fncache_fsencode(&elements, dotencode))
     }
 
     fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &MPath, extension: E) -> PathBuf {
@@ -337,7 +337,7 @@ impl RevlogRepo {
         }
         self.basepath
             .join("store")
-            .join(fsencode(&elements, dotencode))
+            .join(fncache_fsencode(&elements, dotencode))
     }
 
     pub fn bookmarks(&self) -> Result<StockBookmarks> {

@@ -62,7 +62,7 @@ pub use delta::Delta;
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{NodeHash, NULL_HASH};
-pub use path::{fsencode, MPath, MPathElement, RepoPath};
+pub use path::{fncache_fsencode, MPath, MPathElement, RepoPath};
 pub use repo::{BoxRepo, Repo};
 pub use utils::percent_encode;
 
