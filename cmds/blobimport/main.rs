@@ -33,6 +33,7 @@ extern crate futures_ext;
 extern crate heads;
 extern crate linknodes;
 extern crate manifoldblob;
+extern crate memheads;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
@@ -62,7 +63,6 @@ use tokio_core::reactor::{Core, Remote};
 use blobrepo::BlobChangeset;
 use blobstore::Blobstore;
 use fileblob::Fileblob;
-use fileheads::FileHeads;
 use filelinknodes::FileLinknodes;
 use futures_ext::{BoxFuture, FutureExt};
 use linknodes::NoopLinknodes;
@@ -114,7 +114,7 @@ pub(crate) enum BlobstoreEntry {
 
 fn run_blobimport<In, Out>(
     input: In,
-    output: Out,
+    output: Option<Out>,
     blobtype: BlobstoreType,
     write_linknodes: bool,
     logger: &Logger,
@@ -125,20 +125,19 @@ fn run_blobimport<In, Out>(
 ) -> Result<()>
 where
     In: Into<PathBuf>,
-    Out: Into<PathBuf>,
+    Out: Into<PathBuf> + Clone + std::fmt::Debug + Send + 'static,
 {
     let input = input.into();
-    let output = output.into();
     let core = Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
 
-    info!(logger, "Opening headstore: {}", output.display());
-    let headstore = open_headstore(&output, &cpupool)?;
+    info!(logger, "Opening headstore: {:?}", output);
+    let headstore = open_headstore(output.clone(), &cpupool)?;
 
     if let BlobstoreType::Manifold(ref bucket) = blobtype {
         info!(logger, "Using ManifoldBlob with bucket: {:?}", bucket);
     } else {
-        info!(logger, "Opening blobstore: {}", output.display());
+        info!(logger, "Opening blobstore: {:?}", output);
     }
 
     let (sender, recv) = sync_channel::<BlobstoreEntry>(channel_size);
@@ -203,6 +202,8 @@ where
     };
     let res = if write_linknodes {
         info!(logger, "Opening linknodes store: {:?}", output);
+        let output = output.expect("output path is not provided");
+        let output = output.into();
         let linknodes_store = open_linknodes_store(&output, &cpupool)?;
         convert_context.convert(linknodes_store)
     } else {
@@ -225,13 +226,20 @@ fn open_repo<P: Into<PathBuf>>(input: P) -> Result<RevlogRepo> {
     Ok(revlog)
 }
 
-fn open_headstore<P: Into<PathBuf>>(heads: P, pool: &Arc<CpuPool>) -> Result<FileHeads> {
-    let mut heads = heads.into();
+fn open_headstore<P: Into<PathBuf>>(
+    path: Option<P>,
+    pool: &Arc<CpuPool>,
+) -> Result<Box<heads::Heads>> {
+    match path {
+        Some(path) => {
+            let mut heads = path.into();
 
-    heads.push("heads");
-    let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
-
-    Ok(headstore)
+            heads.push("heads");
+            let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
+            Ok(Box::new(headstore))
+        }
+        None => Ok(Box::new(memheads::MemHeads::new())),
+    }
 }
 
 fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<FileLinknodes> {
@@ -242,21 +250,26 @@ fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Resul
 }
 
 fn open_blobstore<P: Into<PathBuf>>(
-    output: P,
+    output: Option<P>,
     ty: BlobstoreType,
     remote: &Remote,
     postpone_compaction: bool,
     max_blob_size: Option<usize>,
 ) -> Result<BBlobstore> {
-    let mut output = output.into();
-    output.push("blobs");
-
     let blobstore: BBlobstore = match ty {
-        BlobstoreType::Files => Fileblob::<_, Bytes>::create(output)
-            .map_err(Error::from)
-            .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
-            .arced(),
+        BlobstoreType::Files => {
+            let output = output.expect("output path is not specified");
+            let mut output = output.into();
+            output.push("blobs");
+            Fileblob::<_, Bytes>::create(output)
+                .map_err(Error::from)
+                .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
+                .arced()
+        }
         BlobstoreType::Rocksdb => {
+            let output = output.expect("output path is not specified");
+            let mut output = output.into();
+            output.push("blobs");
             let options = rocksdb::Options::new()
                 .create_if_missing(true)
                 .disable_auto_compaction(postpone_compaction);
@@ -322,7 +335,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .args_from_usage(
             r#"
             <INPUT>                  'input revlog repo'
-            <OUTPUT>                 'output blobstore RepoCtx'
+            [OUTPUT]                 'output blobstore RepoCtx'
 
             -p, --port [PORT]        'if provided the thrift server will start on this port'
 
@@ -406,7 +419,7 @@ fn main() {
         start_stats()?;
 
         let input = matches.value_of("INPUT").unwrap();
-        let output = matches.value_of("OUTPUT").unwrap();
+        let output = matches.value_of("OUTPUT");
         let bucket = matches
             .value_of("bucket")
             .unwrap_or(DEFAULT_MANIFOLD_BUCKET);
@@ -431,7 +444,7 @@ fn main() {
 
         run_blobimport(
             input,
-            output,
+            output.map(|path| path.to_string()),
             blobtype,
             write_linknodes,
             &root_log,
@@ -450,7 +463,7 @@ fn main() {
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
             let options = rocksdb::Options::new().create_if_missing(false);
-            let rocksdb = rocksdb::Db::open(Path::new(output).join("blobs"), options)
+            let rocksdb = rocksdb::Db::open(Path::new(output.unwrap()).join("blobs"), options)
                 .expect("can't open rocksdb");
             info!(root_log, "compaction started");
             rocksdb.compact_range(&[], &[]);
