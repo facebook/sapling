@@ -54,6 +54,13 @@ _errors = {
         # FormatMessage(ERROR_PATH_NOT_FOUND)
         br'The system cannot find the path specified',
     ),
+    br'$ECONNRESET$': (
+        # strerror()
+        br'Connection reset by peer',
+
+        # FormatMessage(WSAECONNRESET)
+        br'An existing connection was forcibly closed by the remote host',
+    ),
 }
 
 for replace, msgs in _errors.items():

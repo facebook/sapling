@@ -36,8 +36,7 @@ Failure to accept() socket should result in connection related error message
   $ cat hg.pid > $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT/ clone
-  abort: error: Connection reset by peer (no-windows !)
-  abort: error: An existing connection was forcibly closed by the remote host (windows !)
+  abort: error: $ECONNRESET$
   [255]
 
 (The server exits on its own, but there is a race between that and starting a new server.
@@ -54,8 +53,7 @@ TODO: this usually outputs good results, but sometimes emits abort:
 error: '' on FreeBSD and OS X.
 What we ideally want are:
 
-abort: error: Connection reset by peer (no-windows !)
-abort: error: An existing connection was forcibly closed by the remote host (windows !)
+abort: error: $ECONNRESET$
 
 The flakiness in this output was observable easily with
 --runs-per-test=20 on macOS 10.12 during the freeze for 4.2.
