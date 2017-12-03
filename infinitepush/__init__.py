@@ -100,6 +100,7 @@ import tempfile
 import time
 
 from .bundleparts import (
+    copiedpart,
     getscratchbranchparts,
     scratchbookmarksparttype,
     scratchbranchparttype,
@@ -1083,7 +1084,7 @@ def processparts(orig, repo, op, unbundler):
                 # follow-ups stop part.seek support to reduce memory usage
                 # (https://bz.mercurial-scm.org/5691). So we need to copy
                 # the part so it can be consumed later.
-                scratchbookpart = bundleparts.copiedpart(part)
+                scratchbookpart = copiedpart(part)
             else:
                 if handleallparts or part.type in partforwardingwhitelist:
                     # Ideally we would not process any parts, and instead just
