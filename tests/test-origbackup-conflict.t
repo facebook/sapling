@@ -129,8 +129,7 @@ Incorrectly configure origbackuppath to be under a file
   b/c: replacing untracked file
   getting b/c
   creating directory: $TESTTMP/repo/.hg/badorigbackups/b (glob)
-  abort: The system cannot find the path specified: '$TESTTMP/repo/.hg/badorigbackups/b' (glob) (windows !)
-  abort: Not a directory: '$TESTTMP/repo/.hg/badorigbackups/b' (no-windows !)
+  abort: $ENOTDIR$: '$TESTTMP/repo/.hg/badorigbackups/b' (glob)
   [255]
   $ cat .hg/badorigbackups
   data

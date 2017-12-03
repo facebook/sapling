@@ -47,6 +47,13 @@ _errors = {
         # FormatMessage(ERROR_FILE_NOT_FOUND)
         br'The system cannot find the file specified',
     ),
+    br'$ENOTDIR$': (
+        # strerror()
+        br'Not a directory',
+
+        # FormatMessage(ERROR_PATH_NOT_FOUND)
+        br'The system cannot find the path specified',
+    ),
 }
 
 for replace, msgs in _errors.items():
