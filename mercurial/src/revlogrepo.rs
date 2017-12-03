@@ -47,6 +47,7 @@ pub enum Required {
     Largefiles,
     Lz4revlog,
     SqlDirstate,
+    HgSql,
 }
 
 impl Display for Required {
@@ -65,6 +66,7 @@ impl Display for Required {
             &Largefiles => "largefiles",
             &Lz4revlog => "lz4revlog",
             &SqlDirstate => "sqldirstate",
+            &HgSql => "hgsql",
         };
         write!(fmt, "{}", s)
     }
@@ -88,6 +90,7 @@ impl FromStr for Required {
             "largefiles" => Ok(Largefiles),
             "lz4revlog" => Ok(Lz4revlog),
             "sqldirstate" => Ok(SqlDirstate),
+            "hgsql" => Ok(HgSql),
             unk => Err(ErrorKind::UnknownReq(unk.into()).into()),
         }
     }
