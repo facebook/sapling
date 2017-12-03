@@ -20,8 +20,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
-use mercurial_types::{fncache_fsencode, BlobNode, Changeset, MPath, MPathElement, Manifest,
-                      NodeHash, Repo, RepoPath, NULL_HASH};
+use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, Changeset, MPath, MPathElement,
+                      Manifest, NodeHash, Repo, RepoPath, NULL_HASH};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -318,18 +318,16 @@ impl RevlogRepo {
 
     fn get_tree_log_path<E: AsRef<[u8]>>(&self, path: &MPath, filename: E) -> PathBuf {
         let filename = filename.as_ref();
-        let dotencode = self.requirements.contains(&Required::Dotencode);
         let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("meta".as_bytes()))];
         elements.extend(path.into_iter().cloned());
         elements.push(MPathElement::new(Vec::from(filename)));
         self.basepath
             .join("store")
-            .join(fncache_fsencode(&elements, dotencode))
+            .join(self.fsencode_path(&elements))
     }
 
     fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &MPath, extension: E) -> PathBuf {
         let extension = extension.as_ref();
-        let dotencode = self.requirements.contains(&Required::Dotencode);
         let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("data".as_bytes()))];
         elements.extend(path.into_iter().cloned());
         if let Some(last) = elements.last_mut() {
@@ -337,7 +335,24 @@ impl RevlogRepo {
         }
         self.basepath
             .join("store")
-            .join(fncache_fsencode(&elements, dotencode))
+            .join(self.fsencode_path(&elements))
+    }
+
+    fn fsencode_path(&self, elements: &Vec<MPathElement>) -> PathBuf {
+        // Mercurial has a complicated logic of path encoding.
+        // Code below matches core Mercurial logic from the commit
+        // 75013952d8d9608f73cd45f68405fbd6ec112bf2 from file mercurial/store.py from the function
+        // store(). The only caveat is that basicstore is not yet implemented
+        if self.requirements.contains(&Required::Store) {
+            if self.requirements.contains(&Required::Fncache) {
+                let dotencode = self.requirements.contains(&Required::Dotencode);
+                fncache_fsencode(&elements, dotencode)
+            } else {
+                simple_fsencode(&elements)
+            }
+        } else {
+            unimplemented!();
+        }
     }
 
     pub fn bookmarks(&self) -> Result<StockBookmarks> {

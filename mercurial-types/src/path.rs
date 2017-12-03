@@ -259,6 +259,7 @@ impl IntoIterator for MPath {
 
 /// Perform the mapping to a filesystem path used in a .hg directory
 /// Assumes that this path is a file.
+/// This encoding is used when both 'store' and 'fncache' requirements are in the repo.
 pub fn fncache_fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
@@ -277,6 +278,31 @@ pub fn fncache_fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBu
         } else {
             ret.clone()
         }
+    } else {
+        PathBuf::new()
+    }
+}
+
+/// Perform the mapping to a filesystem path used in a .hg directory
+/// Assumes that this path is a file.
+/// This encoding is used when 'store' requirement is present in the repo, but 'fncache'
+/// requirement is not present.
+pub fn simple_fsencode(elements: &Vec<MPathElement>) -> PathBuf {
+    let mut path = elements.iter().rev();
+    let file = path.next();
+    let directory_elements = path.rev();
+
+    if let Some(basename) = file {
+        let encoded_directory: PathBuf = directory_elements
+            .map(|elem| {
+                let encoded_element = fnencode(direncode(&elem.0));
+                String::from_utf8(encoded_element).expect("bad utf8")
+            })
+            .collect();
+
+        let encoded_basename =
+            PathBuf::from(String::from_utf8(fnencode(&basename.0)).expect("bad utf8"));
+        encoded_directory.join(encoded_basename)
     } else {
         PathBuf::new()
     }
@@ -702,6 +728,14 @@ mod test {
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
+    fn check_simple_fsencode(path: &[u8], expected: &str) {
+        let mut elements = vec![];
+        let path = &MPath::new(path).unwrap();
+        elements.extend(path.into_iter().cloned());
+
+        assert_eq!(simple_fsencode(&elements), PathBuf::from(expected));
+    }
+
     #[test]
     fn fsencode_simple() {
         check_fsencode(b"foo/bar", "foo/bar");
@@ -865,5 +899,17 @@ mod test {
         let toencode = b"data/\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
         let expected = "data/~01~02~03~04~05~06~07~08~09~0a~0b~0c~0d~0e~0f~10~11~12~13~14~15~16~17~18~19~1a~1b~1c~1d~1e~1f";
         check_fsencode(&toencode[..], expected);
+    }
+
+    #[test]
+    fn test_simple_fsencode() {
+        let toencode: &[u8] = b"foo.i/bar.d/bla.hg/hi:world?/HELLO";
+        let expected = "foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o";
+
+        check_simple_fsencode(toencode, expected);
+
+        let toencode: &[u8] = b".arcconfig.i";
+        let expected = ".arcconfig.i";
+        check_simple_fsencode(toencode, expected);
     }
 }
