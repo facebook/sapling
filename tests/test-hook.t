@@ -685,7 +685,7 @@ test python hook configured with python:[file]:[hook] syntax
 
   $ hg up null
   loading update.ne hook failed:
-  abort: No such file or directory: $TESTTMP/d/repo/nonexistent.py
+  abort: $ENOENT$: $TESTTMP/d/repo/nonexistent.py
   [255]
 
   $ hg id

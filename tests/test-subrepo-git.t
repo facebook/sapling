@@ -640,9 +640,10 @@ Test forgetting files, not implemented in git subrepo, used to
 traceback
 #if no-windows
   $ hg forget 'notafile*'
-  notafile*: No such file or directory
+  notafile*: $ENOENT$
   [1]
 #else
+error: The filename, directory name, or volume label syntax is incorrect
   $ hg forget 'notafile'
   notafile: * (glob)
   [1]

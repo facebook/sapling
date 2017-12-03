@@ -94,8 +94,7 @@ However, we can't prevent it from loading extensions and configs:
   [255]
 
   $ hg log -b --cwd=inexistent default
-  abort: No such file or directory: 'inexistent' (no-windows !)
-  abort: The system cannot find the file specified: 'inexistent' (windows !)
+  abort: $ENOENT$: 'inexistent'
   [255]
 
   $ hg log -b '--config=ui.traceback=yes' 2>&1 | grep '^Traceback'
@@ -212,7 +211,7 @@ Current directory removed:
 The output could be one of the following and something else:
  chg: abort: failed to getcwd (errno = *) (glob)
  abort: error getting current working directory: * (glob)
- sh: 0: getcwd() failed: No such file or directory
+ sh: 0: getcwd() failed: $ENOENT$
 Since the exact behavior depends on the shell, only check it returns non-zero.
   $ HGDEMANDIMPORT=disable hg version -q 2>/dev/null || false
   [1]

@@ -31,8 +31,7 @@
   $ hg forget foo
 
   $ hg -v addremove nonexistent
-  nonexistent: The system cannot find the file specified (windows !)
-  nonexistent: No such file or directory (no-windows !)
+  nonexistent: $ENOENT$
   [1]
 
   $ cd ..
@@ -86,8 +85,7 @@
   $ rm c
 
   $ hg ci -A -m "c" nonexistent
-  nonexistent: The system cannot find the file specified (windows !)
-  nonexistent: No such file or directory (no-windows !)
+  nonexistent: $ENOENT$
   abort: failed to mark all new/missing files as added/removed
   [255]
 

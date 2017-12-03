@@ -265,7 +265,7 @@ Check recursive uses of 'include:'
   $ cp otherignore goodignore
   $ echo "include:badignore" >> otherignore
   $ hg status
-  skipping unreadable pattern file 'badignore': No such file or directory
+  skipping unreadable pattern file 'badignore': $ENOENT$
   A dir/b.o
 
   $ mv goodignore otherignore

@@ -37,3 +37,17 @@ substitutions = [
      br' - - [$LOGDATE$] "GET'
     ),
 ]
+
+# Various platform error strings, keyed on a common replacement string
+_errors = {
+    br'$ENOENT$': (
+        # strerror()
+        br'No such file or directory',
+
+        # FormatMessage(ERROR_FILE_NOT_FOUND)
+        br'The system cannot find the file specified',
+    ),
+}
+
+for replace, msgs in _errors.items():
+    substitutions.extend((m, replace) for m in msgs)

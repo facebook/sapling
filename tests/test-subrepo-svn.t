@@ -571,15 +571,9 @@ Test archive
 Test forgetting files, not implemented in svn subrepo, used to
 traceback
 
-#if no-windows
   $ hg forget 'notafile*'
-  notafile*: No such file or directory
+  notafile*: $ENOENT$
   [1]
-#else
-  $ hg forget 'notafile'
-  notafile: * (glob)
-  [1]
-#endif
 
 Test a subrepo referencing a just moved svn path. Last commit rev will
 be different from the revision, and the path will be different as

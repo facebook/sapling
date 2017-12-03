@@ -83,8 +83,7 @@ Status compared to parent of the working copy, i.e. the dirstate status
   ! missing_missing_missing-tracked
 
   $ hg status -A --rev 1 'glob:missing_missing_missing-untracked'
-  missing_missing_missing-untracked: The system cannot find the file specified (windows !)
-  missing_missing_missing-untracked: No such file or directory (no-windows !)
+  missing_missing_missing-untracked: $ENOENT$
 
 Status between first and second commit. Should ignore dirstate status.
 

@@ -378,7 +378,7 @@ Test patterns:
   f  glob:glob   glob:glob
   $ hg debugwalk glob:glob
   matcher: <patternmatcher patterns='(?:glob$)'>
-  glob: No such file or directory
+  glob: $ENOENT$
   $ hg debugwalk glob:glob:glob
   matcher: <patternmatcher patterns='(?:glob\\:glob$)'>
   f  glob:glob  glob:glob  exact

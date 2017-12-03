@@ -925,7 +925,7 @@ file specified by acl.config does not exist
   bundle2-input-bundle: 4 parts total
   transaction abort!
   rollback completed
-  abort: No such file or directory: ../acl.config
+  abort: $ENOENT$: ../acl.config
   no rollback information available
   0:6675d58eff77
   

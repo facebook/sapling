@@ -216,8 +216,7 @@ Test that "hg rollback" restores status of largefiles correctly
   $ hg add --large largeY
 
   $ hg status -A large1
-  large1: The system cannot find the file specified (windows !)
-  large1: No such file or directory (no-windows !)
+  large1: $ENOENT$
 
   $ hg status -A large2
   ? large2
@@ -309,8 +308,7 @@ automated commit like rebase/transplant
   rebasing 4:07d6153b5c04 "#4" (tip)
 
   $ hg status -A large1
-  large1: The system cannot find the file specified (windows !)
-  large1: No such file or directory (no-windows !)
+  large1: $ENOENT$
 
   $ hg status -A largeX
   C largeX
@@ -320,8 +318,7 @@ automated commit like rebase/transplant
   $ hg transplant -q 1 4
 
   $ hg status -A large1
-  large1: The system cannot find the file specified (windows !)
-  large1: No such file or directory (no-windows !)
+  large1: $ENOENT$
 
   $ hg status -A largeX
   C largeX
@@ -331,8 +328,7 @@ automated commit like rebase/transplant
   $ hg transplant -q --merge 1 --merge 4
 
   $ hg status -A large1
-  large1: The system cannot find the file specified (windows !)
-  large1: No such file or directory (no-windows !)
+  large1: $ENOENT$
 
   $ hg status -A largeX
   C largeX
