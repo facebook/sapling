@@ -34,15 +34,10 @@ cacert not found
 
 Test server address cannot be reused
 
-#if windows
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
-  abort: cannot start server at 'localhost:$HGPORT': * (glob)
+  abort: cannot start server at 'localhost:$HGPORT': $EADDRINUSE$
   [255]
-#else
-  $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
-  abort: cannot start server at 'localhost:$HGPORT': Address already in use
-  [255]
-#endif
+
   $ cd ..
 
 Our test cert is not signed by a trusted CA. It should fail to verify if

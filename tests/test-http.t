@@ -17,15 +17,10 @@
 
 Test server address cannot be reused
 
-#if windows
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at 'localhost:$HGPORT1': * (glob)
+  abort: cannot start server at 'localhost:$HGPORT1': $EADDRINUSE$
   [255]
-#else
-  $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at 'localhost:$HGPORT1': Address already in use
-  [255]
-#endif
+
   $ cd ..
   $ cat hg1.pid hg2.pid >> $DAEMON_PIDS
 

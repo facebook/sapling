@@ -61,6 +61,14 @@ _errors = {
         # FormatMessage(WSAECONNRESET)
         br'An existing connection was forcibly closed by the remote host',
     ),
+    br'$EADDRINUSE$': (
+        # strerror()
+        br'Address already in use',
+
+        # FormatMessage(WSAEADDRINUSE)
+        br'Only one usage of each socket address'
+        br' \(protocol/network address/port\) is normally permitted',
+    ),
 }
 
 for replace, msgs in _errors.items():
