@@ -115,6 +115,7 @@
             <File Id="monoblue.filerevision.tmpl"   Name="filerevision.tmpl" />
             <File Id="monoblue.footer.tmpl"         Name="footer.tmpl" />
             <File Id="monoblue.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="monoblue.graphentry.tmpl"     Name="graphentry.tmpl" />
             <File Id="monoblue.header.tmpl"         Name="header.tmpl" />
             <File Id="monoblue.index.tmpl"          Name="index.tmpl" />
             <File Id="monoblue.manifest.tmpl"       Name="manifest.tmpl" />

@@ -731,6 +731,9 @@ Set up the repo
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'graph?style=monoblue' | egrep $REVLINKS
               <li><a href="/file/tip?style=monoblue">files</a></li>
+          <a href="/rev/9d8c40cba617?style=monoblue">third</a>
+          <a href="/rev/a7c1559b7bba?style=monoblue">second</a>
+          <a href="/rev/43c799df6e75?style=monoblue">first</a>
           <a href="/graph/tip?revcount=30&style=monoblue">less</a>
           <a href="/graph/tip?revcount=120&style=monoblue">more</a>
           | <a href="/graph/43c799df6e75?style=monoblue">(0)</a> <a href="/graph/tip?style=monoblue">tip</a> 
@@ -810,6 +813,8 @@ Set up the repo
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'graph/xyzzy?style=monoblue' | egrep $REVLINKS
               <li><a href="/file/xyzzy?style=monoblue">files</a></li>
+          <a href="/rev/a7c1559b7bba?style=monoblue">second</a>
+          <a href="/rev/43c799df6e75?style=monoblue">first</a>
           <a href="/graph/xyzzy?revcount=30&style=monoblue">less</a>
           <a href="/graph/xyzzy?revcount=120&style=monoblue">more</a>
           | <a href="/graph/43c799df6e75?style=monoblue">(0)</a> <a href="/graph/tip?style=monoblue">tip</a> 
