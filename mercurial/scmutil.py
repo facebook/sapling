@@ -1284,7 +1284,7 @@ def nodesummaries(repo, nodes, maxnumnodes=4):
     if len(nodes) <= maxnumnodes or repo.ui.verbose:
         return ' '.join(short(h) for h in nodes)
     first = ' '.join(short(h) for h in nodes[:maxnumnodes])
-    return _("%s and %s others") % (first, len(nodes) - maxnumnodes)
+    return _("%s and %d others") % (first, len(nodes) - maxnumnodes)
 
 def enforcesinglehead(repo, tr, desc):
     """check that no named branch has multiple heads"""
