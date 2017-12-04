@@ -52,7 +52,7 @@ The warning message changed in Git 1.8.0
   |
   o  changeset:   2:8bc4d64940260d4a1e70b54c099d3a76c83ff41e
   |  parent:      1:f35a3100b78e57a0f5e4589a438f952a14b26ade
-  |  parent:      1:(9f6268bfc9eb3956c5ab8752d7b983b0ffe57115|955b24cf6f8f293741d3f39110c6fe554c292533) (re)
+  |  parent:      -1:0000000000000000000000000000000000000000
   |  manifest:    2:f580e7da3673c137370da2b931a1dee83590d7b4
   |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
   |  date:        Mon Jan 01 00:00:12 2007 +0000
@@ -89,7 +89,7 @@ The warning message changed in Git 1.8.0
      extra:       hg-git-rename-source=git
      description:
      add \xc3\xa4lph\xc3\xa0 (esc)
-  
+  |  parent:      1:(9f6268bfc9eb3956c5ab8752d7b983b0ffe57115|955b24cf6f8f293741d3f39110c6fe554c292533) (re)
   
 
   $ hg gclear
