@@ -85,6 +85,7 @@
             <File Id="gitweb.filerevision.tmpl"   Name="filerevision.tmpl" />
             <File Id="gitweb.footer.tmpl"         Name="footer.tmpl" />
             <File Id="gitweb.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="gitweb.graphentry.tmpl"     Name="graphentry.tmpl" />
             <File Id="gitweb.header.tmpl"         Name="header.tmpl" />
             <File Id="gitweb.index.tmpl"          Name="index.tmpl" />
             <File Id="gitweb.manifest.tmpl"       Name="manifest.tmpl" />

@@ -1782,7 +1782,35 @@ Overviews
   <div id="wrapper">
   <ul id="nodebgs"></ul>
   <canvas id="graph" width="39" height="168"></canvas>
-  <ul id="graphnodes"></ul>
+  <ul id="graphnodes"><li data-node="cad8025a2e87">
+   <span class="desc">
+    <a class="list" href="/rev/cad8025a2e87?style=gitweb"><b>branch commit with null character: </b></a>
+   </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+   <span class="info">1970-01-01, by test</span>
+  </li>
+  <li data-node="1d22e65f027e">
+   <span class="desc">
+    <a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>branch</b></a>
+   </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="stable">stable</span> </span>
+   <span class="info">1970-01-01, by test</span>
+  </li>
+  <li data-node="a4f92ed23982">
+   <span class="desc">
+    <a class="list" href="/rev/a4f92ed23982?style=gitweb"><b>Added tag 1.0 for changeset 2ef0ac749a14</b></a>
+   </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="branchtag" title="default">default</span> </span>
+   <span class="info">1970-01-01, by test</span>
+  </li>
+  <li data-node="2ef0ac749a14">
+   <span class="desc">
+    <a class="list" href="/rev/2ef0ac749a14?style=gitweb"><b>base</b></a>
+   </span>
+   <span class="logtags"><span class="phasetag" title="draft">draft</span> <span class="tagtag" title="1.0">1.0</span> <span class="bookmarktag" title="anotherthing">anotherthing</span> </span>
+   <span class="info">1970-01-01, by test</span>
+  </li>
+  </ul>
   </div>
   
   <script>
@@ -1801,39 +1829,13 @@ Overviews
   	
   	var bg = '<li class="bg parity' + parity + '"></li>';
   	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
-  	var nstyle = 'padding-left: ' + left + 'px;';
   	
-  	var tagspan = '';
-  	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) {
-  		tagspan = '<span class="logtags">';
-  		if (cur[6][1]) {
-  			tagspan += '<span class="branchtag" title="' + cur[6][0] + '">';
-  			tagspan += cur[6][0] + '</span> ';
-  		} else if (!cur[6][1] && cur[6][0] != 'default') {
-  			tagspan += '<span class="inbranchtag" title="' + cur[6][0] + '">';
-  			tagspan += cur[6][0] + '</span> ';
-  		}
-  		if (cur[7].length) {
-  			for (var t in cur[7]) {
-  				var tag = cur[7][t];
-  				tagspan += '<span class="tagtag">' + tag + '</span> ';
-  			}
-  		}
-  		if (cur[8].length) {
-  			for (var t in cur[8]) {
-  				var bookmark = cur[8][t];
-  				tagspan += '<span class="bookmarktag">' + bookmark + '</span> ';
-  			}
-  		}
-  		tagspan += '</span>';
+  	var item = document.querySelector('[data-node="' + cur.node + '"]');
+  	if (item) {
+  		item.style.paddingLeft = left + 'px';
   	}
   	
-  	var item = '<li style="' + nstyle + '"><span class="desc">';
-  	item += '<a class="list" href="/rev/' + cur[0] + '?style=gitweb" title="' + cur[0] + '"><b>' + cur[3] + '</b></a>';
-  	item += '</span> ' + tagspan + '';
-  	item += '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
-  
-  	return [bg, item];
+  	return [bg, ''];
   	
   }
   

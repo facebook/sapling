@@ -262,6 +262,7 @@ filecompchild = '
   </tr>'
 shortlog = shortlog.tmpl
 graph = graph.tmpl
+graphentry = graphentry.tmpl
 phasetag = '{ifeq(phase, 'public', '', '<span class="phasetag" title="{phase|escape}">{phase|escape}</span> ')}'
 obsoletetag = '{if(obsolete, '<span class="obsoletetag" title="obsolete">obsolete</span> ')}'
 instabilitytag = '<span class="instabilitytag" title="{instability|escape}">{instability|escape}</span> '
