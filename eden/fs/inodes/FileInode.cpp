@@ -213,64 +213,60 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
 folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     const struct stat& attr,
     int to_set) {
-  int openFlags = O_RDWR;
-
   // Minor optimization: if we know that the file is being completed truncated
   // as part of this operation, there's no need to fetch the underlying data,
   // so pass on the truncate flag our underlying open call
-  if ((to_set & FUSE_SET_ATTR_SIZE) && attr.st_size == 0) {
-    openFlags |= O_TRUNC;
-  }
 
-  return materializeForWrite(openFlags).then(
-      [self = inodePtrFromThis(), attr, to_set]() {
-        self->materializeInParent();
+  bool truncate = (to_set & FUSE_SET_ATTR_SIZE) && attr.st_size == 0;
+  auto future = truncate ? (materializeAndTruncate(), makeFuture())
+                         : materializeForWrite();
+  return future.then([self = inodePtrFromThis(), attr, to_set]() {
+    self->materializeInParent();
 
-        auto result =
-            fusell::Dispatcher::Attr{self->getMount()->initStatData()};
+    auto result = fusell::Dispatcher::Attr{self->getMount()->initStatData()};
 
-        auto state = self->state_.wlock();
-        CHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
-            << "Must have a file in the overlay at this point";
-        auto file = self->getFile(*state);
+    auto state = self->state_.wlock();
+    CHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
+        << "Must have a file in the overlay at this point";
+    auto file = self->getFile(*state);
 
-        // Set the size of the file when FUSE_SET_ATTR_SIZE is set
-        if (to_set & FUSE_SET_ATTR_SIZE) {
-          checkUnixError(
-              ftruncate(file.fd(), attr.st_size + Overlay::kHeaderLength));
-        }
+    // Set the size of the file when FUSE_SET_ATTR_SIZE is set
+    if (to_set & FUSE_SET_ATTR_SIZE) {
+      checkUnixError(
+          ftruncate(file.fd(), attr.st_size + Overlay::kHeaderLength));
+    }
 
-        if (to_set & FUSE_SET_ATTR_MODE) {
-          // The mode data is stored only in inode_->state_.
-          // (We don't set mode bits on the overlay file as that may incorrectly
-          // prevent us from reading or writing the overlay data).
-          // Make sure we preserve the file type bits, and only update
-          // permissions.
-          state->mode = (state->mode & S_IFMT) | (07777 & attr.st_mode);
-        }
+    if (to_set & FUSE_SET_ATTR_MODE) {
+      // The mode data is stored only in inode_->state_.
+      // (We don't set mode bits on the overlay file as that may incorrectly
+      // prevent us from reading or writing the overlay data).
+      // Make sure we preserve the file type bits, and only update
+      // permissions.
+      state->mode = (state->mode & S_IFMT) | (07777 & attr.st_mode);
+    }
 
-        // Set in-memory timeStamps
-        self->setattrTimes(attr, to_set, state->timeStamps);
+    // Set in-memory timeStamps
+    self->setattrTimes(attr, to_set, state->timeStamps);
 
-        // We need to call fstat function here to get the size of the overlay
-        // file. We might update size in the result while truncating the file
-        // when FUSE_SET_ATTR_SIZE flag is set but when the flag is not set we
-        // have to return the correct size of the file even if some size is sent
-        // in attr.st.st_size.
-        checkUnixError(fstat(file.fd(), &result.st));
-        result.st.st_ino = self->getNodeId();
-        result.st.st_size -= Overlay::kHeaderLength;
-        result.st.st_atim = state->timeStamps.atime;
-        result.st.st_ctim = state->timeStamps.ctime;
-        result.st.st_mtim = state->timeStamps.mtime;
-        result.st.st_mode = state->mode;
+    // We need to call fstat function here to get the size of the overlay
+    // file. We might update size in the result while truncating the file
+    // when FUSE_SET_ATTR_SIZE flag is set but when the flag is not set we
+    // have to return the correct size of the file even if some size is sent
+    // in attr.st.st_size.
+    checkUnixError(fstat(file.fd(), &result.st));
+    result.st.st_ino = self->getNodeId();
+    result.st.st_size -= Overlay::kHeaderLength;
+    result.st.st_atim = state->timeStamps.atime;
+    result.st.st_ctim = state->timeStamps.ctime;
+    result.st.st_mtim = state->timeStamps.mtime;
+    result.st.st_mode = state->mode;
 
-        state->checkInvariants();
+    state->checkInvariants();
 
-        // Update the Journal
-        self->updateJournal();
-        return result;
-      });
+    // Update the Journal
+    self->updateJournal();
+    return result;
+  });
 }
 
 folly::Future<std::string> FileInode::readlink() {
@@ -380,15 +376,25 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
     }
   }
 
-  if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT | O_TRUNC)) {
-    return materializeForWrite(fi.flags).then([self = inodePtrFromThis()]() {
+  // Creating the FileHandle increments openCount, which causes the truncation
+  // and materialization paths to cache the overlay's file handle in the state.
+  auto fileHandle = std::make_shared<FileHandle>(inodePtrFromThis());
+
+  if (fi.flags & O_TRUNC) {
+    materializeAndTruncate();
+    materializeInParent();
+    return fileHandle;
+  } else if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT)) {
+    // TODO: return fileHandle immediately and begin materializing in the
+    // background.
+    return materializeForWrite().then([self = inodePtrFromThis()]() {
       self->materializeInParent();
       return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
     });
   } else {
-    return ensureDataLoaded().then([self = inodePtrFromThis()]() {
-      return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
-    });
+    // Begin prefetching the data as it's likely to be needed soon.
+    (void)ensureDataLoaded();
+    return fileHandle;
   }
 }
 
@@ -761,15 +767,7 @@ folly::IOBuf createOverlayHeaderFromTimestamps(
 }
 } // namespace
 
-// Waits until inode is in 'materialized' state.
-Future<Unit> FileInode::materializeForWrite(int openFlags) {
-  // Fast-path O_TRUNC for all states: blobs never need to be loaded from the
-  // backing store.
-  if (openFlags & O_TRUNC) {
-    materializeAndTruncate();
-    return makeFuture();
-  }
-
+Future<Unit> FileInode::materializeForWrite() {
   // Not O_TRUNC, so ensure we have a blob (or are already materialized).
   return ensureDataLoaded().then([self = inodePtrFromThis()]() {
     auto state = self->state_.wlock();
@@ -780,11 +778,11 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     };
 
     if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-      // This conditional will be hit if materializeForWrite is called without
-      // O_TRUNC, issues a load, and then materializeForWrite is called _with_
-      // O_TRUNC before ensureDataLoaded() completes.  The prior O_TRUNC would
-      // have completed synchronously and switched the inode into the
-      // 'materialized' state, in which case there is nothing left to do here.
+      // This conditional will be hit if materializeForWrite is called, issues
+      // a load, and then materializeAndTruncate is called before
+      // ensureDataLoaded() completes.  The prior O_TRUNC would have completed
+      // synchronously and switched the inode into the 'materialized' state, in
+      // which case there is nothing left to do here.
       return;
     }
 
@@ -830,9 +828,10 @@ Future<Unit> FileInode::materializeForWrite(int openFlags) {
     // Update the FileInode to indicate that we are materialized now.
     state->blob.reset();
     state->hash = folly::none;
-    // Do not cache the file in State - it will be reopened when a FileHandle
-    // needs it.
-    // state->file = std::move(file);
+    // If a FileHandle is already open cache the newly-opened file.
+    if (state->openCount) {
+      state->file = std::move(file);
+    }
     state->tag = State::MATERIALIZED_IN_OVERLAY;
   });
 }
@@ -884,9 +883,10 @@ void FileInode::materializeAndTruncate() {
       }
 
       state->hash.reset();
-      // Do not cache the file in State - it will be reopened when a FileHandle
-      // needs it.
-      // state->file = std::move(file);
+      // If a FileHandle is already open cache the newly-opened file.
+      if (state->openCount) {
+        state->file = std::move(file);
+      }
       state->sha1Valid = false;
       state->tag = State::MATERIALIZED_IN_OVERLAY;
     }
@@ -909,7 +909,7 @@ ObjectStore* FileInode::getObjectStore() const {
 
 Hash FileInode::recomputeAndStoreSha1(
     const folly::Synchronized<FileInode::State>::LockedPtr& state,
-    folly::File& file) {
+    const folly::File& file) {
   uint8_t buf[8192];
   off_t off = Overlay::kHeaderLength;
   SHA_CTX ctx;
