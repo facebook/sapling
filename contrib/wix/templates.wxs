@@ -143,6 +143,7 @@
             <File Id="paper.filerevision.tmpl"  Name="filerevision.tmpl" />
             <File Id="paper.footer.tmpl"        Name="footer.tmpl" />
             <File Id="paper.graph.tmpl"         Name="graph.tmpl" />
+            <File Id="paper.graphentry.tmpl"    Name="graphentry.tmpl" />
             <File Id="paper.header.tmpl"        Name="header.tmpl" />
             <File Id="paper.index.tmpl"         Name="index.tmpl" />
             <File Id="paper.manifest.tmpl"      Name="manifest.tmpl" />

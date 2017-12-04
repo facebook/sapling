@@ -315,38 +315,13 @@ Some tests for hgweb in an empty repository
   	
   	var bg = '<li class="bg"></li>';
   	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
-  	var nstyle = 'padding-left: ' + left + 'px;';
   
-  	var tagspan = '';
-  	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) {
-  		tagspan = '<span class="logtags">';
-  		if (cur[6][1]) {
-  			tagspan += '<span class="branchhead" title="' + cur[6][0] + '">';
-  			tagspan += cur[6][0] + '</span> ';
-  		} else if (!cur[6][1] && cur[6][0] != 'default') {
-  			tagspan += '<span class="branchname" title="' + cur[6][0] + '">';
-  			tagspan += cur[6][0] + '</span> ';
-  		}
-  		if (cur[7].length) {
-  			for (var t in cur[7]) {
-  				var tag = cur[7][t];
-  				tagspan += '<span class="tag">' + tag + '</span> ';
-  			}
-  		}
-  		if (cur[8].length) {
-  			for (var b in cur[8]) {
-  				var bookmark = cur[8][b];
-  				tagspan += '<span class="tag">' + bookmark + '</span> ';
-  			}
-  		}
-  		tagspan += '</span>';
+  	var item = document.querySelector('[data-node="' + cur.node + '"]');
+  	if (item) {
+  		item.style.paddingLeft = left + 'px';
   	}
-  
-  	var item = '<li style="' + nstyle + '"><span class="desc">';
-  	item += '<a href="/rev/' + cur[0] + '" title="' + cur[0] + '">' + cur[3] + '</a>';
-  	item += '</span>' + tagspan + '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
   	
-  	return [bg, item];
+  	return [bg, ''];
   	
   }
   

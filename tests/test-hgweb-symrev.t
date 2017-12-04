@@ -59,6 +59,9 @@ Set up the repo
   <a href="/graph/tip?revcount=30&style=paper">less</a>
   <a href="/graph/tip?revcount=120&style=paper">more</a>
   | rev 2: <a href="/graph/43c799df6e75?style=paper">(0)</a> <a href="/graph/tip?style=paper">tip</a> 
+    <a href="/rev/9d8c40cba617?style=paper">third</a>
+    <a href="/rev/a7c1559b7bba?style=paper">second</a>
+    <a href="/rev/43c799df6e75?style=paper">first</a>
   <a href="/graph/tip?revcount=30&style=paper">less</a>
   <a href="/graph/tip?revcount=120&style=paper">more</a>
   | rev 2: <a href="/graph/43c799df6e75?style=paper">(0)</a> <a href="/graph/tip?style=paper">tip</a> 
@@ -123,6 +126,8 @@ Set up the repo
   <a href="/graph/xyzzy?revcount=30&style=paper">less</a>
   <a href="/graph/xyzzy?revcount=120&style=paper">more</a>
   | rev 1: <a href="/graph/43c799df6e75?style=paper">(0)</a> <a href="/graph/tip?style=paper">tip</a> 
+    <a href="/rev/a7c1559b7bba?style=paper">second</a>
+    <a href="/rev/43c799df6e75?style=paper">first</a>
   <a href="/graph/xyzzy?revcount=30&style=paper">less</a>
   <a href="/graph/xyzzy?revcount=120&style=paper">more</a>
   | rev 1: <a href="/graph/43c799df6e75?style=paper">(0)</a> <a href="/graph/tip?style=paper">tip</a> 
@@ -254,6 +259,9 @@ Set up the repo
   <a href="/graph/tip?revcount=30&style=coal">less</a>
   <a href="/graph/tip?revcount=120&style=coal">more</a>
   | rev 2: <a href="/graph/43c799df6e75?style=coal">(0)</a> <a href="/graph/tip?style=coal">tip</a> 
+    <a href="/rev/9d8c40cba617?style=coal">third</a>
+    <a href="/rev/a7c1559b7bba?style=coal">second</a>
+    <a href="/rev/43c799df6e75?style=coal">first</a>
   <a href="/graph/tip?revcount=30&style=coal">less</a>
   <a href="/graph/tip?revcount=120&style=coal">more</a>
   | rev 2: <a href="/graph/43c799df6e75?style=coal">(0)</a> <a href="/graph/tip?style=coal">tip</a> 
@@ -318,6 +326,8 @@ Set up the repo
   <a href="/graph/xyzzy?revcount=30&style=coal">less</a>
   <a href="/graph/xyzzy?revcount=120&style=coal">more</a>
   | rev 1: <a href="/graph/43c799df6e75?style=coal">(0)</a> <a href="/graph/tip?style=coal">tip</a> 
+    <a href="/rev/a7c1559b7bba?style=coal">second</a>
+    <a href="/rev/43c799df6e75?style=coal">first</a>
   <a href="/graph/xyzzy?revcount=30&style=coal">less</a>
   <a href="/graph/xyzzy?revcount=120&style=coal">more</a>
   | rev 1: <a href="/graph/43c799df6e75?style=coal">(0)</a> <a href="/graph/tip?style=coal">tip</a> 

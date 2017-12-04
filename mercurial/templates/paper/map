@@ -9,6 +9,7 @@ changelog = shortlog.tmpl
 shortlog = shortlog.tmpl
 shortlogentry = shortlogentry.tmpl
 graph = graph.tmpl
+graphentry = graphentry.tmpl
 help = help.tmpl
 helptopics = helptopics.tmpl
 
