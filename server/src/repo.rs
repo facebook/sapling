@@ -32,12 +32,19 @@ use blobrepo::{BlobRepo, FilesBlobState, RocksBlobState};
 
 use errors::*;
 
-pub fn init_repo(parent_logger: &Logger, repotype: &RepoType) -> Result<(PathBuf, HgRepo)> {
+use repoinfo::RepoGenCache;
+use revset::{AncestorsNodeStream, IntersectNodeStream, SingleNodeHash, UnionNodeStream};
+
+pub fn init_repo(
+    parent_logger: &Logger,
+    repotype: &RepoType,
+    cache_size: usize,
+) -> Result<(PathBuf, HgRepo)> {
     let repopath = repotype.path();
 
     let mut sock = repopath.join(".hg");
 
-    let repo = HgRepo::new(parent_logger, repotype)
+    let repo = HgRepo::new(parent_logger, repotype, cache_size)
         .chain_err(|| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
@@ -89,6 +96,7 @@ impl OpenableRepoType for RepoType {
 pub struct HgRepo {
     path: String,
     hgrepo: Arc<Box<Repo<Error = hgproto::Error> + Send + Sync>>,
+    repo_generation: RepoGenCache<Box<Repo<Error = hgproto::Error> + Send + Sync>>,
     _logger: Logger,
 }
 
@@ -123,12 +131,13 @@ fn bundle2caps() -> String {
 }
 
 impl HgRepo {
-    pub fn new(parent_logger: &Logger, repo: &RepoType) -> Result<Self> {
+    pub fn new(parent_logger: &Logger, repo: &RepoType, cache_size: usize) -> Result<Self> {
         let path = repo.path().to_owned();
 
         Ok(HgRepo {
             path: format!("{}", path.display()),
             hgrepo: Arc::new(repo.open()?),
+            repo_generation: RepoGenCache::new(cache_size),
             _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
         })
     }
@@ -301,12 +310,67 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<NodeHash>) -> HgCommandRes<Vec<bool>> {
         info!(self.logger, "known: {:?}", nodes);
-        let known_futures: Vec<_> = nodes
-            .iter()
-            .map(|node| self.repo.hgrepo.changeset_exists(node))
-            .collect();
-        future::join_all(known_futures)
-            .from_err::<hgproto::Error>()
+        let repo_generation = &self.repo.repo_generation;
+        let hgrepo = &self.repo.hgrepo;
+
+        // Ultimately, this block takes all ancestors of heads in this repo intersected with
+        // the nodes passed in by the client, and then returns a Vec<bool>, true if the
+        // intersection contains the matching node in nodes, false if it does not.
+        // Note that revsets are lazy, and will not generate unnecessary nodes.
+        hgrepo
+            .get_heads()
+            // Convert Stream<Heads> into Stream<Ancestors<Heads>>
+            .map({
+                let repo_generation = repo_generation.clone();
+                let hgrepo = hgrepo.clone();
+                move |hash| AncestorsNodeStream::new(&hgrepo, repo_generation.clone(), hash).boxed()
+            })
+            // Convert Stream<Ancestors<Heads>>> into Future<Vec<Ancestors<Heads>>>
+            .collect()
+            // Do the next few steps inside the Future; the parameter to the closure is
+            // Vec<Ancestors<Heads>>
+            .map({
+                let repo_generation = repo_generation.clone();
+                let hgrepo = hgrepo.clone();
+                let nodes = nodes.clone();
+                move |vec| {
+                    // Intersect the union of the Vec<Ancestors<Heads>> that's passed in, with
+                    // a union of the known nodes the client asked about.
+                    IntersectNodeStream::new(
+                        &hgrepo,
+                        repo_generation.clone(),
+                        vec![
+                            // This is the union of all ancestors of heads
+                            UnionNodeStream::new(&hgrepo, repo_generation.clone(), vec).boxed(),
+                            // This is the union of all passed in nodes.
+                            UnionNodeStream::new(
+                                &hgrepo,
+                                repo_generation,
+                                nodes.into_iter().map({
+                                    let hgrepo = hgrepo.clone();
+                                    move |node| SingleNodeHash::new(node, &hgrepo).boxed()
+                                }),
+                            ).boxed(),
+                        ],
+                        // collect() below will result in a Future<Vec<NodeHash>> which is all
+                        // nodes that are both an ancestor of a get_heads() head and were
+                        // passed in by the client
+                    ).collect()
+                        .from_err::<hgproto::Error>()
+                }
+            })
+            // We have a Future<Future<Vec<NodeHash>>> - collapse one layer of Future.
+            .flatten()
+            // Finally, within the Future, use the Vec<NodeHash> that's only nodes that were
+            // passed in by the client and that are ancestors of a get_heads() head to convert
+            // the Vec of client known nodes to a Vec<bool> telling the client if we also
+            // know of the nodes it asked us about.
+            .map(move |known| {
+                nodes
+                    .iter()
+                    .map(|node| known.contains(node))
+                    .collect::<Vec<bool>>()
+            })
             .boxify()
     }
 

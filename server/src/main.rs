@@ -39,6 +39,8 @@ extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
 extern crate metaconfig;
+extern crate repoinfo;
+extern crate revset;
 extern crate services;
 extern crate sshrelay;
 extern crate stats;
@@ -212,7 +214,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
 fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
 where
-    I: IntoIterator<Item = RepoType>,
+    I: IntoIterator<Item = (RepoType, usize)>,
 {
     // Given the list of paths to repos:
     // - initialize the repo
@@ -220,7 +222,9 @@ where
     // - wait for connections in that thread
     let repos: Vec<_> = repos
         .into_iter()
-        .map(|repotype| repo::init_repo(root_log, &repotype))
+        .map(|(repotype, cache_size)| {
+            repo::init_repo(root_log, &repotype, cache_size)
+        })
         .collect();
 
     if repos.iter().any(Result::is_err) {
@@ -352,8 +356,13 @@ fn main() {
         };
 
         let config = get_config(root_log, &matches)?;
-        let repo_listeners =
-            start_repo_listeners(config.repos.into_iter().map(|(_, c)| c.repotype), root_log)?;
+        let repo_listeners = start_repo_listeners(
+            config
+                .repos
+                .into_iter()
+                .map(|(_, c)| (c.repotype, c.generation_cache_size)),
+            root_log,
+        )?;
 
         for handle in vec![stats_aggregation]
             .into_iter()

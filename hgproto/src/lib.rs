@@ -35,6 +35,7 @@ extern crate futures_ext;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+extern crate revset;
 
 // QuickCheck for randomized testing.
 #[cfg(test)]

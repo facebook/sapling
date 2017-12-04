@@ -8,6 +8,7 @@ use std::io;
 
 use mercurial;
 use mercurial_bundles;
+use revset;
 
 #[recursion_limit = "1024"]
 error_chain! {
@@ -36,6 +37,7 @@ error_chain! {
     links {
         Mercurial(mercurial::Error, mercurial::ErrorKind);
         MercurialBundles(mercurial_bundles::Error, mercurial_bundles::ErrorKind);
+        Revset(revset::Error, revset::ErrorKind);
     }
 
     foreign_links {

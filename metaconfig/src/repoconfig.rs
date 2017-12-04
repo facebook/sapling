@@ -29,6 +29,8 @@ use errors::*;
 pub struct RepoConfig {
     /// Defines the type of repository
     pub repotype: RepoType,
+    /// How large a cache to use (in bytes) for RepoGenCache derived information
+    pub generation_cache_size: usize,
 }
 
 /// Types of repositories supported
@@ -91,9 +93,9 @@ impl RepoConfigs {
                 })
                 .from_err()
                 .and_then(|repos_node| match repos_node {
-                    VfsNode::File(_) => Err(
-                        ErrorKind::InvalidFileStructure("expected directory".into()).into(),
-                    ),
+                    VfsNode::File(_) => {
+                        bail!(ErrorKind::InvalidFileStructure("expected directory".into()))
+                    }
                     VfsNode::Dir(dir) => Ok(dir),
                 })
                 .and_then(|repos_dir| {
@@ -151,11 +153,9 @@ impl RepoConfigs {
                                 ),
                             })
                             .and_then(|blob| {
-                                let bytes = blob.as_slice().ok_or(
-                                    ErrorKind::InvalidFileStructure(
-                                        "expected content of the blob".into(),
-                                    )
-                                )?;
+                                let bytes = blob.as_slice().ok_or(ErrorKind::InvalidFileStructure(
+                                    "expected content of the blob".into(),
+                                ))?;
                                 Ok((
                                     reponame,
                                     toml::from_slice::<RawRepoConfig>(bytes)
@@ -176,6 +176,7 @@ impl RepoConfigs {
 struct RawRepoConfig {
     path: PathBuf,
     repotype: RawRepoType,
+    generation_cache_size: Option<usize>,
 }
 
 /// Types of repositories supported
@@ -198,7 +199,12 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             BlobRocks => RepoType::BlobRocks(this.path),
         };
 
-        Ok(RepoConfig { repotype })
+        let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
+
+        Ok(RepoConfig {
+            repotype,
+            generation_cache_size,
+        })
     }
 }
 
@@ -215,6 +221,7 @@ mod test {
         let fbsource_content = r#"
             path="/tmp/fbsource"
             repotype="blob:files"
+            generation_cache_size=1048576
         "#;
         let www_content = r#"
             path="/tmp/www"
@@ -233,12 +240,14 @@ mod test {
             "fbsource".to_string(),
             RepoConfig {
                 repotype: RepoType::BlobFiles("/tmp/fbsource".into()),
+                generation_cache_size: 1024 * 1024,
             },
         );
         repos.insert(
             "www".to_string(),
             RepoConfig {
                 repotype: RepoType::Revlog("/tmp/www".into()),
+                generation_cache_size: 10 * 1024 * 1024,
             },
         );
         assert_eq!(
