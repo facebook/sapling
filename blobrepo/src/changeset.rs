@@ -81,7 +81,6 @@ impl BlobChangeset {
         B: Blobstore + Send + 'static,
         B::Error: Send + 'static,
         B::PutBlob: Send + 'static,
-        B::ValueIn: From<Vec<u8>>,
     {
         let key = cskey(&self.nodeid);
 

@@ -9,6 +9,7 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+extern crate bytes;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
@@ -21,6 +22,7 @@ extern crate fileblob;
 extern crate memblob;
 extern crate rocksblob;
 
+use bytes::Bytes;
 use futures::Future;
 use tempdir::TempDir;
 
@@ -48,15 +50,14 @@ pub use errors::*;
 fn simple<B>(blobstore: B)
 where
     B: Blobstore,
-    B::ValueIn: From<&'static [u8]>,
 {
     let foo = "foo".to_string();
     let res = blobstore
-        .put(foo.clone(), b"bar"[..].into())
+        .put(foo.clone(), Bytes::from_static(b"bar"))
         .and_then(|_| blobstore.get(foo));
     let out = res.wait().expect("pub/get failed").expect("missing");
 
-    assert_eq!(out.as_ref(), b"bar".as_ref());
+    assert_eq!(out, Bytes::from_static(b"bar"));
 }
 
 fn missing<B>(blobstore: B)
@@ -72,19 +73,17 @@ where
 fn boxable<B>(blobstore: B)
 where
     B: Blobstore,
-    B::ValueIn: From<&'static [u8]>,
-    Vec<u8>: From<B::ValueOut>,
     Error: From<B::Error>,
 {
-    let blobstore = blobstore.boxed::<_, _, Error>();
+    let blobstore = blobstore.boxed::<Error>();
 
     let foo = "foo".to_string();
     let res = blobstore
-        .put(foo.clone(), b"bar".as_ref())
+        .put(foo.clone(), Bytes::from_static(b"bar"))
         .and_then(|_| blobstore.get(foo));
-    let out: Vec<u8> = res.wait().expect("pub/get failed").expect("missing");
+    let out: Bytes = res.wait().expect("pub/get failed").expect("missing");
 
-    assert_eq!(&*out, b"bar".as_ref());
+    assert_eq!(out, Bytes::from_static(b"bar"));
 }
 
 macro_rules! blobstore_test_impl {
@@ -128,7 +127,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     fileblob_test => {
         state: TempDir::new("fileblob_test").unwrap(),
-        new: |dir| Fileblob::<Vec<u8>>::open(dir).unwrap(),
+        new: |dir| Fileblob::open(dir).unwrap(),
         persistent: true,
     }
 }

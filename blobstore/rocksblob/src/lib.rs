@@ -62,13 +62,13 @@ pub struct GetBlob(Db, String);
 pub struct PutBlob(Db, String, Bytes);
 
 impl Future for GetBlob {
-    type Item = Option<rocksdb::Buffer>;
+    type Item = Option<Bytes>;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let rdopts = ReadOptions::new();
         let ret = self.0.get(&self.1, &rdopts).map_err(Error::from)?;
-        Ok(Async::Ready(ret))
+        Ok(Async::Ready(ret.map(Bytes::from)))
     }
 }
 
@@ -84,8 +84,6 @@ impl Future for PutBlob {
 }
 
 impl Blobstore for Rocksblob {
-    type ValueIn = Bytes;
-    type ValueOut = rocksdb::Buffer;
     type Error = Error;
     // TODO: remove these and use poll_fn once we have `impl Future`
     type GetBlob = GetBlob;
@@ -97,7 +95,7 @@ impl Blobstore for Rocksblob {
         GetBlob(db, key)
     }
 
-    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
         let db = self.db.clone();
 
         PutBlob(db, key, val)

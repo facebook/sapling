@@ -6,6 +6,7 @@
 
 #![deny(warnings)]
 
+extern crate bytes;
 #[macro_use]
 extern crate error_chain;
 extern crate futures;
@@ -16,9 +17,9 @@ extern crate futures_ext;
 
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
-use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
+use bytes::Bytes;
 use futures::Async;
 use futures::future::poll_fn;
 use futures_ext::{BoxFuture, FutureExt};
@@ -46,12 +47,11 @@ use errors::*;
 pub use errors::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
-pub struct Fileblob<V> {
+pub struct Fileblob {
     base: PathBuf,
-    _phantom: PhantomData<V>,
 }
 
-impl<V> Fileblob<V> {
+impl Fileblob {
     pub fn open<P: AsRef<Path>>(base: P) -> Result<Self> {
         let base = base.as_ref();
 
@@ -61,7 +61,6 @@ impl<V> Fileblob<V> {
 
         Ok(Self {
             base: base.to_owned(),
-            _phantom: PhantomData,
         })
     }
 
@@ -77,15 +76,10 @@ impl<V> Fileblob<V> {
     }
 }
 
-impl<V> Blobstore for Fileblob<V>
-where
-    V: AsRef<[u8]> + Send + 'static,
-{
+impl Blobstore for Fileblob {
     type Error = Error;
-    type ValueIn = V;
-    type ValueOut = Vec<u8>;
 
-    type GetBlob = BoxFuture<Option<Self::ValueOut>, Self::Error>;
+    type GetBlob = BoxFuture<Option<Bytes>, Self::Error>;
     type PutBlob = BoxFuture<(), Self::Error>;
 
     fn get(&self, key: String) -> Self::GetBlob {
@@ -98,14 +92,14 @@ where
                 Err(e) => return Err(e.into()),
                 Ok(mut f) => {
                     f.read_to_end(&mut v)?;
-                    Some(v)
+                    Some(Bytes::from(v))
                 }
             };
             Ok(Async::Ready(ret))
         }).boxify()
     }
 
-    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
         let p = self.path(&key);
 
         poll_fn(move || {

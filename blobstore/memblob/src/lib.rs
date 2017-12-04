@@ -8,11 +8,13 @@
 #![feature(never_type)]
 
 extern crate blobstore;
+extern crate bytes;
 extern crate futures;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use bytes::Bytes;
 use futures::future::{FutureResult, IntoFuture};
 
 use blobstore::Blobstore;
@@ -22,7 +24,7 @@ use blobstore::Blobstore;
 /// Pure in-memory implementation for testing.
 #[derive(Clone)]
 pub struct Memblob {
-    hash: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    hash: Arc<Mutex<HashMap<String, Bytes>>>,
 }
 
 impl Memblob {
@@ -34,13 +36,11 @@ impl Memblob {
 }
 
 impl Blobstore for Memblob {
-    type ValueIn = Vec<u8>;
-    type ValueOut = Self::ValueIn;
     type Error = !;
     type PutBlob = FutureResult<(), Self::Error>;
-    type GetBlob = FutureResult<Option<Self::ValueOut>, Self::Error>;
+    type GetBlob = FutureResult<Option<Bytes>, Self::Error>;
 
-    fn put(&self, k: String, v: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, k: String, v: Bytes) -> Self::PutBlob {
         let mut inner = self.hash.lock().expect("lock poison");
 
         inner.insert(k, v);

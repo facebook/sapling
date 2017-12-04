@@ -8,31 +8,19 @@ use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use futures::Future;
 
 use futures_ext::{BoxFuture, FutureExt};
 
 use super::*;
 
-pub type BoxBlobstore<Vi, Vo, E> = Box<
-    Blobstore<
-        ValueIn = Vi,
-        ValueOut = Vo,
-        Error = E,
-        GetBlob = BoxFuture<Option<Vo>, E>,
-        PutBlob = BoxFuture<(), E>,
-    >,
+pub type BoxBlobstore<E> = Box<
+    Blobstore<Error = E, GetBlob = BoxFuture<Option<Bytes>, E>, PutBlob = BoxFuture<(), E>>,
 >;
 
-pub type ArcBlobstore<Vi, Vo, E> = Arc<
-    Blobstore<
-        ValueIn = Vi,
-        ValueOut = Vo,
-        Error = E,
-        GetBlob = BoxFuture<Option<Vo>, E>,
-        PutBlob = BoxFuture<(), E>,
-    >
-        + Sync,
+pub type ArcBlobstore<E> = Arc<
+    Blobstore<Error = E, GetBlob = BoxFuture<Option<Bytes>, E>, PutBlob = BoxFuture<(), E>> + Sync,
 >;
 
 /// Take a concrete `BlobStore` implementation and box it up in a generic way.
@@ -40,14 +28,11 @@ pub type ArcBlobstore<Vi, Vo, E> = Arc<
 /// the `Value*` and `Error` associated types to some type. This allows the caller
 /// to conform multiple different blobstore implementations into a single boxed trait
 /// object type with uniform errors and value types.
-pub fn boxed<B, Vi, Vo, E>(blobstore: B) -> BoxBlobstore<Vi, Vo, E>
+pub fn boxed<B, E>(blobstore: B) -> BoxBlobstore<E>
 where
     B: Blobstore + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    B::ValueIn: From<Vi>,
-    Vi: Send + 'static,
-    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     let new = BlobstoreInner {
@@ -57,14 +42,11 @@ where
     Box::new(new)
 }
 
-pub fn arced<B, Vi, Vo, E>(blobstore: B) -> ArcBlobstore<Vi, Vo, E>
+pub fn arced<B, E>(blobstore: B) -> ArcBlobstore<E>
 where
     B: Blobstore + Sync + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    B::ValueIn: From<Vi>,
-    Vi: Send + 'static,
-    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     let new = BlobstoreInner {
@@ -74,45 +56,35 @@ where
     Arc::new(new)
 }
 
-struct BlobstoreInner<B, Vi, Vo, E> {
+struct BlobstoreInner<B, E> {
     blobstore: B,
-    _phantom: PhantomData<(Vi, Vo, E)>,
+    _phantom: PhantomData<E>,
 }
 
 // Set Sync marker iff B is Sync - the rest don't matter in a PhantomData.
-unsafe impl<B, Vi, Vo, E> Sync for BlobstoreInner<B, Vi, Vo, E>
+unsafe impl<B, E> Sync for BlobstoreInner<B, E>
 where
     B: Sync,
 {
 }
 
-impl<B, Vi, Vo, E> Blobstore for BlobstoreInner<B, Vi, Vo, E>
+impl<B, E> Blobstore for BlobstoreInner<B, E>
 where
     B: Blobstore + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    B::ValueIn: From<Vi>,
-    Vi: Send + 'static,
-    Vo: From<B::ValueOut> + AsRef<[u8]> + Send + 'static,
     E: error::Error + From<B::Error> + Send + 'static,
 {
     type Error = E;
-    type ValueIn = Vi;
-    type ValueOut = Vo;
 
-    type GetBlob = BoxFuture<Option<Self::ValueOut>, Self::Error>;
+    type GetBlob = BoxFuture<Option<Bytes>, Self::Error>;
     type PutBlob = BoxFuture<(), Self::Error>;
 
     fn get(&self, key: String) -> Self::GetBlob {
-        self.blobstore
-            .get(key)
-            .map(|v| v.map(Vo::from))
-            .map_err(E::from)
-            .boxify()
+        self.blobstore.get(key).map_err(E::from).boxify()
     }
 
-    fn put(&self, key: String, value: Self::ValueIn) -> Self::PutBlob {
-        let value = B::ValueIn::from(value);
+    fn put(&self, key: String, value: Bytes) -> Self::PutBlob {
         self.blobstore.put(key, value).map_err(E::from).boxify()
     }
 }

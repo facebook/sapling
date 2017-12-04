@@ -49,7 +49,9 @@ extern crate blobstore;
 extern crate ascii;
 extern crate heads;
 extern crate futures;
+extern crate bytes;
 
+use bytes::Bytes;
 use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
@@ -82,7 +84,7 @@ pub fn getrepo() -> BlobRepo<MemBlobState> {
             with open(blob, "rb") as data:
                 blobdata = "\\x".join(chunk_string(data.read().hex()))
                 rs.write(
-                    '    blobs.put(String::from("{}"), b"\\x{}".to_vec()).wait().expect("Blob put failed");\n'.
+                    '    blobs.put(String::from("{}"), Bytes::from_static(b"\\x{}")).wait().expect("Blob put failed");\n'.
                     format(key, blobdata)
                 )
         for linknode in glob.glob(

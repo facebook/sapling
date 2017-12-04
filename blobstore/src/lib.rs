@@ -12,8 +12,12 @@ extern crate futures_ext;
 
 extern crate tokio_core;
 
+extern crate bytes;
+
 use std::error;
 use std::sync::Arc;
+
+use bytes::Bytes;
 
 use futures::Future;
 
@@ -85,50 +89,37 @@ pub use boxed::{ArcBlobstore, BoxBlobstore};
 // - streaming get/put?
 // - range get/put? (how does range put work? put-put-put-commit?)
 pub trait Blobstore: Send + 'static {
-    type ValueIn: Send + 'static;
-    type ValueOut: AsRef<[u8]> + Send + 'static;
     type Error: error::Error + Send + 'static;
 
-    type GetBlob: Future<Item = Option<Self::ValueOut>, Error = Self::Error> + Send + 'static;
+    type GetBlob: Future<Item = Option<Bytes>, Error = Self::Error> + Send + 'static;
     type PutBlob: Future<Item = (), Error = Self::Error> + Send + 'static;
 
     fn get(&self, key: String) -> Self::GetBlob;
-    fn put(&self, key: String, value: Self::ValueIn) -> Self::PutBlob;
+    fn put(&self, key: String, value: Bytes) -> Self::PutBlob;
 
-    fn boxed<Vi, Vo, E>(self) -> BoxBlobstore<Vi, Vo, E>
+    fn boxed<E>(self) -> BoxBlobstore<E>
     where
         Self: Sized,
-        Self::ValueIn: From<Vi>,
-        Vi: Send + 'static,
-        Vo: From<Self::ValueOut> + AsRef<[u8]> + Send + 'static,
         E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::boxed(self)
     }
 
-    fn arced<Vi, Vo, E>(self) -> ArcBlobstore<Vi, Vo, E>
+    fn arced<E>(self) -> ArcBlobstore<E>
     where
         Self: Sync + Sized,
-        Self::ValueIn: From<Vi>,
-        Vi: Send + 'static,
-        Vo: From<Self::ValueOut> + AsRef<[u8]> + Send + 'static,
         E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::arced(self)
     }
 }
 
-impl<Vi, Vo, E, GB, PB> Blobstore
-    for Arc<Blobstore<ValueIn = Vi, ValueOut = Vo, Error = E, GetBlob = GB, PutBlob = PB> + Sync>
+impl<E, GB, PB> Blobstore for Arc<Blobstore<Error = E, GetBlob = GB, PutBlob = PB> + Sync>
 where
-    Vi: Send + 'static,
-    Vo: AsRef<[u8]> + Send + 'static,
     E: error::Error + Send + 'static,
-    GB: Future<Item = Option<Vo>, Error = E> + Send + 'static,
+    GB: Future<Item = Option<Bytes>, Error = E> + Send + 'static,
     PB: Future<Item = (), Error = E> + Send + 'static,
 {
-    type ValueIn = Vi;
-    type ValueOut = Vo;
     type Error = E;
     type GetBlob = GB;
     type PutBlob = PB;
@@ -137,22 +128,17 @@ where
         self.as_ref().get(key)
     }
 
-    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
         self.as_ref().put(key, val)
     }
 }
 
-impl<Vi, Vo, E, GB, PB> Blobstore
-    for Box<Blobstore<ValueIn = Vi, ValueOut = Vo, Error = E, GetBlob = GB, PutBlob = PB>>
+impl<E, GB, PB> Blobstore for Box<Blobstore<Error = E, GetBlob = GB, PutBlob = PB>>
 where
-    Vi: Send + 'static,
-    Vo: AsRef<[u8]> + Send + 'static,
     E: error::Error + Send + 'static,
-    GB: Future<Item = Option<Vo>, Error = E> + Send + 'static,
+    GB: Future<Item = Option<Bytes>, Error = E> + Send + 'static,
     PB: Future<Item = (), Error = E> + Send + 'static,
 {
-    type ValueIn = Vi;
-    type ValueOut = Vo;
     type Error = E;
     type GetBlob = GB;
     type PutBlob = PB;
@@ -161,7 +147,7 @@ where
         self.as_ref().get(key)
     }
 
-    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
         self.as_ref().put(key, val)
     }
 }

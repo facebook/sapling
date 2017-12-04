@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
-use bytes::Bytes;
 use fileblob::Fileblob;
 use filebookmarks::FileBookmarks;
 use fileheads::FileHeads;
@@ -88,7 +87,7 @@ impl_blob_state! {
     FilesBlobState {
         heads: FileHeads,
         bookmarks: Arc<FileBookmarks>,
-        blobstore: Fileblob<Vec<u8>>,
+        blobstore: Fileblob,
         linknodes: Arc<FileLinknodes>,
     }
 }
@@ -180,7 +179,7 @@ impl_blob_state! {
     TestManifoldBlobState {
         heads: MemHeads,
         bookmarks: Arc<MemBookmarks>,
-        blobstore: ManifoldBlob<Bytes>,
+        blobstore: ManifoldBlob,
         linknodes: Arc<MemLinknodes>,
     }
 }
