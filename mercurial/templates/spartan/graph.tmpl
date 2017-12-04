@@ -33,7 +33,7 @@ navigate: <small class="navigate">{changenav%navgraph}</small>
 <div id="wrapper">
 <ul id="nodebgs"></ul>
 <canvas id="graph" width="{canvaswidth}" height="{canvasheight}"></canvas>
-<ul id="graphnodes"></ul>
+<ul id="graphnodes">{nodes%graphentry}</ul>
 </div>
 
 <script type="text/javascript"{if(nonce, ' nonce="{nonce}"')}>
@@ -52,12 +52,12 @@ graph.vertex = function(x, y, radius, color, parity, cur) \{
 	
 	var bg = '<li class="bg parity' + parity + '"></li>';
 	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
-	var nstyle = 'padding-left: ' + left + 'px;';
-	var item = '<li style="' + nstyle + '"><span class="desc">';
-	item += '<a href="{url|urlescape}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '">' + cur[3] + '</a>';
-	item += '</span><span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
+	var item = document.querySelector('[data-node="' + cur.node + '"]');
+	if (item) \{
+		item.style.paddingLeft = left + 'px';
+	}
 
-	return [bg, item];
+	return [bg, ''];
 	
 }
 

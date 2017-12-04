@@ -946,6 +946,9 @@ Set up the repo
   <a href="/shortlog/tip?style=spartan">shortlog</a>
   <a href="/file/tip/?style=spartan">files</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
+    <a href="/rev/9d8c40cba617?style=spartan">third</a>
+    <a href="/rev/a7c1559b7bba?style=spartan">second</a>
+    <a href="/rev/43c799df6e75?style=spartan">first</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'tags?style=spartan' | egrep $REVLINKS
@@ -1023,6 +1026,8 @@ Set up the repo
   <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
   <a href="/file/xyzzy/?style=spartan">files</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
+    <a href="/rev/a7c1559b7bba?style=spartan">second</a>
+    <a href="/rev/43c799df6e75?style=spartan">first</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" $LOCALIP:$HGPORT 'file/xyzzy?style=spartan' | egrep $REVLINKS

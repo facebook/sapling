@@ -211,6 +211,7 @@
             <File Id="spartan.filerevision.tmpl"   Name="filerevision.tmpl" />
             <File Id="spartan.footer.tmpl"         Name="footer.tmpl" />
             <File Id="spartan.graph.tmpl"          Name="graph.tmpl" />
+            <File Id="spartan.graphentry.tmpl"     Name="graphentry.tmpl" />
             <File Id="spartan.header.tmpl"         Name="header.tmpl" />
             <File Id="spartan.index.tmpl"          Name="index.tmpl" />
             <File Id="spartan.manifest.tmpl"       Name="manifest.tmpl" />

@@ -7,6 +7,7 @@ changelog = changelog.tmpl
 shortlog = shortlog.tmpl
 shortlogentry = shortlogentry.tmpl
 graph = graph.tmpl
+graphentry = graphentry.tmpl
 naventry = '<a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navgraphentry = '<a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
