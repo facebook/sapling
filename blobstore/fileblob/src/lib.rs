@@ -18,7 +18,6 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
-use std::string::ToString;
 
 use futures::Async;
 use futures::future::poll_fn;
@@ -47,15 +46,12 @@ use errors::*;
 pub use errors::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
-pub struct Fileblob<K, V> {
+pub struct Fileblob<V> {
     base: PathBuf,
-    _phantom: PhantomData<(K, V)>,
+    _phantom: PhantomData<V>,
 }
 
-impl<K, V> Fileblob<K, V>
-where
-    K: ToString,
-{
+impl<V> Fileblob<V> {
     pub fn open<P: AsRef<Path>>(base: P) -> Result<Self> {
         let base = base.as_ref();
 
@@ -75,28 +71,25 @@ where
         Self::open(base)
     }
 
-    fn path(&self, key: &K) -> PathBuf {
-        let key = key.to_string();
+    fn path(&self, key: &String) -> PathBuf {
         let key = percent_encode(key.as_bytes(), DEFAULT_ENCODE_SET);
         self.base.join(format!("{}-{}", PREFIX, key))
     }
 }
 
-impl<K, V> Blobstore for Fileblob<K, V>
+impl<V> Blobstore for Fileblob<V>
 where
-    K: ToString + Send + 'static,
     V: AsRef<[u8]> + Send + 'static,
 {
     type Error = Error;
-    type Key = K;
     type ValueIn = V;
     type ValueOut = Vec<u8>;
 
     type GetBlob = BoxFuture<Option<Self::ValueOut>, Self::Error>;
     type PutBlob = BoxFuture<(), Self::Error>;
 
-    fn get(&self, key: &Self::Key) -> Self::GetBlob {
-        let p = self.path(key);
+    fn get(&self, key: String) -> Self::GetBlob {
+        let p = self.path(&key);
 
         poll_fn(move || {
             let mut v = Vec::new();
@@ -112,7 +105,7 @@ where
         }).boxify()
     }
 
-    fn put(&self, key: Self::Key, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
         let p = self.path(&key);
 
         poll_fn(move || {

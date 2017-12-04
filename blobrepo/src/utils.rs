@@ -23,12 +23,12 @@ pub struct RawNodeBlob {
 
 pub fn get_node<B>(blobstore: &B, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error>
 where
-    B: Blobstore<Key = String>,
+    B: Blobstore,
 {
     let key = format!("node-{}.bincode", nodeid);
 
     blobstore
-        .get(&key)
+        .get(key)
         .map_err(blobstore_err)
         .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
         .and_then(move |blob| {

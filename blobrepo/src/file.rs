@@ -30,7 +30,7 @@ pub struct BlobEntry<B> {
 
 pub fn fetch_blob_from_blobstore<B>(blobstore: B, nodeid: NodeHash) -> BoxFuture<Vec<u8>, Error>
 where
-    B: Blobstore<Key = String> + Clone,
+    B: Blobstore + Clone,
 {
     get_node(&blobstore, nodeid)
         .and_then({
@@ -39,7 +39,7 @@ where
                 let key = format!("sha1-{}", node.blob.sha1());
 
                 blobstore
-                    .get(&key)
+                    .get(key)
                     .map_err(blobstore_err)
                     .and_then(move |blob| {
                         blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
@@ -55,7 +55,7 @@ where
 
 impl<B> BlobEntry<B>
 where
-    B: Blobstore<Key = String> + Sync + Clone,
+    B: Blobstore + Sync + Clone,
 {
     pub fn new(blobstore: B, path: MPath, nodeid: NodeHash, ty: Type) -> Result<Self> {
         let path = match ty {
@@ -85,7 +85,7 @@ where
                     let key = format!("sha1-{}", node.blob.sha1());
 
                     blobstore
-                        .get(&key)
+                        .get(key)
                         .map_err(blobstore_err)
                         .and_then(move |blob| {
                             blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
@@ -99,7 +99,7 @@ where
 
 impl<B> Entry for BlobEntry<B>
 where
-    B: Blobstore<Key = String> + Sync + Clone,
+    B: Blobstore + Sync + Clone,
 {
     type Error = Error;
 

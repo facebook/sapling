@@ -14,9 +14,8 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use super::*;
 
-pub type BoxBlobstore<K, Vi, Vo, E> = Box<
+pub type BoxBlobstore<Vi, Vo, E> = Box<
     Blobstore<
-        Key = K,
         ValueIn = Vi,
         ValueOut = Vo,
         Error = E,
@@ -25,9 +24,8 @@ pub type BoxBlobstore<K, Vi, Vo, E> = Box<
     >,
 >;
 
-pub type ArcBlobstore<K, Vi, Vo, E> = Arc<
+pub type ArcBlobstore<Vi, Vo, E> = Arc<
     Blobstore<
-        Key = K,
         ValueIn = Vi,
         ValueOut = Vo,
         Error = E,
@@ -42,10 +40,9 @@ pub type ArcBlobstore<K, Vi, Vo, E> = Arc<
 /// the `Value*` and `Error` associated types to some type. This allows the caller
 /// to conform multiple different blobstore implementations into a single boxed trait
 /// object type with uniform errors and value types.
-pub fn boxed<B, Vi, Vo, E>(blobstore: B) -> BoxBlobstore<B::Key, Vi, Vo, E>
+pub fn boxed<B, Vi, Vo, E>(blobstore: B) -> BoxBlobstore<Vi, Vo, E>
 where
     B: Blobstore + Send + 'static,
-    B::Key: Sized + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
@@ -60,10 +57,9 @@ where
     Box::new(new)
 }
 
-pub fn arced<B, Vi, Vo, E>(blobstore: B) -> ArcBlobstore<B::Key, Vi, Vo, E>
+pub fn arced<B, Vi, Vo, E>(blobstore: B) -> ArcBlobstore<Vi, Vo, E>
 where
     B: Blobstore + Sync + Send + 'static,
-    B::Key: Sized + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
@@ -93,7 +89,6 @@ where
 impl<B, Vi, Vo, E> Blobstore for BlobstoreInner<B, Vi, Vo, E>
 where
     B: Blobstore + Send + 'static,
-    B::Key: Sized + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
     B::ValueIn: From<Vi>,
@@ -102,14 +97,13 @@ where
     E: error::Error + From<B::Error> + Send + 'static,
 {
     type Error = E;
-    type Key = B::Key;
     type ValueIn = Vi;
     type ValueOut = Vo;
 
     type GetBlob = BoxFuture<Option<Self::ValueOut>, Self::Error>;
     type PutBlob = BoxFuture<(), Self::Error>;
 
-    fn get(&self, key: &Self::Key) -> Self::GetBlob {
+    fn get(&self, key: String) -> Self::GetBlob {
         self.blobstore
             .get(key)
             .map(|v| v.map(Vo::from))
@@ -117,7 +111,7 @@ where
             .boxify()
     }
 
-    fn put(&self, key: Self::Key, value: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, value: Self::ValueIn) -> Self::PutBlob {
         let value = B::ValueIn::from(value);
         self.blobstore.put(key, value).map_err(E::from).boxify()
     }

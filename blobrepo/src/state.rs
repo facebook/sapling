@@ -30,7 +30,7 @@ use errors::*;
 pub trait BlobState: 'static + Send + Sync {
     type Heads: Heads + Sync;
     type Bookmarks: Bookmarks + Clone + Sync;
-    type Blobstore: Blobstore<Key = String> + Clone + Sync;
+    type Blobstore: Blobstore + Clone + Sync;
     type Linknodes: Linknodes + Clone;
 
     fn heads(&self) -> &Self::Heads;
@@ -88,7 +88,7 @@ impl_blob_state! {
     FilesBlobState {
         heads: FileHeads,
         bookmarks: Arc<FileBookmarks>,
-        blobstore: Fileblob<String, Vec<u8>>,
+        blobstore: Fileblob<Vec<u8>>,
         linknodes: Arc<FileLinknodes>,
     }
 }
@@ -121,7 +121,7 @@ impl_blob_state! {
     RocksBlobState {
         heads: FileHeads,
         bookmarks: Arc<FileBookmarks>,
-        blobstore: Rocksblob<String>,
+        blobstore: Rocksblob,
         linknodes: Arc<FileLinknodes>,
     }
 }
@@ -180,7 +180,7 @@ impl_blob_state! {
     TestManifoldBlobState {
         heads: MemHeads,
         bookmarks: Arc<MemBookmarks>,
-        blobstore: ManifoldBlob<String, Bytes>,
+        blobstore: ManifoldBlob<Bytes>,
         linknodes: Arc<MemLinknodes>,
     }
 }

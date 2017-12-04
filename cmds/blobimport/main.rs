@@ -92,7 +92,6 @@ enum BlobstoreType {
 
 type BBlobstore = Arc<
     Blobstore<
-        Key = String,
         ValueIn = Bytes,
         ValueOut = Vec<u8>,
         Error = Error,
@@ -261,7 +260,7 @@ fn open_blobstore<P: Into<PathBuf>>(
             let output = output.expect("output path is not specified");
             let mut output = output.into();
             output.push("blobs");
-            Fileblob::<_, Bytes>::create(output)
+            Fileblob::<Bytes>::create(output)
                 .map_err(Error::from)
                 .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
                 .arced()
@@ -279,7 +278,7 @@ fn open_blobstore<P: Into<PathBuf>>(
                 .arced()
         }
         BlobstoreType::Manifold(bucket) => {
-            let mb: ManifoldBlob<String, Bytes> = ManifoldBlob::new_may_panic(bucket, remote);
+            let mb: ManifoldBlob<Bytes> = ManifoldBlob::new_may_panic(bucket, remote);
             mb.arced()
         }
     };
@@ -308,18 +307,17 @@ struct LimitedBlobstore {
 }
 
 impl Blobstore for LimitedBlobstore {
-    type Key = String;
     type ValueIn = Bytes;
     type ValueOut = Vec<u8>;
     type Error = Error;
     type GetBlob = BoxFuture<Option<Vec<u8>>, Error>;
     type PutBlob = BoxFuture<(), Error>;
 
-    fn get(&self, key: &Self::Key) -> Self::GetBlob {
+    fn get(&self, key: String) -> Self::GetBlob {
         self.blobstore.get(key)
     }
 
-    fn put(&self, key: Self::Key, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
         if val.len() >= self.max_blob_size {
             Ok(()).into_future().boxify()
         } else {

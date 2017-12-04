@@ -34,23 +34,22 @@ impl Memblob {
 }
 
 impl Blobstore for Memblob {
-    type Key = String;
     type ValueIn = Vec<u8>;
     type ValueOut = Self::ValueIn;
     type Error = !;
     type PutBlob = FutureResult<(), Self::Error>;
     type GetBlob = FutureResult<Option<Self::ValueOut>, Self::Error>;
 
-    fn put(&self, k: Self::Key, v: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, k: String, v: Self::ValueIn) -> Self::PutBlob {
         let mut inner = self.hash.lock().expect("lock poison");
 
         inner.insert(k, v);
         Ok(()).into_future()
     }
 
-    fn get(&self, k: &Self::Key) -> Self::GetBlob {
+    fn get(&self, k: String) -> Self::GetBlob {
         let inner = self.hash.lock().expect("lock poison");
 
-        Ok(inner.get(k).map(Clone::clone)).into_future()
+        Ok(inner.get(&k).map(Clone::clone)).into_future()
     }
 }

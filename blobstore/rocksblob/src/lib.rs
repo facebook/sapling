@@ -14,7 +14,6 @@ extern crate futures;
 extern crate blobstore;
 extern crate rocksdb;
 
-use std::marker::PhantomData;
 use std::path::Path;
 
 use bytes::Bytes;
@@ -30,12 +29,11 @@ mod errors;
 pub use errors::{Error, ErrorKind, Result, ResultExt};
 
 #[derive(Clone)]
-pub struct Rocksblob<K> {
+pub struct Rocksblob {
     db: Db,
-    _marker: PhantomData<K>,
 }
 
-impl<K> Rocksblob<K> {
+impl Rocksblob {
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_options(path, rocksdb::Options::new().create_if_missing(true))
     }
@@ -53,21 +51,17 @@ impl<K> Rocksblob<K> {
 
         Ok(Rocksblob {
             db: Db::open(path, opts)?,
-            _marker: PhantomData,
         })
     }
 }
 
 #[must_use = "futures do nothing unless polled"]
-pub struct GetBlob<K>(Db, K);
+pub struct GetBlob(Db, String);
 
 #[must_use = "futures do nothing unless polled"]
-pub struct PutBlob<K>(Db, K, Bytes);
+pub struct PutBlob(Db, String, Bytes);
 
-impl<K> Future for GetBlob<K>
-where
-    K: AsRef<[u8]>,
-{
+impl Future for GetBlob {
     type Item = Option<rocksdb::Buffer>;
     type Error = Error;
 
@@ -78,10 +72,7 @@ where
     }
 }
 
-impl<K> Future for PutBlob<K>
-where
-    K: AsRef<[u8]>,
-{
+impl Future for PutBlob {
     type Item = ();
     type Error = Error;
 
@@ -92,26 +83,21 @@ where
     }
 }
 
-impl<K> Blobstore for Rocksblob<K>
-where
-    K: AsRef<[u8]> + Send + Clone + 'static,
-{
-    type Key = K;
+impl Blobstore for Rocksblob {
     type ValueIn = Bytes;
     type ValueOut = rocksdb::Buffer;
     type Error = Error;
     // TODO: remove these and use poll_fn once we have `impl Future`
-    type GetBlob = GetBlob<K>;
-    type PutBlob = PutBlob<K>;
+    type GetBlob = GetBlob;
+    type PutBlob = PutBlob;
 
-    fn get(&self, key: &Self::Key) -> Self::GetBlob {
+    fn get(&self, key: String) -> Self::GetBlob {
         let db = self.db.clone();
-        let key = key.clone();
 
         GetBlob(db, key)
     }
 
-    fn put(&self, key: Self::Key, val: Self::ValueIn) -> Self::PutBlob {
+    fn put(&self, key: String, val: Self::ValueIn) -> Self::PutBlob {
         let db = self.db.clone();
 
         PutBlob(db, key, val)

@@ -52,13 +52,13 @@ impl BlobChangeset {
         nodeid: &NodeHash,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static
     where
-        B: Blobstore<Key = String>,
+        B: Blobstore,
     {
         let nodeid = *nodeid;
         let key = cskey(&nodeid);
 
         blobstore
-            .get(&key)
+            .get(key)
             .map_err(blobstore_err)
             .and_then(move |got| match got {
                 None => Ok(None),
@@ -78,7 +78,7 @@ impl BlobChangeset {
 
     pub fn save<B>(&self, blobstore: B) -> impl Future<Item = (), Error = Error> + Send + 'static
     where
-        B: Blobstore<Key = String> + Send + 'static,
+        B: Blobstore + Send + 'static,
         B::Error: Send + 'static,
         B::PutBlob: Send + 'static,
         B::ValueIn: From<Vec<u8>>,

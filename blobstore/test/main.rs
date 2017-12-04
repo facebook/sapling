@@ -47,13 +47,13 @@ pub use errors::*;
 
 fn simple<B>(blobstore: B)
 where
-    B: Blobstore<Key = String>,
+    B: Blobstore,
     B::ValueIn: From<&'static [u8]>,
 {
     let foo = "foo".to_string();
     let res = blobstore
         .put(foo.clone(), b"bar"[..].into())
-        .and_then(|_| blobstore.get(&foo));
+        .and_then(|_| blobstore.get(foo));
     let out = res.wait().expect("pub/get failed").expect("missing");
 
     assert_eq!(out.as_ref(), b"bar".as_ref());
@@ -61,9 +61,9 @@ where
 
 fn missing<B>(blobstore: B)
 where
-    B: Blobstore<Key = String>,
+    B: Blobstore,
 {
-    let res = blobstore.get(&"missing".to_string());
+    let res = blobstore.get("missing".to_string());
     let out = res.wait().expect("get failed");
 
     assert!(out.is_none());
@@ -71,7 +71,7 @@ where
 
 fn boxable<B>(blobstore: B)
 where
-    B: Blobstore<Key = String>,
+    B: Blobstore,
     B::ValueIn: From<&'static [u8]>,
     Vec<u8>: From<B::ValueOut>,
     Error: From<B::Error>,
@@ -81,7 +81,7 @@ where
     let foo = "foo".to_string();
     let res = blobstore
         .put(foo.clone(), b"bar".as_ref())
-        .and_then(|_| blobstore.get(&foo));
+        .and_then(|_| blobstore.get(foo));
     let out: Vec<u8> = res.wait().expect("pub/get failed").expect("missing");
 
     assert_eq!(&*out, b"bar".as_ref());
@@ -128,7 +128,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     fileblob_test => {
         state: TempDir::new("fileblob_test").unwrap(),
-        new: |dir| Fileblob::<_, Vec<u8>>::open(dir).unwrap(),
+        new: |dir| Fileblob::<Vec<u8>>::open(dir).unwrap(),
         persistent: true,
     }
 }

@@ -28,7 +28,7 @@ pub struct BlobManifest<B> {
 
 impl<B> BlobManifest<B>
 where
-    B: Blobstore<Key = String> + Clone,
+    B: Blobstore + Clone,
 {
     pub fn load(blobstore: &B, manifestid: &NodeHash) -> BoxFuture<Option<Self>, Error> {
         get_node(blobstore, manifestid.clone())
@@ -36,7 +36,7 @@ where
                 let blobstore = blobstore.clone();
                 move |nodeblob| {
                     let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-                    blobstore.get(&blobkey).map_err(blobstore_err)
+                    blobstore.get(blobkey).map_err(blobstore_err)
                 }
             })
             .and_then({
@@ -59,7 +59,7 @@ where
 
 impl<B> Manifest for BlobManifest<B>
 where
-    B: Blobstore<Key = String> + Sync + Clone,
+    B: Blobstore + Sync + Clone,
 {
     type Error = Error;
 
