@@ -16,8 +16,10 @@
 
 from mercurial import (
     branchmap,
+    commands,
     dispatch,
     extensions,
+    localrepo,
     merge,
     namespaces,
     obsutil,
@@ -41,6 +43,7 @@ def extsetup(ui):
     wrapfunction(branchmap, 'read', _branchmapread)
     wrapfunction(branchmap, 'replacecache', _branchmapreplacecache)
     wrapfunction(branchmap, 'updatecache', _branchmapupdatecache)
+    wrapfunction(commands, '_docommit', _docommit)
     if ui.configbool('perftweaks', 'preferdeltas'):
         wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
 
@@ -161,6 +164,22 @@ def _branchmapupdatecache(orig, repo):
         partial = branchmap.branchcache()
     partial.update(repo, None)
     repo._branchcaches[repo.filtername] = partial
+
+# _docommit accesses "branchheads" just to decide whether to show "(created new
+# head)" or not. Accessing branchheads requires calling "headrevs()" which is
+# expensive since it scans entire changelog. We don't use named branches and
+# do not worry about multiple heads.
+def _docommit(orig, ui, repo, *pats, **opts):
+    # developer config: perftweaks.disableheaddetection
+    if not repo.ui.configbool('perftweaks', 'disableheaddetection'):
+        return orig(ui, repo, *pats, **opts)
+
+    def _fakedbranchheads(orig, repo, *args, **kwargs):
+        # Make "." a "head" so the "created new head" message won't be printed.
+        return [repo['.'].node()]
+    with extensions.wrappedfunction(localrepo.localrepository,
+                                    'branchheads', _fakedbranchheads):
+        return orig(ui, repo, *pats, **opts)
 
 def _branchmapwrite(orig, self, repo):
     if repo.ui.configbool('perftweaks', 'disablebranchcache2'):

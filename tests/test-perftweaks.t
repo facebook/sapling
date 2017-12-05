@@ -1,5 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > drawdag=$RUNTESTDIR/drawdag.py
   > perftweaks=$TESTDIR/../hgext3rd/perftweaks.py
   > EOF
 
@@ -99,6 +100,25 @@ Test disabling the branchcache
   *> perftweaks updated served branch cache (glob)
   *> commit -Aqm a * exited 0 after * seconds (glob)
   *> blackbox (glob)
+
+  $ cd ..
+
+Test avoiding calculating head changes during commit
+
+  $ hg init branchatcommit
+  $ cd branchatcommit
+  $ hg debugdrawdag<<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg up -q A
+  $ echo C > C
+  $ hg commit -m C -A C
+  created new head
+  $ hg up -q A
+  $ echo D > D
+  $ hg commit -m D -A D --config perftweaks.disableheaddetection=1
 
   $ cd ..
 
