@@ -221,44 +221,36 @@ def _incrementalrepack(repo, datastore, historystore, packpath, category,
                 options=options)
 
 def _computeincrementaldatapack(ui, files):
-    """Given a set of pack files and a set of generation size limits, this
-    function computes the list of files that should be packed as part of an
-    incremental repack.
+    opts = {
+        'gencountlimit' : ui.configint(
+            'remotefilelog', 'data.gencountlimit', 2),
+        'generations' : ui.configlist(
+            'remotefilelog', 'data.generations', ['1GB', '100MB', '1MB']),
+        'maxrepackpacks' : ui.configint(
+            'remotefilelog', 'data.maxrepackpacks', 50),
+        'repacksizelimit' : ui.configbytes(
+            'remotefilelog', 'data.repacksizelimit', '100MB'),
+    }
 
-    It tries to strike a balance between keeping incremental repacks cheap (i.e.
-    packing small things when possible, and rolling the packs up to the big ones
-    over time).
-    """
-    generations = ui.configlist("remotefilelog", "data.generations",
-                                ['1GB', '100MB', '1MB'])
-    generations = list(sorted((util.sizetoint(s) for s in generations),
-                                reverse=True))
-    generations.append(0)
-
-    gencountlimit = ui.configint('remotefilelog', 'data.gencountlimit', 2)
-    repacksizelimit = ui.configbytes('remotefilelog', 'data.repacksizelimit',
-                                     '100MB')
-    maxrepackpacks = ui.configint('remotefilelog', 'data.maxrepackpacks', 50)
-
-    return _computeincrementalpack(ui, files, generations, datapack.PACKSUFFIX,
-                                   datapack.INDEXSUFFIX, gencountlimit,
-                                   repacksizelimit, maxrepackpacks)
+    packfiles = _allpackfileswithsuffix(
+        files, datapack.PACKSUFFIX, datapack.INDEXSUFFIX)
+    return _computeincrementalpack(packfiles, opts)
 
 def _computeincrementalhistorypack(ui, files):
-    generations = ui.configlist("remotefilelog", "history.generations",
-                                ['100MB'])
-    generations = list(sorted((util.sizetoint(s) for s in generations),
-                                reverse=True))
-    generations.append(0)
+    opts = {
+        'gencountlimit' : ui.configint(
+            'remotefilelog', 'history.gencountlimit', 2),
+        'generations' : ui.configlist(
+            'remotefilelog', 'history.generations', ['100MB']),
+        'maxrepackpacks' : ui.configint(
+            'remotefilelog', 'history.maxrepackpacks', 50),
+        'repacksizelimit' : ui.configbytes(
+            'remotefilelog', 'history.repacksizelimit', '100MB'),
+    }
 
-    gencountlimit = ui.configint('remotefilelog', 'history.gencountlimit', 2)
-    repacksizelimit = ui.configbytes('remotefilelog', 'history.repacksizelimit',
-                                     '100MB')
-    maxrepackpacks = ui.configint('remotefilelog', 'history.maxrepackpacks', 50)
-
-    return _computeincrementalpack(ui, files, generations,
-            historypack.PACKSUFFIX, historypack.INDEXSUFFIX, gencountlimit,
-            repacksizelimit, maxrepackpacks)
+    packfiles = _allpackfileswithsuffix(
+        files, historypack.PACKSUFFIX, historypack.INDEXSUFFIX)
+    return _computeincrementalpack(packfiles, opts)
 
 def _allpackfileswithsuffix(files, packsuffix, indexsuffix):
     result = []
@@ -276,16 +268,27 @@ def _allpackfileswithsuffix(files, packsuffix, indexsuffix):
 
     return result
 
-def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
-                            gencountlimit, repacksizelimit, maxrepackpacks):
+def _computeincrementalpack(files, opts):
+    """Given a set of pack files along with the configuration options, this
+    function computes the list of files that should be packed as part of an
+    incremental repack.
+
+    It tries to strike a balance between keeping incremental repacks cheap (i.e.
+    packing small things when possible, and rolling the packs up to the big ones
+    over time).
+    """
+
+    limits = list(sorted((util.sizetoint(s) for s in opts['generations']),
+                                reverse=True))
+    limits.append(0)
+
     # Group the packs by generation (i.e. by size)
     generations = []
     for i in xrange(len(limits)):
         generations.append([])
 
     sizes = {}
-    for prefix, mode, stat in _allpackfileswithsuffix(files, packsuffix,
-            indexsuffix):
+    for prefix, mode, stat in files:
         size = stat.st_size
         sizes[prefix] = size
         for i, limit in enumerate(limits):
@@ -301,7 +304,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     # Find the largest generation with more than gencountlimit packs
     genpacks = []
     for i, limit in enumerate(limits):
-        if len(generations[i]) > gencountlimit:
+        if len(generations[i]) > opts['gencountlimit']:
             # Sort to be smallest last, for easy popping later
             genpacks.extend(sorted(generations[i], reverse=True,
                                    key=lambda x: sizes[x]))
@@ -311,8 +314,8 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     chosenpacks = genpacks[-3:]
     genpacks = genpacks[:-3]
     repacksize = sum(sizes[n] for n in chosenpacks)
-    while (repacksize < repacksizelimit and genpacks and
-           len(chosenpacks) < maxrepackpacks):
+    while (repacksize < opts['repacksizelimit'] and genpacks and
+           len(chosenpacks) < opts['maxrepackpacks']):
         chosenpacks.append(genpacks.pop())
         repacksize += sizes[chosenpacks[-1]]
 
