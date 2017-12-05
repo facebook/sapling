@@ -93,12 +93,11 @@ Test disabling the branchcache
   $ hg strip -q -r . -k
   $ rm .hg/blackbox.log
   $ rm -rf .hg/cache
-  $ hg commit -Aqm a --config perftweaks.disablebranchcache=True
+  $ hg commit -Aqm a --config perftweaks.disablebranchcache=True --config perftweaks.disablebranchcache2=True
   $ hg blackbox
   *> commit -Aqm a* (glob)
   *> perftweaks updated served branch cache (glob)
-  *> wrote served branch cache with 1 labels and 1 nodes (glob)
-  *> commit -Aqm a --config 'perftweaks.disablebranchcache=True' exited 0 after * seconds (glob)
+  *> commit -Aqm a * exited 0 after * seconds (glob)
   *> blackbox (glob)
 
   $ cd ..

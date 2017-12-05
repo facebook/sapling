@@ -28,7 +28,7 @@ from mercurial import (
     util,
 )
 from mercurial.extensions import wrapfunction
-from mercurial.node import bin, nullid, nullrev
+from mercurial.node import bin
 import errno
 import os
 
@@ -38,6 +38,9 @@ def extsetup(ui):
     wrapfunction(tags, '_readtagcache', _readtagcache)
     wrapfunction(merge, '_checkcollision', _checkcollision)
     wrapfunction(branchmap.branchcache, 'update', _branchmapupdate)
+    wrapfunction(branchmap, 'read', _branchmapread)
+    wrapfunction(branchmap, 'replacecache', _branchmapreplacecache)
+    wrapfunction(branchmap, 'updatecache', _branchmapupdatecache)
     if ui.configbool('perftweaks', 'preferdeltas'):
         wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
 
@@ -111,32 +114,60 @@ def _branchmapupdate(orig, self, repo, revgen):
     cl = repo.changelog
     tonode = cl.node
 
+    if self.tiprev == len(cl) - 1 and self.validfor(repo):
+        return
+
     # Since we have no branches, the default branch heads are equal to
-    # cl.headrevs(). Note: cl.headrevs() is already sorted.
-    branchheads = cl.headrevs()
+    # cl.headrevs(). Note: cl.headrevs() is already sorted and it may return
+    # -1.
+    branchheads = [i for i in cl.headrevs() if i >= 0]
 
-    self['default'] = [tonode(rev) for rev in branchheads]
-    tiprev = branchheads[-1]
-    if tiprev > self.tiprev:
-        self.tipnode = cl.node(tiprev)
-        self.tiprev = tiprev
-
-    # Copy and paste from branchmap.branchcache.update()
-    if not self.validfor(repo):
-        # cache key are not valid anymore
-        self.tipnode = nullid
-        self.tiprev = nullrev
-        for heads in self.values():
-            tiprev = max(cl.rev(node) for node in heads)
-            if tiprev > self.tiprev:
-                self.tipnode = cl.node(tiprev)
-                self.tiprev = tiprev
+    if not branchheads:
+        if 'default' in self:
+            del self['default']
+        tiprev = -1
+    else:
+        self['default'] = [tonode(rev) for rev in branchheads]
+        tiprev = branchheads[-1]
+    self.tipnode = cl.node(tiprev)
+    self.tiprev = tiprev
     self.filteredhash = scmutil.filteredhash(repo, self.tiprev)
     repo.ui.log('branchcache', 'perftweaks updated %s branch cache\n',
                 repo.filtername)
 
+def _branchmapread(orig, repo):
+    # developer config: perftweaks.disablebranchcache2
+    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+        return orig(repo)
+    # Don't bother reading branchmap since branchcache.update() will be called
+    # anyway and that is O(changelog)
+
+def _branchmapreplacecache(orig, repo, bm):
+    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+        return orig(repo, bm)
+    # Don't bother writing branchmap since we don't read it
+
+def _branchmapupdatecache(orig, repo):
+    if not repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+        return orig(repo)
+
+    # The original logic has unnecessary steps, ex. it calculates the "served"
+    # repoview as an attempt to build branchcache for "visible". And then
+    # calculates "immutable" for calculating "served", recursively.
+    #
+    # Just use a shortcut path that construct the branchcache directly.
+    partial = repo._branchcaches.get(repo.filtername)
+    if partial is None:
+        partial = branchmap.branchcache()
+    partial.update(repo, None)
+    repo._branchcaches[repo.filtername] = partial
+
 def _branchmapwrite(orig, self, repo):
-    result = orig(self, repo)
+    if repo.ui.configbool('perftweaks', 'disablebranchcache2'):
+        # Since we don't read the branchcache, don't bother writing it.
+        result = None
+    else:
+        result = orig(self, repo)
     if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
         revs = set()
         nodemap = repo.changelog.nodemap
@@ -144,7 +175,6 @@ def _branchmapwrite(orig, self, repo):
             revs.update(nodemap[n] for n in heads)
         name = 'branchheads-%s' % repo.filtername
         _savepreloadrevs(repo, name, revs)
-
     return result
 
 def _saveremotenames(orig, repo, remotepath, branches=None, bookmarks=None):
