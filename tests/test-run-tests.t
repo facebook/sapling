@@ -1280,7 +1280,7 @@ support for automatically discovering test if arg is a folder
   $ cp -R tmp tmpp
   $ cp tmp/test-uno.t test-solo.t
 
-  $ $PYTHON $TESTDIR/run-tests.py tmp/ test-solo.t tmpp
+  $ rt tmp/ test-solo.t tmpp
   .....
   # Ran 5 tests, 0 skipped, 0 failed.
   $ rm -rf tmp tmpp
@@ -1303,7 +1303,7 @@ support for running run-tests.py from another directory
   > EOF
 
   $ cd ..
-  $ $PYTHON $TESTDIR/run-tests.py tmp/test-*.t
+  $ rt tmp/test-*.t
   
   --- $TESTTMP/anothertests/tmp/test-folder-fail.t
   +++ $TESTTMP/anothertests/tmp/test-folder-fail.t.err
