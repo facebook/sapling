@@ -516,7 +516,7 @@ class EdenMount {
   // Dispatches fuse requests
   void fuseWorkerThread();
 
-  static struct timespec getCurrentCheckoutTime();
+  struct timespec getCurrentCheckoutTime();
 
   /**
    * Private destructor.
@@ -601,8 +601,7 @@ class EdenMount {
    * low level lock in our lock ordering hierarchy: No other locks should be
    * acquired while holding this lock.
    */
-  folly::Synchronized<struct timespec> lastCheckoutTime_{
-      getCurrentCheckoutTime()};
+  folly::Synchronized<struct timespec> lastCheckoutTime_;
 
   /**
    * The current state of the mount point.

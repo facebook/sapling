@@ -11,6 +11,7 @@
 
 #include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
+#include <folly/chrono/Conv.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
@@ -779,8 +780,7 @@ FileInodePtr TreeInode::symlink(
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    struct timespec currentTime;
-    clock_gettime(CLOCK_REALTIME, &currentTime);
+    auto currentTime = getNow();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
 
@@ -825,8 +825,9 @@ FileInodePtr TreeInode::symlink(
     contents->entries.emplace(name, std::move(entry));
 
     // Update mtime and ctime of the file
-    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
-    contents->timeStamps.ctime = contents->timeStamps.mtime;
+    auto now = getNow();
+    contents->timeStamps.mtime = now;
+    contents->timeStamps.ctime = now;
 
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
@@ -879,8 +880,7 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    struct timespec currentTime;
-    clock_gettime(CLOCK_REALTIME, &currentTime);
+    auto currentTime = getNow();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
     auto entry = std::make_unique<Entry>(mode, childNumber, rdev);
@@ -898,8 +898,8 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     contents->entries.emplace(name, std::move(entry));
 
     // Update mtime and ctime of the file
-    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
-    contents->timeStamps.ctime = contents->timeStamps.mtime;
+    contents->timeStamps.mtime = currentTime;
+    contents->timeStamps.ctime = currentTime;
 
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
@@ -947,11 +947,12 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     // Store the overlay entry for this dir
     Dir emptyDir;
     // Update timeStamps of newly created directory and current directory.
-    clock_gettime(CLOCK_REALTIME, &emptyDir.timeStamps.atime);
-    emptyDir.timeStamps.ctime = emptyDir.timeStamps.atime;
-    emptyDir.timeStamps.mtime = emptyDir.timeStamps.atime;
-    contents->timeStamps.mtime = emptyDir.timeStamps.atime;
-    contents->timeStamps.ctime = emptyDir.timeStamps.atime;
+    auto now = getNow();
+    emptyDir.timeStamps.atime = now;
+    emptyDir.timeStamps.ctime = now;
+    emptyDir.timeStamps.mtime = now;
+    contents->timeStamps.mtime = now;
+    contents->timeStamps.ctime = now;
 
     overlay->saveOverlayDir(childNumber, &emptyDir);
 
@@ -1144,8 +1145,9 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directoryafter removing the
     // child.
-    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
-    contents->timeStamps.ctime = contents->timeStamps.mtime;
+    auto now = getNow();
+    contents->timeStamps.mtime = now;
+    contents->timeStamps.ctime = now;
 
     // Update the on-disk overlay
     auto overlay = this->getOverlay();
@@ -2741,7 +2743,8 @@ void TreeInode::unloadChildrenNow() {
 
 uint64_t TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
   // Get the timepoint and convert to timespec.
-  auto timePointRel = std::chrono::system_clock::now() - age;
+  auto now = folly::to<std::chrono::system_clock::time_point>(getNow());
+  auto timePointRel = now - age;
   auto epochTime = timePointRel.time_since_epoch();
   auto sec = std::chrono::duration_cast<std::chrono::seconds>(epochTime);
   auto nsec =
@@ -2986,9 +2989,10 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   updateJournal();
   return result;
 }
-void TreeInode::setAtime(struct timespec& atime) {
+void TreeInode::updateAtimeToNow() {
+  auto now = getNow();
   auto contents = contents_.wlock();
-  contents->timeStamps.atime = atime;
+  contents->timeStamps.atime = now;
 }
 } // namespace eden
 } // namespace facebook

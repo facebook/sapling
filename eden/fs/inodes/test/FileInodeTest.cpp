@@ -25,6 +25,7 @@
 using namespace facebook::eden;
 using folly::StringPiece;
 using std::chrono::duration_cast;
+using namespace std::literals;
 
 std::ostream& operator<<(std::ostream& os, const timespec& ts) {
   os << folly::sformat("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
@@ -152,6 +153,9 @@ fusell::Dispatcher::Attr basicAttrChecks(const FileInodePtr& inode) {
 class FileInodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    // Default to a nonzero time.
+    mount_.getClock().advance(9876min);
+
     // Set up a directory structure that we will use for most
     // of the tests below
     FakeTreeBuilder builder;
@@ -173,19 +177,8 @@ TEST_F(FileInodeTest, getattrFromBlob) {
 }
 
 TEST_F(FileInodeTest, getattrFromOverlay) {
-  auto start = std::chrono::system_clock::now();
+  auto start = mount_.getClock().getTimePoint();
 
-  // Allow ourselves up to 1 second of slop.
-  //
-  // When using files in the overlay we currently use the timestamp from the
-  // underlying file system.  Some file systems only provide second-level
-  // granularity.  Even on filesystems with higher granularity, the timestamp
-  // is often stored based on a cached time value in the kernel that is only
-  // updated on timer interrupts.  Therefore we might get a value slightly
-  // older than the start time we computed.
-  start -= std::chrono::seconds{1};
-
-  mount_.getClock().set(start);
   mount_.addFile("dir/new_file.c", "hello\nworld\n");
   auto inode = mount_.getFileInode("dir/new_file.c");
 
@@ -193,9 +186,9 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(12, attr.st.st_size);
-  EXPECT_GE(attr.st.st_atim, start);
-  EXPECT_GE(attr.st.st_mtim, start);
-  EXPECT_GE(attr.st.st_ctim, start);
+  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_atim), start);
+  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_mtim), start);
+  EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_ctim), start);
 }
 
 TEST_F(FileInodeTest, setattrTruncateAll) {
@@ -326,14 +319,17 @@ TEST_F(FileInodeTest, setattrAtime) {
   EXPECT_EQ(1234, attr.st.st_atim.tv_sec);
   EXPECT_EQ(5678, attr.st.st_atim.tv_nsec);
 
+  mount_.getClock().advance(10min);
+
   // Ask to set the atime to the current time
-  auto start = std::chrono::system_clock::now();
   desired.st_atim.tv_sec = 8765;
   desired.st_atim.tv_nsec = 4321;
   attr = setFileAttr(inode, desired, FUSE_SET_ATTR_ATIME_NOW);
 
   BASIC_ATTR_CHECKS(inode, attr);
-  EXPECT_GE(attr.st.st_atim, start);
+  EXPECT_EQ(
+      mount_.getClock().getTimePoint(),
+      folly::to<FakeClock::time_point>(attr.st.st_atim));
 }
 
 TEST_F(FileInodeTest, setattrMtime) {
@@ -351,13 +347,14 @@ TEST_F(FileInodeTest, setattrMtime) {
   EXPECT_EQ(5678, attr.st.st_mtim.tv_nsec);
 
   // Ask to set the mtime to the current time
-  auto start = std::chrono::system_clock::now();
+  mount_.getClock().advance(1234min);
+  auto start = mount_.getClock().getTimePoint();
   desired.st_mtim.tv_sec = 8765;
   desired.st_mtim.tv_nsec = 4321;
   attr = setFileAttr(inode, desired, FUSE_SET_ATTR_MTIME_NOW);
 
   BASIC_ATTR_CHECKS(inode, attr);
-  EXPECT_GE(attr.st.st_mtim, start);
+  EXPECT_EQ(start, folly::to<FakeClock::time_point>(attr.st.st_mtim));
 }
 
 namespace {

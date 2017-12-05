@@ -334,6 +334,7 @@ void testModifyFile(
   builder1.setFile("a/b/tttt.c", "this is tttt.c\n");
   builder1.setFile(path, contents1, perms1);
   TestMount testMount{builder1};
+  testMount.getClock().advance(9876min);
 
   // Prepare the second tree
   auto builder2 = builder1.clone();
@@ -352,7 +353,8 @@ void testModifyFile(
     preStat = preInode->getattr().get(10ms).st;
   }
 
-  auto checkoutStart = system_clock::now();
+  testMount.getClock().advance(10min);
+  auto checkoutStart = testMount.getClock().getTimePoint();
   auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
   ASSERT_TRUE(checkoutResult.isReady());
   auto results = checkoutResult.get();

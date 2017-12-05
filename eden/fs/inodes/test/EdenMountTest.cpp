@@ -159,14 +159,11 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
   auto fileInode = testMount.getFileInode("newfile.txt");
   auto timestamps = fileInode->getTimestamps();
   EXPECT_EQ(
-      clock.getTimePoint(),
-      folly::to<FakeClock::clock::time_point>(timestamps.atime));
+      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.atime));
   EXPECT_EQ(
-      clock.getTimePoint(),
-      folly::to<FakeClock::clock::time_point>(timestamps.ctime));
+      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.ctime));
   EXPECT_EQ(
-      clock.getTimePoint(),
-      folly::to<FakeClock::clock::time_point>(timestamps.mtime));
+      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.mtime));
 }
 } // namespace eden
 } // namespace facebook

@@ -25,6 +25,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
@@ -549,7 +550,7 @@ std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
 
   auto state = state_.wlock();
   SCOPE_SUCCESS {
-    clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
+    state->timeStamps.atime = getNow();
   };
 
   if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
@@ -605,7 +606,7 @@ folly::Future<std::string> FileInode::readAll() {
     }
 
     // We want to update atime after the read operation.
-    clock_gettime(CLOCK_REALTIME, &state->timeStamps.atime);
+    state->timeStamps.atime = self->getNow();
     return result;
   });
 }
@@ -631,8 +632,9 @@ size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
-  clock_gettime(CLOCK_REALTIME, &state->timeStamps.mtime);
-  state->timeStamps.ctime = state->timeStamps.mtime;
+  auto now = getNow();
+  state->timeStamps.mtime = now;
+  state->timeStamps.ctime = now;
 
   return xfer;
 }
@@ -652,8 +654,9 @@ size_t FileInode::write(folly::StringPiece data, off_t off) {
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
-  clock_gettime(CLOCK_REALTIME, &state->timeStamps.mtime);
-  state->timeStamps.ctime = state->timeStamps.mtime;
+  auto now = getNow();
+  state->timeStamps.mtime = now;
+  state->timeStamps.ctime = now;
 
   return xfer;
 }

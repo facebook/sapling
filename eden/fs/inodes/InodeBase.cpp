@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/utils/Clock.h"
 
 using namespace folly;
 
@@ -338,13 +339,16 @@ folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
   return setInodeAttr(attr, to_set);
 }
 
+timespec InodeBase::getNow() const {
+  return getMount()->getClock().getRealtime();
+}
+
 // Helper function to set timeStamps of FileInode and TreeInode
 void InodeBase::setattrTimes(
     const struct stat& attr,
     int to_set,
     InodeTimestamps& timeStamps) {
-  struct timespec currentTime;
-  clock_gettime(CLOCK_REALTIME, &currentTime);
+  auto currentTime = getNow();
 
   // Set atime for TreeInode.
   if (to_set & FUSE_SET_ATTR_ATIME) {

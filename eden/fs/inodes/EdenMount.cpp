@@ -39,6 +39,7 @@
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Clock.h"
 
 using folly::Future;
 using folly::StringPiece;
@@ -184,6 +185,7 @@ EdenMount::EdenMount(
       socketPath_(socketPath),
       straceLogger_{kEdenStracePrefix.str() +
                     config_->getMountPath().value().toStdString()},
+      lastCheckoutTime_{clock->getRealtime()},
       path_(config_->getMountPath()),
       uid_(getuid()),
       gid_(getgid()),
@@ -547,7 +549,7 @@ void EdenMount::resetParents(const ParentCommits& parents) {
 }
 
 struct timespec EdenMount::getCurrentCheckoutTime() {
-  return folly::to<struct timespec>(system_clock::now());
+  return getClock().getRealtime();
 }
 
 struct timespec EdenMount::getLastCheckoutTime() {

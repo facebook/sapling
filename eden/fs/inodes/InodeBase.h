@@ -337,6 +337,11 @@ class InodeBase {
 
  protected:
   /**
+   * Returns current time from EdenMount's clock.
+   */
+  timespec getNow() const;
+
+  /**
    * Helper function to update timeStamps passed by FileInode and TreeInode in
    * InodeBase
    */

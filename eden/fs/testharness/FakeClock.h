@@ -19,25 +19,27 @@ namespace eden {
 class FakeClock : public Clock {
  public:
   using clock = std::chrono::system_clock;
+  using time_point = clock::time_point;
+  using duration = clock::duration;
 
   timespec getRealtime() override {
-    return folly::to<timespec>(currentTime);
+    return folly::to<timespec>(currentTime_);
   }
 
-  clock::time_point getTimePoint() const {
-    return currentTime;
+  time_point getTimePoint() const {
+    return currentTime_;
   }
 
-  void set(clock::time_point to) {
-    currentTime = to;
+  void set(time_point to) {
+    currentTime_ = to;
   }
 
-  void advance(clock::duration by) {
-    currentTime += by;
+  void advance(duration by) {
+    currentTime_ += by;
   }
 
  private:
-  clock::time_point currentTime;
+  time_point currentTime_;
 };
 
 } // namespace eden

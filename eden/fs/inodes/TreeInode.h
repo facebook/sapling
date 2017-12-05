@@ -557,7 +557,7 @@ class TreeInode : public InodeBase {
    * TreeInode::contents_ we have this function. This has to be public since we
    * are using it TreeInodeDirHandle class.
    */
-  void setAtime(struct timespec& atime);
+  void updateAtimeToNow();
 
  private:
   class TreeRenameLocks;
