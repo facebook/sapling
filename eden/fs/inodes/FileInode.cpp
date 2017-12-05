@@ -383,18 +383,16 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
 
   if (fi.flags & O_TRUNC) {
     materializeAndTruncate();
-    return fileHandle;
   } else if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT)) {
-    // TODO: return fileHandle immediately and begin materializing in the
-    // background.
-    return materializeForWrite().then([self = inodePtrFromThis()]() {
-      return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
-    });
+    // Begin materializing the data into the overlay, but return the FileHandle
+    // immediately.
+    (void)materializeForWrite();
   } else {
     // Begin prefetching the data as it's likely to be needed soon.
     (void)ensureDataLoaded();
-    return fileHandle;
   }
+
+  return fileHandle;
 }
 
 void FileInode::materializeInParent() {
@@ -503,12 +501,10 @@ folly::Future<struct stat> FileInode::stat() {
 }
 
 void FileInode::flush(uint64_t /* lock_owner */) {
+  // This is called by FUSE when a file handle is closed.
+  // https://github.com/libfuse/libfuse/wiki/FAQ#which-method-is-called-on-the-close-system-call
   // We have no write buffers, so there is nothing for us to flush,
   // but let's take this opportunity to update the sha1 attribute.
-  // TODO: A program that issues a series of write() and flush() syscalls (for
-  // example, when logging to a file), would exhibit quadratic behavior here.
-  // This should either not recompute SHA-1 here or instead remember if the
-  // prior SHA-1 was actually used.
   auto state = state_.wlock();
   if (state->isFileOpen() && !state->sha1Valid) {
     recomputeAndStoreSha1(state, state->file);
@@ -616,13 +612,17 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
   return fusell::BufVec(std::move(buf));
 }
 
-size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
+folly::Future<size_t> FileInode::write(fusell::BufVec&& buf, off_t off) {
   auto state = state_.wlock();
 
   if (State::MATERIALIZED_IN_OVERLAY != state->tag) {
-    // Not open for write
-    folly::throwSystemErrorExplicit(EINVAL);
+    // Not open for write, so wait until it is.
+    return materializeForWrite().then(
+        [self = inodePtrFromThis(), buf = buf.copyData(), off]() mutable {
+          return self->write(StringPiece{buf}, off);
+        });
   }
+
   auto file = getFile(*state);
 
   state->sha1Valid = false;
@@ -639,12 +639,15 @@ size_t FileInode::write(fusell::BufVec&& buf, off_t off) {
   return xfer;
 }
 
-size_t FileInode::write(folly::StringPiece data, off_t off) {
+folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
   auto state = state_.wlock();
 
   if (State::MATERIALIZED_IN_OVERLAY != state->tag) {
-    // Not open for write
-    folly::throwSystemErrorExplicit(EINVAL);
+    // Not open for write, so wait until it is.
+    return materializeForWrite().then(
+        [self = inodePtrFromThis(), data = data.str(), off]() mutable {
+          return self->write(StringPiece{data}, off);
+        });
   }
   auto file = getFile(*state);
 

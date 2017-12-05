@@ -70,13 +70,6 @@ folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
 }
 
 folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
-  SCOPE_SUCCESS {
-    auto myname = inode_->getPath();
-    if (myname.hasValue()) {
-      inode_->getMount()->getJournal().addDelta(
-          std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
-    }
-  };
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -84,17 +77,17 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
       inode_->getNodeId(),
       off,
       buf.size());
-  return inode_->write(std::move(buf), off);
+  return inode_->write(std::move(buf), off).then([inode = inode_](size_t size) {
+    auto myname = inode->getPath();
+    if (myname.hasValue()) {
+      inode->getMount()->getJournal().addDelta(
+          std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
+    }
+    return size;
+  });
 }
 
 folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
-  SCOPE_SUCCESS {
-    auto myname = inode_->getPath();
-    if (myname.hasValue()) {
-      inode_->getMount()->getJournal().addDelta(
-          std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
-    }
-  };
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -102,7 +95,14 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
       inode_->getNodeId(),
       off,
       str.size());
-  return inode_->write(str, off);
+  return inode_->write(str, off).then([inode = inode_](size_t size) {
+    auto myname = inode->getPath();
+    if (myname.hasValue()) {
+      inode->getMount()->getJournal().addDelta(
+          std::make_unique<JournalDelta>(JournalDelta{myname.value()}));
+    }
+    return size;
+  });
 }
 
 folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {

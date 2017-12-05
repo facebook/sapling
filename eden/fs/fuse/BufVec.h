@@ -57,6 +57,11 @@ class BufVec {
    * Returns the total number of bytes in the BufVec.
    */
   size_t size() const;
+
+  /**
+   * Copies the buffer into a std::string.
+   */
+  std::string copyData() const;
 };
 } // namespace fusell
 } // namespace eden

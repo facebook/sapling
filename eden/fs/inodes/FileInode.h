@@ -160,7 +160,7 @@ class FileInode : public InodeBase {
    */
   std::unique_ptr<folly::IOBuf> readIntoBuffer(size_t size, off_t off);
 
-  size_t write(folly::StringPiece data, off_t off);
+  folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
   /**
    * Get the timestamps of the inode.
@@ -362,7 +362,7 @@ class FileInode : public InodeBase {
       Hash sha1);
 
   fusell::BufVec read(size_t size, off_t off);
-  size_t write(fusell::BufVec&& buf, off_t off);
+  folly::Future<size_t> write(fusell::BufVec&& buf, off_t off);
 
   folly::Future<struct stat> stat();
   void flush(uint64_t lock_owner);

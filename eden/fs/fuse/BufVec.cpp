@@ -38,6 +38,19 @@ size_t BufVec::size() const {
   return total;
 }
 
+std::string BufVec::copyData() const {
+  std::string rv;
+  rv.reserve(size());
+  for (const auto& b : items_) {
+    DCHECK(b->fd == -1) << "we don't support splicing yet";
+    const auto* buf = b->buf.get();
+    do {
+      rv.append(reinterpret_cast<const char*>(buf->data()), buf->length());
+      buf = buf->next();
+    } while (buf != b->buf.get());
+  }
+  return rv;
+}
 } // namespace fusell
 } // namespace eden
 } // namespace facebook

@@ -1,0 +1,13 @@
+# @autodeps
+
+cpp_unittest(
+    name = "test",
+    srcs = ["main.cpp"] + glob(
+        ["*Test.cpp"],
+    ),
+    deps = [
+        "@/eden/fs/fuse:fusell",
+        "@/folly/experimental/logging:init",
+        "@/folly/init:init",
+    ],
+)
