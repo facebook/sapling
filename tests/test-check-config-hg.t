@@ -36,6 +36,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fbconduit.reponame (str)
   undocumented: fbhistedit.exec_in_user_shell (str)
   undocumented: grep.command (str)
+  undocumented: infinitepush.bundle-stream (bool)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.cachenoderevs (bool) [True]

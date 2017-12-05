@@ -319,6 +319,7 @@ def clientextsetup(ui):
     wrapcommand(commands.table, 'update', _update)
 
     wrapfunction(discovery, 'checkheads', _checkheads)
+    wrapfunction(bundle2, '_addpartsfromopts', _addpartsfromopts)
 
     wireproto.wirepeer.listkeyspatterns = listkeyspatterns
 
@@ -401,6 +402,13 @@ def _checkheads(orig, pushop):
     if pushop.ui.configbool(experimental, configscratchpush, False):
         return
     return orig(pushop)
+
+def _addpartsfromopts(orig, ui, repo, bundler, *args, **kwargs):
+    """ adds a stream level part to bundle2 storing whether this is an
+    infinitepush bundle or not """
+    if ui.configbool('infinitepush', 'bundle-stream', False):
+        bundler.addparam('infinitepush', True)
+    return orig(ui, repo, bundler, *args, **kwargs)
 
 def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
     patterns = decodelist(patterns)
@@ -1231,6 +1239,14 @@ def storebundle(op, params, bundlefile):
     finally:
         if bundle:
             bundle.close()
+
+@bundle2.b2streamparamhandler('infinitepush')
+def processinfinitepush(unbundler, param, value):
+    """ process the bundle2 stream level parameter containing whether this push
+    is an infinitepush or not. """
+    if value and unbundler.ui.configbool('infinitepush',
+                                         'bundle-stream', False):
+        pass
 
 @bundle2.parthandler(scratchbranchparttype,
                      ('bookmark', 'bookprevnode' 'create', 'force',
