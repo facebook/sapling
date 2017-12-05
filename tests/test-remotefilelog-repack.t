@@ -327,7 +327,29 @@ Single pack - repack does nothing
   -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
   -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
   -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
-  $ hg repack --incremental
+
+For the data packs, setting the limit for the repackmaxpacksize to be 64 such
+that data pack with size 65 is more than the limit. This effectively ensures
+that no generation has 3 packs and therefore, no packs are chosen for the
+incremental repacking. As for the history packs, setting repackmaxpacksize to be
+0 which should always result in no repacking.
+  $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=64 \
+  > --config remotefilelog.history.repackmaxpacksize=0
+  $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
+  -r--r--r--      59 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack
+  -r--r--r--      65 6c499d21350d79f92fd556b4b7a902569d88e3c9.datapack
+  -r--r--r--      61 817d294043bd21a3de01f807721971abe45219ce.datapack
+  -r--r--r--      63 ff45add45ab3f59c4f75efc6a087d86c821219d6.datapack
+  $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
+  -r--r--r--     254 077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
+  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
+  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
+
+Setting limit for the repackmaxpacksize to be the size of the biggest pack file
+which ensures that it is effectively ignored in the incremental repacking.
+  $ hg repack --incremental --config remotefilelog.data.repackmaxpacksize=65 \
+  > --config remotefilelog.history.repackmaxpacksize=336
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      59 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack
   -r--r--r--     225 8fe685c56f6f7edf550bfcec74eeecc5f3c2ba15.datapack

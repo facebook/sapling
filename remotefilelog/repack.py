@@ -228,6 +228,8 @@ def _computeincrementaldatapack(ui, files):
             'remotefilelog', 'data.generations', ['1GB', '100MB', '1MB']),
         'maxrepackpacks' : ui.configint(
             'remotefilelog', 'data.maxrepackpacks', 50),
+        'repackmaxpacksize' : ui.configbytes(
+            'remotefilelog', 'data.repackmaxpacksize', '4GB'),
         'repacksizelimit' : ui.configbytes(
             'remotefilelog', 'data.repacksizelimit', '100MB'),
     }
@@ -244,6 +246,8 @@ def _computeincrementalhistorypack(ui, files):
             'remotefilelog', 'history.generations', ['100MB']),
         'maxrepackpacks' : ui.configint(
             'remotefilelog', 'history.maxrepackpacks', 50),
+        'repackmaxpacksize' : ui.configbytes(
+            'remotefilelog', 'history.repackmaxpacksize', '400MB'),
         'repacksizelimit' : ui.configbytes(
             'remotefilelog', 'history.repacksizelimit', '100MB'),
     }
@@ -290,6 +294,9 @@ def _computeincrementalpack(files, opts):
     sizes = {}
     for prefix, mode, stat in files:
         size = stat.st_size
+        if size > opts['repackmaxpacksize']:
+            continue
+
         sizes[prefix] = size
         for i, limit in enumerate(limits):
             if size > limit:

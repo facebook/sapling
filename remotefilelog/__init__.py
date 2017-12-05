@@ -32,6 +32,8 @@ Configs:
       1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
       include in an incremental data repack.
+    ``remotefilelog.data.repackmaxpacksize`` the maximum size of a pack file for
+      it to be considered for an incremental data repack.
     ``remotefilelog.data.repacksizelimit`` the maximum total size of pack files
       to include in an incremental data repack.
     ``remotefilelog.history.gencountlimit`` constraints the minimum number of
@@ -43,6 +45,8 @@ Configs:
       0, 1MB), [1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
       include in an incremental history repack.
+    ``remotefilelog.history.repackmaxpacksize`` the maximum size of a pack file
+      for it to be considered for an incremental history repack.
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
       files to include in an incremental history repack.
 """
