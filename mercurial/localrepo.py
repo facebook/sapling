@@ -688,11 +688,10 @@ class localrepository(object):
         key = self.unfiltered().__class__
         if key not in self._filteredrepotypes:
             # Build a new type with the repoview mixin and the base
-            # class of this repo. Give it a name containing the
-            # filter name to aid debugging.
-            bases = (repoview.repoview, key)
-            cls = type(r'%sfilteredrepo' % name, bases, {})
-            self._filteredrepotypes[key] = cls
+            # class of this repo.
+            class filteredrepo(repoview.repoview, key):
+                pass
+            self._filteredrepotypes[key] = filteredrepo
 
         return self._filteredrepotypes[key](self, name)
 
