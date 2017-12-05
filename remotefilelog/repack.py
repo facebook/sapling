@@ -326,11 +326,6 @@ def _computeincrementalpack(files, opts):
         chosenpacks.append(genpacks.pop())
         repacksize += sizes[chosenpacks[-1]]
 
-    # If there aren't any good candidates for a repack,
-    # repack the two largest ones.
-    if not chosenpacks and len(generations[0]) > 1:
-        chosenpacks = generations[0]
-
     return chosenpacks
 
 def _runrepack(repo, data, history, packpath, category, fullhistory=None,
