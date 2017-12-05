@@ -1094,12 +1094,8 @@ largefiles (issue4547)
 
 Move (and then undo) a directory move with only largefiles.
 
-  $ listtree() {
-  >   $PYTHON $TESTDIR/list-tree.py $@
-  > }
-
   $ cd subrepo-root
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir/
@@ -1114,7 +1110,7 @@ Move (and then undo) a directory move with only largefiles.
   $ hg mv dir/subdir dir/subdir2
   moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin (glob)
 
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir2/
@@ -1154,7 +1150,7 @@ The content of the forgotten file shouldn't be clobbered
 
 The standin for subdir2 should be deleted, not just dropped
 
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir/
@@ -1181,7 +1177,7 @@ existed under .hglf/.
   R dir/subdir/large.bin
   ? large.orig
 
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir2/
@@ -1206,7 +1202,7 @@ Start from scratch, and rename something other than the final path component.
     dir/subdir/large.bin
   R dir/subdir/large.bin
 
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir2/
   .hglf/dir2/subdir/
@@ -1225,7 +1221,7 @@ Start from scratch, and rename something other than the final path component.
   $ hg status -C
   ? dir2/subdir/large.bin
 
-  $ listtree .hglf dir* large*
+  $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
   .hglf/dir/
   .hglf/dir/subdir/
