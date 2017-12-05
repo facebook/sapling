@@ -294,7 +294,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
                 break
 
     # Steps for picking what packs to repack:
-    # 1. Pick the largest generation with >2 pack files.
+    # 1. Pick the largest generation with > gencountlimit pack files.
     # 2. Take the smallest three packs.
     # 3. While total-size-of-packs < repacksizelimit: add another pack
 

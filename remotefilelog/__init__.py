@@ -23,10 +23,28 @@ Configs:
       days after which it is no longer prefetched.
     ``remotefilelog.prefetchdelay`` specifies delay between background
       prefetches in seconds after operations that change the working copy parent
+    ``remotefilelog.data.gencountlimit`` constraints the minimum number of data
+      pack files required to be considered part of a generation. In particular,
+      minimum number of packs files > gencountlimit.
+    ``remotefilelog.data.generations`` list for specifying the lower bound of
+      each generation of the data pack files. For example, list ['100MB','1MB']
+      or ['1MB', '100MB'] will lead to three generations: [0, 1MB), [
+      1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
       include in an incremental data repack.
+    ``remotefilelog.data.repacksizelimit`` the maximum total size of pack files
+      to include in an incremental data repack.
+    ``remotefilelog.history.gencountlimit`` constraints the minimum number of
+      history pack files required to be considered part of a generation. In
+      particular, minimum number of packs files > gencountlimit.
+    ``remotefilelog.history.generations`` list for specifying the lower bound of
+      each generation of the history pack files. For example, list [
+      '100MB', '1MB'] or ['1MB', '100MB'] will lead to three generations: [
+      0, 1MB), [1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
       include in an incremental history repack.
+    ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
+      files to include in an incremental history repack.
 """
 
 from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
