@@ -502,9 +502,6 @@ class localrepository(object):
         # post-dirstate-status hooks
         self._postdsstatus = []
 
-        # Cache of types representing filtered repos.
-        self._filteredrepotypes = weakref.WeakKeyDictionary()
-
         # generic mapping between names and nodes
         self.names = namespaces.namespaces()
 
@@ -680,20 +677,8 @@ class localrepository(object):
 
     def filtered(self, name):
         """Return a filtered version of a repository"""
-        # Python <3.4 easily leaks types via __mro__. See
-        # https://bugs.python.org/issue17950. We cache dynamically
-        # created types so this method doesn't leak on every
-        # invocation.
-
-        key = self.unfiltered().__class__
-        if key not in self._filteredrepotypes:
-            # Build a new type with the repoview mixin and the base
-            # class of this repo.
-            class filteredrepo(repoview.repoview, key):
-                pass
-            self._filteredrepotypes[key] = filteredrepo
-
-        return self._filteredrepotypes[key](self, name)
+        cls = repoview.newtype(self.unfiltered().__class__)
+        return cls(self, name)
 
     @repofilecache('bookmarks', 'bookmarks.current')
     def _bookmarks(self):

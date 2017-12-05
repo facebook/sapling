@@ -9,6 +9,7 @@
 from __future__ import absolute_import
 
 import copy
+import weakref
 
 from .node import nullrev
 from . import (
@@ -240,3 +241,16 @@ class repoview(object):
 
     def __delattr__(self, attr):
         return delattr(self._unfilteredrepo, attr)
+
+# Python <3.4 easily leaks types via __mro__. See
+# https://bugs.python.org/issue17950. We cache dynamically created types
+# so they won't be leaked on every invocation of repo.filtered().
+_filteredrepotypes = weakref.WeakKeyDictionary()
+
+def newtype(base):
+    """Create a new type with the repoview mixin and the given base class"""
+    if base not in _filteredrepotypes:
+        class filteredrepo(repoview, base):
+            pass
+        _filteredrepotypes[base] = filteredrepo
+    return _filteredrepotypes[base]

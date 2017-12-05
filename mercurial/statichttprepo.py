@@ -166,8 +166,6 @@ class statichttprepository(localrepo.localrepository):
         self.encodepats = None
         self.decodepats = None
         self._transref = None
-        # Cache of types representing filtered repos.
-        self._filteredrepotypes = {}
 
     def _restrictcapabilities(self, caps):
         caps = super(statichttprepository, self)._restrictcapabilities(caps)
