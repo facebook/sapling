@@ -382,13 +382,11 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(
 
   if (fi.flags & O_TRUNC) {
     materializeAndTruncate();
-    materializeInParent();
     return fileHandle;
   } else if (fi.flags & (O_RDWR | O_WRONLY | O_CREAT)) {
     // TODO: return fileHandle immediately and begin materializing in the
     // background.
     return materializeForWrite().then([self = inodePtrFromThis()]() {
-      self->materializeInParent();
       return shared_ptr<fusell::FileHandle>{std::make_shared<FileHandle>(self)};
     });
   } else {
@@ -770,75 +768,82 @@ folly::IOBuf createOverlayHeaderFromTimestamps(
 Future<Unit> FileInode::materializeForWrite() {
   // Not O_TRUNC, so ensure we have a blob (or are already materialized).
   return ensureDataLoaded().then([self = inodePtrFromThis()]() {
-    auto state = self->state_.wlock();
+    // Notifying the parent of materialization must happen outside of the lock.
+    {
+      auto state = self->state_.wlock();
 
-    state->checkInvariants();
-    SCOPE_SUCCESS {
       state->checkInvariants();
-    };
+      SCOPE_SUCCESS {
+        state->checkInvariants();
+      };
 
-    if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-      // This conditional will be hit if materializeForWrite is called, issues
-      // a load, and then materializeAndTruncate is called before
-      // ensureDataLoaded() completes.  The prior O_TRUNC would have completed
-      // synchronously and switched the inode into the 'materialized' state, in
-      // which case there is nothing left to do here.
-      return;
+      if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+        // This conditional will be hit if materializeForWrite is called, issues
+        // a load, and then materializeAndTruncate is called before
+        // ensureDataLoaded() completes.  The prior O_TRUNC would have completed
+        // synchronously and switched the inode into the 'materialized' state,
+        // in which case there is nothing left to do here.
+        return;
+      }
+
+      // Add header to the overlay File.
+      auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
+      auto iov = header.getIov();
+
+      auto filePath = self->getLocalPath();
+
+      // state->blob is guaranteed non-null because:
+      //   If state->file was set, we would have early exited above.
+      //   If not O_TRUNC, then we called ensureDataLoaded().
+      CHECK_NOTNULL(state->blob.get());
+
+      // Write the blob contents out to the overlay
+      auto contents = state->blob->getContents().getIov();
+      iov.insert(iov.end(), contents.begin(), contents.end());
+
+      folly::writeFileAtomic(
+          filePath.stringPiece(), iov.data(), iov.size(), 0600);
+      InodeTimestamps timeStamps;
+
+      auto file = Overlay::openFile(
+          filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
+      state->sha1Valid = false;
+
+      // If we have a SHA-1 from the metadata, apply it to the new file.  This
+      // saves us from recomputing it again in the case that something opens the
+      // file read/write and closes it without changing it.
+      auto metadata =
+          self->getObjectStore()->getBlobMetadata(state->hash.value());
+      if (metadata.isReady()) {
+        self->storeSha1(state, file, metadata.value().sha1);
+      } else {
+        // Leave the SHA-1 attribute dirty - it is not very likely that a file
+        // will be opened for writing, closed without changing, and then have
+        // its SHA-1 queried via Thrift or xattr. If so, the SHA-1 will be
+        // recomputed as needed. That said, it's perhaps cheaper to hash now
+        // (SHA-1 is hundreds of MB/s) while the data is accessible in the blob
+        // than to read the file out of the overlay later.
+      }
+
+      // Update the FileInode to indicate that we are materialized now.
+      state->blob.reset();
+      state->hash = folly::none;
+      // If a FileHandle is already open cache the newly-opened file.
+      if (state->openCount) {
+        state->file = std::move(file);
+      }
+      state->tag = State::MATERIALIZED_IN_OVERLAY;
     }
-
-    // Add header to the overlay File.
-    auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
-    auto iov = header.getIov();
-
-    auto filePath = self->getLocalPath();
-
-    // state->blob is guaranteed non-null because:
-    //   If state->file was set, we would have early exited above.
-    //   If not O_TRUNC, then we called ensureDataLoaded().
-    CHECK_NOTNULL(state->blob.get());
-
-    // Write the blob contents out to the overlay
-    auto contents = state->blob->getContents().getIov();
-    iov.insert(iov.end(), contents.begin(), contents.end());
-
-    folly::writeFileAtomic(
-        filePath.stringPiece(), iov.data(), iov.size(), 0600);
-    InodeTimestamps timeStamps;
-
-    auto file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
-    state->sha1Valid = false;
-
-    // If we have a SHA-1 from the metadata, apply it to the new file.  This
-    // saves us from recomputing it again in the case that something opens the
-    // file read/write and closes it without changing it.
-    auto metadata =
-        self->getObjectStore()->getBlobMetadata(state->hash.value());
-    if (metadata.isReady()) {
-      self->storeSha1(state, file, metadata.value().sha1);
-    } else {
-      // Leave the SHA-1 attribute dirty - it is not very likely that a file
-      // will be opened for writing, closed without changing, and then have its
-      // SHA-1 queried via Thrift or xattr. If so, the SHA-1 will be recomputed
-      // as needed. That said, it's perhaps cheaper to hash now (SHA-1 is
-      // hundreds of MB/s) while the data is accessible in the blob than to read
-      // the file out of the overlay later.
-    }
-
-    // Update the FileInode to indicate that we are materialized now.
-    state->blob.reset();
-    state->hash = folly::none;
-    // If a FileHandle is already open cache the newly-opened file.
-    if (state->openCount) {
-      state->file = std::move(file);
-    }
-    state->tag = State::MATERIALIZED_IN_OVERLAY;
+    self->materializeInParent();
   });
 }
 
 void FileInode::materializeAndTruncate() {
   // Set if in 'loading' state.  Fulfilled outside of the scopes of any locks.
   folly::Optional<folly::SharedPromise<folly::Unit>> sharedPromise;
+
+  // Notifying the parent of materialization must occur outside of the lock.
+  bool didMaterialize = false;
 
   auto exceptionWrapper = folly::try_and_catch<const std::exception>([&] {
     auto state = state_.wlock();
@@ -889,9 +894,14 @@ void FileInode::materializeAndTruncate() {
       }
       state->sha1Valid = false;
       state->tag = State::MATERIALIZED_IN_OVERLAY;
+      didMaterialize = true;
     }
     storeSha1(state, file, Hash::sha1(ByteRange{}));
   });
+
+  if (didMaterialize) {
+    materializeInParent();
+  }
 
   // Fulfill outside of the lock.
   if (sharedPromise) {

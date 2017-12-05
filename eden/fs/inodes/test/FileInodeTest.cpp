@@ -14,10 +14,13 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
+#include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
+#include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;
@@ -152,9 +155,8 @@ class FileInodeTest : public ::testing::Test {
     // Set up a directory structure that we will use for most
     // of the tests below
     FakeTreeBuilder builder;
-    builder.setFiles({
-        {"dir/a.txt", "This is a.txt.\n"},
-    });
+    builder.setFiles({{"dir/a.txt", "This is a.txt.\n"},
+                      {"dir/sub/b.txt", "This is b.txt.\n"}});
     mount_.initialize(builder);
   }
 
@@ -354,6 +356,48 @@ TEST_F(FileInodeTest, setattrMtime) {
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_GE(attr.st.st_mtim, start);
+}
+
+namespace {
+bool isInodeMaterialized(const TreeInodePtr& inode) {
+  return inode->getContents().wlock()->isMaterialized();
+}
+} // namespace
+
+TEST_F(FileInodeTest, writingMaterializesParent) {
+  auto inode = mount_.getFileInode("dir/sub/b.txt");
+  auto parent = mount_.getTreeInode("dir/sub");
+  auto grandparent = mount_.getTreeInode("dir");
+
+  EXPECT_EQ(false, isInodeMaterialized(grandparent));
+  EXPECT_EQ(false, isInodeMaterialized(parent));
+
+  fuse_file_info fi;
+  memset(&fi, 0, sizeof(fuse_file_info));
+  fi.flags = O_WRONLY;
+  auto handle = inode->open(fi).get();
+  auto written = handle->write("abcd", 0).get();
+  EXPECT_EQ(4, written);
+
+  EXPECT_EQ(true, isInodeMaterialized(grandparent));
+  EXPECT_EQ(true, isInodeMaterialized(parent));
+}
+
+TEST_F(FileInodeTest, truncatingMaterializesParent) {
+  auto inode = mount_.getFileInode("dir/sub/b.txt");
+  auto parent = mount_.getTreeInode("dir/sub");
+  auto grandparent = mount_.getTreeInode("dir");
+
+  EXPECT_EQ(false, isInodeMaterialized(grandparent));
+  EXPECT_EQ(false, isInodeMaterialized(parent));
+
+  fuse_file_info fi;
+  memset(&fi, 0, sizeof(fuse_file_info));
+  fi.flags = O_WRONLY | O_TRUNC;
+  (void)inode->open(fi).get();
+
+  EXPECT_EQ(true, isInodeMaterialized(grandparent));
+  EXPECT_EQ(true, isInodeMaterialized(parent));
 }
 
 // TODO: test multiple flags together
