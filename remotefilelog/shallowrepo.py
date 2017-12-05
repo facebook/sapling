@@ -182,7 +182,7 @@ def wraprepo(repo):
                                opts=None):
             """Runs prefetch in background with optional repack
             """
-            cmd = util.hgcmd() + ['-R', repo.origroot, 'prefetch']
+            cmd = [util.hgexecutable(), '-R', repo.origroot, 'prefetch']
             if repack:
                 cmd.append('--repack')
             if revs:
