@@ -14,6 +14,8 @@ def _dispatch(ui, cmd):
     assert '--quiet' in cmd
     try:
         req = dispatch.request(cmd, ui=ui)
+        req.earlyoptions = {'config': [], 'cwd': '', 'debugger': None,
+                            'profile': False, 'repository': ''}
         dispatch._dispatch(req)
     except AttributeError:
         dispatch._dispatch(ui, cmd)
