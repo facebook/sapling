@@ -308,6 +308,7 @@ def testui(stupid=False, layout='auto', startrev=0):
     u.setconfig('hgsubversion', 'layout', layout)
     u.setconfig('hgsubversion', 'startrev', startrev)
     u.setconfig('devel', 'all-warnings', True)
+    u.setconfig('subrepos', 'hgsubversion:allowed', True)
     return u
 
 def dispatch(cmd):
