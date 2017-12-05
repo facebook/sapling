@@ -120,6 +120,23 @@ Test avoiding calculating head changes during commit
   $ echo D > D
   $ hg commit -m D -A D --config perftweaks.disableheaddetection=1
 
+Test disabling updating branchcache during commit
+
+  $ $TESTDIR/ls-l.py .hg/cache | grep branch
+  -rw-r--r--     196 branch2-served
+
+  $ rm -f .hg/cache/branch*
+  $ echo D >> D
+  $ hg commit -m D2
+  $ $TESTDIR/ls-l.py .hg/cache | grep branch
+  -rw-r--r--     196 branch2-served
+
+  $ rm -f .hg/cache/branch*
+  $ echo D >> D
+  $ hg commit -m D3 --config perftweaks.disableupdatebranchcacheoncommit=1 --config perftweaks.disableheaddetection=1
+  $ $TESTDIR/ls-l.py .hg/cache | grep branch
+  [1]
+
   $ cd ..
 
 Test changing the delta heuristic

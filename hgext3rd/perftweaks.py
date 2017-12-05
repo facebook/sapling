@@ -79,6 +79,27 @@ def reposetup(ui, repo):
     if repo.local() is not None:
         _preloadrevs(repo)
 
+        # developer config: perftweaks.disableupdatebranchcacheoncommit
+        if repo.ui.configbool('perftweaks', 'disableupdatebranchcacheoncommit'):
+            class perftweaksrepo(repo.__class__):
+                @localrepo.unfilteredmethod
+                def updatecaches(self, tr=None):
+                    # Disable "branchmap.updatecache(self.filtered('served'))"
+                    # code path guarded by "if tr.changes['revs']". First, we
+                    # don't have on-disk branchmap. Second, accessing
+                    # "repo.filtered('served')" alone is not very cheap.
+                    bakrevs = None
+                    if tr and 'revs' in tr.changes:
+                        bakrevs = tr.changes['revs']
+                        tr.changes['revs'] = frozenset()
+                    try:
+                        super(perftweaksrepo, self).updatecaches(tr)
+                    finally:
+                        if bakrevs:
+                            tr.changes['revs'] = bakrevs
+
+            repo.__class__ = perftweaksrepo
+
 def _singlenode(orig, self, repo, name):
     """Skips reading branches namespace if unnecessary"""
     # developer config: perftweaks.disableresolvingbranches
