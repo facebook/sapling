@@ -174,6 +174,7 @@ TEST_F(FileInodeTest, getattrFromBlob) {
 
 TEST_F(FileInodeTest, getattrFromOverlay) {
   auto start = std::chrono::system_clock::now();
+
   // Allow ourselves up to 1 second of slop.
   //
   // When using files in the overlay we currently use the timestamp from the
@@ -184,6 +185,7 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   // older than the start time we computed.
   start -= std::chrono::seconds{1};
 
+  mount_.getClock().set(start);
   mount_.addFile("dir/new_file.c", "hello\nworld\n");
   auto inode = mount_.getFileInode("dir/new_file.c");
 

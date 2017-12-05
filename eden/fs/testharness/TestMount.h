@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -133,8 +134,6 @@ class TestMount {
   }
 
   /**
-   * Get the LocalStore.
-   *
    * Callers can use this to populate the LocalStore before calling build().
    */
   const std::shared_ptr<LocalStore>& getLocalStore() const {
@@ -142,12 +141,18 @@ class TestMount {
   }
 
   /**
-   * Get the LocalStore.
-   *
    * Callers can use this to populate the BackingStore before calling build().
    */
   const std::shared_ptr<FakeBackingStore>& getBackingStore() const {
     return backingStore_;
+  }
+
+  /**
+   * Access to the TestMount's FakeClock which is referenced by the underlying
+   * EdenMount (and thus inodes).
+   */
+  FakeClock& getClock() {
+    return *clock_;
   }
 
   /**
@@ -260,6 +265,8 @@ class TestMount {
    * perform all TestMount manipulation from a single thread.
    */
   std::atomic<uint64_t> commitNumber_{1};
+
+  std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
 
   fusell::ThreadLocalEdenStats stats_;
 };

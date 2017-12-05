@@ -24,6 +24,10 @@ class FakeClock : public Clock {
     return folly::to<timespec>(currentTime);
   }
 
+  clock::time_point getTimePoint() const {
+    return currentTime;
+  }
+
   void set(clock::time_point to) {
     currentTime = to;
   }

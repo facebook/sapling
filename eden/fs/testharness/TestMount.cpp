@@ -87,7 +87,7 @@ void TestMount::initialize(
                    std::move(objectStore),
                    AbsolutePathPiece(),
                    &stats_,
-                   std::make_shared<FakeClock>())
+                   clock_)
                    .get();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
@@ -104,7 +104,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
                    std::move(objectStore),
                    AbsolutePathPiece(),
                    &stats_,
-                   std::make_shared<FakeClock>())
+                   clock_)
                    .get();
 }
 
@@ -130,7 +130,7 @@ void TestMount::initialize(
                    std::move(objectStore),
                    AbsolutePathPiece(),
                    &stats_,
-                   std::make_shared<FakeClock>())
+                   clock_)
                    .get();
 }
 
@@ -188,7 +188,7 @@ void TestMount::remount() {
                    std::move(objectStore),
                    AbsolutePathPiece(),
                    &stats_,
-                   std::make_shared<FakeClock>())
+                   clock_)
                    .get();
 }
 

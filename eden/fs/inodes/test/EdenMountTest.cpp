@@ -11,6 +11,7 @@
 
 #include <folly/Range.h>
 #include <folly/test/TestUtils.h>
+#include <folly/chrono/Conv.h>
 #include <gtest/gtest.h>
 
 #include "eden/fs/config/ClientConfig.h"
@@ -131,6 +132,41 @@ TEST(EdenMount, testLastCheckoutTime) {
   EXPECT_EQ(nsec.count(), stDir.ctime.tv_nsec);
   EXPECT_EQ(sec.count(), stDir.mtime.tv_sec);
   EXPECT_EQ(nsec.count(), stDir.mtime.tv_nsec);
+}
+
+TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
+  TestMount testMount;
+
+  auto builder = FakeTreeBuilder();
+  builder.setFile("initial/file.txt", "was here");
+  builder.finalize(testMount.getBackingStore(), true);
+  auto commit = testMount.getBackingStore()->putCommit("1", builder);
+  commit->setReady();
+
+  auto& clock = testMount.getClock();
+
+  auto lastCheckoutTime = clock.getTimePoint();
+
+  testMount.initialize(makeTestHash("1"), lastCheckoutTime);
+
+  using namespace std::literals::chrono_literals;
+  clock.advance(10min);
+
+  auto newFile = testMount.getEdenMount()
+                     ->getRootInode()
+                     ->create(PathComponentPiece{"newfile.txt"}, 0660, 0)
+                     .get();
+  auto fileInode = testMount.getFileInode("newfile.txt");
+  auto timestamps = fileInode->getTimestamps();
+  EXPECT_EQ(
+      clock.getTimePoint(),
+      folly::to<FakeClock::clock::time_point>(timestamps.atime));
+  EXPECT_EQ(
+      clock.getTimePoint(),
+      folly::to<FakeClock::clock::time_point>(timestamps.ctime));
+  EXPECT_EQ(
+      clock.getTimePoint(),
+      folly::to<FakeClock::clock::time_point>(timestamps.mtime));
 }
 } // namespace eden
 } // namespace facebook

@@ -39,6 +39,7 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
@@ -690,8 +691,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // Since we will move this file into the underlying file data, we
     // take special care to ensure that it is opened read-write
 
-    struct timespec currentTime;
-    clock_gettime(CLOCK_REALTIME, &currentTime);
+    auto currentTime = getMount()->getClock().getRealtime();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
     // The mode passed in by the caller may not have the file type bits set.
@@ -720,8 +720,9 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     entry->setInode(inode.get());
     inodeMap->inodeCreated(inode);
 
-    clock_gettime(CLOCK_REALTIME, &contents->timeStamps.mtime);
-    contents->timeStamps.ctime = contents->timeStamps.mtime;
+    auto now = getMount()->getClock().getRealtime();
+    contents->timeStamps.ctime = now;
+    contents->timeStamps.mtime = now;
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
   }
 
