@@ -156,11 +156,14 @@ folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats) {
-  auto mount = std::shared_ptr<EdenMount>{
-      new EdenMount{
-          std::move(config), std::move(objectStore), socketPath, globalStats},
-      EdenMountDeleter{}};
+    fusell::ThreadLocalEdenStats* globalStats,
+    std::shared_ptr<Clock> clock) {
+  auto mount = std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
+                                                        std::move(objectStore),
+                                                        socketPath,
+                                                        globalStats,
+                                                        clock},
+                                          EdenMountDeleter{}};
   return mount->initialize().then([mount] { return mount; });
 }
 
@@ -168,7 +171,8 @@ EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats)
+    fusell::ThreadLocalEdenStats* globalStats,
+    std::shared_ptr<Clock> clock)
     : globalEdenStats_(globalStats),
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
@@ -182,7 +186,8 @@ EdenMount::EdenMount(
                     config_->getMountPath().value().toStdString()},
       path_(config_->getMountPath()),
       uid_(getuid()),
-      gid_(getgid()) {}
+      gid_(getgid()),
+      clock_(clock) {}
 
 folly::Future<folly::Unit> EdenMount::initialize() {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());

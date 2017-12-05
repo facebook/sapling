@@ -34,6 +34,7 @@
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
+#include "eden/fs/utils/Clock.h"
 
 DEFINE_bool(debug, false, "run fuse in debug mode");
 DEFINE_bool(
@@ -446,7 +447,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
              std::move(initialConfig),
              std::move(objectStore),
              getSocketPath(),
-             getStats())
+             getStats(),
+             std::make_shared<UnixClock>())
       .then([this](std::shared_ptr<EdenMount> edenMount) {
         // Load InodeBase objects for any materialized files in this mount point
         // before we start mounting.

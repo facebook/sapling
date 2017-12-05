@@ -24,6 +24,7 @@ cpp_library(
         "@/folly:range",
         "@/folly:string",
         "@/folly:subprocess",
+        "@/folly/chrono:conv",
         "@/folly/experimental:test_util",
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",

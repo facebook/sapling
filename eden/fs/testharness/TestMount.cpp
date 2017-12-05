@@ -26,6 +26,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
+#include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 
@@ -85,7 +86,8 @@ void TestMount::initialize(
                    std::move(config_),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_)
+                   &stats_,
+                   std::make_shared<FakeClock>())
                    .get();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
@@ -101,7 +103,8 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
                    std::move(config_),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_)
+                   &stats_,
+                   std::make_shared<FakeClock>())
                    .get();
 }
 
@@ -126,7 +129,8 @@ void TestMount::initialize(
                    std::move(config_),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_)
+                   &stats_,
+                   std::make_shared<FakeClock>())
                    .get();
 }
 
@@ -183,7 +187,8 @@ void TestMount::remount() {
                    std::move(config),
                    std::move(objectStore),
                    AbsolutePathPiece(),
-                   &stats_)
+                   &stats_,
+                   std::make_shared<FakeClock>())
                    .get();
 }
 

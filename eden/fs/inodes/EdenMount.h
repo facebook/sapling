@@ -45,6 +45,7 @@ class MountPoint;
 class BindMount;
 class CheckoutConflict;
 class ClientConfig;
+class Clock;
 class EdenDispatcher;
 class InodeDiffCallback;
 class InodeMap;
@@ -92,7 +93,8 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats);
+      fusell::ThreadLocalEdenStats* globalStats,
+      std::shared_ptr<Clock> clock);
 
   /**
    * Destroy the EdenMount.
@@ -201,6 +203,13 @@ class EdenMount {
    */
   const std::shared_ptr<folly::Executor>& getThreadPool() const {
     return threadPool_;
+  }
+
+  /**
+   * Returns the Clock with which this mount was configured.
+   */
+  Clock& getClock() {
+    return *clock_;
   }
 
   /** Get the TreeInode for the root of the mount. */
@@ -487,7 +496,8 @@ class EdenMount {
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats);
+      fusell::ThreadLocalEdenStats* globalStats,
+      std::shared_ptr<Clock> clock);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -647,6 +657,8 @@ class EdenMount {
    * The server's thread pool passed into startFuse().
    */
   std::shared_ptr<folly::Executor> threadPool_;
+
+  std::shared_ptr<Clock> clock_;
 };
 
 /**
