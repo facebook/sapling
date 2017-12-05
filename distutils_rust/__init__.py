@@ -75,12 +75,13 @@ class BuildRustExt(Command):
     def get_temp_output(self, ext):
         """Returns the location in the temp directory of the output file."""
         platform = distutils.util.get_platform()
-        if platform.startswith('macosx'):
-            libsuffix = '.dylib'
+        if platform.startswith('win-'):
+            name = ext.name + '.dll'
+        elif platform.startswith('macosx'):
+            name = 'lib' + ext.name + '.dylib'
         else:
-            libsuffix = '.so'
-        return os.path.join('debug' if self.debug else 'release',
-                            'lib' + ext.name + libsuffix)
+            name = 'lib' + ext.name + '.so'
+        return os.path.join('debug' if self.debug else 'release', name)
 
     def get_output_filename(self, ext):
         """Returns the filename of the build output."""
