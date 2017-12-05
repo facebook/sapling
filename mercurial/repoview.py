@@ -15,6 +15,7 @@ from .node import nullrev
 from . import (
     obsolete,
     phases,
+    pycompat,
     tags as tagsmod,
 )
 
@@ -231,6 +232,11 @@ class repoview(object):
         if name == self.filtername:
             return self
         return self.unfiltered().filtered(name)
+
+    def __repr__(self):
+        return r'<%s:%s %r>' % (self.__class__.__name__,
+                                pycompat.sysstr(self.filtername),
+                                self.unfiltered())
 
     # everything access are forwarded to the proxied repo
     def __getattr__(self, attr):
