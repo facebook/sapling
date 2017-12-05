@@ -29,12 +29,16 @@ import sys, platform
 if sys.version_info[0] >= 3:
     printf = eval('print')
     libdir_escape = 'unicode_escape'
+    def sysstr(s):
+        return s.decode('latin-1')
 else:
     libdir_escape = 'string_escape'
     def printf(*args, **kwargs):
         f = kwargs.get('file', sys.stdout)
         end = kwargs.get('end', '\n')
         f.write(b' '.join(args) + end)
+    def sysstr(s):
+        return s
 
 # Attempt to guide users to a modern pip - this means that 2.6 users
 # should have a chance of getting a 4.2 release, and when we ratchet
@@ -295,8 +299,8 @@ version = ''
 if os.path.isdir('.hg'):
     hg = findhg()
     cmd = ['log', '-r', '.', '--template', '{tags}\n']
-    numerictags = [t for t in hg.run(cmd).split() if t[0:1].isdigit()]
-    hgid = hg.run(['id', '-i']).strip()
+    numerictags = [t for t in sysstr(hg.run(cmd)).split() if t[0:1].isdigit()]
+    hgid = sysstr(hg.run(['id', '-i'])).strip()
     if not hgid:
         # Bail out if hg is having problems interacting with this repository,
         # rather than falling through and producing a bogus version number.
@@ -309,7 +313,7 @@ if os.path.isdir('.hg'):
             version += '+'
     else: # no tag found
         ltagcmd = ['parents', '--template', '{latesttag}']
-        ltag = hg.run(ltagcmd)
+        ltag = sysstr(hg.run(ltagcmd))
         changessincecmd = ['log', '-T', 'x\n', '-r', "only(.,'%s')" % ltag]
         changessince = len(hg.run(changessincecmd).splitlines())
         version = '%s+%s-%s' % (ltag, changessince, hgid)
