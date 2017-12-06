@@ -51,6 +51,8 @@ tweakrc = """
 rollback = False
 # Make `hg status` report copy information
 statuscopies = yes
+# Prefer curses UIs when available. Revert to plain-text with `text`.
+interface = curses
 
 [commands]
 # Make `hg status` emit cwd-relative paths by default.
