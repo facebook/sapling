@@ -688,8 +688,8 @@ class localrepository(object):
     def _activebookmark(self):
         return self._bookmarks.active
 
-    # _phaserevs and _phasesets depend on changelog. what we need is to
-    # call _phasecache.invalidate() if '00changelog.i' was changed, but it
+    # _phasesets depend on changelog. what we need is to call
+    # _phasecache.invalidate() if '00changelog.i' was changed, but it
     # can't be easily expressed in filecache mechanism.
     @storecache('phaseroots', '00changelog.i')
     def _phasecache(self):

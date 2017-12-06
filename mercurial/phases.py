@@ -115,6 +115,7 @@ from .node import (
 )
 from . import (
     error,
+    pycompat,
     smartset,
     txnutil,
     util,
@@ -202,7 +203,7 @@ class phasecache(object):
         if _load:
             # Cheap trick to allow shallow-copy without copy module
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-            self._phaserevs = None
+            self._phasemaxrev = nullrev
             self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
@@ -210,23 +211,30 @@ class phasecache(object):
     def getrevset(self, repo, phases):
         """return a smartset for the given phases"""
         self.loadphaserevs(repo) # ensure phase's sets are loaded
-
-        if self._phasesets and all(self._phasesets[p] is not None
-                                   for p in phases):
-            # fast path - use _phasesets
-            revs = self._phasesets[phases[0]]
-            if len(phases) > 1:
-                revs = revs.copy() # only copy when needed
-                for p in phases[1:]:
-                    revs.update(self._phasesets[p])
+        phases = set(phases)
+        if public not in phases:
+            # fast path: _phasesets contains the interesting sets,
+            # might only need a union and post-filtering.
+            if len(phases) == 1:
+                [p] = phases
+                revs = self._phasesets[p]
+            else:
+                revs = set.union(*[self._phasesets[p] for p in phases])
             if repo.changelog.filteredrevs:
                 revs = revs - repo.changelog.filteredrevs
             return smartset.baseset(revs)
         else:
-            # slow path - enumerate all revisions
-            phase = self.phase
-            revs = (r for r in repo if phase(repo, r) in phases)
-            return smartset.generatorset(revs, iterasc=True)
+            phases = set(allphases).difference(phases)
+            if not phases:
+                return smartset.fullreposet(repo)
+            if len(phases) == 1:
+                [p] = phases
+                revs = self._phasesets[p]
+            else:
+                revs = set.union(*[self._phasesets[p] for p in phases])
+            if not revs:
+                return smartset.fullreposet(repo)
+            return smartset.fullreposet(repo).filter(lambda r: r not in revs)
 
     def copy(self):
         # Shallow copy meant to ensure isolation in
@@ -235,13 +243,14 @@ class phasecache(object):
         ph.phaseroots = self.phaseroots[:]
         ph.dirty = self.dirty
         ph.opener = self.opener
-        ph._phaserevs = self._phaserevs
+        ph._phasemaxrev = self._phasemaxrev
         ph._phasesets = self._phasesets
         return ph
 
     def replace(self, phcache):
         """replace all values in 'self' with content of phcache"""
-        for a in ('phaseroots', 'dirty', 'opener', '_phaserevs', '_phasesets'):
+        for a in ('phaseroots', 'dirty', 'opener', '_phasemaxrev',
+                  '_phasesets'):
             setattr(self, a, getattr(phcache, a))
 
     def _getphaserevsnative(self, repo):
@@ -253,42 +262,38 @@ class phasecache(object):
 
     def _computephaserevspure(self, repo):
         repo = repo.unfiltered()
-        revs = [public] * len(repo.changelog)
-        self._phaserevs = revs
-        self._populatephaseroots(repo)
-        for phase in trackedphases:
-            roots = list(map(repo.changelog.rev, self.phaseroots[phase]))
-            if roots:
-                for rev in roots:
-                    revs[rev] = phase
-                for rev in repo.changelog.descendants(roots):
-                    revs[rev] = phase
+        cl = repo.changelog
+        self._phasesets = [set() for phase in allphases]
+        roots = pycompat.maplist(cl.rev, self.phaseroots[secret])
+        if roots:
+            ps = set(cl.descendants(roots))
+            for root in roots:
+                ps.add(root)
+            self._phasesets[secret] = ps
+        roots = pycompat.maplist(cl.rev, self.phaseroots[draft])
+        if roots:
+            ps = set(cl.descendants(roots))
+            for root in roots:
+                ps.add(root)
+            ps.difference_update(self._phasesets[secret])
+            self._phasesets[draft] = ps
+        self._phasemaxrev = len(cl)
 
     def loadphaserevs(self, repo):
         """ensure phase information is loaded in the object"""
-        if self._phaserevs is None:
+        if self._phasesets is None:
             try:
                 res = self._getphaserevsnative(repo)
-                self._phaserevs, self._phasesets = res
+                self._phasemaxrev, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
 
     def invalidate(self):
-        self._phaserevs = None
+        self._phasemaxrev = nullrev
         self._phasesets = None
 
-    def _populatephaseroots(self, repo):
-        """Fills the _phaserevs cache with phases for the roots.
-        """
-        cl = repo.changelog
-        phaserevs = self._phaserevs
-        for phase in trackedphases:
-            roots = map(cl.rev, self.phaseroots[phase])
-            for root in roots:
-                phaserevs[root] = phase
-
     def phase(self, repo, rev):
-        # We need a repo argument here to be able to build _phaserevs
+        # We need a repo argument here to be able to build _phasesets
         # if necessary. The repository instance is not stored in
         # phasecache to avoid reference cycles. The changelog instance
         # is not stored because it is a filecache() property and can
@@ -297,10 +302,13 @@ class phasecache(object):
             return public
         if rev < nullrev:
             raise ValueError(_('cannot lookup negative revision'))
-        if self._phaserevs is None or rev >= len(self._phaserevs):
+        if rev >= self._phasemaxrev:
             self.invalidate()
             self.loadphaserevs(repo)
-        return self._phaserevs[rev]
+        for phase in trackedphases:
+            if rev in self._phasesets[phase]:
+                return phase
+        return public
 
     def write(self):
         if not self.dirty:
@@ -455,10 +463,10 @@ class phasecache(object):
         if filtered:
             self.dirty = True
         # filterunknown is called by repo.destroyed, we may have no changes in
-        # root but phaserevs contents is certainly invalid (or at least we
+        # root but _phasesets contents is certainly invalid (or at least we
         # have not proper way to check that). related to issue 3858.
         #
-        # The other caller is __init__ that have no _phaserevs initialized
+        # The other caller is __init__ that have no _phasesets initialized
         # anyway. If this change we should consider adding a dedicated
         # "destroyed" function to phasecache or a proper cache key mechanism
         # (see branchmap one)

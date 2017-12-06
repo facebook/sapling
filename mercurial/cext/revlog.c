@@ -628,7 +628,7 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 {
 	PyObject *roots = Py_None;
 	PyObject *ret = NULL;
-	PyObject *phaseslist = NULL;
+	PyObject *phasessize = NULL;
 	PyObject *phaseroots = NULL;
 	PyObject *phaseset = NULL;
 	PyObject *phasessetlist = NULL;
@@ -685,12 +685,10 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 		}
 	}
 	/* Transform phase list to a python list */
-	phaseslist = PyList_New(len);
-	if (phaseslist == NULL)
+	phasessize = PyInt_FromLong(len);
+	if (phasessize == NULL)
 		goto release;
 	for (i = 0; i < len; i++) {
-		PyObject *phaseval;
-
 		phase = phases[i];
 		/* We only store the sets of phase for non public phase, the public phase
 		 * is computed as a difference */
@@ -702,15 +700,11 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 			PySet_Add(phaseset, rev);
 			Py_XDECREF(rev);
 		}
-		phaseval = PyInt_FromLong(phase);
-		if (phaseval == NULL)
-			goto release;
-		PyList_SET_ITEM(phaseslist, i, phaseval);
 	}
-	ret = PyTuple_Pack(2, phaseslist, phasessetlist);
+	ret = PyTuple_Pack(2, phasessize, phasessetlist);
 
 release:
-	Py_XDECREF(phaseslist);
+	Py_XDECREF(phasessize);
 	Py_XDECREF(phasessetlist);
 done:
 	free(phases);
