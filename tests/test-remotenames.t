@@ -11,7 +11,10 @@ Making a server repo
 
   $ hg init server
   $ cd server
-  $ for ch in {a..h}; do echo "foo" >> $ch; hg ci -Aqm "Added "$ch; done
+  $ for ch in a b c d e f g h; do
+  >   echo "foo" >> $ch
+  >   hg ci -Aqm "Added "$ch
+  > done
   $ hg glog
   @  7:ec2426147f0e  Added h
   |
