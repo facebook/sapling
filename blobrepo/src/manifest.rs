@@ -36,7 +36,7 @@ where
                 let blobstore = blobstore.clone();
                 move |nodeblob| {
                     let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-                    blobstore.get(blobkey).map_err(blobstore_err)
+                    blobstore.get(blobkey)
                 }
             })
             .and_then({
@@ -61,12 +61,7 @@ impl<B> Manifest for BlobManifest<B>
 where
     B: Blobstore + Sync + Clone,
 {
-    type Error = Error;
-
-    fn lookup(
-        &self,
-        path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         let res = self.files.get(path).map({
             let blobstore = self.blobstore.clone();
             move |d| BlobEntry::new(blobstore, path.clone(), *d.nodeid(), d.flag())
@@ -78,7 +73,7 @@ where
         }
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
         let entries = self.files
             .clone()
             .into_iter()

@@ -7,7 +7,8 @@
 #![deny(warnings)]
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure_derive;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate serde;
 #[macro_use]
@@ -26,43 +27,32 @@ use mercurial_types::{NodeHash, RepoPath};
 mod errors {
     use super::*;
 
-    struct OptionNodeHash<'a>(&'a Option<NodeHash>);
+    pub use failure::{Error, Result, ResultExt};
 
-    impl<'a> fmt::Display for OptionNodeHash<'a> {
+    #[derive(Debug)]
+    pub struct OptionNodeHash(pub Option<NodeHash>);
+
+    impl fmt::Display for OptionNodeHash {
         fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-            match *self.0 {
-                Some(nodehash) => nodehash.fmt(fmt),
-                None => write!(fmt, "(unknown)"),
+            match &self.0 {
+                &Some(ref nodehash) => nodehash.fmt(fmt),
+                &None => write!(fmt, "(unknown)"),
             }
         }
     }
 
-    error_chain! {
-        errors {
-            NotFound(path: RepoPath, node: NodeHash) {
-                description("linknode not found")
-                display("linknode not found for {}, node {}", path, node)
-            }
-            AlreadyExists(
-                path: RepoPath,
-                node: NodeHash,
-                old_linknode: Option<NodeHash>,
-                new_linknode: NodeHash
-            ) {
-                description("linknode already exists")
-                display(
-                    "linknode already exists for {}, node {} (linknodes: existing {}, new {})",
-                    path,
-                    node,
-                    OptionNodeHash(old_linknode),
-                    new_linknode
-                )
-            }
-            StorageError {
-                description("linknode storage error")
-                display("linknode storage error")
-            }
-        }
+    #[derive(Debug, Fail)]
+    pub enum ErrorKind {
+        #[fail(display = "linknode not found for {}, node {}", _0, _1)] NotFound(RepoPath, NodeHash),
+        #[fail(display = "linknode already exists for {}, node {} (linknodes: existing {}, new {})",
+               path, node, old_linknode, new_linknode)]
+        AlreadyExists {
+            path: RepoPath,
+            node: NodeHash,
+            old_linknode: OptionNodeHash,
+            new_linknode: NodeHash,
+        },
+        #[fail(display = "linknode storage error")] StorageError,
     }
 }
 

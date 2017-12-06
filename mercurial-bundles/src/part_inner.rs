@@ -109,16 +109,16 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
                 .map(|param| param.clone())
                 .collect();
             if !unknown_params.is_empty() {
-                bail!(ErrorKind::BundleUnknownPartParams(
+                Err(ErrorKind::BundleUnknownPartParams(
                     header.part_type().to_ascii_string(),
-                    unknown_params
-                ));
+                    unknown_params,
+                ))?;
             }
             Ok(Some(header))
         }
         None => {
             if header.is_mandatory() {
-                bail!(ErrorKind::BundleUnknownPart(header));
+                Err(ErrorKind::BundleUnknownPart(header))?;
             }
             Ok(None)
         }

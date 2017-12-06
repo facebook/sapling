@@ -124,9 +124,9 @@ impl<K: Hash + Eq + Clone, V> Tree<K, V> {
                 nodes.insert(key, nodeid);
                 Ok(nodeid)
             }
-            _ => bail!(ErrorKind::TreeInsert(
-                "Tried to insert a subnode into a leaf node".into()
-            )),
+            _ => Err(ErrorKind::TreeInsert(
+                "Tried to insert a subnode into a leaf node".into(),
+            ))?,
         }
     }
 }

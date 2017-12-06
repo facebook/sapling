@@ -82,14 +82,16 @@ where
     fn drain_str(&mut self, len: usize) -> Result<String> {
         Ok(
             str::from_utf8(self.split_to(len).as_ref())
-                .chain_err(|| "invalid UTF-8")?
+                .context("invalid UTF-8")?
                 .into(),
         )
     }
 
     #[inline]
     fn drain_path(&mut self, len: usize) -> Result<MPath> {
-        MPath::new(self.split_to(len)).chain_err(|| "invalid path")
+        MPath::new(self.split_to(len))
+            .context("invalid path")
+            .map_err(Error::from)
     }
 
     #[inline]
@@ -133,9 +135,9 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<DecompressorTy
         Some("GZ") => Ok(DecompressorType::Gzip),
         Some("ZS") => Ok(DecompressorType::Zstd),
         Some("UN") => Ok(DecompressorType::Uncompressed),
-        Some(s) => bail!(ErrorKind::Bundle2Decode(
-            format!("unknown compression '{}'", s)
-        )),
+        Some(s) => Err(ErrorKind::Bundle2Decode(
+            format!("unknown compression '{}'", s),
+        ))?,
         None => Ok(DecompressorType::Uncompressed),
     }
 }
@@ -170,10 +172,10 @@ mod test {
 
         assert!(f("Foo").unwrap());
         assert!(!f("bar").unwrap());
-        assert_matches!(f("").unwrap_err().kind(),
-                        &ErrorKind::Msg(ref msg) if msg == "string is empty");
-        assert_matches!(f("123").unwrap_err().kind(),
-                        &ErrorKind::Msg(ref msg)
-                        if msg == "'123': first char '1' is not alphabetic");
+        assert_eq!(format!("{}", f("").unwrap_err()), "string is empty");
+        assert_eq!(
+            format!("{}", f("123").unwrap_err()),
+            "'123': first char '1' is not alphabetic"
+        );
     }
 }

@@ -6,19 +6,17 @@
 
 #![deny(warnings)]
 
+extern crate bytes;
+extern crate failure;
 extern crate futures;
-
 extern crate futures_ext;
-
 extern crate tokio_core;
 
-extern crate bytes;
-
-use std::error;
 use std::sync::Arc;
 
 use bytes::Bytes;
 
+use failure::Error;
 use futures::Future;
 
 mod boxed;
@@ -89,38 +87,32 @@ pub use boxed::{ArcBlobstore, BoxBlobstore};
 // - streaming get/put?
 // - range get/put? (how does range put work? put-put-put-commit?)
 pub trait Blobstore: Send + 'static {
-    type Error: error::Error + Send + 'static;
-
-    type GetBlob: Future<Item = Option<Bytes>, Error = Self::Error> + Send + 'static;
-    type PutBlob: Future<Item = (), Error = Self::Error> + Send + 'static;
+    type GetBlob: Future<Item = Option<Bytes>, Error = Error> + Send + 'static;
+    type PutBlob: Future<Item = (), Error = Error> + Send + 'static;
 
     fn get(&self, key: String) -> Self::GetBlob;
     fn put(&self, key: String, value: Bytes) -> Self::PutBlob;
 
-    fn boxed<E>(self) -> BoxBlobstore<E>
+    fn boxed(self) -> BoxBlobstore
     where
         Self: Sized,
-        E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::boxed(self)
     }
 
-    fn arced<E>(self) -> ArcBlobstore<E>
+    fn arced(self) -> ArcBlobstore
     where
         Self: Sync + Sized,
-        E: error::Error + From<Self::Error> + Send + 'static,
     {
         boxed::arced(self)
     }
 }
 
-impl<E, GB, PB> Blobstore for Arc<Blobstore<Error = E, GetBlob = GB, PutBlob = PB> + Sync>
+impl<GB, PB> Blobstore for Arc<Blobstore<GetBlob = GB, PutBlob = PB> + Sync>
 where
-    E: error::Error + Send + 'static,
-    GB: Future<Item = Option<Bytes>, Error = E> + Send + 'static,
-    PB: Future<Item = (), Error = E> + Send + 'static,
+    GB: Future<Item = Option<Bytes>, Error = Error> + Send + 'static,
+    PB: Future<Item = (), Error = Error> + Send + 'static,
 {
-    type Error = E;
     type GetBlob = GB;
     type PutBlob = PB;
 
@@ -133,13 +125,11 @@ where
     }
 }
 
-impl<E, GB, PB> Blobstore for Box<Blobstore<Error = E, GetBlob = GB, PutBlob = PB>>
+impl<GB, PB> Blobstore for Box<Blobstore<GetBlob = GB, PutBlob = PB>>
 where
-    E: error::Error + Send + 'static,
-    GB: Future<Item = Option<Bytes>, Error = E> + Send + 'static,
-    PB: Future<Item = (), Error = E> + Send + 'static,
+    GB: Future<Item = Option<Bytes>, Error = Error> + Send + 'static,
+    PB: Future<Item = (), Error = Error> + Send + 'static,
 {
-    type Error = E;
     type GetBlob = GB;
     type PutBlob = PB;
 

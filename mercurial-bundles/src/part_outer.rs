@@ -145,12 +145,15 @@ impl OuterDecoder {
                 let _ = buf.split_to(4);
                 let part_header = Self::decode_header(buf.split_to(header_len).freeze());
                 if let Err(e) = part_header {
-                    let next_state = if e.is_app_error() {
-                        OuterState::DiscardPayload
-                    } else {
-                        OuterState::Invalid
+                    let next = match e.downcast::<ErrorKind>() {
+                        Ok(ek) => if ek.is_app_error() {
+                            (Err(ek.into()), OuterState::DiscardPayload)
+                        } else {
+                            (Err(ek.into()), OuterState::Invalid)
+                        },
+                        Err(e) => (Err(e), OuterState::Invalid),
                     };
-                    return (Err(e.into()), next_state);
+                    return next;
                 };
                 let part_header = part_header.unwrap();
                 // If no part header was returned, this part wasn't

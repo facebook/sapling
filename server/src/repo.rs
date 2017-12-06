@@ -7,7 +7,6 @@
 //! State for a single source control Repo
 
 use std::collections::{HashMap, HashSet};
-use std::error;
 use std::fmt::{self, Debug};
 use std::io::Cursor;
 use std::mem;
@@ -45,7 +44,7 @@ pub fn init_repo(
     let mut sock = repopath.join(".hg");
 
     let repo = HgRepo::new(parent_logger, repotype, cache_size)
-        .chain_err(|| format!("Failed to initialize repo {:?}", repopath))?;
+        .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
 
@@ -54,31 +53,18 @@ pub fn init_repo(
 
 
 pub trait OpenableRepoType {
-    fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>>;
+    fn open(&self) -> Result<Box<Repo + Sync + Send>>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self) -> Result<Box<Repo<Error = hgproto::Error> + Sync + Send>> {
-        use hgproto::{Error, ErrorKind};
+    fn open(&self) -> Result<Box<Repo + Sync + Send>> {
         use metaconfig::repoconfig::RepoType::*;
 
-        fn repo_chain<E: error::Error + Send + 'static>(err: E) -> Error {
-            Error::with_chain(err, ErrorKind::Repo)
-        }
-
         let ret = match *self {
-            Revlog(ref path) => {
-                BoxRepo::new_with_cvterr(mercurial::RevlogRepo::open(path.join(".hg"))?, repo_chain)
-            }
-
-            BlobFiles(ref path) => {
-                BoxRepo::new_with_cvterr(BlobRepo::new(FilesBlobState::new(&path)?), repo_chain)
-            }
-
-            BlobRocks(ref path) => {
-                BoxRepo::new_with_cvterr(BlobRepo::new(RocksBlobState::new(&path)?), repo_chain)
-            }
+            Revlog(ref path) => BoxRepo::new(mercurial::RevlogRepo::open(path.join(".hg"))?),
+            BlobFiles(ref path) => BoxRepo::new(BlobRepo::new(FilesBlobState::new(&path)?)),
+            BlobRocks(ref path) => BoxRepo::new(BlobRepo::new(RocksBlobState::new(&path)?)),
         };
 
         Ok(ret)
@@ -95,8 +81,8 @@ impl OpenableRepoType for RepoType {
 
 pub struct HgRepo {
     path: String,
-    hgrepo: Arc<Box<Repo<Error = hgproto::Error> + Send + Sync>>,
-    repo_generation: RepoGenCache<Box<Repo<Error = hgproto::Error> + Send + Sync>>,
+    hgrepo: Arc<Box<Repo + Send + Sync>>,
+    repo_generation: RepoGenCache<Box<Repo + Send + Sync>>,
     _logger: Logger,
 }
 

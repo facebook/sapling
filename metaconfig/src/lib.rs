@@ -11,7 +11,7 @@
 #![feature(try_from)]
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate mercurial;
 extern crate mercurial_types;

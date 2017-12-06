@@ -352,14 +352,15 @@ mod test {
         let mut nodestream =
             spawn(IntersectNodeStream::new(&repo, repo_generation, inputs.into_iter()).boxed());
 
-        assert!(
-            if let Some(Err(Error(ErrorKind::RepoError(hash), _))) = nodestream.wait_stream() {
-                hash == nodehash
-            } else {
-                false
+        match nodestream.wait_stream() {
+            Some(Err(err)) => match err.downcast::<ErrorKind>() {
+                Ok(ErrorKind::RepoError(hash)) => assert_eq!(hash, nodehash),
+                Ok(bad) => panic!("unexpected error {:?}", bad),
+                Err(bad) => panic!("unknown error {:?}", bad),
             },
-            "No error for bad node"
-        );
+            Some(Ok(bad)) => panic!("unexpected success {:?}", bad),
+            None => panic!("no result"),
+        };
     }
 
     #[test]

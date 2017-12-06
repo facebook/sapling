@@ -7,6 +7,7 @@
 #![feature(never_type)]
 
 extern crate bookmarks;
+extern crate failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;
@@ -17,6 +18,7 @@ use std::collections::hash_map::Entry;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
+use failure::Error;
 use futures::future::ok;
 use futures::stream::iter_ok;
 
@@ -45,7 +47,7 @@ impl MemBookmarks {
 }
 
 impl Bookmarks for MemBookmarks {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
         ok(
             self.bookmarks
                 .lock()
@@ -55,7 +57,7 @@ impl Bookmarks for MemBookmarks {
         ).boxify()
     }
 
-    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
+    fn keys(&self) -> BoxStream<Vec<u8>, Error> {
         let guard = self.bookmarks.lock().unwrap();
         let keys = guard.keys().map(|k| k.clone()).collect::<Vec<_>>();
         iter_ok(keys.into_iter()).boxify()
@@ -68,7 +70,7 @@ impl BookmarksMut for MemBookmarks {
         key: &AsRef<[u8]>,
         value: &NodeHash,
         version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    ) -> BoxFuture<Option<Version>, Error> {
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {
@@ -89,11 +91,7 @@ impl BookmarksMut for MemBookmarks {
         }.boxify()
     }
 
-    fn delete(
-        &self,
-        key: &AsRef<[u8]>,
-        version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> BoxFuture<Option<Version>, Error> {
         let mut bookmarks = self.bookmarks.lock().unwrap();
 
         match bookmarks.entry(key.as_ref().to_vec()) {

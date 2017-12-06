@@ -159,7 +159,11 @@ impl<H: HgCommands> HgCommandHandler<H> {
                 // TODO: collect all parsing errors, not just the first one?
                 Err(err) => return future::err(err).boxify(),
                 Ok(None) => {
-                    return future::err(ErrorKind::BatchInvalid(full_cmd.to_vec()).into()).boxify();
+                    return future::err(
+                        ErrorKind::BatchInvalid(
+                            String::from_utf8_lossy(full_cmd.as_ref()).into_owned(),
+                        ).into(),
+                    ).boxify();
                 }
                 Ok(Some(cmd)) => cmd,
             };

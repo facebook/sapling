@@ -13,7 +13,7 @@ extern crate assert_matches;
 extern crate byteorder;
 extern crate bytes;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
 #[macro_use]

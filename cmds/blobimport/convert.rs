@@ -13,6 +13,7 @@ use slog::Logger;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobChangeset;
+use failure::{Error, Result};
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
 use linknodes::Linknodes;
@@ -23,7 +24,6 @@ use stats::Timeseries;
 
 use BlobstoreEntry;
 use STATS;
-use errors::*;
 use manifest;
 
 pub(crate) struct ConvertContext<H> {
@@ -75,12 +75,15 @@ where
         let heads = self.repo
             .get_heads()
             .map_err(Error::from)
-            .map_err(|err| Error::with_chain(err, "Failed get heads"))
+            .map_err(|err| err.context("Failed get heads").into())
             .map(|h| {
                 debug!(logger, "head {}", h);
                 STATS::heads.add_value(1);
                 headstore.add(&h).map_err({
-                    move |err| Error::with_boxed_chain(err, format!("Failed to create head {}", h))
+                    move |err| {
+                        err.context(format_err!("Failed to create head {}", h))
+                            .into()
+                    }
                 })
             })
             .buffer_unordered(100);
@@ -123,7 +126,7 @@ where
                 let bcs = BlobChangeset::new(&csid, cs);
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
-                    .map_err(|e| Error::from(e.to_string()))
+                    .map_err(Error::from)
             })
     };
 
@@ -137,9 +140,9 @@ where
             put_blobs(revlog_repo, sender, linknodes_store, mfid, linkrev)
         })
         .map_err(move |err| {
-            Error::with_chain(err, format!("Can't copy manifest for cs {}", csid))
+            err.context(format_err!("Can't copy manifest for cs {}", csid))
+                .into()
         });
-
     _assert_sized(&put);
     _assert_sized(&manifest);
 
@@ -181,7 +184,7 @@ where
             // Get the listing of entries and fetch each of those
             let files = RevlogManifest::new(revlog_repo.clone(), blob)
                 .map_err(|err| {
-                    Error::with_chain(Error::from(err), "Parsing manifest to get list")
+                    Error::from(err.context("Parsing manifest to get list"))
                 })
                 .map(|mf| mf.list().map_err(Error::from))
                 .map(|entry_stream| {

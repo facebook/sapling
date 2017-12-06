@@ -8,7 +8,7 @@
 
 extern crate bytes;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate futures;
 extern crate url;
 
@@ -20,6 +20,7 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use bytes::Bytes;
+use failure::Error;
 use futures::Async;
 use futures::future::poll_fn;
 use futures_ext::{BoxFuture, FutureExt};
@@ -29,22 +30,13 @@ use blobstore::Blobstore;
 
 const PREFIX: &str = "blob";
 
-mod errors {
-    error_chain! {
-        errors {
-        }
+pub type Result<T> = std::result::Result<T, Error>;
 
-        links {
-        }
-
-        foreign_links {
-            Io(::std::io::Error);
-        }
+macro_rules! bail {
+    ($($arg:expr),*) => {
+        return Err(format_err!($($arg),*))
     }
 }
-
-use errors::*;
-pub use errors::{Error, ErrorKind};
 
 #[derive(Debug, Clone)]
 pub struct Fileblob {
@@ -77,10 +69,8 @@ impl Fileblob {
 }
 
 impl Blobstore for Fileblob {
-    type Error = Error;
-
-    type GetBlob = BoxFuture<Option<Bytes>, Self::Error>;
-    type PutBlob = BoxFuture<(), Self::Error>;
+    type GetBlob = BoxFuture<Option<Bytes>, Error>;
+    type PutBlob = BoxFuture<(), Error>;
 
     fn get(&self, key: String) -> Self::GetBlob {
         let p = self.path(&key);

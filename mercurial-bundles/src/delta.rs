@@ -36,11 +36,11 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
 
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
         if remaining < delta_len {
-            bail!(ErrorKind::InvalidDelta(format!(
+            Err(ErrorKind::InvalidDelta(format!(
                 "expected {} bytes, {} remaining",
                 delta_len,
                 remaining
-            )));
+            )))?;
         }
 
         frags.push(Fragment {
@@ -54,12 +54,14 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     }
 
     if remaining != 0 {
-        bail!(ErrorKind::InvalidDelta(
+        Err(ErrorKind::InvalidDelta(
             format!("{} trailing bytes in encoded delta", remaining),
-        ));
+        ))?;
     }
 
-    Delta::new(frags).chain_err(|| ErrorKind::InvalidDelta("invalid fragment list".into()))
+    Delta::new(frags)
+        .with_context(|_| ErrorKind::InvalidDelta("invalid fragment list".into()))
+        .map_err(Error::from)
 }
 
 pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
@@ -74,29 +76,36 @@ pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
 #[cfg(test)]
 mod test {
     use super::*;
+    use failure;
 
     #[test]
     fn invalid_deltas() {
         let short_delta = BytesMut::from(&b"\0\0\0\0\0\0\0\0\0\0\0\x20"[..]);
         assert_matches!(
-            decode_delta(short_delta),
-            Err(Error(ErrorKind::InvalidDelta(ref msg), _))
+            decode_delta(short_delta).unwrap_err().downcast::<ErrorKind>(),
+            Ok(ErrorKind::InvalidDelta(ref msg))
             if msg == "expected 44 bytes, 12 remaining"
         );
 
         let short_header = BytesMut::from(&b"\0\0\0\0\0\0"[..]);
         assert_matches!(
-            decode_delta(short_header),
-            Err(Error(ErrorKind::InvalidDelta(ref msg), _))
+            decode_delta(short_header).unwrap_err().downcast::<ErrorKind>(),
+            Ok(ErrorKind::InvalidDelta(ref msg))
             if msg == "6 trailing bytes in encoded delta"
         );
 
         // start = 2, end = 0
         let start_after_end = BytesMut::from(&b"\0\0\0\x02\0\0\0\0\0\0\0\0"[..]);
-        assert_matches!(
-            decode_delta(start_after_end),
-            Err(Error(ErrorKind::InvalidDelta(_), _))
-        );
+        match decode_delta(start_after_end) {
+            Ok(bad) => panic!("unexpected success {:?}", bad),
+            Err(err) => match err.downcast::<failure::Context<ErrorKind>>() {
+                Ok(ctxt) => match ctxt.get_context() {
+                    &ErrorKind::InvalidDelta(..) => (),
+                    bad => panic!("Bad ErrorKind {:?}", bad),
+                },
+                Err(bad) => panic!("Unexpected error {:?}", bad),
+            },
+        }
     }
 
     quickcheck! {

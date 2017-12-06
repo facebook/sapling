@@ -148,9 +148,9 @@ impl RevlogRepo {
         };
 
         let mut req = HashSet::new();
-        let file = fs::File::open(base.join("requires")).chain_err(|| "Can't open `requires`")?;
+        let file = fs::File::open(base.join("requires")).context("Can't open `requires`")?;
         for line in BufReader::new(file).lines() {
-            req.insert(line.chain_err(|| "Line read failed")?.parse()?);
+            req.insert(line.context("Line read failed")?.parse()?);
         }
 
         Ok(RevlogRepo {
@@ -426,13 +426,11 @@ impl Stream for ChangesetStream {
 }
 
 impl Repo for RevlogRepo {
-    type Error = Error;
-
-    fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
+    fn get_heads(&self) -> BoxStream<NodeHash, Error> {
         self.get_heads().boxify()
     }
 
-    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
         match self.bookmarks() {
             Ok(bms) => bms.keys().from_err().boxify(),
             Err(e) => stream::once(Err(e.into())).boxify(),
@@ -442,31 +440,28 @@ impl Repo for RevlogRepo {
     fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
         match self.bookmarks() {
             Ok(bms) => bms.get(key).from_err().boxify(),
             Err(e) => future::err(e.into()).boxify(),
         }
     }
 
-    fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
+    fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
         self.changesets().boxify()
     }
 
-    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
+    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
         RevlogRepo::changeset_exists(self, nodeid).boxify()
     }
 
-    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
+    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
         RevlogRepo::get_changeset_by_nodeid(self, nodeid)
             .map(|cs| cs.boxed())
             .boxify()
     }
 
-    fn get_manifest_by_nodeid(
-        &self,
-        nodeid: &NodeHash,
-    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Manifest + Sync>, Error> {
         RevlogRepo::get_manifest_by_nodeid(self, nodeid)
             .map(|m| m.boxed())
             .boxify()

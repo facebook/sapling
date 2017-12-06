@@ -4,31 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use bytes::Bytes;
+pub use failure::{Error, Result, ResultExt};
 
-#[recursion_limit = "1024"]
-error_chain! {
-    errors {
-        Initialization(msg: &'static str) {
-            description("failed to initialize server")
-            display("{}", msg)
-        }
-    }
-
-    links {
-        Blobrepo(::blobrepo::Error, ::blobrepo::ErrorKind);
-        HgProto(::hgproto::Error, ::hgproto::ErrorKind);
-        Mercurial(::mercurial::Error, ::mercurial::ErrorKind);
-        MercurialTypes(::mercurial_types::Error, ::mercurial_types::ErrorKind);
-        Metaconfig(::metaconfig::Error, ::metaconfig::ErrorKind);
-    }
-
-    foreign_links {
-        Fmt(::std::fmt::Error);
-        Io(::std::io::Error);
-        SendError(::futures::sync::mpsc::SendError<Bytes>);
-        Utf8(::std::str::Utf8Error);
-    }
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "failed to initialize server: {}", _0)] Initialization(&'static str),
 }
-
-impl_kv_error!(Error);

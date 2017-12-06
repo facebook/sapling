@@ -7,8 +7,7 @@
 #![deny(warnings)]
 
 extern crate bytes;
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate futures;
 
 extern crate blobstore;
@@ -17,16 +16,14 @@ extern crate rocksdb;
 use std::path::Path;
 
 use bytes::Bytes;
-
+use failure::Error;
 use futures::{Async, Future, Poll};
 
 use rocksdb::{Db, ReadOptions, WriteOptions};
 
 use blobstore::Blobstore;
 
-mod errors;
-
-pub use errors::{Error, ErrorKind, Result, ResultExt};
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Clone)]
 pub struct Rocksblob {
@@ -84,7 +81,6 @@ impl Future for PutBlob {
 }
 
 impl Blobstore for Rocksblob {
-    type Error = Error;
     // TODO: remove these and use poll_fn once we have `impl Future`
     type GetBlob = GetBlob;
     type PutBlob = PutBlob;

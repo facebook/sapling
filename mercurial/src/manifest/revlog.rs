@@ -15,6 +15,7 @@ use futures::stream::Stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
+use failure;
 use file;
 use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
@@ -51,21 +52,22 @@ fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Det
         }
 
         let (name, rest) = match find(line, &0) {
-            None => bail!("Malformed entry: no \\0"),
+            None => Err(failure::err_msg("Malformed entry: no \\0"))?,
             Some(nil) => {
                 let (name, rest) = line.split_at(nil);
                 if let Some((_, hash)) = rest.split_first() {
                     (name, hash)
                 } else {
-                    bail!("Malformed entry: no hash");
+                    Err(failure::err_msg("Malformed entry: no hash"))?;
+                    unreachable!()
                 }
             }
         };
 
         let path = if let Some(prefix) = prefix {
-            prefix.join(&MPath::new(name).chain_err(|| "invalid path in manifest")?)
+            prefix.join(&MPath::new(name).context("invalid path in manifest")?)
         } else {
-            MPath::new(name).chain_err(|| "invalid path in manifest")?
+            MPath::new(name).context("invalid path in manifest")?
         };
         let details = Details::parse(rest)?;
 
@@ -88,7 +90,7 @@ impl RevlogManifest {
     pub fn new(repo: RevlogRepo, node: BlobNode) -> Result<RevlogManifest> {
         node.as_blob()
             .as_slice()
-            .ok_or("node missing data".into())
+            .ok_or(failure::err_msg("node missing data"))
             .and_then(|blob| Self::parse(Some(repo), blob))
     }
 
@@ -128,18 +130,18 @@ impl RevlogManifest {
 impl Details {
     fn parse(data: &[u8]) -> Result<Details> {
         if data.len() < 40 {
-            bail!("hash too small");
+            Err(failure::err_msg("hash too small"))?;
         }
 
         let (hash, flags) = data.split_at(40);
         let hash = match str::from_utf8(hash) {
-            Err(_) => bail!("malformed hash"),
+            Err(_) => Err(failure::err_msg("malformed hash"))?,
             Ok(hs) => hs,
         };
-        let nodeid = hash.parse().chain_err(|| "malformed hash")?;
+        let nodeid = hash.parse::<NodeHash>().context("malformed hash")?;
 
         if flags.len() > 1 {
-            bail!("More than 1 flag");
+            Err(failure::err_msg("More than 1 flag"))?;
         }
 
         let flag = if flags.len() == 0 {
@@ -149,7 +151,7 @@ impl Details {
                 b'l' => Type::Symlink,
                 b'x' => Type::Executable,
                 b't' => Type::Tree,
-                unk => bail!("Unknown flag {}", unk),
+                unk => Err(format_err!("Unknown flag {}", unk))?,
             }
         };
 
@@ -207,7 +209,7 @@ impl Stream for RevlogListStream {
     type Item = RevlogEntry;
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
         let v = self.0.next().map(|(path, details)| {
             RevlogEntry::new(self.1.clone(), path, details)
         });
@@ -219,12 +221,7 @@ impl Stream for RevlogListStream {
 }
 
 impl Manifest for RevlogManifest {
-    type Error = Error;
-
-    fn lookup(
-        &self,
-        path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         let repo = self.repo.as_ref().expect("missing repo").clone();
         let res = RevlogManifest::lookup(self, path)
             .map(|details| RevlogEntry::new(repo, path.clone(), *details));
@@ -235,7 +232,7 @@ impl Manifest for RevlogManifest {
         }
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
         let v: Vec<_> = self.manifest()
             .into_iter()
             .map(|(p, d)| (p.clone(), *d))
@@ -252,9 +249,9 @@ impl RevlogEntry {
     fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
         let path = match details.flag() {
             Type::Tree => RepoPath::dir(path)
-                .chain_err(|| ErrorKind::Path("error while creating RepoPath".into()))?,
+                .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
             _ => RepoPath::file(path)
-                .chain_err(|| ErrorKind::Path("error while creating RepoPath".into()))?,
+                .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
         };
         Ok(RevlogEntry {
             repo,
@@ -265,13 +262,11 @@ impl RevlogEntry {
 }
 
 impl Entry for RevlogEntry {
-    type Error = Error;
-
     fn get_type(&self) -> Type {
         self.details.flag()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
+    fn get_parents(&self) -> BoxFuture<Parents, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
@@ -280,26 +275,24 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
             .map(|node| node.as_blob().clone())
             .map_err(|err| {
-                Error::with_chain(
-                    err,
-                    format!(
-                        "Can't get content for {} node {}",
-                        self.get_path(),
-                        self.get_hash()
-                    ),
-                )
+                err.context(format_err!(
+                    "Can't get content for {} node {}",
+                    self.get_path(),
+                    self.get_hash()
+                ))
             })
+            .map_err(Error::from)
             .into_future()
             .boxify()
     }
 
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
+    fn get_content(&self) -> BoxFuture<Content, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
 
         revlog
@@ -312,11 +305,13 @@ impl Entry for RevlogEntry {
                 Type::Executable => Ok(Content::Executable(strip_file_metadata(&data))),
                 Type::Symlink => {
                     let data = strip_file_metadata(&data);
-                    let data = data.as_slice().ok_or("missing blob data")?;
+                    let data = data.as_slice()
+                        .ok_or(failure::err_msg("missing symlink blob data"))?;
                     Ok(Content::Symlink(MPath::new(data)?))
                 }
                 Type::Tree => {
-                    let data = data.as_slice().ok_or("missing blob data")?;
+                    let data = data.as_slice()
+                        .ok_or(failure::err_msg("missing tree blob data"))?;
                     let revlog_manifest = RevlogManifest::parse_with_prefix(
                         Some(self.repo.clone()),
                         &data,
@@ -328,20 +323,18 @@ impl Entry for RevlogEntry {
                 }
             })
             .map_err(|err| {
-                Error::with_chain(
-                    err,
-                    format!(
-                        "Can't get content for {} node {}",
-                        self.get_path(),
-                        self.get_hash()
-                    ),
-                )
+                err.context(format_err!(
+                    "Can't get content for {} node {}",
+                    self.get_path(),
+                    self.get_hash()
+                ))
             })
+            .map_err(Error::from)
             .into_future()
             .boxify()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
             .and_then(|content| match content {
                 Content::File(data) | Content::Executable(data) => Ok(data.size()),

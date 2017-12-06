@@ -23,7 +23,7 @@ extern crate slog;
 
 // Errors
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 
 #[cfg(test)]
 #[macro_use]
@@ -163,5 +163,5 @@ impl Response {
 }
 
 pub use commands::{HgCommandRes, HgCommands};
-pub use errors::{Error, ErrorKind, Result, ResultExt};
+pub use errors::{Error, ErrorKind, Result};
 pub use handler::HgProtoHandler;

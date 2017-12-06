@@ -74,8 +74,8 @@ fn test_parse_unknown_compression() {
     let mut core = Core::new().unwrap();
     let bundle2_buf = MemBuf::from(Vec::from(UNKNOWN_COMPRESSION_BUNDLE2));
     let outer_stream_err = parse_stream_start(&mut core, bundle2_buf, Some("IL")).unwrap_err();
-    assert_matches!(outer_stream_err.kind(),
-                    &ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
+    assert_matches!(outer_stream_err.downcast::<ErrorKind>().unwrap(),
+                    ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn unknown_part(ct: CompressorType) {
     let stream = stream.into_inner();
     let app_errors = stream.app_errors();
     assert_eq!(app_errors.len(), 1);
-    assert_matches!(app_errors[0].kind(),
+    assert_matches!(&app_errors[0],
                     &ErrorKind::BundleUnknownPart(ref header)
                     if header.part_type() == "UNKNOWN:UNKNOWN");
 }

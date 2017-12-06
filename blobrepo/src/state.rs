@@ -7,6 +7,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use failure::ResultExt;
+
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
 use fileblob::Fileblob;
@@ -95,16 +97,16 @@ impl_blob_state! {
 impl FilesBlobState {
     pub fn new(path: &Path) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
-            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
+            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = Arc::new(
             FileBookmarks::open(path.join("books"))
-                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
+                .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
         );
         let blobstore = Fileblob::open(path.join("blobs"))
-            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = Arc::new(
             FileLinknodes::open(path.join("linknodes"))
-                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Linknodes))?,
+                .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?,
         );
 
         Ok(FilesBlobState {
@@ -128,16 +130,16 @@ impl_blob_state! {
 impl RocksBlobState {
     pub fn new(path: &Path) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
-            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Heads))?;
+            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = Arc::new(
             FileBookmarks::open(path.join("books"))
-                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
+                .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?,
         );
         let blobstore = Rocksblob::open(path.join("blobs"))
-            .chain_err(|| ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = Arc::new(
             FileLinknodes::open(path.join("linknodes"))
-                .chain_err(|| ErrorKind::StateOpen(StateOpenError::Linknodes))?,
+                .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?,
         );
 
 

@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use ascii::{AsciiStr, AsciiString, IntoAsciiString};
 use bytes::{BigEndian, BufMut, Bytes};
+use failure::SyncFailure;
 
 use chunk::Chunk;
 use errors::*;
@@ -124,7 +125,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     let type_size = header_bytes.drain_u8() as usize;
     let part_type = header_bytes
         .drain_str(type_size)
-        .chain_err(|| ErrorKind::Bundle2Decode("invalid part type".into()))?;
+        .with_context(|_| ErrorKind::Bundle2Decode("invalid part type".into()))?;
 
     let part_id = header_bytes.drain_u32();
 
@@ -133,7 +134,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     let mut param_sizes = Vec::with_capacity(nmparams + naparams);
     let mut header = PartHeaderBuilder::with_capacity(part_type, nmparams, naparams)
-        .chain_err(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+        .with_context(|_| ErrorKind::Bundle2Decode("invalid part header".into()))?;
 
     for _ in 0..(nmparams + naparams) {
         // TODO: ensure none of the params is empty
@@ -145,7 +146,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     for cur in 0..nmparams {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).chain_err(|| {
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|_| {
             let err_msg = format!(
                 "part '{}' (id {}): invalid param {}",
                 header.part_type(),
@@ -156,12 +157,12 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
         })?;
         header
             .add_mparam(key, val)
-            .chain_err(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+            .with_context(|_| ErrorKind::Bundle2Decode("invalid part header".into()))?;
     }
 
     for cur in nmparams..(nmparams + naparams) {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).chain_err(|| {
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|_| {
             let err_msg = format!(
                 "part '{}' (id {}): invalid param {}",
                 header.part_type(),
@@ -172,14 +173,14 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
         })?;
         header
             .add_aparam(key, val)
-            .chain_err(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
+            .with_context(|_| ErrorKind::Bundle2Decode("invalid part header".into()))?;
     }
 
     Ok(header.build(part_id))
 }
 
 fn decode_header_param(buf: &mut Bytes, ksize: usize, vsize: usize) -> Result<(String, Bytes)> {
-    let key = buf.drain_str(ksize).chain_err(|| "invalid key")?;
+    let key = buf.drain_str(ksize).with_context(|_| "invalid key")?;
     let val = buf.split_to(vsize);
     return Ok((key, val));
 }
@@ -210,7 +211,8 @@ impl PartHeaderBuilder {
     {
         let part_type = part_type
             .into_ascii_string()
-            .chain_err(|| "invalid part type")?;
+            .map_err(|e| Error::from(SyncFailure::new(e)))
+            .context("invalid part type")?;
         Self::check_part_type(&part_type)?;
         Ok(PartHeaderBuilder {
             part_type: part_type,
@@ -362,8 +364,8 @@ mod test {
     #[test]
     fn test_roundtrip() {
         quickcheck(
-            roundtrip as
-                fn(AsciiString, u32, HashMap<String, QCBytes>, HashMap<String, QCBytes>)
+            roundtrip
+                as fn(AsciiString, u32, HashMap<String, QCBytes>, HashMap<String, QCBytes>)
                     -> TestResult,
         );
     }

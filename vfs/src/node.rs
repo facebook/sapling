@@ -56,11 +56,9 @@ where
 {
     /// Associated type for node that is a Dir
     type TDir: VfsDir;
-    /// Associated type for errors used when reading a file
-    type Error: Send + 'static + ::std::error::Error;
 
     /// Returns a future with the content of the file
-    fn read(&self) -> Box<Future<Item = Content<Self::Error>, Error = Self::Error> + Send>;
+    fn read(&self) -> Box<Future<Item = Content, Error = Error> + Send>;
 
     /// Returns directory that contains this file
     fn parent_dir(&self) -> Self::TDir;
@@ -122,7 +120,7 @@ where
     type Item = VfsNode<TDir, TFile>;
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
         if self.steps == 0 {
             self.steps += 1;
             return Ok(Async::Ready(Some(self.current_node.clone())));
@@ -130,13 +128,13 @@ where
 
         if self.steps > self.max_steps && !self.remainder.is_empty() {
             let remainder = mem::replace(&mut self.remainder, VecDeque::new());
-            bail!(ErrorKind::MaximumStepReached(
+            Err(ErrorKind::MaximumStepReached(
                 format!(
                     "Reached a maximum of {} steps during a walk",
                     self.max_steps
                 ),
-                remainder
-            ));
+                remainder,
+            ))?;
         }
 
         match self.remainder.pop_front() {
@@ -147,16 +145,17 @@ where
                         None => {
                             let mut remainder = mem::replace(&mut self.remainder, VecDeque::new());
                             remainder.push_front(path_element);
-                            bail!(ErrorKind::PathDoNotExists(
+                            Err(ErrorKind::PathDoesNotExist(
                                 "Encountered a non existing MPath during a walk on Vfs".into(),
-                                remainder
-                            ));
+                                remainder,
+                            ))?;
+                            unreachable!()
                         }
                         Some(node) => node,
                     },
-                    VfsNode::File(_) => bail!(ErrorKind::NotImplemented(
-                        "Walking through Symlinks is not implemented yet".into()
-                    )),
+                    VfsNode::File(_) => Err(ErrorKind::NotImplemented(
+                        "Walking through Symlinks is not implemented yet".into(),
+                    ))?,
                 };
                 self.steps += 1;
                 Ok(Async::Ready(Some(self.current_node.clone())))
@@ -211,9 +210,8 @@ mod tests {
 
     impl VfsFile for MockVfsFile {
         type TDir = MockVfsDir;
-        type Error = Error;
 
-        fn read(&self) -> Box<Future<Item = Content<Self::Error>, Error = Self::Error> + Send> {
+        fn read(&self) -> Box<Future<Item = Content, Error = Error> + Send> {
             unimplemented!();
         }
         fn parent_dir(&self) -> Self::TDir {
@@ -271,8 +269,11 @@ mod tests {
         BoxFnOnce::from(move |result: Result<VfsNode<TDir, TFile>>| {
             let expected = MPath::new(expected).unwrap().into_iter();
             match result {
-                Err(Error(ErrorKind::PathDoNotExists(_, r), _)) => assert_equal(r, expected),
-                Err(error) => panic!("unexpected error: {:?}", error),
+                Err(error) => match error.downcast::<ErrorKind>() {
+                    Ok(ErrorKind::PathDoesNotExist(_, r)) => assert_equal(r, expected),
+                    Ok(error) => panic!("unexpected ErrorKind error: {:?}", error),
+                    Err(error) => panic!("unexpected other error: {:?}", error),
+                },
                 Ok(_) => panic!("unexpected success"),
             }
         })
@@ -341,12 +342,13 @@ mod tests {
             let last = walk_result.pop().unwrap().unwrap();
             let err = walk_result.pop().unwrap().unwrap_err();
 
-            match err {
-                Error(ErrorKind::MaximumStepReached(_, r), _) => {
+            match err.downcast::<ErrorKind>() {
+                Ok(ErrorKind::MaximumStepReached(_, r)) => {
                     cmp_paths(&r, expected_remainder);
                     checker.call(VfsWalker::new(last, r).walk().wait());
                 }
-                _ => panic!("unexpected error: {:?}", err),
+                Ok(error) => panic!("unexpected ErrorKind error: {:?}", error),
+                Err(error) => panic!("unexpected other error: {:?}", error),
             }
         }
     }
@@ -355,9 +357,12 @@ mod tests {
     fn test_walk_with_file() {
         let node = make_node("a/b/c", Some(MockVfsFile));
 
-        let check_not_implemented = BoxFnOnce::from(|result| match result {
-            Err(Error(ErrorKind::NotImplemented(_), _)) => (),
-            Err(error) => panic!("unexpected error: {:?}", error),
+        let check_not_implemented = BoxFnOnce::from(|result: Result<_>| match result {
+            Err(error) => match error.downcast::<ErrorKind>() {
+                Ok(ErrorKind::NotImplemented(_)) => (),
+                Ok(error) => panic!("unexpected ErrorKind error: {:?}", error),
+                Err(error) => panic!("unexpected other error: {:?}", error),
+            },
             Ok(_) => panic!("unexpected success"),
         });
 

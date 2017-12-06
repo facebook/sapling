@@ -11,6 +11,7 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate percent_encoding;
 
+extern crate failure_ext as failure;
 extern crate filekv;
 extern crate futures_ext;
 extern crate linknodes;
@@ -23,10 +24,11 @@ use std::sync::Arc;
 use futures::Future;
 use futures_cpupool::CpuPool;
 
+use failure::Result;
 use filekv::FileKV;
 use futures_ext::{BoxFuture, FutureExt};
 use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes,
-                ResultExt};
+                OptionNodeHash};
 use mercurial_types::{NodeHash, RepoPath};
 use mercurial_types::hash::Sha1;
 
@@ -41,28 +43,28 @@ pub struct FileLinknodes {
 
 impl FileLinknodes {
     #[inline]
-    pub fn open<P: Into<PathBuf>>(path: P) -> filekv::Result<Self> {
+    pub fn open<P: Into<PathBuf>>(path: P) -> Result<Self> {
         Ok(FileLinknodes {
             kv: FileKV::open(path, PREFIX)?,
         })
     }
 
     #[inline]
-    pub fn open_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> filekv::Result<Self> {
+    pub fn open_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
         Ok(FileLinknodes {
             kv: FileKV::open_with_pool(path, PREFIX, pool)?,
         })
     }
 
     #[inline]
-    pub fn create<P: Into<PathBuf>>(path: P) -> filekv::Result<Self> {
+    pub fn create<P: Into<PathBuf>>(path: P) -> Result<Self> {
         Ok(FileLinknodes {
             kv: FileKV::create(path, PREFIX)?,
         })
     }
 
     #[inline]
-    pub fn create_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> filekv::Result<Self> {
+    pub fn create_with_pool<P: Into<PathBuf>>(path: P, pool: Arc<CpuPool>) -> Result<Self> {
         Ok(FileLinknodes {
             kv: FileKV::create_with_pool(path, PREFIX, pool)?,
         })
@@ -79,9 +81,7 @@ impl FileLinknodes {
             .then(move |res| match res {
                 Ok(Some((data, _version))) => Ok(data),
                 Ok(None) => Err(LinknodeErrorKind::NotFound(path, node).into()),
-                Err(err) => {
-                    Err(err).chain_err(|| LinknodeError::from_kind(LinknodeErrorKind::StorageError))
-                }
+                Err(err) => Err(err.context(LinknodeErrorKind::StorageError).into()),
             })
     }
 }
@@ -119,11 +119,15 @@ impl Linknodes for FileLinknodes {
                         // Versions are irrelevant as linknodes don't support replacement.
                         Ok(())
                     }
-                    Ok(None) => {
-                        Err(LinknodeErrorKind::AlreadyExists(path, node, None, linknode).into())
-                    }
-                    Err(err) => Err(err)
-                        .chain_err(|| LinknodeError::from_kind(LinknodeErrorKind::StorageError)),
+                    Ok(None) => Err(
+                        LinknodeErrorKind::AlreadyExists {
+                            path,
+                            node,
+                            old_linknode: OptionNodeHash(None),
+                            new_linknode: linknode,
+                        }.into(),
+                    ),
+                    Err(err) => Err(err.context(LinknodeErrorKind::StorageError).into()),
                 }
             })
             .boxify()

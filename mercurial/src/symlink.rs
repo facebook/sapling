@@ -19,7 +19,7 @@ impl Symlink {
 
     pub fn path(&self) -> Result<Option<MPath>> {
         if let Some(path) = self.0.content().map(|s| MPath::new(s)) {
-            Ok(Some(path.chain_err(|| "invalid symlink target")?))
+            Ok(Some(path.context("invalid symlink target")?))
         } else {
             Ok(None)
         }

@@ -12,7 +12,7 @@
 
 extern crate bincode;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate nix;
@@ -48,17 +48,7 @@ use serde::de::DeserializeOwned;
 use futures_ext::{BoxStream, StreamExt};
 use storage_types::{version_random, Version};
 
-mod errors {
-    error_chain! {
-        foreign_links {
-            Bincode(::bincode::Error);
-            De(::serde::de::value::Error);
-            Io(::std::io::Error);
-            Nix(::nix::Error);
-        }
-    }
-}
-pub use errors::*;
+use failure::{Error, Result};
 
 /// A basic file-based persistent bookmark store.
 ///

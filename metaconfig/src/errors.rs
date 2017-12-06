@@ -6,31 +6,15 @@
 
 //! Definition of errors used in this crate by the error_chain crate
 
-use std::str::Utf8Error;
-use toml::de;
-use vfs::errors as vfs_errors;
+pub use failure::{Error, Result};
 
-error_chain! {
-    errors {
-        /// The given bookmark does not exist in the repo
-        BookmarkNotFound(msg: String) {
-            description("the provided bookmark was not found in the repo")
-            display("{}", msg)
-        }
-        /// The structure of metaconfig repo is invalid
-        InvalidFileStructure(msg: String) {
-            description("the structure of files in vfs is invalid")
-            display("{}", msg)
-        }
-    }
-
-    links {
-        Vfs(vfs_errors::Error, vfs_errors::ErrorKind)
-        #[doc = "Error originated in the vfs crate while manipulating the Vfs"];
-    }
-
-    foreign_links {
-        De(de::Error) #[doc = "Failure in deserializing the config files"];
-        Utf8(Utf8Error) #[doc = "Name of the repository is not in utf8"];
-    }
+/// Types of errors we can raise
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    /// The given bookmark does not exist in the repo
+    #[fail(display = "bookmark not found: {}", _0)]
+    BookmarkNotFound(String),
+    /// The structure of metaconfig repo is invalid
+    #[fail(display = "invalid file structure: {}", _0)]
+    InvalidFileStructure(String),
 }

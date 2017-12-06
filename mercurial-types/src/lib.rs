@@ -25,7 +25,7 @@ extern crate url;
 extern crate futures;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;

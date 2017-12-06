@@ -5,31 +5,22 @@
 // GNU General Public License version 2 or any later version.
 
 // declare dependencies on other crates
-extern crate clap; // 3rd party command line parser
-extern crate mercurial; // mercurial stuff
+extern crate clap;
+// mercurial stuff
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
+// 3rd party command line parser
+extern crate mercurial;
 
 // Import symbols from std:: (standard library)
 use std::str::{self, FromStr};
 
 // Just need `App` from clap
 use clap::App;
+use failure::Result;
 
 // Get `Revlog` and `RevIdx` from revlog module.
 use mercurial::revlog::{RevIdx, Revlog};
-
-mod errors {
-    use mercurial;
-
-    error_chain! {
-        links {
-            Mercurial(mercurial::Error, mercurial::ErrorKind);
-        }
-    }
-}
-
-use errors::*;
 
 fn run() -> Result<()> {
     // Define command line args and parse command line
@@ -83,7 +74,7 @@ fn main() {
     if let Err(ref e) = run() {
         println!("Failed: {}", e);
 
-        for e in e.iter().skip(1) {
+        for e in e.causes() {
             println!("caused by: {}", e);
         }
 

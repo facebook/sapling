@@ -4,39 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::convert::From;
+pub use failure::{Error, ResultExt};
 
 use MPath;
 
-#[recursion_limit = "1024"]
-error_chain! {
-    errors {
-        InvalidSha1Input(msg: String) {
-            description("invalid sha-1 input")
-            display("invalid sha-1 input: {}", msg)
-        }
-        InvalidPath(path: Vec<u8>, msg: String) {
-            description("invalid path")
-            display("invalid path '{}': {}", String::from_utf8_lossy(&path[..]), msg)
-        }
-        InvalidMPath(path: MPath, msg: String) {
-            description("invalid Mercurial path")
-            display("invalid Mercurial path '{}', {}", path, msg)
-        }
-        InvalidFragmentList(msg: String) {
-            description("invalid fragment list")
-            display("invalid fragment list: {}", msg)
-        }
-    }
-
-    foreign_links {
-        Bincode(::bincode::Error);
-        Utf8(::std::str::Utf8Error);
-    }
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "invalid sha-1 input: {}", _0)] InvalidSha1Input(String),
+    #[fail(display = "invalid path '{}': {}", _0, _1)] InvalidPath(String, String),
+    #[fail(display = "invalid Mercurial path '{}': {}", _0, _1)] InvalidMPath(MPath, String),
+    #[fail(display = "invalid fragment list: {}", _0)] InvalidFragmentList(String),
 }
 
-impl From<!> for Error {
-    fn from(_t: !) -> Error {
-        unreachable!("never type cannot be instantiated")
-    }
-}
+pub type Result<T> = ::std::result::Result<T, Error>;

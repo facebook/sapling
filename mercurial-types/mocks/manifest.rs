@@ -4,9 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::marker::PhantomData;
 use std::sync::Arc;
 
+use failure::Error;
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
@@ -15,18 +15,18 @@ use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::NodeHash;
 
-type ContentFactory<E> = Arc<Fn() -> Content<E> + Send + Sync>;
+type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
-pub fn make_file<C: AsRef<str>, E>(content: C) -> ContentFactory<E> {
+pub fn make_file<C: AsRef<str>>(content: C) -> ContentFactory {
     let content = content.as_ref().to_owned().into_bytes();
     Arc::new(move || Content::File(Blob::Dirty(content.clone())))
 }
 
-pub struct MockManifest<E> {
-    entries: Vec<MockEntry<E>>,
+pub struct MockManifest {
+    entries: Vec<MockEntry>,
 }
 
-impl<E> MockManifest<E> {
+impl MockManifest {
     fn p(p: &'static str) -> RepoPath {
         // This should also allow directory paths eventually.
         RepoPath::file(p).expect(&format!("invalid path {}", p))
@@ -47,7 +47,7 @@ impl<E> MockManifest<E> {
         MockManifest { entries }
     }
 
-    pub fn with_content(content: Vec<(&'static str, ContentFactory<E>)>) -> Self {
+    pub fn with_content(content: Vec<(&'static str, ContentFactory)>) -> Self {
         let entries = content
             .into_iter()
             .map(|(p, c)| MockEntry::new(Self::p(p), c))
@@ -56,69 +56,52 @@ impl<E> MockManifest<E> {
     }
 }
 
-impl<E> Manifest for MockManifest<E>
-where
-    E: Send + 'static + ::std::error::Error,
-{
-    type Error = E;
-
-    fn lookup(
-        &self,
-        _path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
+impl Manifest for MockManifest {
+    fn lookup(&self, _path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         unimplemented!();
     }
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
         stream::iter_ok(self.entries.clone().into_iter().map(|e| e.boxed())).boxify()
     }
 }
 
-struct MockEntry<E> {
+struct MockEntry {
     path: RepoPath,
-    content_factory: ContentFactory<E>,
-    phantom: PhantomData<E>,
+    content_factory: ContentFactory,
 }
 
-unsafe impl<E> Sync for MockEntry<E> {}
-
-impl<E> Clone for MockEntry<E> {
+impl Clone for MockEntry {
     fn clone(&self) -> Self {
         MockEntry {
             path: self.path.clone(),
             content_factory: self.content_factory.clone(),
-            phantom: PhantomData,
         }
     }
 }
 
-impl<E> MockEntry<E> {
-    fn new(path: RepoPath, content_factory: ContentFactory<E>) -> Self {
+impl MockEntry {
+    fn new(path: RepoPath, content_factory: ContentFactory) -> Self {
         MockEntry {
             path,
             content_factory,
-            phantom: PhantomData,
         }
     }
 }
 
-impl<E> Entry for MockEntry<E>
-where
-    E: Send + 'static + ::std::error::Error,
-{
-    type Error = E;
+impl Entry for MockEntry {
     fn get_type(&self) -> Type {
         unimplemented!();
     }
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
+    fn get_parents(&self) -> BoxFuture<Parents, Error> {
         unimplemented!();
     }
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
         unimplemented!();
     }
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
+    fn get_content(&self) -> BoxFuture<Content, Error> {
         Ok((self.content_factory)()).into_future().boxify()
     }
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         unimplemented!();
     }
     fn get_hash(&self) -> &NodeHash {

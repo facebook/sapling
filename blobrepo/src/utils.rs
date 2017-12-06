@@ -29,7 +29,6 @@ where
 
     blobstore
         .get(key)
-        .map_err(blobstore_err)
         .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
         .and_then(move |blob| {
             bincode::deserialize(blob.as_ref()).into_future().from_err()

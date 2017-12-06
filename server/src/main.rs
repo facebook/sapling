@@ -8,6 +8,8 @@
 #![feature(never_type)]
 
 #[macro_use]
+extern crate failure_ext as failure;
+#[macro_use]
 extern crate futures;
 extern crate futures_ext;
 extern crate tokio_core;
@@ -17,11 +19,7 @@ extern crate tokio_uds;
 extern crate clap;
 
 #[macro_use]
-extern crate error_chain;
-
-#[macro_use]
 extern crate slog;
-#[macro_use]
 extern crate slog_glog_fmt;
 extern crate slog_kvfilter;
 extern crate slog_logview;
@@ -56,6 +54,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
+use failure::SlogKVError;
 use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
@@ -195,7 +194,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         config_repo
             .get_bookmark_value(&bookmark)
             .wait()?
-            .ok_or_else(|| Error::from("bookmark for config repo not found"))?
+            .ok_or_else(|| failure::err_msg("bookmark for config repo not found"))?
             .0
     } else {
         mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())?
@@ -229,11 +228,12 @@ where
 
     if repos.iter().any(Result::is_err) {
         for err in repos.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to initialize repo"; err);
+            crit!(root_log, "Failed to initialize repo"; SlogKVError(err));
         }
-        bail!(ErrorKind::Initialization(
+        Err(ErrorKind::Initialization(
             "at least one of the repos failed to be initialized",
-        ));
+        ))?;
+        unreachable!()
     }
 
     let handles: Vec<_> = repos
@@ -252,11 +252,12 @@ where
 
     if handles.iter().any(Result::is_err) {
         for err in handles.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to spawn listener thread"; err);
+            crit!(root_log, "Failed to spawn listener thread"; SlogKVError(err));
         }
-        bail!(ErrorKind::Initialization(
+        Err(ErrorKind::Initialization(
             "at least one of the listener threads failed to be spawned",
-        ));
+        ))?;
+        unreachable!()
     }
 
     Ok(handles.into_iter().filter_map(Result::ok).collect())
@@ -277,7 +278,9 @@ where
         .for_each(move |sock| {
             match sock.peer_addr() {
                 Ok(addr) => info!(listen_log, "New connection from {:?}", addr),
-                Err(err) => error!(listen_log, "Failed to get peer addr"; Error::from(err)),
+                Err(err) => {
+                    error!(listen_log, "Failed to get peer addr"; SlogKVError(Error::from(err)))
+                }
             };
 
             // Have a connection. Extract std{in,out,err} streams for socket
@@ -324,7 +327,7 @@ where
             // TODO: seems to leave the client hanging?
             let conn_log = conn_log.clone();
             let endres = endres.or_else(move |err| {
-                error!(conn_log, "Command failed"; err, "remote" => "true");
+                error!(conn_log, "Command failed"; SlogKVError(err), "remote" => "true");
                 Ok(())
             });
 
@@ -381,7 +384,7 @@ fn main() {
 
     match run_server(&root_log, matches) {
         Err(e) => {
-            crit!(root_log, "Server fatal error"; e);
+            crit!(root_log, "Server fatal error"; SlogKVError(e));
             std::process::exit(1);
         }
     }

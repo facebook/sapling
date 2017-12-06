@@ -4,23 +4,21 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::error;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use futures::Future;
+use failure::Error;
 
 use futures_ext::{BoxFuture, FutureExt};
 
 use super::*;
 
-pub type BoxBlobstore<E> = Box<
-    Blobstore<Error = E, GetBlob = BoxFuture<Option<Bytes>, E>, PutBlob = BoxFuture<(), E>>,
+pub type BoxBlobstore = Box<
+    Blobstore<GetBlob = BoxFuture<Option<Bytes>, Error>, PutBlob = BoxFuture<(), Error>>,
 >;
 
-pub type ArcBlobstore<E> = Arc<
-    Blobstore<Error = E, GetBlob = BoxFuture<Option<Bytes>, E>, PutBlob = BoxFuture<(), E>> + Sync,
+pub type ArcBlobstore = Arc<
+    Blobstore<GetBlob = BoxFuture<Option<Bytes>, Error>, PutBlob = BoxFuture<(), Error>> + Sync,
 >;
 
 /// Take a concrete `BlobStore` implementation and box it up in a generic way.
@@ -28,63 +26,44 @@ pub type ArcBlobstore<E> = Arc<
 /// the `Value*` and `Error` associated types to some type. This allows the caller
 /// to conform multiple different blobstore implementations into a single boxed trait
 /// object type with uniform errors and value types.
-pub fn boxed<B, E>(blobstore: B) -> BoxBlobstore<E>
+pub fn boxed<B>(blobstore: B) -> BoxBlobstore
 where
     B: Blobstore + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    E: error::Error + From<B::Error> + Send + 'static,
 {
-    let new = BlobstoreInner {
-        blobstore,
-        _phantom: PhantomData,
-    };
+    let new = BlobstoreInner { blobstore };
     Box::new(new)
 }
 
-pub fn arced<B, E>(blobstore: B) -> ArcBlobstore<E>
+pub fn arced<B>(blobstore: B) -> ArcBlobstore
 where
     B: Blobstore + Sync + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    E: error::Error + From<B::Error> + Send + 'static,
 {
-    let new = BlobstoreInner {
-        blobstore,
-        _phantom: PhantomData,
-    };
+    let new = BlobstoreInner { blobstore };
     Arc::new(new)
 }
 
-struct BlobstoreInner<B, E> {
+struct BlobstoreInner<B> {
     blobstore: B,
-    _phantom: PhantomData<E>,
 }
 
-// Set Sync marker iff B is Sync - the rest don't matter in a PhantomData.
-unsafe impl<B, E> Sync for BlobstoreInner<B, E>
-where
-    B: Sync,
-{
-}
-
-impl<B, E> Blobstore for BlobstoreInner<B, E>
+impl<B> Blobstore for BlobstoreInner<B>
 where
     B: Blobstore + Send + 'static,
     B::GetBlob: Send + 'static,
     B::PutBlob: Send + 'static,
-    E: error::Error + From<B::Error> + Send + 'static,
 {
-    type Error = E;
-
-    type GetBlob = BoxFuture<Option<Bytes>, Self::Error>;
-    type PutBlob = BoxFuture<(), Self::Error>;
+    type GetBlob = BoxFuture<Option<Bytes>, Error>;
+    type PutBlob = BoxFuture<(), Error>;
 
     fn get(&self, key: String) -> Self::GetBlob {
-        self.blobstore.get(key).map_err(E::from).boxify()
+        self.blobstore.get(key).boxify()
     }
 
     fn put(&self, key: String, value: Bytes) -> Self::PutBlob {
-        self.blobstore.put(key, value).map_err(E::from).boxify()
+        self.blobstore.put(key, value).boxify()
     }
 }

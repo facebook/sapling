@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![feature(const_fn)]
 
+extern crate failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate mercurial_types;

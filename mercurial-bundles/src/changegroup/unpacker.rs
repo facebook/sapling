@@ -93,14 +93,14 @@ impl Decoder for Cg2Unpacker {
                         self.state,
                         bytes,
                     );
-                    bail!(ErrorKind::Cg2Decode(msg));
+                    Err(ErrorKind::Cg2Decode(msg))?;
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete changegroup: expected state End, found {:?}",
                         self.state
                     );
-                    bail!(ErrorKind::Cg2Decode(msg))
+                    Err(ErrorKind::Cg2Decode(msg))?;
                 }
                 Ok(None)
             }
@@ -187,7 +187,7 @@ impl Cg2Unpacker {
                 CHUNK_HEADER_LEN,
                 chunk_len
             );
-            bail!(ErrorKind::Cg2Decode(msg));
+            Err(ErrorKind::Cg2Decode(msg))?;
         }
 
         if buf.len() < chunk_len {
@@ -237,7 +237,7 @@ impl Cg2Unpacker {
             return Ok(DecodeRes::None);
         }
         let _ = buf.split_to(4);
-        let filename = buf.drain_path(filename_len - 4).chain_err(|| {
+        let filename = buf.drain_path(filename_len - 4).with_context(|_| {
             let msg = format!("invalid filename of length {}", filename_len);
             ErrorKind::Cg2Decode(msg)
         })?;

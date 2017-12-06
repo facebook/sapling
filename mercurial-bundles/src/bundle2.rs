@@ -33,7 +33,7 @@ where
 #[derive(Debug)]
 struct Bundle2StreamInner {
     logger: slog::Logger,
-    app_errors: Vec<Error>,
+    app_errors: Vec<ErrorKind>,
 }
 
 enum CurrentStream<'a, R>
@@ -105,7 +105,7 @@ where
         }
     }
 
-    pub fn app_errors(&self) -> &[Error] {
+    pub fn app_errors(&self) -> &[ErrorKind] {
         &self.inner.app_errors
     }
 }
@@ -159,15 +159,15 @@ impl Bundle2StreamInner {
             }
             CurrentStream::Outer(mut stream) => {
                 match stream.poll() {
-                    Err(e) => {
-                        if e.is_app_error() {
-                            // Don't return these, just continue processing the stream.
-                            self.app_errors.push(e);
+                    Err(e) => match e.downcast::<ErrorKind>() {
+                        Ok(ek) => if ek.is_app_error() {
+                            self.app_errors.push(ek);
                             self.poll_next(CurrentStream::Outer(stream))
                         } else {
-                            (Err(e), CurrentStream::Outer(stream))
-                        }
-                    }
+                            (Err(Error::from(ek)), CurrentStream::Outer(stream))
+                        },
+                        Err(e) => (Err(e), CurrentStream::Outer(stream)),
+                    },
                     Ok(Async::NotReady) => (Ok(Async::NotReady), CurrentStream::Outer(stream)),
                     Ok(Async::Ready(None)) => {
                         (Ok(Async::Ready(None)), CurrentStream::Outer(stream))

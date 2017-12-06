@@ -24,7 +24,7 @@ use std::sync::Mutex;
 use futures::future::{err, ok, FutureResult, IntoFuture};
 
 use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes,
-                Result as LinknodeResult, ResultExt};
+                OptionNodeHash, Result as LinknodeResult, ResultExt};
 use mercurial_types::{NodeHash, RepoPath};
 
 pub struct MemLinknodes {
@@ -44,12 +44,12 @@ impl MemLinknodes {
         let mut linknodes = self.linknodes.lock().unwrap();
         match linknodes.entry((data.path.clone(), data.node)) {
             Entry::Occupied(occupied) => Err(
-                LinknodeErrorKind::AlreadyExists(
-                    data.path,
-                    data.node,
-                    Some(*occupied.get()),
-                    data.linknode,
-                ).into(),
+                LinknodeErrorKind::AlreadyExists {
+                    path: data.path,
+                    node: data.node,
+                    old_linknode: OptionNodeHash(Some(*occupied.get())),
+                    new_linknode: data.linknode,
+                }.into(),
             ),
             Entry::Vacant(vacant) => {
                 vacant.insert(data.linknode);
@@ -59,7 +59,7 @@ impl MemLinknodes {
     }
 
     pub fn add_data_encoded(&self, bytes: &[u8]) -> LinknodeResult<()> {
-        let data = bincode::deserialize(bytes).chain_err(|| LinknodeErrorKind::StorageError)?;
+        let data = bincode::deserialize(bytes).context(LinknodeErrorKind::StorageError)?;
         self.add_data(data)
     }
 }

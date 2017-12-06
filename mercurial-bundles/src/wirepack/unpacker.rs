@@ -61,14 +61,14 @@ impl Decoder for WirePackUnpacker {
                         self.state,
                         bytes,
                     );
-                    bail!(ErrorKind::WirePackDecode(msg));
+                    Err(ErrorKind::WirePackDecode(msg))?;
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete wirepack: expected state End, found {:?}",
                         self.state
                     );
-                    bail!(ErrorKind::WirePackDecode(msg))
+                    Err(ErrorKind::WirePackDecode(msg))?;
                 }
                 Ok(None)
             }
@@ -144,7 +144,7 @@ impl UnpackerInner {
                     None => return Ok((None, Data(f, entry_count))),
                 },
                 End => return Ok((None, End)),
-                Invalid => bail!(ErrorKind::WirePackDecode("byte stream corrupt".into())),
+                Invalid => Err(ErrorKind::WirePackDecode("byte stream corrupt".into()))?,
             }
         }
     }
@@ -190,12 +190,12 @@ impl UnpackerInner {
         let filename = if filename_len == 0 {
             match self.kind {
                 Kind::Tree => RepoPath::root(),
-                Kind::File => bail!(ErrorKind::WirePackDecode(
-                    "file packs cannot contain zero-length filenames".into()
-                )),
+                Kind::File => Err(ErrorKind::WirePackDecode(
+                    "file packs cannot contain zero-length filenames".into(),
+                ))?,
             }
         } else {
-            let mpath = buf.drain_path(filename_len).chain_err(|| {
+            let mpath = buf.drain_path(filename_len).with_context(|_| {
                 let msg = format!("invalid filename of length {}", filename_len);
                 ErrorKind::WirePackDecode(msg)
             })?;
@@ -203,7 +203,7 @@ impl UnpackerInner {
             match self.kind {
                 Kind::Tree => RepoPath::dir(mpath),
                 Kind::File => RepoPath::file(mpath),
-            }.chain_err(|| ErrorKind::WirePackDecode("invalid filename".into()))?
+            }.with_context(|_| ErrorKind::WirePackDecode("invalid filename".into()))?
         };
 
         trace!(self.logger, "decoding entries for filename: {}", filename);
@@ -249,12 +249,12 @@ impl UnpackerInner {
         let copy_from = if copy_from_len > 0 {
             let path = buf.drain_path(copy_from_len)?;
             match self.kind {
-                Kind::Tree => bail!(ErrorKind::WirePackDecode(format!(
+                Kind::Tree => Err(ErrorKind::WirePackDecode(format!(
                     "tree entry {} is marked as copied from path {}, but they cannot be copied",
                     node,
                     path
-                ))),
-                Kind::File => Some(RepoPath::file(path).chain_err(|| {
+                )))?,
+                Kind::File => Some(RepoPath::file(path).with_context(|_| {
                     ErrorKind::WirePackDecode("invalid copy from path".into())
                 })?),
             }

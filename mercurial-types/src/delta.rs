@@ -43,7 +43,7 @@ impl Delta {
     fn verify(frags: &[Fragment]) -> Result<()> {
         let mut prev_frag: Option<&Fragment> = None;
         for (i, frag) in frags.iter().enumerate() {
-            frag.verify().chain_err(|| {
+            frag.verify().with_context(|_| {
                 ErrorKind::InvalidFragmentList(format!("invalid fragment {}", i))
             })?;
             if let Some(prev) = prev_frag {
@@ -54,7 +54,7 @@ impl Delta {
                         prev.end,
                         frag.start
                     );
-                    bail!(ErrorKind::InvalidFragmentList(msg));
+                    Err(ErrorKind::InvalidFragmentList(msg))?;
                 }
             }
             prev_frag = Some(frag);

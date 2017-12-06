@@ -182,10 +182,10 @@ impl MPath {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
-            bail!(ErrorKind::InvalidPath(
-                p.to_vec(),
-                "paths cannot contain '\\0'".into()
-            ))
+            Err(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "paths cannot contain '\\0'".into(),
+            ))?;
         }
         Ok(())
     }
@@ -684,15 +684,21 @@ mod test {
     #[test]
     fn repo_path_empty() {
         let path = MPath::new("").unwrap();
-        assert_matches!(
-            RepoPath::file(path),
-            Err(Error(ErrorKind::InvalidMPath(_, _), _))
-        );
+        match RepoPath::file(path) {
+            Ok(bad) => panic!("unexpected success {:?}", bad),
+            Err(err) => assert_matches!(
+                err.downcast::<ErrorKind>().unwrap(),
+                ErrorKind::InvalidMPath(_, _)
+            ),
+        };
 
-        assert_matches!(
-            RepoPath::dir(b""),
-            Err(Error(ErrorKind::InvalidMPath(_, _), _))
-        );
+        match RepoPath::dir(b"") {
+            Ok(bad) => panic!("unexpected success {:?}", bad),
+            Err(err) => assert_matches!(
+                err.downcast::<ErrorKind>().unwrap(),
+                ErrorKind::InvalidMPath(_, _)
+            ),
+        };
     }
 
     #[test]

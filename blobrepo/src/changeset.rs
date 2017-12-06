@@ -8,6 +8,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use bincode;
+use failure;
 use futures::future::{Future, IntoFuture};
 
 use blobstore::Blobstore;
@@ -57,29 +58,25 @@ impl BlobChangeset {
         let nodeid = *nodeid;
         let key = cskey(&nodeid);
 
-        blobstore
-            .get(key)
-            .map_err(blobstore_err)
-            .and_then(move |got| match got {
-                None => Ok(None),
-                Some(blob) => {
-                    let RawCSBlob { parents, blob } = bincode::deserialize(blob.as_ref())?;
-                    let (p1, p2) = parents.get_nodes();
-                    let blob = Blob::from(blob.into_owned());
-                    let node = BlobNode::new(blob, p1, p2);
-                    let cs = BlobChangeset {
-                        nodeid: nodeid,
-                        revlogcs: RevlogChangeset::new(node)?,
-                    };
-                    Ok(Some(cs))
-                }
-            })
+        blobstore.get(key).and_then(move |got| match got {
+            None => Ok(None),
+            Some(blob) => {
+                let RawCSBlob { parents, blob } = bincode::deserialize(blob.as_ref())?;
+                let (p1, p2) = parents.get_nodes();
+                let blob = Blob::from(blob.into_owned());
+                let node = BlobNode::new(blob, p1, p2);
+                let cs = BlobChangeset {
+                    nodeid: nodeid,
+                    revlogcs: RevlogChangeset::new(node)?,
+                };
+                Ok(Some(cs))
+            }
+        })
     }
 
     pub fn save<B>(&self, blobstore: B) -> impl Future<Item = (), Error = Error> + Send + 'static
     where
         B: Blobstore + Send + 'static,
-        B::Error: Send + 'static,
         B::PutBlob: Send + 'static,
     {
         let key = cskey(&self.nodeid);
@@ -90,7 +87,7 @@ impl BlobChangeset {
                 let data = node
                     .as_blob()
                     .as_slice()
-                    .ok_or(Error::from("missing changeset blob"))?;
+                    .ok_or(failure::err_msg("missing changeset blob"))?;
                 let blob = RawCSBlob {
                     parents: *self.revlogcs.parents(),
                     blob: Cow::Borrowed(data),
@@ -98,8 +95,7 @@ impl BlobChangeset {
                 bincode::serialize(&blob, bincode::Infinite).map_err(Error::from)
             })
             .into_future()
-            .and_then(move |blob| blobstore.put(key, blob.into())
-                                .map_err(blobstore_err))
+            .and_then(move |blob| blobstore.put(key, blob.into()))
     }
 }
 

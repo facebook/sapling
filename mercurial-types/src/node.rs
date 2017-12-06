@@ -4,8 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::error;
-
+use failure::Error;
 use futures::{Future, Stream};
 
 /// A general source control Node
@@ -19,10 +18,9 @@ use futures::{Future, Stream};
 /// code.
 pub trait Node: Sized {
     type Content;
-    type Error: error::Error;
 
-    type GetParents: Stream<Item = Self, Error = Self::Error>;
-    type GetContent: Future<Item = Self::Content, Error = Self::Error>;
+    type GetParents: Stream<Item = Self, Error = Error>;
+    type GetContent: Future<Item = Self::Content, Error = Error>;
 
     fn get_parents(&self) -> Self::GetParents;
     fn get_content(&self) -> Self::GetContent;

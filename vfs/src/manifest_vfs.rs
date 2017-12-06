@@ -9,8 +9,6 @@ use std::sync::Arc;
 
 use futures::{Future, Stream};
 
-use error_chain::ChainedError;
-
 use mercurial_types::{Entry, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::path::{MPathElement, DOT, DOTDOT};
@@ -26,17 +24,16 @@ const INCONCISTENCY: &str = "Internal inconsitency in Tree detected, a nodeid is
 struct TEntryId(usize);
 
 /// For a given Manifest return a VfsDir representing the root of the file system defined by it
-pub fn vfs_from_manifest<M, E>(
+pub fn vfs_from_manifest<M>(
     manifest: &M,
-) -> impl Future<Item = ManifestVfsDir<E>, Error = Error> + Send + 'static
+) -> impl Future<Item = ManifestVfsDir, Error = Error> + Send + 'static
 where
-    M: Manifest<Error = E>,
-    E: Send + 'static + ::std::error::Error,
+    M: Manifest,
 {
     manifest
         .list()
         .map_err(|err| {
-            ChainedError::with_chain(err, "failed while listing the manifest")
+            err.context("failed while listing the manifest").into()
         })
         .collect()
         .and_then(|entries| {
@@ -56,16 +53,13 @@ where
         })
 }
 
-struct ManifestVfsRoot<E: Send + 'static + ::std::error::Error> {
-    entries: Vec<Box<Entry<Error = E> + Sync>>,
+struct ManifestVfsRoot {
+    entries: Vec<Box<Entry + Sync>>,
     path_tree: Tree<MPathElement, TEntryId>,
 }
 
-impl<E: Send + 'static + ::std::error::Error> ManifestVfsRoot<E> {
-    fn get_node(
-        this: &Arc<Self>,
-        nodeid: TNodeId,
-    ) -> VfsNode<ManifestVfsDir<E>, ManifestVfsFile<E>> {
+impl ManifestVfsRoot {
+    fn get_node(this: &Arc<Self>, nodeid: TNodeId) -> VfsNode<ManifestVfsDir, ManifestVfsFile> {
         match this.path_tree.get_value(nodeid).expect(INCONCISTENCY) {
             &TreeValue::Leaf(_) => VfsNode::File(ManifestVfsFile {
                 root: this.clone(),
@@ -79,7 +73,7 @@ impl<E: Send + 'static + ::std::error::Error> ManifestVfsRoot<E> {
     }
 }
 
-impl<E: Send + 'static + ::std::error::Error> fmt::Debug for ManifestVfsRoot<E> {
+impl fmt::Debug for ManifestVfsRoot {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -92,12 +86,12 @@ impl<E: Send + 'static + ::std::error::Error> fmt::Debug for ManifestVfsRoot<E> 
 
 /// Structure implementing the VfsDir interface that represents a dir within a Manifest Vfs
 #[derive(Debug)]
-pub struct ManifestVfsDir<E: Send + 'static + ::std::error::Error> {
-    root: Arc<ManifestVfsRoot<E>>,
+pub struct ManifestVfsDir {
+    root: Arc<ManifestVfsRoot>,
     nodeid: TNodeId,
 }
 
-impl<E: Send + 'static + ::std::error::Error> Clone for ManifestVfsDir<E> {
+impl Clone for ManifestVfsDir {
     fn clone(&self) -> Self {
         ManifestVfsDir {
             root: self.root.clone(),
@@ -106,8 +100,8 @@ impl<E: Send + 'static + ::std::error::Error> Clone for ManifestVfsDir<E> {
     }
 }
 
-impl<E: Send + 'static + ::std::error::Error> VfsDir for ManifestVfsDir<E> {
-    type TFile = ManifestVfsFile<E>;
+impl VfsDir for ManifestVfsDir {
+    type TFile = ManifestVfsFile;
 
     fn read(&self) -> Vec<&MPathElement> {
         self.root
@@ -137,12 +131,12 @@ impl<E: Send + 'static + ::std::error::Error> VfsDir for ManifestVfsDir<E> {
 
 /// Structure implementing the VfsFile interface that represents a file within a Manifest Vfs
 #[derive(Debug)]
-pub struct ManifestVfsFile<E: Send + 'static + ::std::error::Error> {
-    root: Arc<ManifestVfsRoot<E>>,
+pub struct ManifestVfsFile {
+    root: Arc<ManifestVfsRoot>,
     nodeid: TNodeId,
 }
 
-impl<E: Send + 'static + ::std::error::Error> Clone for ManifestVfsFile<E> {
+impl Clone for ManifestVfsFile {
     fn clone(&self) -> Self {
         ManifestVfsFile {
             root: self.root.clone(),
@@ -151,11 +145,10 @@ impl<E: Send + 'static + ::std::error::Error> Clone for ManifestVfsFile<E> {
     }
 }
 
-impl<E: Send + 'static + ::std::error::Error> VfsFile for ManifestVfsFile<E> {
-    type TDir = ManifestVfsDir<E>;
-    type Error = E;
+impl VfsFile for ManifestVfsFile {
+    type TDir = ManifestVfsDir;
 
-    fn read(&self) -> Box<Future<Item = Content<E>, Error = E> + Send> {
+    fn read(&self) -> Box<Future<Item = Content, Error = Error> + Send> {
         let &TEntryId(entryid) = self.root
             .path_tree
             .get_value(self.nodeid)
@@ -205,7 +198,7 @@ mod test {
 
     #[test]
     fn test_empty_vfs() {
-        let vfs = get_vfs::<Error>(Vec::<&str>::new());
+        let vfs = get_vfs(Vec::<&str>::new());
         assert!(vfs.read().is_empty());
 
         match vfs.step(&pel("a")) {
@@ -214,8 +207,8 @@ mod test {
         }
     }
 
-    fn example_vfs() -> ManifestVfsDir<Error> {
-        get_vfs::<Error>(vec!["a/b", "a/ab", "c/d/e", "c/d/da", "c/ca/afsd", "f"])
+    fn example_vfs() -> ManifestVfsDir {
+        get_vfs(vec!["a/b", "a/ab", "c/d/e", "c/d/da", "c/ca/afsd", "f"])
     }
 
     #[test]

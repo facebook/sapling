@@ -4,15 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use failure::Error;
 use futures::{Async, Poll};
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
 use repoinfo::{Generation, RepoGenCache};
-use std::collections::HashSet;
-use std::sync::Arc;
 
 use NodeStream;
-use errors::*;
 use setcommon::{add_generations, InputStream};
 
 /// A wrapper around a NodeStream that asserts that the two revset invariants hold:
@@ -49,6 +50,7 @@ impl ValidateNodeStream {
 impl Stream for ValidateNodeStream {
     type Item = NodeHash;
     type Error = Error;
+
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         let next = self.wrapped.poll()?;
 

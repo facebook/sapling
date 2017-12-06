@@ -96,9 +96,9 @@ impl ChunkBuilder {
         if let &Section::Filelog(ref f) = section {
             let f_vec = f.to_vec();
             if f_vec.len() == 0 {
-                bail!(ErrorKind::Cg2Encode(
-                    "attempted to encode a zero-length path".into()
-                ));
+                Err(ErrorKind::Cg2Encode(
+                    "attempted to encode a zero-length path".into(),
+                ))?;
             }
             // Note that the filename length must include the four bytes for itself.
             BigEndian::write_i32(&mut self.inner[0..], (f_vec.len() + 4) as i32);
@@ -140,8 +140,12 @@ mod test {
         let mut builder = ChunkBuilder::new();
         let section = Section::Filelog(MPath::new("").unwrap());
         assert_matches!(
-            builder.encode_section(&section),
-            Err(Error(ErrorKind::Cg2Encode(_), _))
+            builder
+                .encode_section(&section)
+                .unwrap_err()
+                .downcast::<ErrorKind>()
+                .unwrap(),
+            ErrorKind::Cg2Encode(_)
         );
     }
 }

@@ -7,19 +7,20 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+extern crate failure;
 extern crate futures;
-
 extern crate futures_ext;
 extern crate heads;
 extern crate mercurial_types;
 
+use std::collections::HashSet;
 use std::sync::Mutex;
 
+use failure::Error;
 use futures::future::ok;
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use std::collections::HashSet;
-use std::error;
+
 
 use heads::Heads;
 use mercurial_types::NodeHash;
@@ -39,21 +40,21 @@ impl MemHeads {
 }
 
 impl Heads for MemHeads {
-    fn add(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+    fn add(&self, head: &NodeHash) -> BoxFuture<(), Error> {
         self.heads.lock().unwrap().insert(head.clone());
         ok(()).boxify()
     }
 
-    fn remove(&self, head: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+    fn remove(&self, head: &NodeHash) -> BoxFuture<(), Error> {
         self.heads.lock().unwrap().remove(head);
         ok(()).boxify()
     }
 
-    fn is_head(&self, head: &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>> {
+    fn is_head(&self, head: &NodeHash) -> BoxFuture<bool, Error> {
         ok(self.heads.lock().unwrap().contains(head)).boxify()
     }
 
-    fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>> {
+    fn heads(&self) -> BoxStream<NodeHash, Error> {
         let guard = self.heads.lock().unwrap();
         let heads = (*guard).clone();
         iter_ok(heads).boxify()

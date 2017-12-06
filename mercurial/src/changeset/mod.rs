@@ -5,12 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::BTreeMap;
-use std::error;
 use std::io::{self, Write};
-use std::result;
 use std::str::{self, FromStr};
 
 use errors::*;
+use failure;
 use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
 use mercurial_types::changeset::{Changeset, Time};
 
@@ -35,15 +34,14 @@ pub struct RevlogChangeset {
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 struct Extra(BTreeMap<Vec<u8>, Vec<u8>>);
 
-fn parseline<'a, I, F, T, E>(lines: &mut I, parse: F) -> Result<T>
+fn parseline<'a, I, F, T>(lines: &mut I, parse: F) -> Result<T>
 where
     I: Iterator<Item = &'a [u8]>,
-    F: Fn(&'a [u8]) -> result::Result<T, E>,
-    E: Into<Error> + error::Error + Send + 'static,
+    F: Fn(&'a [u8]) -> Result<T>,
 {
     match lines.next() {
         Some(s) => parse(s).map_err(Into::into),
-        None => bail!("premature end"),
+        None => Err(failure::err_msg("premature end"))?,
     }
 }
 
@@ -154,14 +152,14 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
     let parts: Vec<_> = s.splitn(3, |c| *c == b' ').collect();
 
     if parts.len() < 2 {
-        bail!("not enough parts");
+        Err(failure::err_msg("not enough parts"))?;
     }
     let time: u64 = str::from_utf8(parts[0])?
-        .parse()
-        .chain_err(|| "can't parse time")?;
+        .parse::<u64>()
+        .context("can't parse time")?;
     let tz: i32 = str::from_utf8(parts[1])?
-        .parse()
-        .chain_err(|| "can't parse tz")?;
+        .parse::<i32>()
+        .context("can't parse tz")?;
 
     let extras = Extra::from_slice(try_get(parts.as_ref(), 2))?;
 
@@ -204,15 +202,17 @@ impl RevlogChangeset {
         };
 
         {
-            let data = node.as_blob().as_slice().ok_or("node has no data")?;
+            let data = node.as_blob()
+                .as_slice()
+                .ok_or(failure::err_msg("node has no data"))?;
             let mut lines = data.split(|b| *b == b'\n');
 
             ret.manifestid = parseline(&mut lines, |l| NodeHash::from_str(str::from_utf8(l)?))
-                .chain_err(|| "can't get hash")?;
-            ret.user = parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec()))
-                .chain_err(|| "can't get user")?;
+                .context("can't get hash")?;
+            ret.user =
+                parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec())).context("can't get user")?;
             let (time, extra) =
-                parseline(&mut lines, parsetimeextra).chain_err(|| "can't get time/extra")?;
+                parseline(&mut lines, parsetimeextra).context("can't get time/extra")?;
 
             ret.time = time;
             ret.extra = extra;
@@ -233,7 +233,7 @@ impl RevlogChangeset {
                         dofiles = false;
                         continue;
                     }
-                    files.push(MPath::new(line).chain_err(|| "invalid path in changelog")?)
+                    files.push(MPath::new(line).context("invalid path in changelog")?)
                 } else {
                     comments.push(line);
                 }

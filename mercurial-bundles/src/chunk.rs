@@ -40,11 +40,11 @@ impl Chunk {
     pub fn new<T: Into<Bytes>>(val: T) -> Result<Self> {
         let bytes: Bytes = val.into();
         if bytes.len() > i32::max_value() as usize {
-            bail!(ErrorKind::Bundle2Chunk(format!(
+            Err(ErrorKind::Bundle2Chunk(format!(
                 "chunk of length {} exceeds maximum {}",
                 bytes.len(),
                 i32::max_value()
-            )));
+            )))?;
         }
         Ok(Chunk(ChunkInner::Normal(bytes)))
     }
@@ -133,9 +133,9 @@ impl Decoder for ChunkDecoder {
             return Ok(Some(Chunk::error()));
         }
         if len < 0 {
-            bail!(ErrorKind::Bundle2Chunk(
-                format!("chunk length must be >= -1, found {}", len)
-            ));
+            Err(ErrorKind::Bundle2Chunk(
+                format!("chunk length must be >= -1, found {}", len),
+            ))?;
         }
 
         let len = len as usize;
@@ -197,7 +197,10 @@ mod test {
         let chunk_err = decoder.decode(&mut buf);
 
         let err = chunk_err.unwrap_err();
-        assert_matches!(err.kind(), &ErrorKind::Bundle2Chunk(_));
+        assert_matches!(
+            err.downcast::<ErrorKind>().unwrap(),
+            ErrorKind::Bundle2Chunk(_)
+        );
     }
 
     #[test]

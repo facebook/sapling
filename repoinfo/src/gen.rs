@@ -14,6 +14,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::usize;
 
+use failure::Error;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
@@ -66,7 +67,7 @@ where
         &self,
         repo: &Arc<R>,
         nodeid: NodeHash,
-    ) -> impl Future<Item = Generation, Error = R::Error> + Send {
+    ) -> impl Future<Item = Generation, Error = Error> + Send {
         self.cache.get((repo, nodeid))
     }
 }
@@ -88,7 +89,7 @@ where
     R: Repo,
 {
     type Key = Key<R>;
-    type Value = Box<Future<Item = Generation, Error = R::Error> + Send>;
+    type Value = Box<Future<Item = Generation, Error = Error> + Send>;
 
     fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {
         let parents = repo
@@ -105,9 +106,9 @@ where
                 move |p| cache.get((&repo, p))
             }) // Stream<Future<Generation>>
             .buffer_unordered(2) // (up to 2 parents) Stream<Generation>
-            .fold(Generation(0), |g, s| future::ok(cmp::max(g, s)))
+            .fold(Generation(0), |g, s| future::ok::<_, Error>(cmp::max(g, s)))
             .map(|Generation(g)| Generation(g + 1)); // Future<Generation>
 
-        Box::new(gen) as Box<Future<Item = Generation, Error = R::Error> + Send + 'static>
+        Box::new(gen) as Box<Future<Item = Generation, Error = Error> + Send + 'static>
     }
 }

@@ -13,6 +13,7 @@
 #![feature(conservative_impl_trait)]
 
 extern crate asyncmemo;
+extern crate failure;
 extern crate futures;
 extern crate heapsize;
 #[macro_use]

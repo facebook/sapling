@@ -4,10 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::error;
 use std::fmt::{self, Display};
-use std::marker::PhantomData;
 
+use failure::Error;
 use futures::future::Future;
 use futures::stream::Stream;
 
@@ -19,15 +18,10 @@ use path::{MPath, RepoPath};
 
 /// Interface for a manifest
 pub trait Manifest: Send + 'static {
-    type Error: error::Error + Send + 'static;
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error>;
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error>;
 
-    fn lookup(
-        &self,
-        path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error>;
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error>;
-
-    fn boxed(self) -> Box<Manifest<Error = Self::Error> + Sync>
+    fn boxed(self) -> Box<Manifest + Sync>
     where
         Self: Sync + Sized,
     {
@@ -35,93 +29,46 @@ pub trait Manifest: Send + 'static {
     }
 }
 
-pub struct BoxManifest<M, E>
+pub struct BoxManifest<M>
 where
     M: Manifest,
 {
     manifest: M,
-    cvterr: fn(M::Error) -> E,
-    _phantom: PhantomData<E>,
 }
 
-// The box can be Sync iff R is Sync, E doesn't matter as its phantom
-unsafe impl<M, E> Sync for BoxManifest<M, E>
-where
-    M: Manifest + Sync,
-{
-}
-
-impl<M, E> BoxManifest<M, E>
+impl<M> BoxManifest<M>
 where
     M: Manifest + Sync + Send + 'static,
-    E: error::Error + Send + 'static,
 {
-    pub fn new(manifest: M) -> Box<Manifest<Error = E> + Sync>
-    where
-        E: From<M::Error>,
-    {
-        Self::new_with_cvterr(manifest, E::from)
-    }
-
-    pub fn new_with_cvterr(
-        manifest: M,
-        cvterr: fn(M::Error) -> E,
-    ) -> Box<Manifest<Error = E> + Sync> {
-        let bm = BoxManifest {
-            manifest,
-            cvterr,
-            _phantom: PhantomData,
-        };
+    pub fn new(manifest: M) -> Box<Manifest + Sync> {
+        let bm = BoxManifest { manifest };
 
         Box::new(bm)
     }
 }
 
-impl<M, E> Manifest for BoxManifest<M, E>
+impl<M> Manifest for BoxManifest<M>
 where
     M: Manifest + Sync + Send + 'static,
-    E: error::Error + Send + 'static,
 {
-    type Error = E;
-
-    fn lookup(
-        &self,
-        path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
-        let cvterr = self.cvterr;
-
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         self.manifest
             .lookup(path)
-            .map(move |oe| oe.map(|e| BoxEntry::new_with_cvterr(e, cvterr)))
-            .map_err(cvterr)
+            .map(move |oe| oe.map(|e| BoxEntry::new(e)))
             .boxify()
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
-        let cvterr = self.cvterr;
-
-        self.manifest
-            .list()
-            .map(move |e| BoxEntry::new_with_cvterr(e, cvterr))
-            .map_err(cvterr)
-            .boxify()
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
+        self.manifest.list().map(move |e| BoxEntry::new(e)).boxify()
     }
 }
 
-impl<E> Manifest for Box<Manifest<Error = E> + Sync>
-where
-    E: error::Error + Send + 'static,
-{
-    type Error = E;
-
-    fn lookup(
-        &self,
-        path: &MPath,
-    ) -> BoxFuture<Option<Box<Entry<Error = Self::Error> + Sync>>, Self::Error> {
+impl Manifest for Box<Manifest + Sync> {
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         (**self).lookup(path)
     }
 
-    fn list(&self) -> BoxStream<Box<Entry<Error = Self::Error> + Sync>, Self::Error> {
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
         (**self).list()
     }
 }
@@ -134,43 +81,24 @@ pub enum Type {
     Executable,
 }
 
-pub enum Content<E> {
+pub enum Content {
     File(Blob<Vec<u8>>),       // TODO stream
     Executable(Blob<Vec<u8>>), // TODO stream
     Symlink(MPath),
-    Tree(Box<Manifest<Error = E> + Sync>),
-}
-
-impl<E> Content<E>
-where
-    E: error::Error + Send + 'static,
-{
-    fn map_err<ME>(self, cvterr: fn(E) -> ME) -> Content<ME>
-    where
-        ME: error::Error + Send + 'static,
-    {
-        match self {
-            Content::Tree(m) => Content::Tree(BoxManifest::new_with_cvterr(m, cvterr)),
-            Content::File(b) => Content::File(b),
-            Content::Executable(b) => Content::Executable(b),
-            Content::Symlink(p) => Content::Symlink(p),
-        }
-    }
+    Tree(Box<Manifest + Sync>),
 }
 
 pub trait Entry: Send + 'static {
-    type Error: error::Error + Send + 'static;
-
     fn get_type(&self) -> Type;
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error>;
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error>;
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error>;
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error>;
+    fn get_parents(&self) -> BoxFuture<Parents, Error>;
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error>;
+    fn get_content(&self) -> BoxFuture<Content, Error>;
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
     fn get_hash(&self) -> &NodeHash;
     fn get_path(&self) -> &RepoPath;
     fn get_mpath(&self) -> &MPath;
 
-    fn boxed(self) -> Box<Entry<Error = Self::Error> + Sync>
+    fn boxed(self) -> Box<Entry + Sync>
     where
         Self: Sync + Sized,
     {
@@ -178,76 +106,44 @@ pub trait Entry: Send + 'static {
     }
 }
 
-
-pub struct BoxEntry<Ent, E>
+pub struct BoxEntry<Ent>
 where
     Ent: Entry,
 {
     entry: Ent,
-    cvterr: fn(Ent::Error) -> E,
-    _phantom: PhantomData<E>,
 }
 
-unsafe impl<Ent, E> Sync for BoxEntry<Ent, E>
-where
-    Ent: Entry + Sync,
-{
-}
-
-impl<Ent, E> BoxEntry<Ent, E>
+impl<Ent> BoxEntry<Ent>
 where
     Ent: Entry + Sync + Send + 'static,
-    E: error::Error + Send + 'static,
 {
-    pub fn new(entry: Ent) -> Box<Entry<Error = E> + Sync>
-    where
-        E: From<Ent::Error>,
-    {
-        Self::new_with_cvterr(entry, E::from)
-    }
-
-    pub fn new_with_cvterr(
-        entry: Ent,
-        cvterr: fn(Ent::Error) -> E,
-    ) -> Box<Entry<Error = E> + Sync> {
-        Box::new(BoxEntry {
-            entry,
-            cvterr,
-            _phantom: PhantomData,
-        })
+    pub fn new(entry: Ent) -> Box<Entry + Sync> {
+        Box::new(BoxEntry { entry })
     }
 }
 
-impl<Ent, E> Entry for BoxEntry<Ent, E>
+impl<Ent> Entry for BoxEntry<Ent>
 where
     Ent: Entry + Sync + Send + 'static,
-    E: error::Error + Send + 'static,
 {
-    type Error = E;
-
     fn get_type(&self) -> Type {
         self.entry.get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
-        self.entry.get_parents().map_err(self.cvterr).boxify()
+    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+        self.entry.get_parents().boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
-        self.entry.get_raw_content().map_err(self.cvterr).boxify()
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+        self.entry.get_raw_content().boxify()
     }
 
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
-        let cvterr = self.cvterr;
-        self.entry
-            .get_content()
-            .map(move |c| Content::map_err(c, cvterr))
-            .map_err(self.cvterr)
-            .boxify()
+    fn get_content(&self) -> BoxFuture<Content, Error> {
+        self.entry.get_content().boxify()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
-        self.entry.get_size().map_err(self.cvterr).boxify()
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
+        self.entry.get_size().boxify()
     }
 
     fn get_hash(&self) -> &NodeHash {
@@ -263,29 +159,24 @@ where
     }
 }
 
-impl<E> Entry for Box<Entry<Error = E> + Sync>
-where
-    E: error::Error + Send + 'static,
-{
-    type Error = E;
-
+impl Entry for Box<Entry + Sync> {
     fn get_type(&self) -> Type {
         (**self).get_type()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
+    fn get_parents(&self) -> BoxFuture<Parents, Error> {
         (**self).get_parents()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
         (**self).get_raw_content()
     }
 
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
+    fn get_content(&self) -> BoxFuture<Content, Error> {
         (**self).get_content()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         (**self).get_size()
     }
 

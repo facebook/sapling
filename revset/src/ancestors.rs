@@ -43,12 +43,12 @@ fn make_pending<R: Repo>(
     let new_repo = repo.clone();
 
     Box::new(
-        iter_ok(hashes)
+        iter_ok::<_, Error>(hashes)
             .map(move |hash| {
                 new_repo
                     .get_changeset_by_nodeid(&hash)
                     .map(|cs| cs.parents().clone())
-                    .map_err(|err| Error::with_chain(err, ErrorKind::ParentsFetchFailed))
+                    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             })
             .buffered(size)
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
@@ -57,9 +57,7 @@ fn make_pending<R: Repo>(
                 repo_generation
                     .get(&repo, node_hash)
                     .map(move |gen_id| (node_hash, gen_id))
-                    .map_err(|err| {
-                        Error::with_chain(err, ErrorKind::GenerationFetchFailed)
-                    })
+                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }

@@ -14,8 +14,6 @@ use std::str::from_utf8;
 
 use futures::{future, Future, IntoFuture};
 
-use error_chain::ChainedError;
-
 use mercurial_types::{MPath, Manifest, NodeHash, Repo};
 use mercurial_types::manifest::Content;
 use mercurial_types::path::MPathElement;
@@ -61,30 +59,26 @@ pub struct RepoConfigs {
 
 impl RepoConfigs {
     /// Read the config repo and generate RepoConfigs based on it
-    pub fn read_config_repo<E>(
-        repo: Box<Repo<Error = E> + Send>,
+    pub fn read_config_repo(
+        repo: Box<Repo + Send>,
         changeset_hash: NodeHash,
-    ) -> Box<Future<Item = Self, Error = Error> + Send>
-    where
-        E: Send + 'static + ::std::error::Error,
-    {
+    ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
             repo.get_changeset_by_nodeid(&changeset_hash)
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(changeset.manifestid())
                 })
                 .map_err(|err| {
-                    ChainedError::with_chain(err, "failed to get manifest from changeset")
+                    err.context("failed to get manifest from changeset").into()
                 })
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
     }
 
     /// Read the given manifest of metaconfig repo and yield the RepoConfigs for it
-    fn read_manifest<M, E>(manifest: &M) -> Box<Future<Item = Self, Error = Error> + Send>
+    fn read_manifest<M>(manifest: &M) -> Box<Future<Item = Self, Error = Error> + Send>
     where
-        M: Manifest<Error = E>,
-        E: Send + 'static + ::std::error::Error,
+        M: Manifest,
     {
         Box::new(
             vfs_from_manifest(manifest)
@@ -114,13 +108,10 @@ impl RepoConfigs {
         )
     }
 
-    fn read_repo<E>(
-        dir: VfsNode<ManifestVfsDir<E>, ManifestVfsFile<E>>,
+    fn read_repo(
+        dir: VfsNode<ManifestVfsDir, ManifestVfsFile>,
         path: MPathElement,
-    ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send>
-    where
-        E: Send + 'static + ::std::error::Error,
-    {
+    ) -> Box<Future<Item = (String, RepoConfig), Error = Error> + Send> {
         Box::new(
             from_utf8(path.as_bytes())
                 .map(ToOwned::to_owned)
@@ -140,10 +131,7 @@ impl RepoConfigs {
                             })
                             .and_then(|file| {
                                 file.read().map_err(|err| {
-                                    ChainedError::with_chain(
-                                        err,
-                                        "failed to read content of the file",
-                                    )
+                                    err.context("failed to read content of the file").into()
                                 })
                             })
                             .and_then(|content| match content {
@@ -158,15 +146,14 @@ impl RepoConfigs {
                                 ))?;
                                 Ok((
                                     reponame,
-                                    toml::from_slice::<RawRepoConfig>(bytes)
-                                        .map_err(ErrorKind::De)?
-                                        .try_into()?,
+                                    toml::from_slice::<RawRepoConfig>(bytes)?.try_into()?,
                                 ))
                             })
                     }
                 })
                 .map_err(move |err: Error| {
-                    err.chain_err(|| format!("failed while parsing file: {:?}", path))
+                    err.context(format_err!("failed while parsing file: {:?}", path))
+                        .into()
                 }),
         )
     }
@@ -228,7 +215,7 @@ mod test {
             repotype="revlog"
         "#;
 
-        let repoconfig = RepoConfigs::read_manifest(&MockManifest::<Error>::with_content(vec![
+        let repoconfig = RepoConfigs::read_manifest(&MockManifest::with_content(vec![
             ("my_path/my_files", Arc::new(|| unimplemented!())),
             ("repos/fbsource", make_file(fbsource_content)),
             ("repos/www", make_file(www_content)),

@@ -11,14 +11,13 @@ extern crate bincode;
 extern crate bytes;
 extern crate clap;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate slog;
-#[macro_use]
 extern crate slog_glog_fmt;
 extern crate slog_term;
 extern crate tokio_core;
@@ -43,7 +42,6 @@ extern crate services;
 extern crate stats;
 
 mod convert;
-mod errors;
 mod manifest;
 
 use std::path::{Path, PathBuf};
@@ -53,6 +51,7 @@ use std::thread;
 
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches};
+use failure::{Error, Result, ResultExt, SlogKVError};
 use futures::{stream, Future, IntoFuture, Stream};
 use futures_cpupool::CpuPool;
 use slog::{Drain, Level, Logger};
@@ -69,8 +68,6 @@ use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::RevlogRepo;
 use rocksblob::Rocksblob;
-
-use errors::*;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
 
@@ -91,12 +88,7 @@ enum BlobstoreType {
 }
 
 type BBlobstore = Arc<
-    Blobstore<
-        Error = Error,
-        GetBlob = BoxFuture<Option<Bytes>, Error>,
-        PutBlob = BoxFuture<(), Error>,
-    >
-        + Sync,
+    Blobstore<GetBlob = BoxFuture<Option<Bytes>, Error>, PutBlob = BoxFuture<(), Error>> + Sync,
 >;
 
 fn _assert_clone<T: Clone>(_: &T) {}
@@ -170,7 +162,7 @@ where
                             }
                         }
                     })
-                    .map_err(|_| Error::from("error happened"))
+                    .map_err(|_| failure::err_msg("failure happened").into())
                     .buffer_unordered(channel_size)
                     .then(move |res| {
                         if res.is_err() {
@@ -260,7 +252,7 @@ fn open_blobstore<P: Into<PathBuf>>(
             output.push("blobs");
             Fileblob::create(output)
                 .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open file blob store".into())?
+                .context("Failed to open file blob store")?
                 .arced()
         }
         BlobstoreType::Rocksdb => {
@@ -272,7 +264,7 @@ fn open_blobstore<P: Into<PathBuf>>(
                 .disable_auto_compaction(postpone_compaction);
             Rocksblob::open_with_options(output, options)
                 .map_err(Error::from)
-                .chain_err::<_, Error>(|| "Failed to open rocksdb blob store".into())?
+                .context("Failed to open rocksdb blob store")?
                 .arced()
         }
         BlobstoreType::Manifold(bucket) => {
@@ -305,7 +297,6 @@ struct LimitedBlobstore {
 }
 
 impl Blobstore for LimitedBlobstore {
-    type Error = Error;
     type GetBlob = BoxFuture<Option<Bytes>, Error>;
     type PutBlob = BoxFuture<(), Error>;
 
@@ -468,7 +459,7 @@ fn main() {
     }
 
     if let Err(e) = run(&root_log, matches) {
-        error!(root_log, "Blobimport failed"; e);
+        error!(root_log, "Blobimport failed"; SlogKVError(e));
         std::process::exit(1);
     }
 }

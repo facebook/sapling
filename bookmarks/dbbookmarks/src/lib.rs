@@ -10,8 +10,7 @@
 extern crate bookmarks;
 
 extern crate ascii;
-#[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate mysql;
 #[macro_use]
@@ -28,6 +27,7 @@ use std::convert::TryFrom;
 use std::rc::Rc;
 
 use ascii::AsciiStr;
+use failure::{Error, SyncFailure};
 use futures::{future, stream, Future, Stream};
 use mysql_async::{Opts, Pool, Row, TransactionOptions};
 use mysql_async::prelude::*;
@@ -39,23 +39,6 @@ use futures_ext::{BoxFuture, BoxFutureNonSend, BoxStream, FutureExt, StreamExt};
 use mercurial_types::NodeHash;
 use sendwrapper::SendWrapper;
 use storage_types::Version;
-
-mod errors {
-    error_chain! {
-        links {
-            Db(::db::Error, ::db::ErrorKind);
-            Hg(::mercurial_types::Error, ::mercurial_types::ErrorKind);
-            Bookmarks(::bookmarks::Error, ::bookmarks::ErrorKind);
-        }
-
-        foreign_links {
-            Ascii(::ascii::AsAsciiStrError);
-            MySql(::mysql_async::errors::Error);
-            SendWrapper(::sendwrapper::SendWrapperError);
-        }
-    }
-}
-pub use errors::*;
 
 pub struct DbBookmarks {
     wrapper: SendWrapper<Pool>,
@@ -73,29 +56,19 @@ impl DbBookmarks {
 }
 
 impl Bookmarks for DbBookmarks {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
         let key = key.as_ref().to_vec();
         self.wrapper
             .with_inner(move |pool| get_bookmark(pool, key))
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("DbBookmarks get failed").into())
             .boxify()
     }
 
-    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
+    fn keys(&self) -> BoxStream<Vec<u8>, Error> {
         self.wrapper
             .with_inner(move |pool| list_keys(pool))
             .flatten_stream()
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("DbBookmarks keys failed").into())
             .boxify()
     }
 }
@@ -106,36 +79,22 @@ impl BookmarksMut for DbBookmarks {
         key: &AsRef<[u8]>,
         value: &NodeHash,
         version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    ) -> BoxFuture<Option<Version>, Error> {
         let key = key.as_ref().to_vec();
         let value = value.clone();
         let version = version.clone();
         self.wrapper
             .with_inner(move |pool| set_bookmark(pool, key, value, version))
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("DbBookmarks set failed").into())
             .boxify()
     }
 
-    fn delete(
-        &self,
-        key: &AsRef<[u8]>,
-        version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> BoxFuture<Option<Version>, Error> {
         let key = key.as_ref().to_vec();
         let version = version.clone();
         self.wrapper
             .with_inner(move |pool| delete_bookmark(pool, key, version))
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("DbBookmarks delete failed").into())
             .boxify()
     }
 }
@@ -147,7 +106,7 @@ fn list_keys(pool: Rc<Pool>) -> BoxFutureNonSend<BoxStream<Vec<u8>, Error>, Erro
         .map(|(_, rows)| {
             stream::iter_ok(rows.into_iter().map(|row| row.0)).boxify()
         })
-        .from_err()
+        .map_err(|e| SyncFailure::new(e).into())
         .boxify_nonsend()
 }
 
@@ -163,7 +122,7 @@ fn get_bookmark(
             )
         })
         .and_then(|res| res.collect::<(String, u64)>())
-        .from_err()
+        .map_err(|e| SyncFailure::new(e).into())
         .and_then(|(_, mut rows)| if let Some((value, version)) = rows.pop() {
             let value = AsciiStr::from_ascii(&value)?;
             let value = NodeHash::from_ascii_str(&value)?;
@@ -193,7 +152,7 @@ fn set_bookmark(
         // At this point, change the `Error` type of this combinator chain to this crate's
         // `Error` type so we can return custom errors. This means all subsequent `Future`s
         // from `mysql_async` will need `.from_err()` to convert to our `Error` type.
-        .from_err()
+        .map_err(|e| SyncFailure::new(e).into())
         .and_then(move |(txn, mut rows)| {
             // Get the current and new versions for this bookmark. If the bookmark is not present,
             // default to a current version of Version::absent() and a new version of 0.
@@ -213,7 +172,7 @@ fn set_bookmark(
                 ).and_then(|res| res.drop_result())
                     // Commit the transaction, and return the new version.
                     .and_then(|txn| txn.commit())
-                    .from_err()
+                    .map_err(|e| SyncFailure::new(e).into())
                     .map(move |_| Some(new_version))
                     .boxify_nonsend()
             } else {
@@ -257,7 +216,7 @@ fn delete_bookmark(
                     .boxify_nonsend()
             }
         })
-        .from_err()
+        .map_err(|e| SyncFailure::new(e).into())
         .boxify_nonsend()
 }
 

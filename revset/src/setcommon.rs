@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use error_chain::ChainedError;
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
@@ -31,9 +30,8 @@ where
         repo_generation
             .get(&repo, node_hash)
             .map(move |gen_id| (node_hash, gen_id))
-            .map_err(|err| {
-                ChainedError::with_chain(err, ErrorKind::GenerationFetchFailed)
-            })
+            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+            .from_err()
     });
     Box::new(stream)
 }
@@ -91,6 +89,7 @@ impl Stream for RepoErrorStream {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        Err(Error::from_kind(ErrorKind::RepoError(self.hash)))
+        Err(ErrorKind::RepoError(self.hash))?;
+        unreachable!()
     }
 }

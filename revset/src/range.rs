@@ -57,7 +57,7 @@ fn make_pending<R: Repo>(
             let repo = repo.clone();
             repo.get_changeset_by_nodeid(&child.hash)
                 .map(move |cs| (child, cs.parents().clone()))
-                .map_err(|err| Error::with_chain(err, ErrorKind::ParentsFetchFailed))
+                .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
         }.map(|(child, parents)| {
             iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter()))
         })
@@ -74,9 +74,7 @@ fn make_pending<R: Repo>(
                             },
                         }
                     })
-                    .map_err(|err| {
-                        Error::with_chain(err, ErrorKind::GenerationFetchFailed)
-                    })
+                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }
@@ -94,9 +92,7 @@ where
         let start_generation = Box::new(
             repo_generation
                 .get(repo, start_node)
-                .map_err(|err| {
-                    Error::with_chain(err, ErrorKind::GenerationFetchFailed)
-                })
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
                 .map(stream::repeat)
                 .flatten_stream(),
         );
@@ -107,9 +103,7 @@ where
             Box::new(
                 repo_generation
                     .get(&repo, end_node)
-                    .map_err(|err| {
-                        Error::with_chain(err, ErrorKind::GenerationFetchFailed)
-                    })
+                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
                     .map(move |generation| {
                         make_pending(
                             repo,

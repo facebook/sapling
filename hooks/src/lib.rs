@@ -9,7 +9,7 @@
 
 extern crate ascii;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate hlua;
 #[cfg_attr(test, macro_use)]
@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use ascii::IntoAsciiString;
+use failure::ResultExt;
 use futures::Future;
 use hlua::{AnyLuaValue, Lua, LuaError, PushGuard};
 
@@ -68,7 +69,7 @@ impl<'hook, R: Repo> HookContext<'hook, R> {
                 ErrorKind::InvalidHash(name.clone(), hash.into_source())
             })?;
             let hash = NodeHash::from_ascii_str(&hash)
-                .chain_err(|| ErrorKind::InvalidHash(name.clone(), hash.into()))?;
+                .with_context(|_| ErrorKind::InvalidHash(name.clone(), hash.into()))?;
 
             let future = repo.get_changeset_by_nodeid(&hash)
                 .map_err(|err| {
@@ -85,9 +86,9 @@ impl<'hook, R: Repo> HookContext<'hook, R> {
 
         let builder: LuaCoroutineBuilder<_> = match lua.get("hook") {
             Some(val) => val,
-            None => bail!(ErrorKind::HookDefinitionError(
-                "function 'hook' not found".into()
-            )),
+            None => Err(ErrorKind::HookDefinitionError(
+                "function 'hook' not found".into(),
+            ))?,
         };
         // TODO: do we really need the clone?
         // TODO: use chain_err once LuaFunctionCallError implements std::error::Error
@@ -139,7 +140,10 @@ mod test {
             "new_hash" => hash,
         };
         let mut hook_manager = HookManager::new();
-        let repo = mercurial::RevlogRepo::open(dot_hg).unwrap();
+        let repo = match mercurial::RevlogRepo::open(&dot_hg) {
+            Ok(repo) => repo,
+            Err(err) => panic!("RevlogRepo::open({}) failed {:?}", dot_hg.display(), err),
+        };
         let hook = HookContext {
             name: "test",
             repo: Arc::new(repo),

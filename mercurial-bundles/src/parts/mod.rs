@@ -13,8 +13,7 @@ use part_encode::PartEncodeBuilder;
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
     N: Into<Bytes>,
-    S: Stream<Item = (K, V)> + Send + 'static,
-    S::Error: ::std::error::Error + Send,
+    S: Stream<Item = (K, V), Error = Error> + Send + 'static,
     K: AsRef<[u8]>,
     V: AsRef<[u8]>,
 {
@@ -28,9 +27,9 @@ where
             payload.push(b'\t');
             payload.extend_from_slice(value.as_ref());
             payload.push(b'\n');
-            Ok(payload)
+            Ok::<_, Error>(payload)
         })
-        .or_else(|err| Err(err).chain_err(|| ErrorKind::ListkeyGeneration));
+        .map_err(|err| Error::from(err.context(ErrorKind::ListkeyGeneration)));
 
     builder.set_data_future(fut);
 

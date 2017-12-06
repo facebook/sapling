@@ -49,30 +49,28 @@ impl<State> Repo for BlobRepo<State>
 where
     State: BlobState,
 {
-    type Error = Error;
-
-    fn get_changesets(&self) -> BoxStream<NodeHash, Self::Error> {
+    fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
         BlobChangesetStream {
             repo: BlobRepo {
                 inner: self.inner.clone(),
             },
-            heads: self.inner.heads().heads().map_err(heads_err).boxify(),
+            heads: self.inner.heads().heads().boxify(),
             state: BCState::Idle,
             seen: HashSet::new(),
         }.boxify()
     }
 
-    fn get_heads(&self) -> BoxStream<NodeHash, Self::Error> {
-        self.inner.heads().heads().map_err(heads_err).boxify()
+    fn get_heads(&self) -> BoxStream<NodeHash, Error> {
+        self.inner.heads().heads().boxify()
     }
 
-    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Self::Error> {
+    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
         BlobChangeset::load(self.inner.blobstore(), nodeid)
             .map(|cs| cs.is_some())
             .boxify()
     }
 
-    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Self::Error> {
+    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
         let nodeid = *nodeid;
         BlobChangeset::load(self.inner.blobstore(), &nodeid)
             .and_then(move |cs| {
@@ -82,10 +80,7 @@ where
             .boxify()
     }
 
-    fn get_manifest_by_nodeid(
-        &self,
-        nodeid: &NodeHash,
-    ) -> BoxFuture<Box<Manifest<Error = Self::Error> + Sync>, Self::Error> {
+    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
         BlobManifest::load(self.inner.blobstore(), &nodeid)
             .and_then(move |mf| {
@@ -95,23 +90,15 @@ where
             .boxify()
     }
 
-    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Self::Error> {
-        self.inner
-            .bookmarks()
-            .keys()
-            .map_err(|e| bookmarks_err(e))
-            .boxify()
+    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
+        self.inner.bookmarks().keys().boxify()
     }
 
     fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(NodeHash, Version)>, Self::Error> {
-        self.inner
-            .bookmarks()
-            .get(key)
-            .map_err(|e| bookmarks_err(e))
-            .boxify()
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+        self.inner.bookmarks().get(key).boxify()
     }
 }
 
@@ -145,7 +132,7 @@ where
     type Item = NodeHash;
     type Error = Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
         use self::BCState::*;
 
         loop {

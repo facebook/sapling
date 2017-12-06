@@ -23,7 +23,7 @@ use futures::Future;
 use tempdir::TempDir;
 
 use filelinknodes::FileLinknodes;
-use linknodes::{ErrorKind, Linknodes};
+use linknodes::{ErrorKind, Linknodes, OptionNodeHash};
 use memlinknodes::MemLinknodes;
 use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::*;
@@ -45,8 +45,13 @@ fn add_and_get<L: Linknodes>(linknodes: L) {
             .add(path.clone(), &NULL_HASH, &THREES_HASH)
             .wait()
             .unwrap_err()
-            .kind(),
-        &ErrorKind::AlreadyExists(ref p, ref h, ref old, ref new)
+            .downcast::<ErrorKind>().unwrap(),
+        ErrorKind::AlreadyExists {
+            path: ref p,
+            node: ref h,
+            old_linknode: OptionNodeHash(ref old),
+            new_linknode: ref new
+        }
         if p == &path && *h == NULL_HASH && old.unwrap_or(ONES_HASH) == ONES_HASH &&
         *new == THREES_HASH
     );
@@ -65,8 +70,8 @@ fn not_found<L: Linknodes>(linknodes: L) {
             .get(path.clone(), &NULL_HASH)
             .wait()
             .unwrap_err()
-            .kind(),
-        &ErrorKind::NotFound(ref p, ref h) if p == &path && *h == NULL_HASH
+            .downcast::<ErrorKind>().unwrap(),
+        ErrorKind::NotFound(ref p, ref h) if p == &path && *h == NULL_HASH
     );
 }
 

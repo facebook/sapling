@@ -6,15 +6,12 @@
 
 #![deny(warnings)]
 
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate futures;
 
 extern crate futures_ext;
 extern crate mercurial_types;
 extern crate storage_types;
-
-pub mod errors;
 
 use std::sync::Arc;
 
@@ -23,7 +20,7 @@ use futures_ext::{BoxFuture, BoxStream};
 use mercurial_types::NodeHash;
 use storage_types::Version;
 
-pub use errors::{Error, ErrorKind};
+use failure::Error;
 
 /// Trait representing read-only operations on a bookmark store, which maintains a global mapping
 /// of names to commit identifiers. Consistency is maintained using versioning.

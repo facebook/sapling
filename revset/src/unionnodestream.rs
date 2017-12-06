@@ -4,11 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::Async;
-use futures::Poll;
-use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
-use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashSet;
 use std::collections::hash_set::IntoIter;
@@ -16,8 +11,14 @@ use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 
+use failure::Error;
+use futures::Async;
+use futures::Poll;
+use futures::stream::Stream;
+use mercurial_types::{NodeHash, Repo};
+use repoinfo::{Generation, RepoGenCache};
+
 use NodeStream;
-use errors::*;
 use setcommon::*;
 
 pub struct UnionNodeStream {
@@ -96,6 +97,7 @@ impl UnionNodeStream {
 impl Stream for UnionNodeStream {
     type Item = NodeHash;
     type Error = Error;
+
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and
         // the standard futures::executor expects you to only return NotReady if blocked on I/O.
@@ -154,6 +156,7 @@ mod test {
     use branch_even;
     use branch_uneven;
     use branch_wide;
+    use errors::ErrorKind;
     use futures::executor::spawn;
     use linear;
     use repoinfo::RepoGenCache;
@@ -191,14 +194,15 @@ mod test {
         let mut nodestream =
             spawn(UnionNodeStream::new(&repo, repo_generation.clone(), inputs.into_iter()).boxed());
 
-        assert!(
-            if let Some(Err(Error(ErrorKind::RepoError(hash), _))) = nodestream.wait_stream() {
-                hash == nodehash
-            } else {
-                false
+        match nodestream.wait_stream() {
+            Some(Err(err)) => match err.downcast::<ErrorKind>() {
+                Ok(ErrorKind::RepoError(hash)) => assert_eq!(hash, nodehash),
+                Ok(bad) => panic!("unexpected error {:?}", bad),
+                Err(bad) => panic!("unknown error {:?}", bad),
             },
-            "No error for bad node"
-        );
+            Some(Ok(bad)) => panic!("unexpected success {:?}", bad),
+            None => panic!("no result"),
+        };
     }
 
     #[test]

@@ -10,7 +10,7 @@ extern crate heads;
 extern crate mercurial_types;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate futures_ext;
@@ -24,6 +24,7 @@ use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
 
+use failure::{Error, Result, ResultExt};
 use futures::Async;
 use futures::future::{poll_fn, Future, IntoFuture};
 use futures::stream::{self, Stream};
@@ -32,17 +33,6 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use heads::Heads;
 use mercurial_types::NodeHash;
-
-mod errors {
-    error_chain!{
-        foreign_links {
-            Io(::std::io::Error);
-        }
-    }
-}
-pub use errors::*;
-
-use std::error;
 
 static PREFIX: &'static str = "head-";
 
@@ -90,7 +80,7 @@ impl FileHeads {
 }
 
 impl Heads for FileHeads {
-    fn add(&self, key: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+    fn add(&self, key: &NodeHash) -> BoxFuture<(), Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -101,11 +91,10 @@ impl Heads for FileHeads {
                 });
                 pool.spawn(future)
             })
-            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn remove(&self, key: &NodeHash) -> BoxFuture<(), Box<error::Error + Send>> {
+    fn remove(&self, key: &NodeHash) -> BoxFuture<(), Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -122,11 +111,10 @@ impl Heads for FileHeads {
                 });
                 pool.spawn(future)
             })
-            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn is_head(&self, key: &NodeHash) -> BoxFuture<bool, Box<error::Error + Send>> {
+    fn is_head(&self, key: &NodeHash) -> BoxFuture<bool, Error> {
         let pool = self.pool.clone();
         self.get_path(&key)
             .into_future()
@@ -134,11 +122,10 @@ impl Heads for FileHeads {
                 let future = poll_fn(move || Ok(Async::Ready(path.exists())));
                 pool.spawn(future)
             })
-            .map_err(|e| Box::new(e) as Box<error::Error + Send>)
             .boxify()
     }
 
-    fn heads(&self) -> BoxStream<NodeHash, Box<error::Error + Send>> {
+    fn heads(&self) -> BoxStream<NodeHash, Error> {
         let names = fs::read_dir(&self.base).map(|entries| {
             entries
                 .map(|result| {
@@ -149,7 +136,9 @@ impl Heads for FileHeads {
                 .filter_map(|result| match result {
                     Ok(ref name) if name.starts_with(PREFIX) => {
                         let name = &name[PREFIX.len()..];
-                        let name = NodeHash::from_str(name).chain_err(|| "can't parse name");
+                        let name = NodeHash::from_str(name)
+                            .context("can't parse name")
+                            .map_err(Error::from);
                         Some(name)
                     }
                     Ok(_) => None,
@@ -157,11 +146,8 @@ impl Heads for FileHeads {
                 })
         });
         match names {
-            Ok(v) => stream::iter_ok(v)
-                .and_then(|v| v)
-                .map_err(|e| Box::new(e) as Box<error::Error + Send>)
-                .boxify(),
-            Err(e) => stream::once(Err(Box::new(e) as Box<error::Error + Send>)).boxify(),
+            Ok(v) => stream::iter_ok(v).and_then(|v| v).boxify(),
+            Err(e) => stream::once(Err(e.into())).boxify(),
         }
     }
 }

@@ -11,7 +11,8 @@ extern crate ascii;
 #[cfg(test)]
 extern crate assert_matches;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_derive;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 
@@ -21,30 +22,13 @@ extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 extern crate storage_types;
 
-mod errors {
-    error_chain! {
-        errors {
-            InvalidBookmarkLine(line: Vec<u8>) {
-                description("invalid bookmark line")
-                display("invalid bookmark line: {}", String::from_utf8_lossy(line))
-            }
-            InvalidHash(hex: Vec<u8>) {
-                description("invalid hash")
-                display("invalid hash: {}", String::from_utf8_lossy(hex))
-            }
-        }
-        foreign_links {
-            Io(::std::io::Error);
-        }
-    }
-}
-
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read};
 use std::path::PathBuf;
 
 use ascii::AsciiStr;
+use failure::{Error, Result, ResultExt};
 use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -53,7 +37,11 @@ use bookmarks::Bookmarks;
 use mercurial_types::NodeHash;
 use storage_types::Version;
 
-pub use errors::*;
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "invalid bookmarks line: {}", _0)] InvalidBookmarkLine(String),
+    #[fail(display = "invalid hash: {}", _0)] InvalidHash(String),
+}
 
 /// Implementation of bookmarks as they exist in stock Mercurial inside `.hg/bookmarks`.
 /// The file has a list of entries:
@@ -100,16 +88,22 @@ impl StockBookmarks {
             // <hash><space><bookmark name>, where hash is 40 bytes, the space is 1 byte
             // and the bookmark name is at least 1 byte.
             if line.len() < 42 || line[40] != b' ' {
-                bail!(ErrorKind::InvalidBookmarkLine(line));
+                return Err(
+                    ErrorKind::InvalidBookmarkLine(
+                        String::from_utf8_lossy(line.as_ref()).into_owned(),
+                    ).into(),
+                );
             }
             let bmname = &line[41..];
             let hash_slice = &line[..40];
-            let hash = AsciiStr::from_ascii(&hash_slice)
-                .chain_err(|| ErrorKind::InvalidHash(hash_slice.into()))?;
+            let hash = AsciiStr::from_ascii(&hash_slice).context(ErrorKind::InvalidHash(
+                String::from_utf8_lossy(hash_slice).into_owned(),
+            ))?;
             bookmarks.insert(
                 bmname.into(),
-                NodeHash::from_ascii_str(hash)
-                    .chain_err(|| ErrorKind::InvalidHash(hash_slice.into()))?,
+                NodeHash::from_ascii_str(hash).context(ErrorKind::InvalidHash(
+                    String::from_utf8_lossy(hash_slice).into_owned(),
+                ))?,
             );
         }
 
@@ -118,7 +112,7 @@ impl StockBookmarks {
 }
 
 impl Bookmarks for StockBookmarks {
-    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
             Some(hash) => Some((*hash, Version::from(1))),
             None => None,
@@ -126,7 +120,7 @@ impl Bookmarks for StockBookmarks {
         Box::new(future::result(Ok(value)))
     }
 
-    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
+    fn keys(&self) -> BoxStream<Vec<u8>, Error> {
         // collect forces evaluation early, so that the stream can safely outlive self
         stream::iter_ok(
             self.bookmarks
@@ -142,6 +136,7 @@ impl Bookmarks for StockBookmarks {
 mod tests {
     use std::io::Cursor;
 
+    use failure::Context;
     use futures::Future;
     use mercurial_types_mocks::nodehash;
 
@@ -187,47 +182,66 @@ mod tests {
         let reader = Cursor::new(&b"111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().kind(),
-            &ErrorKind::InvalidBookmarkLine(_)
+            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::InvalidBookmarkLine(_)
         );
 
         // no space or bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().kind(),
-            &ErrorKind::InvalidBookmarkLine(_)
+            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::InvalidBookmarkLine(_)
         );
 
         // no bookmark name
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111 \n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().kind(),
-            &ErrorKind::InvalidBookmarkLine(_)
+            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::InvalidBookmarkLine(_)
         );
 
         // no space after hash
         let reader = Cursor::new(&b"1111111111111111111111111111111111111111ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
         assert_matches!(
-            bookmarks.unwrap_err().kind(),
-            &ErrorKind::InvalidBookmarkLine(_)
+            bookmarks.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::InvalidBookmarkLine(_)
         );
 
         // short hash
         let reader = Cursor::new(&b"111111111111111111111111111111111111111  1ab\n"[..]);
         let bookmarks = StockBookmarks::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
+        let err = bookmarks.unwrap_err();
+        match err.downcast::<Context<ErrorKind>>() {
+            Ok(ctxt) => match ctxt.get_context() {
+                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
+                bad => panic!("unexpected error {}", bad),
+            },
+            Err(bad) => panic!("other error: {:?}", bad),
+        };
 
         // non-ASCII
         let reader = Cursor::new(&b"111111111111111111111111111111111111111\xff test\n"[..]);
-        let bookmarks = StockBookmarks::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
+        let err = StockBookmarks::from_reader(reader).unwrap_err();
+        match err.downcast::<Context<ErrorKind>>() {
+            Ok(ctxt) => match ctxt.get_context() {
+                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
+                bad => panic!("unexpected error {}", bad),
+            },
+            Err(bad) => panic!("other error: {:?}", bad),
+        };
 
         // not a valid hex string
         let reader = Cursor::new(&b"abcdefgabcdefgabcdefgabcdefgabcdefgabcde test\n"[..]);
-        let bookmarks = StockBookmarks::from_reader(reader);
-        assert_matches!(bookmarks.unwrap_err().kind(), &ErrorKind::InvalidHash(_));
+        let err = StockBookmarks::from_reader(reader).unwrap_err();
+        match err.downcast::<Context<ErrorKind>>() {
+            Ok(ctxt) => match ctxt.get_context() {
+                ok @ &ErrorKind::InvalidHash(..) => println!("OK: {:?}", ok),
+                bad => panic!("unexpected error {}", bad),
+            },
+            Err(bad) => panic!("other error: {:?}", bad),
+        };
     }
 }

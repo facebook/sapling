@@ -6,7 +6,7 @@
 
 extern crate asyncmemo;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 #[macro_use]
 extern crate maplit;

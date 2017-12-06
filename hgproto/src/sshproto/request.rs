@@ -526,12 +526,10 @@ fn parse_common(
         match parse_res {
             IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
             IResult::Incomplete(_) => None,
-            IResult::Error(err) => {
-                bail!(
-                Error::with_chain(
-                    err,
-                    errors::ErrorKind::CommandParse(buf.to_vec()),
-                ))
+            IResult::Error(_) => {
+                Err(
+                    errors::ErrorKind::CommandParse(String::from_utf8_lossy(buf.as_ref()).into_owned())
+                )?
             }
         }
     };

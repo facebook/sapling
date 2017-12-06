@@ -28,7 +28,7 @@ impl File {
 
     pub fn extract_meta(file: &[u8]) -> (&[u8], usize) {
         if file.len() < META_SZ {
-            return (&[], 0)
+            return (&[], 0);
         }
         if &file[..META_SZ] != META_MARKER {
             (&[], 0)
@@ -96,7 +96,7 @@ impl File {
 
         match ret {
             Some((Ok(path), nodeid)) => Ok(Some((path, nodeid))),
-            Some((Err(e), _nodeid)) => Err(e).chain_err(|| "invalid path in copy metadata"),
+            Some((Err(e), _nodeid)) => Err(e.context("invalid path in copy metadata").into()),
             None => Ok(None),
         }
     }

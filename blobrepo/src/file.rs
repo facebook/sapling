@@ -38,16 +38,13 @@ where
             move |node| {
                 let key = format!("sha1-{}", node.blob.sha1());
 
-                blobstore
-                    .get(key)
-                    .map_err(blobstore_err)
-                    .and_then(move |blob| {
-                        blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                            .map(|blob| {
-                                let (_, off) = file::File::extract_meta(blob.as_ref());
-                                Vec::from(&blob.as_ref()[off..])
-                            })
-                    })
+                blobstore.get(key).and_then(move |blob| {
+                    blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                        .map(|blob| {
+                            let (_, off) = file::File::extract_meta(blob.as_ref());
+                            Vec::from(&blob.as_ref()[off..])
+                        })
+                })
             }
         })
         .boxify()
@@ -86,7 +83,6 @@ where
 
                     blobstore
                         .get(key)
-                        .map_err(blobstore_err)
                         .and_then(move |blob| {
                             blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
                         })
@@ -101,23 +97,21 @@ impl<B> Entry for BlobEntry<B>
 where
     B: Blobstore + Sync + Clone,
 {
-    type Error = Error;
-
     fn get_type(&self) -> Type {
         self.ty
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Self::Error> {
+    fn get_parents(&self) -> BoxFuture<Parents, Error> {
         self.get_node().map(|node| node.parents).boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Self::Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
         self.get_raw_content_inner()
             .map(|blob| Blob::from(blob.as_ref()))
             .boxify()
     }
 
-    fn get_content(&self) -> BoxFuture<Content<Self::Error>, Self::Error> {
+    fn get_content(&self) -> BoxFuture<Content, Error> {
         let blobstore = self.blobstore.clone();
         self.get_raw_content_inner()
             .and_then({
@@ -145,7 +139,7 @@ where
             .boxify()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Self::Error> {
+    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
             .and_then(|content| match content {
                 Content::File(data) | Content::Executable(data) => Ok(data.size()),

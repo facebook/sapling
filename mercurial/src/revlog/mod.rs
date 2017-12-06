@@ -13,6 +13,7 @@ use std::result;
 use std::sync::Arc;
 
 use errors::*;
+use failure;
 use memmap::Mmap;
 use nom::IResult;
 
@@ -152,7 +153,7 @@ impl Revlog {
     where
         IP: AsRef<Path>,
     {
-        let idx = Datafile::map(idxpath).chain_err(|| format!("Can't map idxpath"))?;
+        let idx = Datafile::map(idxpath).context("Can't map idxpath")?;
 
         let revlog = Revlog::init(idx, None)?;
 
@@ -169,7 +170,7 @@ impl Revlog {
         DP: AsRef<Path> + Debug,
     {
         let mut revlog =
-            Self::from_idx(&idxpath).chain_err(|| format!("Can't open index {:?}", idxpath))?;
+            Self::from_idx(&idxpath).with_context(|_| format!("Can't open index {:?}", idxpath))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
@@ -177,11 +178,11 @@ impl Revlog {
             let datafile = match datapath {
                 None => {
                     let path = idxpath.with_extension("d");
-                    Datafile::map(&path).chain_err(|| format!("Can't open data file {:?}", path))?
+                    Datafile::map(&path)
+                        .with_context(|_| format!("Can't open data file {:?}", path))?
                 }
-                Some(path) => {
-                    Datafile::map(&path).chain_err(|| format!("Can't open data file {:?}", path))?
-                }
+                Some(path) => Datafile::map(&path)
+                    .with_context(|_| format!("Can't open data file {:?}", path))?,
             };
             Arc::get_mut(&mut revlog.inner).unwrap().data = Some(datafile);
         }
@@ -336,7 +337,7 @@ impl RevlogInner {
     /// flag set or not.
     fn get_chunk(&self, idx: RevIdx) -> Result<Chunk> {
         if !self.have_data() {
-            return Err("Can't get chunks without data".into());
+            return Err(failure::err_msg("Can't get chunks without data"));
         }
 
         let entry = self.get_entry(idx)?;
@@ -428,9 +429,8 @@ impl RevlogInner {
         let mut data = Vec::new();
         let mut chain = Vec::new();
         for idx in baserev.range_to(tgtidx.succ()) {
-            let chunk = self.get_chunk(idx).chain_err::<_, Error>(|| {
-                format!("simple tgtidx {:?} idx {:?}", tgtidx, idx).into()
-            });
+            let chunk = self.get_chunk(idx)
+                .with_context(|_| format_err!("simple tgtidx {:?} idx {:?}", tgtidx, idx));
 
             match chunk? {
                 Chunk::Literal(v) => {
@@ -469,8 +469,8 @@ impl RevlogInner {
                 idx = baserev;
             } else {
                 let idx = chunks.pop().unwrap();
-                let chunk = self.get_chunk(idx).chain_err::<_, Error>(|| {
-                    format!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx).into()
+                let chunk = self.get_chunk(idx).with_context(|_| {
+                    format_err!("construct_general tgtidx {:?} idx {:?}", tgtidx, idx)
                 })?;
                 match chunk {
                     Chunk::Literal(v) => data = v,
@@ -511,7 +511,7 @@ impl RevlogInner {
 
     fn get_rev(&self, tgtidx: RevIdx) -> Result<BlobNode> {
         if !self.have_data() {
-            return Err("Need data to assemble revision".into());
+            return Err(failure::err_msg("Need data to assemble revision"));
         }
 
         let entry = self.get_entry(tgtidx)?;
@@ -528,7 +528,8 @@ impl RevlogInner {
     fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
         self.get_idx_by_nodeid(id).and_then(|idx| {
             self.get_rev(idx)
-                .chain_err::<_, Error>(|| format!("can't get rev for id {}", id).into())
+                .with_context(|_| format_err!("can't get rev for id {}", id))
+                .map_err(Error::from)
         })
     }
 

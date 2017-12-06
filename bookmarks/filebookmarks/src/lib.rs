@@ -8,8 +8,7 @@
 
 extern crate bookmarks;
 
-#[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate percent_encoding;
@@ -23,6 +22,7 @@ use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
+use failure::{Error, Result};
 use futures::{Future, Stream};
 use futures_cpupool::CpuPool;
 use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
@@ -32,16 +32,6 @@ use filekv::FileKV;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::NodeHash;
 use storage_types::Version;
-
-mod errors {
-    error_chain! {
-        links {
-            FileKV(::filekv::Error, ::filekv::ErrorKind);
-            Bookmarks(::bookmarks::Error, ::bookmarks::ErrorKind);
-        }
-    }
-}
-pub use errors::*;
 
 static PREFIX: &'static str = "bookmark:";
 
@@ -91,28 +81,18 @@ fn encode_key(key: &AsRef<[u8]>) -> String {
 
 impl Bookmarks for FileBookmarks {
     #[inline]
-    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, bookmarks::Error> {
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
         self.kv
             .get(encode_key(name))
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("FileBookmarks get failed").into())
             .boxify()
     }
 
-    fn keys(&self) -> BoxStream<Vec<u8>, bookmarks::Error> {
+    fn keys(&self) -> BoxStream<Vec<u8>, Error> {
         self.kv
             .keys()
             .and_then(|name| Ok(percent_decode(&name[..].as_bytes()).collect()))
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("FileBookmarks keys failed").into())
             .boxify()
     }
 }
@@ -124,32 +104,18 @@ impl BookmarksMut for FileBookmarks {
         key: &AsRef<[u8]>,
         value: &NodeHash,
         version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    ) -> BoxFuture<Option<Version>, Error> {
         self.kv
             .set(encode_key(key), value, version, None)
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("FileBookmarks set failed").into())
             .boxify()
     }
 
     #[inline]
-    fn delete(
-        &self,
-        key: &AsRef<[u8]>,
-        version: &Version,
-    ) -> BoxFuture<Option<Version>, bookmarks::Error> {
+    fn delete(&self, key: &AsRef<[u8]>, version: &Version) -> BoxFuture<Option<Version>, Error> {
         self.kv
             .delete(encode_key(key), version)
-            .map_err(|e| {
-                bookmarks::Error::with_chain(
-                    Error::from(e),
-                    bookmarks::Error::from_kind(bookmarks::ErrorKind::IoError),
-                )
-            })
+            .map_err(|e| e.context("FileBookmarks delete failed").into())
             .boxify()
     }
 }

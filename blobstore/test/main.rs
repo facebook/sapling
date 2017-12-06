@@ -10,8 +10,7 @@
 #![feature(never_type)]
 
 extern crate bytes;
-#[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate tempdir;
@@ -30,22 +29,6 @@ use blobstore::Blobstore;
 use fileblob::Fileblob;
 use memblob::Memblob;
 use rocksblob::Rocksblob;
-
-mod errors {
-    error_chain! {
-        links {
-            Fileblob(::fileblob::Error, ::fileblob::ErrorKind);
-            Rocksblob(::rocksblob::Error, ::rocksblob::ErrorKind);
-        }
-    }
-
-    impl From<!> for Error {
-        fn from(_t: !) -> Error {
-            unreachable!("! can never be instantiated")
-        }
-    }
-}
-pub use errors::*;
 
 fn simple<B>(blobstore: B)
 where
@@ -73,9 +56,8 @@ where
 fn boxable<B>(blobstore: B)
 where
     B: Blobstore,
-    Error: From<B::Error>,
 {
-    let blobstore = blobstore.boxed::<Error>();
+    let blobstore = blobstore.boxed();
 
     let foo = "foo".to_string();
     let res = blobstore

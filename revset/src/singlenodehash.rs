@@ -4,11 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::boxed::Box;
+
+use failure::Error;
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
 use mercurial_types::{NodeHash, Repo};
-use std::boxed::Box;
 
 use NodeStream;
 use errors::*;
@@ -20,9 +22,11 @@ pub struct SingleNodeHash {
 
 impl SingleNodeHash {
     pub fn new<R: Repo>(nodehash: NodeHash, repo: &R) -> Self {
-        let exists = Box::new(repo.changeset_exists(&nodehash).map_err(move |e| {
-            Error::with_chain(e, ErrorKind::RepoError(nodehash))
-        }));
+        let exists = Box::new(
+            repo.changeset_exists(&nodehash)
+                .map_err(move |e| e.context(ErrorKind::RepoError(nodehash)))
+                .from_err(),
+        );
         let nodehash = Some(nodehash);
         SingleNodeHash { nodehash, exists }
     }

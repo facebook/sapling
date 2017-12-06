@@ -17,8 +17,7 @@
 extern crate ascii;
 extern crate blobrepo;
 extern crate clap;
-#[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate futures_ext;
@@ -44,7 +43,6 @@ extern crate tokio_tls;
 extern crate toml;
 
 use std::collections::HashMap;
-use std::error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
@@ -58,7 +56,6 @@ use tokio_core::reactor::Core;
 
 use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState, TestManifoldBlobState};
 use clap::App;
-use error_chain::ChainedError;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
@@ -74,9 +71,8 @@ use regex::{Captures, Regex};
 use scuba::{ScubaClient, ScubaSample};
 use slog::{Drain, Level, Logger};
 use tokio_tls::TlsAcceptorExt;
-mod errors;
 
-use errors::*;
+pub use failure::{DisplayChain, Error, Result, ResultExt};
 
 type NameToRepo<State> = HashMap<String, Arc<BlobRepo<State>>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
@@ -96,7 +92,7 @@ fn parse_capture<T>(caps: &Captures, index: usize) -> Result<T>
 where
     T: FromStr,
     <T as FromStr>::Err: ToString,
-    errors::Error: std::convert::From<<T as std::str::FromStr>::Err>,
+    Error: std::convert::From<<T as std::str::FromStr>::Err>,
 {
     let s = caps.get(index)
         .expect("incorrect url parsing regex")
@@ -131,7 +127,7 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
             return parse_func(caps);
         }
     }
-    Err("malformed url".into())
+    Err(failure::err_msg("malformed url"))
 }
 
 enum ParsedUrl {
@@ -162,10 +158,7 @@ struct TreeMetadata {
 }
 
 impl TreeMetadata {
-    fn new<E>(size: Option<usize>, entry: Box<mercurial_types::Entry<Error = E>>) -> TreeMetadata
-    where
-        E: error::Error + Send + 'static,
-    {
+    fn new(size: Option<usize>, entry: Box<mercurial_types::Entry>) -> TreeMetadata {
         TreeMetadata {
             hash: entry.get_hash().clone(),
             path: PathBuf::from(OsString::from_vec(entry.get_mpath().to_vec())),
@@ -174,9 +167,7 @@ impl TreeMetadata {
         }
     }
 
-    fn from_entry(
-        entry: Box<mercurial_types::Entry<Error = blobrepo::Error>>,
-    ) -> BoxFuture<TreeMetadata, blobrepo::Error> {
+    fn from_entry(entry: Box<mercurial_types::Entry>) -> BoxFuture<TreeMetadata, Error> {
         if entry.get_type() == mercurial_types::Type::Tree {
             // No need to calculate the size of the directory
             Ok(TreeMetadata::new(None, entry)).into_future().boxify()
@@ -222,7 +213,7 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::future::err("unknown repo".into()).boxify();
+                return futures::future::err(failure::err_msg("unknown repo")).boxify();
             }
         };
         repo.get_changeset_by_nodeid(&hash)
@@ -239,7 +230,7 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::stream::once(Err("unknown repo".into())).boxify();
+                return futures::stream::once(Err(failure::err_msg("unknown repo"))).boxify();
             }
         };
 
@@ -261,7 +252,7 @@ where
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::future::err("unknown repo".into()).boxify();
+                return futures::future::err(failure::err_msg("unknown repo")).boxify();
             }
         };
 
@@ -348,7 +339,7 @@ where
                         resp.set_body(output);
                     }
                     Err(e) => {
-                        let error_msg = format!("{}", e.display_chain());
+                        let error_msg = format!("{}", DisplayChain::from(&e));
                         resp.set_body(error_msg);
                         resp.set_status(StatusCode::NotFound);
                     }
@@ -375,7 +366,7 @@ where
     P: AsRef<Path>,
 {
     let pkcs12 = secure_utils::build_pkcs12(cert_pem_file, private_key_pem_file)
-        .chain_err(|| Error::from("failed to build pkcs12"))?;
+        .context("failed to build pkcs12")?;
     let mut tlsacceptor_builder = TlsAcceptor::builder(pkcs12)?;
 
     // Set up client authentication
@@ -385,7 +376,7 @@ where
 
         sslcontextbuilder
             .set_ca_file(ca_pem_file)
-            .chain_err(|| Error::from("cannot set CA file"))?;
+            .context("cannot set CA file")?;
 
         // SSL_VERIFY_PEER checks client certificate if it was supplied.
         // Connection is terminated if certificate verification fails.
@@ -418,7 +409,7 @@ fn start_server<State, P>(
     let tlsacceptor = match tlsacceptor {
         Ok(tlsacceptor) => tlsacceptor,
         Err(err) => {
-            error!(logger, "{}", err.display_chain());
+            error!(logger, "{}", DisplayChain::from(&err));
             return;
         }
     };

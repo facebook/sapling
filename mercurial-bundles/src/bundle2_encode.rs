@@ -52,10 +52,10 @@ where
     pub fn add_stream_param(&mut self, key: String, val: String) -> Result<&mut Self> {
         if &key.to_lowercase() == "compression" {
             let msg = "stream compression should be set through set_compressor_type";
-            bail!(ErrorKind::Bundle2Encode(msg.into()));
+            Err(ErrorKind::Bundle2Encode(msg.into()))?;
         }
         if is_mandatory_param(&key)
-            .chain_err(|| ErrorKind::Bundle2Encode("stream key is invalid".into()))?
+            .with_context(|_| ErrorKind::Bundle2Encode("stream key is invalid".into()))?
         {
             self.header.m_stream_params.insert(key.to_lowercase(), val);
         } else {
@@ -304,9 +304,13 @@ where
                 (Ok(Async::NotReady), EncodeState::Finish(compressor))
             } else {
                 (
-                    Err(err).chain_err(|| {
-                        ErrorKind::Bundle2Encode("error while completing write".into())
-                    }),
+                    Err(
+                        Error::from(err)
+                            .context(ErrorKind::Bundle2Encode(
+                                "error while completing write".into(),
+                            ))
+                            .into(),
+                    ),
                     EncodeState::Invalid,
                 )
             },

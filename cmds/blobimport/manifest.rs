@@ -4,21 +4,20 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::error;
 use std::sync::mpsc::SyncSender;
 
 use bincode;
 use bytes::Bytes;
+use failure::{self, Error};
 use futures::{self, Future, IntoFuture, Stream};
 
 use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
-use mercurial::{self, RevlogRepo};
+use mercurial::RevlogRepo;
 use mercurial::revlog::RevIdx;
 use mercurial_types::{self, Blob, BlobHash, Entry, NodeHash, Parents, Type};
 
 use BlobstoreEntry;
-use errors::*;
 
 pub(crate) fn put_entry(
     sender: SyncSender<BlobstoreEntry>,
@@ -30,7 +29,7 @@ where
     Error: Send + 'static,
 {
     let bytes = blob.into_inner()
-        .ok_or("missing blob data".into())
+        .ok_or(failure::err_msg("missing blob data"))
         .map(Bytes::from)
         .into_future();
     bytes.and_then(move |bytes| {
@@ -50,21 +49,16 @@ where
         ));
         let res2 = sender.send(BlobstoreEntry::ManifestEntry((blobkey, bytes)));
 
-        res1.and(res2)
-            .map_err(|err| Error::from(format!("{}", err)))
+        res1.and(res2).map_err(Error::from)
     })
 }
 
 // Copy a single manifest entry into the blobstore
 // TODO: #[async]
-pub(crate) fn copy_entry<E>(
-    entry: Box<Entry<Error = E>>,
+pub(crate) fn copy_entry(
+    entry: Box<Entry>,
     sender: SyncSender<BlobstoreEntry>,
-) -> impl Future<Item = (), Error = Error> + Send + 'static
-where
-    Error: From<E>,
-    E: error::Error + Send + 'static,
-{
+) -> impl Future<Item = (), Error = Error> + Send + 'static {
     let hash = *entry.get_hash();
 
     let blobfuture = entry.get_raw_content().map_err(Error::from);
@@ -77,10 +71,10 @@ where
 }
 
 pub(crate) fn get_entry_stream(
-    entry: Box<Entry<Error = mercurial::Error>>,
+    entry: Box<Entry>,
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
-) -> Box<Stream<Item = Box<Entry<Error = mercurial::Error>>, Error = Error> + Send> {
+) -> Box<Stream<Item = Box<Entry>, Error = Error> + Send> {
     let revlog = revlog_repo.get_path_revlog(entry.get_path());
 
     let linkrev = revlog
@@ -89,7 +83,8 @@ pub(crate) fn get_entry_stream(
         })
         .map(|e| e.linkrev)
         .map_err(|e| {
-            Error::with_chain(e, format!("cannot get linkrev of {}", entry.get_hash()))
+            e.context(format_err!("cannot get linkrev of {}", entry.get_hash()))
+                .into()
         });
 
     match linkrev {

@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 use std::ops::Deref;
 
-use futures::future::Future;
-use futures::stream::{self, Stream};
+use futures::{Future, Stream};
+use futures::stream;
 
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -16,6 +16,8 @@ use node::Node;
 use nodehash::NodeHash;
 use path::MPath;
 use repo::Repo;
+
+use errors::*;
 
 pub trait Changeset: Send + 'static {
     fn manifestid(&self) -> &NodeHash;
@@ -102,13 +104,12 @@ impl<R> Deref for RepoChangeset<R> {
 
 impl<R> Node for RepoChangeset<R>
 where
-    R: Repo + Clone + Send,
+    R: Repo + Clone,
 {
     type Content = Box<Changeset>;
-    type Error = R::Error;
 
-    type GetParents = BoxStream<Self, Self::Error>;
-    type GetContent = BoxFuture<Self::Content, Self::Error>;
+    type GetParents = BoxStream<Self, Error>;
+    type GetContent = BoxFuture<Self::Content, Error>;
 
     fn get_parents(&self) -> Self::GetParents {
         self.repo.get_changeset_by_nodeid(&self.csid) // Future<Changeset>
