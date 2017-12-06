@@ -29,7 +29,7 @@ pub struct MockManifest {
 impl MockManifest {
     fn p(p: &'static str) -> RepoPath {
         // This should also allow directory paths eventually.
-        RepoPath::file(p).expect(&format!("invalid path {}", p))
+        RepoPath::file(p.as_ref()).expect(&format!("invalid path {}", p))
     }
 
     pub fn new(paths: Vec<&'static str>) -> Self {

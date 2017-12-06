@@ -32,7 +32,6 @@ use std::io::prelude::*;
 use std::marker::PhantomData;
 use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
-use std::str;
 use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};

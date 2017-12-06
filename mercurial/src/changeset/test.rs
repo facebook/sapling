@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::BTreeMap;
-use std::str;
 
 use quickcheck::{QuickCheck, TestResult};
 

@@ -13,9 +13,7 @@ use std::io::{self, Write};
 use std::iter::{once, Once};
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
-use std::result;
 use std::slice::Iter;
-use std::str;
 
 use bincode;
 
@@ -332,19 +330,11 @@ impl<'a> From<&'a MPath> for Vec<u8> {
     }
 }
 
-impl<P: AsRef<[u8]>> TryFrom<P> for MPath {
+impl<'a> TryFrom<&'a [u8]> for MPath {
     type Error = Error;
 
-    fn try_from(value: P) -> Result<Self> {
+    fn try_from(value: &[u8]) -> Result<Self> {
         MPath::new(value)
-    }
-}
-
-impl TryFrom<MPath> for MPath {
-    type Error = !;
-
-    fn try_from(value: MPath) -> result::Result<Self, !> {
-        Ok(value)
     }
 }
 
@@ -676,9 +666,12 @@ mod test {
         let path = MPath::new(b"abc").unwrap();
         assert_eq!(
             RepoPath::dir(path.clone()).unwrap(),
-            RepoPath::dir("abc").unwrap()
+            RepoPath::dir("abc".as_ref()).unwrap()
         );
-        assert_ne!(RepoPath::dir(path).unwrap(), RepoPath::file("abc").unwrap());
+        assert_ne!(
+            RepoPath::dir(path).unwrap(),
+            RepoPath::file("abc".as_ref()).unwrap()
+        );
     }
 
     #[test]
@@ -692,7 +685,7 @@ mod test {
             ),
         };
 
-        match RepoPath::dir(b"") {
+        match RepoPath::dir(b"".as_ref()) {
             Ok(bad) => panic!("unexpected success {:?}", bad),
             Err(err) => assert_matches!(
                 err.downcast::<ErrorKind>().unwrap(),

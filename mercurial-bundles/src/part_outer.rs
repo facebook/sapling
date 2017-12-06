@@ -9,7 +9,6 @@
 //! part headers and puts together chunks for inner codecs to parse.
 
 use std::mem;
-use std::str;
 
 use ascii::AsciiString;
 use async_compression::Decompressor;
