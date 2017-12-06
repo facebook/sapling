@@ -69,31 +69,31 @@ def usercachepath(ui, hash):
     to preserve download bandwidth and storage space.'''
     return os.path.join(_usercachedir(ui), hash)
 
-def _usercachedir(ui):
+def _usercachedir(ui, name=longname):
     '''Return the location of the "global" largefiles cache.'''
-    path = ui.configpath(longname, 'usercache')
+    path = ui.configpath(name, 'usercache')
     if path:
         return path
     if pycompat.iswindows:
         appdata = encoding.environ.get('LOCALAPPDATA',\
                         encoding.environ.get('APPDATA'))
         if appdata:
-            return os.path.join(appdata, longname)
+            return os.path.join(appdata, name)
     elif pycompat.isdarwin:
         home = encoding.environ.get('HOME')
         if home:
-            return os.path.join(home, 'Library', 'Caches', longname)
+            return os.path.join(home, 'Library', 'Caches', name)
     elif pycompat.isposix:
         path = encoding.environ.get('XDG_CACHE_HOME')
         if path:
-            return os.path.join(path, longname)
+            return os.path.join(path, name)
         home = encoding.environ.get('HOME')
         if home:
-            return os.path.join(home, '.cache', longname)
+            return os.path.join(home, '.cache', name)
     else:
         raise error.Abort(_('unknown operating system: %s\n')
                           % pycompat.osname)
-    raise error.Abort(_('unknown %s usercache location') % longname)
+    raise error.Abort(_('unknown %s usercache location') % name)
 
 def inusercache(ui, hash):
     path = usercachepath(ui, hash)
