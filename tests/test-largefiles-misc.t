@@ -1095,8 +1095,7 @@ largefiles (issue4547)
 Move (and then undo) a directory move with only largefiles.
 
   $ listtree() {
-  >   find $@ \( -type d -printf "%p/\n" -o -type f -printf "%p\n" \) \
-  >           -a -name .hg -prune | sort
+  >   $PYTHON $TESTDIR/list-tree.py $@
   > }
 
   $ cd subrepo-root
