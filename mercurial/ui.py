@@ -62,6 +62,7 @@ update.check = noconflict
 
 [diff]
 git = 1
+showfunc = 1
 """
 
 samplehgrcs = {
