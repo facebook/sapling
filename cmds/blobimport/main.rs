@@ -109,7 +109,8 @@ fn run_blobimport<In, Out>(
     logger: &Logger,
     postpone_compaction: bool,
     channel_size: usize,
-    commits_limit: Option<usize>,
+    skip: Option<u64>,
+    commits_limit: Option<u64>,
     max_blob_size: Option<usize>,
 ) -> Result<()>
 where
@@ -187,6 +188,7 @@ where
         core,
         cpupool: cpupool.clone(),
         logger: logger.clone(),
+        skip: skip,
         commits_limit: commits_limit,
     };
     let res = if write_linknodes {
@@ -329,6 +331,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             -d, --debug              'print debug level output'
             --linknodes              'also generate linknodes'
             --channel-size [SIZE]    'channel size between worker and io threads. Default: 1000'
+            --skip [SKIP]            'skips commits from the beginning'
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
             --max-blob-size [LIMIT]  'max size of the blob to be inserted'
         "#,
@@ -435,6 +438,10 @@ fn main() {
             &root_log,
             postpone_compaction,
             channel_size,
+            matches.value_of("skip").map(|size| {
+                size.parse()
+                    .expect("skip must be positive integer")
+            }),
             matches.value_of("commits-limit").map(|size| {
                 size.parse()
                     .expect("commits-limit must be positive integer")

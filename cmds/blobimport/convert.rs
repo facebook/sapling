@@ -33,7 +33,8 @@ pub(crate) struct ConvertContext<H> {
     pub core: Core,
     pub cpupool: Arc<CpuPool>,
     pub logger: Logger,
-    pub commits_limit: Option<usize>,
+    pub skip: Option<u64>,
+    pub commits_limit: Option<u64>,
 }
 
 impl<H> ConvertContext<H>
@@ -46,12 +47,19 @@ where
         let logger = &logger_owned;
         let cpupool = self.cpupool;
         let headstore = self.headstore;
+        let skip = self.skip;
         let commits_limit = self.commits_limit;
 
-        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(limit) = commits_limit {
-            self.repo.changesets().take(limit as u64).boxify()
+        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(skip) = skip {
+            self.repo.changesets().skip(skip).boxify()
         } else {
             self.repo.changesets().boxify()
+        };
+
+        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(limit) = commits_limit {
+            changesets.take(limit).boxify()
+        } else {
+            changesets.boxify()
         };
         let linknodes_store = Arc::new(linknodes_store);
 
