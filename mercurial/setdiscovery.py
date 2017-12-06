@@ -133,7 +133,8 @@ def _limitsample(sample, desiredlen):
 def findcommonheads(ui, local, remote,
                     initialsamplesize=100,
                     fullsamplesize=200,
-                    abortwhenunrelated=True):
+                    abortwhenunrelated=True,
+                    ancestorsof=None):
     '''Return a tuple (common, anyincoming, remoteheads) used to identify
     missing nodes from or in remote.
     '''
@@ -141,7 +142,11 @@ def findcommonheads(ui, local, remote,
 
     roundtrips = 0
     cl = local.changelog
-    dag = dagutil.revlogdag(cl)
+    localsubset = None
+    if ancestorsof is not None:
+        rev = local.changelog.rev
+        localsubset = [rev(n) for n in ancestorsof]
+    dag = dagutil.revlogdag(cl, localsubset=localsubset)
 
     # early exit if we know all the specified remote heads already
     ui.debug("query 1; heads\n")

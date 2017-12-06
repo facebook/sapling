@@ -154,8 +154,9 @@ class revlogbaseddag(basedag):
 class revlogdag(revlogbaseddag):
     '''dag interface to a revlog'''
 
-    def __init__(self, revlog):
+    def __init__(self, revlog, localsubset=None):
         revlogbaseddag.__init__(self, revlog, set(revlog))
+        self._heads = localsubset
 
     def _getheads(self):
         return [r for r in self._revlog.headrevs() if r != nullrev]

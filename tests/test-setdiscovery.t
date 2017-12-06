@@ -16,11 +16,17 @@ Function to test discovery between two repos in both directions, using both the 
   >     echo "% -- a -> b set"
   >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true
   >     echo
+  >     echo "% -- a -> b set (tip only)"
+  >     hg -R a debugdiscovery b --verbose --debug --config progress.debug=true --rev tip
+  >     echo
   >     echo "% -- b -> a tree"
   >     hg -R b debugdiscovery a --verbose --old
   >     echo
   >     echo "% -- b -> a set"
   >     hg -R b debugdiscovery a --verbose --debug --config progress.debug=true
+  >     echo
+  >     echo "% -- b -> a set (tip only)"
+  >     hg -R b debugdiscovery a --verbose --debug --config progress.debug=true --rev tip
   >     cd ..
   > }
 
@@ -48,6 +54,13 @@ Small superset:
   common heads: 01241442b3c2 b5714e113bc0
   local is subset
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  all local heads known remotely
+  common heads: b5714e113bc0
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -56,6 +69,14 @@ Small superset:
   remote is subset
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  all remote heads known locally
+  common heads: 01241442b3c2 b5714e113bc0
+  remote is subset
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -86,6 +107,16 @@ Many new:
   2 total queries in *.????s (glob)
   common heads: bebd167eb94d
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 31, sample size is: 31
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -93,6 +124,16 @@ Many new:
   common heads: bebd167eb94d
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  taking initial sample
+  searching: 2 queries
+  query 2; still undecided: 2, sample size is: 2
+  2 total queries in *.????s (glob)
+  common heads: bebd167eb94d
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -124,6 +165,16 @@ Both sides many new with stub:
   2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 31, sample size is: 31
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -131,6 +182,16 @@ Both sides many new with stub:
   common heads: 2dc09a01254d
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  taking initial sample
+  searching: 2 queries
+  query 2; still undecided: 29, sample size is: 29
+  2 total queries in *.????s (glob)
+  common heads: 2dc09a01254d
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -163,6 +224,16 @@ Both many new:
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 31, sample size is: 31
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -170,6 +241,16 @@ Both many new:
   common heads: 66f7d451a68b
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 31, sample size is: 31
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -202,6 +283,16 @@ Both many new skewed:
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 51, sample size is: 51
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -209,6 +300,16 @@ Both many new skewed:
   common heads: 66f7d451a68b
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 31, sample size is: 31
+  2 total queries in *.????s (glob)
+  common heads: 66f7d451a68b
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -244,6 +345,19 @@ Both many new on top of long history:
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
   
+  % -- a -> b set (tip only)
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 1049, sample size is: 11
+  sampling from both directions
+  searching: 3 queries
+  query 3; still undecided: 31, sample size is: 31
+  3 total queries in *.????s (glob)
+  common heads: 7ead0cba2838
+  
   % -- b -> a tree
   comparing with a
   searching for changes
@@ -251,6 +365,19 @@ Both many new on top of long history:
   common heads: 7ead0cba2838
   
   % -- b -> a set
+  comparing with a
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 1029, sample size is: 11
+  sampling from both directions
+  searching: 3 queries
+  query 3; still undecided: 15, sample size is: 15
+  3 total queries in *.????s (glob)
+  common heads: 7ead0cba2838
+  
+  % -- b -> a set (tip only)
   comparing with a
   query 1; heads
   searching for changes
@@ -326,6 +453,18 @@ One with >200 heads, which used to use up all of the sample:
   searching: 6 queries
   query 6; still undecided: \d+, sample size is: \d+ (re)
   6 total queries in *.????s (glob)
+  common heads: 3ee37d65064a
+  $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
+  comparing with b
+  query 1; heads
+  searching for changes
+  taking quick initial sample
+  searching: 2 queries
+  query 2; still undecided: 303, sample size is: 9
+  sampling from both directions
+  searching: 3 queries
+  query 3; still undecided: 3, sample size is: 3
+  3 total queries in *.????s (glob)
   common heads: 3ee37d65064a
 
 Test actual protocol when pulling one new head in addition to common heads
