@@ -92,7 +92,12 @@ class BuildRustExt(Command):
             package_dir = build_py.get_package_dir(ext.package)
         else:
             package_dir = os.path.join(self.build_lib, *ext.package.split('.'))
-        return os.path.join(package_dir, ext.name + '.so')
+        platform = distutils.util.get_platform()
+        if platform.startswith('win-'):
+            name = ext.name + '.pyd'
+        else:
+            name = ext.name + '.so'
+        return os.path.join(package_dir, name)
 
     def build_ext(self, ext):
         log.info("building '%s' extension", ext.name)
