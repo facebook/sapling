@@ -1,4 +1,4 @@
-# remotenames.py
+# logexchange.py
 #
 # Copyright 2017 Augie Fackler <raf@durin42.com>
 # Copyright 2017 Sean Farley <sean@farley.io>
@@ -15,11 +15,11 @@ from . import (
 )
 
 # directory name in .hg/ in which remotenames files will be present
-remotenamedir = 'remotenames'
+remotenamedir = 'logexchange'
 
 def readremotenamefile(repo, filename):
     """
-    reads a file from .hg/remotenames/ directory and yields it's content
+    reads a file from .hg/logexchange/ directory and yields it's content
     filename: the file to be read
     yield a tuple (node, remotepath, name)
     """
@@ -46,7 +46,7 @@ def readremotenamefile(repo, filename):
 
 def readremotenames(repo):
     """
-    read the details about the remotenames stored in .hg/remotenames/ and
+    read the details about the remotenames stored in .hg/logexchange/ and
     yields a tuple (node, remotepath, name). It does not yields information
     about whether an entry yielded is branch or bookmark. To get that
     information, call the respective functions.
@@ -83,7 +83,7 @@ def writeremotenamefile(repo, remotepath, names, nametype):
 def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     """
     save remotenames i.e. remotebookmarks and remotebranches in their
-    respective files under ".hg/remotenames/" directory.
+    respective files under ".hg/logexchange/" directory.
     """
     wlock = repo.wlock()
     try:

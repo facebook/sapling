@@ -24,11 +24,11 @@ from . import (
     discovery,
     error,
     lock as lockmod,
+    logexchange,
     obsolete,
     phases,
     pushkey,
     pycompat,
-    remotenames,
     scmutil,
     sslutil,
     streamclone,
@@ -1366,7 +1366,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
 
     # storing remotenames
     if repo.ui.configbool('experimental', 'remotenames'):
-        remotenames.pullremotenames(repo, remote)
+        logexchange.pullremotenames(repo, remote)
 
     return pullop
 

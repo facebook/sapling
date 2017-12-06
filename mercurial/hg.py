@@ -28,10 +28,10 @@ from . import (
     httppeer,
     localrepo,
     lock,
+    logexchange,
     merge as mergemod,
     node,
     phases,
-    remotenames,
     repoview,
     scmutil,
     sshpeer,
@@ -691,7 +691,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             destrepo.ui.setconfig('paths', 'default', defaulturl, 'clone')
 
             if ui.configbool('experimental', 'remotenames'):
-                remotenames.pullremotenames(destrepo, srcpeer)
+                logexchange.pullremotenames(destrepo, srcpeer)
 
             if update:
                 if update is not True:
