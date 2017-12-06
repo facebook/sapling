@@ -92,6 +92,21 @@ Graph.prototype = {
 
 	},
 
+	vertex: function(x, y, radius, color, parity, cur) {
+		this.ctx.beginPath();
+		this.setColor(color, 0.25, 0.75);
+		this.ctx.arc(x, y, radius, 0, Math.PI * 2, true);
+		this.ctx.fill();
+
+		var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
+		var item = document.querySelector('[data-node="' + cur.node + '"]');
+		if (item) {
+			item.style.paddingLeft = left + 'px';
+		}
+
+		return ['', ''];
+	},
+
 	render: function(data) {
 
 		var backgrounds = '';
