@@ -514,7 +514,11 @@ def _pushdiscovery(pushop):
 def _pushdiscoverychangeset(pushop):
     """discover the changeset that need to be pushed"""
     fci = discovery.findcommonincoming
-    commoninc = fci(pushop.repo, pushop.remote, force=pushop.force)
+    if pushop.revs:
+        commoninc = fci(pushop.repo, pushop.remote, force=pushop.force,
+                        ancestorsof=pushop.revs)
+    else:
+        commoninc = fci(pushop.repo, pushop.remote, force=pushop.force)
     common, inc, remoteheads = commoninc
     fco = discovery.findcommonoutgoing
     outgoing = fco(pushop.repo, pushop.remote, onlyheads=pushop.revs,

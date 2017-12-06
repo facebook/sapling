@@ -27,7 +27,7 @@ from . import (
     util,
 )
 
-def findcommonincoming(repo, remote, heads=None, force=False):
+def findcommonincoming(repo, remote, heads=None, force=False, ancestorsof=None):
     """Return a tuple (common, anyincoming, heads) used to identify the common
     subset of nodes between repo and remote.
 
@@ -38,6 +38,9 @@ def findcommonincoming(repo, remote, heads=None, force=False):
       changegroupsubset. No code except for pull should be relying on this fact
       any longer.
     "heads" is either the supplied heads, or else the remote's heads.
+    "ancestorsof" if not None, restrict the discovery to a subset defined by
+      these nodes. Changeset outside of this set won't be considered (and
+      won't appears in "common")
 
     If you pass heads and they are all known locally, the response lists just
     these heads in "common" and in "heads".
@@ -60,7 +63,8 @@ def findcommonincoming(repo, remote, heads=None, force=False):
             return (heads, False, heads)
 
     res = setdiscovery.findcommonheads(repo.ui, repo, remote,
-                                       abortwhenunrelated=not force)
+                                       abortwhenunrelated=not force,
+                                       ancestorsof=ancestorsof)
     common, anyinc, srvheads = res
     return (list(common), anyinc, heads or list(srvheads))
 
@@ -142,7 +146,8 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
 
     # get common set if not provided
     if commoninc is None:
-        commoninc = findcommonincoming(repo, other, force=force)
+        commoninc = findcommonincoming(repo, other, force=force,
+                                       ancestorsof=onlyheads)
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing
