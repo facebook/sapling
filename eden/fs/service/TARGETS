@@ -59,6 +59,7 @@ cpp_library(
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly/container:access",
+        "@/folly/executors/task_queue:unbounded_blocking_queue",
         "@/folly/experimental:string_keyed_map",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",

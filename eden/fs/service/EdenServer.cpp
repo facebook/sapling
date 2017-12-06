@@ -14,6 +14,7 @@
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
@@ -135,11 +136,12 @@ EdenServer::EdenServer(
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
       rocksPath_(rocksPath),
-      threadPool_(
-          make_shared<folly::CPUThreadPoolExecutor>(FLAGS_num_eden_threads)) {}
+      threadPool_(make_shared<folly::CPUThreadPoolExecutor>(
+          FLAGS_num_eden_threads,
+          std::make_unique<folly::UnboundedBlockingQueue<
+              folly::CPUThreadPoolExecutor::CPUTask>>())) {}
 
-EdenServer::~EdenServer() {
-}
+EdenServer::~EdenServer() {}
 
 folly::Future<Unit> EdenServer::unmountAll() {
   std::vector<Future<Unit>> futures;
