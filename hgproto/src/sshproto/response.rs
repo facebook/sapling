@@ -4,13 +4,13 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::io::{self, Write};
 use std::fmt::Display;
+use std::io::{self, Write};
 
 use bytes::{BufMut, Bytes, BytesMut};
 
+use {Response, SingleResponse};
 use batch;
-use Response;
 
 fn separated<I, W>(write: &mut W, iter: I, sep: &str) -> io::Result<()>
 where
@@ -34,6 +34,22 @@ where
 }
 
 pub fn encode(response: &Response, out: &mut BytesMut) {
+    match response {
+        &Response::Batch(ref resps) => {
+            let escaped_results: Vec<_> = resps
+                .iter()
+                .map(|resp| batch::escape(&encode_cmd(resp)))
+                .collect();
+            let escaped_results = Bytes::from(escaped_results.join(&b';'));
+            out.reserve(10 + escaped_results.len());
+            out.put_slice(format!("{}\n", escaped_results.len()).as_bytes());
+            out.put(escaped_results)
+        }
+        &Response::Single(ref resp) => encode_single(resp, out),
+    }
+}
+
+fn encode_single(response: &SingleResponse, out: &mut BytesMut) {
     let res = encode_cmd(response);
     out.reserve(10 + res.len());
     if !response.is_stream() {
@@ -43,16 +59,11 @@ pub fn encode(response: &Response, out: &mut BytesMut) {
 }
 
 /// Encode the result of an individual command completion. This is used by both
-/// encode and batch encoding.
-pub fn encode_cmd(response: &Response) -> Bytes {
-    use Response::*;
+/// single and batch responses encoding
+fn encode_cmd(response: &SingleResponse) -> Bytes {
+    use SingleResponse::*;
 
     match response {
-        &Batch(ref results) => {
-            let escaped_results: Vec<_> = results.iter().map(batch::escape).collect();
-            Bytes::from(escaped_results.join(&b';'))
-        }
-
         &Hello(ref map) => {
             let mut out = Vec::new();
 

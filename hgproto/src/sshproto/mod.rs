@@ -61,6 +61,6 @@ impl Decoder for HgSshCommandDecode {
     type Error = Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Request>> {
-        request::parse(buf)
+        request::parse_request(buf)
     }
 }

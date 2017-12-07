@@ -18,7 +18,7 @@ use tokio_io::AsyncRead;
 use mercurial_bundles::bundle2::Bundle2Stream;
 use mercurial_types::NodeHash;
 
-use {GetbundleArgs, Request};
+use {GetbundleArgs, Request, SingleRequest};
 use batch;
 use errors;
 use errors::*;
@@ -330,7 +330,7 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
 /// Parse a command, given some input, a command name (used as a tag), a param parser
 /// function (which generalizes over batched and non-batched parameter syntaxes),
 /// number of args (since each command has a fixed number of expected parameters,
-/// not withstanding '*'), and a function to actually produce a parsed `Request`.
+/// not withstanding '*'), and a function to actually produce a parsed `SingleRequest`.
 fn parse_command<'a, C, F, T>(
     inp: &'a [u8],
     cmd: C,
@@ -412,13 +412,57 @@ macro_rules! command_star {
 }
 
 /// Parse a non-batched command
-pub fn parse(buf: &mut BytesMut) -> Result<Option<Request>> {
-    parse_common(buf, params)
+fn parse_singlerequest(inp: &[u8]) -> IResult<&[u8], SingleRequest> {
+    parse_with_params(inp, params)
 }
 
-/// Parse a single batched command (with its parameters in batched form)
-pub fn parse_batch(buf: &mut BytesMut) -> Result<Option<Request>> {
-    parse_common(buf, batch_params)
+struct Batch {
+    cmds: Vec<(Vec<u8>, Vec<u8>)>,
+}
+
+fn parse_batchrequest(inp: &[u8]) -> IResult<&[u8], Vec<SingleRequest>> {
+    fn parse_cmd(inp: &[u8]) -> IResult<&[u8], SingleRequest> {
+        parse_with_params(inp, batch_params)
+    }
+
+    let (rest, batch) = try_parse!(
+        inp,
+        command_star!("batch", Batch, params, {
+            cmds => cmdlist,
+        })
+    );
+
+    let mut parsed_cmds = Vec::with_capacity(batch.cmds.len());
+    for cmd in batch.cmds {
+        let full_cmd = Bytes::from([cmd.0, cmd.1].join(&b'\n'));
+        let (eof, cmd) = try_parse!(&full_cmd[..], complete!(parse_cmd));
+        let _ = try_parse!(eof, eof!());
+        parsed_cmds.push(cmd);
+    }
+    IResult::Done(rest, parsed_cmds)
+}
+
+pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
+    let res = {
+        let origlen = buf.len();
+        let parse_res = alt!(
+            &buf[..],
+            map!(parse_batchrequest, Request::Batch) | map!(parse_singlerequest, Request::Single)
+        );
+
+        match parse_res {
+            IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
+            IResult::Incomplete(_) => None,
+            IResult::Error(_) => Err(errors::ErrorKind::CommandParse(
+                String::from_utf8_lossy(buf.as_ref()).into_owned(),
+            ))?,
+        }
+    };
+
+    Ok(res.map(|(consume, val)| {
+        let _ = buf.split_to(consume);
+        val
+    }))
 }
 
 /// Parse an unbundle command. This is unusual because it's a normal command talking
@@ -426,15 +470,15 @@ pub fn parse_batch(buf: &mut BytesMut) -> Result<Option<Request>> {
 /// stream until that finishes, then resumes normal command processing. Ideally this
 /// should be implemented in a streaming way, but it isn't yet. We process the unbundle
 /// command almost as usual, then follow it by capturing the bundle2 stream as Bytes and
-/// return them as a Request::Unbundle object for later processing.
+/// return them as a SingleRequest::Unbundle object for later processing.
 fn unbundle(
     inp: &[u8],
     parse_params: fn(&[u8], usize)
         -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
-) -> IResult<&[u8], Request> {
-    // Use this as a syntactic proxy for Request::Unbundle, which works because Request's
-    // values are struct-like enums, and this is a struct, so the command macro is happy
-    // to fill it out.
+) -> IResult<&[u8], SingleRequest> {
+    // Use this as a syntactic proxy for SingleRequest::Unbundle, which works because
+    // SingleRequest's values are struct-like enums, and this is a struct, so the command macro is
+    // happy to fill it out.
     struct UnbundleCmd {
         heads: Vec<String>,
     }
@@ -443,7 +487,7 @@ fn unbundle(
                 heads => stringlist,
             }) >>
         stream: bundle2stream >>
-            (Request::Unbundle {
+            (SingleRequest::Unbundle {
                 heads: unbundle.heads,
                 stream: stream
             })
@@ -453,91 +497,68 @@ fn unbundle(
 /// Common parser, generalized over how to parse parameters (either unbatched or
 /// batched syntax.)
 #[cfg_attr(rustfmt, rustfmt_skip)]
-fn parse_common(
-    buf: &mut BytesMut,
+fn parse_with_params(
+    inp: &[u8],
     parse_params: fn(&[u8], usize)
         -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
-) -> Result<Option<Request>> {
-    use Request::*;
+) -> IResult<&[u8], SingleRequest> {
+    use SingleRequest::*;
 
-    let res = {
-        let origlen = buf.len();
-        let parse_res = alt!(&buf[..],
-              command_star!("batch", Batch, parse_params, {
-                  cmds => cmdlist,
-              })
-            | command!("between", Between, parse_params, {
-                  pairs => pairlist,
-              })
-            | command!("branchmap", Branchmap, parse_params, {})
-            | command!("branches", Branches, parse_params, {
-                  nodes => hashlist,
-              })
-            | command!("clonebundles", Clonebundles, parse_params, {})
-            | command!("capabilities", Capabilities, parse_params, {})
-            | command!("changegroup", Changegroup, parse_params, {
-                  roots => hashlist,
-              })
-            | command!("changegroupsubset", Changegroupsubset, parse_params, {
-                  heads => hashlist,
-                  bases => hashlist,
-              })
-            | call!(parse_command, "debugwireargs", parse_params, 2+1,
-                |kv| Ok(Debugwireargs {
-                    one: parseval(&kv, "one", ident_complete)?.to_vec(),
-                    two: parseval(&kv, "two", ident_complete)?.to_vec(),
-                    all_args: kv,
-                }))
-            | call!(parse_command, "getbundle", parse_params, 0+1,
-                |kv| Ok(Getbundle(GetbundleArgs {
-                    // Some params are currently ignored, like:
-                    // - obsmarkers
-                    // - cg
-                    // - cbattempted
-                    // If those params are needed, they should be parsed here.
-                    heads: parseval_default(&kv, "heads", hashlist)?,
-                    common: parseval_default(&kv, "common", hashlist)?,
-                    bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?,
-                    listkeys: parseval_default(&kv, "listkeys", commavalues)?,
-                })))
-            | command!("heads", Heads, parse_params, {})
-            | command!("hello", Hello, parse_params, {})
-            | command!("listkeys", Listkeys, parse_params, {
-                  namespace => ident_string,
-              })
-            | command!("lookup", Lookup, parse_params, {
-                  key => ident_string,
-              })
-            | command_star!("known", Known, parse_params, {
-                  nodes => hashlist,
-              })
-            | command!("pushkey", Pushkey, parse_params, {
-                  namespace => ident_string,
-                  key => ident_string,
-                  old => nodehash,
-                  new => nodehash,
-              })
-            | command!("streamout", Streamout, parse_params, {})
-            | call!(unbundle, parse_params)
-        );
-
-        // Turn "rest" into a "consumed" bytecount, so consume it once the
-        // borrow from buf has finished.
-        match parse_res {
-            IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
-            IResult::Incomplete(_) => None,
-            IResult::Error(_) => {
-                Err(
-                    errors::ErrorKind::CommandParse(String::from_utf8_lossy(buf.as_ref()).into_owned())
-                )?
-            }
-        }
-    };
-
-    Ok(res.map(|(consume, val)| {
-        let _ = buf.split_to(consume);
-        val
-    }))
+    alt!(inp,
+          command!("between", Between, parse_params, {
+              pairs => pairlist,
+          })
+        | command!("branchmap", Branchmap, parse_params, {})
+        | command!("branches", Branches, parse_params, {
+              nodes => hashlist,
+          })
+        | command!("clonebundles", Clonebundles, parse_params, {})
+        | command!("capabilities", Capabilities, parse_params, {})
+        | command!("changegroup", Changegroup, parse_params, {
+              roots => hashlist,
+          })
+        | command!("changegroupsubset", Changegroupsubset, parse_params, {
+              heads => hashlist,
+              bases => hashlist,
+          })
+        | call!(parse_command, "debugwireargs", parse_params, 2+1,
+            |kv| Ok(Debugwireargs {
+                one: parseval(&kv, "one", ident_complete)?.to_vec(),
+                two: parseval(&kv, "two", ident_complete)?.to_vec(),
+                all_args: kv,
+            }))
+        | call!(parse_command, "getbundle", parse_params, 0+1,
+            |kv| Ok(Getbundle(GetbundleArgs {
+                // Some params are currently ignored, like:
+                // - obsmarkers
+                // - cg
+                // - cbattempted
+                // If those params are needed, they should be parsed here.
+                heads: parseval_default(&kv, "heads", hashlist)?,
+                common: parseval_default(&kv, "common", hashlist)?,
+                bundlecaps: parseval_default(&kv, "bundlecaps", commavalues)?,
+                listkeys: parseval_default(&kv, "listkeys", commavalues)?,
+            })))
+        | command!("heads", Heads, parse_params, {})
+        | command!("hello", Hello, parse_params, {})
+        | command!("listkeys", Listkeys, parse_params, {
+              namespace => ident_string,
+          })
+        | command!("lookup", Lookup, parse_params, {
+              key => ident_string,
+          })
+        | command_star!("known", Known, parse_params, {
+              nodes => hashlist,
+          })
+        | command!("pushkey", Pushkey, parse_params, {
+              namespace => ident_string,
+              key => ident_string,
+              old => nodehash,
+              new => nodehash,
+          })
+        | command!("streamout", Streamout, parse_params, {})
+        | call!(unbundle, parse_params)
+    )
 }
 
 /// Test individual combinators
@@ -1024,7 +1045,7 @@ mod test_parse {
         // check for short inputs
         for l in 0..inbytes.len() - 1 {
             let mut buf = BytesMut::from(inbytes[0..l].to_vec());
-            match parse(&mut buf) {
+            match parse_request(&mut buf) {
                 Ok(None) => (),
                 Ok(Some(val)) => panic!(
                     "BAD PASS: inp >>{:?}<< lpassed unexpectedly val {:?} pass with {}/{} bytes",
@@ -1049,7 +1070,7 @@ mod test_parse {
             let mut buf = BytesMut::from(inbytes.to_vec());
             buf.extend_from_slice(&extra[0..l]);
             let buflen = buf.len();
-            match parse(&mut buf) {
+            match parse_request(&mut buf) {
                 Ok(Some(val)) => assert_eq!(val, exp, "with {}/{} bytes", buflen, inbytes.len()),
                 Ok(None) => panic!(
                     "BAD INCOMPLETE: inp >>{:?}<< extra {} incomplete {}/{} bytes",
@@ -1078,12 +1099,7 @@ mod test_parse {
                    cmds 6\n\
                    hello ";
 
-        test_parse(
-            inp,
-            Request::Batch {
-                cmds: vec![(b"hello".to_vec(), vec![])],
-            },
-        )
+        test_parse(inp, Request::Batch(vec![SingleRequest::Hello]))
     }
 
     #[test]
@@ -1094,9 +1110,9 @@ mod test_parse {
                    3333333333333333333333333333333333333333-4444444444444444444444444444444444444444";
         test_parse(
             inp,
-            Request::Between {
+            Request::Single(SingleRequest::Between {
                 pairs: vec![(hash_ones(), hash_twos()), (hash_threes(), hash_fours())],
-            },
+            }),
         );
     }
 
@@ -1104,7 +1120,7 @@ mod test_parse {
     fn test_parse_branchmap() {
         let inp = "branchmap\n";
 
-        test_parse(inp, Request::Branchmap {});
+        test_parse(inp, Request::Single(SingleRequest::Branchmap {}));
     }
 
     #[test]
@@ -1115,9 +1131,9 @@ mod test_parse {
                    3333333333333333333333333333333333333333 4444444444444444444444444444444444444444";
         test_parse(
             inp,
-            Request::Branches {
+            Request::Single(SingleRequest::Branches {
                 nodes: vec![hash_ones(), hash_twos(), hash_threes(), hash_fours()],
-            },
+            }),
         );
     }
 
@@ -1125,14 +1141,14 @@ mod test_parse {
     fn test_parse_clonebundles() {
         let inp = "clonebundles\n";
 
-        test_parse(inp, Request::Clonebundles {});
+        test_parse(inp, Request::Single(SingleRequest::Clonebundles {}));
     }
 
     #[test]
     fn test_parse_capabilities() {
         let inp = "capabilities\n";
 
-        test_parse(inp, Request::Capabilities {});
+        test_parse(inp, Request::Single(SingleRequest::Capabilities {}));
     }
 
     #[test]
@@ -1143,9 +1159,9 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Changegroup {
+            Request::Single(SingleRequest::Changegroup {
                 roots: vec![hash_ones(), hash_twos()],
-            },
+            }),
         );
     }
 
@@ -1159,10 +1175,10 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Changegroupsubset {
+            Request::Single(SingleRequest::Changegroupsubset {
                 heads: vec![hash_ones()],
                 bases: vec![hash_twos(), hash_threes()],
-            },
+            }),
         );
     }
 
@@ -1176,7 +1192,7 @@ mod test_parse {
                    two 3\nTWO";
         test_parse(
             inp,
-            Request::Debugwireargs {
+            Request::Single(SingleRequest::Debugwireargs {
                 one: b"ONE".to_vec(),
                 two: b"TWO".to_vec(),
                 all_args: hashmap! {
@@ -1185,7 +1201,7 @@ mod test_parse {
                     b"three".to_vec() => b"THREE".to_vec(),
                     b"empty".to_vec() => vec![],
                 },
-            },
+            }),
         );
     }
 
@@ -1197,12 +1213,12 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Getbundle(GetbundleArgs {
+            Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![],
                 common: vec![],
                 bundlecaps: vec![],
                 listkeys: vec![],
-            }),
+            })),
         );
 
         // with arguments
@@ -1220,12 +1236,12 @@ mod test_parse {
                    extra";
         test_parse(
             inp,
-            Request::Getbundle(GetbundleArgs {
+            Request::Single(SingleRequest::Getbundle(GetbundleArgs {
                 heads: vec![hash_ones()],
                 common: vec![hash_twos(), hash_threes()],
                 bundlecaps: vec![b"cap1".to_vec(), b"CAP2".to_vec(), b"cap3".to_vec()],
                 listkeys: vec![b"key1".to_vec(), b"key2".to_vec()],
-            }),
+            })),
         );
     }
 
@@ -1233,14 +1249,14 @@ mod test_parse {
     fn test_parse_heads() {
         let inp = "heads\n";
 
-        test_parse(inp, Request::Heads {});
+        test_parse(inp, Request::Single(SingleRequest::Heads {}));
     }
 
     #[test]
     fn test_parse_hello() {
         let inp = "hello\n";
 
-        test_parse(inp, Request::Hello {});
+        test_parse(inp, Request::Single(SingleRequest::Hello {}));
     }
 
     #[test]
@@ -1251,9 +1267,9 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Listkeys {
+            Request::Single(SingleRequest::Listkeys {
                 namespace: "bookmarks".to_string(),
-            },
+            }),
         );
     }
 
@@ -1265,9 +1281,9 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Lookup {
+            Request::Single(SingleRequest::Lookup {
                 key: "bookmarks".to_string(),
-            },
+            }),
         );
     }
 
@@ -1280,9 +1296,9 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Known {
+            Request::Single(SingleRequest::Known {
                 nodes: vec![hash_ones()],
-            },
+            }),
         );
     }
 
@@ -1300,12 +1316,12 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Pushkey {
+            Request::Single(SingleRequest::Pushkey {
                 namespace: "bookmarks".to_string(),
                 key: "foobar".to_string(),
                 old: hash_ones(),
                 new: hash_twos(),
-            },
+            }),
         );
     }
 
@@ -1313,7 +1329,7 @@ mod test_parse {
     fn test_parse_streamout() {
         let inp = "streamout\n";
 
-        test_parse(inp, Request::Streamout {});
+        test_parse(inp, Request::Single(SingleRequest::Streamout {}));
     }
 
     fn test_parse_unbundle_with(bundle: &[u8]) {
@@ -1325,10 +1341,10 @@ mod test_parse {
 
         test_parse(
             inp,
-            Request::Unbundle {
+            Request::Single(SingleRequest::Unbundle {
                 heads: vec![String::from("666f726365")], // "force" in hex-encoding
                 stream: Bytes::from(bundle),
-            },
+            }),
         );
     }
 
@@ -1346,12 +1362,13 @@ mod test_parse {
 
     #[test]
     fn test_batch_parse_heads() {
-        let mut inp = BytesMut::from(b"heads\n".to_vec());
-
-        match parse_batch(&mut inp) {
-            Ok(Some(res)) => assert_eq!(res, Request::Heads {}),
-            Ok(None) => panic!("unexpected incomplete input"),
-            Err(err) => panic!("failed with {:?}", err),
+        match parse_with_params(b"heads\n", batch_params) {
+            IResult::Done(rest, val) => {
+                assert!(rest.is_empty());
+                assert_eq!(val, SingleRequest::Heads {});
+            }
+            IResult::Incomplete(_) => panic!("unexpected incomplete input"),
+            IResult::Error(err) => panic!("failed with {:?}", err),
         }
     }
 
@@ -1361,22 +1378,17 @@ mod test_parse {
                    * 0\n\
                    cmds 100\n\
                    heads ;\
-                   known nodes=ee07e8c0780b5059e874c5b0dbcab2278fde2a14 \
-                   3243aa153e20a170cd2c7441c595c44a9b087f5b";
+                   known nodes=1111111111111111111111111111111111111111 \
+                   2222222222222222222222222222222222222222";
 
         test_parse(
             inp,
-            Request::Batch {
-                cmds: vec![
-                    (b"heads".to_vec(), vec![]),
-                    (
-                        b"known".to_vec(),
-                        b"nodes=ee07e8c0780b5059e874c5b0dbcab2278fde2a14 \
-                      3243aa153e20a170cd2c7441c595c44a9b087f5b"
-                            .to_vec(),
-                    ),
-                ],
-            },
+            Request::Batch(vec![
+                SingleRequest::Heads {},
+                SingleRequest::Known {
+                    nodes: vec![hash_ones(), hash_twos()],
+                },
+            ]),
         );
     }
 

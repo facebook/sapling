@@ -66,7 +66,12 @@ pub struct BranchRes {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Request {
-    Batch { cmds: Vec<(Vec<u8>, Vec<u8>)> },
+    Batch(Vec<SingleRequest>),
+    Single(SingleRequest),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum SingleRequest {
     Between { pairs: Vec<(NodeHash, NodeHash)> },
     Branchmap,
     Branches { nodes: Vec<NodeHash> },
@@ -129,7 +134,12 @@ impl Debug for GetbundleArgs {
 
 #[derive(Debug)]
 pub enum Response {
-    Batch(Vec<Bytes>),
+    Batch(Vec<SingleResponse>),
+    Single(SingleResponse),
+}
+
+#[derive(Debug)]
+pub enum SingleResponse {
     Between(Vec<Vec<NodeHash>>),
     Branchmap(HashMap<String, HashSet<NodeHash>>),
     Branches(Vec<BranchRes>),
@@ -149,10 +159,10 @@ pub enum Response {
     Unbundle,
 }
 
-impl Response {
+impl SingleResponse {
     /// Whether this represents a streaming response. Streaming responses don't have any framing.
     pub fn is_stream(&self) -> bool {
-        use Response::*;
+        use SingleResponse::*;
 
         match self {
             &Getbundle(_) => true,

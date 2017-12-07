@@ -7,7 +7,9 @@
 use std::io;
 use std::sync::Arc;
 
-use futures::{Poll, Stream};
+use futures::{Future, Poll, Stream};
+use futures::future::Either;
+use futures::stream::futures_ordered;
 use futures_ext::{BoxStream, StreamExt, StreamLayeredExt};
 use tokio_io::codec::{Decoder, Encoder};
 
@@ -92,7 +94,18 @@ where
         .from_err()
         .and_then({
             let handler = handler.clone();
-            move |req| handler.commands_handler.handle(req)
+            move |req| match req {
+                Request::Batch(reqs) => Either::A(
+                    futures_ordered(
+                        reqs.into_iter()
+                            .map(|req| handler.commands_handler.handle(req)),
+                    ).collect()
+                        .map(Response::Batch),
+                ),
+                Request::Single(req) => {
+                    Either::B(handler.commands_handler.handle(req).map(Response::Single))
+                }
+            }
         })
         .encode(handler.respenc.clone())
         .from_err()
