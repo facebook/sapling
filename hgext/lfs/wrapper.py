@@ -302,3 +302,9 @@ def uploadblobs(repo, pointers):
 
     remoteblob = repo.svfs.lfsremoteblobstore
     remoteblob.writebatch(pointers, repo.svfs.lfslocalblobstore)
+
+def upgraderequirements(orig, repo):
+    reqs = orig(repo)
+    if 'lfs' in repo.requirements:
+        reqs.add('lfs')
+    return reqs

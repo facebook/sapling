@@ -46,6 +46,7 @@ from mercurial import (
     registrar,
     revlog,
     scmutil,
+    upgrade,
     vfs as vfsmod,
 )
 
@@ -138,6 +139,12 @@ def extsetup(ui):
     wrapfunction = extensions.wrapfunction
 
     wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
+
+    wrapfunction(upgrade, 'preservedrequirements',
+                 wrapper.upgraderequirements)
+
+    wrapfunction(upgrade, 'supporteddestrequirements',
+                 wrapper.upgraderequirements)
 
     wrapfunction(changegroup,
                  'supportedoutgoingversions',
