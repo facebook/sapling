@@ -2010,7 +2010,7 @@ class overlayworkingctx(workingctx):
                     return self._wrappedctx[path].data()
             else:
                 raise error.ProgrammingError("No such file or directory: %s" %
-                                             self._path)
+                                             path)
         else:
             return self._wrappedctx[path].data()
 
