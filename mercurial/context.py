@@ -1985,6 +1985,7 @@ class overlayworkingctx(workingctx):
         'date': date?
         'data': str?
         'flags': str?
+        'copied': str? (path or None)
     }
     If `exists` is True, `flags` must be non-None and 'date' is non-None. If it
     is `False`, the file was deleted.
@@ -2021,6 +2022,18 @@ class overlayworkingctx(workingctx):
             return self._cache[path]['date']
         else:
             return self._wrappedctx[path].date()
+
+    def markcopied(self, path, origin):
+        if self.isdirty(path):
+            self._cache[path]['copied'] = origin
+        else:
+            raise error.ProgrammingError('markcopied() called on clean context')
+
+    def copydata(self, path):
+        if self.isdirty(path):
+            return self._cache[path]['copied']
+        else:
+            raise error.ProgrammingError('copydata() called on clean context')
 
     def flags(self, path):
         if self.isdirty(path):
@@ -2086,6 +2099,7 @@ class overlayworkingctx(workingctx):
             'data': data,
             'date': date,
             'flags': flags,
+            'copied': None,
         }
 
     def filectx(self, path, filelog=None):
@@ -2122,15 +2136,16 @@ class overlayworkingfilectx(workingfilectx):
         return self._parent.exists(self._path)
 
     def renamed(self):
-        # Copies are currently tracked in the dirstate as before. Straight copy
-        # from workingfilectx.
-        rp = self._repo.dirstate.copied(self._path)
-        if not rp:
+        path = self._parent.copydata(self._path)
+        if not path:
             return None
-        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
+        return path, self._changectx._parents[0]._manifest.get(path, nullid)
 
     def size(self):
         return self._parent.size(self._path)
+
+    def markcopied(self, origin):
+        self._parent.markcopied(self._path, origin)
 
     def audit(self):
         pass
