@@ -483,9 +483,12 @@ class rebaseruntime(object):
                         stats = rebasenode(repo, rev, p1, base, self.state,
                                            self.collapsef, dest)
                         if stats and stats[3] > 0:
-                            raise error.InterventionRequired(
-                                _('unresolved conflicts (see hg '
-                                  'resolve, then hg rebase --continue)'))
+                            if self.wctx.isinmemory():
+                                raise error.InMemoryMergeConflictsError()
+                            else:
+                                raise error.InterventionRequired(
+                                    _('unresolved conflicts (see hg '
+                                      'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
                 if not self.collapsef:
