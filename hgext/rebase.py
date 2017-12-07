@@ -179,6 +179,7 @@ class rebaseruntime(object):
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
         self.obsoletewithoutsuccessorindestination = set()
+        self.inmemory = opts.get('inmemory', False)
 
     @property
     def repo(self):
@@ -383,6 +384,12 @@ class rebaseruntime(object):
 
     def _performrebase(self, tr):
         repo, ui = self.repo, self.ui
+        # Assign a working copy object.
+        if self.inmemory:
+            from mercurial.context import overlayworkingctx
+            self.wctx = overlayworkingctx(self.repo)
+        else:
+            self.wctx = self.repo[None]
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
             # there's a user-provided extrafn it can clobber branch if
@@ -608,6 +615,7 @@ class rebaseruntime(object):
     ('i', 'interactive', False, _('(DEPRECATED)')),
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
+    ('',  'inmemory', False, _('run rebase in-memory (EXPERIMENTAL)')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
     cmdutil.formatteropts,
     _('[-s REV | -b REV] [-d REV] [OPTION]'))
@@ -726,6 +734,8 @@ def rebase(ui, repo, **opts):
 
     """
     opts = pycompat.byteskwargs(opts)
+    if 'inmemory' not in opts:
+        opts['inmemory'] = False
     rbsrt = rebaseruntime(repo, ui, opts)
 
     with repo.wlock(), repo.lock():
