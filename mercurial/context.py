@@ -1990,11 +1990,14 @@ class overlayworkingctx(workingctx):
     is `False`, the file was deleted.
     """
 
-    def __init__(self, repo, wrappedctx):
+    def __init__(self, repo):
         super(overlayworkingctx, self).__init__(repo)
         self._repo = repo
         self.clean()
+
+    def setbase(self, wrappedctx):
         self._wrappedctx = wrappedctx
+        self._parents = [wrappedctx]
 
     def data(self, path):
         if self.isdirty(path):
