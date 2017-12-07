@@ -24,6 +24,10 @@ Configs::
 
     # how many times to retry before giving up on transferring an object
     retry = 5
+
+    # the local directory to store lfs files for sharing across local clones.
+    # If not set, the cache is located in an OS specific cache location.
+    usercache = /path/to/global/cache
 """
 
 from __future__ import absolute_import
@@ -61,6 +65,9 @@ configitem = registrar.configitem(configtable)
 
 configitem('lfs', 'url',
     default=configitem.dynamicdefault,
+)
+configitem('lfs', 'usercache',
+    default=None,
 )
 configitem('lfs', 'threshold',
     default=None,

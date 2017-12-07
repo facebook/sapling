@@ -20,6 +20,8 @@ from mercurial import (
     vfs as vfsmod,
 )
 
+from ..largefiles import lfutil
+
 # 64 bytes for SHA256
 _lfsre = re.compile(r'\A[a-f0-9]{64}\Z')
 
@@ -68,20 +70,29 @@ class local(object):
     def __init__(self, repo):
         fullpath = repo.svfs.join('lfs/objects')
         self.vfs = lfsvfs(fullpath)
+        usercache = lfutil._usercachedir(repo.ui, 'lfs')
+        self.cachevfs = lfsvfs(usercache)
 
     def write(self, oid, data):
         """Write blob to local blobstore."""
         with self.vfs(oid, 'wb', atomictemp=True) as fp:
             fp.write(data)
 
+        # XXX: should we verify the content of the cache, and hardlink back to
+        # the local store on success, but truncate, write and link on failure?
+        if not self.cachevfs.exists(oid):
+            lfutil.link(self.vfs.join(oid), self.cachevfs.join(oid))
+
     def read(self, oid):
         """Read blob from local blobstore."""
+        if not self.vfs.exists(oid):
+            lfutil.link(self.cachevfs.join(oid), self.vfs.join(oid))
         return self.vfs.read(oid)
 
     def has(self, oid):
         """Returns True if the local blobstore contains the requested blob,
         False otherwise."""
-        return self.vfs.exists(oid)
+        return self.cachevfs.exists(oid) or self.vfs.exists(oid)
 
 class _gitlfsremote(object):
 

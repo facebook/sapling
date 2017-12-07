@@ -1102,6 +1102,9 @@ class Test(unittest.TestCase):
         hgrc.write(b'[largefiles]\n')
         hgrc.write(b'usercache = %s\n' %
                    (os.path.join(self._testtmp, b'.cache/largefiles')))
+        hgrc.write(b'[lfs]\n')
+        hgrc.write(b'usercache = %s\n' %
+                   (os.path.join(self._testtmp, b'.cache/lfs')))
         hgrc.write(b'[web]\n')
         hgrc.write(b'address = localhost\n')
         hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))

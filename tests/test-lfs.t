@@ -566,9 +566,9 @@
   repo: repo9
   repo: repo10
 
-TODO: repo12 doesn't have any cached lfs files.  Figure out how to get the
-unpushed files from repo12's source instead of the remote store, where they
-don't exist.
+repo12 doesn't have any cached lfs files and its source never pushed its
+files.  Therefore, the files don't exist in the remote store.  Use the files in
+the user cache.
 
   $ find $TESTTMP/repo12/.hg/store/lfs/objects -type f
   find: */repo12/.hg/store/lfs/objects': $ENOENT$ (glob)
@@ -576,24 +576,28 @@ don't exist.
 
   $ hg --config extensions.share= share repo12 repo13
   updating working directory
-  abort: $TESTTMP/dummy-remote/09/66faba9a01f6c78082aa45899a4fef732002d0b26404e90093adf1e876ab8d: $ENOTDIR$ (glob)
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R repo13 -q verify
+
   $ hg clone repo12 repo14
   updating to branch default
-  abort: $TESTTMP/dummy-remote/09/66faba9a01f6c78082aa45899a4fef732002d0b26404e90093adf1e876ab8d: $ENOTDIR$ (glob)
-  [255]
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R repo14 -q verify
 
-TODO: If the source repo doesn't have the blob (maybe it was pulled or cloned
-with --noupdate), the blob should be accessible via the global cache to send to
-the remote store.
+If the source repo doesn't have the blob (maybe it was pulled or cloned with
+--noupdate), the blob is still accessible via the global cache to send to the
+remote store.
 
   $ rm -rf $TESTTMP/repo14/.hg/store/lfs
   $ hg init repo15
   $ hg -R repo14 push repo15
   pushing to repo15
   searching for changes
-  abort: $TESTTMP/repo14/.hg/store/lfs/objects/1c/896a0adcf9262119f4a98216aaa5ca00a58b9a0ce848914a02f9cd876f65a3: $ENOTDIR$ (glob)
-  [255]
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 2 changes to 1 files
+  $ hg -R repo14 -q verify
 
 lfs -> normal -> lfs round trip conversions are possible.  The threshold for the
 lfs destination is specified here because it was originally listed in the local

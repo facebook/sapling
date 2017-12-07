@@ -53,6 +53,8 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Clear the cache to force a download
+  $ rm -rf `hg config lfs.usercache`
   $ cd ../repo2
   $ hg update tip -v
   resolving manifests
@@ -79,6 +81,8 @@ When the server has some blobs already
   adding file changes
   added 1 changesets with 3 changes to 3 files
 
+Clear the cache to force a download
+  $ rm -rf `hg config lfs.usercache`
   $ hg --repo ../repo1 update tip -v
   resolving manifests
   getting b
@@ -95,6 +99,7 @@ Check error message when the remote missed a blob:
   $ echo FFFFF >> b
   $ hg commit -m b b
   $ rm -rf .hg/store/lfs
+  $ rm -rf `hg config lfs.usercache`
   $ hg update -C '.^'
   abort: LFS server claims required objects do not exist:
   8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13!
@@ -118,6 +123,7 @@ Check error message when object does not exist:
   size 6
   x-is-binary 0
   $ cd ..
+  $ rm -rf `hg config lfs.usercache`
   $ hg --config 'lfs.url=https://dewey-lfs.vip.facebook.com/lfs' clone test test2
   updating to branch default
   abort: LFS server error. Remote object for file data/a.i not found:(.*)! (re)
