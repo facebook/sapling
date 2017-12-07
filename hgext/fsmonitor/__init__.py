@@ -161,6 +161,9 @@ configitem('fsmonitor', 'timeout',
 configitem('fsmonitor', 'blacklistusers',
     default=list,
 )
+configitem('experimental', 'fsmonitor.transaction_notify',
+    default=False,
+)
 
 # This extension is incompatible with the following blacklisted extensions
 # and will disable itself when encountering one of these:
@@ -656,14 +659,18 @@ class state_update(object):
         self.enter()
 
     def enter(self):
-        # We explicitly need to take a lock here, before we proceed to update
-        # watchman about the update operation, so that we don't race with
-        # some other actor.  merge.update is going to take the wlock almost
-        # immediately anyway, so this is effectively extending the lock
-        # around a couple of short sanity checks.
+        # Make sure we have a wlock prior to sending notifications to watchman.
+        # We don't want to race with other actors. In the update case,
+        # merge.update is going to take the wlock almost immediately. We are
+        # effectively extending the lock around several short sanity checks.
         if self.oldnode is None:
             self.oldnode = self.repo['.'].node()
-        self._lock = self.repo.wlock()
+
+        if self.repo.currentwlock() is None:
+            if util.safehasattr(self.repo, 'wlocknostateupdate'):
+                self._lock = self.repo.wlocknostateupdate()
+            else:
+                self._lock = self.repo.wlock()
         self.need_leave = self._state(
             'state-enter',
             hex(self.oldnode))
@@ -783,5 +790,35 @@ def reposetup(ui, repo):
             def status(self, *args, **kwargs):
                 orig = super(fsmonitorrepo, self).status
                 return overridestatus(orig, self, *args, **kwargs)
+
+            def wlocknostateupdate(self, *args, **kwargs):
+                return super(fsmonitorrepo, self).wlock(*args, **kwargs)
+
+            def wlock(self, *args, **kwargs):
+                l = super(fsmonitorrepo, self).wlock(*args, **kwargs)
+                if not ui.configbool(
+                    "experimental", "fsmonitor.transaction_notify"):
+                    return l
+                if l.held != 1:
+                    return l
+                origrelease = l.releasefn
+
+                def staterelease():
+                    if origrelease:
+                        origrelease()
+                    if l.stateupdate:
+                        l.stateupdate.exit()
+                        l.stateupdate = None
+
+                try:
+                    l.stateupdate = None
+                    l.stateupdate = state_update(self, name="hg.transaction")
+                    l.stateupdate.enter()
+                    l.releasefn = staterelease
+                except Exception as e:
+                    # Swallow any errors; fire and forget
+                    self.ui.log(
+                        'watchman', 'Exception in state update %s\n', e)
+                return l
 
         repo.__class__ = fsmonitorrepo
