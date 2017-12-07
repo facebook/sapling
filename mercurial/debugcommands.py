@@ -863,7 +863,10 @@ def debugfileset(ui, repo, expr, **opts):
          [] + cmdutil.formatteropts,
         _(''))
 def debugformat(ui, repo, **opts):
-    """display format information about the current repository"""
+    """display format information about the current repository
+
+    Use --verbose to get extra information about current config value and
+    Mercurial default."""
     maxvariantlength = max(len(fv.name) for fv in upgrade.allformatvariant)
     maxvariantlength = max(len('format-variant'), maxvariantlength)
 
@@ -880,15 +883,22 @@ def debugformat(ui, repo, **opts):
     fm.plain('format-variant')
     fm.plain(' ' * (maxvariantlength - len('format-variant')))
     fm.plain(' repo')
+    if ui.verbose:
+        fm.plain(' config default')
     fm.plain('\n')
     fm.startitem()
     for fv in upgrade.allformatvariant:
         repovalue = fv.fromrepo(repo)
+        configvalue = fv.fromconfig(repo)
 
         fm.write('name', makeformatname(fv.name), fv.name,
                  label='formatvariant.name')
         fm.write('repo', ' %3s', formatvalue(repovalue),
                  label='formatvariant.repo')
+        fm.condwrite(ui.verbose, 'config', ' %6s', formatvalue(configvalue),
+                     label='formatvariant.config')
+        fm.condwrite(ui.verbose, 'default', ' %7s', formatvalue(fv.default),
+                     label='formatvariant.default')
         fm.plain('\n')
 
 @command('debugfsinfo', [], _('[PATH]'), norepo=True)

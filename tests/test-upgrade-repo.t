@@ -60,6 +60,18 @@ An upgrade of a repository created with recommended settings only suggests optim
   dotencode:      yes
   generaldelta:   yes
   plain-cl-delta: yes
+  $ hg debugformat --verbose
+  format-variant repo config default
+  fncache:        yes    yes     yes
+  dotencode:      yes    yes     yes
+  generaldelta:   yes    yes     yes
+  plain-cl-delta: yes    yes     yes
+  $ hg debugformat --verbose --config format.usegfncache=no
+  format-variant repo config default
+  fncache:        yes    yes     yes
+  dotencode:      yes    yes     yes
+  generaldelta:   yes    yes     yes
+  plain-cl-delta: yes    yes     yes
   $ hg debugupgraderepo
   (no feature deficiencies found in existing repository)
   performing an upgrade with "--run" will make the following changes:
@@ -113,6 +125,18 @@ Various sub-optimal detections work
   dotencode:       no
   generaldelta:    no
   plain-cl-delta: yes
+  $ hg debugformat --verbose
+  format-variant repo config default
+  fncache:         no    yes     yes
+  dotencode:       no    yes     yes
+  generaldelta:    no    yes     yes
+  plain-cl-delta: yes    yes     yes
+  $ hg debugformat --verbose --config format.usegeneraldelta=no
+  format-variant repo config default
+  fncache:         no    yes     yes
+  dotencode:       no    yes     yes
+  generaldelta:    no     no     yes
+  plain-cl-delta: yes    yes     yes
   $ hg debugupgraderepo
   repository lacks features recommended by current config options:
   
