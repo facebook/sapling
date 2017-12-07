@@ -2045,6 +2045,16 @@ class overlayworkingctx(workingctx):
         else:
             return self._wrappedctx[path].flags()
 
+    def _existsinparent(self, path):
+        try:
+            # ``commitctx` raises a ``ManifestLookupError`` if a path does not
+            # exist, unlike ``workingctx``, which returns a ``workingfilectx``
+            # with an ``exists()`` function.
+            self._wrappedctx[path]
+            return True
+        except error.ManifestLookupError:
+            return False
+
     def write(self, path, data, flags=''):
         if data is None:
             raise error.ProgrammingError("data must be non-None")
@@ -2070,13 +2080,15 @@ class overlayworkingctx(workingctx):
                 return self.exists(self._cache[path]['data'].strip())
             else:
                 return self._cache[path]['exists']
-        return self._wrappedctx[path].exists()
+
+        return self._existsinparent(path)
 
     def lexists(self, path):
         """lexists returns True if the path exists"""
         if self.isdirty(path):
             return self._cache[path]['exists']
-        return self._wrappedctx[path].lexists()
+
+        return self._existsinparent(path)
 
     def size(self, path):
         if self.isdirty(path):
