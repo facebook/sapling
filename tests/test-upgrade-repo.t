@@ -54,6 +54,12 @@ An upgrade of a repository created with recommended settings only suggests optim
 
   $ hg init empty
   $ cd empty
+  $ hg debugformat
+  format-variant repo
+  fncache:        yes
+  dotencode:      yes
+  generaldelta:   yes
+  plain-cl-delta: yes
   $ hg debugupgraderepo
   (no feature deficiencies found in existing repository)
   performing an upgrade with "--run" will make the following changes:
@@ -101,6 +107,12 @@ Various sub-optimal detections work
   > store
   > EOF
 
+  $ hg debugformat
+  format-variant repo
+  fncache:         no
+  dotencode:       no
+  generaldelta:    no
+  plain-cl-delta: yes
   $ hg debugupgraderepo
   repository lacks features recommended by current config options:
   

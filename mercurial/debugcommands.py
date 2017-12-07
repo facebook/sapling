@@ -859,6 +859,38 @@ def debugfileset(ui, repo, expr, **opts):
     for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)
 
+@command('debugformat',
+         [] + cmdutil.formatteropts,
+        _(''))
+def debugformat(ui, repo, **opts):
+    """display format information about the current repository"""
+    maxvariantlength = max(len(fv.name) for fv in upgrade.allformatvariant)
+    maxvariantlength = max(len('format-variant'), maxvariantlength)
+
+    def makeformatname(name):
+        return '%s:' + (' ' * (maxvariantlength - len(name)))
+
+    def formatvalue(value):
+        if value:
+            return 'yes'
+        else:
+            return 'no'
+
+    fm = ui.formatter('debugformat', opts)
+    fm.plain('format-variant')
+    fm.plain(' ' * (maxvariantlength - len('format-variant')))
+    fm.plain(' repo')
+    fm.plain('\n')
+    fm.startitem()
+    for fv in upgrade.allformatvariant:
+        repovalue = fv.fromrepo(repo)
+
+        fm.write('name', makeformatname(fv.name), fv.name,
+                 label='formatvariant.name')
+        fm.write('repo', ' %3s', formatvalue(repovalue),
+                 label='formatvariant.repo')
+        fm.plain('\n')
+
 @command('debugfsinfo', [], _('[PATH]'), norepo=True)
 def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""

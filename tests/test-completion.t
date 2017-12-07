@@ -87,6 +87,7 @@ Show debug commands if there are no other candidates
   debugdiscovery
   debugextensions
   debugfileset
+  debugformat
   debugfsinfo
   debuggetbundle
   debugignore
@@ -264,6 +265,7 @@ Show all commands + options
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugextensions: template
   debugfileset: rev
+  debugformat: template
   debugfsinfo: 
   debuggetbundle: head, common, type
   debugignore: 

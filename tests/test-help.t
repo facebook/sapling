@@ -922,6 +922,7 @@ Test list of internal help commands
    debugextensions
                  show information about active extensions
    debugfileset  parse and apply a fileset specification
+   debugformat   display format information about the current repository
    debugfsinfo   show information detected about current filesystem
    debuggetbundle
                  retrieves a bundle from a repo
