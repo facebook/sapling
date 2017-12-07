@@ -117,7 +117,6 @@ import weakref
 from mercurial.i18n import _
 from mercurial.node import (
     hex,
-    nullid,
 )
 
 from mercurial import (
@@ -161,12 +160,6 @@ configitem('fsmonitor', 'timeout',
 )
 configitem('fsmonitor', 'blacklistusers',
     default=list,
-)
-configitem('experimental', 'fsmonitor.transaction_notify',
-    default=False,
-)
-configitem('experimental', 'fsmonitor.wc_change_notify',
-    default=False,
 )
 
 # This extension is incompatible with the following blacklisted extensions
@@ -609,14 +602,6 @@ def makedirstate(repo, dirstate):
             self._fsmonitorstate.invalidate()
             return super(fsmonitordirstate, self).invalidate(*args, **kwargs)
 
-        if dirstate._ui.configbool(
-            "experimental", "fsmonitor.wc_change_notify"):
-            def setparents(self, p1, p2=nullid):
-                with state_update(self._repo, name="hg.wc_change",
-                                  oldnode=self._pl[0], newnode=p1,
-                                  partial=False):
-                    return super(fsmonitordirstate, self).setparents(p1, p2)
-
     dirstate.__class__ = fsmonitordirstate
     dirstate._fsmonitorinit(repo)
 
@@ -798,33 +783,5 @@ def reposetup(ui, repo):
             def status(self, *args, **kwargs):
                 orig = super(fsmonitorrepo, self).status
                 return overridestatus(orig, self, *args, **kwargs)
-
-            if ui.configbool("experimental", "fsmonitor.transaction_notify"):
-                def transaction(self, *args, **kwargs):
-                    tr = super(fsmonitorrepo, self).transaction(
-                               *args, **kwargs)
-                    if tr.count != 1:
-                        return tr
-                    stateupdate = state_update(self, name="hg.transaction")
-                    stateupdate.enter()
-
-                    class fsmonitortrans(tr.__class__):
-                        def _abort(self):
-                            try:
-                                result = super(fsmonitortrans, self)._abort()
-                            finally:
-                                stateupdate.exit(abort=True)
-                            return result
-
-                        def close(self):
-                            try:
-                                result = super(fsmonitortrans, self).close()
-                            finally:
-                                if self.count == 0:
-                                    stateupdate.exit()
-                            return result
-
-                    tr.__class__ = fsmonitortrans
-                    return tr
 
         repo.__class__ = fsmonitorrepo
