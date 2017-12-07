@@ -10,7 +10,7 @@
 
 extern crate clap;
 #[macro_use]
-extern crate error_chain;
+extern crate failure_ext as failure;
 extern crate tokio_uds;
 
 extern crate bytes;
@@ -29,7 +29,10 @@ extern crate sshrelay;
 use clap::{App, Arg, SubCommand};
 
 mod serve;
-mod errors;
+
+pub mod errors {
+    pub use failure::{Error, Result};
+}
 
 fn main() {
     let matches = App::new("Mononoke CLI")
@@ -60,7 +63,7 @@ fn main() {
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
         serve::cmd(&matches, subcmd)
     } else {
-        Err("unexpected or missing subcommand".into())
+        Err(failure::err_msg("unexpected or missing subcommand"))
     };
 
     if let Err(err) = res {

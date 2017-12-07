@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use futures::{Future, Sink, Stream, future};
+use futures::{future, Future, Sink, Stream};
 
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
@@ -18,8 +18,8 @@ use clap::ArgMatches;
 
 use errors::*;
 
-use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream};
 use futures_ext::StreamExt;
+use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream};
 
 mod fdio;
 
@@ -32,9 +32,9 @@ pub fn cmd(main: &ArgMatches, sub: &ArgMatches) -> Result<()> {
 
             return ssh_relay(path);
         }
-        bail!("Missing repository");
+        bail_msg!("Missing repository");
     }
-    bail!("Only stdio server is supported");
+    bail_msg!("Only stdio server is supported");
 }
 
 fn ssh_relay<P: AsRef<Path>>(path: P) -> Result<()> {
@@ -75,10 +75,10 @@ fn ssh_relay<P: AsRef<Path>>(path: P) -> Result<()> {
             match msg.stream() {
                 SshStream::Stdout => Ok(false),
                 SshStream::Stderr => Ok(true),
-                bad => bail!("Bad stream: {:?}", bad),
+                bad => bail_msg!("Bad stream: {:?}", bad),
             }
-        })
-    .map(|_| ());
+        },
+    ).map(|_| ());
 
     // Run the reactor to completion and collect the results from the tasks
     match reactor.run(stdout_future.select(stdin_future)) {
