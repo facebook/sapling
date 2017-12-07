@@ -284,6 +284,28 @@ class removecldeltachain(formatvariant):
     def fromconfig(repo):
         return True
 
+@registerformatvariant
+class compressionengine(formatvariant):
+    name = 'compression'
+    default = 'zlib'
+
+    description = _('Compresion algorithm used to compress data. '
+                    'Some engine are faster than other')
+
+    upgrademessage = _('revlog content will be recompressed with the new '
+                       'algorithm.')
+
+    @classmethod
+    def fromrepo(cls, repo):
+        for req in repo.requirements:
+            if req.startswith('exp-compression-'):
+                return req.split('-', 2)[2]
+        return 'zlib'
+
+    @classmethod
+    def fromconfig(cls, repo):
+        return repo.ui.config('experimental', 'format.compression')
+
 def finddeficiencies(repo):
     """returns a list of deficiencies that the repo suffer from"""
     deficiencies = []
