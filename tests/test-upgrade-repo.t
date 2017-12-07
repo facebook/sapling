@@ -467,3 +467,95 @@ Check upgrading a large file repository
   largefiles
   revlogv1
   store
+
+  $ cd ..
+
+repository config is taken in account
+-------------------------------------
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > maxchainlen = 1
+  > EOF
+
+  $ hg init localconfig
+  $ cd localconfig
+  $ cat << EOF > file
+  > some content
+  > with some length
+  > to make sure we get a delta
+  > after changes
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > very long
+  > EOF
+  $ hg -q commit -A -m A
+  $ echo "new line" >> file
+  $ hg -q commit -m B
+  $ echo "new line" >> file
+  $ hg -q commit -m C
+
+  $ cat << EOF >> .hg/hgrc
+  > [format]
+  > maxchainlen = 9001
+  > EOF
+  $ hg config format
+  format.maxchainlen=9001
+  $ hg debugindex file
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      77     -1       0 bcc1d3df78b2 000000000000 000000000000
+       1        77      21      0       1 af3e29f7a72e bcc1d3df78b2 000000000000
+       2        98      84     -1       2 8daf79c5522b af3e29f7a72e 000000000000
+
+  $ hg debugupgraderepo --run --optimize redeltaall
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
+  
+  redeltaall
+     deltas within internal storage will be fully recomputed; this will likely drastically slow down execution time
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/localconfig/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 9 total revisions (3 in filelogs, 3 in manifests, 3 in changelog)
+  migrating 497 bytes in store; 882 bytes tracked data
+  migrating 1 filelogs containing 3 revisions (182 bytes in store; 573 bytes tracked data)
+  finished migrating 3 filelog revisions across 1 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 3 revisions (141 bytes in store; 138 bytes tracked data)
+  finished migrating 3 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 3 revisions (174 bytes in store; 171 bytes tracked data)
+  finished migrating 3 changelog revisions; change in size: 0 bytes
+  finished migrating 9 total revisions; total change in store size: 0 bytes
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/localconfig/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for 0.0s
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/localconfig/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/localconfig/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+  $ hg debugindex file
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      77     -1       0 bcc1d3df78b2 000000000000 000000000000
+       1        77      21      0       1 af3e29f7a72e bcc1d3df78b2 000000000000
+       2        98      84     -1       2 8daf79c5522b af3e29f7a72e 000000000000
+  $ cd ..
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > maxchainlen = 9001
+  > EOF
