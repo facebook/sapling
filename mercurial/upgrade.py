@@ -14,6 +14,7 @@ from .i18n import _
 from . import (
     changelog,
     error,
+    hg,
     localrepo,
     manifest,
     revlog,
@@ -841,9 +842,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
             oldcopy = repo.ui.copy
             try:
                 repo.ui.__dict__.pop('copy', None)
-                dstrepo = localrepo.localrepository(repo.ui,
-                                                    path=tmppath,
-                                                    create=True)
+                dstrepo = hg.repository(repo.ui, path=tmppath, create=True)
             finally:
                 repo.ui.copy = oldcopy
 
