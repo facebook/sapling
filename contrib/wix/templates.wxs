@@ -42,6 +42,7 @@
         <Directory Id="templates.jsondir" Name="json">
           <Component Id="templates.json" Guid="$(var.templates.json.guid)" Win64='$(var.IsX64)'>
             <File Id="json.changelist.tmpl" Name="changelist.tmpl" KeyPath="yes" />
+            <File Id="json.graph.tmpl"      Name="graph.tmpl" />
             <File Id="json.map"             Name="map" />
           </Component>
         </Directory>

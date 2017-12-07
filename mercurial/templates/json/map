@@ -25,6 +25,7 @@ searchentry = '{changelistentry}'
 # number of entries.
 changelog = changelist.tmpl
 shortlog = changelist.tmpl
+graph = graph.tmpl
 changelistentry = '\{
   "node": {node|json},
   "date": {date|json},
@@ -34,6 +35,22 @@ changelistentry = '\{
   "tags": [{join(tags%changelistentryname, ", ")}],
   "user": {author|utf8|json},
   "phase": {phase|json},
+  "parents": [{if(allparents, join(allparents%changesetparent, ", "),
+                  join(parent%changesetparent, ", "))}]
+  }'
+graphentry = '\{
+  "node": {node|json},
+  "date": {date|json},
+  "desc": {desc|utf8|json},
+  "branch": {if(branch, branch%changesetbranch, "default"|json)},
+  "bookmarks": [{join(bookmarks%changelistentryname, ", ")}],
+  "tags": [{join(tags%changelistentryname, ", ")}],
+  "user": {author|utf8|json},
+  "phase": {phase|json},
+  "col": {col|json},
+  "row": {row|json},
+  "color": {color|json},
+  "edges": {edges|json},
   "parents": [{if(allparents, join(allparents%changesetparent, ", "),
                   join(parent%changesetparent, ", "))}]
   }'
@@ -198,7 +215,6 @@ fileannotation = '\{
 filelog = '\{
   "entries": [{join(entries%changelistentry, ", ")}]
   }'
-graph = '"not yet implemented"'
 helptopics = '\{
   "topics": [{join(topics%helptopicentry, ", ")}],
   "earlycommands": [{join(earlycommands%helptopicentry, ", ")}],

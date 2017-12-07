@@ -1277,7 +1277,7 @@ def graph(web, req, tmpl):
     return tmpl('graph', rev=rev, symrev=symrev, revcount=revcount,
                 uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,
-                cols=cols, rows=rows,
+                cols=cols, rows=rows, changesets=count,
                 canvaswidth=(cols + 1) * bg_height,
                 truecanvasheight=rows * bg_height,
                 canvasheight=canvasheight, bg_height=bg_height,

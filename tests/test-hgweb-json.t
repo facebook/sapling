@@ -1335,7 +1335,356 @@ graph/ shows information that can be used to render a graph of the DAG
   $ request json-graph
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "changeset_count": 10,
+    "changesets": [
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "merge test-branch into default",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "parents": [
+          "ceed296fe500c3fac9541e31dad860cb49c89e45",
+          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+        ],
+        "phase": "draft",
+        "row": 0,
+        "tags": [
+          "tip"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "test-branch",
+        "col": 1,
+        "color": 2,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit in test-branch",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "parents": [
+          "6ab967a8ab3489227a83f80e920faa039a71819f"
+        ],
+        "phase": "draft",
+        "row": 1,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "test-branch",
+        "col": 1,
+        "color": 2,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create test branch",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
+        "phase": "draft",
+        "row": 2,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark2"
+        ],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag2",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "parents": [
+          "f2890a05fea49bfaf9fb27ed5490894eba32da78"
+        ],
+        "phase": "draft",
+        "row": 3,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "another commit to da/foo",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "parents": [
+          "93a8ce14f89156426b7fa981af8042da53f03aa0"
+        ],
+        "phase": "draft",
+        "row": 4,
+        "tags": [
+          "tag2"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "create tag",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "93a8ce14f89156426b7fa981af8042da53f03aa0",
+        "parents": [
+          "78896eb0e102174ce9278438a95e12543e4367a7"
+        ],
+        "phase": "public",
+        "row": 5,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "move foo",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "parents": [
+          "8d7c456572acf3557e8ed8a07286b10c408bcec5"
+        ],
+        "phase": "public",
+        "row": 6,
+        "tags": [
+          "tag1"
+        ],
+        "user": "test"
+      },
+      {
+        "bookmarks": [
+          "bookmark1"
+        ],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify da/foo",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 1,
+            "width": -1
+          }
+        ],
+        "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+        "parents": [
+          "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+        ],
+        "phase": "public",
+        "row": 7,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 1,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "modify foo",
+        "edges": [
+          {
+            "bcolor": "",
+            "col": 0,
+            "color": 1,
+            "nextcol": 0,
+            "width": -1
+          },
+          {
+            "bcolor": "",
+            "col": 1,
+            "color": 2,
+            "nextcol": 0,
+            "width": -1
+          }
+        ],
+        "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
+        "phase": "public",
+        "row": 8,
+        "tags": [],
+        "user": "test"
+      },
+      {
+        "bookmarks": [],
+        "branch": "default",
+        "col": 0,
+        "color": 2,
+        "date": [
+          0.0,
+          0
+        ],
+        "desc": "initial",
+        "edges": [],
+        "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "parents": [],
+        "phase": "public",
+        "row": 9,
+        "tags": [],
+        "user": "test"
+      }
+    ],
+    "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"
+  }
 
 help/ shows help topics
 
