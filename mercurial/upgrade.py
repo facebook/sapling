@@ -94,6 +94,9 @@ def allowednewrequirements(repo):
         'generaldelta',
     }
 
+def preservedrequirements(repo):
+    return set()
+
 deficiency = 'deficiency'
 optimisation = 'optimization'
 
@@ -679,6 +682,7 @@ def upgraderepo(ui, repo, run=False, optimize=None):
     # FUTURE there is potentially a need to control the wanted requirements via
     # command arguments or via an extension hook point.
     newreqs = localrepo.newreporequirements(repo)
+    newreqs.update(preservedrequirements(repo))
 
     noremovereqs = (repo.requirements - newreqs -
                    supportremovedrequirements(repo))
