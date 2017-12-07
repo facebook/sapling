@@ -531,12 +531,12 @@ repository config is taken in account
   migrating 9 total revisions (3 in filelogs, 3 in manifests, 3 in changelog)
   migrating 497 bytes in store; 882 bytes tracked data
   migrating 1 filelogs containing 3 revisions (182 bytes in store; 573 bytes tracked data)
-  finished migrating 3 filelog revisions across 1 filelogs; change in size: 0 bytes
+  finished migrating 3 filelog revisions across 1 filelogs; change in size: -63 bytes
   migrating 1 manifests containing 3 revisions (141 bytes in store; 138 bytes tracked data)
   finished migrating 3 manifest revisions across 1 manifests; change in size: 0 bytes
   migrating changelog containing 3 revisions (174 bytes in store; 171 bytes tracked data)
   finished migrating 3 changelog revisions; change in size: 0 bytes
-  finished migrating 9 total revisions; total change in store size: 0 bytes
+  finished migrating 9 total revisions; total change in store size: -63 bytes
   copying phaseroots
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
@@ -552,7 +552,7 @@ repository config is taken in account
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      77     -1       0 bcc1d3df78b2 000000000000 000000000000
        1        77      21      0       1 af3e29f7a72e bcc1d3df78b2 000000000000
-       2        98      84     -1       2 8daf79c5522b af3e29f7a72e 000000000000
+       2        98      21      1       2 8daf79c5522b af3e29f7a72e 000000000000
   $ cd ..
 
   $ cat << EOF >> $HGRCPATH

@@ -830,9 +830,22 @@ def upgraderepo(ui, repo, run=False, optimize=None):
         try:
             ui.write(_('creating temporary repository to stage migrated '
                        'data: %s\n') % tmppath)
-            dstrepo = localrepo.localrepository(repo.baseui,
-                                                path=tmppath,
-                                                create=True)
+
+            # repo.ui is protected against copy:
+            #
+            # running `repo.ui.copy` actually call `repo.baseui.copy`. Here, we
+            # -really- wants to copy the actual `repo.ui` object (since we
+            # create a copy of the repository).
+            #
+            # We have to work around the protection.
+            oldcopy = repo.ui.copy
+            try:
+                repo.ui.__dict__.pop('copy', None)
+                dstrepo = localrepo.localrepository(repo.ui,
+                                                    path=tmppath,
+                                                    create=True)
+            finally:
+                repo.ui.copy = oldcopy
 
             with dstrepo.wlock(), dstrepo.lock():
                 backuppath = _upgraderepo(ui, repo, dstrepo, newreqs,
