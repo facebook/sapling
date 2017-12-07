@@ -784,7 +784,8 @@ def rebase(ui, repo, **opts):
                 return retcode
         else:
             destmap = _definedestmap(ui, repo, destf, srcf, basef, revf,
-                                     destspace=destspace)
+                                     destspace=destspace,
+                                     inmemory=opts['inmemory'])
             retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
                 return retcode
@@ -804,7 +805,7 @@ def rebase(ui, repo, **opts):
         rbsrt._finishrebase()
 
 def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
-                   destspace=None):
+                   destspace=None, inmemory=False):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
@@ -818,8 +819,9 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
     if revf and srcf:
         raise error.Abort(_('cannot specify both a revision and a source'))
 
-    cmdutil.checkunfinished(repo)
-    cmdutil.bailifchanged(repo)
+    if not inmemory:
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
 
     if ui.configbool('commands', 'rebase.requiredest') and not destf:
         raise error.Abort(_('you must specify a destination'),
