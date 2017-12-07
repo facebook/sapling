@@ -874,6 +874,8 @@ def debugformat(ui, repo, **opts):
         return '%s:' + (' ' * (maxvariantlength - len(name)))
 
     def formatvalue(value):
+        if util.safehasattr(value, 'startswith'):
+            return value
         if value:
             return 'yes'
         else:
