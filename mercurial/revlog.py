@@ -2264,7 +2264,9 @@ class revlog(object):
     DELTAREUSESAMEREVS = 'samerevs'
     DELTAREUSENEVER = 'never'
 
-    DELTAREUSEALL = {'always', 'samerevs', 'never'}
+    DELTAREUSEFULLADD = 'fulladd'
+
+    DELTAREUSEALL = {'always', 'samerevs', 'never', 'fulladd'}
 
     def clone(self, tr, destrevlog, addrevisioncb=None,
               deltareuse=DELTAREUSESAMEREVS, aggressivemergedeltas=None):
@@ -2355,18 +2357,24 @@ class revlog(object):
                 if not cachedelta:
                     rawtext = self.revision(rev, raw=True)
 
-                ifh = destrevlog.opener(destrevlog.indexfile, 'a+',
-                                        checkambig=False)
-                dfh = None
-                if not destrevlog._inline:
-                    dfh = destrevlog.opener(destrevlog.datafile, 'a+')
-                try:
-                    destrevlog._addrevision(node, rawtext, tr, linkrev, p1, p2,
-                                            flags, cachedelta, ifh, dfh)
-                finally:
-                    if dfh:
-                        dfh.close()
-                    ifh.close()
+
+                if deltareuse == self.DELTAREUSEFULLADD:
+                    destrevlog.addrevision(rawtext, tr, linkrev, p1, p2,
+                                           cachedelta=cachedelta,
+                                           node=node, flags=flags)
+                else:
+                    ifh = destrevlog.opener(destrevlog.indexfile, 'a+',
+                                            checkambig=False)
+                    dfh = None
+                    if not destrevlog._inline:
+                        dfh = destrevlog.opener(destrevlog.datafile, 'a+')
+                    try:
+                        destrevlog._addrevision(node, rawtext, tr, linkrev, p1,
+                                                p2, flags, cachedelta, ifh, dfh)
+                    finally:
+                        if dfh:
+                            dfh.close()
+                        ifh.close()
 
                 if addrevisioncb:
                     addrevisioncb(self, rev, node)

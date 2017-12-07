@@ -100,6 +100,9 @@ An upgrade of a repository created with recommended settings only suggests optim
   redeltaall
      deltas within internal storage will always be recalculated without reusing prior deltas; this will likely make execution run several times slower; this optimization is typically not needed
   
+  redeltafulladd
+     every revision will be re-added as if it was new content. It will go through the full storage mechanism giving extensions a chance to process it (eg. lfs). This is similar to "redeltaall" but even slower since more logic is involved.
+  
 
 --optimize can be used to add optimizations
 
@@ -120,6 +123,9 @@ An upgrade of a repository created with recommended settings only suggests optim
   
   redeltaall
      deltas within internal storage will always be recalculated without reusing prior deltas; this will likely make execution run several times slower; this optimization is typically not needed
+  
+  redeltafulladd
+     every revision will be re-added as if it was new content. It will go through the full storage mechanism giving extensions a chance to process it (eg. lfs). This is similar to "redeltaall" but even slower since more logic is involved.
   
 
 Various sub-optimal detections work
@@ -196,6 +202,9 @@ Various sub-optimal detections work
   redeltaall
      deltas within internal storage will always be recalculated without reusing prior deltas; this will likely make execution run several times slower; this optimization is typically not needed
   
+  redeltafulladd
+     every revision will be re-added as if it was new content. It will go through the full storage mechanism giving extensions a chance to process it (eg. lfs). This is similar to "redeltaall" but even slower since more logic is involved.
+  
 
   $ hg --config format.dotencode=false debugupgraderepo
   repository lacks features recommended by current config options:
@@ -234,6 +243,9 @@ Various sub-optimal detections work
   
   redeltaall
      deltas within internal storage will always be recalculated without reusing prior deltas; this will likely make execution run several times slower; this optimization is typically not needed
+  
+  redeltafulladd
+     every revision will be re-added as if it was new content. It will go through the full storage mechanism giving extensions a chance to process it (eg. lfs). This is similar to "redeltaall" but even slower since more logic is involved.
   
 
   $ cd ..
@@ -402,6 +414,40 @@ store files with special filenames aren't encoded during copy
   replaced files will be backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
   replacing store...
   store replacement complete; repository was inconsistent for *s (glob)
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/store-filenames/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+  $ hg debugupgraderepo --run --optimize redeltafulladd
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, revlogv1, store
+  
+  redeltafulladd
+     each revision will be added as new content to the internal storage; this will likely drastically slow down execution time, but some extensions might need it
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/store-filenames/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 3 total revisions (1 in filelogs, 1 in manifests, 1 in changelog)
+  migrating 109 bytes in store; 107 bytes tracked data
+  migrating 1 filelogs containing 1 revisions (0 bytes in store; 0 bytes tracked data)
+  finished migrating 1 filelog revisions across 1 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 1 revisions (46 bytes in store; 45 bytes tracked data)
+  finished migrating 1 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 1 revisions (63 bytes in store; 62 bytes tracked data)
+  finished migrating 1 changelog revisions; change in size: 0 bytes
+  finished migrating 3 total revisions; total change in store size: 0 bytes
+  copying .XX_special_filename
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for 0.0s
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/store-filenames/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)

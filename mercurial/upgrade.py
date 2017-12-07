@@ -369,6 +369,19 @@ def findoptimizations(repo):
                          'recomputed; this will likely drastically slow down '
                          'execution time')))
 
+    optimizations.append(improvement(
+        name='redeltafulladd',
+        type=optimisation,
+        description=_('every revision will be re-added as if it was new '
+                      'content. It will go through the full storage '
+                      'mechanism giving extensions a chance to process it '
+                      '(eg. lfs). This is similar to "redeltaall" but even '
+                      'slower since more logic is involved.'),
+        upgrademessage=_('each revision will be added as new content to the '
+                         'internal storage; this will likely drastically slow '
+                         'down execution time, but some extensions might need '
+                         'it')))
+
     return optimizations
 
 def determineactions(repo, deficiencies, sourcereqs, destreqs):
@@ -618,6 +631,8 @@ def _upgraderepo(ui, srcrepo, dstrepo, requirements, actions):
         deltareuse = revlog.revlog.DELTAREUSESAMEREVS
     elif 'redeltamultibase' in actions:
         deltareuse = revlog.revlog.DELTAREUSESAMEREVS
+    if 'redeltafulladd' in actions:
+        deltareuse = revlog.revlog.DELTAREUSEFULLADD
     else:
         deltareuse = revlog.revlog.DELTAREUSEALWAYS
 
