@@ -891,12 +891,26 @@ def debugformat(ui, repo, **opts):
         repovalue = fv.fromrepo(repo)
         configvalue = fv.fromconfig(repo)
 
+        if repovalue != configvalue:
+            namelabel = 'formatvariant.name.mismatchconfig'
+            repolabel = 'formatvariant.repo.mismatchconfig'
+        elif repovalue != fv.default:
+            namelabel = 'formatvariant.name.mismatchdefault'
+            repolabel = 'formatvariant.repo.mismatchdefault'
+        else:
+            namelabel = 'formatvariant.name.uptodate'
+            repolabel = 'formatvariant.repo.uptodate'
+
         fm.write('name', makeformatname(fv.name), fv.name,
-                 label='formatvariant.name')
+                 label=namelabel)
         fm.write('repo', ' %3s', formatvalue(repovalue),
-                 label='formatvariant.repo')
+                 label=repolabel)
+        if fv.default != configvalue:
+            configlabel = 'formatvariant.config.special'
+        else:
+            configlabel = 'formatvariant.config.default'
         fm.condwrite(ui.verbose, 'config', ' %6s', formatvalue(configvalue),
-                     label='formatvariant.config')
+                     label=configlabel)
         fm.condwrite(ui.verbose, 'default', ' %7s', formatvalue(fv.default),
                      label='formatvariant.default')
         fm.plain('\n')

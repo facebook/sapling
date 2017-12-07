@@ -72,6 +72,12 @@ An upgrade of a repository created with recommended settings only suggests optim
   dotencode:      yes    yes     yes
   generaldelta:   yes    yes     yes
   plain-cl-delta: yes    yes     yes
+  $ hg debugformat --verbose --config format.usegfncache=no --color=debug
+  format-variant repo config default
+  [formatvariant.name.uptodate|fncache:       ][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
+  [formatvariant.name.uptodate|dotencode:     ][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
+  [formatvariant.name.uptodate|generaldelta:  ][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
+  [formatvariant.name.uptodate|plain-cl-delta:][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
   $ hg debugupgraderepo
   (no feature deficiencies found in existing repository)
   performing an upgrade with "--run" will make the following changes:
@@ -137,6 +143,12 @@ Various sub-optimal detections work
   dotencode:       no    yes     yes
   generaldelta:    no     no     yes
   plain-cl-delta: yes    yes     yes
+  $ hg debugformat --verbose --config format.usegeneraldelta=no --color=debug
+  format-variant repo config default
+  [formatvariant.name.mismatchconfig|fncache:       ][formatvariant.repo.mismatchconfig|  no][formatvariant.config.default|    yes][formatvariant.default|     yes]
+  [formatvariant.name.mismatchconfig|dotencode:     ][formatvariant.repo.mismatchconfig|  no][formatvariant.config.default|    yes][formatvariant.default|     yes]
+  [formatvariant.name.mismatchdefault|generaldelta:  ][formatvariant.repo.mismatchdefault|  no][formatvariant.config.special|     no][formatvariant.default|     yes]
+  [formatvariant.name.uptodate|plain-cl-delta:][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
   $ hg debugupgraderepo
   repository lacks features recommended by current config options:
   
