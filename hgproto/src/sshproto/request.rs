@@ -244,14 +244,14 @@ where
     F: Fn(&'a [u8]) -> IResult<&'a [u8], T>,
 {
     match params.get(key.as_bytes()) {
-        None => bail!("missing param {}", key),
+        None => bail_msg!("missing param {}", key),
         Some(v) => match parser(v.as_ref()) {
             IResult::Done(rest, v) => match match_eof(rest) {
                 IResult::Done(..) => Ok(v),
-                _ => bail!("Unconsumed characters remain after parsing param"),
+                _ => bail_msg!("Unconsumed characters remain after parsing param"),
             },
-            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
         },
     }
 }
@@ -272,13 +272,13 @@ where
         Some(v) => match parser(v.as_ref()) {
             IResult::Done(unparsed, v) => match match_eof(unparsed) {
                 IResult::Done(..) => Ok(v),
-                _ => bail!(
+                _ => bail_msg!(
                     "Unconsumed characters remain after parsing param: {:?}",
                     unparsed
                 ),
             },
-            IResult::Incomplete(err) => bail!("param parse incomplete: {:?}", err),
-            IResult::Error(err) => bail!("param parse failed: {:?}", err),
+            IResult::Incomplete(err) => bail_msg!("param parse incomplete: {:?}", err),
+            IResult::Error(err) => bail_msg!("param parse failed: {:?}", err),
         },
     }
 }

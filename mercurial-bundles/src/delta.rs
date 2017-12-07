@@ -36,11 +36,11 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
 
         let delta_len = (new_len as usize) + DELTA_HEADER_LEN;
         if remaining < delta_len {
-            Err(ErrorKind::InvalidDelta(format!(
+            bail_err!(ErrorKind::InvalidDelta(format!(
                 "expected {} bytes, {} remaining",
                 delta_len,
                 remaining
-            )))?;
+            )));
         }
 
         frags.push(Fragment {
@@ -54,9 +54,9 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
     }
 
     if remaining != 0 {
-        Err(ErrorKind::InvalidDelta(
+        bail_err!(ErrorKind::InvalidDelta(
             format!("{} trailing bytes in encoded delta", remaining),
-        ))?;
+        ));
     }
 
     Delta::new(frags)

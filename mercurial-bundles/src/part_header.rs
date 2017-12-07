@@ -230,7 +230,7 @@ impl PartHeaderBuilder {
         let val = val.into();
         self.check_param(&key, &val)?;
         if self.mparams.len() >= u8::max_value() as usize {
-            bail!(
+            bail_msg!(
                 "number of mandatory params exceeds maximum {}",
                 u8::max_value()
             );
@@ -248,7 +248,7 @@ impl PartHeaderBuilder {
         let val = val.into();
         self.check_param(&key, &val)?;
         if self.aparams.len() >= u8::max_value() as usize {
-            bail!(
+            bail_msg!(
                 "number of advisory params exceeds maximum {}",
                 u8::max_value()
             );
@@ -278,10 +278,10 @@ impl PartHeaderBuilder {
 
     fn check_part_type(part_type: &AsciiStr) -> Result<()> {
         if part_type.is_empty() {
-            bail!("part type empty");
+            bail_msg!("part type empty");
         }
         if part_type.len() > u8::max_value() as usize {
-            bail!(
+            bail_msg!(
                 "part type '{}' exceeds max length {}",
                 part_type,
                 u8::max_value()
@@ -292,17 +292,17 @@ impl PartHeaderBuilder {
 
     fn check_param(&self, key: &str, val: &[u8]) -> Result<()> {
         if self.mparams.contains_key(key) || self.aparams.contains_key(key) {
-            bail!(
+            bail_msg!(
                 "part '{}': key '{}' already present in this part",
                 self.part_type,
                 key
             );
         }
         if key.is_empty() {
-            bail!("part '{}': empty key", self.part_type);
+            bail_msg!("part '{}': empty key", self.part_type);
         }
         if key.len() > u8::max_value() as usize {
-            bail!(
+            bail_msg!(
                 "part '{}': key '{}' exceeds max length {}",
                 self.part_type,
                 key,
@@ -310,14 +310,14 @@ impl PartHeaderBuilder {
             );
         }
         if val.is_empty() {
-            bail!(
+            bail_msg!(
                 "part '{}': value for key '{}' is empty",
                 self.part_type,
                 key
             );
         }
         if val.len() > u8::max_value() as usize {
-            bail!(
+            bail_msg!(
                 "part '{}': value for key '{}' exceeds max length {}",
                 self.part_type,
                 key,

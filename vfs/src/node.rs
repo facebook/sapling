@@ -128,13 +128,13 @@ where
 
         if self.steps > self.max_steps && !self.remainder.is_empty() {
             let remainder = mem::replace(&mut self.remainder, VecDeque::new());
-            Err(ErrorKind::MaximumStepReached(
+            bail_err!(ErrorKind::MaximumStepReached(
                 format!(
                     "Reached a maximum of {} steps during a walk",
                     self.max_steps
                 ),
                 remainder,
-            ))?;
+            ));
         }
 
         match self.remainder.pop_front() {
@@ -145,17 +145,16 @@ where
                         None => {
                             let mut remainder = mem::replace(&mut self.remainder, VecDeque::new());
                             remainder.push_front(path_element);
-                            Err(ErrorKind::PathDoesNotExist(
+                            bail_err!(ErrorKind::PathDoesNotExist(
                                 "Encountered a non existing MPath during a walk on Vfs".into(),
                                 remainder,
-                            ))?;
-                            unreachable!()
+                            ));
                         }
                         Some(node) => node,
                     },
-                    VfsNode::File(_) => Err(ErrorKind::NotImplemented(
+                    VfsNode::File(_) => bail_err!(ErrorKind::NotImplemented(
                         "Walking through Symlinks is not implemented yet".into(),
-                    ))?,
+                    )),
                 };
                 self.steps += 1;
                 Ok(Async::Ready(Some(self.current_node.clone())))

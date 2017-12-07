@@ -89,7 +89,6 @@ impl Stream for RepoErrorStream {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        Err(ErrorKind::RepoError(self.hash))?;
-        unreachable!()
+        bail_err!(ErrorKind::RepoError(self.hash));
     }
 }

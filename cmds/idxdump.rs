@@ -13,7 +13,7 @@ extern crate failure_ext as failure;
 extern crate mercurial;
 
 // Import symbols from std:: (standard library)
-use std::str::{self, FromStr};
+use std::str::FromStr;
 
 // Just need `App` from clap
 use clap::App;
@@ -39,14 +39,14 @@ fn run() -> Result<()> {
     // Get optional index of entry within index file to start dumping from
     let revidx: Option<RevIdx> = match matches.value_of("REV").map(FromStr::from_str) {
         Some(Ok(v)) => Some(v),
-        Some(Err(err)) => bail!("idx malformed: {:?}", err),
+        Some(Err(err)) => bail_msg!("idx malformed: {:?}", err),
         None => None,
     };
 
     // Construct a `Revlog` from the index file
     let revlog = match Revlog::from_idx(idxpath) {
         Ok(revlog) => revlog,
-        Err(err) => bail!("failed to load idx {}: {:?}", idxpath, err),
+        Err(err) => bail_msg!("failed to load idx {}: {:?}", idxpath, err),
     };
 
     // Print the header, using its `Debug` implementation

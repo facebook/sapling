@@ -86,9 +86,9 @@ impl<'hook, R: Repo> HookContext<'hook, R> {
 
         let builder: LuaCoroutineBuilder<_> = match lua.get("hook") {
             Some(val) => val,
-            None => Err(ErrorKind::HookDefinitionError(
+            None => bail_err!(ErrorKind::HookDefinitionError(
                 "function 'hook' not found".into(),
-            ))?,
+            )),
         };
         // TODO: do we really need the clone?
         // TODO: use chain_err once LuaFunctionCallError implements std::error::Error

@@ -11,7 +11,6 @@
 #![feature(conservative_impl_trait)]
 
 #[macro_use]
-extern crate failure_derive;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate itertools;

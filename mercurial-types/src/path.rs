@@ -180,10 +180,10 @@ impl MPath {
 
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
-            Err(ErrorKind::InvalidPath(
+            bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
                 "paths cannot contain '\\0'".into(),
-            ))?;
+            ));
         }
         Ok(())
     }

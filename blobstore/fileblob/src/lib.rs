@@ -8,7 +8,7 @@
 
 extern crate bytes;
 #[macro_use]
-extern crate failure;
+extern crate failure_ext as failure;
 extern crate futures;
 extern crate url;
 
@@ -20,7 +20,7 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use bytes::Bytes;
-use failure::Error;
+use failure::{Error, Result};
 use futures::Async;
 use futures::future::poll_fn;
 use futures_ext::{BoxFuture, FutureExt};
@@ -29,14 +29,6 @@ use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 use blobstore::Blobstore;
 
 const PREFIX: &str = "blob";
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-macro_rules! bail {
-    ($($arg:expr),*) => {
-        return Err(format_err!($($arg),*))
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Fileblob {
@@ -48,7 +40,7 @@ impl Fileblob {
         let base = base.as_ref();
 
         if !base.is_dir() {
-            bail!("Base {:?} doesn't exist or is not directory", base);
+            bail_msg!("Base {:?} doesn't exist or is not directory", base);
         }
 
         Ok(Self {

@@ -41,7 +41,7 @@ where
 {
     match lines.next() {
         Some(s) => parse(s).map_err(Into::into),
-        None => Err(failure::err_msg("premature end"))?,
+        None => bail_msg!("premature end"),
     }
 }
 
@@ -152,7 +152,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
     let parts: Vec<_> = s.splitn(3, |c| *c == b' ').collect();
 
     if parts.len() < 2 {
-        Err(failure::err_msg("not enough parts"))?;
+        bail_msg!("not enough parts");
     }
     let time: u64 = str::from_utf8(parts[0])?
         .parse::<u64>()

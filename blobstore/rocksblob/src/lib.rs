@@ -7,7 +7,7 @@
 #![deny(warnings)]
 
 extern crate bytes;
-extern crate failure;
+extern crate failure_ext as failure;
 extern crate futures;
 
 extern crate blobstore;

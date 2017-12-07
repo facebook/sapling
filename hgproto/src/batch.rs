@@ -20,16 +20,16 @@ pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
         if idx > 0 {
             // "::" or ":<end of string>" are both illegal.
             if slice.is_empty() {
-                Err(ErrorKind::BatchInvalid(
+                bail_err!(ErrorKind::BatchInvalid(
                     String::from_utf8_lossy(bs.as_ref()).into_owned(),
-                ))?;
+                ));
             }
             out.push(match slice[0] {
                 b'c' => b':',
                 b'o' => b',',
                 b's' => b';',
                 b'e' => b'=',
-                ch => bail!(ErrorKind::BatchEscape(ch)),
+                ch => bail_err!(ErrorKind::BatchEscape(ch)),
             });
             out.extend_from_slice(&slice[1..]);
         } else {

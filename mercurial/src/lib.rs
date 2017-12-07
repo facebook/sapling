@@ -12,8 +12,7 @@ extern crate flate2;
 extern crate futures;
 extern crate futures_ext;
 
-#[macro_use] // for macros
-extern crate failure as _failure;
+#[macro_use]
 extern crate failure_ext as failure;
 
 #[macro_use]

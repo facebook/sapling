@@ -230,10 +230,9 @@ where
         for err in repos.into_iter().filter_map(Result::err) {
             crit!(root_log, "Failed to initialize repo"; SlogKVError(err));
         }
-        Err(ErrorKind::Initialization(
+        bail_err!(ErrorKind::Initialization(
             "at least one of the repos failed to be initialized",
-        ))?;
-        unreachable!()
+        ));
     }
 
     let handles: Vec<_> = repos
@@ -254,10 +253,9 @@ where
         for err in handles.into_iter().filter_map(Result::err) {
             crit!(root_log, "Failed to spawn listener thread"; SlogKVError(err));
         }
-        Err(ErrorKind::Initialization(
+        bail_err!(ErrorKind::Initialization(
             "at least one of the listener threads failed to be spawned",
-        ))?;
-        unreachable!()
+        ));
     }
 
     Ok(handles.into_iter().filter_map(Result::ok).collect())

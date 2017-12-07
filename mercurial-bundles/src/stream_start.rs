@@ -30,9 +30,9 @@ impl Decoder for StartDecoder {
 
         let header_len = {
             if &buf[..4] != b"HG20" {
-                Err(ErrorKind::Bundle2Decode(
+                bail_err!(ErrorKind::Bundle2Decode(
                     "invalid bundle magic string".into(),
-                ))?;
+                ));
             }
             BigEndian::read_u32(&buf[4..8]) as usize
         };

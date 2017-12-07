@@ -208,7 +208,7 @@ where
 fn open_repo<P: Into<PathBuf>>(input: P) -> Result<RevlogRepo> {
     let mut input = input.into();
     if !input.exists() || !input.is_dir() {
-        bail!("input {} doesn't exist or isn't a dir", input.display());
+        bail_msg!("input {} doesn't exist or isn't a dir", input.display());
     }
     input.push(".hg");
 

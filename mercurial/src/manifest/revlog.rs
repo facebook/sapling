@@ -52,14 +52,13 @@ fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Det
         }
 
         let (name, rest) = match find(line, &0) {
-            None => Err(failure::err_msg("Malformed entry: no \\0"))?,
+            None => bail_msg!("Malformed entry: no \\0"),
             Some(nil) => {
                 let (name, rest) = line.split_at(nil);
                 if let Some((_, hash)) = rest.split_first() {
                     (name, hash)
                 } else {
-                    Err(failure::err_msg("Malformed entry: no hash"))?;
-                    unreachable!()
+                    bail_msg!("Malformed entry: no hash");
                 }
             }
         };
@@ -130,18 +129,18 @@ impl RevlogManifest {
 impl Details {
     fn parse(data: &[u8]) -> Result<Details> {
         if data.len() < 40 {
-            Err(failure::err_msg("hash too small"))?;
+            bail_msg!("hash too small");
         }
 
         let (hash, flags) = data.split_at(40);
         let hash = match str::from_utf8(hash) {
-            Err(_) => Err(failure::err_msg("malformed hash"))?,
+            Err(_) => bail_msg!("malformed hash"),
             Ok(hs) => hs,
         };
         let nodeid = hash.parse::<NodeHash>().context("malformed hash")?;
 
         if flags.len() > 1 {
-            Err(failure::err_msg("More than 1 flag"))?;
+            bail_msg!("More than 1 flag");
         }
 
         let flag = if flags.len() == 0 {
@@ -151,7 +150,7 @@ impl Details {
                 b'l' => Type::Symlink,
                 b'x' => Type::Executable,
                 b't' => Type::Tree,
-                unk => Err(format_err!("Unknown flag {}", unk))?,
+                unk => bail_msg!("Unknown flag {}", unk),
             }
         };
 

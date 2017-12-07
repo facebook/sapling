@@ -81,7 +81,7 @@ where
     {
         let path = path.into();
         if !path.is_dir() {
-            bail!("'{}' is not a directory", path.to_string_lossy());
+            bail_msg!("'{}' is not a directory", path.to_string_lossy());
         }
 
         Ok(FileKV {

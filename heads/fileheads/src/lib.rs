@@ -55,7 +55,7 @@ impl FileHeads {
         let path = path.as_ref();
 
         if !path.is_dir() {
-            bail!("'{}' is not a directory", path.to_string_lossy());
+            bail_msg!("'{}' is not a directory", path.to_string_lossy());
         }
 
         Ok(FileHeads {

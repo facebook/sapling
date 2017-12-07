@@ -9,7 +9,7 @@
 
 extern crate blobstore;
 extern crate bytes;
-extern crate failure;
+extern crate failure_ext as failure;
 extern crate futures;
 
 use std::collections::HashMap;

@@ -88,7 +88,7 @@ impl RepoConfigs {
                 .from_err()
                 .and_then(|repos_node| match repos_node {
                     VfsNode::File(_) => {
-                        bail!(ErrorKind::InvalidFileStructure("expected directory".into()))
+                        bail_err!(ErrorKind::InvalidFileStructure("expected directory".into()))
                     }
                     VfsNode::Dir(dir) => Ok(dir),
                 })

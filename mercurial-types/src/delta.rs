@@ -54,7 +54,7 @@ impl Delta {
                         prev.end,
                         frag.start
                     );
-                    Err(ErrorKind::InvalidFragmentList(msg))?;
+                    bail!(ErrorKind::InvalidFragmentList(msg));
                 }
             }
             prev_frag = Some(frag);

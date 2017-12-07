@@ -61,14 +61,14 @@ impl Decoder for WirePackUnpacker {
                         self.state,
                         bytes,
                     );
-                    Err(ErrorKind::WirePackDecode(msg))?;
+                    bail_err!(ErrorKind::WirePackDecode(msg));
                 }
                 if self.state != State::End {
                     let msg = format!(
                         "incomplete wirepack: expected state End, found {:?}",
                         self.state
                     );
-                    Err(ErrorKind::WirePackDecode(msg))?;
+                    bail_err!(ErrorKind::WirePackDecode(msg));
                 }
                 Ok(None)
             }
@@ -144,7 +144,7 @@ impl UnpackerInner {
                     None => return Ok((None, Data(f, entry_count))),
                 },
                 End => return Ok((None, End)),
-                Invalid => Err(ErrorKind::WirePackDecode("byte stream corrupt".into()))?,
+                Invalid => bail_err!(ErrorKind::WirePackDecode("byte stream corrupt".into())),
             }
         }
     }
@@ -190,9 +190,9 @@ impl UnpackerInner {
         let filename = if filename_len == 0 {
             match self.kind {
                 Kind::Tree => RepoPath::root(),
-                Kind::File => Err(ErrorKind::WirePackDecode(
+                Kind::File => bail_err!(ErrorKind::WirePackDecode(
                     "file packs cannot contain zero-length filenames".into(),
-                ))?,
+                )),
             }
         } else {
             let mpath = buf.drain_path(filename_len).with_context(|_| {
@@ -249,11 +249,11 @@ impl UnpackerInner {
         let copy_from = if copy_from_len > 0 {
             let path = buf.drain_path(copy_from_len)?;
             match self.kind {
-                Kind::Tree => Err(ErrorKind::WirePackDecode(format!(
+                Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
                     "tree entry {} is marked as copied from path {}, but they cannot be copied",
                     node,
                     path
-                )))?,
+                ))),
                 Kind::File => Some(RepoPath::file(path).with_context(|_| {
                     ErrorKind::WirePackDecode("invalid copy from path".into())
                 })?),

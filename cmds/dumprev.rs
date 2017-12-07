@@ -12,7 +12,6 @@ extern crate mercurial;
 // Import symbols from std:: (standard library)
 use std::fs::File;
 use std::io::Write;
-use std::str;
 use std::str::FromStr;
 
 // Just need `App` from clap
@@ -71,7 +70,7 @@ fn run() -> Result<()> {
                 if let Some(dumpfile) = dumpfile {
                     let mut file = match File::create(dumpfile) {
                         Ok(file) => file,
-                        Err(err) => bail!("Failed to create file {}: {:?}", dumpfile, err),
+                        Err(err) => bail_msg!("Failed to create file {}: {:?}", dumpfile, err),
                     };
                     println!(
                         "Writing rev {:?} to {}",
@@ -79,7 +78,7 @@ fn run() -> Result<()> {
                         dumpfile
                     );
                     if let Err(err) = file.write_all(revdata) {
-                        bail!("Failed to write {}: {:?}", dumpfile, err);
+                        bail_msg!("Failed to write {}: {:?}", dumpfile, err);
                     }
                 } else {
                     println!(
@@ -92,12 +91,12 @@ fn run() -> Result<()> {
                 println!("Dataless rev {:?}", rev.nodeid().expect("no id"));
             }
         }
-        Ok(rev) => bail!(
+        Ok(rev) => bail_msg!(
             "Nodeid missing: got {:?} expected {:?}",
             rev.nodeid(),
             entry.nodeid()
         ),
-        Err(err) => bail!("failed to get chunk {:?}: {}", revidx, err),
+        Err(err) => bail_msg!("failed to get chunk {:?}: {}", revidx, err),
     };
 
     Ok(())

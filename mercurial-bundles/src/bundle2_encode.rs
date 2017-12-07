@@ -52,7 +52,7 @@ where
     pub fn add_stream_param(&mut self, key: String, val: String) -> Result<&mut Self> {
         if &key.to_lowercase() == "compression" {
             let msg = "stream compression should be set through set_compressor_type";
-            Err(ErrorKind::Bundle2Encode(msg.into()))?;
+            bail_err!(ErrorKind::Bundle2Encode(msg.into()));
         }
         if is_mandatory_param(&key)
             .with_context(|_| ErrorKind::Bundle2Encode("stream key is invalid".into()))?

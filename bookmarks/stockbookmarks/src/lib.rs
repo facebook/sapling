@@ -11,7 +11,6 @@ extern crate ascii;
 #[cfg(test)]
 extern crate assert_matches;
 #[macro_use]
-extern crate failure_derive;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -88,11 +87,9 @@ impl StockBookmarks {
             // <hash><space><bookmark name>, where hash is 40 bytes, the space is 1 byte
             // and the bookmark name is at least 1 byte.
             if line.len() < 42 || line[40] != b' ' {
-                return Err(
-                    ErrorKind::InvalidBookmarkLine(
-                        String::from_utf8_lossy(line.as_ref()).into_owned(),
-                    ).into(),
-                );
+                bail_err!(ErrorKind::InvalidBookmarkLine(
+                    String::from_utf8_lossy(line.as_ref()).into_owned(),
+                ));
             }
             let bmname = &line[41..];
             let hash_slice = &line[..40];

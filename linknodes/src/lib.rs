@@ -7,7 +7,6 @@
 #![deny(warnings)]
 
 #[macro_use]
-extern crate failure_derive;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate serde;

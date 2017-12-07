@@ -121,11 +121,11 @@ pub fn is_mandatory_param(s: &str) -> Result<bool> {
     match s.chars().next() {
         Some(ch) => {
             if !ch.is_alphabetic() {
-                bail!("'{}': first char '{}' is not alphabetic", s, ch);
+                bail_msg!("'{}': first char '{}' is not alphabetic", s, ch);
             }
             Ok(ch.is_uppercase())
         }
-        None => bail!("string is empty"),
+        None => bail_msg!("string is empty"),
     }
 }
 
@@ -135,9 +135,9 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<DecompressorTy
         Some("GZ") => Ok(DecompressorType::Gzip),
         Some("ZS") => Ok(DecompressorType::Zstd),
         Some("UN") => Ok(DecompressorType::Uncompressed),
-        Some(s) => Err(ErrorKind::Bundle2Decode(
+        Some(s) => bail_err!(ErrorKind::Bundle2Decode(
             format!("unknown compression '{}'", s),
-        ))?,
+        )),
         None => Ok(DecompressorType::Uncompressed),
     }
 }

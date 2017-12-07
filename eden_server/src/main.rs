@@ -17,6 +17,7 @@
 extern crate ascii;
 extern crate blobrepo;
 extern crate clap;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_cpupool;
@@ -127,7 +128,7 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
             return parse_func(caps);
         }
     }
-    Err(failure::err_msg("malformed url"))
+    bail_msg!("malformed url")
 }
 
 enum ParsedUrl {
