@@ -1470,3 +1470,9 @@ def scmutilmarktouched(orig, repo, files, *args, **kwargs):
                                 printmessage=False, normallookup=True)
 
     return result
+
+def upgraderequirements(orig, repo):
+    reqs = orig(repo)
+    if 'largefiles' in repo.requirements:
+        reqs.add('largefiles')
+    return reqs

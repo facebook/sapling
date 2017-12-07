@@ -352,3 +352,62 @@ store files with special filenames aren't encoded during copy
   the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
 
   $ cd ..
+
+Check upgrading a large file repository
+---------------------------------------
+
+  $ hg init largefilesrepo
+  $ cat << EOF >> largefilesrepo/.hg/hgrc
+  > [extensions]
+  > largefiles =
+  > EOF
+
+  $ cd largefilesrepo
+  $ touch foo
+  $ hg add --large foo
+  $ hg -q commit -m initial
+  $ cat .hg/requires
+  dotencode
+  fncache
+  generaldelta
+  largefiles
+  revlogv1
+  store
+
+  $ hg debugupgraderepo --run
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, largefiles, revlogv1, store
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/largefilesrepo/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 3 total revisions (1 in filelogs, 1 in manifests, 1 in changelog)
+  migrating 163 bytes in store; 160 bytes tracked data
+  migrating 1 filelogs containing 1 revisions (42 bytes in store; 41 bytes tracked data)
+  finished migrating 1 filelog revisions across 1 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 1 revisions (52 bytes in store; 51 bytes tracked data)
+  finished migrating 1 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 1 revisions (69 bytes in store; 68 bytes tracked data)
+  finished migrating 1 changelog revisions; change in size: 0 bytes
+  finished migrating 3 total revisions; total change in store size: 0 bytes
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for 0.0s
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/largefilesrepo/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+  $ cat .hg/requires
+  dotencode
+  fncache
+  generaldelta
+  largefiles
+  revlogv1
+  store

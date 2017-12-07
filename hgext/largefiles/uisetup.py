@@ -30,6 +30,7 @@ from mercurial import (
     scmutil,
     sshpeer,
     subrepo,
+    upgrade,
     wireproto,
 )
 
@@ -59,6 +60,12 @@ def uisetup(ui):
     extensions.wrapfunction(cmdutil, 'forget', overrides.cmdutilforget)
 
     extensions.wrapfunction(copies, 'pathcopies', overrides.copiespathcopies)
+
+    extensions.wrapfunction(upgrade, 'preservedrequirements',
+                            overrides.upgraderequirements)
+
+    extensions.wrapfunction(upgrade, 'supporteddestrequirements',
+                            overrides.upgraderequirements)
 
     # Subrepos call status function
     entry = extensions.wrapcommand(commands.table, 'status',
