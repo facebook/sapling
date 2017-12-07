@@ -259,7 +259,7 @@ class generaldelta(requirementformatvariant):
 
 @registerformatvariant
 class removecldeltachain(formatvariant):
-    name = 'removecldeltachain'
+    name = 'plain-cl-delta'
 
     default = True
 
