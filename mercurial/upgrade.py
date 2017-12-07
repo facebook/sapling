@@ -14,6 +14,7 @@ from .i18n import _
 from . import (
     changelog,
     error,
+    filelog,
     hg,
     localrepo,
     manifest,
@@ -413,9 +414,8 @@ def _revlogfrompath(repo, path):
         mandir = path[:-len('00manifest.i')]
         return manifest.manifestrevlog(repo.svfs, dir=mandir)
     else:
-        # Filelogs don't do anything special with settings. So we can use a
-        # vanilla revlog.
-        return revlog.revlog(repo.svfs, path)
+        #reverse of "/".join(("data", path + ".i"))
+        return filelog.filelog(repo.svfs, path[5:-2])
 
 def _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse, aggressivemergedeltas):
     """Copy revlogs between 2 repos."""
