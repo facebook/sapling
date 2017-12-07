@@ -646,6 +646,14 @@ def _getcheckunknownconfig(repo, section, name):
     return config
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
+    if wctx.isinmemory():
+        # Nothing to do in IMM because nothing in the "working copy" can be an
+        # unknown file.
+        #
+        # Note that we should bail out here, not in ``_checkunknownfiles()``,
+        # because that function does other useful work.
+        return False
+
     if f2 is None:
         f2 = f
     return (repo.wvfs.audit.check(f)
@@ -674,7 +682,11 @@ class _unknowndirschecker(object):
         # updated with any new dirs that are checked and found to be absent.
         self._missingdircache = set()
 
-    def __call__(self, repo, f):
+    def __call__(self, repo, wctx, f):
+        if wctx.isinmemory():
+            # Nothing to do in IMM for the same reason as ``_checkunknownfile``.
+            return False
+
         # Check for path prefixes that exist as unknown files.
         for p in reversed(list(util.finddirs(f))):
             if p in self._missingdircache:
@@ -726,7 +738,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                 if _checkunknownfile(repo, wctx, mctx, f):
                     fileconflicts.add(f)
                 elif pathconfig and f not in wctx:
-                    path = checkunknowndirs(repo, f)
+                    path = checkunknowndirs(repo, wctx, f)
                     if path is not None:
                         pathconflicts.add(path)
             elif m == 'dg':
