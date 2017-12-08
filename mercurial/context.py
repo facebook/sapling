@@ -1976,9 +1976,9 @@ class workingfilectx(committablefilectx):
     def setflags(self, l, x):
         self._repo.wvfs.setflags(self._path, l, x)
 
-class overlayworkingctx(workingctx):
-    """Wraps another mutable context with a write-back cache that can be flushed
-    at a later time.
+class overlayworkingctx(committablectx):
+    """Wraps another mutable context with a write-back cache that can be
+    converted into a commit context.
 
     self._cache[path] maps to a dict with keys: {
         'exists': bool?
@@ -2161,7 +2161,7 @@ class overlayworkingctx(workingctx):
         return overlayworkingfilectx(self._repo, path, parent=self,
                                      filelog=filelog)
 
-class overlayworkingfilectx(workingfilectx):
+class overlayworkingfilectx(committablefilectx):
     """Wrap a ``workingfilectx`` but intercepts all writes into an in-memory
     cache, which can be flushed through later by calling ``flush()``."""
 
