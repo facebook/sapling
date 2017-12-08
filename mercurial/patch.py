@@ -2515,7 +2515,7 @@ def difflabel(func, *args, **kw):
                                 yield (token, 'diff.tab')
                             else:
                                 if i in matches:
-                                    for l, t in _inlinediff(
+                                    for t, l in _inlinediff(
                                                   lines[i].rstrip(),
                                                   lines[matches[i]].rstrip(),
                                                   label):
@@ -2587,10 +2587,10 @@ def _inlinediff(s1, s2, operation):
             token += part[2:]
             continue
         else:
-            buff.append((label, token))
+            buff.append((token, label))
             label = l
             token = part[2:]
-    buff.append((label, token))
+    buff.append((token, label))
 
     return buff
 
