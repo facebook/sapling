@@ -1017,7 +1017,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     stats = mergemod.update(repo, rev, True, True, base, collapse,
-                            labels=['dest', 'source'])
+                            labels=['dest', 'source'], wc=wctx)
     if collapse:
         copies.duplicatecopies(repo, wctx, rev, dest)
     else:
