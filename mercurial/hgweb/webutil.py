@@ -411,7 +411,7 @@ def changesetentry(web, req, tmpl, ctx):
     files = []
     parity = paritygen(web.stripecount)
     for blockno, f in enumerate(ctx.files()):
-        template = f in ctx and 'filenodelink' or 'filenolink'
+        template = 'filenodelink' if f in ctx else 'filenolink'
         files.append(tmpl(template,
                           node=ctx.hex(), file=f, blockno=blockno + 1,
                           parity=next(parity)))
@@ -572,7 +572,7 @@ def diffstat(tmpl, ctx, statgen, parity):
 
     fileno = 0
     for filename, adds, removes, isbinary in stats:
-        template = filename in files and 'diffstatlink' or 'diffstatnolink'
+        template = 'diffstatlink' if filename in files else 'diffstatnolink'
         total = adds + removes
         fileno += 1
         yield tmpl(template, node=ctx.hex(), file=filename, fileno=fileno,

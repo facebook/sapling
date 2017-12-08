@@ -413,7 +413,7 @@ def changelog(web, req, tmpl, shortlog=False):
     else:
         nextentry = []
 
-    return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
+    return tmpl('shortlog' if shortlog else 'changelog', changenav=changenav,
                 node=ctx.hex(), rev=pos, symrev=symrev, changesets=count,
                 entries=entries,
                 latestentry=latestentry, nextentry=nextentry,
