@@ -447,7 +447,7 @@ store files with special filenames aren't encoded during copy
   starting in-place swap of repository data
   replaced files will be backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
   replacing store...
-  store replacement complete; repository was inconsistent for 0.0s
+  store replacement complete; repository was inconsistent for *s (glob)
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/store-filenames/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/store-filenames/.hg/upgradebackup.* (glob)
@@ -501,7 +501,7 @@ Check upgrading a large file repository
   starting in-place swap of repository data
   replaced files will be backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
   replacing store...
-  store replacement complete; repository was inconsistent for 0.0s
+  store replacement complete; repository was inconsistent for *s (glob)
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/largefilesrepo/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
@@ -589,7 +589,7 @@ repository config is taken in account
   starting in-place swap of repository data
   replaced files will be backed up at $TESTTMP/localconfig/.hg/upgradebackup.* (glob)
   replacing store...
-  store replacement complete; repository was inconsistent for 0.0s
+  store replacement complete; repository was inconsistent for *s (glob)
   finalizing requirements file and making repository readable again
   removing temporary repository $TESTTMP/localconfig/.hg/upgrade.* (glob)
   copy of old repository backed up at $TESTTMP/localconfig/.hg/upgradebackup.* (glob)
