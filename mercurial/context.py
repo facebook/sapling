@@ -2092,9 +2092,50 @@ class overlayworkingctx(committablectx):
         except error.ManifestLookupError:
             return False
 
+    def _auditconflicts(self, path):
+        """Replicates conflict checks done by wvfs.write().
+
+        Since we never write to the filesystem and never call `applyupdates` in
+        IMM, we'll never check that a path is actually writable -- e.g., because
+        it adds `a/foo`, but `a` is actually a file in the other commit.
+        """
+        def fail(path, component):
+            # p1() is the base and we're receiving "writes" for p2()'s
+            # files.
+            if 'l' in self.p1()[component].flags():
+                raise error.Abort("error: %s conflicts with symlink %s "
+                                  "in %s." % (path, component,
+                                              self.p1().rev()))
+            else:
+                raise error.Abort("error: '%s' conflicts with file '%s' in "
+                                  "%s." % (path, component,
+                                           self.p1().rev()))
+
+        # Test that each new directory to be created to write this path from p2
+        # is not a file in p1.
+        components = path.split('/')
+        for i in xrange(len(components)):
+            component = "/".join(components[0:i])
+            if component in self.p1():
+                fail(path, component)
+
+        # Test the other direction -- that this path from p2 isn't a directory
+        # in p1 (test that p1 doesn't any paths matching `path/*`).
+        match = matchmod.match('/', '', [path + '/'], default=b'relpath')
+        matches = self.p1().manifest().matches(match)
+        if len(matches) > 0:
+            if len(matches) == 1 and matches.keys()[0] == path:
+                return
+            raise error.Abort("error: file '%s' cannot be written because "
+                              " '%s/' is a folder in %s (containing %d "
+                              "entries: %s)"
+                              % (path, path, self.p1(), len(matches),
+                                 ', '.join(matches.keys())))
+
     def write(self, path, data, flags=''):
         if data is None:
             raise error.ProgrammingError("data must be non-None")
+        self._auditconflicts(path)
         self._markdirty(path, exists=True, data=data, date=util.makedate(),
                         flags=flags)
 
