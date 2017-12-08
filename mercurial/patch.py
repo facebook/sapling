@@ -2510,16 +2510,15 @@ def difflabel(func, *args, **kw):
             for prefix, label in prefixes:
                 if stripline.startswith(prefix):
                     if diffline:
-                        for token in tabsplitter.findall(stripline):
-                            if '\t' == token[0]:
-                                yield (token, 'diff.tab')
-                            else:
-                                if i in matches:
-                                    for t, l in _inlinediff(
-                                                  lines[i].rstrip(),
-                                                  lines[matches[i]].rstrip(),
-                                                  label):
-                                        yield (t, l)
+                        if i in matches:
+                            for t, l in _inlinediff(lines[i].rstrip(),
+                                                    lines[matches[i]].rstrip(),
+                                                    label):
+                                yield (t, l)
+                        else:
+                            for token in tabsplitter.findall(stripline):
+                                if '\t' == token[0]:
+                                    yield (token, 'diff.tab')
                                 else:
                                     yield (token, label)
                     else:
@@ -2581,11 +2580,13 @@ def _inlinediff(s1, s2, operation):
 
     s = difflib.ndiff(re.split(br'(\W)', s2), re.split(br'(\W)', s1))
     for part in s:
-        if part[0] in operation_skip:
+        if part[0] in operation_skip or len(part) == 2:
             continue
         l = operation + '.highlight'
         if part[0] in ' ':
             l = operation
+        if part[2:] == '\t':
+            l = 'diff.tab'
         if l == label: # contiguous token with same label
             token += part[2:]
             continue

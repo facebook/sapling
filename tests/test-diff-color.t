@@ -269,6 +269,9 @@ test inline color diff
   > this is the second line
   >     third line starts with space
   > + starts with a plus sign
+  > 	this one with one tab
+  > 		now with full two tabs
+  > 	now tabs		everywhere, much fun
   > 
   > this line won't change
   > 
@@ -281,11 +284,15 @@ test inline color diff
   > EOF
   $ hg add file1
   $ hg ci -m 'commit'
+
   $ cat > file1 << EOF
   > that is the first paragraph
   >     this is the second line
   > third line starts with space
   > - starts with a minus sign
+  > 	this one with two tab
+  > 			now with full three tabs
+  > 	now there are tabs		everywhere, much fun
   > 
   > this line won't change
   > 
@@ -301,15 +308,21 @@ test inline color diff
   [diff.diffline|diff --git a/file1 b/file1]
   [diff.file_a|--- a/file1]
   [diff.file_b|+++ b/file1]
-  [diff.hunk|@@ -1,13 +1,14 @@]
+  [diff.hunk|@@ -1,16 +1,17 @@]
   [diff.deleted|-this is the first line]
   [diff.deleted|-this is the second line]
   [diff.deleted|-    third line starts with space]
   [diff.deleted|-+ starts with a plus sign]
+  [diff.deleted|-][diff.tab|	][diff.deleted|this one with one tab]
+  [diff.deleted|-][diff.tab|		][diff.deleted|now with full two tabs]
+  [diff.deleted|-][diff.tab|	][diff.deleted|now tabs][diff.tab|		][diff.deleted|everywhere, much fun]
   [diff.inserted|+that is the first paragraph]
   [diff.inserted|+    this is the second line]
   [diff.inserted|+third line starts with space]
   [diff.inserted|+- starts with a minus sign]
+  [diff.inserted|+][diff.tab|	][diff.inserted|this one with two tab]
+  [diff.inserted|+][diff.tab|			][diff.inserted|now with full three tabs]
+  [diff.inserted|+][diff.tab|	][diff.inserted|now there are tabs][diff.tab|		][diff.inserted|everywhere, much fun]
    
    this line won't change
    
@@ -328,15 +341,21 @@ test inline color diff
   [diff.diffline|diff --git a/file1 b/file1]
   [diff.file_a|--- a/file1]
   [diff.file_b|+++ b/file1]
-  [diff.hunk|@@ -1,13 +1,14 @@]
+  [diff.hunk|@@ -1,16 +1,17 @@]
   [diff.deleted|-this is the ][diff.deleted.highlight|first][diff.deleted| line]
   [diff.deleted|-this is the second line]
   [diff.deleted|-][diff.deleted.highlight|    ][diff.deleted|third line starts with space]
   [diff.deleted|-][diff.deleted.highlight|+][diff.deleted| starts with a ][diff.deleted.highlight|plus][diff.deleted| sign]
+  [diff.deleted|-][diff.tab|	][diff.deleted|this one with ][diff.deleted.highlight|one][diff.deleted| tab]
+  [diff.deleted|-][diff.tab|		][diff.deleted|now with full ][diff.deleted.highlight|two][diff.deleted| tabs]
+  [diff.deleted|-][diff.tab|	][diff.deleted|now tabs][diff.tab|		][diff.deleted|everywhere, much fun]
   [diff.inserted|+that is the first paragraph]
   [diff.inserted|+][diff.inserted.highlight|    ][diff.inserted|this is the ][diff.inserted.highlight|second][diff.inserted| line]
   [diff.inserted|+third line starts with space]
   [diff.inserted|+][diff.inserted.highlight|-][diff.inserted| starts with a ][diff.inserted.highlight|minus][diff.inserted| sign]
+  [diff.inserted|+][diff.tab|	][diff.inserted|this one with ][diff.inserted.highlight|two][diff.inserted| tab]
+  [diff.inserted|+][diff.tab|			][diff.inserted|now with full ][diff.inserted.highlight|three][diff.inserted| tabs]
+  [diff.inserted|+][diff.tab|	][diff.inserted|now][diff.inserted.highlight| there are][diff.inserted| tabs][diff.tab|		][diff.inserted|everywhere, much fun]
    
    this line won't change
    
