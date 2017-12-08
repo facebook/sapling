@@ -22,7 +22,11 @@ with demandimport.deactivated():
     import pygments
     import pygments.formatters
     import pygments.lexers
+    import pygments.plugin
     import pygments.util
+
+    for unused in pygments.plugin.find_plugin_lexers():
+        pass
 
 highlight = pygments.highlight
 ClassNotFound = pygments.util.ClassNotFound
