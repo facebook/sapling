@@ -1228,13 +1228,12 @@ def graph(web, req, tmpl):
         # since hgweb graphing code is not itself lazy yet.
         dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
         # As we said one line above... not lazy.
-        tree = list(graphmod.colored(dag, web.repo))
+        tree = list(item for item in graphmod.colored(dag, web.repo)
+                    if item[1] == graphmod.CHANGESET)
 
     def getcolumns(tree):
         cols = 0
         for (id, type, ctx, vtx, edges) in tree:
-            if type != graphmod.CHANGESET:
-                continue
             cols = max(cols, max([edge[0] for edge in edges] or [0]),
                              max([edge[1] for edge in edges] or [0]))
         return cols
@@ -1244,9 +1243,6 @@ def graph(web, req, tmpl):
 
         row = 0
         for (id, type, ctx, vtx, edges) in tree:
-            if type != graphmod.CHANGESET:
-                continue
-
             if usetuples:
                 node = pycompat.bytestr(ctx)
                 data.append({'node': node, 'vertex': vtx, 'edges': edges})
