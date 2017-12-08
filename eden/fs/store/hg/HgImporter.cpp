@@ -11,7 +11,6 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <folly/Bits.h>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/container/Array.h>
@@ -19,6 +18,7 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/lang/Bits.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <unistd.h>

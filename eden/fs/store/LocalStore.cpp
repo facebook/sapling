@@ -9,13 +9,13 @@
  */
 #include "LocalStore.h"
 
-#include <folly/Bits.h>
 #include <folly/Format.h>
 #include <folly/Optional.h>
 #include <folly/String.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/lang/Bits.h>
 #include <rocksdb/db.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>

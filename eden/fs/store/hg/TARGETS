@@ -19,7 +19,6 @@ cpp_library(
         "@/eden/fs/store:store",
         "@/eden/fs/utils:path",
         "@/eden/fs/utils:utils",
-        "@/folly:bits",
         "@/folly:conv",
         "@/folly:executor",
         "@/folly:file_util",
@@ -34,6 +33,7 @@ cpp_library(
         "@/folly/experimental/logging:logging",
         "@/folly/futures:core",
         "@/folly/io:iobuf",
+        "@/folly/lang:bits",
         "@/scm/hgext:datapack",
     ],
     external_deps = [
