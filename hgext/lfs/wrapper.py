@@ -19,6 +19,8 @@ from mercurial import (
     util,
 )
 
+from ..largefiles import lfutil
+
 from . import (
     blobstore,
     pointer,
@@ -302,6 +304,17 @@ def uploadblobs(repo, pointers):
 
     remoteblob = repo.svfs.lfsremoteblobstore
     remoteblob.writebatch(pointers, repo.svfs.lfslocalblobstore)
+
+def upgradefinishdatamigration(orig, ui, srcrepo, dstrepo, requirements):
+    orig(ui, srcrepo, dstrepo, requirements)
+
+    srclfsvfs = srcrepo.svfs.lfslocalblobstore.vfs
+    dstlfsvfs = dstrepo.svfs.lfslocalblobstore.vfs
+
+    for dirpath, dirs, files in srclfsvfs.walk():
+        for oid in files:
+            srcrepo.ui.write(_('copying lfs blob %s\n') % oid)
+            lfutil.link(srclfsvfs.join(oid), dstlfsvfs.join(oid))
 
 def upgraderequirements(orig, repo):
     reqs = orig(repo)

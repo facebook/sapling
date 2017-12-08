@@ -140,6 +140,9 @@ def extsetup(ui):
 
     wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
 
+    wrapfunction(upgrade, '_finishdatamigration',
+                 wrapper.upgradefinishdatamigration)
+
     wrapfunction(upgrade, 'preservedrequirements',
                  wrapper.upgraderequirements)
 

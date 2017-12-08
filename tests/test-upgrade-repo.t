@@ -548,6 +548,7 @@ Check upgrading a large file repository
   finished migrating 2 changelog revisions; change in size: 0 bytes
   finished migrating 6 total revisions; total change in store size: 0 bytes
   copying phaseroots
+  copying lfs blob d0beab232adff5ba365880366ad30b1edb85c4c5372442b5d2fe27adc96d653f
   data fully migrated to temporary repository
   marking source repository as being upgraded; clients will be unable to read from repository
   starting in-place swap of repository data
@@ -561,11 +562,8 @@ Check upgrading a large file repository
 
   $ grep lfs .hg/requires
   lfs
-TODO: restore the local lfs store.  For now, objects are copied from the user
-cache as needed.
   $ find .hg/store/lfs -type f
-  find: `.hg/store/lfs': $ENOENT$
-  [1]
+  .hg/store/lfs/objects/d0/beab232adff5ba365880366ad30b1edb85c4c5372442b5d2fe27adc96d653f
   $ hg verify
   checking changesets
   checking manifests
