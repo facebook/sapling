@@ -271,8 +271,8 @@ def _prunesharedpacks(repo, packpath):
         # Note this is based on file count, not pack count.
         config = repo.ui.configint("packs", "maxpackfilecount")
         if config and numentries > config:
-            repo.ui.warn("purging shared treemanifest pack cache (%d entries) "
-                         "-- too many files\n" % numentries)
+            repo.ui.warn(("purging shared treemanifest pack cache (%d entries) "
+                         "-- too many files\n" % numentries))
             shutil.rmtree(packpath, True)
     except OSError:
         pass
