@@ -15,6 +15,7 @@ from mercurial.i18n import _
 
 from mercurial import (
     error,
+    pathutil,
     url as urlmod,
     util,
     vfs as vfsmod,
@@ -31,6 +32,28 @@ class lfsvfs(vfsmod.vfs):
         if not _lfsre.match(path):
             raise error.ProgrammingError('unexpected lfs path: %s' % path)
         return super(lfsvfs, self).join(path[0:2], path[2:])
+
+    def walk(self, path=None, onerror=None):
+        """Yield (dirpath, '', oids) tuple for blobs under path
+
+        Oids only exist in the root of this vfs, so dirpath is always ''.
+        """
+        root = os.path.normpath(self.base)
+        # when dirpath == root, dirpath[prefixlen:] becomes empty
+        # because len(dirpath) < prefixlen.
+        prefixlen = len(pathutil.normasprefix(root))
+        oids = []
+
+        for dirpath, dirs, files in os.walk(self.reljoin(self.base, path or ''),
+                                            onerror=onerror):
+            dirpath = dirpath[prefixlen:]
+
+            # Silently skip unexpected files and directories
+            if len(dirpath) == 2:
+                oids.extend([dirpath + f for f in files
+                             if _lfsre.match(dirpath + f)])
+
+        yield ('', '', oids)
 
 class filewithprogress(object):
     """a file-like object that supports __len__ and read.
