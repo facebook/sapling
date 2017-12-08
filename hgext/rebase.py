@@ -759,6 +759,25 @@ def rebase(ui, repo, **opts):
     unresolved conflicts.
 
     """
+    if opts.get('continue') or opts.get('abort'):
+        # in-memory rebase is not compatible with resuming rebases.
+        opts['inmemory'] = False
+
+    if opts.get('inmemory', False):
+        try:
+            # in-memory merge doesn't support conflicts, so if we hit any, abort
+            # and re-run as an on-disk merge.
+            return _origrebase(ui, repo, **opts)
+        except error.InMemoryMergeConflictsError:
+            ui.warn(_('hit merge conflicts; re-running rebase without in-memory'
+                      ' merge\n'))
+            _origrebase(ui, repo, **{'abort': True})
+            opts['inmemory'] = False
+            return _origrebase(ui, repo, **opts)
+    else:
+        return _origrebase(ui, repo, **opts)
+
+def _origrebase(ui, repo, **opts):
     opts = pycompat.byteskwargs(opts)
     if 'inmemory' not in opts:
         opts['inmemory'] = False
