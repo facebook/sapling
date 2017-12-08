@@ -514,6 +514,70 @@ Check upgrading a large file repository
   revlogv1
   store
 
+  $ cat << EOF >> .hg/hgrc
+  > [extensions]
+  > lfs =
+  > [lfs]
+  > threshold = 10
+  > EOF
+  $ echo '123456789012345' > lfs.bin
+  $ hg ci -Am 'lfs.bin'
+  adding lfs.bin
+  $ grep lfs .hg/requires
+  lfs
+  $ find .hg/store/lfs -type f
+  .hg/store/lfs/objects/d0/beab232adff5ba365880366ad30b1edb85c4c5372442b5d2fe27adc96d653f
+
+  $ hg debugupgraderepo --run
+  upgrade will perform the following actions:
+  
+  requirements
+     preserved: dotencode, fncache, generaldelta, largefiles, lfs, revlogv1, store
+  
+  beginning upgrade...
+  repository locked and read-only
+  creating temporary repository to stage migrated data: $TESTTMP/largefilesrepo/.hg/upgrade.* (glob)
+  (it is safe to interrupt this process any time before data migration completes)
+  migrating 6 total revisions (2 in filelogs, 2 in manifests, 2 in changelog)
+  migrating 417 bytes in store; 467 bytes tracked data
+  migrating 2 filelogs containing 2 revisions (168 bytes in store; 182 bytes tracked data)
+  finished migrating 2 filelog revisions across 2 filelogs; change in size: 0 bytes
+  migrating 1 manifests containing 2 revisions (113 bytes in store; 151 bytes tracked data)
+  finished migrating 2 manifest revisions across 1 manifests; change in size: 0 bytes
+  migrating changelog containing 2 revisions (136 bytes in store; 134 bytes tracked data)
+  finished migrating 2 changelog revisions; change in size: 0 bytes
+  finished migrating 6 total revisions; total change in store size: 0 bytes
+  copying phaseroots
+  data fully migrated to temporary repository
+  marking source repository as being upgraded; clients will be unable to read from repository
+  starting in-place swap of repository data
+  replaced files will be backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
+  replacing store...
+  store replacement complete; repository was inconsistent for *s (glob)
+  finalizing requirements file and making repository readable again
+  removing temporary repository $TESTTMP/largefilesrepo/.hg/upgrade.* (glob)
+  copy of old repository backed up at $TESTTMP/largefilesrepo/.hg/upgradebackup.* (glob)
+  the old repository will not be deleted; remove it to free up disk space once the upgraded repository is verified
+
+  $ grep lfs .hg/requires
+  lfs
+TODO: restore the local lfs store.  For now, objects are copied from the user
+cache as needed.
+  $ find .hg/store/lfs -type f
+  find: `.hg/store/lfs': $ENOENT$
+  [1]
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 2 changesets, 2 total revisions
+  $ hg debugdata lfs.bin 0
+  version https://git-lfs.github.com/spec/v1
+  oid sha256:d0beab232adff5ba365880366ad30b1edb85c4c5372442b5d2fe27adc96d653f
+  size 16
+  x-is-binary 0
+
   $ cd ..
 
 repository config is taken in account
