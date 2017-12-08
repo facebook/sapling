@@ -495,11 +495,21 @@ class rebaseruntime(object):
                     merging = p2 != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
-                    newnode = concludenode(repo, rev, p1, p2,
-                                           extrafn=_makeextrafn(self.extrafns),
-                                           editor=editor,
-                                           keepbranches=self.keepbranchesf,
-                                           date=self.date)
+                    if self.wctx.isinmemory():
+                        newnode = concludememorynode(repo, rev, p1, p2,
+                            wctx=self.wctx,
+                            extrafn=_makeextrafn(self.extrafns),
+                            editor=editor,
+                            keepbranches=self.keepbranchesf,
+                            date=self.date)
+                        mergemod.mergestate.clean(repo)
+                    else:
+                        newnode = concludenode(repo, rev, p1, p2,
+                            extrafn=_makeextrafn(self.extrafns),
+                            editor=editor,
+                            keepbranches=self.keepbranchesf,
+                            date=self.date)
+
                     if newnode is None:
                         # If it ended up being a no-op commit, then the normal
                         # merge state clean-up path doesn't happen, so do it
@@ -552,13 +562,22 @@ class rebaseruntime(object):
             dsguard = None
             if ui.configbool('rebase', 'singletransaction'):
                 dsguard = dirstateguard.dirstateguard(repo, 'rebase')
-            with util.acceptintervention(dsguard):
-                newnode = concludenode(repo, revtoreuse, p1, self.external,
-                                       commitmsg=commitmsg,
-                                       extrafn=_makeextrafn(self.extrafns),
-                                       editor=editor,
-                                       keepbranches=self.keepbranchesf,
-                                       date=self.date)
+            if self.inmemory:
+                newnode = concludememorynode(repo, revtoreuse, p1,
+                    self.external,
+                    commitmsg=commitmsg,
+                    extrafn=_makeextrafn(self.extrafns),
+                    editor=editor,
+                    keepbranches=self.keepbranchesf,
+                    date=self.date, wctx=self.wctx)
+            else:
+                with util.acceptintervention(dsguard):
+                    newnode = concludenode(repo, revtoreuse, p1, self.external,
+                        commitmsg=commitmsg,
+                        extrafn=_makeextrafn(self.extrafns),
+                        editor=editor,
+                        keepbranches=self.keepbranchesf,
+                        date=self.date)
             if newnode is not None:
                 newrev = repo[newnode].rev()
                 for oldrev in self.state.iterkeys():
@@ -963,6 +982,44 @@ def externalparent(repo, state, destancestors):
                        'than one external parent: %s') %
                      (max(destancestors),
                       ', '.join(str(p) for p in sorted(parents))))
+
+def concludememorynode(repo, rev, p1, p2, wctx=None,
+                       commitmsg=None, editor=None, extrafn=None,
+                       keepbranches=False, date=None):
+    '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
+    but also store useful information in extra.
+    Return node of committed revision.'''
+    ctx = repo[rev]
+    if commitmsg is None:
+        commitmsg = ctx.description()
+    keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
+    extra = {'rebase_source': ctx.hex()}
+    if extrafn:
+        extrafn(ctx, extra)
+
+    destphase = max(ctx.phase(), phases.draft)
+    overrides = {('phases', 'new-commit'): destphase}
+    with repo.ui.configoverride(overrides, 'rebase'):
+        if keepbranch:
+            repo.ui.setconfig('ui', 'allowemptycommit', True)
+        # Replicates the empty check in ``repo.commit``.
+        if wctx.isempty() and not repo.ui.configbool('ui', 'allowemptycommit'):
+            return None
+
+        if date is None:
+            date = ctx.date()
+
+        # By convention, ``extra['branch']`` (set by extrafn) clobbers
+        # ``branch`` (used when passing ``--keepbranches``).
+        branch = repo[p1].branch()
+        if 'branch' in extra:
+            branch = extra['branch']
+
+        memctx = wctx.tomemctx(commitmsg, parents=(p1, p2), date=date,
+            extra=extra, user=ctx.user(), branch=branch, editor=editor)
+        commitres = repo.commitctx(memctx)
+        wctx.clean() # Might be reused
+        return commitres
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
                  keepbranches=False, date=None):

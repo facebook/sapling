@@ -2102,6 +2102,12 @@ class overlayworkingctx(workingctx):
     def isdirty(self, path):
         return path in self._cache
 
+    def isempty(self):
+        # We need to discard any keys that are actually clean before the empty
+        # commit check.
+        self._compact()
+        return len(self._cache) == 0
+
     def clean(self):
         self._cache = {}
 
