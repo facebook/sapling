@@ -2217,6 +2217,9 @@ class overlayworkingfilectx(workingfilectx):
     def remove(self, ignoremissing=False):
         return self._parent.remove(self._path)
 
+    def clearunknown(self):
+        pass
+
 class workingcommitctx(workingctx):
     """A workingcommitctx object makes access to data related to
     the revision being committed convenient.
