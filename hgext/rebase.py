@@ -830,7 +830,8 @@ def _origrebase(ui, repo, **opts):
         else:
             destmap = _definedestmap(ui, repo, destf, srcf, basef, revf,
                                      destspace=destspace,
-                                     inmemory=opts['inmemory'])
+                                     opts=opts)
+            rbsrt.inmemory = opts['inmemory']
             retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
                 return retcode
@@ -850,7 +851,7 @@ def _origrebase(ui, repo, **opts):
         rbsrt._finishrebase()
 
 def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
-                   destspace=None, inmemory=False):
+                   destspace=None, opts=None):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
@@ -864,7 +865,7 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
     if revf and srcf:
         raise error.Abort(_('cannot specify both a revision and a source'))
 
-    if not inmemory:
+    if not opts['inmemory']:
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
@@ -939,6 +940,22 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
                 ui.status(_('nothing to rebase from %s to %s\n') %
                           ('+'.join(str(repo[r]) for r in base), dest))
             return None
+    # If rebasing the working copy parent, force in-memory merge to be off.
+    #
+    # This is because the extra work of checking out the newly rebased commit
+    # outweights the benefits of rebasing in-memory, and executing an extra
+    # update command adds a bit of overhead, so better to just do it on disk. In
+    # all other cases leave it on.
+    #
+    # Note that there are cases where this isn't true -- e.g., rebasing large
+    # stacks that include the WCP. However, I'm not yet sure where the cutoff
+    # is.
+    rebasingwcp = repo['.'].rev() in rebaseset
+    if opts['inmemory'] and rebasingwcp:
+        opts['inmemory'] = False
+        # Check these since we did not before.
+        cmdutil.checkunfinished(repo)
+        cmdutil.bailifchanged(repo)
 
     if not destf:
         dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
