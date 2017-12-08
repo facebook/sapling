@@ -9,7 +9,10 @@
  */
 #pragma once
 
+#include <folly/Range.h>
+#include <string>
 #include "eden/fs/model/git/GitIgnoreStack.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
@@ -27,18 +30,24 @@ class ObjectStore;
  */
 class DiffContext {
  public:
-  DiffContext(InodeDiffCallback* cb, bool listIgnored, ObjectStore* os)
-      : callback{cb}, store{os}, listIgnored{listIgnored} {
-    // TODO: Load the system-wide ignore settings and user-specific
-    // ignore settings into rootIgnore_.
-  }
+  // Loads the system-wide ignore settings and user-specific
+  // ignore settings into top level git ignore stack
+  DiffContext(InodeDiffCallback* cb, bool listIgnored, const ObjectStore* os);
+
+  // this constructor is primarily intended for testing
+  DiffContext(
+      InodeDiffCallback* cb,
+      bool listIgnored,
+      const ObjectStore* os,
+      folly::StringPiece systemWideIgnoreFileContents,
+      folly::StringPiece userIgnoreFileContents);
 
   const GitIgnoreStack* getToplevelIgnore() const {
-    return &rootIgnore_;
+    return ownedIgnores_.empty() ? nullptr : ownedIgnores_.back().get();
   }
 
   InodeDiffCallback* const callback;
-  ObjectStore* const store;
+  const ObjectStore* const store;
   /**
    * If listIgnored is true information about ignored files will be reported.
    * If listIgnored is false then ignoredFile() will never be called on the
@@ -48,7 +57,17 @@ class DiffContext {
   bool const listIgnored;
 
  private:
-  GitIgnoreStack rootIgnore_{nullptr};
+  static AbsolutePath constructUserIgnoreFileName();
+  static std::string tryIngestFile(folly::StringPiece fileName);
+  void initOwnedIgnores(
+      folly::StringPiece systemWideIgnoreFileContents,
+      folly::StringPiece userIgnoreFileContents);
+  void pushFrameIfAvailable(folly::StringPiece ignoreFileContents);
+
+  static constexpr folly::StringPiece kSystemWideIgnoreFileName =
+      "/etc/eden/ignore";
+  const AbsolutePath userIgnoreFileName_;
+  std::vector<std::unique_ptr<GitIgnoreStack>> ownedIgnores_;
 };
 } // namespace eden
 } // namespace facebook

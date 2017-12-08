@@ -1649,15 +1649,12 @@ Future<Unit> TreeInode::diff(
     }
 
     if (!inodeEntry) {
-      // Just create an empty GitIgnoreStack for this directory,
-      // with no ignore rules.
-      auto ignore = make_unique<GitIgnoreStack>(parentIgnore);
       return computeDiff(
           std::move(contents),
           context,
           currentPath,
           std::move(tree),
-          std::move(ignore),
+          make_unique<GitIgnoreStack>(parentIgnore), // empty with no rules
           isIgnored);
     }
 
@@ -1716,13 +1713,12 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     // if we reach here with a TreeInode.
     XLOG(WARNING) << "loadGitIgnoreThenDiff() invoked with a non-file inode: "
                   << gitignoreInode->getLogPath();
-    auto ignore = make_unique<GitIgnoreStack>(parentIgnore);
     return computeDiff(
         contents_.wlock(),
         context,
         currentPath,
         std::move(tree),
-        std::move(ignore),
+        make_unique<GitIgnoreStack>(parentIgnore),
         isIgnored);
   }
 
@@ -1736,22 +1732,21 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     });
   }
 
-  return fileInode->readAll().then([self = inodePtrFromThis(),
-                                    context,
-                                    currentPath = RelativePath{currentPath},
-                                    tree = std::move(tree),
-                                    parentIgnore,
-                                    isIgnored](
-                                       std::string&& ignoreFileContents) {
-    auto ignore = make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents);
-    return self->computeDiff(
-        self->contents_.wlock(),
-        context,
-        currentPath,
-        std::move(tree),
-        std::move(ignore),
-        isIgnored);
-  });
+  return fileInode->readAll().then(
+      [self = inodePtrFromThis(),
+       context,
+       currentPath = RelativePath{currentPath},
+       tree = std::move(tree),
+       parentIgnore,
+       isIgnored](std::string&& ignoreFileContents) mutable {
+        return self->computeDiff(
+            self->contents_.wlock(),
+            context,
+            currentPath,
+            std::move(tree),
+            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+            isIgnored);
+      });
 }
 
 Future<Unit> TreeInode::computeDiff(

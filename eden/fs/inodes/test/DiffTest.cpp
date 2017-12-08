@@ -12,6 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -157,9 +158,17 @@ class DiffTest {
     mount_.initialize(builder_);
   }
 
-  DiffResults diff(bool listIgnored = false) {
+  DiffResults diff(
+      bool listIgnored = false,
+      folly::StringPiece systemWideIgnoreFileContents = "",
+      folly::StringPiece userIgnoreFileContents = "") {
     DiffResultsCallback callback;
-    auto diffFuture = mount_.getEdenMount()->diff(&callback, listIgnored);
+    DiffContext diffContext{&callback,
+                            listIgnored,
+                            mount_.getEdenMount()->getObjectStore(),
+                            systemWideIgnoreFileContents,
+                            userIgnoreFileContents};
+    auto diffFuture = mount_.getEdenMount()->diff(&diffContext);
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractResults();
   }
@@ -711,6 +720,47 @@ TEST(DiffTest, ignoreToplevelOnly) {
           RelativePath{"src/foo/abc/xyz/ignore.txt"}));
   EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
   EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+}
+
+// Test with a .gitignore file in the top-level directory
+// and the presence of none, either, or both of system level
+// and user specific ignore files
+TEST(DiffTest, ignoreSystemLevelAndUser) {
+  DiffTest test({
+      {".gitignore", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
+      {"a/b.txt", "test\n"},
+      {"src/x.txt", "test\n"},
+      {"src/y.txt", "test\n"},
+      {"src/z.txt", "test\n"},
+      {"src/foo/bar.txt", "test\n"},
+  });
+
+  // Add some untracked files, matching either global or user patterns
+  test.getMount().addFile("skip_global.txt", "new\n");
+  test.getMount().addFile("skip_user.txt", "new\n");
+
+  auto result =
+      test.diff(true /* listIgnored */, "skip_global.txt\n", "skip_user.txt\n");
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(
+          RelativePath{"skip_global.txt"}, RelativePath{"skip_user.txt"}));
+
+  result = test.diff(true /* listIgnored */, "", "skip_user.txt\n");
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getIgnored(), UnorderedElementsAre(RelativePath{"skip_user.txt"}));
+
+  result = test.diff(true /* listIgnored */, "skip_global.txt\n", "");
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(RelativePath{"skip_global.txt"}));
+
+  result = test.diff(true /* listIgnored */, "", "");
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
 }
 
 // Test with a .gitignore file in the top-level directory

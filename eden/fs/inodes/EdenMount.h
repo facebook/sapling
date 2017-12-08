@@ -14,6 +14,7 @@
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/experimental/logging/Logger.h>
+#include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 #include <chrono>
 #include <memory>
@@ -46,6 +47,7 @@ class BindMount;
 class CheckoutConflict;
 class ClientConfig;
 class Clock;
+class DiffContext;
 class EdenDispatcher;
 class InodeDiffCallback;
 class InodeMap;
@@ -268,6 +270,14 @@ class EdenMount {
   folly::Future<std::vector<CheckoutConflict>> checkout(
       Hash snapshotHash,
       CheckoutMode checkoutMode = CheckoutMode::NORMAL);
+
+  /**
+   * This version of diff is primarily intended for testing.
+   * Use diff(InodeDiffCallback* callback, bool listIgnored) instead.
+   * The caller must ensure that the DiffContext object ctsPtr points to
+   * exists at least until the returned Future completes.
+   */
+  folly::Future<folly::Unit> diff(const DiffContext* ctxPtr) const;
 
   /**
    * Compute differences between the current commit and the working directory

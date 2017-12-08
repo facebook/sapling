@@ -55,7 +55,9 @@ class GitIgnoreStack {
    * Create a new GitIgnoreStack for a directory that contains a .gitignore
    * file.
    */
-  GitIgnoreStack(const GitIgnoreStack* parent, std::string ignoreFileContents)
+  GitIgnoreStack(
+      const GitIgnoreStack* parent,
+      folly::StringPiece ignoreFileContents)
       : parent_{parent} {
     ignore_.loadFile(ignoreFileContents);
   }

@@ -472,6 +472,19 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       });
 }
 
+Future<Unit> EdenMount::diff(const DiffContext* ctxPtr) const {
+  auto rootInode = getRootInode();
+  return getRootTreeFuture().then([ctxPtr, rootInode = std::move(rootInode)](
+                                      std::shared_ptr<const Tree>&& rootTree) {
+    return rootInode->diff(
+        ctxPtr,
+        RelativePathPiece{},
+        std::move(rootTree),
+        ctxPtr->getToplevelIgnore(),
+        false);
+  });
+}
+
 Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
     const {
   // Create a DiffContext object for this diff operation.
@@ -483,18 +496,7 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
   // exists until the diff completes.
   auto stateHolder = [ctx = std::move(context)]() {};
 
-  auto rootInode = getRootInode();
-  return getRootTreeFuture()
-      .then([ctxPtr, rootInode = std::move(rootInode)](
-                std::shared_ptr<const Tree>&& rootTree) {
-        return rootInode->diff(
-            ctxPtr,
-            RelativePathPiece{},
-            std::move(rootTree),
-            ctxPtr->getToplevelIgnore(),
-            false);
-      })
-      .ensure(std::move(stateHolder));
+  return diff(ctxPtr).ensure(std::move(stateHolder));
 }
 
 folly::Future<folly::Unit> EdenMount::diffRevisions(

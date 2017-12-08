@@ -95,6 +95,8 @@ class GitIgnore {
   GitIgnore();
   virtual ~GitIgnore();
   GitIgnore(GitIgnore&&) = default;
+  GitIgnore(GitIgnore const&) = delete;
+  GitIgnore& operator=(GitIgnore const&) = delete;
 
   /**
    * Move assignment operator.
@@ -165,9 +167,6 @@ class GitIgnore {
   static std::string matchString(MatchResult result);
 
  private:
-  GitIgnore(GitIgnore const&) = delete;
-  GitIgnore& operator=(GitIgnore const&) = delete;
-
   /*
    * The patterns loaded from the gitignore file.  These are sorted from
    * highest to lowest precedence (the reverse of the order they are actually

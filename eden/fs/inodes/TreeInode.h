@@ -86,6 +86,8 @@ class TreeInode : public InodeBase {
 
     Entry(Entry&& e) = default;
     Entry& operator=(Entry&& e) = default;
+    Entry(const Entry& e) = delete;
+    Entry& operator=(const Entry& e) = delete;
 
     bool isMaterialized() const {
       // TODO: In the future we should probably only allow callers to invoke
@@ -97,6 +99,7 @@ class TreeInode : public InodeBase {
       // TODO: In the future we should probably only allow callers to invoke
       // this method when inode is not set.  If inode is set it should be the
       // authoritative source of data.
+      DCHECK(hash_.hasValue());
       return hash_.value();
     }
     const folly::Optional<Hash>& getOptionalHash() const {

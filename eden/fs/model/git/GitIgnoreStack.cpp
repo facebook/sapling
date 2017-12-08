@@ -23,15 +23,15 @@ GitIgnore::MatchResult GitIgnoreStack::match(
   // directories.
   const static PathComponentPiece kHgName{".hg"};
   const static PathComponentPiece kEdenName{".eden"};
-  auto basename = path.basename();
+  const auto basename = path.basename();
   if (basename == kHgName || basename == kEdenName) {
     return GitIgnore::HIDDEN;
   }
 
   // Walk upwards through the GitIgnore stack, checking the path relative to
   // each directory against the GitIgnore rules for that directory.
-  auto* node = this;
-  auto suffixRange = path.rsuffixes();
+  const auto* node = this;
+  const auto suffixRange = path.rsuffixes();
   auto suffixIter = suffixRange.begin();
   while (node != nullptr) {
     RelativePathPiece suffix;
@@ -50,7 +50,7 @@ GitIgnore::MatchResult GitIgnoreStack::match(
     const GitIgnore* ignore = &node->ignore_;
     node = node->parent_;
 
-    auto result = ignore->match(suffix, basename, fileType);
+    const auto result = ignore->match(suffix, basename, fileType);
     if (result != GitIgnore::NO_MATCH) {
       return result;
     }
