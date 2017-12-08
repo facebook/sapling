@@ -507,7 +507,10 @@ class rebaseruntime(object):
                         mergemod.mergestate.clean(repo)
                 else:
                     # Skip commit if we are collapsing
-                    repo.setparents(repo[p1].node())
+                    if self.wctx.isinmemory():
+                        self.wctx.setbase(repo[p1])
+                    else:
+                        repo.setparents(repo[p1].node())
                     newnode = None
                 # Update the state
                 if newnode is not None:
@@ -570,7 +573,8 @@ class rebaseruntime(object):
         if newwd < 0:
             # original directory is a parent of rebase set root or ignored
             newwd = self.originalwd
-        if newwd not in [c.rev() for c in repo[None].parents()]:
+        if (newwd not in [c.rev() for c in repo[None].parents()] and
+                not self.inmemory):
             ui.note(_("update back to initial working directory parent\n"))
             hg.updaterepo(repo, newwd, False)
 
@@ -996,18 +1000,22 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     'Rebase a single revision rev on top of p1 using base as merge ancestor'
     # Merge phase
     # Update to destination and merge it with local
-    if repo['.'].rev() != p1:
-        repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
-        mergemod.update(repo, p1, False, True)
+    if wctx.isinmemory():
+        wctx.setbase(repo[p1])
     else:
-        repo.ui.debug(" already in destination\n")
-    repo.dirstate.write(repo.currenttransaction())
+        # This is necessary to invalidate workingctx's caches.
+        wctx = repo[None]
+        if repo['.'].rev() != p1:
+            repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
+            mergemod.update(repo, p1, False, True)
+        else:
+            repo.ui.debug(" already in destination\n")
+        repo.dirstate.write(repo.currenttransaction())
     repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
     if base is not None:
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    wctx = repo[None]
     stats = mergemod.update(repo, rev, True, True, base, collapse,
                             labels=['dest', 'source'])
     if collapse:
