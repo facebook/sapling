@@ -2225,6 +2225,29 @@ class overlayworkingctx(committablectx):
     def clean(self):
         self._cache = {}
 
+    def _compact(self):
+        """Removes keys from the cache that are actually clean, by comparing
+        them with the underlying context.
+
+        This can occur during the merge process, e.g. by passing --tool :local
+        to resolve a conflict.
+        """
+        keys = []
+        for path in self._cache.keys():
+            cache = self._cache[path]
+            try:
+                underlying = self._wrappedctx[path]
+                if (underlying.data() == cache['data'] and
+                            underlying.flags() == cache['flags']):
+                    keys.append(path)
+            except error.ManifestLookupError:
+                # Path not in the underlying manifest (created).
+                continue
+
+        for path in keys:
+            del self._cache[path]
+        return keys
+
     def _markdirty(self, path, exists, data=None, date=None, flags=''):
         self._cache[path] = {
             'exists': exists,
