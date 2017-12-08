@@ -208,7 +208,7 @@ class phasecache(object):
             self.filterunknown(repo)
             self.opener = repo.svfs
 
-    def getrevset(self, repo, phases):
+    def getrevset(self, repo, phases, subset=None):
         """return a smartset for the given phases"""
         self.loadphaserevs(repo) # ensure phase's sets are loaded
         phases = set(phases)
@@ -222,7 +222,10 @@ class phasecache(object):
                 revs = set.union(*[self._phasesets[p] for p in phases])
             if repo.changelog.filteredrevs:
                 revs = revs - repo.changelog.filteredrevs
-            return smartset.baseset(revs)
+            if subset is None:
+                return smartset.baseset(revs)
+            else:
+                return subset & smartset.baseset(revs)
         else:
             phases = set(allphases).difference(phases)
             if not phases:
@@ -232,9 +235,11 @@ class phasecache(object):
                 revs = self._phasesets[p]
             else:
                 revs = set.union(*[self._phasesets[p] for p in phases])
+            if subset is None:
+                subset = smartset.fullreposet(repo)
             if not revs:
-                return smartset.fullreposet(repo)
-            return smartset.fullreposet(repo).filter(lambda r: r not in revs)
+                return subset
+            return subset.filter(lambda r: r not in revs)
 
     def copy(self):
         # Shallow copy meant to ensure isolation in

@@ -1504,8 +1504,7 @@ def parents(repo, subset, x):
 
 def _phase(repo, subset, *targets):
     """helper to select all rev in <targets> phases"""
-    s = repo._phasecache.getrevset(repo, targets)
-    return subset & s
+    return repo._phasecache.getrevset(repo, targets, subset)
 
 @predicate('draft()', safe=True)
 def draft(repo, subset, x):
@@ -1612,11 +1611,7 @@ def public(repo, subset, x):
     """Changeset in public phase."""
     # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
-    phase = repo._phasecache.phase
-    target = phases.public
-    condition = lambda r: phase(repo, r) == target
-    return subset.filter(condition, condrepr=('<phase %r>', target),
-                         cache=False)
+    return _phase(repo, subset, phases.public)
 
 @predicate('remote([id [,path]])', safe=False)
 def remote(repo, subset, x):
