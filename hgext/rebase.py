@@ -382,14 +382,16 @@ class rebaseruntime(object):
 
         self.prepared = True
 
-    def _performrebase(self, tr):
-        repo, ui = self.repo, self.ui
-        # Assign a working copy object.
+    def _assignworkingcopy(self):
         if self.inmemory:
             from mercurial.context import overlayworkingctx
             self.wctx = overlayworkingctx(self.repo)
         else:
             self.wctx = self.repo[None]
+
+    def _performrebase(self, tr):
+        self._assignworkingcopy()
+        repo, ui = self.repo, self.ui
         if self.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
             # there's a user-provided extrafn it can clobber branch if
