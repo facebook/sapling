@@ -276,3 +276,9 @@ Test incremental repack that doesn't take all packs
   $ hg repack --incremental --config remotefilelog.data.generations=300,20
   $ ls_l .hg/cache/packs/manifests/ | grep datapack
   -r--r--r--     496 bc6c2ebb080844d7a227dacbc847a5b375ec620c.datapack
+
+- Test pruning the manifest cache using packs.maxpackfilecount
+  $ hg repack --incremental --config packs.maxpackfilecount=0
+  $ hg repack --incremental --config packs.maxpackfilecount=1
+  purging shared treemanifest pack cache (4 entries) -- too many files
+  $ ls_l .hg/cache/packs/manifests/

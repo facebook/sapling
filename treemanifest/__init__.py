@@ -128,6 +128,7 @@ from remotefilelog.repack import (
 import cstore
 
 import os
+import shutil
 import struct
 import time
 
@@ -263,6 +264,19 @@ def clientreposetup(repo):
     if not util.safehasattr(repo, 'connectionpool'):
         repo.connectionpool = connectionpool.connectionpool(repo)
 
+def _prunesharedpacks(repo, packpath):
+    """Wipe the packpath if it has too many packs in it"""
+    try:
+        numentries = len(os.listdir(packpath))
+        # Note this is based on file count, not pack count.
+        config = repo.ui.configint("packs", "maxpackfilecount")
+        if config and numentries > config:
+            repo.ui.warn("purging shared treemanifest pack cache (%d entries) "
+                         "-- too many files\n" % numentries)
+            shutil.rmtree(packpath, True)
+    except OSError:
+        pass
+
 def setuptreestores(repo, mfl):
     if repo.ui.configbool("treemanifest", "server"):
         packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
@@ -278,7 +292,7 @@ def setuptreestores(repo, mfl):
             historystore,
             revlogstore,
         )
-
+        _prunesharedpacks(repo, packpath)
         return
 
     usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
@@ -286,6 +300,7 @@ def setuptreestores(repo, mfl):
     if not util.safehasattr(repo, 'name'):
         repo.name = repo.ui.config('remotefilelog', 'reponame')
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
+    _prunesharedpacks(repo, packpath)
 
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                                  PACK_CATEGORY)
