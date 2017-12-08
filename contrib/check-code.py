@@ -135,7 +135,6 @@ testpats = [
     (r'if\s*!', "don't use '!' to negate exit status"),
     (r'/dev/u?random', "don't use entropy, use /dev/zero"),
     (r'do\s*true;\s*done', "don't use true as loop body, use sleep 0"),
-    (r'^( *)\t', "don't use tabs to indent"),
     (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
     (r'^diff *-\w*[uU].*$\n(^  \$ |^$)', "prefix diff -u/-U with cmp"),
@@ -225,6 +224,7 @@ utestpats = [
   ]
 ]
 
+# transform plain test rules to unified test's
 for i in [0, 1]:
     for tp in testpats[i]:
         p = tp[0]
@@ -234,6 +234,11 @@ for i in [0, 1]:
         else:
             p = r"^  [$>] .*(%s)" % p
         utestpats[i].append((p, m) + tp[2:])
+
+# don't transform the following rules:
+# "  > \t" and "  \t" should be allowed in unified tests
+testpats[0].append((r'^( *)\t', "don't use tabs to indent"))
+utestpats[0].append((r'^( ?)\t', "don't use tabs to indent"))
 
 utestfilters = [
     (r"<<(\S+)((.|\n)*?\n  > \1)", rephere),

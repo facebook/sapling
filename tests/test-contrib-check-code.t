@@ -173,6 +173,17 @@
    don't use old-style two-argument raise, use Exception(message)
   [1]
 
+  $ cat <<EOF > tab.t
+  > 	indent
+  >   > 	heredoc
+  > EOF
+  $ "$check_code" tab.t
+  tab.t:1:
+   > 	indent
+   don't use tabs to indent
+  [1]
+  $ rm tab.t
+
   $ cat > rst.py <<EOF
   > """problematic rst text
   > 
