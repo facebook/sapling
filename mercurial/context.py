@@ -2014,6 +2014,43 @@ class overlayworkingctx(workingctx):
         else:
             return self._wrappedctx[path].data()
 
+    @propertycache
+    def _manifest(self):
+        parents = self.parents()
+        man = parents[0].manifest().copy()
+
+        flag = self._flagfunc
+        for path in self.added():
+            man[path] = addednodeid
+            man.setflag(path, flag(path))
+        for path in self.modified():
+            man[path] = modifiednodeid
+            man.setflag(path, flag(path))
+        for path in self.removed():
+            del man[path]
+        return man
+
+    @propertycache
+    def _flagfunc(self):
+        def f(path):
+            return self._cache[path]['flags']
+        return f
+
+    def files(self):
+        return sorted(self.added() + self.modified() + self.removed())
+
+    def modified(self):
+        return [f for f in self._cache.keys() if self._cache[f]['exists'] and
+                self._existsinparent(f)]
+
+    def added(self):
+        return [f for f in self._cache.keys() if self._cache[f]['exists'] and
+                not self._existsinparent(f)]
+
+    def removed(self):
+        return [f for f in self._cache.keys() if
+                not self._cache[f]['exists'] and self._existsinparent(f)]
+
     def isinmemory(self):
         return True
 
