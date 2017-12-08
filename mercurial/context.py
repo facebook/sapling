@@ -2177,6 +2177,42 @@ class overlayworkingctx(committablectx):
                                              self._path)
         return self._wrappedctx[path].size()
 
+    def tomemctx(self, text, branch=None, extra=None, date=None, parents=None,
+                 user=None, editor=None):
+        """Converts this ``overlayworkingctx`` into a ``memctx`` ready to be
+        committed.
+
+        ``text`` is the commit message.
+        ``parents`` (optional) are rev numbers.
+        """
+        # Default parents to the wrapped contexts' if not passed.
+        if parents is None:
+            parents = self._wrappedctx.parents()
+            if len(parents) == 1:
+                parents = (parents[0], None)
+
+        # ``parents`` is passed as rev numbers; convert to ``commitctxs``.
+        if parents[1] is None:
+            parents = (self._repo[parents[0]], None)
+        else:
+            parents = (self._repo[parents[0]], self._repo[parents[1]])
+
+        files = self._cache.keys()
+        def getfile(repo, memctx, path):
+            if self._cache[path]['exists']:
+                return memfilectx(repo, path,
+                                  self._cache[path]['data'],
+                                  'l' in self._cache[path]['flags'],
+                                  'x' in self._cache[path]['flags'],
+                                  self._cache[path]['copied'],
+                                  memctx)
+            else:
+                # Returning None, but including the path in `files`, is
+                # necessary for memctx to register a deletion.
+                return None
+        return memctx(self._repo, parents, text, files, getfile, date=date,
+                      extra=extra, user=user, branch=branch, editor=editor)
+
     def isdirty(self, path):
         return path in self._cache
 
