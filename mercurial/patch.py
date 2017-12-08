@@ -2575,6 +2575,9 @@ def _inlinediff(s1, s2, operation):
         token = '+'
         s2 = s2[1:]
         s1 = s1[1:]
+    else:
+        raise error.ProgrammingError("Case not expected, operation = %s" %
+                                     operation)
 
     s = difflib.ndiff(re.split(br'(\W)', s2), re.split(br'(\W)', s1))
     for part in s:
