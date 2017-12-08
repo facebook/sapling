@@ -1999,6 +1999,10 @@ class overlayworkingctx(committablectx):
     def setbase(self, wrappedctx):
         self._wrappedctx = wrappedctx
         self._parents = [wrappedctx]
+        # Drop old manifest cache as it is now out of date.
+        # This is necessary when, e.g., rebasing several nodes with one
+        # ``overlayworkingctx`` (e.g. with --collapse).
+        util.clearcachedproperty(self, '_manifest')
 
     def data(self, path):
         if self.isdirty(path):
