@@ -441,12 +441,12 @@ def getobsoleted(repo, tr):
     public = phases.public
     addedmarkers = tr.changes.get('obsmarkers')
     addedrevs = tr.changes.get('revs')
-    seenrevs = set(addedrevs)
+    seenrevs = set()
     obsoleted = set()
     for mark in addedmarkers:
         node = mark[0]
         rev = torev(node)
-        if rev is None or rev in seenrevs:
+        if rev is None or rev in seenrevs or rev in addedrevs:
             continue
         seenrevs.add(rev)
         if phase(repo, rev) == public:

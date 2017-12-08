@@ -1275,7 +1275,7 @@ class localrepository(object):
                                      validator=validate,
                                      releasefn=releasefn,
                                      checkambigfiles=_cachedfiles)
-        tr.changes['revs'] = set()
+        tr.changes['revs'] = xrange(0, 0)
         tr.changes['obsmarkers'] = set()
         tr.changes['phases'] = {}
         tr.changes['bookmarks'] = {}

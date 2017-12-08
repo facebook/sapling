@@ -541,5 +541,10 @@ class changelog(revlog.revlog):
                                                    *args, **kwargs)
         revs = transaction.changes.get('revs')
         if revs is not None:
-            revs.add(rev)
+            if revs:
+                assert revs[-1] + 1 == rev
+                revs = xrange(revs[0], rev + 1)
+            else:
+                revs = xrange(rev, rev + 1)
+            transaction.changes['revs'] = revs
         return node

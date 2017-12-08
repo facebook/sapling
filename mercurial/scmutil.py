@@ -1262,7 +1262,7 @@ def registersummarycallback(repo, otr, txnname=''):
         @reportsummary
         def reportnewcs(repo, tr):
             """Report the range of new revisions pulled/unbundled."""
-            newrevs = list(tr.changes.get('revs', set()))
+            newrevs = tr.changes.get('revs', xrange(0, 0))
             if not newrevs:
                 return
 
