@@ -418,6 +418,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
 
     The merged result is written into `localctx`.
     """
+    opts = pycompat.byteskwargs(opts)
+
     def readctx(ctx):
         # Merges were always run in the working copy before, which means
         # they used decoded data, if the user defined any repository
