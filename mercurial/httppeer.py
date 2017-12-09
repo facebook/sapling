@@ -204,6 +204,7 @@ class httppeer(wireproto.wirepeer):
         self._caps = set(self._call('capabilities').split())
 
     def _callstream(self, cmd, _compressible=False, **args):
+        args = pycompat.byteskwargs(args)
         if cmd == 'pushkey':
             args['data'] = ''
         data = args.pop('data', None)
