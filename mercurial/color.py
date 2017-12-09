@@ -484,7 +484,7 @@ if pycompat.iswindows:
             _win32print(ui, text, writefunc, **opts)
 
     def _win32print(ui, text, writefunc, **opts):
-        label = opts.get('label', '')
+        label = opts.get(r'label', '')
         attr = origattr
 
         def mapcolor(val, attr):
