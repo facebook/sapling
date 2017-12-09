@@ -776,7 +776,7 @@ def makestore(ui, repo):
     # rely on obsstore class default when possible.
     kwargs = {}
     if defaultformat is not None:
-        kwargs['defaultformat'] = defaultformat
+        kwargs[r'defaultformat'] = defaultformat
     readonly = not isenabled(repo, createmarkersopt)
     store = obsstore(repo.svfs, readonly=readonly, **kwargs)
     if store and readonly:
