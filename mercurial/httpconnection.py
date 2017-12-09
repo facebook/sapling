@@ -248,7 +248,7 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
             return self.https_open(req)
         def makehttpcon(*args, **kwargs):
             k2 = dict(kwargs)
-            k2['use_ssl'] = False
+            k2[r'use_ssl'] = False
             return HTTPConnection(*args, **k2)
         return self.do_open(makehttpcon, req, False)
 
@@ -288,8 +288,8 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
             if '[' in host:
                 host = host[1:-1]
 
-        kwargs['keyfile'] = keyfile
-        kwargs['certfile'] = certfile
+        kwargs[r'keyfile'] = keyfile
+        kwargs[r'certfile'] = certfile
 
         con = HTTPConnection(host, port, use_ssl=True,
                              ssl_wrap_socket=sslutil.wrapsocket,
