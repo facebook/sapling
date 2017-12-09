@@ -354,7 +354,7 @@ class basectx(object):
             ctx2 = self.p1()
         if ctx2 is not None:
             ctx2 = self._repo[ctx2]
-        diffopts = patch.diffopts(self._repo.ui, opts)
+        diffopts = patch.diffopts(self._repo.ui, pycompat.byteskwargs(opts))
         return patch.diff(self._repo, ctx2, self, match=match, opts=diffopts)
 
     def dirs(self):
