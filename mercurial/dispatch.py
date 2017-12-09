@@ -200,7 +200,8 @@ def dispatch(req):
         req.ui.flush()
         if req.ui.logblockedtimes:
             req.ui._blockedtimes['command_duration'] = duration * 1000
-            req.ui.log('uiblocked', 'ui blocked ms', **req.ui._blockedtimes)
+            req.ui.log('uiblocked', 'ui blocked ms',
+                       **pycompat.strkwargs(req.ui._blockedtimes))
         req.ui.log("commandfinish", "%s exited %d after %0.2f seconds\n",
                    msg, ret or 0, duration)
         try:
