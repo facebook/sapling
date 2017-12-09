@@ -453,7 +453,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
                 rst.append(' :%s: %s\n' % (f, h[f]))
 
         ex = opts.get
-        anyopts = (ex('keyword') or not (ex('command') or ex('extension')))
+        anyopts = (ex(r'keyword') or not (ex(r'command') or ex(r'extension')))
         if not name and anyopts:
             exts = listexts(_('enabled extensions:'), extensions.enabled())
             if exts:
