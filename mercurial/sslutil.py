@@ -96,13 +96,13 @@ except AttributeError:
             # in this legacy code since we don't support SNI.
 
             args = {
-                'keyfile': self._keyfile,
-                'certfile': self._certfile,
-                'server_side': server_side,
-                'cert_reqs': self.verify_mode,
-                'ssl_version': self.protocol,
-                'ca_certs': self._cacerts,
-                'ciphers': self._ciphers,
+                r'keyfile': self._keyfile,
+                r'certfile': self._certfile,
+                r'server_side': server_side,
+                r'cert_reqs': self.verify_mode,
+                r'ssl_version': self.protocol,
+                r'ca_certs': self._cacerts,
+                r'ciphers': self._ciphers,
             }
 
             return ssl.wrap_socket(socket, **args)
