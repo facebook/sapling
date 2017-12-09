@@ -322,7 +322,7 @@ class KeepAliveHandler(object):
                 data = urllibcompat.getdata(req)
                 h.putrequest(
                     req.get_method(), urllibcompat.getselector(req),
-                    **skipheaders)
+                    **pycompat.strkwargs(skipheaders))
                 if 'content-type' not in headers:
                     h.putheader('Content-type',
                                 'application/x-www-form-urlencoded')
@@ -331,7 +331,7 @@ class KeepAliveHandler(object):
             else:
                 h.putrequest(
                     req.get_method(), urllibcompat.getselector(req),
-                    **skipheaders)
+                    **pycompat.strkwargs(skipheaders))
         except socket.error as err:
             raise urlerr.urlerror(err)
         for k, v in headers.items():
@@ -366,8 +366,8 @@ class HTTPResponse(httplib.HTTPResponse):
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         extrakw = {}
         if not pycompat.ispy3:
-            extrakw['strict'] = True
-            extrakw['buffering'] = True
+            extrakw[r'strict'] = True
+            extrakw[r'buffering'] = True
         httplib.HTTPResponse.__init__(self, sock, debuglevel=debuglevel,
                                       method=method, **extrakw)
         self.fileno = sock.fileno
