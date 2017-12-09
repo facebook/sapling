@@ -1333,7 +1333,8 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
     if opargs is None:
         opargs = {}
     pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
-                           streamclonerequested=streamclonerequested, **opargs)
+                           streamclonerequested=streamclonerequested,
+                           **pycompat.strkwargs(opargs))
 
     peerlocal = pullop.remote.local()
     if peerlocal:
@@ -1757,7 +1758,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
                               b2caps=None, heads=None, common=None, **kwargs):
     """add a changegroup part to the requested bundle"""
     cgstream = None
-    if kwargs.get('cg', True):
+    if kwargs.get(r'cg', True):
         # build changegroup bundle here.
         version = '01'
         cgversions = b2caps.get('changegroup')
@@ -1785,7 +1786,7 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
 def _getbundlebookmarkpart(bundler, repo, source, bundlecaps=None,
                               b2caps=None, **kwargs):
     """add a bookmark part to the requested bundle"""
-    if not kwargs.get('bookmarks', False):
+    if not kwargs.get(r'bookmarks', False):
         return
     if 'bookmarks' not in b2caps:
         raise ValueError(_('no common bookmarks exchange method'))
@@ -1798,7 +1799,7 @@ def _getbundlebookmarkpart(bundler, repo, source, bundlecaps=None,
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
                             b2caps=None, **kwargs):
     """add parts containing listkeys namespaces to the requested bundle"""
-    listkeys = kwargs.get('listkeys', ())
+    listkeys = kwargs.get(r'listkeys', ())
     for namespace in listkeys:
         part = bundler.newpart('listkeys')
         part.addparam('namespace', namespace)
@@ -1809,7 +1810,7 @@ def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,
 def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
                             b2caps=None, heads=None, **kwargs):
     """add an obsolescence markers part to the requested bundle"""
-    if kwargs.get('obsmarkers', False):
+    if kwargs.get(r'obsmarkers', False):
         if heads is None:
             heads = repo.heads()
         subset = [c.node() for c in repo.set('::%ln', heads)]
@@ -1821,7 +1822,7 @@ def _getbundleobsmarkerpart(bundler, repo, source, bundlecaps=None,
 def _getbundlephasespart(bundler, repo, source, bundlecaps=None,
                             b2caps=None, heads=None, **kwargs):
     """add phase heads part to the requested bundle"""
-    if kwargs.get('phases', False):
+    if kwargs.get(r'phases', False):
         if not 'heads' in b2caps.get('phases'):
             raise ValueError(_('no common phases exchange method'))
         if heads is None:
@@ -1878,7 +1879,7 @@ def _getbundletagsfnodes(bundler, repo, source, bundlecaps=None,
     # Don't send unless:
     # - changeset are being exchanged,
     # - the client supports it.
-    if not (kwargs.get('cg', True) and 'hgtagsfnodes' in b2caps):
+    if not (kwargs.get(r'cg', True) and 'hgtagsfnodes' in b2caps):
         return
 
     outgoing = _computeoutgoing(repo, heads, common)
