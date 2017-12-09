@@ -894,9 +894,9 @@ class ui(object):
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
         '''
-        if self._buffers and not opts.get('prompt', False):
+        if self._buffers and not opts.get(r'prompt', False):
             if self._bufferapplylabels:
-                label = opts.get('label', '')
+                label = opts.get(r'label', '')
                 self._buffers[-1].extend(self.label(a, label) for a in args)
             else:
                 self._buffers[-1].extend(args)
@@ -907,7 +907,7 @@ class ui(object):
         else:
             msgs = args
             if self._colormode is not None:
-                label = opts.get('label', '')
+                label = opts.get(r'label', '')
                 msgs = [self.label(a, label) for a in args]
             self._write(*msgs, **opts)
 
@@ -935,7 +935,7 @@ class ui(object):
         else:
             msgs = args
             if self._colormode is not None:
-                label = opts.get('label', '')
+                label = opts.get(r'label', '')
                 msgs = [self.label(a, label) for a in args]
             self._write_err(*msgs, **opts)
 
