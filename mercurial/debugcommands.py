@@ -183,7 +183,7 @@ def debugbuilddag(ui, repo, text=None,
                 id, ps = data
 
                 files = []
-                fctxs = {}
+                filecontent = {}
 
                 p2 = None
                 if mergeable_file:
@@ -204,27 +204,29 @@ def debugbuilddag(ui, repo, text=None,
                     ml[id * linesperrev] += " r%i" % id
                     mergedtext = "\n".join(ml)
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(repo, fn, mergedtext)
+                    filecontent[fn] = mergedtext
 
                 if overwritten_file:
                     fn = "of"
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(repo, fn, "r%i\n" % id)
+                    filecontent[fn] = "r%i\n" % id
 
                 if new_file:
                     fn = "nf%i" % id
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(repo, fn, "r%i\n" % id)
+                    filecontent[fn] = "r%i\n" % id
                     if len(ps) > 1:
                         if not p2:
                             p2 = repo[ps[1]]
                         for fn in p2:
                             if fn.startswith("nf"):
                                 files.append(fn)
-                                fctxs[fn] = p2[fn]
+                                filecontent[fn] = p2[fn].data()
 
                 def fctxfn(repo, cx, path):
-                    return fctxs.get(path)
+                    if path in filecontent:
+                        return context.memfilectx(repo, path, filecontent[path])
+                    return None
 
                 if len(ps) == 0 or ps[0] < 0:
                     pars = [None, None]
