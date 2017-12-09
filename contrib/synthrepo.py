@@ -369,14 +369,14 @@ def synthesize(ui, repo, descpath, **opts):
             while not validpath(path):
                 path = pickpath()
             data = '%s contents\n' % path
-            files[path] = context.memfilectx(repo, path, data)
+            files[path] = data
             dir = os.path.dirname(path)
             while dir and dir not in dirs:
                 dirs.add(dir)
                 dir = os.path.dirname(dir)
 
         def filectxfn(repo, memctx, path):
-            return files[path]
+            return context.memfilectx(repo, path, files[path])
 
         ui.progress(_synthesizing, None)
         message = 'synthesized wide repo with %d files' % (len(files),)
@@ -444,14 +444,12 @@ def synthesize(ui, repo, descpath, **opts):
                 for __ in xrange(add):
                     lines.insert(random.randint(0, len(lines)), makeline())
                 path = fctx.path()
-                changes[path] = context.memfilectx(repo, path,
-                                                   '\n'.join(lines) + '\n')
+                changes[path] = '\n'.join(lines) + '\n'
             for __ in xrange(pick(filesremoved)):
                 path = random.choice(mfk)
                 for __ in xrange(10):
                     path = random.choice(mfk)
                     if path not in changes:
-                        changes[path] = None
                         break
         if filesadded:
             dirs = list(pctx.dirs())
@@ -466,9 +464,11 @@ def synthesize(ui, repo, descpath, **opts):
                 pathstr = '/'.join(filter(None, path))
             data = '\n'.join(makeline()
                              for __ in xrange(pick(linesinfilesadded))) + '\n'
-            changes[pathstr] = context.memfilectx(repo, pathstr, data)
+            changes[pathstr] = data
         def filectxfn(repo, memctx, path):
-            return changes[path]
+            if path not in changes:
+                return None
+            return context.memfilectx(repo, path, changes[path])
         if not changes:
             continue
         if revs:
