@@ -181,7 +181,7 @@ def parsealiases(cmd):
 def setupwrapcolorwrite(ui):
     # wrap ui.write so diff output can be labeled/colorized
     def wrapwrite(orig, *args, **kw):
-        label = kw.pop('label', '')
+        label = kw.pop(r'label', '')
         for chunk, l in patch.difflabel(lambda: args):
             orig(chunk, label=label + l)
 
@@ -372,7 +372,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
             # Make all of the pathnames absolute.
             newfiles = [repo.wjoin(nf) for nf in newfiles]
-            return commitfunc(ui, repo, *newfiles, **opts)
+            return commitfunc(ui, repo, *newfiles, **pycompat.strkwargs(opts))
         finally:
             # 5. finally restore backed-up files
             try:
@@ -1334,7 +1334,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 if opts.get('exact'):
                     editor = None
                 else:
-                    editor = getcommiteditor(editform=editform, **opts)
+                    editor = getcommiteditor(editform=editform,
+                                             **pycompat.strkwargs(opts))
                 extra = {}
                 for idfunc in extrapreimport:
                     extrapreimportmap[idfunc](repo, extractdata, extra, opts)
@@ -2717,7 +2718,7 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         firstedge = next(edges)
         width = firstedge[2]
         displayer.show(ctx, copies=copies, matchfn=revmatchfn,
-                       _graphwidth=width, **props)
+                       _graphwidth=width, **pycompat.strkwargs(props))
         lines = displayer.hunk.pop(rev).split('\n')
         if not lines[-1]:
             del lines[-1]
@@ -3008,6 +3009,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
 
 def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
     err = 1
+    opts = pycompat.byteskwargs(opts)
 
     def write(path):
         filename = None
@@ -3050,7 +3052,8 @@ def cat(ui, repo, ctx, matcher, basefm, fntemplate, prefix, **opts):
             submatch = matchmod.subdirmatcher(subpath, matcher)
 
             if not sub.cat(submatch, basefm, fntemplate,
-                           os.path.join(prefix, sub._path), **opts):
+                           os.path.join(prefix, sub._path),
+                           **pycompat.strkwargs(opts)):
                 err = 0
         except error.RepoLookupError:
             ui.status(_("skipping missing subrepository: %s\n")
