@@ -880,7 +880,7 @@ def latesttag(context, mapping, args):
     if len(args) == 1:
         pattern = evalstring(context, mapping, args[0])
 
-    return templatekw.showlatesttags(pattern, **mapping)
+    return templatekw.showlatesttags(pattern, **pycompat.strkwargs(mapping))
 
 @templatefunc('localdate(date[, tz])')
 def localdate(context, mapping, args):
@@ -1063,7 +1063,8 @@ def revset(context, mapping, args):
             revs = list(revs)
             revsetcache[raw] = revs
 
-    return templatekw.showrevslist("revision", revs, **mapping)
+    return templatekw.showrevslist("revision", revs,
+                                   **pycompat.strkwargs(mapping))
 
 @templatefunc('rstdoc(text, style)')
 def rstdoc(context, mapping, args):
