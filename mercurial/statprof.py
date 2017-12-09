@@ -922,7 +922,7 @@ def main(argv=None):
 
     load_data(path=path)
 
-    display(**displayargs)
+    display(**pycompat.strkwargs(displayargs))
 
     return 0
 
