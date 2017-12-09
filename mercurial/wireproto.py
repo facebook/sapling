@@ -452,9 +452,9 @@ class wirepeer(repository.legacypeer):
         # don't pass optional arguments left at their default value
         opts = {}
         if three is not None:
-            opts['three'] = three
+            opts[r'three'] = three
         if four is not None:
-            opts['four'] = four
+            opts[r'four'] = four
         return self._call('debugwireargs', one=one, two=two, **opts)
 
     def _call(self, cmd, **args):
@@ -817,7 +817,7 @@ def changegroupsubset(repo, proto, bases, heads):
 def debugwireargs(repo, proto, one, two, others):
     # only accept optional args from the known set
     opts = options('debugwireargs', ['three', 'four'], others)
-    return repo.debugwireargs(one, two, **opts)
+    return repo.debugwireargs(one, two, **pycompat.strkwargs(opts))
 
 @wireprotocommand('getbundle', '*')
 def getbundle(repo, proto, others):
