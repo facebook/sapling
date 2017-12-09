@@ -22,6 +22,7 @@ from . import (
     obsutil,
     pathutil,
     phases,
+    pycompat,
     registrar,
     repoview,
     revsetlang,
@@ -266,7 +267,8 @@ predicate = registrar.revsetpredicate()
 def _destupdate(repo, subset, x):
     # experimental revset for update destination
     args = getargsdict(x, 'limit', 'clean')
-    return subset & baseset([destutil.destupdate(repo, **args)[0]])
+    return subset & baseset([destutil.destupdate(repo,
+                            **pycompat.strkwargs(args))[0]])
 
 @predicate('_destmerge')
 def _destmerge(repo, subset, x):
