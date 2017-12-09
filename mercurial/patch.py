@@ -2466,8 +2466,8 @@ def diffhunks(repo, node1=None, node2=None, match=None, changes=None,
 def difflabel(func, *args, **kw):
     '''yields 2-tuples of (output, label) based on the output of func()'''
     inlinecolor = False
-    if kw.get('opts'):
-        inlinecolor = kw['opts'].worddiff
+    if kw.get(r'opts'):
+        inlinecolor = kw[r'opts'].worddiff
     headprefixes = [('diff', 'diff.diffline'),
                     ('copy', 'diff.extended'),
                     ('rename', 'diff.extended'),
