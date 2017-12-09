@@ -126,7 +126,7 @@ class tarit(object):
         def __init__(self, *args, **kw):
             timestamp = None
             if 'timestamp' in kw:
-                timestamp = kw.pop('timestamp')
+                timestamp = kw.pop(r'timestamp')
             if timestamp is None:
                 self.timestamp = time.time()
             else:
