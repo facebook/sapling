@@ -1278,6 +1278,7 @@ def cat(ui, repo, file1, *pats, **opts):
 
     Returns 0 on success.
     """
+    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     m = scmutil.match(ctx, (file1,) + pats, opts)
     fntemplate = opts.pop('output', '')
@@ -1290,7 +1291,8 @@ def cat(ui, repo, file1, *pats, **opts):
         ui.pager('cat')
         fm = ui.formatter('cat', opts)
     with fm:
-        return cmdutil.cat(ui, repo, ctx, m, fm, fntemplate, '', **opts)
+        return cmdutil.cat(ui, repo, ctx, m, fm, fntemplate, '',
+                           **pycompat.strkwargs(opts))
 
 @command('^clone',
     [('U', 'noupdate', None, _('the clone will include an empty working '
@@ -1743,7 +1745,7 @@ def debugcommands(ui, cmd='', *args):
 def debugcomplete(ui, cmd='', **opts):
     """returns the completion list associated with the given command"""
 
-    if opts.get('options'):
+    if opts.get(r'options'):
         options = []
         otables = [globalopts]
         if cmd:
