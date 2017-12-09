@@ -571,7 +571,7 @@ files.  Therefore, the files don't exist in the remote store.  Use the files in
 the user cache.
 
   $ find $TESTTMP/repo12/.hg/store/lfs/objects -type f
-  find: */repo12/.hg/store/lfs/objects': $ENOENT$ (glob)
+  find: */repo12/.hg/store/lfs/objects*: $ENOENT$ (glob)
   [1]
 
   $ hg --config extensions.share= share repo12 repo13
