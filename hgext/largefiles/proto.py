@@ -176,7 +176,7 @@ def sshrepocallstream(self, cmd, **args):
     if cmd == 'heads' and self.capable('largefiles'):
         cmd = 'lheads'
     if cmd == 'batch' and self.capable('largefiles'):
-        args['cmds'] = args['cmds'].replace('heads ', 'lheads ')
+        args[r'cmds'] = args[r'cmds'].replace('heads ', 'lheads ')
     return ssholdcallstream(self, cmd, **args)
 
 headsre = re.compile(r'(^|;)heads\b')
@@ -185,5 +185,5 @@ def httprepocallstream(self, cmd, **args):
     if cmd == 'heads' and self.capable('largefiles'):
         cmd = 'lheads'
     if cmd == 'batch' and self.capable('largefiles'):
-        args['cmds'] = headsre.sub('lheads', args['cmds'])
+        args[r'cmds'] = headsre.sub('lheads', args[r'cmds'])
     return httpoldcallstream(self, cmd, **args)

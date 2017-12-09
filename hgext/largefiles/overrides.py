@@ -21,6 +21,7 @@ from mercurial import (
     hg,
     match as matchmod,
     pathutil,
+    pycompat,
     registrar,
     scmutil,
     smartset,
@@ -156,7 +157,7 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
     # Need to lock, otherwise there could be a race condition between
     # when standins are created and added to the repo.
     with repo.wlock():
-        if not opts.get('dry_run'):
+        if not opts.get(r'dry_run'):
             standins = []
             lfdirstate = lfutil.openlfdirstate(ui, repo)
             for f in lfnames:
@@ -177,7 +178,7 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
     return added, bad
 
 def removelargefiles(ui, repo, isaddremove, matcher, **opts):
-    after = opts.get('after')
+    after = opts.get(r'after')
     m = composelargefilematcher(matcher, repo[None].manifest())
     try:
         repo.lfstatus = True
@@ -221,11 +222,11 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
                     name = m.rel(f)
                 ui.status(_('removing %s\n') % name)
 
-            if not opts.get('dry_run'):
+            if not opts.get(r'dry_run'):
                 if not after:
                     repo.wvfs.unlinkpath(f, ignoremissing=True)
 
-        if opts.get('dry_run'):
+        if opts.get(r'dry_run'):
             return result
 
         remove = [lfutil.standin(f) for f in remove]
@@ -252,7 +253,7 @@ def decodepath(orig, path):
 # -- Wrappers: modify existing commands --------------------------------
 
 def overrideadd(orig, ui, repo, *pats, **opts):
-    if opts.get('normal') and opts.get('large'):
+    if opts.get(r'normal') and opts.get(r'large'):
         raise error.Abort(_('--normal cannot be used with --large'))
     return orig(ui, repo, *pats, **opts)
 
@@ -403,9 +404,9 @@ def overridelog(orig, ui, repo, *pats, **opts):
         setattr(cmdutil, '_makenofollowlogfilematcher', oldmakelogfilematcher)
 
 def overrideverify(orig, ui, repo, *pats, **opts):
-    large = opts.pop('large', False)
-    all = opts.pop('lfa', False)
-    contents = opts.pop('lfc', False)
+    large = opts.pop(r'large', False)
+    all = opts.pop(r'lfa', False)
+    contents = opts.pop(r'lfc', False)
 
     result = orig(ui, repo, *pats, **opts)
     if large or all or contents:
@@ -413,7 +414,7 @@ def overrideverify(orig, ui, repo, *pats, **opts):
     return result
 
 def overridedebugstate(orig, ui, repo, *pats, **opts):
-    large = opts.pop('large', False)
+    large = opts.pop(r'large', False)
     if large:
         class fakerepo(object):
             dirstate = lfutil.openlfdirstate(ui, repo)
@@ -802,8 +803,8 @@ def overridepull(orig, ui, repo, source=None, **opts):
     repo.lfpullsource = source
     result = orig(ui, repo, source, **opts)
     revspostpull = len(repo)
-    lfrevs = opts.get('lfrev', [])
-    if opts.get('all_largefiles'):
+    lfrevs = opts.get(r'lfrev', [])
+    if opts.get(r'all_largefiles'):
         lfrevs.append('pulled()')
     if lfrevs and revspostpull > revsprepull:
         numcached = 0
@@ -820,7 +821,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
 
 def overridepush(orig, ui, repo, *args, **kwargs):
     """Override push command and store --lfrev parameters in opargs"""
-    lfrevs = kwargs.pop('lfrev', None)
+    lfrevs = kwargs.pop(r'lfrev', None)
     if lfrevs:
         opargs = kwargs.setdefault('opargs', {})
         opargs['lfrevs'] = scmutil.revrange(repo, lfrevs)
@@ -828,7 +829,7 @@ def overridepush(orig, ui, repo, *args, **kwargs):
 
 def exchangepushoperation(orig, *args, **kwargs):
     """Override pushoperation constructor and store lfrevs parameter"""
-    lfrevs = kwargs.pop('lfrevs', None)
+    lfrevs = kwargs.pop(r'lfrevs', None)
     pushop = orig(*args, **kwargs)
     pushop.lfrevs = lfrevs
     return pushop
@@ -865,7 +866,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
     d = dest
     if d is None:
         d = hg.defaultdest(source)
-    if opts.get('all_largefiles') and not hg.islocal(d):
+    if opts.get(r'all_largefiles') and not hg.islocal(d):
             raise error.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s') %
             d)
@@ -893,7 +894,7 @@ def hgclone(orig, ui, opts, *args, **kwargs):
         # Caching is implicitly limited to 'rev' option, since the dest repo was
         # truncated at that point.  The user may expect a download count with
         # this option, so attempt whether or not this is a largefile repo.
-        if opts.get('all_largefiles'):
+        if opts.get(r'all_largefiles'):
             success, missing = lfcommands.downloadlfiles(ui, repo, None)
 
             if missing != 0:
@@ -913,7 +914,7 @@ def overriderebase(orig, ui, repo, **opts):
     if not util.safehasattr(repo, '_largefilesenabled'):
         return orig(ui, repo, **opts)
 
-    resuming = opts.get('continue')
+    resuming = opts.get(r'continue')
     repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
     repo._lfstatuswriters.append(lambda *msg, **opts: None)
     try:
@@ -1272,6 +1273,7 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
     repo.status = overridestatus
     orig(ui, repo, *dirs, **opts)
     repo.status = oldstatus
+
 def overriderollback(orig, ui, repo, **opts):
     with repo.wlock():
         before = repo.dirstate.parents()
@@ -1310,7 +1312,7 @@ def overriderollback(orig, ui, repo, **opts):
     return result
 
 def overridetransplant(orig, ui, repo, *revs, **opts):
-    resuming = opts.get('continue')
+    resuming = opts.get(r'continue')
     repo._lfcommithooks.append(lfutil.automatedcommithook(resuming))
     repo._lfstatuswriters.append(lambda *msg, **opts: None)
     try:
@@ -1321,6 +1323,7 @@ def overridetransplant(orig, ui, repo, *revs, **opts):
     return result
 
 def overridecat(orig, ui, repo, file1, *pats, **opts):
+    opts = pycompat.byteskwargs(opts)
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     err = 1
     notbad = set()
@@ -1382,7 +1385,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
 
 def mergeupdate(orig, repo, node, branchmerge, force,
                 *args, **kwargs):
-    matcher = kwargs.get('matcher', None)
+    matcher = kwargs.get(r'matcher', None)
     # note if this is a partial update
     partial = matcher and not matcher.always()
     with repo.wlock():
@@ -1437,7 +1440,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         # Make sure the merge runs on disk, not in-memory. largefiles is not a
         # good candidate for in-memory merge (large files, custom dirstate,
         # matcher usage).
-        kwargs['wc'] = repo[None]
+        kwargs[r'wc'] = repo[None]
         result = orig(repo, node, branchmerge, force, *args, **kwargs)
 
         newstandins = lfutil.getstandinsstate(repo)

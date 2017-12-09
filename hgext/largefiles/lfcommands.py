@@ -24,6 +24,7 @@ from mercurial import (
     lock,
     match as matchmod,
     node,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -74,6 +75,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
     Use --to-normal to convert largefiles back to normal files; after
     this, the DEST repository can be used without largefiles at all.'''
 
+    opts = pycompat.byteskwargs(opts)
     if opts['to_normal']:
         tolfile = False
     else:
@@ -579,7 +581,7 @@ def lfpull(ui, repo, source="default", **opts):
     """
     repo.lfpullsource = source
 
-    revs = opts.get('rev', [])
+    revs = opts.get(r'rev', [])
     if not revs:
         raise error.Abort(_('no revisions specified'))
     revs = scmutil.revrange(repo, revs)
