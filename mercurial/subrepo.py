@@ -60,8 +60,8 @@ def _getstorehashcachename(remotepath):
 class SubrepoAbort(error.Abort):
     """Exception class used to avoid handling a subrepo error more than once"""
     def __init__(self, *args, **kw):
-        self.subrepo = kw.pop('subrepo', None)
-        self.cause = kw.pop('cause', None)
+        self.subrepo = kw.pop(r'subrepo', None)
+        self.cause = kw.pop(r'cause', None)
         error.Abort.__init__(self, *args, **kw)
 
 def annotatesubrepoerror(func):
@@ -1244,7 +1244,7 @@ class svnsubrepo(abstractsubrepo):
         if not self.ui.interactive():
             # Making stdin be a pipe should prevent svn from behaving
             # interactively even if we can't pass --non-interactive.
-            extrakw['stdin'] = subprocess.PIPE
+            extrakw[r'stdin'] = subprocess.PIPE
             # Starting in svn 1.5 --non-interactive is a global flag
             # instead of being per-command, but we need to support 1.4 so
             # we have to be intelligent about what commands take
