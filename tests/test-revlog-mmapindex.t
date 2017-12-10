@@ -6,12 +6,13 @@ create verbosemmap.py
   > 
   > from mercurial import (
   >     extensions,
+  >     pycompat,
   >     util,
   > )
   > 
   > def extsetup(ui):
   >     def mmapread(orig, fp):
-  >         ui.write("mmapping %s\n" % fp.name)
+  >         ui.write(b"mmapping %s\n" % pycompat.bytestr(fp.name))
   >         ui.flush()
   >         return orig(fp)
   > 
