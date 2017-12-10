@@ -54,6 +54,8 @@ def wintests():
     enable windows matching on any os
         >>> _osaltsep = os.altsep
         >>> os.altsep = True
+        >>> _osname = os.name
+        >>> os.name = 'nt'
 
     valid match on windows
         >>> lm(b'g/a*/d (glob)\n', b'g\\abc/d\n')
@@ -66,9 +68,12 @@ def wintests():
     missing glob
         >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d/fg\n')
         'special: +glob'
+        >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d\\fg\r\n')
+        'special: +glob'
 
     restore os.altsep
         >>> os.altsep = _osaltsep
+        >>> os.name = _osname
     """
     pass
 
@@ -78,6 +83,8 @@ def otherostests():
     disable windows matching on any os
         >>> _osaltsep = os.altsep
         >>> os.altsep = False
+        >>> _osname = os.name
+        >>> os.name = 'nt'
 
     backslash does not match slash
         >>> lm(b'h/a* (glob)\n', b'h\\ab\n')
@@ -93,6 +100,7 @@ def otherostests():
 
     restore os.altsep
         >>> os.altsep = _osaltsep
+        >>> os.name = _osname
     """
     pass
 

@@ -1610,8 +1610,10 @@ class TTest(Test):
                 if l.endswith(b" (glob)\n"):
                     l = l[:-8] + b"\n"
                 return TTest.globmatch(el[:-8], l) or retry
-            if os.altsep and l.replace(b'\\', b'/') == el:
-                return b'+glob'
+            if os.altsep:
+                _l = l.replace(b'\\', b'/')
+                if el == _l or os.name == 'nt' and el[:-1] + b'\r\n' == _l:
+                    return b'+glob'
         return retry
 
     @staticmethod
