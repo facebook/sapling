@@ -295,7 +295,7 @@ Some tests for hgweb in an empty repository
   
   <div id="wrapper">
   <ul id="nodebgs" class="stripes2"></ul>
-  <canvas id="graph" width="39" height="12"></canvas>
+  <canvas id="graph"></canvas>
   <ul id="graphnodes"></ul>
   </div>
   

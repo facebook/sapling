@@ -1781,7 +1781,7 @@ Overviews
   
   <div id="wrapper">
   <ul id="nodebgs"></ul>
-  <canvas id="graph" width="39" height="168"></canvas>
+  <canvas id="graph"></canvas>
   <ul id="graphnodes"><li data-node="cad8025a2e87">
    <span class="desc">
     <a class="list" href="/rev/cad8025a2e87?style=gitweb"><b>branch commit with null character: </b></a>

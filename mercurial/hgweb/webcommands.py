@@ -1231,13 +1231,6 @@ def graph(web, req, tmpl):
         tree = list(item for item in graphmod.colored(dag, web.repo)
                     if item[1] == graphmod.CHANGESET)
 
-    def getcolumns(tree):
-        cols = 0
-        for (id, type, ctx, vtx, edges) in tree:
-            cols = max(cols, max([edge[0] for edge in edges] or [0]),
-                             max([edge[1] for edge in edges] or [0]))
-        return cols
-
     def graphdata(usetuples):
         data = []
 
@@ -1266,17 +1259,14 @@ def graph(web, req, tmpl):
 
         return data
 
-    cols = getcolumns(tree)
     rows = len(tree)
-    canvasheight = (rows + 1) * bg_height - 27
 
     return tmpl('graph', rev=rev, symrev=symrev, revcount=revcount,
                 uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,
-                cols=cols, rows=rows, changesets=count,
-                canvaswidth=(cols + 1) * bg_height,
-                truecanvasheight=rows * bg_height,
-                canvasheight=canvasheight, bg_height=bg_height,
+                rows=rows,
+                bg_height=bg_height,
+                changesets=count,
                 jsdata=lambda **x: graphdata(True),
                 nodes=lambda **x: graphdata(False),
                 node=ctx.hex(), changenav=changenav)

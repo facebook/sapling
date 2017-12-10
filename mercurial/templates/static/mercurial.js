@@ -111,19 +111,30 @@ Graph.prototype = {
 
 		var backgrounds = '';
 		var nodedata = '';
-		var line, start, end, color, x, y, x0, y0, x1, y1, column, radius;
+		var i, j, cur, line, start, end, color, x, y, x0, y0, x1, y1, column, radius;
 
-		for (var i = 0; i < data.length; i++) {
+		var cols = 0;
+		for (i = 0; i < data.length; i++) {
+			cur = data[i];
+			for (j = 0; j < cur.edges.length; j++) {
+				line = cur.edges[j];
+				cols = Math.max(cols, line[0], line[1]);
+			}
+		}
+		this.canvas.width = (cols + 1) * this.bg_height;
+		this.canvas.height = (data.length + 1) * this.bg_height - 27;
+
+		for (i = 0; i < data.length; i++) {
 
 			var parity = i % 2;
 			this.cell[1] += this.bg_height;
 			this.bg[1] += this.bg_height;
 
-			var cur = data[i];
+			cur = data[i];
 			var fold = false;
 
 			var prevWidth = this.ctx.lineWidth;
-			for (var j = 0; j < cur.edges.length; j++) {
+			for (j = 0; j < cur.edges.length; j++) {
 
 				line = cur.edges[j];
 				start = line[0];
@@ -413,14 +424,6 @@ function ajaxScrollInit(urlFormat,
 
                     if (mode === 'graph') {
                         var graph = window.graph;
-                        var sizes = htmlText.match(/^\s*<canvas id="graph" width="(\d+)" height="(\d+)"><\/canvas>$/m);
-                        var addWidth = sizes[1];
-                        var addHeight = sizes[2];
-                        addWidth = parseInt(addWidth);
-                        addHeight = parseInt(addHeight);
-                        graph.canvas.width = addWidth;
-                        graph.canvas.height = addHeight;
-
                         var dataStr = htmlText.match(/^\s*var data = (.*);$/m)[1];
                         var data = JSON.parse(dataStr);
                         if (data.length < nextPageVar) {
