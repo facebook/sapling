@@ -57,6 +57,7 @@ cpp_library(
         "@/folly:file",
         "@/folly:file_util",
         "@/folly:network_address",
+        "@/folly:range",
         "@/folly:stop_watch",
         "@/folly:string",
         "@/folly:synchronized",
@@ -140,6 +141,7 @@ cpp_library(
     deps = [
         ":thrift-streaming-cpp2",
         "@/folly:optional",
+        "@/folly:range",
     ],
 )
 
