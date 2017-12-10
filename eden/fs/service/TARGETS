@@ -53,6 +53,7 @@ cpp_library(
         "@/eden/fs/takeover:takeover",
         "@/folly:conv",
         "@/folly:exception_wrapper",
+        "@/folly:executor",
         "@/folly:file",
         "@/folly:file_util",
         "@/folly:network_address",
