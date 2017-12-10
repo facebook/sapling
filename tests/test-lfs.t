@@ -232,9 +232,10 @@
   $ hg mv b1 a2
   $ hg commit -m b
   $ hg status
-  $ HEADER=$'\1\n'
-  $ printf '%sSTART-WITH-HG-FILELOG-METADATA' "$HEADER" > a2
-  $ printf '%sMETA\n' "$HEADER" > a1
+  >>> with open('a2', 'wb') as f:
+  ...     f.write(b'\1\nSTART-WITH-HG-FILELOG-METADATA')
+  >>> with open('a1', 'wb') as f:
+  ...     f.write(b'\1\nMETA\n')
   $ hg commit -m meta
   $ hg status
   $ hg log -T '{rev}: {file_copies} | {file_dels} | {file_adds}\n'
