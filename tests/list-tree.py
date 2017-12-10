@@ -24,4 +24,4 @@ def gather():
         else:
             yield p
 
-print('\n'.join(sorted(gather())))
+print('\n'.join(sorted(gather(), key=lambda x: x.replace(os.path.sep, '/'))))
