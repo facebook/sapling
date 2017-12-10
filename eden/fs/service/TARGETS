@@ -52,6 +52,8 @@ cpp_library(
         "@/eden/fs/store/hg:hg",
         "@/eden/fs/takeover:takeover",
         "@/folly:conv",
+        "@/folly:exception_wrapper",
+        "@/folly:file",
         "@/folly:file_util",
         "@/folly:network_address",
         "@/folly:stop_watch",
