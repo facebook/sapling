@@ -1451,10 +1451,7 @@ class TTest(Test):
 
                     r = self.linematch(el, lout)
                     if isinstance(r, str):
-                        if r == '+glob':
-                            lout = el[:-1] + ' (glob)\n'
-                            r = '' # Warn only this line.
-                        elif r == '-glob':
+                        if r == '-glob':
                             lout = ''.join(el.rsplit(' (glob)', 1))
                             r = '' # Warn only this line.
                         elif r == "retry":
@@ -1613,7 +1610,7 @@ class TTest(Test):
             if os.altsep:
                 _l = l.replace(b'\\', b'/')
                 if el == _l or os.name == 'nt' and el[:-1] + b'\r\n' == _l:
-                    return b'+glob'
+                    return True
         return retry
 
     @staticmethod

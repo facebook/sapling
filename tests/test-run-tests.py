@@ -67,9 +67,9 @@ def wintests():
 
     missing glob
         >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d/fg\n')
-        'special: +glob'
+        True
         >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d\\fg\r\n')
-        'special: +glob'
+        True
 
     restore os.altsep
         >>> os.altsep = _osaltsep
