@@ -68,13 +68,13 @@ def record(ui, repo, *pats, **opts):
         raise error.Abort(_('running non-interactively, use %s instead') %
                          'commit')
 
-    opts["interactive"] = True
+    opts[r"interactive"] = True
     overrides = {('experimental', 'crecord'): False}
     with ui.configoverride(overrides, 'record'):
         return commands.commit(ui, repo, *pats, **opts)
 
 def qrefresh(origfn, ui, repo, *pats, **opts):
-    if not opts['interactive']:
+    if not opts[r'interactive']:
         return origfn(ui, repo, *pats, **opts)
 
     mq = extensions.find('mq')
@@ -112,7 +112,7 @@ def _qrecord(cmdsuggest, ui, repo, patch, *pats, **opts):
     repo.mq.checkpatchname(patch)
 
     def committomq(ui, repo, *pats, **opts):
-        opts['checkname'] = False
+        opts[r'checkname'] = False
         mq.new(ui, repo, patch, *pats, **opts)
 
     overrides = {('experimental', 'crecord'): False}
@@ -121,7 +121,7 @@ def _qrecord(cmdsuggest, ui, repo, patch, *pats, **opts):
                          cmdutil.recordfilter, *pats, **opts)
 
 def qnew(origfn, ui, repo, patch, *args, **opts):
-    if opts['interactive']:
+    if opts[r'interactive']:
         return _qrecord(None, ui, repo, patch, *args, **opts)
     return origfn(ui, repo, patch, *args, **opts)
 
