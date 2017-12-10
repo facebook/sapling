@@ -368,6 +368,7 @@ def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
         norepo=True)
 def debugcapabilities(ui, path, **opts):
     """lists the capabilities of a remote peer"""
+    opts = pycompat.byteskwargs(opts)
     peer = hg.peer(ui, opts, path)
     caps = peer.capabilities()
     ui.write(('Main capabilities:\n'))
@@ -870,6 +871,7 @@ def debugformat(ui, repo, **opts):
 
     Use --verbose to get extra information about current config value and
     Mercurial default."""
+    opts = pycompat.byteskwargs(opts)
     maxvariantlength = max(len(fv.name) for fv in upgrade.allformatvariant)
     maxvariantlength = max(len('format-variant'), maxvariantlength)
 
@@ -2324,7 +2326,7 @@ def debugsuccessorssets(ui, repo, *revs, **opts):
         ctx = repo[rev]
         ui.write('%s\n'% ctx2str(ctx))
         for succsset in obsutil.successorssets(repo, ctx.node(),
-                                                closest=opts['closest'],
+                                                closest=opts[r'closest'],
                                                 cache=cache):
             if succsset:
                 ui.write('    ')
@@ -2450,6 +2452,7 @@ def debugwireargs(ui, repopath, *vals, **opts):
     for k, v in opts.iteritems():
         if v:
             args[k] = v
+    args = pycompat.strkwargs(args)
     # run twice to check that we don't mess up the stream for the next command
     res1 = repo.debugwireargs(*vals, **args)
     res2 = repo.debugwireargs(*vals, **args)
