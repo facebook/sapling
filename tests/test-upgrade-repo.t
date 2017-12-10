@@ -85,28 +85,28 @@ An upgrade of a repository created with recommended settings only suggests optim
   $ hg debugformat -Tjson
   [
    {
-    "config": "yes",
-    "default": "yes",
+    "config": true,
+    "default": true,
     "name": "fncache",
-    "repo": "yes"
+    "repo": true
    },
    {
-    "config": "yes",
-    "default": "yes",
+    "config": true,
+    "default": true,
     "name": "dotencode",
-    "repo": "yes"
+    "repo": true
    },
    {
-    "config": "yes",
-    "default": "yes",
+    "config": true,
+    "default": true,
     "name": "generaldelta",
-    "repo": "yes"
+    "repo": true
    },
    {
-    "config": "yes",
-    "default": "yes",
+    "config": true,
+    "default": true,
     "name": "plain-cl-delta",
-    "repo": "yes"
+    "repo": true
    },
    {
     "config": "zlib",

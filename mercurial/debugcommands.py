@@ -873,15 +873,18 @@ def debugformat(ui, repo, **opts):
     def makeformatname(name):
         return '%s:' + (' ' * (maxvariantlength - len(name)))
 
-    def formatvalue(value):
-        if util.safehasattr(value, 'startswith'):
-            return value
-        if value:
-            return 'yes'
-        else:
-            return 'no'
-
     fm = ui.formatter('debugformat', opts)
+    if fm.isplain():
+        def formatvalue(value):
+            if util.safehasattr(value, 'startswith'):
+                return value
+            if value:
+                return 'yes'
+            else:
+                return 'no'
+    else:
+        formatvalue = pycompat.identity
+
     fm.plain('format-variant')
     fm.plain(' ' * (maxvariantlength - len('format-variant')))
     fm.plain(' repo')
