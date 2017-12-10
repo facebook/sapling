@@ -888,8 +888,8 @@ def debugformat(ui, repo, **opts):
     if ui.verbose:
         fm.plain(' config default')
     fm.plain('\n')
-    fm.startitem()
     for fv in upgrade.allformatvariant:
+        fm.startitem()
         repovalue = fv.fromrepo(repo)
         configvalue = fv.fromconfig(repo)
 
@@ -916,6 +916,7 @@ def debugformat(ui, repo, **opts):
         fm.condwrite(ui.verbose, 'default', ' %7s', formatvalue(fv.default),
                      label='formatvariant.default')
         fm.plain('\n')
+    fm.end()
 
 @command('debugfsinfo', [], _('[PATH]'), norepo=True)
 def debugfsinfo(ui, path="."):

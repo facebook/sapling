@@ -82,6 +82,39 @@ An upgrade of a repository created with recommended settings only suggests optim
   [formatvariant.name.uptodate|generaldelta:  ][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
   [formatvariant.name.uptodate|plain-cl-delta:][formatvariant.repo.uptodate| yes][formatvariant.config.default|    yes][formatvariant.default|     yes]
   [formatvariant.name.uptodate|compression:   ][formatvariant.repo.uptodate| zlib][formatvariant.config.default|   zlib][formatvariant.default|    zlib]
+  $ hg debugformat -Tjson
+  [
+   {
+    "config": "yes",
+    "default": "yes",
+    "name": "fncache",
+    "repo": "yes"
+   },
+   {
+    "config": "yes",
+    "default": "yes",
+    "name": "dotencode",
+    "repo": "yes"
+   },
+   {
+    "config": "yes",
+    "default": "yes",
+    "name": "generaldelta",
+    "repo": "yes"
+   },
+   {
+    "config": "yes",
+    "default": "yes",
+    "name": "plain-cl-delta",
+    "repo": "yes"
+   },
+   {
+    "config": "zlib",
+    "default": "zlib",
+    "name": "compression",
+    "repo": "zlib"
+   }
+  ]
   $ hg debugupgraderepo
   (no feature deficiencies found in existing repository)
   performing an upgrade with "--run" will make the following changes:
