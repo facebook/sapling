@@ -90,16 +90,16 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ hg rm t/b
 
   $ hg locate 't/**'
-  t/b (glob)
-  t/e.h (glob)
-  t/x (glob)
+  t/b
+  t/e.h
+  t/x
 
   $ hg files
   b
-  dir.h/foo (glob)
+  dir.h/foo
   t.h
-  t/e.h (glob)
-  t/x (glob)
+  t/e.h
+  t/x
   $ hg files b
   b
 
@@ -107,47 +107,47 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ cd otherdir
 
   $ hg files path:
-  ../b (glob)
-  ../dir.h/foo (glob)
-  ../t.h (glob)
-  ../t/e.h (glob)
-  ../t/x (glob)
+  ../b
+  ../dir.h/foo
+  ../t.h
+  ../t/e.h
+  ../t/x
   $ hg files path:.
-  ../b (glob)
-  ../dir.h/foo (glob)
-  ../t.h (glob)
-  ../t/e.h (glob)
-  ../t/x (glob)
+  ../b
+  ../dir.h/foo
+  ../t.h
+  ../t/e.h
+  ../t/x
 
   $ hg locate b
-  ../b (glob)
-  ../t/b (glob)
+  ../b
+  ../t/b
   $ hg locate '*.h'
-  ../t.h (glob)
-  ../t/e.h (glob)
+  ../t.h
+  ../t/e.h
   $ hg locate path:t/x
-  ../t/x (glob)
+  ../t/x
   $ hg locate 're:.*\.h$'
-  ../t.h (glob)
-  ../t/e.h (glob)
+  ../t.h
+  ../t/e.h
   $ hg locate -r 0 b
-  ../b (glob)
-  ../t/b (glob)
+  ../b
+  ../t/b
   $ hg locate -r 0 '*.h'
-  ../t.h (glob)
-  ../t/e.h (glob)
+  ../t.h
+  ../t/e.h
   $ hg locate -r 0 path:t/x
-  ../t/x (glob)
+  ../t/x
   $ hg locate -r 0 're:.*\.h$'
-  ../t.h (glob)
-  ../t/e.h (glob)
+  ../t.h
+  ../t/e.h
 
   $ hg files
-  ../b (glob)
-  ../dir.h/foo (glob)
-  ../t.h (glob)
-  ../t/e.h (glob)
-  ../t/x (glob)
+  ../b
+  ../dir.h/foo
+  ../t.h
+  ../t/e.h
+  ../t/x
   $ hg files .
   [1]
 

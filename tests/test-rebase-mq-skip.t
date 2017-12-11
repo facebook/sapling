@@ -67,14 +67,14 @@ already has one local mq patch
   note: rebase of 3:148775c71080 created no changes to commit
   rebase merging completed
   updating mq patch p0.patch to 5:9ecc820b1737
-  $TESTTMP/a/.hg/patches/p0.patch (glob)
+  $TESTTMP/a/.hg/patches/p0.patch
   2 changesets found
   uncompressed size of bundle content:
        348 (changelog)
        324 (manifests)
        129  p0
        129  p1
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-5da6ecfb-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-5da6ecfb-rebase.hg
   2 changesets found
   uncompressed size of bundle content:
        403 (changelog)
@@ -166,7 +166,7 @@ already has one local mq patch
   rebasing 5:681a378595ba "r5" (r5)
   rebasing 6:512a1f24768b "r6" (qtip r6)
   note: rebase of 6:512a1f24768b created no changes to commit
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-b9bfb84d-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-b9bfb84d-rebase.hg
 
   $ hg tglog
   @  8: 0b9735ce8f0a 'r5' tags: qtip r5 tip

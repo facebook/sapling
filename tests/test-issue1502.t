@@ -13,7 +13,7 @@ Initialize repository
   $ echo "bar" > foo1/a && hg -R foo1 commit -m "edit a in foo1"
   $ echo "hi" > foo/a && hg -R foo commit -m "edited a foo"
   $ hg -R foo1 pull
-  pulling from $TESTTMP/foo (glob)
+  pulling from $TESTTMP/foo
   searching for changes
   adding changesets
   adding manifests
@@ -30,7 +30,7 @@ Pull. Bookmark should not jump to new head.
 
   $ echo "there" >> foo/a && hg -R foo commit -m "edited a again"
   $ hg -R foo1 pull
-  pulling from $TESTTMP/foo (glob)
+  pulling from $TESTTMP/foo
   searching for changes
   adding changesets
   adding manifests

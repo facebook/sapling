@@ -37,7 +37,7 @@ setup
 
   $ mkcommit old
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -61,7 +61,7 @@ old exists remotely as draft. It is obsoleted by new that we now push.
 Push should not warn about creating new head
 
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -77,7 +77,7 @@ setup
   $ cp -R ../backup1 ../remote
   $ hg -R ../remote phase --public c70b08862e08
   $ hg pull -v
-  pulling from $TESTTMP/remote (glob)
+  pulling from $TESTTMP/remote
   searching for changes
   no changes found
   $ hg log -G --hidden
@@ -91,7 +91,7 @@ setup
 Abort: old will still be an head because it's public.
 
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   abort: push creates new remote head 71e3228bffe1!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -151,7 +151,7 @@ old exists remotely as draft. It is obsoleted by new but we don't push new.
 Push should abort on new head
 
   $ hg push -r 'desc("other")'
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   abort: push creates new remote head d7d41ccbd4de!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -178,7 +178,7 @@ setup. (The obsolete marker is known locally only
   $ mkcommit new
   created new head
   $ hg push -f
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -214,7 +214,7 @@ Push should not warn about adding new heads. We create one, but we'll delete
 one anyway.
 
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -260,7 +260,7 @@ setup
 We do not have enought data to take the right decision, we should fail
 
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   remote has heads on branch 'default' that are not known locally: c70b08862e08
   abort: push creates new remote head 71e3228bffe1!
@@ -270,7 +270,7 @@ We do not have enought data to take the right decision, we should fail
 Pulling the missing data makes it work
 
   $ hg pull
-  pulling from $TESTTMP/remote (glob)
+  pulling from $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -278,7 +278,7 @@ Pulling the missing data makes it work
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads)
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   adding changesets
   adding manifests
@@ -309,7 +309,7 @@ setup
   
 
   $ hg push
-  pushing to $TESTTMP/remote (glob)
+  pushing to $TESTTMP/remote
   searching for changes
   abort: push creates new remote head 350a93b716be!
   (merge or see 'hg help push' for details about pushing new heads)

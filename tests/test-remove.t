@@ -322,8 +322,8 @@ dir, options none
   \r (no-eol) (esc)
   deleting [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
-  removing test/foo (glob)
+  removing test/bar
+  removing test/foo
   exit code: 0
   R test/bar
   R test/foo
@@ -346,8 +346,8 @@ dir, options -f
   \r (no-eol) (esc)
   deleting [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
-  removing test/foo (glob)
+  removing test/bar
+  removing test/foo
   exit code: 0
   R test/bar
   R test/foo
@@ -370,8 +370,8 @@ dir, options -Av
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
-  not removing test/foo: file still exists (glob)
+  removing test/bar
+  not removing test/foo: file still exists
   exit code: 1
   R test/bar
   ./foo
@@ -393,7 +393,7 @@ dir, options -A <dir>
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
+  removing test/bar
   exit code: 1
   R test/bar
   ./foo
@@ -413,7 +413,7 @@ without any files/dirs, options -A
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
+  removing test/bar
   exit code: 1
   R test/bar
   ./foo
@@ -436,8 +436,8 @@ dir, options -Af
   \r (no-eol) (esc)
   deleting [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing test/bar (glob)
-  removing test/foo (glob)
+  removing test/bar
+  removing test/foo
   exit code: 0
   R test/bar
   R test/foo
@@ -463,7 +463,7 @@ test remove dropping empty trees (issue1861)
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing issue1861/b/c/y (glob)
+  removing issue1861/b/c/y
   $ hg ci -m remove
   $ ls issue1861
   x
@@ -497,7 +497,7 @@ handling of untracked directories and missing files
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing d1/a (glob)
+  removing d1/a
 
   $ hg rm --after nosuch
   nosuch: * (glob)

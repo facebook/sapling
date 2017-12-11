@@ -88,7 +88,7 @@ still introduced by an ancestor of changeset on B-NEW. In the below case,
   rebasing 4:69a34c08022a "E" (BOOK-E)
   note: rebase of 4:69a34c08022a created no changes to commit
   rebasing 5:6b2aeab91270 "F" (BOOK-F F)
-  saved backup bundle to $TESTTMP/non-merge/.hg/strip-backup/dc0947a82db8-52bb4973-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/non-merge/.hg/strip-backup/dc0947a82db8-52bb4973-rebase.hg
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  5 F BOOK-F
   |
@@ -136,7 +136,7 @@ Merge and its ancestors all become empty
   note: rebase of 3:b18e25de2cf5 created no changes to commit
   rebasing 4:86a1f6686812 "E" (BOOK-E E)
   note: rebase of 4:86a1f6686812 created no changes to commit
-  saved backup bundle to $TESTTMP/merge1/.hg/strip-backup/b18e25de2cf5-1fd0a4ba-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/merge1/.hg/strip-backup/b18e25de2cf5-1fd0a4ba-rebase.hg
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o  4 H BOOK-C BOOK-D BOOK-E
@@ -186,7 +186,7 @@ Part of ancestors of a merge become empty
   rebasing 5:ad6717a6a58e "F" (BOOK-F)
   note: rebase of 5:ad6717a6a58e created no changes to commit
   rebasing 6:c58e8bdac1f4 "G" (BOOK-G G)
-  saved backup bundle to $TESTTMP/merge2/.hg/strip-backup/b18e25de2cf5-2d487005-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/merge2/.hg/strip-backup/b18e25de2cf5-2d487005-rebase.hg
 
   $ hg log -G -T '{rev} {desc} {bookmarks}'
   o    7 G BOOK-G

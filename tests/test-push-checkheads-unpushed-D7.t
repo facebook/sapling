@@ -88,7 +88,7 @@ Actual testing
 --------------
 
   $ hg push --rev 'desc(C0)'
-  pushing to $TESTTMP/D7/server (glob)
+  pushing to $TESTTMP/D7/server
   searching for changes
   adding changesets
   adding manifests

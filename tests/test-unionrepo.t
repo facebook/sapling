@@ -167,4 +167,4 @@ union repos should use the correct rev number (issue5024)
 
 "hg files -v" to call fctx.size() -> fctx.iscensored()
   $ hg files -R union:b+a -r2 -v
-           3   b/f (glob)
+           3   b/f

@@ -53,7 +53,7 @@ Test setup
   created new head
   $ cd ../client
   $ hg pull
-  pulling from $TESTTMP/A7/server (glob)
+  pulling from $TESTTMP/A7/server
   searching for changes
   adding changesets
   adding manifests
@@ -90,7 +90,7 @@ Actual testing
 --------------
 
   $ hg push
-  pushing to $TESTTMP/A7/server (glob)
+  pushing to $TESTTMP/A7/server
   searching for changes
   adding changesets
   adding manifests

@@ -52,9 +52,9 @@ Revert interactive tests
   > n
   > EOF
   reverting f
-  reverting folder1/g (glob)
-  removing folder1/i (glob)
-  reverting folder2/h (glob)
+  reverting folder1/g
+  removing folder1/i
+  reverting folder2/h
   remove added file folder1/i (Yn)? y
   diff --git a/f b/f
   2 hunks, 2 lines changed
@@ -140,8 +140,8 @@ Revert interactive tests
 Test that --interactive lift the need for --all
 
   $ echo q | hg revert -i -r 2
-  reverting folder1/g (glob)
-  reverting folder2/h (glob)
+  reverting folder1/g
+  reverting folder2/h
   diff --git a/folder1/g b/folder1/g
   1 hunks, 1 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] q
@@ -198,9 +198,9 @@ Test --no-backup
   > n
   > EOF
   reverting f
-  reverting folder1/g (glob)
-  removing folder1/i (glob)
-  reverting folder2/h (glob)
+  reverting folder1/g
+  removing folder1/i
+  reverting folder2/h
   remove added file folder1/i (Yn)? n
   diff --git a/f b/f
   2 hunks, 2 lines changed

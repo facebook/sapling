@@ -64,7 +64,7 @@ Actual testing
 --------------
 
   $ hg push
-  pushing to $TESTTMP/A4/server (glob)
+  pushing to $TESTTMP/A4/server
   searching for changes
   adding changesets
   adding manifests

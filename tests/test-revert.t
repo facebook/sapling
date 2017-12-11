@@ -91,8 +91,8 @@ Test creation of backup (.orig) file in configured file location
 
   $ echo z > e
   $ hg revert --all -v --config 'ui.origbackuppath=.hg/origbackups'
-  creating directory: $TESTTMP/repo/.hg/origbackups (glob)
-  saving current version of e as $TESTTMP/repo/.hg/origbackups/e (glob)
+  creating directory: $TESTTMP/repo/.hg/origbackups
+  saving current version of e as $TESTTMP/repo/.hg/origbackups/e
   reverting e
   $ rm -rf .hg/origbackups
 
@@ -283,11 +283,11 @@ Issue332: confusing message when reverting directory
   $ echo foo > newdir/newfile
   $ hg add newdir/newfile
   $ hg revert b newdir
-  reverting b/b (glob)
-  forgetting newdir/newfile (glob)
+  reverting b/b
+  forgetting newdir/newfile
   $ echo foobar > b/b
   $ hg revert .
-  reverting b/b (glob)
+  reverting b/b
 
 
 reverting a rename target should revert the source
@@ -336,8 +336,8 @@ should revert ignored* and undelete *removed
 
   $ hg revert -a --no-backup
   reverting ignored
-  reverting ignoreddir/file (glob)
-  undeleting ignoreddir/removed (glob)
+  reverting ignoreddir/file
+  undeleting ignoreddir/removed
   undeleting removed
   $ hg st -mardi
 

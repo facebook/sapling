@@ -99,7 +99,7 @@ Cross and same-directory copies with a relative root:
   warning: dir2 not inside relative root dir1
 
   $ hg diff --git --root dir1 -r 1:tip 'dir2/{copy}'
-  warning: dir2/{copy} not inside relative root dir1 (glob)
+  warning: dir2/{copy} not inside relative root dir1
 
   $ cd dir1
   $ hg diff --git --root .. -r 1:tip
@@ -161,7 +161,7 @@ Cross and same-directory copies with a relative root:
    new
   +copy1
   $ hg diff --git --root . -r 1:tip ../dir2
-  warning: ../dir2 not inside relative root . (glob)
+  warning: ../dir2 not inside relative root .
   $ hg diff --git --root . -r 1:tip '../dir2/*'
   warning: ../dir2/* not inside relative root . (glob)
   $ cd ..

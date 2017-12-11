@@ -409,7 +409,7 @@ divergent bookmarks
    * foobar                    1:9b140be10808
 
   $ hg pull --config paths.foo=../a foo --config "$TESTHOOK"
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -485,7 +485,7 @@ explicit pull should overwrite the local version (issue4439)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark X)
   $ hg pull --config paths.foo=../a foo -B . --config "$TESTHOOK"
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   no changes found
   divergent bookmark @ stored as @foo
   importing bookmark X
@@ -840,12 +840,12 @@ Test to show result of bookmarks comparison
 be exchanged)
 
   $ hg -R repo1 incoming -B
-  comparing with $TESTTMP/bmcomparison/source (glob)
+  comparing with $TESTTMP/bmcomparison/source
   searching for changed bookmarks
   no changed bookmarks found
   [1]
   $ hg -R repo1 outgoing -B
-  comparing with $TESTTMP/bmcomparison/source (glob)
+  comparing with $TESTTMP/bmcomparison/source
   searching for changed bookmarks
   no changed bookmarks found
   [1]
@@ -989,7 +989,7 @@ pushing an existing but divergent bookmark with -B still requires -f
   $ echo 2 > f2
   $ hg ci -qAmr
   $ hg push -B X
-  pushing to $TESTTMP/addmarks (glob)
+  pushing to $TESTTMP/addmarks
   searching for changes
   remote has heads on branch 'default' that are not known locally: a2a606d9ff1b
   abort: push creates new remote head 54694f811df9 with bookmark 'X'!
@@ -1072,7 +1072,7 @@ Local push
 #if b2-pushkey
 
   $ hg push -B @ local
-  pushing to $TESTTMP/issue4455-dest (glob)
+  pushing to $TESTTMP/issue4455-dest
   searching for changes
   no changes found
   pushkey-abort: prepushkey hook exited with status 1
@@ -1083,7 +1083,7 @@ Local push
 #if b2-binary
 
   $ hg push -B @ local
-  pushing to $TESTTMP/issue4455-dest (glob)
+  pushing to $TESTTMP/issue4455-dest
   searching for changes
   no changes found
   abort: prepushkey hook exited with status 1

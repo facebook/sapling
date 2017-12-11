@@ -3,7 +3,7 @@
 audit of .hg
 
   $ hg add .hg/00changelog.i
-  abort: path contains illegal component: .hg/00changelog.i (glob)
+  abort: path contains illegal component: .hg/00changelog.i
   [255]
 
 #if symlink
@@ -17,14 +17,14 @@ Symlinks
   $ ln -s a b
   $ echo b > a/b
   $ hg add b/b
-  abort: path 'b/b' traverses symbolic link 'b' (glob)
+  abort: path 'b/b' traverses symbolic link 'b'
   [255]
   $ hg add b
 
 should still fail - maybe
 
   $ hg add b/b
-  abort: path 'b/b' traverses symbolic link 'b' (glob)
+  abort: path 'b/b' traverses symbolic link 'b'
   [255]
 
   $ hg commit -m 'add symlink b'
@@ -86,7 +86,7 @@ attack .hg/test
   $ hg manifest -r0
   .hg/test
   $ hg update -Cr0
-  abort: path contains illegal component: .hg/test (glob)
+  abort: path contains illegal component: .hg/test
   [255]
 
 attack foo/.hg/test
@@ -94,7 +94,7 @@ attack foo/.hg/test
   $ hg manifest -r1
   foo/.hg/test
   $ hg update -Cr1
-  abort: path 'foo/.hg/test' is inside nested repo 'foo' (glob)
+  abort: path 'foo/.hg/test' is inside nested repo 'foo'
   [255]
 
 attack back/test where back symlinks to ..
@@ -121,7 +121,7 @@ attack ../test
   $ mkdir ../test
   $ echo data > ../test/file
   $ hg update -Cr3
-  abort: path contains illegal component: ../test (glob)
+  abort: path contains illegal component: ../test
   [255]
   $ cat ../test/file
   data
@@ -131,7 +131,7 @@ attack /tmp/test
   $ hg manifest -r4
   /tmp/test
   $ hg update -Cr4
-  abort: path contains illegal component: /tmp/test (glob)
+  abort: path contains illegal component: /tmp/test
   [255]
 
   $ cd ..

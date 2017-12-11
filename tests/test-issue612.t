@@ -7,7 +7,7 @@ https://bz.mercurial-scm.org/612
   adding src/a.c
 
   $ hg mv src source
-  moving src/a.c to source/a.c (glob)
+  moving src/a.c to source/a.c
 
   $ hg ci -Ammove
 

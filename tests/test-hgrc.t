@@ -30,7 +30,7 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/foo%bar (glob)
+  default = $TESTTMP/foo%bar
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -43,10 +43,10 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   # name and email (local to this repository, optional), e.g.
   # username = Jane Doe <jdoe@example.com>
   $ hg paths
-  default = $TESTTMP/foo%bar (glob)
+  default = $TESTTMP/foo%bar
   $ hg showconfig
-  bundle.mainreporoot=$TESTTMP/foobar (glob)
-  paths.default=$TESTTMP/foo%bar (glob)
+  bundle.mainreporoot=$TESTTMP/foobar
+  paths.default=$TESTTMP/foo%bar
   $ cd ..
 
 issue1829: wrong indentation
@@ -242,4 +242,4 @@ source of paths is not mangled
   $ hg showconfig --debug paths
   plain: True
   read config from: $TESTTMP/hgrc
-  $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar (glob)
+  $TESTTMP/hgrc:17: paths.foo=$TESTTMP/bar

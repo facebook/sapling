@@ -18,7 +18,7 @@ Preparing the subrepository 'sub2'
   $ hg init sub2
   $ echo sub2 > sub2/sub2
   $ hg add -R sub2
-  adding sub2/sub2 (glob)
+  adding sub2/sub2
   $ hg commit -R sub2 -m "sub2 import"
 
 Preparing the 'sub1' repo which depends on the subrepo 'sub2'
@@ -41,8 +41,8 @@ Preparing the 'sub1' repo which depends on the subrepo 'sub2'
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R sub1
-  adding sub1/.hgsub (glob)
-  adding sub1/sub1 (glob)
+  adding sub1/.hgsub
+  adding sub1/sub1
   $ hg commit -R sub1 -m "sub1 import"
 
 Preparing the 'main' repo which depends on the subrepo 'sub1'
@@ -77,8 +77,8 @@ Preparing the 'main' repo which depends on the subrepo 'sub1'
   cloning subrepo sub2 from $TESTTMP/sub2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R main
-  adding main/.hgsub (glob)
-  adding main/main (glob)
+  adding main/.hgsub
+  adding main/main
   $ hg commit -R main -m "main import"
 
 #if serve
@@ -89,13 +89,13 @@ reason why 'main' can be cloned via the filesystem is because 'sub1' and 'sub2'
 are also available as siblings of 'main'.
 
   $ hg serve -R main --debug -S -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
-  adding  = $TESTTMP/main (glob)
-  adding sub1 = $TESTTMP/main/sub1 (glob)
-  adding sub1/sub2 = $TESTTMP/main/sub1/sub2 (glob)
+  adding  = $TESTTMP/main
+  adding sub1 = $TESTTMP/main/sub1
+  adding sub1/sub2 = $TESTTMP/main/sub1/sub2
   listening at http://*:$HGPORT/ (bound to *:$HGPORT) (glob) (?)
-  adding  = $TESTTMP/main (glob) (?)
-  adding sub1 = $TESTTMP/main/sub1 (glob) (?)
-  adding sub1/sub2 = $TESTTMP/main/sub1/sub2 (glob) (?)
+  adding  = $TESTTMP/main (?)
+  adding sub1 = $TESTTMP/main/sub1 (?)
+  adding sub1/sub2 = $TESTTMP/main/sub1/sub2 (?)
   $ cat hg1.pid >> $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT httpclone --config progress.disable=True
@@ -186,14 +186,14 @@ Clone main
                                                               \r (no-eol) (esc)
   updating to branch default
   cloning subrepo sub1 from $TESTTMP/sub1
-  cloning subrepo sub1/sub2 from $TESTTMP/sub2 (glob)
+  cloning subrepo sub1/sub2 from $TESTTMP/sub2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Largefiles is NOT enabled in the clone if the source repo doesn't require it
   $ cat cloned/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/main (glob)
+  default = $TESTTMP/main
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -231,7 +231,7 @@ Modifying deeply nested 'sub2'
   $ echo modified > cloned/sub1/sub2/sub2
   $ hg commit --subrepos -m "deep nested modif should trigger a commit" -R cloned
   committing subrepository sub1
-  committing subrepository sub1/sub2 (glob)
+  committing subrepository sub1/sub2
 
 Checking modified node ids
 
@@ -263,7 +263,7 @@ Check that deep archiving works
   $ hg ci -ASm "add test.txt"
   adding sub1/sub2/folder/test.txt
   committing subrepository sub1
-  committing subrepository sub1/sub2 (glob)
+  committing subrepository sub1/sub2
 
   $ rm -r main
   $ hg archive -S -qr 'wdir()' ../wdir
@@ -309,8 +309,8 @@ A deleted subrepo file is flagged as dirty, like the top level repo
   \r (no-eol) (esc)
   deleting [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  removing sub1/sub2/folder/test.txt (glob)
-  removing sub1/sub2/test.txt (glob)
+  removing sub1/sub2/folder/test.txt
+  removing sub1/sub2/test.txt
   $ hg status -S
   R sub1/sub2/folder/test.txt
   R sub1/sub2/test.txt
@@ -368,10 +368,10 @@ Test relative path printing + subrepos
   \r (no-eol) (esc)
   searching for exact renames [                         ] 0/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  adding ../sub1/sub2/folder/test.txt (glob)
-  removing ../sub1/sub2/test.txt (glob)
-  adding ../sub1/foo (glob)
-  adding bar/abc (glob)
+  adding ../sub1/sub2/folder/test.txt
+  removing ../sub1/sub2/test.txt
+  adding ../sub1/foo
+  adding bar/abc
   $ cd ..
   $ hg status -S
   A foo/bar/abc
@@ -398,9 +398,9 @@ Archive wdir() with subrepos
   archiving (sub1) [===================================>] 4/4\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ diff -r . ../wdir | egrep -v '\.hg$|^Common subdirectories:'
   Only in ../wdir: .hg_archival.txt
@@ -442,9 +442,9 @@ Attempting to archive 'wdir()' with a missing file is handled gracefully
   archiving (sub1) [===================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ find ../wdir -type f | sort
   ../wdir/.hg_archival.txt
@@ -474,10 +474,10 @@ Continue relative path printing + subrepos
   archiving (sub1) [===================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ cat ../wdir/.hg_archival.txt
   repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
@@ -489,15 +489,15 @@ Continue relative path printing + subrepos
 
   $ touch sub1/sub2/folder/bar
   $ hg addremove sub1/sub2
-  adding sub1/sub2/folder/bar (glob)
+  adding sub1/sub2/folder/bar
   $ hg status -S
   A sub1/sub2/folder/bar
   ? foo/bar/abc
   ? sub1/foo
   $ hg update -Cq
   $ hg addremove sub1
-  adding sub1/sub2/folder/bar (glob)
-  adding sub1/foo (glob)
+  adding sub1/sub2/folder/bar
+  adding sub1/foo
   $ hg update -Cq
   $ rm sub1/sub2/folder/test.txt
   $ rm sub1/sub2/test.txt
@@ -508,7 +508,7 @@ Continue relative path printing + subrepos
   adding sub1/foo
   adding foo/bar/abc
   committing subrepository sub1
-  committing subrepository sub1/sub2 (glob)
+  committing subrepository sub1/sub2
 
   $ hg forget sub1/sub2/sub2
   $ echo x > sub1/sub2/x.txt
@@ -518,75 +518,75 @@ Files sees uncommitted adds and removes in subrepos
   $ hg files -S
   .hgsub
   .hgsubstate
-  foo/bar/abc (glob)
+  foo/bar/abc
   main
-  sub1/.hgsub (glob)
-  sub1/.hgsubstate (glob)
-  sub1/foo (glob)
-  sub1/sub1 (glob)
-  sub1/sub2/folder/bar (glob)
-  sub1/sub2/x.txt (glob)
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/foo
+  sub1/sub1
+  sub1/sub2/folder/bar
+  sub1/sub2/x.txt
 
   $ hg files -S "set:eol('dos') or eol('unix') or size('<= 0')"
   .hgsub
   .hgsubstate
-  foo/bar/abc (glob)
+  foo/bar/abc
   main
-  sub1/.hgsub (glob)
-  sub1/.hgsubstate (glob)
-  sub1/foo (glob)
-  sub1/sub1 (glob)
-  sub1/sub2/folder/bar (glob)
-  sub1/sub2/x.txt (glob)
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/foo
+  sub1/sub1
+  sub1/sub2/folder/bar
+  sub1/sub2/x.txt
 
   $ hg files -r '.^' -S "set:eol('dos') or eol('unix')"
   .hgsub
   .hgsubstate
   main
-  sub1/.hgsub (glob)
-  sub1/.hgsubstate (glob)
-  sub1/sub1 (glob)
-  sub1/sub2/folder/test.txt (glob)
-  sub1/sub2/sub2 (glob)
-  sub1/sub2/test.txt (glob)
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/sub1
+  sub1/sub2/folder/test.txt
+  sub1/sub2/sub2
+  sub1/sub2/test.txt
 
   $ hg files sub1
-  sub1/.hgsub (glob)
-  sub1/.hgsubstate (glob)
-  sub1/foo (glob)
-  sub1/sub1 (glob)
-  sub1/sub2/folder/bar (glob)
-  sub1/sub2/x.txt (glob)
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/foo
+  sub1/sub1
+  sub1/sub2/folder/bar
+  sub1/sub2/x.txt
 
   $ hg files sub1/sub2
-  sub1/sub2/folder/bar (glob)
-  sub1/sub2/x.txt (glob)
+  sub1/sub2/folder/bar
+  sub1/sub2/x.txt
 
   $ hg files
   .hgsub
   .hgsubstate
-  foo/bar/abc (glob)
+  foo/bar/abc
   main
 
   $ hg files -S -r '.^' sub1/sub2/folder
-  sub1/sub2/folder/test.txt (glob)
+  sub1/sub2/folder/test.txt
 
   $ hg files -S -r '.^' sub1/sub2/missing
-  sub1/sub2/missing: no such file in rev 78026e779ea6 (glob)
+  sub1/sub2/missing: no such file in rev 78026e779ea6
   [1]
 
   $ hg files -r '.^' sub1/
-  sub1/.hgsub (glob)
-  sub1/.hgsubstate (glob)
-  sub1/sub1 (glob)
-  sub1/sub2/folder/test.txt (glob)
-  sub1/sub2/sub2 (glob)
-  sub1/sub2/test.txt (glob)
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/sub1
+  sub1/sub2/folder/test.txt
+  sub1/sub2/sub2
+  sub1/sub2/test.txt
 
   $ hg files -r '.^' sub1/sub2
-  sub1/sub2/folder/test.txt (glob)
-  sub1/sub2/sub2 (glob)
-  sub1/sub2/test.txt (glob)
+  sub1/sub2/folder/test.txt
+  sub1/sub2/sub2
+  sub1/sub2/test.txt
 
   $ hg rollback -q
   $ hg up -Cq
@@ -605,10 +605,10 @@ Files sees uncommitted adds and removes in subrepos
   archiving (sub1) [===================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ find ../archive_all | sort
   ../archive_all
@@ -642,8 +642,8 @@ Check that archive -X works in deep subrepos
   archiving (sub1) [===================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ find ../archive_exclude | sort
   ../archive_exclude
@@ -663,9 +663,9 @@ Check that archive -X works in deep subrepos
   archiving (sub1) [ <=>                                  ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============>                ] 1/2\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ find ../archive_include | sort
   ../archive_include
@@ -686,7 +686,7 @@ Note that add --large through a subrepo currently adds the file as a normal file
   $ hg --config extensions.largefiles= add --large large.bin
   $ hg --config extensions.largefiles= ci -S -m "add large files"
   committing subrepository sub1
-  committing subrepository sub1/sub2 (glob)
+  committing subrepository sub1/sub2
 
   $ hg --config extensions.largefiles= archive -S ../archive_lf
   $ find ../archive_lf | sort
@@ -785,7 +785,7 @@ The local repo enables largefiles if a largefiles repo is cloned
   $ cat ../lfclone/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/cloned (glob)
+  default = $TESTTMP/cloned
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -817,16 +817,16 @@ largefile and a normal file.  Then a largefile that hasn't been committed yet.
   $ touch sub1/sub2/untracked.txt
   $ touch sub1/sub2/large.dat
   $ hg forget sub1/sub2/large.bin sub1/sub2/test.txt sub1/sub2/untracked.txt
-  not removing sub1/sub2/untracked.txt: file is already untracked (glob)
+  not removing sub1/sub2/untracked.txt: file is already untracked
   [1]
   $ hg add --large --dry-run -v sub1/sub2/untracked.txt
-  adding sub1/sub2/untracked.txt as a largefile (glob)
+  adding sub1/sub2/untracked.txt as a largefile
   $ hg add --large -v sub1/sub2/untracked.txt
-  adding sub1/sub2/untracked.txt as a largefile (glob)
+  adding sub1/sub2/untracked.txt as a largefile
   $ hg add --normal -v sub1/sub2/large.dat
-  adding sub1/sub2/large.dat (glob)
+  adding sub1/sub2/large.dat
   $ hg forget -v sub1/sub2/untracked.txt
-  removing sub1/sub2/untracked.txt (glob)
+  removing sub1/sub2/untracked.txt
   $ hg status -S
   A sub1/sub2/large.dat
   R sub1/sub2/large.bin
@@ -907,7 +907,7 @@ Test issue4330: commit a directory where only normal files have changed
   $ hg add -v foo/bar/abc a.txt a.dat
   adding a.dat as a largefile
   adding a.txt
-  adding foo/bar/abc (glob)
+  adding foo/bar/abc
   $ hg ci -m 'dir commit with only normal file deltas' foo/bar
   $ hg status
   A a.dat
@@ -1040,7 +1040,7 @@ Interaction with extdiff, largefiles and subrepos
   archiving (sub1) [ <=>                                  ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [ <=>                             ] 0\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [ <=>                             ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   archiving (sub3) [ <=>                                  ] 0\r (no-eol) (esc)
@@ -1054,7 +1054,7 @@ Interaction with extdiff, largefiles and subrepos
   archiving (sub1) [ <=>                                  ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [ <=>                             ] 0\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [ <=>                             ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   diff -Nru cloned.*/.hgsub cloned/.hgsub (glob)
   --- cloned.*/.hgsub	* (glob)
@@ -1082,8 +1082,8 @@ Interaction with extdiff, largefiles and subrepos
   archiving (sub1) [===================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   archiving [                                           ] 0/8\r (no-eol) (esc)
@@ -1101,10 +1101,10 @@ Interaction with extdiff, largefiles and subrepos
   archiving (sub1) [===================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [=========>                     ] 1/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [===================>           ] 2/3\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   archiving (sub3) [                                    ] 0/1\r (no-eol) (esc)
@@ -1179,8 +1179,8 @@ Interaction with extdiff, largefiles and subrepos
   archiving (sub1) [ <=>                                  ] 0\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (glob) (esc)
-  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (sub1/sub2) [                               ] 0/1\r (no-eol) (esc)
+  archiving (sub1/sub2) [==============================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   --- */cloned.*/sub1/sub2/sub2	* (glob)
   +++ */cloned/sub1/sub2/sub2	* (glob)

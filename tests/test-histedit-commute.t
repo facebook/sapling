@@ -420,7 +420,7 @@ Now, let's try to fold the second commit into the first:
   > EOF
 
   $ HGEDITOR="sh ./editor.sh" hg histedit 0
-  saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/b0f4233702ca-4cf5af69-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/b0f4233702ca-4cf5af69-histedit.hg
 
   $ hg --config diff.git=yes export 0
   # HG changeset patch

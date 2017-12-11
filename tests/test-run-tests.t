@@ -680,7 +680,7 @@ Refuse the fix
 Interactive with custom view
 
   $ echo 'n' | rt -i --view echo
-  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
+  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
   Accept this change? [n]* (glob)
   ERROR: test-failure.t output changed
   !.
@@ -692,7 +692,7 @@ Interactive with custom view
 View the fix
 
   $ echo 'y' | rt --view echo
-  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err (glob)
+  $TESTTMP/test-failure.t $TESTTMP/test-failure.t.err
   
   ERROR: test-failure.t output changed
   !.
@@ -858,8 +858,8 @@ No Diff
 test --tmpdir support
   $ rt --tmpdir=$TESTTMP/keep test-success.t
   
-  Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t (glob)
-  Keeping threadtmp dir: $TESTTMP/keep/child1  (glob)
+  Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t
+  Keeping threadtmp dir: $TESTTMP/keep/child1 
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 

@@ -178,8 +178,8 @@ issue 4481: revert across case only renames
   $ echo 'foo' > a/B/c/D/E
   $ hg ci -m 'e content change'
   $ hg revert --all -r 0
-  removing a/B/c/D/E (glob)
-  adding a/B/c/D/e (glob)
+  removing a/B/c/D/E
+  adding a/B/c/D/e
   $ find * | sort
   a
   a/B

@@ -106,7 +106,7 @@ pull
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=phase
   $ hg -R other pull -r 24b6387c8c8c
-  pulling from $TESTTMP/main (glob)
+  pulling from $TESTTMP/main
   searching for changes
   adding changesets
   adding manifests
@@ -137,7 +137,7 @@ pull empty (with phase movement)
   postclose-tip:02de42196ebe draft 
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=phase
   $ hg -R other pull -r 24b6387c8c8c
-  pulling from $TESTTMP/main (glob)
+  pulling from $TESTTMP/main
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 
@@ -157,7 +157,7 @@ pull empty (with phase movement)
 pull empty
 
   $ hg -R other pull -r 24b6387c8c8c
-  pulling from $TESTTMP/main (glob)
+  pulling from $TESTTMP/main
   no changes found
   pre-close-tip:24b6387c8c8c public 
   postclose-tip:24b6387c8c8c public 

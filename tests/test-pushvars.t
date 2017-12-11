@@ -24,7 +24,7 @@ Test pushing vars to repo with pushvars.server not set
   $ echo b > a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"
-  pushing to $TESTTMP/repo (glob)
+  pushing to $TESTTMP/repo
   searching for changes
   adding changesets
   adding manifests
@@ -38,7 +38,7 @@ Setting pushvars.sever = true and then pushing.
   $ echo b >> a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"
-  pushing to $TESTTMP/repo (glob)
+  pushing to $TESTTMP/repo
   searching for changes
   adding changesets
   adding manifests
@@ -52,7 +52,7 @@ Test pushing var with empty right-hand side
   $ echo b >> a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG="
-  pushing to $TESTTMP/repo (glob)
+  pushing to $TESTTMP/repo
   searching for changes
   adding changesets
   adding manifests
@@ -65,7 +65,7 @@ Test pushing bad vars
   $ echo b >> a
   $ hg commit -Aqm b
   $ hg push --pushvars "DEBUG"
-  pushing to $TESTTMP/repo (glob)
+  pushing to $TESTTMP/repo
   searching for changes
   abort: unable to parse variable 'DEBUG', should follow 'KEY=VALUE' or 'KEY=' format
   [255]

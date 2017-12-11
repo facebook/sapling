@@ -158,7 +158,7 @@ set up some more complex changes to shelve
 
   $ echo a >> a/a
   $ hg mv b b.rename
-  moving b/b to b.rename/b (glob)
+  moving b/b to b.rename/b
   $ hg cp c c.copy
   $ hg status -C
   M a/a
@@ -352,7 +352,7 @@ force a conflicted merge to occur
   
   # Unresolved merge conflicts:
   # 
-  #     a/a (glob)
+  #     a/a
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   
@@ -643,7 +643,7 @@ shelve should leave dirstate clean (issue4055)
   $ hg rebase -d 1 --config extensions.rebase=
   rebasing 2:323bfa07f744 "xyz" (tip)
   merging x
-  saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-78114325-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-78114325-rebase.hg
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
@@ -899,7 +899,7 @@ Test that resolving all conflicts in one direction (so that the rebase
 is a no-op), works (issue4398)
 
   $ hg revert -a -r .
-  reverting a/a (glob)
+  reverting a/a
   $ hg resolve -m a/a
   (no more unresolved files)
   continue: hg unshelve --continue

@@ -68,7 +68,7 @@ Actual testing
 --------------
 
   $ hg push
-  pushing to $TESTTMP/B7/server (glob)
+  pushing to $TESTTMP/B7/server
   searching for changes
   adding changesets
   adding manifests

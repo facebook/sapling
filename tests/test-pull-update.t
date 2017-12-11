@@ -100,7 +100,7 @@ explicit destination of the update.
    * active-before-pull        3:483b76ad4309
 
   $ hg pull -u -r active-after-pull
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -129,7 +129,7 @@ explicit destination of the update.
    * active-before-pull        3:483b76ad4309
 
   $ hg pull -u $TESTTMP/t#active-after-pull
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -168,7 +168,7 @@ match with the name of any existing bookmarks.
    * active-before-pull        3:483b76ad4309
 
   $ hg pull -u -r b5e4babfaaa7
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -195,7 +195,7 @@ match with the name of any existing bookmarks.
    * active-before-pull        3:483b76ad4309
 
   $ hg pull -u -b bar
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -222,7 +222,7 @@ match with the name of any existing bookmarks.
    * active-before-pull        3:483b76ad4309
 
   $ hg pull -u $TESTTMP/t#bar
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests

@@ -112,7 +112,7 @@ and now for something completely different
   abort: pretxncommit.crlf hook failed
   [255]
   $ hg revert -a
-  forgetting d/f2 (glob)
+  forgetting d/f2
   $ rm d/f2
 
   $ hg rem f
@@ -177,10 +177,10 @@ and now for something completely different
 
   $ for x in a b c d; do echo content > dupe/$x; done
   $ hg -R dupe add
-  adding dupe/a (glob)
-  adding dupe/b (glob)
-  adding dupe/c (glob)
-  adding dupe/d (glob)
+  adding dupe/a
+  adding dupe/b
+  adding dupe/c
+  adding dupe/d
   $ $PYTHON unix2dos.py dupe/b dupe/c dupe/d
   $ hg -R dupe ci -m a dupe/a
   $ hg -R dupe ci -m b/c dupe/[bc]
@@ -385,7 +385,7 @@ Disable warning:
   WARNING: f4.bat already has CRLF line endings
   and does not need EOL conversion by the win32text plugin.
   Before your next commit, please reconsider your encode/decode settings in 
-  Mercurial.ini or $TESTTMP/t/.hg/hgrc. (glob)
+  Mercurial.ini or $TESTTMP/t/.hg/hgrc.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat bin
   hello\x00\r (esc)

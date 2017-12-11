@@ -32,8 +32,8 @@ Initial svn import
   $ cd ..
 
   $ svn import -m "init projB" projB "$SVNREPOURL/proj%20B" | filter_svn_output | sort
-  Adding         projB/mytrunk (glob)
-  Adding         projB/tags (glob)
+  Adding         projB/mytrunk
+  Adding         projB/tags
   Committed revision 1.
 
 Update svn repository

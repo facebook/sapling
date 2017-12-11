@@ -66,8 +66,8 @@ TODO: Ideally, this should mention the largefile, not the standin
   ./dirb/largefile
   $ cd ..
   $ hg mv dira dirc
-  moving .hglf/dira/baz/largefile to .hglf/dirc/baz/largefile (glob)
-  moving .hglf/dira/dirb/largefile to .hglf/dirc/dirb/largefile (glob)
+  moving .hglf/dira/baz/largefile to .hglf/dirc/baz/largefile
+  moving .hglf/dira/dirb/largefile to .hglf/dirc/dirb/largefile
   $ find * | sort
   dirc
   dirc/baz
@@ -292,9 +292,9 @@ Add a normal file to the subrepo, then test archiving
   ? subrepo/renamed-large.txt
 
   $ hg addremove --dry-run subrepo
-  removing subrepo/large.txt (glob)
-  adding subrepo/normal.txt (glob)
-  adding subrepo/renamed-large.txt (glob)
+  removing subrepo/large.txt
+  adding subrepo/normal.txt
+  adding subrepo/renamed-large.txt
   $ hg status -S
   ! subrepo/large.txt
   ? large.dat
@@ -303,9 +303,9 @@ Add a normal file to the subrepo, then test archiving
   $ cd ..
 
   $ hg -R statusmatch addremove --dry-run statusmatch/subrepo
-  removing statusmatch/subrepo/large.txt (glob)
-  adding statusmatch/subrepo/normal.txt (glob)
-  adding statusmatch/subrepo/renamed-large.txt (glob)
+  removing statusmatch/subrepo/large.txt
+  adding statusmatch/subrepo/normal.txt
+  adding statusmatch/subrepo/renamed-large.txt
   $ hg -R statusmatch status -S
   ! subrepo/large.txt
   ? large.dat
@@ -321,7 +321,7 @@ Add a normal file to the subrepo, then test archiving
 
   $ mv subrepo/renamed-large.txt subrepo/large.txt
   $ hg addremove subrepo
-  adding subrepo/normal.txt (glob)
+  adding subrepo/normal.txt
   $ hg forget subrepo/normal.txt
 
   $ hg addremove -S
@@ -393,7 +393,7 @@ Test update with subrepos.
 Forget doesn't change the content of the file
   $ echo 'pre-forget content' > subrepo/large.txt
   $ hg forget -v subrepo/large.txt
-  removing subrepo/large.txt (glob)
+  removing subrepo/large.txt
   $ cat subrepo/large.txt
   pre-forget content
 
@@ -403,7 +403,7 @@ Test reverting a forgotten file
   C subrepo/large.txt
 
   $ hg rm -v subrepo/large.txt
-  removing subrepo/large.txt (glob)
+  removing subrepo/large.txt
   $ hg revert -R subrepo subrepo/large.txt
   $ rm subrepo/large.txt
   $ hg addremove -S
@@ -532,10 +532,10 @@ Test actions on largefiles using relative paths from subdir
 Test orig files go where we want them
   $ echo moremore >> anotherlarge
   $ hg revert anotherlarge -v --config 'ui.origbackuppath=.hg/origbackups'
-  creating directory: $TESTTMP/addrm2/.hg/origbackups/.hglf/sub (glob)
-  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge (glob)
-  reverting ../.hglf/sub/anotherlarge (glob)
-  creating directory: $TESTTMP/addrm2/.hg/origbackups/sub (glob)
+  creating directory: $TESTTMP/addrm2/.hg/origbackups/.hglf/sub
+  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge
+  reverting ../.hglf/sub/anotherlarge
+  creating directory: $TESTTMP/addrm2/.hg/origbackups/sub
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   $ ls ../.hg/origbackups/sub
@@ -608,7 +608,7 @@ check messages when there is no files to upload:
 
   $ hg -q clone src clone2
   $ hg -R clone2 paths | grep default
-  default = $TESTTMP/issue3651/src (glob)
+  default = $TESTTMP/issue3651/src
 
   $ hg -R clone2 summary --large
   parent: 0:fc0bd45326d3 tip
@@ -619,14 +619,14 @@ check messages when there is no files to upload:
   phases: 1 draft
   largefiles: (no files to upload)
   $ hg -R clone2 outgoing --large
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   no changes found
   largefiles: no files to upload
   [1]
 
   $ hg -R clone2 outgoing --large --graph --template "{rev}"
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   no changes found
   largefiles: no files to upload
@@ -647,7 +647,7 @@ check messages when there are files to upload:
   phases: 2 draft
   largefiles: 1 entities for 1 files to upload
   $ hg -R clone2 outgoing --large
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   changeset:   1:1acbe71ce432
   tag:         tip
@@ -659,7 +659,7 @@ check messages when there are files to upload:
   b
   
   $ hg -R clone2 outgoing --large --graph --template "{rev}"
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   @  1
   
@@ -683,7 +683,7 @@ check messages when there are files to upload:
   phases: 3 draft
   largefiles: 1 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   1:1acbe71ce432
   2:6095d0695d70
@@ -695,7 +695,7 @@ check messages when there are files to upload:
   $ hg -R clone2 cat -r 1 clone2/.hglf/b
   89e6c98d92887913cadf06b2adb97f26cde4849b
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   query 1; heads
   searching for changes
   all remote heads known locally
@@ -733,7 +733,7 @@ check messages when there are files to upload:
   phases: 6 draft
   largefiles: 3 entities for 3 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   1:1acbe71ce432
   2:6095d0695d70
@@ -750,7 +750,7 @@ check messages when there are files to upload:
   $ hg -R clone2 cat -r 4 clone2/.hglf/b
   13f9ed0898e315bf59dc2973fec52037b6f441a2
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   query 1; heads
   searching for changes
   all remote heads known locally
@@ -792,7 +792,7 @@ and #5 refer it.
   phases: 6 draft
   largefiles: 2 entities for 1 files to upload
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n"
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   searching for changes
   2:6095d0695d70
   3:7983dce246cc
@@ -802,7 +802,7 @@ and #5 refer it.
   b
   
   $ hg -R clone2 outgoing --large -T "{rev}:{node|short}\n" --debug --config progress.debug=true
-  comparing with $TESTTMP/issue3651/src (glob)
+  comparing with $TESTTMP/issue3651/src
   query 1; heads
   searching for changes
   all remote heads known locally
@@ -843,7 +843,7 @@ merge action 'd' for 'local renamed directory to d2/g' which has no filename
   A d1/g
   $ hg up -qr0
   $ hg mv d1 d2
-  moving d1/f to d2/f (glob)
+  moving d1/f to d2/f
   $ hg ci -qm2
   Invoking status precommit hook
   A d2/f
@@ -962,7 +962,7 @@ enabling largefiles extension.
   > largefiles=
   > EOF
   $ hg -R enabledlocally root
-  $TESTTMP/individualenabling/enabledlocally (glob)
+  $TESTTMP/individualenabling/enabledlocally
   $ hg -R notenabledlocally root
   abort: repository requires features unknown to this Mercurial: largefiles!
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
@@ -1088,9 +1088,9 @@ largefiles (issue4547)
   */no-largefiles/normal1 */no-largefiles/normal1 (glob) (no-windows !)
   [1]
   $ hg -R subrepo-root revert --all
-  reverting subrepo-root/.hglf/large (glob)
+  reverting subrepo-root/.hglf/large
   reverting subrepo no-largefiles
-  reverting subrepo-root/no-largefiles/normal1 (glob)
+  reverting subrepo-root/no-largefiles/normal1
 
 Move (and then undo) a directory move with only largefiles.
 
@@ -1108,7 +1108,7 @@ Move (and then undo) a directory move with only largefiles.
   large.orig
 
   $ hg mv dir/subdir dir/subdir2
-  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin (glob)
+  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin
 
   $ $PYTHON $TESTDIR/list-tree.py .hglf dir* large*
   .hglf/
@@ -1135,8 +1135,8 @@ Move (and then undo) a directory move with only largefiles.
   ? large.orig
 
   $ hg revert --all
-  undeleting .hglf/dir/subdir/large.bin (glob)
-  forgetting .hglf/dir/subdir2/large.bin (glob)
+  undeleting .hglf/dir/subdir/large.bin
+  forgetting .hglf/dir/subdir2/large.bin
   reverting subrepo no-largefiles
 
   $ hg status -C
@@ -1169,7 +1169,7 @@ The standin for subdir2 should be deleted, not just dropped
 'subdir' should not be in the destination.  It would be if the subdir2 directory
 existed under .hglf/.
   $ hg mv dir/subdir dir/subdir2
-  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin (glob)
+  moving .hglf/dir/subdir/large.bin to .hglf/dir/subdir2/large.bin
 
   $ hg status -C
   A dir/subdir2/large.bin
@@ -1195,7 +1195,7 @@ Start from scratch, and rename something other than the final path component.
   $ hg --config extensions.purge= purge
 
   $ hg mv dir/subdir dir2/subdir
-  moving .hglf/dir/subdir/large.bin to .hglf/dir2/subdir/large.bin (glob)
+  moving .hglf/dir/subdir/large.bin to .hglf/dir2/subdir/large.bin
 
   $ hg status -C
   A dir2/subdir/large.bin
@@ -1214,8 +1214,8 @@ Start from scratch, and rename something other than the final path component.
   large
 
   $ hg revert --all
-  undeleting .hglf/dir/subdir/large.bin (glob)
-  forgetting .hglf/dir2/subdir/large.bin (glob)
+  undeleting .hglf/dir/subdir/large.bin
+  forgetting .hglf/dir2/subdir/large.bin
   reverting subrepo no-largefiles
 
   $ hg status -C
@@ -1257,7 +1257,7 @@ Test "pull --rebase" when rebase is enabled before largefiles (issue3861)
   > largefiles=
   > EOF
   $ hg -R dst pull --rebase
-  pulling from $TESTTMP/issue3861/src (glob)
+  pulling from $TESTTMP/issue3861/src
   requesting all changes
   adding changesets
   adding manifests

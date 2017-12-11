@@ -247,7 +247,7 @@ qpop
   [255]
   $ hg revert sub
   reverting subrepo sub
-  adding sub/a (glob)
+  adding sub/a
   $ hg qpop
   popping 1
   now at: 0
@@ -266,7 +266,7 @@ qpush
   [255]
   $ hg revert sub
   reverting subrepo sub
-  adding sub/a (glob)
+  adding sub/a
   $ hg qpush
   applying 1
    subrepository sub diverged (local revision: b2fdb12cd82b, remote revision: aa037b301eba)

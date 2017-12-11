@@ -207,7 +207,7 @@ Inject corruption into the largefiles store and see how update handles that:
   $ echo corruption > .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
   $ hg up -C
   getting changed largefiles
-  large: data corruption in $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020 with hash 6a7bb2556144babe3899b25e5428123735bb1e27 (glob)
+  large: data corruption in $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020 with hash 6a7bb2556144babe3899b25e5428123735bb1e27
   0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updated to "cd24c147f45c: modified"
@@ -228,7 +228,7 @@ Test coverage of error handling from putlfile:
   $ hg push http://localhost:$HGPORT1 -f --config files.usercache=nocache
   pushing to http://localhost:$HGPORT1/
   searching for changes
-  abort: remotestore: could not open file $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020: HTTP Error 403: ssl required (glob)
+  abort: remotestore: could not open file $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020: HTTP Error 403: ssl required
   [255]
 
   $ rm .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020

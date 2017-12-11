@@ -46,7 +46,7 @@
 # Push changes to the server
 
   $ hg push
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   abort: lfs.url needs to be configured
   [255]
@@ -57,7 +57,7 @@
   > EOF
 
   $ hg push -v | egrep -v '^(uncompressed| )'
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   2 changesets found
   adding changesets
@@ -83,7 +83,7 @@
 
 # Pull from server
   $ hg pull default
-  pulling from $TESTTMP/server (glob)
+  pulling from $TESTTMP/server
   requesting all changes
   adding changesets
   adding manifests

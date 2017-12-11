@@ -191,7 +191,7 @@ clone root separately, make different local change
 user b push changes
 
   $ hg push 2>/dev/null
-  pushing to $TESTTMP/t (glob)
+  pushing to $TESTTMP/t
   pushing branch testing of subrepository "s"
   searching for changes
   adding changesets
@@ -203,7 +203,7 @@ user a pulls, merges, commits
 
   $ cd ../ta
   $ hg pull
-  pulling from $TESTTMP/t (glob)
+  pulling from $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -236,7 +236,7 @@ user a pulls, merges, commits
    source   ../gitroot
    revision f47b465e1bce645dbf37232a00574aa1546ca8d3
   $ hg push 2>/dev/null
-  pushing to $TESTTMP/t (glob)
+  pushing to $TESTTMP/t
   pushing branch testing of subrepository "s"
   searching for changes
   adding changesets
@@ -268,7 +268,7 @@ make and push changes to hg without updating the subrepo
   $ echo aa >> a
   $ hg commit -m aa
   $ hg push
-  pushing to $TESTTMP/t (glob)
+  pushing to $TESTTMP/t
   searching for changes
   adding changesets
   adding manifests
@@ -399,7 +399,7 @@ nested commit
   M inner/s/f
   $ hg commit --subrepos -m nested
   committing subrepository inner
-  committing subrepository inner/s (glob)
+  committing subrepository inner/s
 
 nested archive
 
@@ -678,8 +678,8 @@ Test sanitizing ".hg/hgrc" in subrepo
 
   $ hg -R tc pull -q
   $ hg -R tc update -q -C 3473d20bddcf 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg'
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg'
   $ cd tc
   $ hg parents -q
   8:3473d20bddcf
@@ -725,8 +725,8 @@ additional test for "git merge --ff" route:
   $ cd ..
   $ hg -R tc pull -q
   $ hg -R tc update -q -C ed23f7fe024e 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/.hg'
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/tc/s/sub/.hg'
   $ cd tc
   $ hg parents -q
   9:ed23f7fe024e
@@ -924,8 +924,8 @@ revert moves orig files to the right place
   $ echo 'bloop' > s/foobar
   $ hg revert --all --verbose --config 'ui.origbackuppath=.hg/origbackups'
   reverting subrepo ../gitroot
-  creating directory: $TESTTMP/tc/.hg/origbackups (glob)
-  saving current version of foobar as $TESTTMP/tc/.hg/origbackups/foobar (glob)
+  creating directory: $TESTTMP/tc/.hg/origbackups
+  saving current version of foobar as $TESTTMP/tc/.hg/origbackups/foobar
   $ ls .hg/origbackups
   foobar
   $ rm -rf .hg/origbackups
@@ -998,7 +998,7 @@ add git files, using either files or patterns
   reverting subrepo ../gitroot
 
   $ hg add --subrepos "glob:**.python"
-  adding s/snake.python (glob)
+  adding s/snake.python
   $ hg st --subrepos s
   A s/snake.python
   ? s/barfoo
@@ -1009,11 +1009,11 @@ add git files, using either files or patterns
   reverting subrepo ../gitroot
 
   $ hg add --subrepos s
-  adding s/barfoo (glob)
-  adding s/c.c (glob)
-  adding s/cpp.cpp (glob)
-  adding s/foobar.orig (glob)
-  adding s/snake.python (glob)
+  adding s/barfoo
+  adding s/c.c
+  adding s/cpp.cpp
+  adding s/foobar.orig
+  adding s/snake.python
   $ hg st --subrepos s
   A s/barfoo
   A s/c.c
@@ -1031,10 +1031,10 @@ make sure everything is reverted correctly
   ? s/snake.python
 
   $ hg add --subrepos --exclude "path:s/c.c"
-  adding s/barfoo (glob)
-  adding s/cpp.cpp (glob)
-  adding s/foobar.orig (glob)
-  adding s/snake.python (glob)
+  adding s/barfoo
+  adding s/cpp.cpp
+  adding s/foobar.orig
+  adding s/snake.python
   $ hg st --subrepos s
   A s/barfoo
   A s/cpp.cpp
@@ -1050,7 +1050,7 @@ make sure everything is reverted correctly
   > EOF
   $ hg add .hgignore
   $ hg add --subrepos "glob:**.python" s/barfoo
-  adding s/snake.python (glob)
+  adding s/snake.python
   $ hg st --subrepos s
   A s/barfoo
   A s/snake.python
@@ -1099,10 +1099,10 @@ except for explicitly added files (no patterns)
 
 correctly do a dry run
   $ hg add --subrepos s --dry-run
-  adding s/barfoo (glob)
-  adding s/c.c (glob)
-  adding s/cpp.cpp (glob)
-  adding s/foobar.orig (glob)
+  adding s/barfoo
+  adding s/c.c
+  adding s/cpp.cpp
+  adding s/foobar.orig
   $ hg st --subrepos s
   A s/.gitignore
   A s/snake.python
@@ -1196,7 +1196,7 @@ test for Git CVE-2016-3068
   $ unset GIT_ALLOW_PROTOCOL
   $ PWNED_MSG="your git is too old or mercurial has regressed" hg clone \
   > malicious-subrepository malicious-subrepository-protected
-  Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'... (glob)
+  Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'...
   fatal: transport 'ext' not allowed
   updating to branch default
   cloning subrepo s from ext::sh -c echo% pwned:% $PWNED_MSG% >pwned.txt
@@ -1209,7 +1209,7 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   $ rm -f pwned.txt
   $ env GIT_ALLOW_PROTOCOL=ext PWNED_MSG="you asked for it" hg clone \
   > malicious-subrepository malicious-subrepository-clone-allowed
-  Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'... (glob)
+  Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'...
   fatal: Could not read from remote repository.
   
   Please make sure you have the correct access rights

@@ -142,7 +142,7 @@ client only pulls down 1 changeset
 
   $ cd pull-hidden-common-client
   $ hg pull --debug
-  pulling from $TESTTMP/pull-hidden-common (glob)
+  pulling from $TESTTMP/pull-hidden-common
   query 1; heads
   searching for changes
   taking quick initial sample

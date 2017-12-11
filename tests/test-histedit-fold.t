@@ -317,7 +317,7 @@ should effectively drop the changes from +6.
   continue: hg histedit --continue
   $ hg histedit --continue
   251d831eeec5: empty changeset
-  saved backup bundle to $TESTTMP/fold-to-empty-test/.hg/strip-backup/888f9082bf99-daa0b8b3-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/fold-to-empty-test/.hg/strip-backup/888f9082bf99-daa0b8b3-histedit.hg
   $ hg logt --graph
   @  1:617f94f13c0f +4
   |
@@ -394,7 +394,7 @@ dropped revision.
   HG: user: test
   HG: branch 'default'
   HG: changed file
-  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-3d69522c-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-3d69522c-histedit.hg
   $ hg logt -G
   @  1:10c647b2cdd5 +4
   |

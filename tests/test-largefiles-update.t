@@ -440,7 +440,7 @@ Test that the internal linear merging works correctly
 
   $ hg update -q -C 2
   $ hg strip 3 4
-  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9530e27857f7-2e7b195d-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9530e27857f7-2e7b195d-backup.hg
   $ mv .hg/strip-backup/9530e27857f7-2e7b195d-backup.hg $TESTTMP
 
 (internal linear merging at "hg pull --update")
@@ -448,7 +448,7 @@ Test that the internal linear merging works correctly
   $ echo 'large1 for linear merge (conflict)' > large1
   $ echo 'large2 for linear merge (conflict with normal file)' > large2
   $ hg pull --update --config debug.dirstate.delaywrite=2 $TESTTMP/9530e27857f7-2e7b195d-backup.hg
-  pulling from $TESTTMP/9530e27857f7-2e7b195d-backup.hg (glob)
+  pulling from $TESTTMP/9530e27857f7-2e7b195d-backup.hg
   searching for changes
   adding changesets
   adding manifests

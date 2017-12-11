@@ -272,7 +272,7 @@ Pull from bundle and trigger notify
   Message-Id: <hg.a2392c293916*> (glob)
   To: Test
   
-  changeset a2392c293916 in $TESTTMP/Test (glob)
+  changeset a2392c293916 in $TESTTMP/Test
   details: $TESTTMP/Test?cmd=changeset;node=a2392c293916
   description:
   	addsym
@@ -295,7 +295,7 @@ Pull from bundle and trigger notify
   Message-Id: <hg.ef63ca68695b*> (glob)
   To: Test
   
-  changeset ef63ca68695b in $TESTTMP/Test (glob)
+  changeset ef63ca68695b in $TESTTMP/Test
   details: $TESTTMP/Test?cmd=changeset;node=ef63ca68695b
   description:
   	absym
@@ -929,7 +929,7 @@ Clone to test incoming
   > default = ../Test
   > EOF
   $ hg incoming
-  comparing with $TESTTMP/Test (glob)
+  comparing with $TESTTMP/Test
   searching for changes
   changeset:   2:bb948857c743
   tag:         tip

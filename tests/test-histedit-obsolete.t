@@ -526,7 +526,7 @@ attempted later.
 
   $ hg histedit --abort
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/abort/.hg/strip-backup/4dc06258baa6-dff4ef05-backup.hg (glob)
+  saved backup bundle to $TESTTMP/abort/.hg/strip-backup/4dc06258baa6-dff4ef05-backup.hg
 
   $ hg log -G
   @  18:ee118ab9fa44 (secret) k

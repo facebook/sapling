@@ -257,7 +257,7 @@ Verify strip -k resets dirstate correctly
    4 files changed, 4 insertions(+), 2 deletions(-)
   
   $ hg strip -r . -k
-  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/39278f7c08a9-ce59e002-backup.hg (glob)
+  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/39278f7c08a9-ce59e002-backup.hg
   $ hg status
   M show
   ? show2
@@ -267,7 +267,7 @@ Verify rebase succeeds if all changed files are in sparse checkout
   $ hg commit -Aqm "add show2"
   $ hg rebase -d 1 --config extensions.rebase=
   rebasing 2:bdde55290160 "add show2" (tip)
-  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/bdde55290160-216ed9c6-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/bdde55290160-216ed9c6-rebase.hg
 
 Verify log --sparse only shows commits that affect the sparse checkout
 

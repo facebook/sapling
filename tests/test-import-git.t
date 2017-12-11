@@ -648,8 +648,8 @@ prefix '.' is the same as no prefix
   d
   dddd
   $ hg revert -aC
-  forgetting dir/a (glob)
-  reverting dir/d (glob)
+  forgetting dir/a
+  reverting dir/d
   $ rm dir/a
 
 prefix with default strip
@@ -673,8 +673,8 @@ prefix with default strip
   d
   dd
   $ hg revert -aC
-  forgetting dir/a (glob)
-  reverting dir/d (glob)
+  forgetting dir/a
+  reverting dir/d
   $ rm dir/a
 (test that prefixes are relative to the cwd)
   $ mkdir tmpdir
@@ -714,11 +714,11 @@ prefix with default strip
 Renames, similarity and git diff
 
   $ hg revert -aC
-  forgetting dir/a (glob)
-  undeleting dir/d (glob)
-  undeleting dir/dir2/b (glob)
-  forgetting dir/dir2/b2 (glob)
-  reverting dir/dir2/c (glob)
+  forgetting dir/a
+  undeleting dir/d
+  undeleting dir/dir2/b
+  forgetting dir/dir2/b2
+  reverting dir/dir2/c
   $ rm dir/a dir/dir2/b2
   $ hg import --similarity 90 --no-commit - <<EOF
   > diff --git a/a b/b

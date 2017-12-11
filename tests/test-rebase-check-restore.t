@@ -138,7 +138,7 @@ Solve the conflict and go on:
   continue: hg rebase --continue
   $ hg rebase --continue
   rebasing 5:01e6ebbd8272 "F" (tip)
-  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/01e6ebbd8272-6fd3a015-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/a2/.hg/strip-backup/01e6ebbd8272-6fd3a015-rebase.hg
 
   $ hg tglog
   @  5:draft 'F' notdefault

@@ -27,7 +27,7 @@ Push should provide a hint when both 'default' and 'default-push' not set:
 Push should push to 'default' when 'default-push' not set:
 
   $ hg --cwd b push
-  pushing to $TESTTMP/a (glob)
+  pushing to $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -39,7 +39,7 @@ Push should push to 'default-push' when set:
   $ echo '[paths]' >> b/.hg/hgrc
   $ echo 'default-push = ../c' >> b/.hg/hgrc
   $ hg --cwd b push
-  pushing to $TESTTMP/c (glob)
+  pushing to $TESTTMP/c
   searching for changes
   adding changesets
   adding manifests
@@ -49,7 +49,7 @@ Push should push to 'default-push' when set:
 But push should push to 'default' if explicitly specified (issue5000):
 
   $ hg --cwd b push default
-  pushing to $TESTTMP/a (glob)
+  pushing to $TESTTMP/a
   searching for changes
   no changes found
   [1]
@@ -63,7 +63,7 @@ Push should push to 'default-push' when 'default' is not set
   $ touch foo
   $ hg -q commit -A -m 'add foo'
   $ hg --config paths.default-push=../a push
-  pushing to $TESTTMP/a (glob)
+  pushing to $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests

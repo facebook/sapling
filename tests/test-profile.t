@@ -143,12 +143,12 @@ profiler extension could be loaded before other extensions
   $ hg root
   otherextension: loaded
   fooprof: loaded
-  $TESTTMP/b (glob)
+  $TESTTMP/b
   $ HGPROF=fooprof hg root --profile
   fooprof: loaded
   fooprof: start profile
   otherextension: loaded
-  $TESTTMP/b (glob)
+  $TESTTMP/b
   fooprof: end profile
 
   $ HGPROF=other hg root --profile 2>&1 | head -n 2

@@ -61,7 +61,7 @@ commit added file that has been deleted
   $ mkdir dir
   $ echo boo > dir/file
   $ hg add
-  adding dir/file (glob)
+  adding dir/file
   $ hg -v commit -m commit-9 dir
   committing files:
   dir/file
@@ -180,8 +180,8 @@ partial subdir commit test
   $ mkdir bar
   $ echo bar > bar/bar
   $ hg add
-  adding bar/bar (glob)
-  adding foo/foo (glob)
+  adding bar/bar
+  adding foo/foo
   $ HGEDITOR=cat hg ci -e -m commit-subdir-1 foo
   commit-subdir-1
   
@@ -680,7 +680,7 @@ verify pathauditor blocks evil filepaths
   > EOF
   $ $PYTHON evil-commit.py
   $ hg co --clean tip
-  abort: path contains illegal component: HG~1/hgrc (glob)
+  abort: path contains illegal component: HG~1/hgrc
   [255]
 
   $ hg rollback -f
@@ -699,7 +699,7 @@ verify pathauditor blocks evil filepaths
   > EOF
   $ $PYTHON evil-commit.py
   $ hg co --clean tip
-  abort: path contains illegal component: HG8B6C~2/hgrc (glob)
+  abort: path contains illegal component: HG8B6C~2/hgrc
   [255]
 
 # test that an unmodified commit template message aborts

@@ -67,7 +67,7 @@ Test setup
   created new head
   $ cd ../client
   $ hg pull
-  pulling from $TESTTMP/D4/server (glob)
+  pulling from $TESTTMP/D4/server
   searching for changes
   adding changesets
   adding manifests
@@ -104,7 +104,7 @@ Actual testing (new branch only)
 --------------------------------
 
   $ hg push --rev 'desc(A1)'
-  pushing to $TESTTMP/D4/server (glob)
+  pushing to $TESTTMP/D4/server
   searching for changes
   abort: push creates new remote head f6082bc4ffef!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -114,7 +114,7 @@ Actual testing (existing branch only)
 ------------------------------------
 
   $ hg push --rev 'desc(B1)'
-  pushing to $TESTTMP/D4/server (glob)
+  pushing to $TESTTMP/D4/server
   searching for changes
   adding changesets
   adding manifests

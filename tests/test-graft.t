@@ -811,7 +811,7 @@ but do some destructive editing of the repo:
   $ hg up -qC 7
   $ hg tag -l -r 13 tmp
   $ hg --config extensions.strip= strip 2
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-d323a1e4-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/5c095ad7e90f-d323a1e4-backup.hg
   $ hg graft tmp
   skipping already grafted revision 8:7a4785234d87 (2:ef0ef43d49e7 also has unknown origin 5c095ad7e90f)
   [255]

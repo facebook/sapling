@@ -372,7 +372,7 @@ parameters:
   73649e48688a
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a'repo"
-  remote: Illegal repository "$TESTTMP/a'repo" (glob)
+  remote: Illegal repository "$TESTTMP/a'repo"
   abort: no suitable response from remote hg!
   [255]
 

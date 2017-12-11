@@ -56,11 +56,11 @@ push
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset cb9a9f314b8b in $TESTTMP/a (glob)
+  changeset cb9a9f314b8b in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=cb9a9f314b8b
   summary: a
   
-  changeset ba677d0156c1 in $TESTTMP/a (glob)
+  changeset ba677d0156c1 in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=ba677d0156c1
   summary: b
   
@@ -109,11 +109,11 @@ unbundle with correct source
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset cb9a9f314b8b in $TESTTMP/a (glob)
+  changeset cb9a9f314b8b in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=cb9a9f314b8b
   summary: a
   
-  changeset ba677d0156c1 in $TESTTMP/a (glob)
+  changeset ba677d0156c1 in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=ba677d0156c1
   summary: b
   
@@ -186,19 +186,19 @@ push
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset 84e487dddc58 in $TESTTMP/a (glob)
+  changeset 84e487dddc58 in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=84e487dddc58
   summary: newfile
   
-  changeset b29c7a2b6b0c in $TESTTMP/a (glob)
+  changeset b29c7a2b6b0c in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=b29c7a2b6b0c
   summary: x
   
-  changeset 0957c7d64886 in $TESTTMP/a (glob)
+  changeset 0957c7d64886 in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=0957c7d64886
   summary: y
   
-  changeset 485b4e6b0249 in $TESTTMP/a (glob)
+  changeset 485b4e6b0249 in $TESTTMP/a
   details: $TESTTMP/a?cmd=changeset;node=485b4e6b0249
   summary: merged
   

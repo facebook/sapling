@@ -36,7 +36,7 @@ continuing the current defaultbranch
 
   $ mkcommit c_dB0
   $ hg push
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -52,7 +52,7 @@ creating a new branch
   (branches are permanent and global, did you want a bookmark?)
   $ mkcommit c_aC0
   $ hg push --new-branch
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -66,7 +66,7 @@ Create a new head on the default branch
   $ mkcommit c_dD0
   created new head
   $ hg push -f
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -85,7 +85,7 @@ remerge them
   (branch merge, don't forget to commit)
   $ mkcommit c_dE0
   $ hg push
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -97,7 +97,7 @@ Test single head enforcing - after rewrite
 
   $ mkcommit c_dF0
   $ hg push
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -105,7 +105,7 @@ Test single head enforcing - after rewrite
   added 1 changesets with 1 changes to 1 files
   $ hg commit --amend -m c_dF1
   $ hg push
-  pushing to $TESTTMP/single-head-server (glob)
+  pushing to $TESTTMP/single-head-server
   searching for changes
   adding changesets
   adding manifests
@@ -199,5 +199,5 @@ setup
 actual stripping
 
   $ hg strip --config extensions.strip= --rev 'desc("c_dH0")'
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/fe47ea669cea-a41bf5a9-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/fe47ea669cea-a41bf5a9-backup.hg
 

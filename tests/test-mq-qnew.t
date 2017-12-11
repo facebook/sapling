@@ -117,7 +117,7 @@ plain headers
   abort: patch name cannot begin or end with whitespace
   abort: patch name cannot begin or end with whitespace
   % qnew with name containing slash
-  abort: path ends in directory separator: foo/ (glob)
+  abort: path ends in directory separator: foo/
   abort: "foo" already exists as a directory
   foo/bar.patch
   popping foo/bar.patch
@@ -187,7 +187,7 @@ hg headers
   abort: patch name cannot begin or end with whitespace
   abort: patch name cannot begin or end with whitespace
   % qnew with name containing slash
-  abort: path ends in directory separator: foo/ (glob)
+  abort: path ends in directory separator: foo/
   abort: "foo" already exists as a directory
   foo/bar.patch
   popping foo/bar.patch

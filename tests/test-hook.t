@@ -792,7 +792,7 @@ new commits must be visible in pretxnchangegroup (issue3428)
   $ echo aa >> from/a
   $ hg --cwd from ci -mb
   $ hg --cwd from push
-  pushing to $TESTTMP/to (glob)
+  pushing to $TESTTMP/to
   searching for changes
   changeset:   0:cb9a9f314b8b
   tag:         tip

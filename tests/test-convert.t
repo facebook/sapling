@@ -476,7 +476,7 @@ running from a devel copy, not a temp installation
   assuming destination emptydir-hg
   initializing destination emptydir-hg repository
   emptydir does not look like a CVS checkout
-  $TESTTMP/emptydir does not look like a Git repository (glob)
+  $TESTTMP/emptydir does not look like a Git repository
   emptydir does not look like a Subversion repository
   emptydir is not a local Mercurial repository
   emptydir does not look like a darcs repository

@@ -515,7 +515,7 @@ commit hook on tag used to be run without write lock - issue3344
   $ hg -R repo-tag --config hooks.commit="sh ../issue3344.sh" tag tag
   hook: tag changes detected
   hook: +A be090ea6625635128e90f7d89df8beeb2bcc1653 tag
-  pushing to $TESTTMP/repo-tag-target (glob)
+  pushing to $TESTTMP/repo-tag-target
   searching for changes
   adding changesets
   adding manifests
@@ -619,7 +619,7 @@ check that we can merge tags that differ in rank
 
   $ cd ../repo-automatic-tag-merge-clone
   $ hg pull
-  pulling from $TESTTMP/repo-automatic-tag-merge (glob)
+  pulling from $TESTTMP/repo-automatic-tag-merge
   searching for changes
   adding changesets
   adding manifests

@@ -48,7 +48,7 @@ Merge - local file conflicts with remote directory
   a/b: path conflict - a file or link has the same name as a directory
   the local file has been renamed to a/b~0ed027b96f31
   resolve manually then use 'hg resolve --mark a/b'
-  moving a/b to a/b~0ed027b96f31 (glob)
+  moving a/b to a/b~0ed027b96f31
   getting a/b/c/d
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon

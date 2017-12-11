@@ -66,9 +66,9 @@ Test fileset
 Test template output
 
   $ hg --cwd tmp cat ../b ../c -T '== {path} ({abspath}) ==\n{data}'
-  == ../b (b) == (glob)
+  == ../b (b) ==
   1
-  == ../c (c) == (glob)
+  == ../c (c) ==
   3
 
   $ hg cat b c -Tjson --output -

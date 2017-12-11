@@ -20,35 +20,35 @@ with paths:
   $ echo 'dupe = ../b#tip' >> .hg/hgrc
   $ echo 'expand = $SOMETHING/bar' >> .hg/hgrc
   $ hg in dupe
-  comparing with $TESTTMP/b (glob)
+  comparing with $TESTTMP/b
   no changes found
   [1]
   $ cd ..
   $ hg -R a in dupe
-  comparing with $TESTTMP/b (glob)
+  comparing with $TESTTMP/b
   no changes found
   [1]
   $ cd a
   $ hg paths
-  dupe = $TESTTMP/b#tip (glob)
-  expand = $TESTTMP/a/$SOMETHING/bar (glob)
+  dupe = $TESTTMP/b#tip
+  expand = $TESTTMP/a/$SOMETHING/bar
   $ SOMETHING=foo hg paths
-  dupe = $TESTTMP/b#tip (glob)
-  expand = $TESTTMP/a/foo/bar (glob)
+  dupe = $TESTTMP/b#tip
+  expand = $TESTTMP/a/foo/bar
 #if msys
   $ SOMETHING=//foo hg paths
-  dupe = $TESTTMP/b#tip (glob)
+  dupe = $TESTTMP/b#tip
   expand = /foo/bar
 #else
   $ SOMETHING=/foo hg paths
-  dupe = $TESTTMP/b#tip (glob)
+  dupe = $TESTTMP/b#tip
   expand = /foo/bar
 #endif
   $ hg paths -q
   dupe
   expand
   $ hg paths dupe
-  $TESTTMP/b#tip (glob)
+  $TESTTMP/b#tip
   $ hg paths -q dupe
   $ hg paths unknown
   not found!
@@ -64,11 +64,11 @@ formatter output with paths:
    {
     "name": "dupe",
     "pushurl": "https://example.com/dupe",
-    "url": "$TESTTMP/b#tip" (glob)
+    "url": "$TESTTMP/b#tip"
    },
    {
     "name": "expand",
-    "url": "$TESTTMP/a/$SOMETHING/bar" (glob)
+    "url": "$TESTTMP/a/$SOMETHING/bar"
    }
   ]
   $ hg paths -Tjson dupe | sed 's|\\\\|\\|g'
@@ -76,7 +76,7 @@ formatter output with paths:
    {
     "name": "dupe",
     "pushurl": "https://example.com/dupe",
-    "url": "$TESTTMP/b#tip" (glob)
+    "url": "$TESTTMP/b#tip"
    }
   ]
   $ hg paths -Tjson -q unknown
@@ -89,21 +89,21 @@ log template:
  (behaves as a {name: path-string} dict by default)
 
   $ hg log -rnull -T '{peerurls}\n'
-  dupe=$TESTTMP/b#tip expand=$TESTTMP/a/$SOMETHING/bar (glob)
+  dupe=$TESTTMP/b#tip expand=$TESTTMP/a/$SOMETHING/bar
   $ hg log -rnull -T '{join(peerurls, "\n")}\n'
-  dupe=$TESTTMP/b#tip (glob)
-  expand=$TESTTMP/a/$SOMETHING/bar (glob)
+  dupe=$TESTTMP/b#tip
+  expand=$TESTTMP/a/$SOMETHING/bar
   $ hg log -rnull -T '{peerurls % "{name}: {url}\n"}'
-  dupe: $TESTTMP/b#tip (glob)
-  expand: $TESTTMP/a/$SOMETHING/bar (glob)
+  dupe: $TESTTMP/b#tip
+  expand: $TESTTMP/a/$SOMETHING/bar
   $ hg log -rnull -T '{get(peerurls, "dupe")}\n'
-  $TESTTMP/b#tip (glob)
+  $TESTTMP/b#tip
 
  (sub options can be populated by map/dot operation)
 
   $ hg log -rnull \
   > -T '{get(peerurls, "dupe") % "url: {url}\npushurl: {pushurl}\n"}'
-  url: $TESTTMP/b#tip (glob)
+  url: $TESTTMP/b#tip
   pushurl: https://example.com/dupe
   $ hg log -rnull -T '{peerurls.dupe.pushurl}\n'
   https://example.com/dupe
@@ -132,9 +132,9 @@ output:
 zeroconf wraps ui.configitems(), which shouldn't crash at least:
 
   $ hg paths --config extensions.zeroconf=
-  dupe = $TESTTMP/b#tip (glob)
+  dupe = $TESTTMP/b#tip
   dupe:pushurl = https://example.com/dupe
-  expand = $TESTTMP/a/$SOMETHING/bar (glob)
+  expand = $TESTTMP/a/$SOMETHING/bar
   insecure = http://foo:***@example.com/
 
   $ cd ..

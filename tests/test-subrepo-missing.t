@@ -130,10 +130,10 @@ verifying shouldn't init a new subrepo if the reference doesn't exist
   checking files
   2 files, 5 changesets, 5 total revisions
   checking subrepo links
-  0: repository $TESTTMP/repo/subrepo not found (glob)
-  1: repository $TESTTMP/repo/subrepo not found (glob)
-  3: repository $TESTTMP/repo/subrepo not found (glob)
-  4: repository $TESTTMP/repo/subrepo not found (glob)
+  0: repository $TESTTMP/repo/subrepo not found
+  1: repository $TESTTMP/repo/subrepo not found
+  3: repository $TESTTMP/repo/subrepo not found
+  4: repository $TESTTMP/repo/subrepo not found
   $ ls
   b
   $ mv b subrepo

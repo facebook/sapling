@@ -138,7 +138,7 @@ Check that path aliases are expanded:
 
   $ hg clone -q -U --config 'paths.foobar=a#0' foobar f
   $ hg -R f showconfig paths.default
-  $TESTTMP/a#0 (glob)
+  $TESTTMP/a#0
 
 Use --pull:
 
@@ -808,7 +808,7 @@ The shared repo should have been created
 The destination should point to it
 
   $ cat share-dest1a/.hg/sharedpath; echo
-  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg (glob)
+  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg
 
 The destination should have bookmarks
 
@@ -818,7 +818,7 @@ The destination should have bookmarks
 The default path should be the remote, not the share
 
   $ hg -R share-dest1a config paths.default
-  $TESTTMP/source1a (glob)
+  $TESTTMP/source1a
 
 Clone with existing share dir should result in pull + share
 
@@ -839,7 +839,7 @@ Clone with existing share dir should result in pull + share
   b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1
 
   $ cat share-dest1b/.hg/sharedpath; echo
-  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg (glob)
+  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg
 
 We only get bookmarks from the remote, not everything in the share
 
@@ -850,7 +850,7 @@ We only get bookmarks from the remote, not everything in the share
 Default path should be source, not share.
 
   $ hg -R share-dest1b config paths.default
-  $TESTTMP/source1b (glob)
+  $TESTTMP/source1b
 
 Checked out revision should be head of default branch
 

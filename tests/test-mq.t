@@ -154,7 +154,7 @@ qinit -c should create both files if they don't exist
   guards
   $ cat .hg/patches/series
   $ hg qinit -c
-  abort: repository $TESTTMP/d/.hg/patches already exists! (glob)
+  abort: repository $TESTTMP/d/.hg/patches already exists!
   [255]
   $ cd ..
 
@@ -177,8 +177,8 @@ qinit -c should create both files if they don't exist
   $ echo status >> .hg/patches/.hgignore
   $ echo bleh >> .hg/patches/.hgignore
   $ hg qinit -c
-  adding .hg/patches/A (glob)
-  adding .hg/patches/B (glob)
+  adding .hg/patches/A
+  adding .hg/patches/B
   $ hg -R .hg/patches status
   A .hgignore
   A A
@@ -800,7 +800,7 @@ strip with local changes, should complain
 
   $ hg strip -f tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/770eb8fce608-0ddcae0f-backup.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/770eb8fce608-0ddcae0f-backup.hg
   $ cd ..
 
 
@@ -1247,7 +1247,7 @@ repo with unversioned patch dir
 
   $ cd qclonesource
   $ hg qinit -c
-  adding .hg/patches/patch1 (glob)
+  adding .hg/patches/patch1
   $ hg qci -m checkpoint
   $ qlog
   main repo:
@@ -1388,8 +1388,8 @@ apply force, should discard changes in hello, but not bye
 
   $ hg qpush -f --verbose --config 'ui.origbackuppath=.hg/origbackups'
   applying empty
-  creating directory: $TESTTMP/forcepush/.hg/origbackups (glob)
-  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt (glob)
+  creating directory: $TESTTMP/forcepush/.hg/origbackups
+  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt
   patching file hello.txt
   committing files:
   hello.txt

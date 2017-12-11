@@ -148,7 +148,7 @@ temporarily.
   $ mv .hg/histedit-state.back .hg/histedit-state
 
   $ hg histedit --continue
-  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-histedit.hg
   $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 2::
   @  4 f5ed five
   |
@@ -265,7 +265,7 @@ short hash. This tests issue3893.
   HG: user: test
   HG: branch 'default'
   HG: changed alpha
-  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/c8e68270e35a-63d8b8d8-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/c8e68270e35a-63d8b8d8-histedit.hg
 
   $ hg update -q 2
   $ echo x > x

@@ -736,7 +736,7 @@ We warn about divergent during bare update to the active bookmark
      Z                         2:db815d6d32e6
      x  y                      2:db815d6d32e6
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence pull
-  pulling from $TESTTMP/repo (glob)
+  pulling from $TESTTMP/repo
   searching for changes
   adding changesets
   adding manifests

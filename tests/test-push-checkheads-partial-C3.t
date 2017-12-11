@@ -47,7 +47,7 @@ Test setup
   $ mkcommit B0
   $ cd ../client
   $ hg pull
-  pulling from $TESTTMP/C3/server (glob)
+  pulling from $TESTTMP/C3/server
   searching for changes
   adding changesets
   adding manifests
@@ -75,7 +75,7 @@ Actual testing
 --------------
 
   $ hg push
-  pushing to $TESTTMP/C3/server (glob)
+  pushing to $TESTTMP/C3/server
   searching for changes
   abort: push creates new remote head 0f88766e02d6!
   (merge or see 'hg help push' for details about pushing new heads)

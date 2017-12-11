@@ -9,7 +9,7 @@ on commit:
   $ hg init sub/.hg
   $ echo 'sub/.hg = sub/.hg' >> .hgsub
   $ hg ci -qAm 'add subrepo "sub/.hg"'
-  abort: path 'sub/.hg' is inside nested repo 'sub' (glob)
+  abort: path 'sub/.hg' is inside nested repo 'sub'
   [255]
 
 prepare tampered repo (including the commit above):
@@ -33,7 +33,7 @@ prepare tampered repo (including the commit above):
 on clone (and update):
 
   $ hg clone -q hgname hgname2
-  abort: path 'sub/.hg' is inside nested repo 'sub' (glob)
+  abort: path 'sub/.hg' is inside nested repo 'sub'
   [255]
 
 Test direct symlink traversal

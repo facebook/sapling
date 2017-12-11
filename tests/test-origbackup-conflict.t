@@ -30,7 +30,7 @@ Peform an update that causes b/c to be backed up
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
+  creating directory: $TESTTMP/repo/.hg/origbackups/b
   getting d
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
@@ -54,7 +54,7 @@ Perform an update that causes b to be backed up - it should replace the backup b
   resolving manifests
   b: replacing untracked file
   getting b
-  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/b (glob)
+  removing conflicting directory: $TESTTMP/repo/.hg/origbackups/b
   getting d
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark b1)
@@ -69,8 +69,8 @@ Perform an update the causes b/c to be backed up again - it should replace the b
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
-  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
+  creating directory: $TESTTMP/repo/.hg/origbackups/b
+  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b
   getting d
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
@@ -107,8 +107,8 @@ Perform an update that causes b/c and d to be backed up again - b/c should not g
   b/c: replacing untracked file
   d: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/origbackups/b (glob)
-  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b (glob)
+  creating directory: $TESTTMP/repo/.hg/origbackups/b
+  removing conflicting file: $TESTTMP/repo/.hg/origbackups/b
   getting d
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark c1)
@@ -128,8 +128,8 @@ Incorrectly configure origbackuppath to be under a file
   resolving manifests
   b/c: replacing untracked file
   getting b/c
-  creating directory: $TESTTMP/repo/.hg/badorigbackups/b (glob)
-  abort: $ENOTDIR$: '$TESTTMP/repo/.hg/badorigbackups/b' (glob)
+  creating directory: $TESTTMP/repo/.hg/badorigbackups/b
+  abort: $ENOTDIR$: '$TESTTMP/repo/.hg/badorigbackups/b'
   [255]
   $ cat .hg/badorigbackups
   data

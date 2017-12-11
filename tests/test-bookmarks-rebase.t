@@ -38,7 +38,7 @@ rebase
 
   $ hg rebase -s two -d one
   rebasing 3:2ae46b1d99a7 "3" (two tip)
-  saved backup bundle to $TESTTMP/.hg/strip-backup/2ae46b1d99a7-e6b057bc-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/.hg/strip-backup/2ae46b1d99a7-e6b057bc-rebase.hg
 
   $ hg log
   changeset:   3:42e5ed2cdcf4

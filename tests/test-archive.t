@@ -32,7 +32,7 @@ hg subrepos are shared when the parent repo is shared
   sharing subrepo subrepo from $TESTTMP/test/subrepo
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat shared1/subrepo/.hg/sharedpath
-  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $TESTTMP/test/subrepo/.hg (no-eol)
 
 hg subrepos are shared into existence on demand if the parent was shared
 
@@ -45,7 +45,7 @@ hg subrepos are shared into existence on demand if the parent was shared
   sharing subrepo subrepo from $TESTTMP/test/subrepo
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat share2/subrepo/.hg/sharedpath
-  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $TESTTMP/test/subrepo/.hg (no-eol)
   $ echo 'mod' > share2/subrepo/sub
   $ hg -R share2 ci -Sqm 'subrepo mod'
   $ hg -R clone1 update -C tip
@@ -79,7 +79,7 @@ hg subrepos are shared into existence on demand if the parent was shared
   $ hg -R shared3 archive --config ui.archivemeta=False -r tip -S archive
   sharing subrepo subrepo from $TESTTMP/test/subrepo
   $ cat shared3/subrepo/.hg/sharedpath
-  $TESTTMP/test/subrepo/.hg (no-eol) (glob)
+  $TESTTMP/test/subrepo/.hg (no-eol)
   $ diff -r archive test
   Only in test: .hg
   Common subdirectories: archive/baz and test/baz (?)

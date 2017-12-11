@@ -54,12 +54,12 @@ Can add nested directories
   $ hg files -r .
   a
   b
-  dir1/a (glob)
-  dir1/b (glob)
-  dir1/dir1/a (glob)
-  dir1/dir1/b (glob)
-  dir1/dir2/a (glob)
-  dir1/dir2/b (glob)
+  dir1/a
+  dir1/b
+  dir1/dir1/a
+  dir1/dir1/b
+  dir1/dir2/a
+  dir1/dir2/b
   e
 
 The manifest command works
@@ -80,7 +80,7 @@ Revision is not created for unchanged directory
   $ mkdir dir2
   $ echo 3 > dir2/a
   $ hg add dir2
-  adding dir2/a (glob)
+  adding dir2/a
   $ hg debugindex --dir dir1 > before
   $ hg ci -qm 'add dir2'
   $ hg debugindex --dir dir1 > after
@@ -90,8 +90,8 @@ Revision is not created for unchanged directory
 Removing directory does not create an revlog entry
 
   $ hg rm dir1/dir1
-  removing dir1/dir1/a (glob)
-  removing dir1/dir1/b (glob)
+  removing dir1/dir1/a
+  removing dir1/dir1/b
   $ hg debugindex --dir dir1/dir1 > before
   $ hg ci -qm 'remove dir1/dir1'
   $ hg debugindex --dir dir1/dir1 > after
@@ -105,12 +105,12 @@ without loading all directory revlogs
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mv .hg/store/meta/dir2 .hg/store/meta/dir2-backup
   $ hg files -r . dir1
-  dir1/a (glob)
-  dir1/b (glob)
-  dir1/dir1/a (glob)
-  dir1/dir1/b (glob)
-  dir1/dir2/a (glob)
-  dir1/dir2/b (glob)
+  dir1/a
+  dir1/b
+  dir1/dir1/a
+  dir1/dir1/b
+  dir1/dir2/a
+  dir1/dir2/b
 
 Check that status between revisions works (calls treemanifest.matches())
 without loading all directory revlogs
@@ -161,7 +161,7 @@ dir1's manifest does change, but only because dir1/a's filelog changes.)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg revert -r 'desc("modify dir2/a")' .
-  reverting dir1/a (glob)
+  reverting dir1/a
   $ hg ci -m 'merge, keeping parent 1'
   $ hg debugindex --dir dir2 > after
   $ diff before after
@@ -177,7 +177,7 @@ dir2's manifest does change, but only because dir2/a's filelog changes.)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg revert -r 'desc("modify dir1/a")' .
-  reverting dir2/a (glob)
+  reverting dir2/a
   $ hg ci -m 'merge, keeping parent 2'
   created new head
   $ hg debugindex --dir dir1 > after
@@ -322,7 +322,7 @@ Stripping and recovering changes should work
   M dir1/a
   $ hg --config extensions.strip= strip tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
@@ -455,31 +455,31 @@ the files command with various parameters.
 Test files from the root.
 
   $ hg files -r .
-  .A/one.txt (glob)
-  .A/two.txt (glob)
-  b/bar/fruits.txt (glob)
-  b/bar/orange/fly/gnat.py (glob)
-  b/bar/orange/fly/housefly.txt (glob)
-  b/foo/apple/bees/flower.py (glob)
+  .A/one.txt
+  .A/two.txt
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  b/foo/apple/bees/flower.py
   c.txt
   d.py
 
 Excludes with a glob should not exclude everything from the glob's root
 
   $ hg files -r . -X 'b/fo?' b
-  b/bar/fruits.txt (glob)
-  b/bar/orange/fly/gnat.py (glob)
-  b/bar/orange/fly/housefly.txt (glob)
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
   $ cp -R .hg/store .hg/store-copy
 
 Test files for a subdirectory.
 
   $ rm -r .hg/store/meta/~2e_a
   $ hg files -r . b
-  b/bar/fruits.txt (glob)
-  b/bar/orange/fly/gnat.py (glob)
-  b/bar/orange/fly/housefly.txt (glob)
-  b/foo/apple/bees/flower.py (glob)
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
+  b/foo/apple/bees/flower.py
   $ hg diff -r '.^' -r . --stat b
    b/bar/fruits.txt              |  1 +
    b/bar/orange/fly/gnat.py      |  1 +
@@ -494,7 +494,7 @@ Test files with just includes and excludes.
   $ rm -r .hg/store/meta/b/bar/orange/fly
   $ rm -r .hg/store/meta/b/foo/apple/bees
   $ hg files -r . -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
-  b/bar/fruits.txt (glob)
+  b/bar/fruits.txt
   $ hg diff -r '.^' -r . --stat -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
    b/bar/fruits.txt |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -505,9 +505,9 @@ Test files for a subdirectory, excluding a directory within it.
   $ rm -r .hg/store/meta/~2e_a
   $ rm -r .hg/store/meta/b/foo
   $ hg files -r . -X path:b/foo b
-  b/bar/fruits.txt (glob)
-  b/bar/orange/fly/gnat.py (glob)
-  b/bar/orange/fly/housefly.txt (glob)
+  b/bar/fruits.txt
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
   $ hg diff -r '.^' -r . --stat -X path:b/foo b
    b/bar/fruits.txt              |  1 +
    b/bar/orange/fly/gnat.py      |  1 +
@@ -521,8 +521,8 @@ including an unrelated directory.
   $ rm -r .hg/store/meta/~2e_a
   $ rm -r .hg/store/meta/b/foo
   $ hg files -r . -I path:b/bar/orange -I path:a b
-  b/bar/orange/fly/gnat.py (glob)
-  b/bar/orange/fly/housefly.txt (glob)
+  b/bar/orange/fly/gnat.py
+  b/bar/orange/fly/housefly.txt
   $ hg diff -r '.^' -r . --stat -I path:b/bar/orange -I path:a b
    b/bar/orange/fly/gnat.py      |  1 +
    b/bar/orange/fly/housefly.txt |  1 +
@@ -536,7 +536,7 @@ within that.
   $ rm -r .hg/store/meta/b/foo
   $ rm -r .hg/store/meta/b/bar/orange
   $ hg files -r . glob:**.txt -I path:b/bar -X path:b/bar/orange
-  b/bar/fruits.txt (glob)
+  b/bar/fruits.txt
   $ hg diff -r '.^' -r . --stat glob:**.txt -I path:b/bar -X path:b/bar/orange
    b/bar/fruits.txt |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -838,7 +838,7 @@ other branch
   $ hg co '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg revert -r tip dir/
-  reverting dir/file (glob)
+  reverting dir/file
   $ echo b > file # to make sure root manifest is sent
   $ hg ci -m grafted
   created new head
@@ -855,7 +855,7 @@ other branch
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd grafted-dir-repo-clone
   $ hg pull -r 2
-  pulling from $TESTTMP/grafted-dir-repo (glob)
+  pulling from $TESTTMP/grafted-dir-repo
   searching for changes
   adding changesets
   adding manifests
@@ -869,7 +869,7 @@ Committing a empty commit does not duplicate root treemanifest
   $ hg commit -Aqm 'pre-empty commit'
   $ hg rm z
   $ hg commit --amend -m 'empty commit'
-  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-9e3b6b02-amend.hg (glob)
+  saved backup bundle to $TESTTMP/grafted-dir-repo-clone/.hg/strip-backup/cb99d5717cea-9e3b6b02-amend.hg
   $ hg log -r 'tip + tip^' -T '{manifest}\n'
   1:678d3574b88c
   1:678d3574b88c

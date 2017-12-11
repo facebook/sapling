@@ -48,7 +48,7 @@
 Now b has one revision to be pulled from a:
 
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -56,7 +56,7 @@ Now b has one revision to be pulled from a:
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 77ae9631bcca
   rebasing 2:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/b/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
 
   $ hg tglog
   @  3: d80cc2da061e 'L1'
@@ -70,7 +70,7 @@ Now b has one revision to be pulled from a:
 Re-run:
 
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 
@@ -138,7 +138,7 @@ Invoke pull --rebase and nothing to rebase:
 
   $ hg book norebase
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -157,7 +157,7 @@ Invoke pull --rebase and nothing to rebase:
 pull --rebase --update should ignore --update:
 
   $ hg pull --rebase --update
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 
@@ -166,7 +166,7 @@ pull --rebase doesn't update if nothing has been pulled:
   $ hg up -q 1
 
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   no changes found
 
@@ -206,7 +206,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   adding L1
   created new head
   $ hg pull --rev tip --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -214,7 +214,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   added 2 changesets with 2 changes to 2 files
   new changesets 31cd3a05214e:770a61882ace
   rebasing 3:ff8d69a621f9 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-160fa373-rebase.hg
   $ hg tglog
   @  5: 518d153c0ba3 'L1'
   |
@@ -249,7 +249,7 @@ pull --rebase works with bundle2 turned on
   
   $ cd ../c
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -257,7 +257,7 @@ pull --rebase works with bundle2 turned on
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 00e3b7781125
   rebasing 5:518d153c0ba3 "L1"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/518d153c0ba3-73407f14-rebase.hg
   $ hg tglog
   @  6: 0d0727eb7ce0 'L1'
   |
@@ -302,7 +302,7 @@ pull --rebase only update if there is nothing to rebase
   $ hg up 'desc(L1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -311,7 +311,7 @@ pull --rebase only update if there is nothing to rebase
   new changesets 88dd24261747
   rebasing 6:0d0727eb7ce0 "L1"
   rebasing 7:c1f58876e3bf "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-rebase.hg
   $ hg tglog
   o  8: 6dc0ea5dcf55 'L2'
   |
@@ -344,7 +344,7 @@ pull --rebase update (no rebase) use proper update:
   $ hg up 'desc(R5)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -394,7 +394,7 @@ pre-existing heads.
   $ hg up 'desc(L2)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -421,7 +421,7 @@ The second local head should not confuse the `hg pull rebase`.
   $ hg up 'desc(L2)'
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg pull --rebase
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -430,7 +430,7 @@ The second local head should not confuse the `hg pull rebase`.
   new changesets f7d3e42052f9
   rebasing 7:864e0a2d2614 "L1"
   rebasing 8:6dc0ea5dcf55 "L2"
-  saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/864e0a2d2614-2f72c89c-rebase.hg
   $ hg tglog
   @  12: 3603a865eea0 'L2'
   |

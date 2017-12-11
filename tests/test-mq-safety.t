@@ -68,7 +68,7 @@ qpop/qrefresh on the wrong revision
   abort: popping would remove a revision not managed by this patch queue
   [255]
   $ hg qpop -n patches
-  using patch queue: $TESTTMP/repo/.hg/patches (glob)
+  using patch queue: $TESTTMP/repo/.hg/patches
   abort: popping would remove a revision not managed by this patch queue
   [255]
   $ hg qrefresh

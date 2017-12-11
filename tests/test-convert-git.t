@@ -936,7 +936,7 @@ damage git repository by renaming a commit object
   $ COMMIT_OBJ=1c/0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
   $ mv git-repo4/.git/objects/$COMMIT_OBJ git-repo4/.git/objects/$COMMIT_OBJ.tmp
   $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
-  abort: cannot retrieve number of commits in $TESTTMP/git-repo4/.git (glob)
+  abort: cannot retrieve number of commits in $TESTTMP/git-repo4/.git
   $ mv git-repo4/.git/objects/$COMMIT_OBJ.tmp git-repo4/.git/objects/$COMMIT_OBJ
 damage git repository by renaming a blob object
 

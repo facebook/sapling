@@ -115,7 +115,7 @@ Insert unsupported mandatory merge record:
 Abort (should clear out unsupported merge state):
 
   $ hg rebase --abort
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3e046f2ecedb-6beef7d5-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/3e046f2ecedb-6beef7d5-backup.hg
   rebase aborted
   $ hg debugmergestate
   no merge state found
@@ -377,7 +377,7 @@ test aborting an interrupted series (issue5084)
   abort: ^C
   [255]
   $ hg rebase --abort
-  saved backup bundle to $TESTTMP/interrupted/.hg/strip-backup/3d8812cf300d-93041a90-backup.hg (glob)
+  saved backup bundle to $TESTTMP/interrupted/.hg/strip-backup/3d8812cf300d-93041a90-backup.hg
   rebase aborted
   $ hg log -G --template "{rev} {desc} {bookmarks}"
   o  6 no-a

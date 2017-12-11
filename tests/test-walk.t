@@ -255,7 +255,7 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk .hg
-  abort: path 'mammals/.hg' is inside nested repo 'mammals' (glob)
+  abort: path 'mammals/.hg' is inside nested repo 'mammals'
   [255]
   $ hg debugwalk ../.hg
   abort: path contains illegal component: .hg
@@ -326,10 +326,10 @@
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk ..
-  abort: .. not under root '$TESTTMP/t' (glob)
+  abort: .. not under root '$TESTTMP/t'
   [255]
   $ hg debugwalk beans/../..
-  abort: beans/../.. not under root '$TESTTMP/t' (glob)
+  abort: beans/../.. not under root '$TESTTMP/t'
   [255]
   $ hg debugwalk .hg
   abort: path contains illegal component: .hg
@@ -338,10 +338,10 @@
   abort: path contains illegal component: .hg
   [255]
   $ hg debugwalk beans/../.hg/data
-  abort: path contains illegal component: .hg/data (glob)
+  abort: path contains illegal component: .hg/data
   [255]
   $ hg debugwalk beans/.hg
-  abort: path 'beans/.hg' is inside nested repo 'beans' (glob)
+  abort: path 'beans/.hg' is inside nested repo 'beans'
   [255]
 
 Test absolute paths:
@@ -355,7 +355,7 @@ Test absolute paths:
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk `pwd`/..
-  abort: $TESTTMP/t/.. not under root '$TESTTMP/t' (glob)
+  abort: $TESTTMP/t/.. not under root '$TESTTMP/t'
   [255]
 
 Test patterns:

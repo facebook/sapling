@@ -50,7 +50,7 @@ Test setup
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ cd ../client
   $ hg pull
-  pulling from $TESTTMP/D3/server (glob)
+  pulling from $TESTTMP/D3/server
   searching for changes
   adding changesets
   adding manifests
@@ -86,13 +86,13 @@ Actual testing
 --------------
 
   $ hg push --rev 'desc(A1)'
-  pushing to $TESTTMP/D3/server (glob)
+  pushing to $TESTTMP/D3/server
   searching for changes
   abort: push creates new remote head f6082bc4ffef!
   (merge or see 'hg help push' for details about pushing new heads)
   [255]
   $ hg push --rev 'desc(B1)'
-  pushing to $TESTTMP/D3/server (glob)
+  pushing to $TESTTMP/D3/server
   searching for changes
   abort: push creates new remote head 25c56d33e4c4!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -104,7 +104,7 @@ Extra testing
 In this case, even a bare push is creating more heads
 
   $ hg push
-  pushing to $TESTTMP/D3/server (glob)
+  pushing to $TESTTMP/D3/server
   searching for changes
   abort: push creates new remote head 25c56d33e4c4!
   (merge or see 'hg help push' for details about pushing new heads)

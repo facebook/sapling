@@ -14,16 +14,16 @@ Should print nothing:
 Should fail:
 
   $ hg st b/x
-  abort: path 'b/x' is inside nested repo 'b' (glob)
+  abort: path 'b/x' is inside nested repo 'b'
   [255]
   $ hg add b/x
-  abort: path 'b/x' is inside nested repo 'b' (glob)
+  abort: path 'b/x' is inside nested repo 'b'
   [255]
 
 Should fail:
 
   $ hg add b b/x
-  abort: path 'b/x' is inside nested repo 'b' (glob)
+  abort: path 'b/x' is inside nested repo 'b'
   [255]
   $ hg st
 
@@ -37,7 +37,7 @@ Should arguably print nothing:
 Should fail:
 
   $ hg mv a b
-  abort: path 'b/a' is inside nested repo 'b' (glob)
+  abort: path 'b/a' is inside nested repo 'b'
   [255]
   $ hg st
 

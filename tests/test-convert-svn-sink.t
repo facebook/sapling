@@ -48,8 +48,8 @@ Modify
   0 modify a file
   $ svnupanddisplay a-hg-wc 2
    2 1 test d1
-   2 1 test d1/d2 (glob)
-   2 1 test d1/d2/b (glob)
+   2 1 test d1/d2
+   2 1 test d1/d2/b
    2 2 test .
    2 2 test a
   revision: 2
@@ -89,8 +89,8 @@ Rename
   0 rename a file
   $ svnupanddisplay a-hg-wc 1
    3 1 test d1
-   3 1 test d1/d2 (glob)
-   3 1 test d1/d2/b (glob)
+   3 1 test d1/d2
+   3 1 test d1/d2/b
    3 3 test .
    3 3 test b
   revision: 3
@@ -124,8 +124,8 @@ Copy
   0 copy a file
   $ svnupanddisplay a-hg-wc 1
    4 1 test d1
-   4 1 test d1/d2 (glob)
-   4 1 test d1/d2/b (glob)
+   4 1 test d1/d2
+   4 1 test d1/d2/b
    4 3 test b
    4 4 test .
    4 4 test c
@@ -161,8 +161,8 @@ Remove
   0 remove a file
   $ svnupanddisplay a-hg-wc 1
    5 1 test d1
-   5 1 test d1/d2 (glob)
-   5 1 test d1/d2/b (glob)
+   5 1 test d1/d2
+   5 1 test d1/d2/b
    5 4 test c
    5 5 test .
   revision: 5
@@ -203,8 +203,8 @@ Executable
   0 make a file executable
   $ svnupanddisplay a-hg-wc 1
    6 1 test d1
-   6 1 test d1/d2 (glob)
-   6 1 test d1/d2/b (glob)
+   6 1 test d1/d2
+   6 1 test d1/d2/b
    6 6 test .
    6 6 test c
   revision: 6
@@ -256,7 +256,7 @@ Make sure our changes don't affect the rest of the test cases
   $ hg --cwd a up 5
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --cwd a --config extensions.strip= strip -r 6
-  saved backup bundle to $TESTTMP/a/.hg/strip-backup/bd4f7b7a7067-ed505e42-backup.hg (glob)
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/bd4f7b7a7067-ed505e42-backup.hg
 
 #endif
 
@@ -312,7 +312,7 @@ Executable in new directory
   $ svnupanddisplay a-hg-wc 1
    1 1 test .
    1 1 test d1
-   1 1 test d1/a (glob)
+   1 1 test d1/a
   revision: 1
   author: test
   msg: add executable file in new directory
@@ -337,10 +337,10 @@ Copy to new directory
   0 copy file to new directory
   $ svnupanddisplay a-hg-wc 1
    2 1 test d1
-   2 1 test d1/a (glob)
+   2 1 test d1/a
    2 2 test .
    2 2 test d2
-   2 2 test d2/a (glob)
+   2 2 test d2/a
   revision: 2
   author: test
   msg: copy file to new directory

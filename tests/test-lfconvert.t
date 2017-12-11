@@ -215,7 +215,7 @@ lfconvert with rename, merge, and remove
   $ hg share -q -U bigfile-repo shared
   $ printf 'bogus' > shared/.hg/sharedpath
   $ hg lfconvert shared foo
-  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus! (glob)
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus!
   [255]
   $ hg lfconvert bigfile-repo largefiles-repo
   initializing destination largefiles-repo
@@ -340,12 +340,12 @@ process.
   checking files
   9 files, 8 changesets, 13 total revisions
   searching 7 changesets for largefiles
-  changeset 0:d4892ec57ce2: large references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/2e000fa7e85759c7f4c254d4d9c33ef481e459a7 (glob)
-  changeset 1:334e5237836d: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
-  changeset 2:261ad3f3f037: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c (glob)
-  changeset 3:55759520c76f: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38 (glob)
-  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38 (glob)
-  changeset 6:17126745edfd: anotherlarge references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3 (glob)
+  changeset 0:d4892ec57ce2: large references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/2e000fa7e85759c7f4c254d4d9c33ef481e459a7
+  changeset 1:334e5237836d: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
+  changeset 2:261ad3f3f037: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
+  changeset 3:55759520c76f: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38
+  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38
+  changeset 6:17126745edfd: anotherlarge references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
   verified existence of 6 revisions of 4 largefiles
   [1]
   $ hg -R largefiles-repo-hg showconfig paths

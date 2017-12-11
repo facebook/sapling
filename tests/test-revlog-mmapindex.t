@@ -37,7 +37,7 @@ set up verbosemmap extension
 
 mmap index which is now more than 4k long
   $ hg log -l 5 -T '{rev}\n' --config experimental.mmapindexthreshold=4k
-  mmapping $TESTTMP/a/.hg/store/00changelog.i (glob)
+  mmapping $TESTTMP/a/.hg/store/00changelog.i
   100
   99
   98

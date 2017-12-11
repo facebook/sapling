@@ -353,7 +353,7 @@ Repo cloned before tainted content introduced can pull censored nodes
   checking files
   2 files, 1 changesets, 2 total revisions
   $ hg pull -r $H1 -r $H2
-  pulling from $TESTTMP/r (glob)
+  pulling from $TESTTMP/r
   searching for changes
   adding changesets
   adding manifests
@@ -398,7 +398,7 @@ Censored nodes can be pushed if they censor previously unexchanged nodes
   $ hg cat -r $CLEANREV target
   Re-sanitized; nothing to see here
   $ hg push -f -r $H2
-  pushing to $TESTTMP/r (glob)
+  pushing to $TESTTMP/r
   searching for changes
   adding changesets
   adding manifests

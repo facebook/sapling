@@ -197,17 +197,17 @@ Test that adding a directory doesn't require case matching (issue4578)
   $ echo def > CapsDir1/CapsDir/SubDir/Def.txt
 
   $ hg add capsdir1/capsdir
-  adding CapsDir1/CapsDir/AbC.txt (glob)
-  adding CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  adding CapsDir1/CapsDir/AbC.txt
+  adding CapsDir1/CapsDir/SubDir/Def.txt
 
   $ hg forget capsdir1/capsdir/abc.txt
 
   $ hg forget capsdir1/capsdir
-  removing CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  removing CapsDir1/CapsDir/SubDir/Def.txt
 
   $ hg add capsdir1
-  adding CapsDir1/CapsDir/AbC.txt (glob)
-  adding CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  adding CapsDir1/CapsDir/AbC.txt
+  adding CapsDir1/CapsDir/SubDir/Def.txt
 
   $ hg ci -m "AbCDef" capsdir1/capsdir
 
@@ -216,14 +216,14 @@ Test that adding a directory doesn't require case matching (issue4578)
   C CapsDir1/CapsDir/SubDir/Def.txt
 
   $ hg files capsdir1/capsdir
-  CapsDir1/CapsDir/AbC.txt (glob)
-  CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  CapsDir1/CapsDir/AbC.txt
+  CapsDir1/CapsDir/SubDir/Def.txt
 
   $ echo xyz > CapsDir1/CapsDir/SubDir/Def.txt
   $ hg ci -m xyz capsdir1/capsdir/subdir/def.txt
 
   $ hg revert -r '.^' capsdir1/capsdir
-  reverting CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  reverting CapsDir1/CapsDir/SubDir/Def.txt
 
 The conditional tests above mean the hash on the diff line differs on Windows
 and OS X
@@ -244,8 +244,8 @@ and OS X
 
   $ hg remove -f 'glob:**.txt' -X capsdir1/capsdir
   $ hg remove -f 'glob:**.txt' -I capsdir1/capsdir
-  removing CapsDir1/CapsDir/ABC.txt (glob)
-  removing CapsDir1/CapsDir/SubDir/Def.txt (glob)
+  removing CapsDir1/CapsDir/ABC.txt
+  removing CapsDir1/CapsDir/SubDir/Def.txt
 #endif
 
   $ cd ..

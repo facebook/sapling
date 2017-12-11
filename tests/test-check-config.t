@@ -33,7 +33,7 @@ Sanity check check-config.py
   $ $PYTHON contrib/check-config.py < $TESTTMP/files
   foo = ui.configint('ui', 'intdefault', default=42)
   conflict on ui.intdefault: ('int', '42') != ('int', '1')
-  at $TESTTMP/testfile.py:12: (glob)
+  at $TESTTMP/testfile.py:12:
   undocumented: ui.doesnotexist (str)
   undocumented: ui.intdefault (int) [42]
   undocumented: ui.intdefault2 (int) [42]

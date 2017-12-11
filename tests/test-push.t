@@ -199,7 +199,7 @@ Expected to fail:
   [1]
 
   $ hg push
-  pushing to $TESTTMP/test-validation (glob)
+  pushing to $TESTTMP/test-validation
   searching for changes
   adding changesets
   adding manifests
@@ -234,7 +234,7 @@ Expected to fail:
   [1]
 
   $ hg push
-  pushing to $TESTTMP/test-validation (glob)
+  pushing to $TESTTMP/test-validation
   searching for changes
   adding changesets
   adding manifests

@@ -41,14 +41,14 @@ share shouldn't have a cache dir, original repo should
 Some sed versions appends newline, some don't, and some just fails
 
   $ cat .hg/sharedpath; echo
-  $TESTTMP/repo1/.hg (glob)
+  $TESTTMP/repo1/.hg
 
 trailing newline on .hg/sharedpath is ok
   $ hg tip -q
   0:d3873e73d99e
   $ echo '' >> .hg/sharedpath
   $ cat .hg/sharedpath
-  $TESTTMP/repo1/.hg (glob)
+  $TESTTMP/repo1/.hg
   $ hg tip -q
   0:d3873e73d99e
 
@@ -278,7 +278,7 @@ test pushing bookmarks works
      bm3                       4:62f4ded848e4
    * bm4                       5:92793bfc8cad
   $ hg push -B bm4
-  pushing to $TESTTMP/repo3 (glob)
+  pushing to $TESTTMP/repo3
   searching for changes
   adding changesets
   adding manifests
@@ -348,7 +348,7 @@ verify that bookmarks are not written on failed transaction
      bm1                       3:b87954705719
      bm4                       5:92793bfc8cad
   $ hg --config "extensions.failpullbookmarks=$TESTTMP/failpullbookmarks.py" pull $TESTTMP/repo4
-  pulling from $TESTTMP/repo4 (glob)
+  pulling from $TESTTMP/repo4
   searching for changes
   no changes found
   adding remote bookmark bm3
@@ -358,7 +358,7 @@ verify that bookmarks are not written on failed transaction
      bm1                       3:b87954705719
      bm4                       5:92793bfc8cad
   $ hg pull $TESTTMP/repo4
-  pulling from $TESTTMP/repo4 (glob)
+  pulling from $TESTTMP/repo4
   searching for changes
   no changes found
   adding remote bookmark bm3
@@ -396,7 +396,7 @@ test shared clones using relative paths work
   $ hg share -U thisdir/orig thisdir/abs
   $ hg share -U --relative thisdir/abs thisdir/rel
   $ cat thisdir/rel/.hg/sharedpath
-  ../../orig/.hg (no-eol) (glob)
+  ../../orig/.hg (no-eol)
   $ grep shared thisdir/*/.hg/requires
   thisdir/abs/.hg/requires:shared
   thisdir/rel/.hg/requires:shared
@@ -406,22 +406,22 @@ test that relative shared paths aren't relative to $PWD
 
   $ cd thisdir
   $ hg -R rel root
-  $TESTTMP/thisdir/rel (glob)
+  $TESTTMP/thisdir/rel
   $ cd ..
 
 now test that relative paths really are relative, survive across
 renames and changes of PWD
 
   $ hg -R thisdir/abs root
-  $TESTTMP/thisdir/abs (glob)
+  $TESTTMP/thisdir/abs
   $ hg -R thisdir/rel root
-  $TESTTMP/thisdir/rel (glob)
+  $TESTTMP/thisdir/rel
   $ mv thisdir thatdir
   $ hg -R thatdir/abs root
-  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg! (glob)
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/thisdir/orig/.hg!
   [255]
   $ hg -R thatdir/rel root
-  $TESTTMP/thatdir/rel (glob)
+  $TESTTMP/thatdir/rel
 
 test unshare relshared repo
 

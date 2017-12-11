@@ -38,7 +38,7 @@
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/a#stable (glob)
+  default = $TESTTMP/a#stable
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -70,7 +70,7 @@
   
 
   $ hg tout
-  comparing with $TESTTMP/a (glob)
+  comparing with $TESTTMP/a
   searching for changes
   2:1d4099801a4e: '3' stable
 
@@ -90,7 +90,7 @@
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/a#stable (glob)
+  default = $TESTTMP/a#stable
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)

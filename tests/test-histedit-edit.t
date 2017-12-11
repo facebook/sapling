@@ -273,7 +273,7 @@ check histedit_source
   HG: user: test
   HG: branch 'default'
   HG: added f
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-c28d9c86-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-c28d9c86-histedit.hg
 
   $ hg status
 
@@ -437,7 +437,7 @@ rollback should not work after a histedit
   (hg histedit --continue to resume)
   [1]
   $ HGEDITOR=true hg histedit --continue
-  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-histedit.hg (glob)
+  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-histedit.hg
 
   $ hg log -G
   @  changeset:   0:0efcea34f18a

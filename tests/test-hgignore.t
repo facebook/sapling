@@ -59,9 +59,9 @@ Ensure given files are relative to cwd
   I dir/c.o
 
   $ hg debugignore dir/c.o dir/missing.o
-  dir/c.o is ignored (glob)
+  dir/c.o is ignored
   (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
-  dir/missing.o is ignored (glob)
+  dir/missing.o is ignored
   (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: 'dir/.*\.o') (glob)
   $ cd dir
   $ hg debugignore c.o missing.o
@@ -164,7 +164,7 @@ Test relative ignore path (issue4473):
 
   $ echo "syntax: invalid" > .hgignore
   $ hg status
-  $TESTTMP/ignorerepo/.hgignore: ignoring invalid syntax 'invalid' (glob)
+  $TESTTMP/ignorerepo/.hgignore: ignoring invalid syntax 'invalid'
   A dir/b.o
   ? .hgignore
   ? a.c
@@ -236,7 +236,7 @@ Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
   $ hg debugignore a.c
   a.c is not ignored
   $ hg debugignore dir/c.o
-  dir/c.o is ignored (glob)
+  dir/c.o is ignored
   (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 2: 'dir/**/c.o') (glob)
 
 Check using 'include:' in ignore file
@@ -322,7 +322,7 @@ Check include subignore at the same level
   $ hg status | grep file2
   [1]
   $ hg debugignore dir1/file2
-  dir1/file2 is ignored (glob)
+  dir1/file2 is ignored
   (ignore rule in dir2/.hgignore, line 1: 'file*2')
 
 #if windows

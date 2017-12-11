@@ -74,7 +74,7 @@ Add two linear commits
 Pull the new commits in the clone
 
   $ hg pull
-  pulling from $TESTTMP/repo (glob)
+  pulling from $TESTTMP/repo
   searching for changes
   remote: changegroup1
   adding changesets
@@ -145,7 +145,7 @@ pullop.cgresult
 
   $ cd ../clone
   $ hg pull
-  pulling from $TESTTMP/repo (glob)
+  pulling from $TESTTMP/repo
   searching for changes
   remote: changegroup1
   adding changesets
@@ -219,7 +219,7 @@ pullop.cgresult
 
   $ cd ../clone
   $ hg pull
-  pulling from $TESTTMP/repo (glob)
+  pulling from $TESTTMP/repo
   searching for changes
   remote: changegroup1
   adding changesets

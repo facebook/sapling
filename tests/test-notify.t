@@ -199,7 +199,7 @@ pull (minimal config)
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset 0647d048b600 in $TESTTMP/b (glob)
+  changeset 0647d048b600 in $TESTTMP/b
   details: $TESTTMP/b?cmd=changeset;node=0647d048b600
   description: b
   
@@ -563,7 +563,7 @@ default template:
   Message-Id: <hg.f5e8ec95bf59.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset f5e8ec95bf59 in $TESTTMP/b (glob)
+  changeset f5e8ec95bf59 in $TESTTMP/b
   details: http://test/b?cmd=changeset;node=f5e8ec95bf59
   description: default template
 

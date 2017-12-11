@@ -938,7 +938,7 @@ test paths outside repo root
   > rename to bar
   > EOF
   applying patch from stdin
-  abort: path contains illegal component: ../outside/foo (glob)
+  abort: path contains illegal component: ../outside/foo
   [255]
   $ cd ..
 

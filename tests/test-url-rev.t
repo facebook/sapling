@@ -44,7 +44,7 @@ Test basic functionality of url#rev syntax
   $ cat clone/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/repo#foo (glob)
+  default = $TESTTMP/repo#foo
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -329,4 +329,4 @@ a 'url#rev' path
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg root -R '#foo'
-  $TESTTMP/#foo (glob)
+  $TESTTMP/#foo

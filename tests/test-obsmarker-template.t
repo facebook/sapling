@@ -1419,7 +1419,7 @@ Test setup
   
   $ cd $TESTTMP/templates-local-remote-markers-2
   $ hg pull
-  pulling from $TESTTMP/templates-local-remote-markers-1 (glob)
+  pulling from $TESTTMP/templates-local-remote-markers-1
   searching for changes
   adding changesets
   adding manifests

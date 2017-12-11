@@ -261,12 +261,12 @@ Change file contents via comments
   a
   FILE B
   b
-  FILE dir1/a (glob)
+  FILE dir1/a
   1
   2
-  FILE dir1/c (glob)
+  FILE dir1/c
   5
-  FILE dir2/b (glob)
+  FILE dir2/b
   34
-  FILE dir2/c (glob)
+  FILE dir2/c
   6

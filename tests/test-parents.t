@@ -71,7 +71,7 @@ hg parents c, single revision
   
 
   $ hg parents -r 2 ../a
-  abort: ../a not under root '$TESTTMP/repo' (glob)
+  abort: ../a not under root '$TESTTMP/repo'
   [255]
 
 

@@ -49,7 +49,7 @@ Test setup
   $ mkcommit B0
   $ cd ../client
   $ hg pull
-  pulling from $TESTTMP/A3/server (glob)
+  pulling from $TESTTMP/A3/server
   searching for changes
   adding changesets
   adding manifests
@@ -82,7 +82,7 @@ Actual testing
 --------------
 
   $ hg push
-  pushing to $TESTTMP/A3/server (glob)
+  pushing to $TESTTMP/A3/server
   searching for changes
   adding changesets
   adding manifests

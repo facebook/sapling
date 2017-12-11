@@ -122,7 +122,7 @@ XXX: There's a difference between wdir() and '.', so there should be a status.
   $ hg files -R subrepo
   [1]
   $ hg files -R subrepo -r '.'
-  subrepo/b (glob)
+  subrepo/b
 
   $ hg bookmark -r tip @other
   $ echo xyz > subrepo/c

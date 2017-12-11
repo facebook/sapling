@@ -81,7 +81,7 @@ Combining esc with other markups - and handling lines ending with \r instead of 
   fo?/bar\r (no-eol) (glob) (esc)
 #if windows
   $ printf 'foo\\bar\r'
-  foo/bar\r (no-eol) (glob) (esc)
+  foo/bar\r (no-eol) (esc)
 #endif
   $ printf 'foo/bar\rfoo/bar\r'
   foo.bar\r \(no-eol\) (re) (esc)

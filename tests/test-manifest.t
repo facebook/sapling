@@ -26,7 +26,7 @@ The next call is expected to return nothing:
 
   $ hg files -vr .
            2   a
-           2 x b/a (glob)
+           2 x b/a
            1 l l
   $ hg files -r . -X b
   a

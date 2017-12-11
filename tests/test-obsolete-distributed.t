@@ -136,7 +136,7 @@ client side: pull from the server
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull
-  pulling from $TESTTMP/distributed-chain-building/server (glob)
+  pulling from $TESTTMP/distributed-chain-building/server
   searching for changes
   adding changesets
   adding manifests
@@ -174,7 +174,7 @@ obsolete on the server side but the marker is sent out.)
   $ hg rollback
   repository tip rolled back to revision 3 (undo pull)
   $ hg push -f
-  pushing to $TESTTMP/distributed-chain-building/server (glob)
+  pushing to $TESTTMP/distributed-chain-building/server
   searching for changes
   adding changesets
   adding manifests
@@ -362,7 +362,7 @@ Celeste now pushes to the server
 However using a central server seems more common)
 
   $ hg push
-  pushing to $TESTTMP/distributed-chain-building/distributed-chain-building/server (glob)
+  pushing to $TESTTMP/distributed-chain-building/distributed-chain-building/server
   searching for changes
   adding changesets
   adding manifests
@@ -380,7 +380,7 @@ from the server (note: could be from Celeste directly)
   $ hg up 'desc(ROOT)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg pull
-  pulling from $TESTTMP/distributed-chain-building/distributed-chain-building/server (glob)
+  pulling from $TESTTMP/distributed-chain-building/distributed-chain-building/server
   searching for changes
   adding changesets
   adding manifests

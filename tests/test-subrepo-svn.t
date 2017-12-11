@@ -22,12 +22,12 @@ create subversion repo
   $ echo alpha > src/alpha
   $ svn add src
   A         src
-  A         src/alpha (glob)
+  A         src/alpha
   $ mkdir externals
   $ echo other > externals/other
   $ svn add externals
   A         externals
-  A         externals/other (glob)
+  A         externals/other
   $ svn ci -qm 'Add alpha'
   $ svn up -q
   $ echo "externals -r1 $SVNREPOURL/externals" > extdef
@@ -173,7 +173,7 @@ this commit from hg will fail
 this commit fails because of meta changes
 
   $ svn propset svn:mime-type 'text/html' s/alpha
-  property 'svn:mime-type' set on 's/alpha' (glob)
+  property 'svn:mime-type' set on 's/alpha'
   $ (hg ci --subrepos -m 'amend alpha from hg' 2>&1; echo "[$?]") | grep -vi 'out of date'
   committing subrepository s
   abort: svn:*Commit failed (details follow): (glob)
@@ -204,7 +204,7 @@ this commit fails because of externals changes
 this commit fails because of externals meta changes
 
   $ svn propset svn:mime-type 'text/html' s/externals/other
-  property 'svn:mime-type' set on 's/externals/other' (glob)
+  property 'svn:mime-type' set on 's/externals/other'
   $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals (in subrepository "s")
@@ -216,19 +216,19 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  A    tc/s/alpha (glob)
-   U   tc/s (glob)
+  A    tc/s/alpha
+   U   tc/s
   
   Fetching external item into 'tc/s/externals'* (glob)
-  A    tc/s/externals/other (glob)
+  A    tc/s/externals/other
   Checked out external at revision 1.
   
   Checked out revision 3.
-  A    tc/subdir/s/alpha (glob)
-   U   tc/subdir/s (glob)
+  A    tc/subdir/s/alpha
+   U   tc/subdir/s
   
   Fetching external item into 'tc/subdir/s/externals'* (glob)
-  A    tc/subdir/s/externals/other (glob)
+  A    tc/subdir/s/externals/other
   Checked out external at revision 1.
   
   Checked out revision 2.
@@ -430,7 +430,7 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ echo epsilon.py > dir/epsilon.py
   $ svn add dir
   A         dir
-  A         dir/epsilon.py (glob)
+  A         dir/epsilon.py
   $ svn ci -qm 'Add dir/epsilon.py'
   $ cd ../..
   $ hg init rebaserepo
@@ -495,7 +495,7 @@ First, create that condition in the repository.
 
   $ hg ci --subrepos -m cleanup | filter_svn_output
   committing subrepository obstruct
-  Sending        obstruct/other (glob)
+  Sending        obstruct/other
   Committed revision 7.
   At revision 7.
   $ svn mkdir -qm "baseline" $SVNREPOURL/trunk
@@ -516,7 +516,7 @@ First, create that condition in the repository.
   $ cd ..
   $ rm -rf tempwc
   $ svn co "$SVNREPOURL/branch"@10 recreated
-  A    recreated/somethingold (glob)
+  A    recreated/somethingold
   Checked out revision 10.
   $ echo "recreated =        [svn]       $SVNREPOURL/branch" >> .hgsub
   $ hg ci -m addsub
@@ -584,8 +584,8 @@ well.
   $ mkdir trunk/subdir branches
   $ echo a > trunk/subdir/a
   $ svn add trunk/subdir branches
-  A         trunk/subdir (glob)
-  A         trunk/subdir/a (glob)
+  A         trunk/subdir
+  A         trunk/subdir/a
   A         branches
   $ svn ci -qm addsubdir
   $ svn cp -qm branchtrunk $SVNREPOURL/trunk $SVNREPOURL/branches/somebranch
@@ -594,7 +594,7 @@ well.
   $ hg init repo2
   $ cd repo2
   $ svn co $SVNREPOURL/branches/somebranch/subdir
-  A    subdir/a (glob)
+  A    subdir/a
   Checked out revision 15.
   $ echo "subdir = [svn] $SVNREPOURL/branches/somebranch/subdir" > .hgsub
   $ hg add .hgsub
@@ -618,10 +618,10 @@ Test sanitizing ".hg/hgrc" in subrepo
   $ echo 'sub/.hg/hgrc in svn repo' > sub/.hg/hgrc
   $ svn add .hg sub
   A         .hg
-  A         .hg/hgrc (glob)
+  A         .hg/hgrc
   A         sub
-  A         sub/.hg (glob)
-  A         sub/.hg/hgrc (glob)
+  A         sub/.hg
+  A         sub/.hg/hgrc
   $ svn ci -qm 'add .hg/hgrc to be sanitized at hg update'
   $ svn up -q
   $ cd ..
@@ -631,8 +631,8 @@ Test sanitizing ".hg/hgrc" in subrepo
   $ cd ..
 
   $ hg -R tc pull -u -q 2>&1 | sort
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/.hg' (glob)
-  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/sub/.hg' (glob)
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/.hg'
+  warning: removing potentially hostile 'hgrc' in '$TESTTMP/sub/tc/s/sub/.hg'
   $ cd tc
   $ grep ' s$' .hgsubstate
   16 s

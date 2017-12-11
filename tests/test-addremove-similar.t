@@ -153,7 +153,7 @@ Issue1527: repeated addremove causes Abort
   $ hg addremove -s80
   removing d/a
   adding d/b
-  recording removal of d/a as rename to d/b (100% similar) (glob)
+  recording removal of d/a as rename to d/b (100% similar)
   $ hg debugstate
   r   0          0 1970-01-01 00:00:00 d/a
   a   0         -1 unset               d/b
@@ -163,12 +163,12 @@ Issue1527: repeated addremove causes Abort
 no copies found here (since the target isn't in d
 
   $ hg addremove -s80 d
-  removing d/b (glob)
+  removing d/b
 
 copies here
 
   $ hg addremove -s80
   adding c
-  recording removal of d/a as rename to c (100% similar) (glob)
+  recording removal of d/a as rename to c (100% similar)
 
   $ cd ..

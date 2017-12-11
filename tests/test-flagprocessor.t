@@ -81,7 +81,7 @@
 
 # Push to the server
   $ hg push
-  pushing to $TESTTMP/server (glob)
+  pushing to $TESTTMP/server
   searching for changes
   adding changesets
   adding manifests
@@ -101,7 +101,7 @@
 
 # Pull from server and update to latest revision
   $ hg pull default
-  pulling from $TESTTMP/server (glob)
+  pulling from $TESTTMP/server
   requesting all changes
   adding changesets
   adding manifests

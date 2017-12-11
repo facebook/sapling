@@ -23,10 +23,10 @@ Add files --- .hgsub files must go first to trigger subrepos:
   $ hg add -S .hgsub
   $ hg add -S foo/.hgsub
   $ hg add -S foo/bar
-  adding foo/bar/z.txt (glob)
+  adding foo/bar/z.txt
   $ hg add -S
   adding x.txt
-  adding foo/y.txt (glob)
+  adding foo/y.txt
 
 Test recursive status without committing anything:
 
@@ -67,7 +67,7 @@ The --subrepos flag overwrite the config setting:
 
   $ hg commit -m 0-0-0 --config ui.commitsubrepos=No --subrepos
   committing subrepository foo
-  committing subrepository foo/bar (glob)
+  committing subrepository foo/bar
 
   $ cd foo
   $ echo y2 >> y.txt
@@ -192,7 +192,7 @@ Cleanup and final commit:
   $ rm -r dir
   $ hg commit --subrepos -m 2-3-2
   committing subrepository foo
-  committing subrepository foo/bar (glob)
+  committing subrepository foo/bar
 
 Test explicit path commands within subrepos: add/forget
   $ echo z1 > foo/bar/z2.txt
@@ -205,7 +205,7 @@ Test explicit path commands within subrepos: add/forget
   $ hg status -S
   ? foo/bar/z2.txt
   $ hg forget foo/bar/z2.txt
-  not removing foo/bar/z2.txt: file is already untracked (glob)
+  not removing foo/bar/z2.txt: file is already untracked
   [1]
   $ hg status -S
   ? foo/bar/z2.txt
@@ -254,13 +254,13 @@ Status between revisions:
 #if serve
   $ cd ..
   $ hg serve -R repo --debug -S -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
-  adding  = $TESTTMP/repo (glob)
-  adding foo = $TESTTMP/repo/foo (glob)
-  adding foo/bar = $TESTTMP/repo/foo/bar (glob)
+  adding  = $TESTTMP/repo
+  adding foo = $TESTTMP/repo/foo
+  adding foo/bar = $TESTTMP/repo/foo/bar
   listening at http://*:$HGPORT/ (bound to *:$HGPORT) (glob) (?)
-  adding  = $TESTTMP/repo (glob) (?)
-  adding foo = $TESTTMP/repo/foo (glob) (?)
-  adding foo/bar = $TESTTMP/repo/foo/bar (glob) (?)
+  adding  = $TESTTMP/repo (?)
+  adding foo = $TESTTMP/repo/foo (?)
+  adding foo/bar = $TESTTMP/repo/foo/bar (?)
   $ cat hg1.pid >> $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT clone  --config progress.disable=True
@@ -278,7 +278,7 @@ Status between revisions:
   adding file changes
   added 4 changesets with 7 changes to 3 files
   new changesets af048e97ade2:65903cebad86
-  cloning subrepo foo/bar from http://localhost:$HGPORT/foo/bar (glob)
+  cloning subrepo foo/bar from http://localhost:$HGPORT/foo/bar
   requesting all changes
   adding changesets
   adding manifests
@@ -340,8 +340,8 @@ only show up in the test output, not in real usage):
   archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   $ find ../archive | sort
   ../archive
@@ -372,8 +372,8 @@ Test archiving to zip file (unzip output is unstable):
   archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
 (unzip date formating is unstable, we do not care about it and glob it out)
@@ -445,11 +445,11 @@ cloned:
   linking [      <=>                                      ] 6\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   cloning subrepo foo from $TESTTMP/repo/foo
-  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
+  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
 #else
 Note there's a slight output glitch on non-hardlink systems: the last
 "linking" progress topic never gets closed, leading to slight output corruption on that platform.
@@ -462,7 +462,7 @@ Note there's a slight output glitch on non-hardlink systems: the last
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   linking [ <=>                                           ] 1\r (no-eol) (esc)
-  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
+  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
 #endif
 
 Archive + subrepos uses '/' for all component separators
@@ -498,7 +498,7 @@ created by archive:
   $ echo f > foo/f
   $ hg archive --subrepos -r tip archive
   cloning subrepo foo from $TESTTMP/empty/foo
-  abort: destination '$TESTTMP/almost-empty/foo' is not empty (in subrepository "foo") (glob)
+  abort: destination '$TESTTMP/almost-empty/foo' is not empty (in subrepository "foo")
   [255]
 
 Clone and test outgoing:
@@ -507,11 +507,11 @@ Clone and test outgoing:
   $ hg clone repo repo2
   updating to branch default
   cloning subrepo foo from $TESTTMP/repo/foo
-  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
+  cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
   $ hg outgoing -S
-  comparing with $TESTTMP/repo (glob)
+  comparing with $TESTTMP/repo
   searching for changes
   no changes found
   comparing with $TESTTMP/repo/foo
@@ -537,7 +537,7 @@ Make nested change:
   $ hg commit --subrepos -m 3-4-2
   committing subrepository foo
   $ hg outgoing -S
-  comparing with $TESTTMP/repo (glob)
+  comparing with $TESTTMP/repo
   searching for changes
   changeset:   3:2655b8ecc4ee
   tag:         tip
@@ -567,7 +567,7 @@ Switch to original repo and setup default path:
 Test incoming:
 
   $ hg incoming -S
-  comparing with $TESTTMP/repo2 (glob)
+  comparing with $TESTTMP/repo2
   searching for changes
   changeset:   3:2655b8ecc4ee
   tag:         tip

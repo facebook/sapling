@@ -343,8 +343,8 @@ Corner cases for adding largefiles.
   $ echo large6 > sub2/large6
   $ echo large7 > sub2/large7
   $ hg add --large sub2
-  adding sub2/large6 as a largefile (glob)
-  adding sub2/large7 as a largefile (glob)
+  adding sub2/large6 as a largefile
+  adding sub2/large7 as a largefile
   $ hg st
   M large3
   A large5
@@ -661,7 +661,7 @@ Test that a standin can't be added as a large file
 
 Test that outgoing --large works (with revsets too)
   $ hg outgoing --rev '.^' --large
-  comparing with $TESTTMP/a (glob)
+  comparing with $TESTTMP/a
   searching for changes
   changeset:   8:c02fd3b77ec4
   user:        test
@@ -1098,7 +1098,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   $ rm "${USERCACHE}"/*
   $ cd a-backup
   $ hg pull --all-largefiles --config paths.default-push=bogus/path
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   adding changesets
   adding manifests
@@ -1113,7 +1113,7 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
   $ hg rollback
   repository tip rolled back to revision 1 (undo pull)
   $ hg pull -v --lfrev 'heads(pulled())+min(pulled())'
-  pulling from $TESTTMP/a (glob)
+  pulling from $TESTTMP/a
   searching for changes
   all local heads known remotely
   6 changesets found
@@ -1199,7 +1199,7 @@ rebased or not.
 
   $ [ ! -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg pull --rebase --all-largefiles --config paths.default-push=bogus/path --config paths.default=../b
-  pulling from $TESTTMP/b (glob)
+  pulling from $TESTTMP/b
   searching for changes
   adding changesets
   adding manifests
@@ -1210,7 +1210,7 @@ rebased or not.
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
-  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg
   0 largefiles cached
   $ [ -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
@@ -1270,7 +1270,7 @@ rebased or not.
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
-  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg (glob)
+  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-dd1d9f80-rebase.hg
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -1500,8 +1500,8 @@ Test hg remove removes empty largefiles directories
 # XXX we don't really want to report that we're reverting the standin;
 # that's just an implementation detail. But I don't see an obvious fix. ;-(
   $ hg revert sub
-  reverting .hglf/sub/large4 (glob)
-  reverting sub/normal4 (glob)
+  reverting .hglf/sub/large4
+  reverting sub/normal4
   $ hg status
   M normal3
   A sub2/large8
@@ -1513,8 +1513,8 @@ Test hg remove removes empty largefiles directories
   $ cat sub/large4
   large4-modified
   $ hg revert -a --no-backup
-  undeleting .hglf/sub2/large6 (glob)
-  forgetting .hglf/sub2/large8 (glob)
+  undeleting .hglf/sub2/large6
+  forgetting .hglf/sub2/large8
   reverting normal3
   $ hg status
   ? sub/large4.orig
@@ -1528,12 +1528,12 @@ Test hg remove removes empty largefiles directories
 
 revert some files to an older revision
   $ hg revert --no-backup -r 8 sub2
-  reverting .hglf/sub2/large6 (glob)
+  reverting .hglf/sub2/large6
   $ cat sub2/large6
   large6
   $ hg revert --no-backup -C -r '.^' sub2
   $ hg revert --no-backup sub2
-  reverting .hglf/sub2/large6 (glob)
+  reverting .hglf/sub2/large6
   $ hg status
 
 "verify --large" actually verifies largefiles
@@ -1542,7 +1542,7 @@ revert some files to an older revision
   $ pwd
   $TESTTMP/e
   $ hg paths
-  default = $TESTTMP/d (glob)
+  default = $TESTTMP/d
 
   $ hg verify --large
   checking changesets
@@ -1565,14 +1565,14 @@ and make sure that this is caught:
   checking files
   10 files, 10 changesets, 28 total revisions
   searching 1 changesets for largefiles
-  changeset 9:598410d3eb9a: sub/large4 references missing $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 (glob)
+  changeset 9:598410d3eb9a: sub/large4 references missing $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
   verified existence of 3 revisions of 3 largefiles
   [1]
 
 - introduce corruption and make sure that it is caught when checking content:
   $ echo '5 cents' > $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
   $ hg verify -q --large --lfc
-  changeset 9:598410d3eb9a: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 (glob)
+  changeset 9:598410d3eb9a: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
   [1]
 
 - cleanup
@@ -1582,16 +1582,16 @@ and make sure that this is caught:
 - verifying all revisions will fail because we didn't clone all largefiles to d:
   $ echo 'T-shirt' > $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
   $ hg verify -q --lfa --lfc
-  changeset 0:30d30fe6a5be: large1 references missing $TESTTMP/d/.hg/largefiles/4669e532d5b2c093a78eca010077e708a071bb64 (glob)
-  changeset 0:30d30fe6a5be: sub/large2 references missing $TESTTMP/d/.hg/largefiles/1deebade43c8c498a3c8daddac0244dc55d1331d (glob)
-  changeset 1:ce8896473775: large1 references missing $TESTTMP/d/.hg/largefiles/5f78770c0e77ba4287ad6ef3071c9bf9c379742f (glob)
-  changeset 1:ce8896473775: sub/large2 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
-  changeset 3:9e8fbc4bce62: large1 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
-  changeset 4:74c02385b94c: large3 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
-  changeset 4:74c02385b94c: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
-  changeset 5:9d5af5072dbd: large3 references missing $TESTTMP/d/.hg/largefiles/baaf12afde9d8d67f25dab6dced0d2bf77dba47c (glob)
-  changeset 5:9d5af5072dbd: sub/large4 references missing $TESTTMP/d/.hg/largefiles/aeb2210d19f02886dde00dac279729a48471e2f9 (glob)
-  changeset 6:4355d653f84f: large3 references missing $TESTTMP/d/.hg/largefiles/7838695e10da2bb75ac1156565f40a2595fa2fa0 (glob)
+  changeset 0:30d30fe6a5be: large1 references missing $TESTTMP/d/.hg/largefiles/4669e532d5b2c093a78eca010077e708a071bb64
+  changeset 0:30d30fe6a5be: sub/large2 references missing $TESTTMP/d/.hg/largefiles/1deebade43c8c498a3c8daddac0244dc55d1331d
+  changeset 1:ce8896473775: large1 references missing $TESTTMP/d/.hg/largefiles/5f78770c0e77ba4287ad6ef3071c9bf9c379742f
+  changeset 1:ce8896473775: sub/large2 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  changeset 3:9e8fbc4bce62: large1 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  changeset 4:74c02385b94c: large3 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  changeset 4:74c02385b94c: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  changeset 5:9d5af5072dbd: large3 references missing $TESTTMP/d/.hg/largefiles/baaf12afde9d8d67f25dab6dced0d2bf77dba47c
+  changeset 5:9d5af5072dbd: sub/large4 references missing $TESTTMP/d/.hg/largefiles/aeb2210d19f02886dde00dac279729a48471e2f9
+  changeset 6:4355d653f84f: large3 references missing $TESTTMP/d/.hg/largefiles/7838695e10da2bb75ac1156565f40a2595fa2fa0
   [1]
 
 - cleanup
@@ -1655,7 +1655,7 @@ Merge with revision with missing largefile - and make sure it tries to fetch it.
 Pulling 0 revisions with --all-largefiles should not fetch for all revisions
 
   $ hg pull --all-largefiles
-  pulling from $TESTTMP/d (glob)
+  pulling from $TESTTMP/d
   searching for changes
   no changes found
 
@@ -1752,8 +1752,8 @@ Test status after merging with a branch that introduces a new largefile:
 
 - revert should be able to revert files introduced in a pending merge
   $ hg revert --all -r .
-  removing .hglf/large (glob)
-  undeleting .hglf/sub2/large6 (glob)
+  removing .hglf/large
+  undeleting .hglf/sub2/large6
 
 Test that a normal file and a largefile with the same name and path cannot
 coexist.
@@ -1761,7 +1761,7 @@ coexist.
   $ rm sub2/large7
   $ echo "largeasnormal" > sub2/large7
   $ hg add sub2/large7
-  sub2/large7 already a largefile (glob)
+  sub2/large7 already a largefile
 
 Test that transplanting a largefile change works correctly.
 
@@ -1832,7 +1832,7 @@ Cat a standin
   $ hg cat .hglf/sub/large4
   e166e74c7303192238d60af5a9c4ce9bef0b7928
   $ hg cat .hglf/normal3
-  .hglf/normal3: no such file in rev 598410d3eb9a (glob)
+  .hglf/normal3: no such file in rev 598410d3eb9a
   [1]
 
 Test that renaming a largefile results in correct output for status

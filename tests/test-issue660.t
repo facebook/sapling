@@ -67,9 +67,9 @@ Revert all - should succeed:
 
   $ hg revert --all
   undeleting a
-  forgetting a/a (glob)
+  forgetting a/a
   forgetting b
-  undeleting b/b (glob)
+  undeleting b/b
 
   $ hg st
 

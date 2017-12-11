@@ -1083,15 +1083,15 @@ This test issue 3805
   o  0:d20a80d4def3 (draft) [ ] base
   
   $ hg incoming
-  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  comparing with $TESTTMP/tmpe/repo-issue3805
   searching for changes
   2:323a9c3ddd91 (draft) [tip ] A
   $ hg incoming --bundle ../issue3805.hg
-  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  comparing with $TESTTMP/tmpe/repo-issue3805
   searching for changes
   2:323a9c3ddd91 (draft) [tip ] A
   $ hg outgoing
-  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  comparing with $TESTTMP/tmpe/repo-issue3805
   searching for changes
   1:29f0c6921ddd (draft) [tip ] A
 
@@ -1369,7 +1369,7 @@ Test ability to pull changeset with locally applying obsolescence markers
   
 
   $ hg strip --hidden -r 2 --config extensions.strip= --config devel.strip-obsmarkers=no
-  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-ede36964-backup.hg (glob)
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e008cf283490-ede36964-backup.hg
   $ hg debugobsolete
   e008cf2834908e5d6b0f792a9d4b0e2272260fb8 b0551702f918510f01ae838ab03a463054c67b46 0 (Thu Jan 01 00:00:00 1970 +0000) {'ef1': '8', 'operation': 'amend', 'user': 'test'}
   $ hg log -G
@@ -1418,7 +1418,7 @@ Testing that strip remove markers:
 
   $ hg strip -r 1 --config extensions.strip=
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e016b03fd86f-65ede734-backup.hg (glob)
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e016b03fd86f-65ede734-backup.hg
   $ hg debugobsolete
   $ hg log -G
   @  0:a78f55e5508c (draft) [tip ] 0
@@ -1525,7 +1525,7 @@ Test adding changeset after obsmarkers affecting it
   $ getid .
   $ hg --config extensions.strip= strip -r .
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/tmpe/issue4845/doindexrev/.hg/strip-backup/9bc153528424-ee80edd4-backup.hg (glob)
+  saved backup bundle to $TESTTMP/tmpe/issue4845/doindexrev/.hg/strip-backup/9bc153528424-ee80edd4-backup.hg
   $ hg debugobsolete 9bc153528424ea266d13e57f9ff0d799dfe61e4b
   $ hg unbundle ../bundle-2.hg
   adding changesets

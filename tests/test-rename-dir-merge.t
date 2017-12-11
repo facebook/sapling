@@ -11,8 +11,8 @@
   $ hg co -C 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv a b
-  moving a/a to b/a (glob)
-  moving a/b to b/b (glob)
+  moving a/a to b/a
+  moving a/b to b/b
   $ hg ci -m "1 mv a/ b/"
 
   $ hg co -C 0
@@ -48,7 +48,7 @@
    b/b: remote created -> g
   getting b/b
    b/c: remote directory rename - move from a/c -> dm
-  moving a/c to b/c (glob)
+  moving a/c to b/c
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -65,7 +65,7 @@
   ? a/d
   $ hg ci -m "3 merge 2+1"
   $ hg debugrename b/c
-  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
+  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 
   $ hg co -C 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -100,7 +100,7 @@
   $ hg ci -m "4 merge 1+2"
   created new head
   $ hg debugrename b/c
-  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
+  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 
 Local directory rename with conflicting file added in remote source directory
 and untracked in local target directory.
@@ -191,7 +191,7 @@ Second scenario with two repos:
   $ mkdir a
   $ echo foo > a/f
   $ hg add a
-  adding a/f (glob)
+  adding a/f
   $ hg ci -m "a/f == foo"
   $ cd ..
 
@@ -200,7 +200,7 @@ Second scenario with two repos:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd r2
   $ hg mv a b
-  moving a/f to b/f (glob)
+  moving a/f to b/f
   $ echo foo1 > b/f
   $ hg ci -m" a -> b, b/f == foo1"
   $ cd ..
@@ -209,7 +209,7 @@ Second scenario with two repos:
   $ mkdir a/aa
   $ echo bar > a/aa/g
   $ hg add a/aa
-  adding a/aa/g (glob)
+  adding a/aa/g
   $ hg ci -m "a/aa/g"
   $ hg pull ../r2
   pulling from ../r2

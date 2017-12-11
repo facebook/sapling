@@ -60,7 +60,7 @@ clone, commit, pull
   adding c
   $ cd ../blackboxtest2
   $ hg pull
-  pulling from $TESTTMP/blackboxtest (glob)
+  pulling from $TESTTMP/blackboxtest
   searching for changes
   adding changesets
   adding manifests
@@ -85,7 +85,7 @@ we must not cause a failure if we cannot write to the log
   $ mkdir .hg/blackbox.log
   $ hg --debug incoming
   warning: cannot write to blackbox.log: * (glob)
-  comparing with $TESTTMP/blackboxtest (glob)
+  comparing with $TESTTMP/blackboxtest
   query 1; heads
   searching for changes
   all local heads known remotely
@@ -104,7 +104,7 @@ we must not cause a failure if we cannot write to the log
   
   
   $ hg pull
-  pulling from $TESTTMP/blackboxtest (glob)
+  pulling from $TESTTMP/blackboxtest
   searching for changes
   adding changesets
   adding manifests
@@ -133,7 +133,7 @@ backup bundles get logged
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> strip tip
-  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> updated base branch cache in * seconds (glob)
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> wrote base branch cache with 1 labels and 2 nodes
   1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> strip tip exited 0 after * seconds (glob)

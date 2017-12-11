@@ -11,9 +11,9 @@
   adding a/b/c/d/y
   adding a/b/c/d/z
   $ hg mv a z
-  moving a/b/c/d/x to z/b/c/d/x (glob)
-  moving a/b/c/d/y to z/b/c/d/y (glob)
-  moving a/b/c/d/z to z/b/c/d/z (glob)
+  moving a/b/c/d/x to z/b/c/d/x
+  moving a/b/c/d/y to z/b/c/d/y
+  moving a/b/c/d/z to z/b/c/d/z
 
 Test name collisions
 

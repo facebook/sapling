@@ -155,7 +155,7 @@ Push to repo r1 should break up most hardlinks in r2:
 
   $ cd r3
   $ hg push
-  pushing to $TESTTMP/r1 (glob)
+  pushing to $TESTTMP/r1
   searching for changes
   adding changesets
   adding manifests
