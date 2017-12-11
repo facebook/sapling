@@ -1207,6 +1207,10 @@ def graph(web, req, tmpl):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
+    graphtop = req.form.get('graphtop', [ctx.hex()])[0]
+    graphvars = copy.copy(tmpl.defaults['sessionvars'])
+    graphvars['graphtop'] = graphtop
+
     count = len(web.repo)
     pos = rev
 
@@ -1215,13 +1219,21 @@ def graph(web, req, tmpl):
     changenav = webutil.revnav(web.repo).gen(pos, revcount, count)
 
     tree = []
+    nextentry = []
+    lastrev = 0
     if pos != -1:
         allrevs = web.repo.changelog.revs(pos, 0)
         revs = []
         for i in allrevs:
             revs.append(i)
-            if len(revs) >= revcount:
+            if len(revs) >= revcount + 1:
                 break
+
+        if len(revs) > revcount:
+            nextentry = [webutil.commonentry(web.repo, web.repo[revs[-1]])]
+            revs = revs[:-1]
+
+        lastrev = revs[-1]
 
         # We have to feed a baseset to dagwalker as it is expecting smartset
         # object. This does not have a big impact on hgweb performance itself
@@ -1231,11 +1243,21 @@ def graph(web, req, tmpl):
         tree = list(item for item in graphmod.colored(dag, web.repo)
                     if item[1] == graphmod.CHANGESET)
 
+    def fulltree():
+        pos = web.repo[graphtop].rev()
+        tree = []
+        if pos != -1:
+            revs = web.repo.changelog.revs(pos, lastrev)
+            dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
+            tree = list(item for item in graphmod.colored(dag, web.repo)
+                        if item[1] == graphmod.CHANGESET)
+        return tree
+
     def jsdata():
         return [{'node': pycompat.bytestr(ctx),
                  'vertex': vtx,
                  'edges': edges}
-                for (id, type, ctx, vtx, edges) in tree]
+                for (id, type, ctx, vtx, edges) in fulltree()]
 
     def nodes():
         for row, (id, type, ctx, vtx, edges) in enumerate(tree):
@@ -1260,9 +1282,11 @@ def graph(web, req, tmpl):
     return tmpl('graph', rev=rev, symrev=symrev, revcount=revcount,
                 uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,
+                graphvars=graphvars,
                 rows=rows,
                 bg_height=bg_height,
                 changesets=count,
+                nextentry=nextentry,
                 jsdata=lambda **x: jsdata(),
                 nodes=lambda **x: nodes(),
                 node=ctx.hex(), changenav=changenav)

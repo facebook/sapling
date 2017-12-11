@@ -41,7 +41,6 @@ Graph.prototype = {
 		this.cell = [2, 0];
 		this.columns = 0;
 		document.getElementById('nodebgs').innerHTML = '';
-		document.getElementById('graphnodes').innerHTML = '';
 	},
 
 	scale: function(height) {

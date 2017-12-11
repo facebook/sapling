@@ -1838,9 +1838,12 @@ Overviews
   
   <script type="text/javascript">
       ajaxScrollInit(
-              '/graph/3?revcount=%next%&style=gitweb',
-              60+60,
-              function (htmlText, previousVal) { return previousVal + 60; },
+              '/graph/%next%?graphtop=cad8025a2e87f88c06259790adfa15acb4080123&style=gitweb',
+              '', <!-- NEXTHASH
+              function (htmlText, previousVal) {
+                  var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
+                  return m ? m[1] : null;
+              },
               '#wrapper',
               '<div class="%class%" style="text-align: center;">%text%</div>',
               'graph'
