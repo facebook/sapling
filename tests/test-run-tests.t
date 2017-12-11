@@ -1214,7 +1214,12 @@ running is placed.
   > #else
   >   $ test "\$TESTDIR" = "$TESTTMP"/anothertests
   > #endif
-  >   $ test "\$RUNTESTDIR" = "$TESTDIR"
+  > If this prints a path, that means RUNTESTDIR didn't equal
+  > TESTDIR as it should have.
+  >   $ test "\$RUNTESTDIR" = "$TESTDIR" || echo "\$RUNTESTDIR"
+  > This should print the start of check-code. If this passes but the
+  > previous check failed, that means we found a copy of check-code at whatever
+  > RUNTESTSDIR ended up containing, even though it doesn't match TESTDIR.
   >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py | sed 's@.!.*python@#!USRBINENVPY@'
   >   #!USRBINENVPY
   >   #
