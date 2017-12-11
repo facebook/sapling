@@ -706,7 +706,7 @@ Accept the fix
   $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
   $ echo "  saved backup bundle to \$TESTTMP/foo.hg" >> test-failure.t
   $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
-  $ echo "  saved backup bundle to \$TESTTMP/foo.hg (glob)" >> test-failure.t
+  $ echo "  saved backup bundle to \$TESTTMP\\foo.hg" >> test-failure.t
   $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
   $ echo "  saved backup bundle to \$TESTTMP/*.hg (glob)" >> test-failure.t
   $ echo 'y' | rt -i 2>&1
@@ -720,15 +720,14 @@ Accept the fix
    This is a noop statement so that
    this test is still more bytes than success.
    pad pad pad pad............................................................
-  @@ -9,7 +9,7 @@
-   pad pad pad pad............................................................
-   pad pad pad pad............................................................
+  @@ -11,6 +11,6 @@
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-  -  saved backup bundle to $TESTTMP/foo.hg
-  +  saved backup bundle to $TESTTMP/foo.hg* (glob)
+     saved backup bundle to $TESTTMP/foo.hg
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-     saved backup bundle to $TESTTMP/foo.hg* (glob)
+  -  saved backup bundle to $TESTTMP\foo.hg
+  +  saved backup bundle to $TESTTMP/foo.hg
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
+     saved backup bundle to $TESTTMP/*.hg (glob)
   Accept this change? [n] ..
   # Ran 2 tests, 0 skipped, 0 failed.
 
@@ -744,9 +743,9 @@ Accept the fix
   pad pad pad pad............................................................
   pad pad pad pad............................................................
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-    saved backup bundle to $TESTTMP/foo.hg (glob)<
+    saved backup bundle to $TESTTMP/foo.hg
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
-    saved backup bundle to $TESTTMP/foo.hg (glob)<
+    saved backup bundle to $TESTTMP/foo.hg
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
     saved backup bundle to $TESTTMP/*.hg (glob)<
 
