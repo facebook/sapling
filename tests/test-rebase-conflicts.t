@@ -235,6 +235,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   
   $ hg rebase -s9 -d2 --debug # use debug to really check merge base used
   rebase onto 4bc80088dc6b starting from e31216eec445
+  rebasing on disk
   rebase status stored
   rebasing 9:e31216eec445 "more changes to f1"
    future parents are 2 and -1

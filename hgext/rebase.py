@@ -386,8 +386,10 @@ class rebaseruntime(object):
         if self.inmemory:
             from mercurial.context import overlayworkingctx
             self.wctx = overlayworkingctx(self.repo)
+            self.repo.ui.debug("rebasing in-memory\n")
         else:
             self.wctx = self.repo[None]
+            self.repo.ui.debug("rebasing on disk\n")
 
     def _performrebase(self, tr):
         self._assignworkingcopy()
