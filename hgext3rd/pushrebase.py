@@ -109,6 +109,11 @@ def extsetup(ui):
 
     partorder.insert(0, partorder.pop(partorder.index(commonheadsparttype)))
 
+    if 'check-bookmarks' in partorder:
+        # check-bookmarks is intended for non-pushrebase scenarios when
+        # we can't push to a bookmark if it's changed in the meantime
+        partorder.pop(partorder.index('check-bookmarks'))
+
     wrapfunction(discovery, 'checkheads', _checkheads)
     # we want to disable the heads check because in pushrebase repos, we
     # expect the heads to change during the push and we should not abort.
