@@ -154,8 +154,7 @@ def reposetup(ui, repo):
     legexc = repo.ui.configlist('devel', 'legacy.exchange', [])
     if 'bookmarks' not in legexc:
         legexc.append('bookmarks')
-    repo.ui.setconfig('devel', 'legacy.exchange',
-                      ','.join(legexc), 'pushrebase')
+    repo.ui.setconfig('devel', 'legacy.exchange', legexc, 'pushrebase')
 
 def blocknonpushrebase(ui, repo, **kwargs):
     if not repo.ui.configbool('pushrebase', pushrebasemarker):
