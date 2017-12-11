@@ -63,6 +63,7 @@ if ispy3:
         sysexecutable = os.fsencode(sysexecutable)
     stringio = io.BytesIO
     maplist = lambda *args: list(map(*args))
+    ziplist = lambda *args: list(zip(*args))
     rawinput = input
 
     # TODO: .buffer might not exist if std streams were replaced; we'll need
@@ -313,6 +314,7 @@ else:
     shlexsplit = shlex.split
     stringio = cStringIO.StringIO
     maplist = map
+    ziplist = zip
     rawinput = raw_input
 
 isjython = sysplatform.startswith('java')
