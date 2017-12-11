@@ -11,11 +11,11 @@
   > }
   $ catlog() {
   >     catpatch $1
-  >     hg log --template "{rev}: {desc} - {author}\n"
+  >     hg log --template "{rev}: {node|short} {desc} - {author}\n"
   > }
   $ catlogd() {
   >     catpatch $1
-  >     hg log --template "{rev}: {desc} - {author} - {date}\n"
+  >     hg log --template "{rev}: {node|short} {desc} - {author} - {date}\n"
   > }
   $ drop() {
   >     hg qpop
@@ -189,7 +189,7 @@
   >     echo ==== "qpop -a / qpush -a"
   >     hg qpop -a
   >     hg qpush -a
-  >     hg log --template "{rev}: {desc} - {author} - {date}\n"
+  >     hg log --template "{rev}: {node|short} {desc} - {author} - {date}\n"
   > }
 
 ======= plain headers
@@ -202,7 +202,7 @@
   ==== qnew -d
   Date: 3 0
   
-  0: [mq]: 1.patch - test - 3.00
+  0: 758bd2596a39 [mq]: 1.patch - test - 3.00
   ==== qref
   adding 1
   Date: 3 0
@@ -212,7 +212,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test - 3.00
+  0: 8c640e9949a8 [mq]: 1.patch - test - 3.00
   ==== qref -d
   Date: 4 0
   
@@ -221,7 +221,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test - 4.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew
   adding 2
   diff -r ... 2
@@ -229,8 +229,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - test
+  1: fc7e8a2f6499 [mq]: 2.patch - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   Date: 5 0
   
@@ -239,8 +239,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - test
+  1: 1d9a6a118fd1 [mq]: 2.patch - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 2.patch
   now at: 1.patch
   ==== qnew -d -m
@@ -248,8 +248,8 @@
   
   Three
   
-  1: Three - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 2a9ef0bdefba Three - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref
   adding 3
   Date: 6 0
@@ -261,8 +261,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Three - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 7f19ad9eea7b Three - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -m
   Date: 6 0
   
@@ -273,8 +273,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Drei - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 7ff7377793e3 Drei - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -d
   Date: 7 0
   
@@ -285,8 +285,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Drei - test - 7.00
-  0: [mq]: 1.patch - test - 4.00
+  1: d89d3144f518 Drei - test - 7.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -d -m
   Date: 8 0
   
@@ -297,8 +297,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew -m
   adding 4
   Four
@@ -308,9 +308,9 @@
   +++ b/4
   @@ -0,0 +1,1 @@
   +4
-  2: Four - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  2: 74ded07d166b Four - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   Date: 9 0
   
@@ -321,9 +321,9 @@
   +++ b/4
   @@ -0,0 +1,1 @@
   +4
-  2: Four - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  2: 1a651320cf8e Four - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 4.patch
   now at: 3.patch
   ==== qnew with HG header
@@ -331,9 +331,9 @@
   now at: 3.patch
   # HG changeset patch
   # Date 10 0
-  2: imported patch 5.patch - test - 10.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: d16a272220d2 imported patch 5.patch - test - 10.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref
   adding 5
   # HG changeset patch
@@ -345,9 +345,9 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  2: [mq]: 5.patch - test - 10.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: 5dbf69c07df9 [mq]: 5.patch - test - 10.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   # HG changeset patch
   # Date 11 0
@@ -358,19 +358,19 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew with plain header
   popping 6.patch
   now at: 5.patch
   now at: 6.patch
   Date: 12 0
   
-  3: imported patch 6.patch - test
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 8ad9ebc22b96 imported patch 6.patch - test
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== hg qref
   adding 6
   Date: 12 0
@@ -380,10 +380,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - test - 12.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 038c46b02a56 [mq]: 6.patch - test - 12.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   Date: 13 0
   
@@ -392,10 +392,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - test - 13.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 2785642ea4b4 [mq]: 6.patch - test - 13.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   popping 6.patch
   now at: 5.patch
   ==== qnew -u
@@ -407,10 +407,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - jane
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: a05a33f187ce [mq]: 6.patch - jane
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   From: jane
   Date: 12 0
@@ -420,10 +420,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - jane
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 5702c529dfe9 [mq]: 6.patch - jane
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 6.patch
   now at: 5.patch
   ==== qnew -d
@@ -435,10 +435,10 @@
   +++ b/7
   @@ -0,0 +1,1 @@
   +7
-  3: [mq]: 7.patch - test
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 8dd1eb8d4132 [mq]: 7.patch - test
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u
   From: john
   Date: 13 0
@@ -448,10 +448,10 @@
   +++ b/7
   @@ -0,0 +1,1 @@
   +7
-  3: [mq]: 7.patch - john - 13.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 4f9d07369cc4 [mq]: 7.patch - john - 13.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew
   adding 8
   diff -r ... 8
@@ -459,11 +459,11 @@
   +++ b/8
   @@ -0,0 +1,1 @@
   +8
-  4: [mq]: 8.patch - test
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: 868b62f09492 [mq]: 8.patch - test
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u -d
   From: john
   Date: 14 0
@@ -473,11 +473,11 @@
   +++ b/8
   @@ -0,0 +1,1 @@
   +8
-  4: [mq]: 8.patch - john
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: b1e878ae55b9 [mq]: 8.patch - john
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 8.patch
   now at: 7.patch
   ==== qnew -m
@@ -489,11 +489,11 @@
   +++ b/9
   @@ -0,0 +1,1 @@
   +9
-  4: Nine - test
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: 7251936ac2bf Nine - test
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u -d
   From: john
   Date: 15 0
@@ -505,11 +505,11 @@
   +++ b/9
   @@ -0,0 +1,1 @@
   +9
-  4: Nine - john
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: a0de5bf6e9f7 Nine - john
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 9.patch
   now at: 7.patch
   ==== qpop -a / qpush -a
@@ -523,10 +523,10 @@
   applying 5.patch
   applying 7.patch
   now at: 7.patch
-  3: imported patch 7.patch - john - 13.00
-  2: imported patch 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: imported patch 1.patch - test - 4.00
+  3: d26a5b7ffce1 imported patch 7.patch - john - 13.00
+  2: dda6cf77060a imported patch 5.patch - test - 11.00
+  1: 25e32d66c8c7 Three (again) - test - 8.00
+  0: e5011c0211fe imported patch 1.patch - test - 4.00
   $ rm -r sandbox
 
 ======= hg headers
@@ -540,7 +540,7 @@
   # Date 3 0
   # Parent 
   
-  0: [mq]: 1.patch - test - 3.00
+  0: 758bd2596a39 [mq]: 1.patch - test - 3.00
   ==== qref
   adding 1
   # HG changeset patch
@@ -552,7 +552,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test - 3.00
+  0: 8c640e9949a8 [mq]: 1.patch - test - 3.00
   ==== qref -d
   # HG changeset patch
   # Date 4 0
@@ -563,7 +563,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test - 4.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew
   adding 2
   # HG changeset patch
@@ -574,8 +574,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - test
+  1: fc7e8a2f6499 [mq]: 2.patch - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   # HG changeset patch
   # Date 5 0
@@ -586,8 +586,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - test
+  1: 1d9a6a118fd1 [mq]: 2.patch - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 2.patch
   now at: 1.patch
   ==== qnew -d -m
@@ -596,8 +596,8 @@
   # Parent 
   Three
   
-  1: Three - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 2a9ef0bdefba Three - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref
   adding 3
   # HG changeset patch
@@ -610,8 +610,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Three - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 7f19ad9eea7b Three - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -m
   # HG changeset patch
   # Date 6 0
@@ -623,8 +623,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Drei - test - 6.00
-  0: [mq]: 1.patch - test - 4.00
+  1: 7ff7377793e3 Drei - test - 6.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -d
   # HG changeset patch
   # Date 7 0
@@ -636,8 +636,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Drei - test - 7.00
-  0: [mq]: 1.patch - test - 4.00
+  1: d89d3144f518 Drei - test - 7.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qref -d -m
   # HG changeset patch
   # Date 8 0
@@ -649,8 +649,8 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew -m
   adding 4
   # HG changeset patch
@@ -662,9 +662,9 @@
   +++ b/4
   @@ -0,0 +1,1 @@
   +4
-  2: Four - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  2: 74ded07d166b Four - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   # HG changeset patch
   # Date 9 0
@@ -676,9 +676,9 @@
   +++ b/4
   @@ -0,0 +1,1 @@
   +4
-  2: Four - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  2: 1a651320cf8e Four - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 4.patch
   now at: 3.patch
   ==== qnew with HG header
@@ -686,9 +686,9 @@
   now at: 3.patch
   # HG changeset patch
   # Date 10 0
-  2: imported patch 5.patch - test - 10.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: d16a272220d2 imported patch 5.patch - test - 10.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref
   adding 5
   # HG changeset patch
@@ -700,9 +700,9 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  2: [mq]: 5.patch - test - 10.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: 5dbf69c07df9 [mq]: 5.patch - test - 10.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   # HG changeset patch
   # Date 11 0
@@ -713,19 +713,19 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew with plain header
   popping 6.patch
   now at: 5.patch
   now at: 6.patch
   Date: 12 0
   
-  3: imported patch 6.patch - test
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 8ad9ebc22b96 imported patch 6.patch - test
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== hg qref
   adding 6
   Date: 12 0
@@ -735,10 +735,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - test - 12.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 038c46b02a56 [mq]: 6.patch - test - 12.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== hg qref -d
   Date: 13 0
   
@@ -747,10 +747,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - test - 13.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 2785642ea4b4 [mq]: 6.patch - test - 13.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   popping 6.patch
   now at: 5.patch
   ==== qnew -u
@@ -764,10 +764,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - jane
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: a05a33f187ce [mq]: 6.patch - jane
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -d
   # HG changeset patch
   # User jane
@@ -779,10 +779,10 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  3: [mq]: 6.patch - jane
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 5702c529dfe9 [mq]: 6.patch - jane
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 6.patch
   now at: 5.patch
   ==== qnew -d
@@ -796,10 +796,10 @@
   +++ b/7
   @@ -0,0 +1,1 @@
   +7
-  3: [mq]: 7.patch - test
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  3: 8dd1eb8d4132 [mq]: 7.patch - test
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u
   # HG changeset patch
   # User john
@@ -811,10 +811,10 @@
   +++ b/7
   @@ -0,0 +1,1 @@
   +7
-  3: [mq]: 7.patch - john - 13.00
-  2: [mq]: 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: [mq]: 1.patch - test - 4.00
+  3: 4f9d07369cc4 [mq]: 7.patch - john - 13.00
+  2: 049de6af0c1d [mq]: 5.patch - test - 11.00
+  1: b1b6b0fe0e6d Three (again) - test - 8.00
+  0: 4a67dfeea974 [mq]: 1.patch - test - 4.00
   ==== qnew
   adding 8
   # HG changeset patch
@@ -825,11 +825,11 @@
   +++ b/8
   @@ -0,0 +1,1 @@
   +8
-  4: [mq]: 8.patch - test
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: 868b62f09492 [mq]: 8.patch - test
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u -d
   # HG changeset patch
   # User john
@@ -841,11 +841,11 @@
   +++ b/8
   @@ -0,0 +1,1 @@
   +8
-  4: [mq]: 8.patch - john
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: b1e878ae55b9 [mq]: 8.patch - john
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 8.patch
   now at: 7.patch
   ==== qnew -m
@@ -859,11 +859,11 @@
   +++ b/9
   @@ -0,0 +1,1 @@
   +9
-  4: Nine - test
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: 7251936ac2bf Nine - test
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   ==== qref -u -d
   # HG changeset patch
   # User john
@@ -876,11 +876,11 @@
   +++ b/9
   @@ -0,0 +1,1 @@
   +9
-  4: Nine - john
-  3: [mq]: 7.patch - john
-  2: [mq]: 5.patch - test
-  1: Three (again) - test
-  0: [mq]: 1.patch - test
+  4: a0de5bf6e9f7 Nine - john
+  3: 4f9d07369cc4 [mq]: 7.patch - john
+  2: 049de6af0c1d [mq]: 5.patch - test
+  1: b1b6b0fe0e6d Three (again) - test
+  0: 4a67dfeea974 [mq]: 1.patch - test
   popping 9.patch
   now at: 7.patch
   ==== qpop -a / qpush -a
@@ -894,8 +894,8 @@
   applying 5.patch
   applying 7.patch
   now at: 7.patch
-  3: imported patch 7.patch - john - 13.00
-  2: imported patch 5.patch - test - 11.00
-  1: Three (again) - test - 8.00
-  0: imported patch 1.patch - test - 4.00
+  3: d26a5b7ffce1 imported patch 7.patch - john - 13.00
+  2: dda6cf77060a imported patch 5.patch - test - 11.00
+  1: 25e32d66c8c7 Three (again) - test - 8.00
+  0: e5011c0211fe imported patch 1.patch - test - 4.00
   $ rm -r sandbox

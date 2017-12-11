@@ -6,7 +6,7 @@
   $ catlog() {
   >     cat .hg/patches/$1.patch | sed -e "s/^diff \-r [0-9a-f]* /diff -r ... /" \
   >                                    -e "s/^\(# Parent \).*/\1/"
-  >     hg log --template "{rev}: {desc} - {author}\n"
+  >     hg log --template "{rev}: {node|short} {desc} - {author}\n"
   > }
   $ runtest() {
   >     echo ==== init
@@ -122,7 +122,7 @@
   >     echo ==== "qpop -a / qpush -a"
   >     hg qpop -a
   >     hg qpush -a
-  >     hg log --template "{rev}: {desc} - {author}\n"
+  >     hg log --template "{rev}: {node|short} {desc} - {author}\n"
   > }
 
 ======= plain headers
@@ -135,7 +135,7 @@
   ==== qnew -U
   From: test
   
-  0: [mq]: 1.patch - test
+  0: a054644889e5 [mq]: 1.patch - test
   ==== qref
   adding 1
   From: test
@@ -145,7 +145,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test
+  0: 2905f1e46ee0 [mq]: 1.patch - test
   ==== qref -u
   From: mary
   
@@ -154,7 +154,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - mary
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew
   adding 2
   diff -r ... 2
@@ -162,8 +162,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - mary
+  1: 527f98a12a7a [mq]: 2.patch - test
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   From: jane
   
@@ -172,16 +172,16 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -U -m
   From: test
   
   Three
   
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 0ffa16a9088e Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref
   adding 3
   From: test
@@ -193,9 +193,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 83f1290c6086 Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -m
   From: test
   
@@ -206,9 +206,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: b0d856328d4d Drei - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   From: mary
   
@@ -219,9 +219,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - mary
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: bb9d4b28e6a6 Drei - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u -m
   From: maria
   
@@ -232,9 +232,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -m
   adding 4of
   Four
@@ -244,10 +244,10 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - test
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: b9f922d0da40 Four - test
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   From: jane
   
@@ -258,21 +258,21 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with HG header
   popping 5.patch
   now at: 4.patch
   now at: 5.patch
   # HG changeset patch
   # User johndoe
-  4: imported patch 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 72bc4a0467ef imported patch 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 5
   # HG changeset patch
@@ -284,11 +284,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: ff5c06112e5a [mq]: 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
   # User test
@@ -299,11 +299,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - test
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: c947416c22b1 [mq]: 5.patch - test
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
   # User johndeere
@@ -314,23 +314,23 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with plain header
   popping 6.patch
   now at: 5.patch
   now at: 6.patch
   From: test
   
-  5: imported patch 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 7825a18ec839 imported patch 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 6
   From: test
@@ -340,12 +340,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   From: test
   
@@ -354,12 +354,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   From: johndeere
   
@@ -368,12 +368,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - johndeere
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 32641ee07196 [mq]: 6.patch - johndeere
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qpop -a / qpush -a
   popping 6.patch
   popping 5.patch
@@ -389,12 +389,12 @@
   applying 5.patch
   applying 6.patch
   now at: 6.patch
-  5: imported patch 6.patch - johndeere
-  4: imported patch 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: imported patch 2.patch - jane
-  0: imported patch 1.patch - mary
+  5: 1fb083c80457 imported patch 6.patch - johndeere
+  4: 7e96e969691d imported patch 5.patch - johndeere
+  3: c7147533d3cd Four - jane
+  2: b383d04401ea Three (again) - maria
+  1: fac2da4efc3c imported patch 2.patch - jane
+  0: b6e237e8771b imported patch 1.patch - mary
   $ rm -r sandbox
 
 ======= hg headers
@@ -408,7 +408,7 @@
   # User test
   # Parent 
   
-  0: [mq]: 1.patch - test
+  0: a054644889e5 [mq]: 1.patch - test
   ==== qref
   adding 1
   # HG changeset patch
@@ -420,7 +420,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test
+  0: 2905f1e46ee0 [mq]: 1.patch - test
   ==== qref -u
   # HG changeset patch
   # User mary
@@ -431,7 +431,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - mary
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew
   adding 2
   # HG changeset patch
@@ -442,8 +442,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - mary
+  1: 527f98a12a7a [mq]: 2.patch - test
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User jane
@@ -454,17 +454,17 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -U -m
   # HG changeset patch
   # User test
   # Parent 
   Three
   
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 0ffa16a9088e Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref
   adding 3
   # HG changeset patch
@@ -477,9 +477,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 83f1290c6086 Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -m
   # HG changeset patch
   # User test
@@ -491,9 +491,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: b0d856328d4d Drei - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User mary
@@ -505,9 +505,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - mary
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: bb9d4b28e6a6 Drei - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u -m
   # HG changeset patch
   # User maria
@@ -519,9 +519,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -m
   adding 4of
   # HG changeset patch
@@ -533,10 +533,10 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - test
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: b9f922d0da40 Four - test
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User jane
@@ -548,21 +548,21 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with HG header
   popping 5.patch
   now at: 4.patch
   now at: 5.patch
   # HG changeset patch
   # User johndoe
-  4: imported patch 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 72bc4a0467ef imported patch 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 5
   # HG changeset patch
@@ -574,11 +574,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: ff5c06112e5a [mq]: 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
   # User test
@@ -589,11 +589,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - test
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: c947416c22b1 [mq]: 5.patch - test
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
   # User johndeere
@@ -604,23 +604,23 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with plain header
   popping 6.patch
   now at: 5.patch
   now at: 6.patch
   From: test
   
-  5: imported patch 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 7825a18ec839 imported patch 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 6
   From: test
@@ -630,12 +630,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   From: test
   
@@ -644,12 +644,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   From: johndeere
   
@@ -658,12 +658,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - johndeere
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 32641ee07196 [mq]: 6.patch - johndeere
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qpop -a / qpush -a
   popping 6.patch
   popping 5.patch
@@ -679,12 +679,12 @@
   applying 5.patch
   applying 6.patch
   now at: 6.patch
-  5: imported patch 6.patch - johndeere
-  4: imported patch 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: imported patch 2.patch - jane
-  0: imported patch 1.patch - mary
+  5: 1fb083c80457 imported patch 6.patch - johndeere
+  4: 7e96e969691d imported patch 5.patch - johndeere
+  3: c7147533d3cd Four - jane
+  2: b383d04401ea Three (again) - maria
+  1: fac2da4efc3c imported patch 2.patch - jane
+  0: b6e237e8771b imported patch 1.patch - mary
   $ rm -r sandbox
   $ runtest
   ==== init
@@ -693,7 +693,7 @@
   # User test
   # Parent 
   
-  0: [mq]: 1.patch - test
+  0: a054644889e5 [mq]: 1.patch - test
   ==== qref
   adding 1
   # HG changeset patch
@@ -705,7 +705,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - test
+  0: 2905f1e46ee0 [mq]: 1.patch - test
   ==== qref -u
   # HG changeset patch
   # User mary
@@ -716,7 +716,7 @@
   +++ b/1
   @@ -0,0 +1,1 @@
   +1
-  0: [mq]: 1.patch - mary
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew
   adding 2
   # HG changeset patch
@@ -727,8 +727,8 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - test
-  0: [mq]: 1.patch - mary
+  1: 527f98a12a7a [mq]: 2.patch - test
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User jane
@@ -739,17 +739,17 @@
   +++ b/2
   @@ -0,0 +1,1 @@
   +2
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -U -m
   # HG changeset patch
   # User test
   # Parent 
   Three
   
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 0ffa16a9088e Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref
   adding 3
   # HG changeset patch
@@ -762,9 +762,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: 83f1290c6086 Three - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -m
   # HG changeset patch
   # User test
@@ -776,9 +776,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - test
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: b0d856328d4d Drei - test
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User mary
@@ -790,9 +790,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Drei - mary
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: bb9d4b28e6a6 Drei - mary
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u -m
   # HG changeset patch
   # User maria
@@ -804,9 +804,9 @@
   +++ b/3
   @@ -0,0 +1,1 @@
   +3
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew -m
   adding 4of
   # HG changeset patch
@@ -818,10 +818,10 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - test
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: b9f922d0da40 Four - test
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qref -u
   # HG changeset patch
   # User jane
@@ -833,21 +833,21 @@
   +++ b/4of
   @@ -0,0 +1,1 @@
   +4 t
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with HG header
   popping 5.patch
   now at: 4.patch
   now at: 5.patch
   # HG changeset patch
   # User johndoe
-  4: imported patch 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 72bc4a0467ef imported patch 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 5
   # HG changeset patch
@@ -859,11 +859,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndoe
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: ff5c06112e5a [mq]: 5.patch - johndoe
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   # HG changeset patch
   # User test
@@ -874,11 +874,11 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - test
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: c947416c22b1 [mq]: 5.patch - test
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   # HG changeset patch
   # User johndeere
@@ -889,23 +889,23 @@
   +++ b/5
   @@ -0,0 +1,1 @@
   +5
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qnew with plain header
   popping 6.patch
   now at: 5.patch
   now at: 6.patch
   From: test
   
-  5: imported patch 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 7825a18ec839 imported patch 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref
   adding 6
   From: test
@@ -915,12 +915,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -U
   From: test
   
@@ -929,12 +929,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - test
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 09d19592680d [mq]: 6.patch - test
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== hg qref -u
   From: johndeere
   
@@ -943,12 +943,12 @@
   +++ b/6
   @@ -0,0 +1,1 @@
   +6
-  5: [mq]: 6.patch - johndeere
-  4: [mq]: 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: [mq]: 2.patch - jane
-  0: [mq]: 1.patch - mary
+  5: 32641ee07196 [mq]: 6.patch - johndeere
+  4: 1d898e201a22 [mq]: 5.patch - johndeere
+  3: 0dfb3111e7ee Four - jane
+  2: a6686ee84fc3 Three (again) - maria
+  1: a425cde5f493 [mq]: 2.patch - jane
+  0: 3682f830e656 [mq]: 1.patch - mary
   ==== qpop -a / qpush -a
   popping 6.patch
   popping 5.patch
@@ -964,11 +964,11 @@
   applying 5.patch
   applying 6.patch
   now at: 6.patch
-  5: imported patch 6.patch - johndeere
-  4: imported patch 5.patch - johndeere
-  3: Four - jane
-  2: Three (again) - maria
-  1: imported patch 2.patch - jane
-  0: imported patch 1.patch - mary
+  5: 1fb083c80457 imported patch 6.patch - johndeere
+  4: 7e96e969691d imported patch 5.patch - johndeere
+  3: c7147533d3cd Four - jane
+  2: b383d04401ea Three (again) - maria
+  1: fac2da4efc3c imported patch 2.patch - jane
+  0: b6e237e8771b imported patch 1.patch - mary
 
   $ cd ..

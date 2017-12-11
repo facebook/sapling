@@ -6,7 +6,7 @@
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -37,15 +37,15 @@
   adding r2
 
   $ hg tglog
-  @  4: 'r2'
+  @  4: 225af64d03e6 'r2'
   |
-  o  3: 'r1'
+  o  3: 8d0a8c99b309 'r1'
   |
-  | o  2: 'l1'
+  | o  2: 87c180a611f2 'l1'
   |/
-  o  1: 'c2'
+  o  1: 56daeba07f4b 'c2'
   |
-  o  0: 'c1'
+  o  0: e8faad3d03ff 'c1'
   
 Rebase with no arguments - single revision in source branch:
 
@@ -56,15 +56,15 @@ Rebase with no arguments - single revision in source branch:
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/87c180a611f2-a5be192d-rebase.hg (glob)
 
   $ hg tglog
-  @  4: 'l1'
+  @  4: b1152cc99655 'l1'
   |
-  o  3: 'r2'
+  o  3: 225af64d03e6 'r2'
   |
-  o  2: 'r1'
+  o  2: 8d0a8c99b309 'r1'
   |
-  o  1: 'c2'
+  o  1: 56daeba07f4b 'c2'
   |
-  o  0: 'c1'
+  o  0: e8faad3d03ff 'c1'
   
   $ cd ..
 
@@ -96,15 +96,15 @@ Rebase with no arguments - single revision in source branch:
   created new head
 
   $ hg tglog
-  @  4: 'r1'
+  @  4: 8d0a8c99b309 'r1'
   |
-  | o  3: 'l2'
+  | o  3: 1ac923b736ef 'l2'
   | |
-  | o  2: 'l1'
+  | o  2: 87c180a611f2 'l1'
   |/
-  o  1: 'c2'
+  o  1: 56daeba07f4b 'c2'
   |
-  o  0: 'c1'
+  o  0: e8faad3d03ff 'c1'
   
 Rebase with no arguments - single revision in target branch:
 
@@ -116,15 +116,15 @@ Rebase with no arguments - single revision in target branch:
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/87c180a611f2-b980535c-rebase.hg (glob)
 
   $ hg tglog
-  @  4: 'l2'
+  @  4: 023181307ed0 'l2'
   |
-  o  3: 'l1'
+  o  3: 913ab52b43b4 'l1'
   |
-  o  2: 'r1'
+  o  2: 8d0a8c99b309 'r1'
   |
-  o  1: 'c2'
+  o  1: 56daeba07f4b 'c2'
   |
-  o  0: 'c1'
+  o  0: e8faad3d03ff 'c1'
   
 
   $ cd ..

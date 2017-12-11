@@ -7,7 +7,7 @@
   > plain=true
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' tags: {tags}\n"
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' tags: {tags}\n"
   > EOF
 
 
@@ -33,13 +33,13 @@
   $ hg qref -m P1 -d '2 0'
 
   $ hg tglog
-  @  3: 'P1' tags: f2.patch qtip tip
+  @  3: 929394423cd3 'P1' tags: f2.patch qtip tip
   |
-  o  2: 'P0' tags: f.patch qbase
+  o  2: 3504f44bffc0 'P0' tags: f.patch qbase
   |
-  | o  1: 'R1' tags:
+  | o  1: bac9ed9960d8 'R1' tags:
   |/
-  o  0: 'C1' tags: qparent
+  o  0: 36f36ddbca61 'C1' tags: qparent
   
 
 Rebase - try to rebase on an applied mq patch:
@@ -91,13 +91,13 @@ Fix the 2nd conflict:
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/3504f44bffc0-30595b40-rebase.hg (glob)
 
   $ hg tglog
-  @  3: 'P1' tags: f2.patch qtip tip
+  @  3: 462012cf340c 'P1' tags: f2.patch qtip tip
   |
-  o  2: 'P0' tags: f.patch qbase
+  o  2: ebe9914c0d1c 'P0' tags: f.patch qbase
   |
-  o  1: 'R1' tags: qparent
+  o  1: bac9ed9960d8 'R1' tags: qparent
   |
-  o  0: 'C1' tags:
+  o  0: 36f36ddbca61 'C1' tags:
   
   $ hg up -q qbase
 
@@ -298,11 +298,11 @@ Create mq repo with guarded patches foo and bar and empty patch:
   foo: +baz
 
   $ hg tglog
-  @  2: 'imported patch bar' tags: bar qtip tip
+  @  2: 4f44b861d38c 'imported patch bar' tags: bar qtip tip
   |
-  o  1: 'important commit message' tags: empty-important qbase
+  o  1: 0aaf4c3af7eb 'important commit message' tags: empty-important qbase
   |
-  o  0: 'a' tags: qparent
+  o  0: cb9a9f314b8b 'a' tags: qparent
   
 Create new head to rebase bar onto:
 
@@ -318,13 +318,13 @@ Create new head to rebase bar onto:
   $ hg qref
 
   $ hg tglog
-  @  3: '[mq]: bar' tags: bar qtip tip
+  @  3: d526d4536ed6 '[mq]: bar' tags: bar qtip tip
   |
-  | o  2: 'b' tags:
+  | o  2: d2ae7f538514 'b' tags:
   | |
-  o |  1: 'important commit message' tags: empty-important qbase
+  o |  1: 0aaf4c3af7eb 'important commit message' tags: empty-important qbase
   |/
-  o  0: 'a' tags: qparent
+  o  0: cb9a9f314b8b 'a' tags: qparent
   
 
 Rebase bar (make sure series order is preserved and empty-important also is
@@ -351,10 +351,10 @@ removed from the series):
   foo: +baz
 
   $ hg tglog
-  @  2: '[mq]: bar' tags: bar qbase qtip tip
+  @  2: 477d948bb2af '[mq]: bar' tags: bar qbase qtip tip
   |
-  o  1: 'b' tags: qparent
+  o  1: d2ae7f538514 'b' tags: qparent
   |
-  o  0: 'a' tags:
+  o  0: cb9a9f314b8b 'a' tags:
   
   $ cd ..

@@ -2,7 +2,7 @@
   > [extensions]
   > mq=
   > [alias]
-  > tlog = log --template "{rev}: {desc}\\n"
+  > tlog = log --template "{rev}: {node|short} {desc}\\n"
   > theads = heads --template "{rev}: {desc}\\n"
   > tincoming = incoming --template "{rev}: {desc}\\n"
   > EOF
@@ -97,7 +97,7 @@ Pull queue bundle:
   0: queue: two.patch added
 
   $ hg -R .hg/patches tlog
-  0: queue: two.patch added
+  0: d7553909353d queue: two.patch added
 
   $ hg qseries
   two.patch
@@ -128,7 +128,7 @@ Unbundle queue bundle:
   0: queue: two.patch added
 
   $ hg -R .hg/patches tlog
-  0: queue: two.patch added
+  0: d7553909353d queue: two.patch added
 
   $ hg qseries
   two.patch

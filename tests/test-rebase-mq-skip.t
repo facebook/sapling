@@ -12,7 +12,7 @@ already has one local mq patch
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' tags: {tags}\n"
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' tags: {tags}\n"
   > EOF
 
 
@@ -90,13 +90,13 @@ already has one local mq patch
   1 revisions have been skipped
 
   $ hg tglog
-  @  3: 'P0' tags: p0.patch qbase qtip tip
+  @  3: 9ecc820b1737 'P0' tags: p0.patch qbase qtip tip
   |
-  o  2: 'P1' tags: qparent
+  o  2: 869d8b134a27 'P1' tags: qparent
   |
-  o  1: 'R1' tags:
+  o  1: da108f2755df 'R1' tags:
   |
-  o  0: 'C1' tags:
+  o  0: cd320d50b341 'C1' tags:
   
   $ cd ..
 
@@ -169,23 +169,23 @@ already has one local mq patch
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/b4bffa6e4776-b9bfb84d-rebase.hg (glob)
 
   $ hg tglog
-  @  8: 'r5' tags: qtip r5 tip
+  @  8: 0b9735ce8f0a 'r5' tags: qtip r5 tip
   |
-  o  7: 'r2' tags: qbase r2
+  o  7: 1660ab13ce9a 'r2' tags: qbase r2
   |
-  o  6: 'branch2-r6' tags: qparent
+  o  6: 057f55ff8f44 'branch2-r6' tags: qparent
   |
-  o  5: 'branch2-r4' tags:
+  o  5: 1d7287f8deb1 'branch2-r4' tags:
   |
-  o  4: 'branch2-r8' tags:
+  o  4: 3c10b9db2bd5 'branch2-r8' tags:
   |
-  o  3: 'branch2-r7' tags:
+  o  3: b684023158dc 'branch2-r7' tags:
   |
-  o  2: 'branch2-r3' tags:
+  o  2: d817754b1251 'branch2-r3' tags:
   |
-  o  1: 'branch2-r1' tags:
+  o  1: 0621a206f8a4 'branch2-r1' tags:
   |
-  o  0: 'r0' tags:
+  o  0: 222799e2f90b 'r0' tags:
   
 
   $ cd ..

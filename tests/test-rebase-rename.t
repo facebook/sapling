@@ -3,7 +3,7 @@
   > rebase=
   > 
   > [alias]
-  > tlog  = log  --template "{rev}: '{desc}' {branches}\n"
+  > tlog  = log --template "{rev}: {node|short} '{desc}' {branches}\n"
   > tglog = tlog --graph
   > EOF
 
@@ -34,19 +34,19 @@
   created new head
 
   $ hg tglog
-  @  3: 'rename A'
+  @  3: 73a3ee40125d 'rename A'
   |
-  | o  2: 'rename B'
+  | o  2: 220d0626d185 'rename B'
   |/
-  o  1: 'B'
+  o  1: 3ab5da9a5c01 'B'
   |
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 
 Rename is tracked:
 
   $ hg tlog -p --git -r tip
-  3: 'rename A' 
+  3: 73a3ee40125d 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -64,19 +64,19 @@ Rebase the revision containing the rename:
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/73a3ee40125d-1d78ebcf-rebase.hg (glob)
 
   $ hg tglog
-  @  3: 'rename A'
+  @  3: 032a9b75e83b 'rename A'
   |
-  o  2: 'rename B'
+  o  2: 220d0626d185 'rename B'
   |
-  o  1: 'B'
+  o  1: 3ab5da9a5c01 'B'
   |
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 
 Rename is not lost:
 
   $ hg tlog -p --git -r tip
-  3: 'rename A' 
+  3: 032a9b75e83b 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -132,18 +132,18 @@ Rebased revision does not contain information about b (issue3739)
   created new head
 
   $ hg tglog
-  @  3: 'copy A'
+  @  3: 0a8162ff18a8 'copy A'
   |
-  | o  2: 'copy B'
+  | o  2: 39e588434882 'copy B'
   |/
-  o  1: 'B'
+  o  1: 6c81ed0049f8 'B'
   |
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 Copy is tracked:
 
   $ hg tlog -p --git -r tip
-  3: 'copy A' 
+  3: 0a8162ff18a8 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied
@@ -155,19 +155,19 @@ Rebase the revision containing the copy:
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/0a8162ff18a8-dd06302a-rebase.hg (glob)
 
   $ hg tglog
-  @  3: 'copy A'
+  @  3: 98f6e6dbf45a 'copy A'
   |
-  o  2: 'copy B'
+  o  2: 39e588434882 'copy B'
   |
-  o  1: 'B'
+  o  1: 6c81ed0049f8 'B'
   |
-  o  0: 'A'
+  o  0: 1994f17a630e 'A'
   
 
 Copy is not lost:
 
   $ hg tlog -p --git -r tip
-  3: 'copy A' 
+  3: 98f6e6dbf45a 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied
@@ -223,15 +223,15 @@ Test rebase across repeating renames:
   created new head
 
   $ hg tglog
-  @  4: 'Another unrelated change'
+  @  4: b918d683b091 'Another unrelated change'
   |
-  | o  3: 'Rename file2 back to file1'
+  | o  3: 1ac17e43d8aa 'Rename file2 back to file1'
   |/
-  o  2: 'Unrelated change'
+  o  2: 480101d66d8d 'Unrelated change'
   |
-  o  1: 'Rename file1 to file2'
+  o  1: be44c61debd2 'Rename file1 to file2'
   |
-  o  0: 'Adding file1'
+  o  0: 8ce9a346991d 'Adding file1'
   
 
   $ hg rebase -s 4 -d 3
@@ -263,13 +263,13 @@ Verify that copies get preserved (issue4192).
 
 Note that there are four entries in the log for d
   $ hg tglog --follow d
-  @  3: 'File d created as copy of c and modified'
+  @  3: 421b7e82bb85 'File d created as copy of c and modified'
   |
-  o  2: 'File c created as copy of b and modified'
+  o  2: 327f772bc074 'File c created as copy of b and modified'
   |
-  o  1: 'File b created as copy of a and modified'
+  o  1: 79d255d24ad2 'File b created as copy of a and modified'
   |
-  o  0: 'File a created'
+  o  0: b220cd6d2326 'File a created'
   
 Update back to before we performed copies, and inject an unrelated change.
   $ hg update 0
@@ -293,13 +293,13 @@ Rebase the copies on top of the unrelated change.
 
 There should still be four entries in the log for d
   $ hg tglog --follow d
-  @  4: 'File d created as copy of c and modified'
+  @  4: dbb9ba033561 'File d created as copy of c and modified'
   |
-  o  3: 'File c created as copy of b and modified'
+  o  3: af74b229bc02 'File c created as copy of b and modified'
   |
-  o  2: 'File b created as copy of a and modified'
+  o  2: 68bf06433839 'File b created as copy of a and modified'
   :
-  o  0: 'File a created'
+  o  0: b220cd6d2326 'File a created'
   
 Same steps as above, but with --collapse on rebase to make sure the
 copy records collapse correctly.
@@ -322,11 +322,11 @@ This should show both revision 3 and 0 since 'd' was transitively a
 copy of 'a'.
 
   $ hg tglog --follow d
-  @  3: 'Collapsed revision
+  @  3: 5a46b94210e5 'Collapsed revision
   :  * File b created as copy of a and modified
   :  * File c created as copy of b and modified
   :  * File d created as copy of c and modified'
-  o  0: 'File a created'
+  o  0: b220cd6d2326 'File a created'
   
 
   $ cd ..

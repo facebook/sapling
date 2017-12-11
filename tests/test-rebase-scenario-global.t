@@ -7,7 +7,7 @@
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -34,21 +34,21 @@ can abort or warn for colliding untracked files)
   $ cd a1
 
   $ hg tglog
-  @  7: 'H'
+  @  7: 02de42196ebe 'H'
   |
-  | o  6: 'G'
+  | o  6: eea13746799a 'G'
   |/|
-  o |  5: 'F'
+  o |  5: 24b6387c8c8c 'F'
   | |
-  | o  4: 'E'
+  | o  4: 9520eea781bc 'E'
   |/
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
 
   $ hg status --rev "3^1" --rev 3
@@ -72,21 +72,21 @@ can abort or warn for colliding untracked files)
   $ rm D.orig
 
   $ hg tglog
-  o  7: 'D'
+  o  7: 1619f02ff7dd 'D'
   |
-  @  6: 'H'
+  @  6: 02de42196ebe 'H'
   |
-  | o  5: 'G'
+  | o  5: eea13746799a 'G'
   |/|
-  o |  4: 'F'
+  o |  4: 24b6387c8c8c 'F'
   | |
-  | o  3: 'E'
+  | o  3: 9520eea781bc 'E'
   |/
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -107,21 +107,21 @@ that we can ignore for colliding untracked files)
   $ rm D.orig
 
   $ hg tglog
-  o  7: 'D'
+  o  7: 2107530e74ab 'D'
   |
-  | @  6: 'H'
+  | @  6: 02de42196ebe 'H'
   |/
-  | o  5: 'G'
+  | o  5: eea13746799a 'G'
   |/|
-  o |  4: 'F'
+  o |  4: 24b6387c8c8c 'F'
   | |
-  | o  3: 'E'
+  | o  3: 9520eea781bc 'E'
   |/
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -144,19 +144,19 @@ if they have the same contents)
   E.orig: file not found
 
   $ hg tglog
-  o  6: 'E'
+  o  6: 9f8b8ec77260 'E'
   |
-  @  5: 'H'
+  @  5: 02de42196ebe 'H'
   |
-  o  4: 'F'
+  o  4: 24b6387c8c8c 'F'
   |
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -174,19 +174,19 @@ F onto E - rebase of a branching point (skip G):
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg (glob)
 
   $ hg tglog
-  @  6: 'H'
+  @  6: e9240aeaa6ad 'H'
   |
-  o  5: 'F'
+  o  5: 5d0ccadb6e3e 'F'
   |
-  o  4: 'E'
+  o  4: 9520eea781bc 'E'
   |
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -201,21 +201,21 @@ G onto H - merged revision having a parent in ancestors of target:
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/eea13746799a-883828ed-rebase.hg (glob)
 
   $ hg tglog
-  o    7: 'G'
+  o    7: 397834907a90 'G'
   |\
-  | @  6: 'H'
+  | @  6: 02de42196ebe 'H'
   | |
-  | o  5: 'F'
+  | o  5: 24b6387c8c8c 'F'
   | |
-  o |  4: 'E'
+  o |  4: 9520eea781bc 'E'
   |/
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -232,21 +232,21 @@ F onto B - G maintains E as parent:
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/24b6387c8c8c-c3fe765d-rebase.hg (glob)
 
   $ hg tglog
-  @  7: 'H'
+  @  7: c87be72f9641 'H'
   |
-  | o  6: 'G'
+  | o  6: 17badd73d4f1 'G'
   |/|
-  o |  5: 'F'
+  o |  5: 74fb9ed646c4 'F'
   | |
-  | o  4: 'E'
+  | o  4: 9520eea781bc 'E'
   | |
-  | | o  3: 'D'
+  | | o  3: 32af7686d403 'D'
   | | |
-  +---o  2: 'C'
+  +---o  2: 5fddd98957c8 'C'
   | |
-  o |  1: 'B'
+  o |  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
   $ cd ..
 
@@ -304,21 +304,21 @@ C onto A - rebase onto an ancestor:
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-f9244fa1-rebase.hg (glob)
   $ hg tglog
-  o  7: 'D'
+  o  7: c9659aac0000 'D'
   |
-  o  6: 'C'
+  o  6: e1c4361dd923 'C'
   |
-  | @  5: 'H'
+  | @  5: 02de42196ebe 'H'
   | |
-  | | o  4: 'G'
+  | | o  4: eea13746799a 'G'
   | |/|
-  | o |  3: 'F'
+  | o |  3: 24b6387c8c8c 'F'
   |/ /
-  | o  2: 'E'
+  | o  2: 9520eea781bc 'E'
   |/
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
 
 Check rebasing public changeset
@@ -424,23 +424,23 @@ All destination are B
   new changesets 9ae2ed22e576:479ddb54a924
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg tglog
-  o  8: 'I'
+  o  8: 479ddb54a924 'I'
   |
-  o  7: 'H'
+  o  7: 72434a4e60b0 'H'
   |
-  o  6: 'G'
+  o  6: 3d8a618087a7 'G'
   |
-  | o  5: 'F'
+  | o  5: 41bfcc75ed73 'F'
   | |
-  | o  4: 'E'
+  | o  4: c01897464e7f 'E'
   |/
-  o  3: 'D'
+  o  3: ffd453c31098 'D'
   |
-  o  2: 'C'
+  o  2: c9e50f6cdc55 'C'
   |
-  | o  1: 'B'
+  | o  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -462,33 +462,33 @@ Source on have two descendant heads but ask for one
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
   $ hg tglog
-  o  13: 'I'
+  o  13: 9bf1d9358a90 'I'
   |
-  o  12: 'H'
+  o  12: 274623a778d4 'H'
   |
-  o  11: 'G'
+  o  11: ab8c8617c8e8 'G'
   |
-  o  10: 'D'
+  o  10: c8cbf59f70da 'D'
   |
-  o  9: 'C'
+  o  9: 563e4faab485 'C'
   |
-  | o  8: 'I'
+  | o  8: 479ddb54a924 'I'
   | |
-  | o  7: 'H'
+  | o  7: 72434a4e60b0 'H'
   | |
-  | o  6: 'G'
+  | o  6: 3d8a618087a7 'G'
   | |
-  | | o  5: 'F'
+  | | o  5: 41bfcc75ed73 'F'
   | | |
-  | | o  4: 'E'
+  | | o  4: c01897464e7f 'E'
   | |/
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   | |
-  | o  2: 'C'
+  | o  2: c9e50f6cdc55 'C'
   | |
-  o |  1: 'B'
+  o |  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -507,31 +507,31 @@ Base on have one descendant heads we ask for but common ancestor have two
   rebasing 7:72434a4e60b0 "H"
   rebasing 8:479ddb54a924 "I" (tip)
   $ hg tglog
-  o  12: 'I'
+  o  12: 9d7da0053b1c 'I'
   |
-  o  11: 'H'
+  o  11: 8fbd00952cbc 'H'
   |
-  o  10: 'G'
+  o  10: 51d434a615ee 'G'
   |
-  o  9: 'D'
+  o  9: a9c125634b0b 'D'
   |
-  | o  8: 'I'
+  | o  8: 479ddb54a924 'I'
   | |
-  | o  7: 'H'
+  | o  7: 72434a4e60b0 'H'
   | |
-  | o  6: 'G'
+  | o  6: 3d8a618087a7 'G'
   | |
-  | | o  5: 'F'
+  | | o  5: 41bfcc75ed73 'F'
   | | |
-  | | o  4: 'E'
+  | | o  4: c01897464e7f 'E'
   | |/
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   | |
-  | o  2: 'C'
+  | o  2: c9e50f6cdc55 'C'
   | |
-  o |  1: 'B'
+  o |  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -549,29 +549,29 @@ rebase subset
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
   $ hg tglog
-  o  11: 'H'
+  o  11: 8fbd00952cbc 'H'
   |
-  o  10: 'G'
+  o  10: 51d434a615ee 'G'
   |
-  o  9: 'D'
+  o  9: a9c125634b0b 'D'
   |
-  | o  8: 'I'
+  | o  8: 479ddb54a924 'I'
   | |
-  | o  7: 'H'
+  | o  7: 72434a4e60b0 'H'
   | |
-  | o  6: 'G'
+  | o  6: 3d8a618087a7 'G'
   | |
-  | | o  5: 'F'
+  | | o  5: 41bfcc75ed73 'F'
   | | |
-  | | o  4: 'E'
+  | | o  4: c01897464e7f 'E'
   | |/
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   | |
-  | o  2: 'C'
+  | o  2: c9e50f6cdc55 'C'
   | |
-  o |  1: 'B'
+  o |  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -591,33 +591,33 @@ rebase subset with multiple head
   rebasing 6:3d8a618087a7 "G"
   rebasing 7:72434a4e60b0 "H"
   $ hg tglog
-  o  13: 'H'
+  o  13: 8fbd00952cbc 'H'
   |
-  o  12: 'G'
+  o  12: 51d434a615ee 'G'
   |
-  | o  11: 'F'
+  | o  11: df23d8bda0b7 'F'
   | |
-  | o  10: 'E'
+  | o  10: 47b7889448ff 'E'
   |/
-  o  9: 'D'
+  o  9: a9c125634b0b 'D'
   |
-  | o  8: 'I'
+  | o  8: 479ddb54a924 'I'
   | |
-  | o  7: 'H'
+  | o  7: 72434a4e60b0 'H'
   | |
-  | o  6: 'G'
+  | o  6: 3d8a618087a7 'G'
   | |
-  | | o  5: 'F'
+  | | o  5: 41bfcc75ed73 'F'
   | | |
-  | | o  4: 'E'
+  | | o  4: c01897464e7f 'E'
   | |/
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   | |
-  | o  2: 'C'
+  | o  2: c9e50f6cdc55 'C'
   | |
-  o |  1: 'B'
+  o |  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -634,23 +634,23 @@ rebase on ancestor with revset
   rebasing 8:479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-b4f73f31-rebase.hg (glob)
   $ hg tglog
-  o  8: 'I'
+  o  8: fcb52e68a694 'I'
   |
-  o  7: 'H'
+  o  7: 77bd65cd7600 'H'
   |
-  o  6: 'G'
+  o  6: 12d0e738fb18 'G'
   |
-  | o  5: 'F'
+  | o  5: 41bfcc75ed73 'F'
   | |
-  | o  4: 'E'
+  | o  4: c01897464e7f 'E'
   | |
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   |/
-  o  2: 'C'
+  o  2: c9e50f6cdc55 'C'
   |
-  | o  1: 'B'
+  | o  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -669,23 +669,23 @@ We would expect heads are I, F if it was supported
   rebasing 8:479ddb54a924 "I" (tip)
   saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-aae93a24-rebase.hg (glob)
   $ hg tglog
-  o  8: 'I'
+  o  8: 9136df9a87cf 'I'
   |
-  o  7: 'H'
+  o  7: 23e8f30da832 'H'
   |
-  o  6: 'G'
+  o  6: b0efe8534e8b 'G'
   |
-  | o  5: 'F'
+  | o  5: 6eb5b496ab79 'F'
   | |
-  | o  4: 'E'
+  | o  4: d15eade9b0b1 'E'
   |/
-  | o  3: 'D'
+  | o  3: ffd453c31098 'D'
   | |
-  | o  2: 'C'
+  | o  2: c9e50f6cdc55 'C'
   | |
-  o |  1: 'B'
+  o |  1: 8fd0f7e49f53 'B'
   |/
-  o  0: 'A'
+  o  0: 9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -709,27 +709,27 @@ each root have a different common ancestor with the destination and this is a de
   $ hg add K
   $ hg commit -m K
   $ hg tglog
-  @  10: 'K'
+  @  10: 23a4ace37988 'K'
   |
-  o  9: 'J'
+  o  9: 1301922eeb0c 'J'
   |
-  | o  8: 'I'
+  | o  8: e7ec4e813ba6 'I'
   | |
-  | o  7: 'H'
+  | o  7: 02de42196ebe 'H'
   | |
-  +---o  6: 'G'
+  +---o  6: eea13746799a 'G'
   | |/
-  | o  5: 'F'
+  | o  5: 24b6387c8c8c 'F'
   | |
-  o |  4: 'E'
+  o |  4: 9520eea781bc 'E'
   |/
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
 (actual test)
 
@@ -752,27 +752,27 @@ each root have a different common ancestor with the destination and this is a de
   summary:     K
   
   $ hg tglog
-  @  10: 'K'
+  @  10: 882431a34a0e 'K'
   |
-  | o  9: 'I'
+  | o  9: adb617877056 'I'
   |/
-  | o  8: 'J'
+  | o  8: 1301922eeb0c 'J'
   | |
-  | | o  7: 'H'
+  | | o  7: 02de42196ebe 'H'
   | | |
-  o---+  6: 'G'
+  o---+  6: eea13746799a 'G'
   |/ /
-  | o  5: 'F'
+  | o  5: 24b6387c8c8c 'F'
   | |
-  o |  4: 'E'
+  o |  4: 9520eea781bc 'E'
   |/
-  | o  3: 'D'
+  | o  3: 32af7686d403 'D'
   | |
-  | o  2: 'C'
+  | o  2: 5fddd98957c8 'C'
   | |
-  | o  1: 'B'
+  | o  1: 42ccdea3bb16 'B'
   |/
-  o  0: 'A'
+  o  0: cd010b8cd998 'A'
   
 
 Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
@@ -833,19 +833,19 @@ Test that rebase is done in topo order (issue5370)
   created new head
 
   $ hg tglog
-  @  6: 'G'
+  @  6: 124bb27b6f28 'G'
   |
-  | o  5: 'F'
+  | o  5: 412b391de760 'F'
   | |
-  | | o  4: 'E'
+  | | o  4: 82ae8dc7a9b7 'E'
   | | |
-  | o |  3: 'D'
+  | o |  3: ab709c9f7171 'D'
   | | |
-  | | o  2: 'C'
+  | | o  2: d84f5cfaaf14 'C'
   | |/
-  | o  1: 'B'
+  | o  1: 76035bbd54bd 'B'
   |/
-  o  0: 'A'
+  o  0: 216878401574 'A'
   
 
   $ hg rebase -s 1 -d 6
@@ -857,19 +857,19 @@ Test that rebase is done in topo order (issue5370)
   saved backup bundle to $TESTTMP/order/.hg/strip-backup/76035bbd54bd-e341bc99-rebase.hg (glob)
 
   $ hg tglog
-  o  6: 'F'
+  o  6: 31884cfb735e 'F'
   |
-  o  5: 'D'
+  o  5: 6d89fa5b0909 'D'
   |
-  | o  4: 'E'
+  | o  4: de64d97c697b 'E'
   | |
-  | o  3: 'C'
+  | o  3: b18e4d2d0aa1 'C'
   |/
-  o  2: 'B'
+  o  2: 0983daf9ff6a 'B'
   |
-  @  1: 'G'
+  @  1: 124bb27b6f28 'G'
   |
-  o  0: 'A'
+  o  0: 216878401574 'A'
   
 
 Test experimental revset

@@ -10,7 +10,7 @@ flag should probably live in somewhere else)
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: {desc}"
+  > tglog = log -G --template "{rev}: {node|short} {desc}"
   > EOF
 
   $ rebasewithdag() {
@@ -39,19 +39,19 @@ Single branching point, without merge:
   rebasing 3:d6003a550c2c "C" (C)
   rebasing 5:4526cf523425 "D" (D)
   rebasing 6:b296604d9846 "E" (E tip)
-  o  6: E
+  o  6: 4870f5e7df37 E
   |
-  | o  5: D
+  | o  5: dc999528138a D
   |/
-  o  4: C
+  o  4: 6b3e11729672 C
   |
-  o  3: Z
+  o  3: 57e70bad1ea3 Z
   |
-  | o  2: B
+  | o  2: c1e6b162678d B
   |/
-  o  1: A
+  o  1: 21a6c4502885 A
   |
-  o  0: R
+  o  0: b41ce7760717 R
   
 Multiple branching points caused by selecting a single merge changeset:
 
@@ -69,19 +69,19 @@ Multiple branching points caused by selecting a single merge changeset:
   rebasing 2:c1e6b162678d "B" (B)
   rebasing 3:d6003a550c2c "C" (C)
   rebasing 6:54c8f00cb91c "E" (E tip)
-  o    6: E
+  o    6: 00598421b616 E
   |\
-  | o  5: C
+  | o  5: 6b3e11729672 C
   | |
-  o |  4: B
+  o |  4: 85260910e847 B
   |/
-  o  3: Z
+  o  3: 57e70bad1ea3 Z
   |
-  | o  2: D
+  | o  2: 8924700906fe D
   |/
-  o  1: A
+  o  1: 21a6c4502885 A
   |
-  o  0: R
+  o  0: b41ce7760717 R
   
 Rebase should not extend the "--base" revset using "descendants":
 
@@ -96,17 +96,17 @@ Rebase should not extend the "--base" revset using "descendants":
   > EOS
   rebasing 2:c1e6b162678d "B" (B)
   rebasing 5:54c8f00cb91c "E" (E tip)
-  o    5: E
+  o    5: e583bf3ff54c E
   |\
-  | o  4: B
+  | o  4: 85260910e847 B
   | |
-  | o  3: Z
+  | o  3: 57e70bad1ea3 Z
   | |
-  o |  2: C
+  o |  2: d6003a550c2c C
   |/
-  o  1: A
+  o  1: 21a6c4502885 A
   |
-  o  0: R
+  o  0: b41ce7760717 R
   
 Rebase should not simplify the "--base" revset using "roots":
 
@@ -122,17 +122,17 @@ Rebase should not simplify the "--base" revset using "roots":
   rebasing 2:c1e6b162678d "B" (B)
   rebasing 3:d6003a550c2c "C" (C)
   rebasing 5:54c8f00cb91c "E" (E tip)
-  o    5: E
+  o    5: 00598421b616 E
   |\
-  | o  4: C
+  | o  4: 6b3e11729672 C
   | |
-  o |  3: B
+  o |  3: 85260910e847 B
   |/
-  o  2: Z
+  o  2: 57e70bad1ea3 Z
   |
-  o  1: A
+  o  1: 21a6c4502885 A
   |
-  o  0: R
+  o  0: b41ce7760717 R
   
 The destination is one of the two branching points of a merge:
 
@@ -173,31 +173,31 @@ Multiple branching points caused by multiple bases (issue5420):
   rebasing 8:781512f5e33d "C2" (C2)
   rebasing 9:428d8c18f641 "E1" (E1)
   rebasing 11:e1bf82f6b6df "E2" (E2)
-  o  12: E2
+  o  12: e4a37b6fdbd2 E2
   |
-  o  11: E1
+  o  11: 9675bea983df E1
   |
-  | o  10: C2
+  | o  10: 4faf5d4c80dc C2
   | |
-  | o  9: C1
+  | o  9: d4799b1ad57d C1
   |/
-  | o  8: B2
+  | o  8: 772732dc64d6 B2
   | |
-  | o  7: B1
+  | o  7: ad3ac528a49f B1
   |/
-  o  6: Z
+  o  6: 2cbdfca6b9d5 Z
   |
-  o  5: F
+  o  5: fcdb3293ec13 F
   |
-  o  4: E
+  o  4: a4652bb8ac54 E
   |
-  o  3: C
+  o  3: bd5548558fcf C
   |
-  o  2: B
+  o  2: c1e6b162678d B
   |
-  o  1: A
+  o  1: 21a6c4502885 A
   |
-  o  0: R
+  o  0: b41ce7760717 R
   
 Multiple branching points with multiple merges:
 
@@ -223,37 +223,37 @@ Multiple branching points with multiple merges:
   rebasing 11:d1f6d0c3c7e4 "M" (M)
   rebasing 12:7aaec6f81888 "N" (N)
   rebasing 15:325bc8f1760d "P" (P tip)
-  o    15: P
+  o    15: 6ef6a0ea3b18 P
   |\
-  | o    14: N
+  | o    14: 20ba3610a7e5 N
   | |\
-  o \ \    13: M
+  o \ \    13: cd4f6c06d2ab M
   |\ \ \
-  | | | o  12: L
+  | | | o  12: bca872041455 L
   | | | |
-  | | o |  11: K
+  | | o |  11: 7bbb6c8a6ad7 K
   | | |/
-  | o /  10: J
+  | o /  10: de0cbffe893e J
   | |/
-  o /  9: I
+  o /  9: 0e710f176a88 I
   |/
-  | o    8: H
+  | o    8: 52507bab39ca H
   | |\
-  | | | o  7: G
+  | | | o  7: bb5fe4652f0d G
   | | |/|
-  | | | o  6: F
+  | | | o  6: f4ad4b31daf4 F
   | | | |
-  | | o |  5: E
+  | | o |  5: b168f85f2e78 E
   | | |/
-  | o |  4: D
+  | o |  4: 8d09fcdb5594 D
   | |\|
-  +---o  3: C
+  +---o  3: ab70b4c5a9c9 C
   | |
-  o |  2: Z
+  o |  2: 262e37e34f63 Z
   | |
-  | o  1: B
+  | o  1: 112478962961 B
   |/
-  o  0: A
+  o  0: 426bada5c675 A
   
 Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pipermail/mercurial-devel/2016-November/091074.html):
 
@@ -275,31 +275,31 @@ Slightly more complex merge case (mentioned in https://www.mercurial-scm.org/pip
   rebasing 11:4e449bd1a643 "A3" (A3)
   rebasing 10:0a33b0519128 "B1" (B1)
   rebasing 12:209327807c3a "B3" (B3 tip)
-  o    12: B3
+  o    12: ceb984566332 B3
   |\
-  | o  11: B1
+  | o  11: 19d93caac497 B1
   | |
-  | | o    10: A3
+  | | o    10: 058e73d3916b A3
   | | |\
-  | +---o  9: A2
+  | +---o  9: 0ba13ad72234 A2
   | | |
-  | o |  8: C1
+  | o |  8: c122c2af10c6 C1
   | | |
-  o | |  7: B2
+  o | |  7: 74275896650e B2
   | | |
-  | o |  6: C0
+  | o |  6: 455ba9bd3ea2 C0
   |/ /
-  o |  5: Z
+  o |  5: b3d7d2fda53b Z
   | |
-  o |  4: M3
+  o |  4: 182ab6383dd7 M3
   | |
-  o |  3: M2
+  o |  3: 6c3f73563d5f M2
   | |
-  | o  2: A1
+  | o  2: 88c860fffcc2 A1
   |/
-  o  1: M1
+  o  1: bc852baa85dd M1
   |
-  o  0: M0
+  o  0: dbdfc5c9bcd5 M0
   
 Disconnected graph:
 
@@ -320,15 +320,15 @@ Multiple roots. Roots are ancestors of dest:
   > EOF
   rebasing 2:112478962961 "B" (B)
   rebasing 3:b70f76719894 "D" (D)
-  o  4: D
+  o  4: 511efad7bf13 D
   |
-  | o  3: B
+  | o  3: 25c4e279af62 B
   |/
-  o    2: Z
+  o    2: 3a49f54d7bb1 Z
   |\
-  | o  1: C
+  | o  1: 96cc3511f894 C
   |
-  o  0: A
+  o  0: 426bada5c675 A
   
 Multiple roots. One root is not an ancestor of dest:
 
@@ -351,17 +351,17 @@ Multiple roots. One root is not an ancestor of dest. Select using a merge:
   > EOF
   rebasing 2:f675d5a1c6a4 "B" (B)
   rebasing 5:f68696fe6af8 "E" (E tip)
-  o    5: E
+  o    5: f6e6f5081554 E
   |\
-  | o    4: B
+  | o    4: 30cabcba27be B
   | |\
-  | | o  3: Z
+  | | o  3: 262e37e34f63 Z
   | | |
-  o | |  2: D
+  o | |  2: b70f76719894 D
   |/ /
-  o /  1: C
+  o /  1: 96cc3511f894 C
    /
-  o  0: A
+  o  0: 426bada5c675 A
   
 Multiple roots. Two children share two parents while dest has only one parent:
 
@@ -372,13 +372,13 @@ Multiple roots. Two children share two parents while dest has only one parent:
   > EOF
   rebasing 2:f675d5a1c6a4 "B" (B)
   rebasing 3:c2a779e13b56 "D" (D)
-  o    4: D
+  o    4: 5eecd056b5f8 D
   |\
-  +---o  3: B
+  +---o  3: 30cabcba27be B
   | |/
-  | o  2: Z
+  | o  2: 262e37e34f63 Z
   | |
-  o |  1: C
+  o |  1: 96cc3511f894 C
    /
-  o  0: A
+  o  0: 426bada5c675 A
   

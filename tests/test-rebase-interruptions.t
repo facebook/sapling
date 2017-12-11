@@ -6,8 +6,8 @@
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
-  > tglogp = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
+  > tglogp = log -G --template "{rev}: {node|short} {phase} '{desc}' {branches}\n"
   > EOF
 
 
@@ -44,15 +44,15 @@ Changes during an interruption - continue:
   $ cd a1
 
   $ hg tglog
-  @  4: 'E'
+  @  4: ae36e8e3dfd7 'E'
   |
-  o  3: 'D'
+  o  3: 46b37eabc604 'D'
   |
-  | o  2: 'C'
+  | o  2: 965c486023db 'C'
   | |
-  | o  1: 'B'
+  | o  1: 27547f69f254 'B'
   |/
-  o  0: 'A'
+  o  0: 4a2df7238c3b 'A'
   
 Rebasing B onto E:
 
@@ -77,19 +77,19 @@ Force this commit onto secret phase
   $ hg phase --force --secret 6
 
   $ hg tglogp
-  @  6:secret 'Extra'
+  @  6: deb5d2f93d8b secret 'Extra'
   |
-  | o  5:draft 'B'
+  | o  5: 45396c49d53b draft 'B'
   | |
-  | o  4:draft 'E'
+  | o  4: ae36e8e3dfd7 draft 'E'
   | |
-  | o  3:draft 'D'
+  | o  3: 46b37eabc604 draft 'D'
   | |
-  o |  2:draft 'C'
+  o |  2: 965c486023db draft 'C'
   | |
-  o |  1:draft 'B'
+  o |  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
 Resume the rebasing:
 
@@ -115,21 +115,21 @@ Solve the conflict and go on:
   warning: orphaned descendants detected, not stripping 27547f69f254, 965c486023db
 
   $ hg tglogp
-  o  7:draft 'C'
+  o  7: d2d25e26288e draft 'C'
   |
-  | o  6:secret 'Extra'
+  | o  6: deb5d2f93d8b secret 'Extra'
   | |
-  o |  5:draft 'B'
+  o |  5: 45396c49d53b draft 'B'
   | |
-  @ |  4:draft 'E'
+  @ |  4: ae36e8e3dfd7 draft 'E'
   | |
-  o |  3:draft 'D'
+  o |  3: 46b37eabc604 draft 'D'
   | |
-  | o  2:draft 'C'
+  | o  2: 965c486023db draft 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
   $ cd ..
 
@@ -140,15 +140,15 @@ Changes during an interruption - abort:
   $ cd a2
 
   $ hg tglog
-  @  4: 'E'
+  @  4: ae36e8e3dfd7 'E'
   |
-  o  3: 'D'
+  o  3: 46b37eabc604 'D'
   |
-  | o  2: 'C'
+  | o  2: 965c486023db 'C'
   | |
-  | o  1: 'B'
+  | o  1: 27547f69f254 'B'
   |/
-  o  0: 'A'
+  o  0: 4a2df7238c3b 'A'
   
 Rebasing B onto E:
 
@@ -169,19 +169,19 @@ Force a commit on B' during the interruption:
   $ hg ci -m 'Extra' --config 'extensions.rebase=!'
 
   $ hg tglog
-  @  6: 'Extra'
+  @  6: 402ee3642b59 'Extra'
   |
-  o  5: 'B'
+  o  5: 45396c49d53b 'B'
   |
-  o  4: 'E'
+  o  4: ae36e8e3dfd7 'E'
   |
-  o  3: 'D'
+  o  3: 46b37eabc604 'D'
   |
-  | o  2: 'C'
+  | o  2: 965c486023db 'C'
   | |
-  | o  1: 'B'
+  | o  1: 27547f69f254 'B'
   |/
-  o  0: 'A'
+  o  0: 4a2df7238c3b 'A'
   
 Abort the rebasing:
 
@@ -190,19 +190,19 @@ Abort the rebasing:
   rebase aborted
 
   $ hg tglog
-  @  6: 'Extra'
+  @  6: 402ee3642b59 'Extra'
   |
-  o  5: 'B'
+  o  5: 45396c49d53b 'B'
   |
-  o  4: 'E'
+  o  4: ae36e8e3dfd7 'E'
   |
-  o  3: 'D'
+  o  3: 46b37eabc604 'D'
   |
-  | o  2: 'C'
+  | o  2: 965c486023db 'C'
   | |
-  | o  1: 'B'
+  | o  1: 27547f69f254 'B'
   |/
-  o  0: 'A'
+  o  0: 4a2df7238c3b 'A'
   
   $ cd ..
 
@@ -212,15 +212,15 @@ Changes during an interruption - abort (again):
   $ cd a3
 
   $ hg tglogp
-  @  4:draft 'E'
+  @  4: ae36e8e3dfd7 draft 'E'
   |
-  o  3:draft 'D'
+  o  3: 46b37eabc604 draft 'D'
   |
-  | o  2:draft 'C'
+  | o  2: 965c486023db draft 'C'
   | |
-  | o  1:draft 'B'
+  | o  1: 27547f69f254 draft 'B'
   |/
-  o  0:draft 'A'
+  o  0: 4a2df7238c3b draft 'A'
   
 Rebasing B onto E:
 
@@ -240,17 +240,17 @@ Change phase on B and B'
   $ hg phase --secret -f 2
 
   $ hg tglogp
-  @  5:public 'B'
+  @  5: 45396c49d53b public 'B'
   |
-  o  4:public 'E'
+  o  4: ae36e8e3dfd7 public 'E'
   |
-  o  3:public 'D'
+  o  3: 46b37eabc604 public 'D'
   |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
 Abort the rebasing:
 
@@ -259,17 +259,17 @@ Abort the rebasing:
   rebase aborted
 
   $ hg tglogp
-  @  5:public 'B'
+  @  5: 45396c49d53b public 'B'
   |
-  o  4:public 'E'
+  o  4: ae36e8e3dfd7 public 'E'
   |
-  o  3:public 'D'
+  o  3: 46b37eabc604 public 'D'
   |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
 Test rebase interrupted by hooks
 
@@ -292,40 +292,40 @@ Test rebase interrupted by hooks
   abort: precommit hook exited with status 1
   [255]
   $ hg tglogp
-  @  7:secret 'C'
+  @  7: 401ccec5e39f secret 'C'
   |
-  | @  6:secret 'F'
+  | @  6: a0b2430ebfb8 secret 'F'
   | |
-  o |  5:public 'B'
+  o |  5: 45396c49d53b public 'B'
   | |
-  o |  4:public 'E'
+  o |  4: ae36e8e3dfd7 public 'E'
   | |
-  o |  3:public 'D'
+  o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-precommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
-  @  6:secret 'F'
+  @  6: 6e92a149ac6b secret 'F'
   |
-  o  5:secret 'C'
+  o  5: 401ccec5e39f secret 'C'
   |
-  o  4:public 'B'
+  o  4: 45396c49d53b public 'B'
   |
-  o  3:public 'E'
+  o  3: ae36e8e3dfd7 public 'E'
   |
-  o  2:public 'D'
+  o  2: 46b37eabc604 public 'D'
   |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ cd ..
 
@@ -347,40 +347,40 @@ Test rebase interrupted by hooks
   abort: pretxncommit hook exited with status 1
   [255]
   $ hg tglogp
-  @  7:secret 'C'
+  @  7: 401ccec5e39f secret 'C'
   |
-  | @  6:secret 'F'
+  | @  6: a0b2430ebfb8 secret 'F'
   | |
-  o |  5:public 'B'
+  o |  5: 45396c49d53b public 'B'
   | |
-  o |  4:public 'E'
+  o |  4: ae36e8e3dfd7 public 'E'
   | |
-  o |  3:public 'D'
+  o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxncommit/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
-  @  6:secret 'F'
+  @  6: 6e92a149ac6b secret 'F'
   |
-  o  5:secret 'C'
+  o  5: 401ccec5e39f secret 'C'
   |
-  o  4:public 'B'
+  o  4: 45396c49d53b public 'B'
   |
-  o  3:public 'E'
+  o  3: ae36e8e3dfd7 public 'E'
   |
-  o  2:public 'D'
+  o  2: 46b37eabc604 public 'D'
   |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ cd ..
 
@@ -397,40 +397,40 @@ Test rebase interrupted by hooks
   abort: pretxnclose hook exited with status 1
   [255]
   $ hg tglogp
-  @  7:secret 'C'
+  @  7: 401ccec5e39f secret 'C'
   |
-  | @  6:secret 'F'
+  | @  6: a0b2430ebfb8 secret 'F'
   | |
-  o |  5:public 'B'
+  o |  5: 45396c49d53b public 'B'
   | |
-  o |  4:public 'E'
+  o |  4: ae36e8e3dfd7 public 'E'
   | |
-  o |  3:public 'D'
+  o |  3: 46b37eabc604 public 'D'
   | |
-  | o  2:secret 'C'
+  | o  2: 965c486023db secret 'C'
   | |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ hg rebase --continue
   already rebased 2:965c486023db "C" as 401ccec5e39f
   rebasing 6:a0b2430ebfb8 "F"
   saved backup bundle to $TESTTMP/hook-pretxnclose/.hg/strip-backup/965c486023db-aa6250e7-rebase.hg (glob)
   $ hg tglogp
-  @  6:secret 'F'
+  @  6: 6e92a149ac6b secret 'F'
   |
-  o  5:secret 'C'
+  o  5: 401ccec5e39f secret 'C'
   |
-  o  4:public 'B'
+  o  4: 45396c49d53b public 'B'
   |
-  o  3:public 'E'
+  o  3: ae36e8e3dfd7 public 'E'
   |
-  o  2:public 'D'
+  o  2: 46b37eabc604 public 'D'
   |
-  | o  1:public 'B'
+  | o  1: 27547f69f254 public 'B'
   |/
-  o  0:public 'A'
+  o  0: 4a2df7238c3b public 'A'
   
   $ cd ..
 
