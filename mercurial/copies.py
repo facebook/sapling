@@ -139,11 +139,11 @@ def _tracefile(fctx, am, limit=-1):
         if limit >= 0 and f.linkrev() < limit and f.rev() < limit:
             return None
 
-def _dirstatecopies(d):
+def _dirstatecopies(d, match=None):
     ds = d._repo.dirstate
     c = ds.copies().copy()
     for k in list(c):
-        if ds[k] not in 'anm':
+        if ds[k] not in 'anm' or (match and not match(k)):
             del c[k]
     return c
 
@@ -166,7 +166,7 @@ def _forwardcopies(a, b, match=None):
         b = w.p1()
         if a == b:
             # short-circuit to avoid issues with merge states
-            return _dirstatecopies(w)
+            return _dirstatecopies(w, match)
 
     # files might have to be traced back to the fctx parent of the last
     # one-side-only changeset, but not further back than that
@@ -202,7 +202,7 @@ def _forwardcopies(a, b, match=None):
 
     # combine copies from dirstate if necessary
     if w is not None:
-        cm = _chain(a, w, cm, _dirstatecopies(w))
+        cm = _chain(a, w, cm, _dirstatecopies(w, match))
 
     return cm
 
