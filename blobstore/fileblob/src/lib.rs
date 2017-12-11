@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use bytes::Bytes;
 use failure::{Error, Result};
 use futures::Async;
-use futures::future::poll_fn;
+use futures::future::{poll_fn, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use url::percent_encoding::{percent_encode, DEFAULT_ENCODE_SET};
 
@@ -61,31 +61,29 @@ impl Fileblob {
 }
 
 impl Blobstore for Fileblob {
-    type GetBlob = BoxFuture<Option<Bytes>, Error>;
-    type PutBlob = BoxFuture<(), Error>;
-
-    fn get(&self, key: String) -> Self::GetBlob {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         let p = self.path(&key);
 
         poll_fn(move || {
             let mut v = Vec::new();
             let ret = match File::open(&p) {
                 Err(ref e) if e.kind() == io::ErrorKind::NotFound => None,
-                Err(e) => return Err(e.into()),
+                Err(e) => return Err(e),
                 Ok(mut f) => {
                     f.read_to_end(&mut v)?;
                     Some(Bytes::from(v))
                 }
             };
             Ok(Async::Ready(ret))
-        }).boxify()
+        }).from_err()
+            .boxify()
     }
 
-    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         let p = self.path(&key);
 
-        poll_fn(move || {
-            File::create(&p)?.write_all(val.as_ref())?;
+        poll_fn::<_, Error, _>(move || {
+            File::create(&p)?.write_all(value.as_ref())?;
             Ok(Async::Ready(()))
         }).boxify()
     }

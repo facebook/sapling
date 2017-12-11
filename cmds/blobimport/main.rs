@@ -87,9 +87,7 @@ enum BlobstoreType {
     Manifold(String),
 }
 
-type BBlobstore = Arc<
-    Blobstore<GetBlob = BoxFuture<Option<Bytes>, Error>, PutBlob = BoxFuture<(), Error>> + Sync,
->;
+type BBlobstore = Arc<Blobstore>;
 
 fn _assert_clone<T: Clone>(_: &T) {}
 fn _assert_send<T: Send>(_: &T) {}
@@ -156,7 +154,7 @@ where
                         }
                         BlobstoreEntry::ManifestEntry((key, value)) => {
                             if inserted_manifest_entries.insert(key.clone()) {
-                                blobstore.put(key.clone(), value).boxify()
+                                blobstore.put(key.clone(), value).from_err().boxify()
                             } else {
                                 STATS::duplicates.add_value(1);
                                 Ok(()).into_future().boxify()
@@ -165,7 +163,7 @@ where
                     })
                     .map_err(|_| failure::err_msg("failure happened").into())
                     .buffer_unordered(channel_size)
-                    .then(move |res| {
+                    .then(move |res: Result<()>| {
                         if res.is_err() {
                             STATS::failures.add_value(1);
                         } else {
@@ -252,10 +250,9 @@ fn open_blobstore<P: Into<PathBuf>>(
             let output = output.expect("output path is not specified");
             let mut output = output.into();
             output.push("blobs");
-            Fileblob::create(output)
+            Arc::new(Fileblob::create(output)
                 .map_err(Error::from)
-                .context("Failed to open file blob store")?
-                .arced()
+                .context("Failed to open file blob store")?)
         }
         BlobstoreType::Rocksdb => {
             let output = output.expect("output path is not specified");
@@ -264,14 +261,13 @@ fn open_blobstore<P: Into<PathBuf>>(
             let options = rocksdb::Options::new()
                 .create_if_missing(true)
                 .disable_auto_compaction(postpone_compaction);
-            Rocksblob::open_with_options(output, options)
+            Arc::new(Rocksblob::open_with_options(output, options)
                 .map_err(Error::from)
-                .context("Failed to open rocksdb blob store")?
-                .arced()
+                .context("Failed to open rocksdb blob store")?)
         }
         BlobstoreType::Manifold(bucket) => {
             let mb: ManifoldBlob = ManifoldBlob::new_may_panic(bucket, remote);
-            mb.arced()
+            Arc::new(mb)
         }
     };
 
@@ -299,18 +295,15 @@ struct LimitedBlobstore {
 }
 
 impl Blobstore for LimitedBlobstore {
-    type GetBlob = BoxFuture<Option<Bytes>, Error>;
-    type PutBlob = BoxFuture<(), Error>;
-
-    fn get(&self, key: String) -> Self::GetBlob {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         self.blobstore.get(key)
     }
 
-    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
-        if val.len() >= self.max_blob_size {
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+        if value.len() >= self.max_blob_size {
             Ok(()).into_future().boxify()
         } else {
-            self.blobstore.put(key, val)
+            self.blobstore.put(key, value)
         }
     }
 }
@@ -438,10 +431,9 @@ fn main() {
             &root_log,
             postpone_compaction,
             channel_size,
-            matches.value_of("skip").map(|size| {
-                size.parse()
-                    .expect("skip must be positive integer")
-            }),
+            matches
+                .value_of("skip")
+                .map(|size| size.parse().expect("skip must be positive integer")),
             matches.value_of("commits-limit").map(|size| {
                 size.parse()
                     .expect("commits-limit must be positive integer")

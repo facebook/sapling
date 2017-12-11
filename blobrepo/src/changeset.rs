@@ -77,7 +77,6 @@ impl BlobChangeset {
     pub fn save<B>(&self, blobstore: B) -> impl Future<Item = (), Error = Error> + Send + 'static
     where
         B: Blobstore + Send + 'static,
-        B::PutBlob: Send + 'static,
     {
         let key = cskey(&self.nodeid);
 

@@ -57,7 +57,7 @@ fn boxable<B>(blobstore: B)
 where
     B: Blobstore,
 {
-    let blobstore = blobstore.boxed();
+    let blobstore = Box::new(blobstore);
 
     let foo = "foo".to_string();
     let res = blobstore

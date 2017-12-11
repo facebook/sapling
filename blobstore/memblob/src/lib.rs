@@ -11,13 +11,15 @@ extern crate blobstore;
 extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
 use failure::Error;
-use futures::future::{FutureResult, IntoFuture};
+use futures::future::IntoFuture;
+use futures_ext::{BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
 
@@ -38,19 +40,16 @@ impl Memblob {
 }
 
 impl Blobstore for Memblob {
-    type PutBlob = FutureResult<(), Error>;
-    type GetBlob = FutureResult<Option<Bytes>, Error>;
-
-    fn put(&self, k: String, v: Bytes) -> Self::PutBlob {
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         let mut inner = self.hash.lock().expect("lock poison");
 
-        inner.insert(k, v);
-        Ok(()).into_future()
+        inner.insert(key, value);
+        Ok(()).into_future().boxify()
     }
 
-    fn get(&self, k: String) -> Self::GetBlob {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         let inner = self.hash.lock().expect("lock poison");
 
-        Ok(inner.get(&k).map(Clone::clone)).into_future()
+        Ok(inner.get(&key).map(Clone::clone)).into_future().boxify()
     }
 }

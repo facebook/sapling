@@ -17,11 +17,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 
 use failure::Error;
-use futures::Future;
-
-mod boxed;
-
-pub use boxed::{ArcBlobstore, BoxBlobstore};
+use futures_ext::BoxFuture;
 
 /// Basic trait for the Blob Store interface
 ///
@@ -86,58 +82,26 @@ pub use boxed::{ArcBlobstore, BoxBlobstore};
 // How to deal with very large objects?
 // - streaming get/put?
 // - range get/put? (how does range put work? put-put-put-commit?)
-pub trait Blobstore: Send + 'static {
-    type GetBlob: Future<Item = Option<Bytes>, Error = Error> + Send + 'static;
-    type PutBlob: Future<Item = (), Error = Error> + Send + 'static;
+pub trait Blobstore: Send + Sync + 'static {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error>;
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error>;
+}
 
-    fn get(&self, key: String) -> Self::GetBlob;
-    fn put(&self, key: String, value: Bytes) -> Self::PutBlob;
-
-    fn boxed(self) -> BoxBlobstore
-    where
-        Self: Sized,
-    {
-        boxed::boxed(self)
+impl Blobstore for Arc<Blobstore> {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
+        self.as_ref().get(key)
     }
-
-    fn arced(self) -> ArcBlobstore
-    where
-        Self: Sync + Sized,
-    {
-        boxed::arced(self)
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+        self.as_ref().put(key, value)
     }
 }
 
-impl<GB, PB> Blobstore for Arc<Blobstore<GetBlob = GB, PutBlob = PB> + Sync>
-where
-    GB: Future<Item = Option<Bytes>, Error = Error> + Send + 'static,
-    PB: Future<Item = (), Error = Error> + Send + 'static,
-{
-    type GetBlob = GB;
-    type PutBlob = PB;
-
-    fn get(&self, key: String) -> Self::GetBlob {
+impl Blobstore for Box<Blobstore> {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         self.as_ref().get(key)
     }
 
-    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
-        self.as_ref().put(key, val)
-    }
-}
-
-impl<GB, PB> Blobstore for Box<Blobstore<GetBlob = GB, PutBlob = PB>>
-where
-    GB: Future<Item = Option<Bytes>, Error = Error> + Send + 'static,
-    PB: Future<Item = (), Error = Error> + Send + 'static,
-{
-    type GetBlob = GB;
-    type PutBlob = PB;
-
-    fn get(&self, key: String) -> Self::GetBlob {
-        self.as_ref().get(key)
-    }
-
-    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
-        self.as_ref().put(key, val)
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
+        self.as_ref().put(key, value)
     }
 }

@@ -9,6 +9,7 @@
 extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 
 extern crate blobstore;
 extern crate rocksdb;
@@ -18,6 +19,7 @@ use std::path::Path;
 use bytes::Bytes;
 use failure::Error;
 use futures::{Async, Future, Poll};
+use futures_ext::{BoxFuture, FutureExt};
 
 use rocksdb::{Db, ReadOptions, WriteOptions};
 
@@ -80,20 +82,16 @@ impl Future for PutBlob {
     }
 }
 
-impl Blobstore for Rocksblob {
-    // TODO: remove these and use poll_fn once we have `impl Future`
-    type GetBlob = GetBlob;
-    type PutBlob = PutBlob;
-
-    fn get(&self, key: String) -> Self::GetBlob {
+impl Blobstore for Rocksblob where {
+    fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         let db = self.db.clone();
 
-        GetBlob(db, key)
+        GetBlob(db, key).boxify()
     }
 
-    fn put(&self, key: String, val: Bytes) -> Self::PutBlob {
+    fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         let db = self.db.clone();
 
-        PutBlob(db, key, val)
+        PutBlob(db, key, value).boxify()
     }
 }
