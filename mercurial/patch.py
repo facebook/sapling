@@ -46,6 +46,7 @@ stringio = util.stringio
 
 gitre = re.compile(br'diff --git a/(.*) b/(.*)')
 tabsplitter = re.compile(br'(\t+|[^\t]+)')
+_nonwordre = re.compile(br'([^a-zA-Z0-9_\x80-\xff])')
 
 PatchError = error.PatchError
 
@@ -2578,7 +2579,7 @@ def _inlinediff(s1, s2, operation):
         raise error.ProgrammingError("Case not expected, operation = %s" %
                                      operation)
 
-    s = difflib.ndiff(re.split(br'(\W)', s2), re.split(br'(\W)', s1))
+    s = difflib.ndiff(_nonwordre.split(s2), _nonwordre.split(s1))
     for part in s:
         if part[0] in operation_skip or len(part) == 2:
             continue
