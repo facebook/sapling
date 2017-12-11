@@ -9,6 +9,7 @@
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate futures_ext;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -18,8 +19,8 @@ extern crate mercurial_types;
 use std::fmt;
 use std::sync::Arc;
 
-use futures::{Future, IntoFuture};
-use futures::future::FutureResult;
+use futures::future::{err, ok};
+use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial_types::{NodeHash, RepoPath};
 
@@ -65,12 +66,8 @@ pub use errors::*;
 /// Mercurial's storage and wire protocol is designed around storing linknodes as intrinsic data,
 /// so Mononoke does the same.
 pub trait Linknodes: Send + Sync + 'static {
-    // Get will become a Stream once 1:many mappings are enabled.
-    type Get: Future<Item = NodeHash, Error = Error> + Send + 'static;
-    type Effect: Future<Item = (), Error = Error> + Send + 'static;
-
-    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect;
-    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get;
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> BoxFuture<(), Error>;
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error>;
 }
 
 /// A linknodes implementation that never stores anything.
@@ -84,17 +81,26 @@ impl NoopLinknodes {
 }
 
 impl Linknodes for NoopLinknodes {
-    type Get = FutureResult<NodeHash, Error>;
-    type Effect = FutureResult<(), Error>;
-
     #[inline]
-    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
-        Err(ErrorKind::NotFound(path, *node).into()).into_future()
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
+        err(ErrorKind::NotFound(path, *node).into()).boxify()
     }
 
     #[inline]
-    fn add(&self, _path: RepoPath, _node: &NodeHash, _linknode: &NodeHash) -> Self::Effect {
-        Ok(()).into_future()
+    fn add(&self, _path: RepoPath, _node: &NodeHash, _linknode: &NodeHash) -> BoxFuture<(), Error> {
+        ok(()).boxify()
+    }
+}
+
+impl Linknodes for Arc<Linknodes> {
+    #[inline]
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
+        (**self).get(path, node)
+    }
+
+    #[inline]
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> BoxFuture<(), Error> {
+        (**self).add(path, node, linknode)
     }
 }
 
@@ -102,16 +108,13 @@ impl<L> Linknodes for Arc<L>
 where
     L: Linknodes,
 {
-    type Get = L::Get;
-    type Effect = L::Effect;
-
     #[inline]
-    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
         (**self).get(path, node)
     }
 
     #[inline]
-    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> BoxFuture<(), Error> {
         (**self).add(path, node, linknode)
     }
 }

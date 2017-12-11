@@ -185,9 +185,7 @@ where
             );
 
             let linknode = cs_entry.nodeid;
-            let put_root_linknode = linknodes_store
-                .add(RepoPath::root(), &mfid, &linknode)
-                .from_err();
+            let put_root_linknode = linknodes_store.add(RepoPath::root(), &mfid, &linknode);
 
             // Get the listing of entries and fetch each of those
             let files = RevlogManifest::new(revlog_repo.clone(), blob)
@@ -210,9 +208,11 @@ where
                         .flatten()
                         .for_each(move |entry| {
                             // All entries share the same linknode to the changelog.
-                            let linknode_future = linknodes_store
-                                .add(entry.get_path().clone(), entry.get_hash(), &linknode)
-                                .from_err();
+                            let linknode_future = linknodes_store.add(
+                                entry.get_path().clone(),
+                                entry.get_hash(),
+                                &linknode,
+                            );
                             let copy_future = manifest::copy_entry(entry, sender.clone());
                             copy_future.join(linknode_future).map(|_| ())
                         })

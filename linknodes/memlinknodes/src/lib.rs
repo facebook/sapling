@@ -8,6 +8,7 @@
 #![feature(never_type)]
 
 extern crate bincode;
+extern crate failure_ext as failure;
 extern crate futures;
 
 extern crate futures_ext;
@@ -21,10 +22,12 @@ use std::mem;
 use std::ptr;
 use std::sync::Mutex;
 
-use futures::future::{err, ok, FutureResult, IntoFuture};
+use failure::Error;
+use futures::future::{err, ok, IntoFuture};
+use futures_ext::{BoxFuture, FutureExt};
 
-use linknodes::{Error as LinknodeError, ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes,
-                OptionNodeHash, Result as LinknodeResult, ResultExt};
+use linknodes::{ErrorKind as LinknodeErrorKind, LinknodeData, Linknodes, OptionNodeHash,
+                Result as LinknodeResult, ResultExt};
 use mercurial_types::{NodeHash, RepoPath};
 
 pub struct MemLinknodes {
@@ -65,24 +68,21 @@ impl MemLinknodes {
 }
 
 impl Linknodes for MemLinknodes {
-    type Get = FutureResult<NodeHash, LinknodeError>;
-    type Effect = FutureResult<(), LinknodeError>;
-
-    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> BoxFuture<(), Error> {
         let data = LinknodeData {
             path,
             node: *node,
             linknode: *linknode,
         };
-        self.add_data(data).into_future()
+        self.add_data(data).into_future().boxify()
     }
 
-    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
         let linknodes = self.linknodes.lock().unwrap();
         match get_pair(&linknodes, &path, node) {
             Some(node) => ok(*node),
             None => err(LinknodeErrorKind::NotFound(path.clone(), *node).into()),
-        }
+        }.boxify()
     }
 }
 

@@ -21,6 +21,7 @@ extern crate storage_types;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use failure::Error;
 use futures::Future;
 use futures_cpupool::CpuPool;
 
@@ -95,10 +96,7 @@ fn hash(path: &RepoPath, node: &NodeHash) -> Sha1 {
 }
 
 impl Linknodes for FileLinknodes {
-    type Get = BoxFuture<NodeHash, LinknodeError>;
-    type Effect = BoxFuture<(), LinknodeError>;
-
-    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> Self::Effect {
+    fn add(&self, path: RepoPath, node: &NodeHash, linknode: &NodeHash) -> BoxFuture<(), Error> {
         let node = *node;
         let linknode = *linknode;
         let hash = hash(&path, &node).to_hex();
@@ -133,7 +131,7 @@ impl Linknodes for FileLinknodes {
             .boxify()
     }
 
-    fn get(&self, path: RepoPath, node: &NodeHash) -> Self::Get {
+    fn get(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
         self.get_data(path, node).map(|data| data.linknode).boxify()
     }
 }
