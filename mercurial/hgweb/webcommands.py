@@ -1231,33 +1231,29 @@ def graph(web, req, tmpl):
         tree = list(item for item in graphmod.colored(dag, web.repo)
                     if item[1] == graphmod.CHANGESET)
 
-    def graphdata(usetuples):
-        data = []
+    def jsdata():
+        return [{'node': pycompat.bytestr(ctx),
+                 'vertex': vtx,
+                 'edges': edges}
+                for (id, type, ctx, vtx, edges) in tree]
 
-        row = 0
-        for (id, type, ctx, vtx, edges) in tree:
-            if usetuples:
-                node = pycompat.bytestr(ctx)
-                data.append({'node': node, 'vertex': vtx, 'edges': edges})
-            else:
-                entry = webutil.commonentry(web.repo, ctx)
-                edgedata = [{'col': edge[0], 'nextcol': edge[1],
-                             'color': (edge[2] - 1) % 6 + 1,
-                             'width': edge[3], 'bcolor': edge[4]}
-                            for edge in edges]
+    def nodes():
+        for row, (id, type, ctx, vtx, edges) in enumerate(tree):
+            entry = webutil.commonentry(web.repo, ctx)
+            edgedata = [{'col': edge[0],
+                         'nextcol': edge[1],
+                         'color': (edge[2] - 1) % 6 + 1,
+                         'width': edge[3],
+                         'bcolor': edge[4]}
+                        for edge in edges]
 
-                entry.update(
-                    {'col': vtx[0],
-                     'color': (vtx[1] - 1) % 6 + 1,
-                     'edges': edgedata,
-                     'row': row,
-                     'nextrow': row + 1})
+            entry.update({'col': vtx[0],
+                          'color': (vtx[1] - 1) % 6 + 1,
+                          'edges': edgedata,
+                          'row': row,
+                          'nextrow': row + 1})
 
-                data.append(entry)
-
-            row += 1
-
-        return data
+            yield entry
 
     rows = len(tree)
 
@@ -1267,8 +1263,8 @@ def graph(web, req, tmpl):
                 rows=rows,
                 bg_height=bg_height,
                 changesets=count,
-                jsdata=lambda **x: graphdata(True),
-                nodes=lambda **x: graphdata(False),
+                jsdata=lambda **x: jsdata(),
+                nodes=lambda **x: nodes(),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
