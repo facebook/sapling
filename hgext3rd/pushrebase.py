@@ -147,6 +147,16 @@ def reposetup(ui, repo):
         repo.ui.setconfig('hooks', 'prechangegroup.blocknonpushrebase',
                           blocknonpushrebase)
 
+    # https://www.mercurial-scm.org/repo/hg/rev/a1e70c1dbec0
+    # and related commits added a new way to pushing bookmarks
+    # Since pushrebase for now uses pushkey, we want to set this config
+    # (T24314128 tracks this)
+    legexc = repo.ui.configlist('devel', 'legacy.exchange', [])
+    if 'bookmarks' not in legexc:
+        legexc.append('bookmarks')
+    repo.ui.setconfig('devel', 'legacy.exchange',
+                      ','.join(legexc), 'pushrebase')
+
 def blocknonpushrebase(ui, repo, **kwargs):
     if not repo.ui.configbool('pushrebase', pushrebasemarker):
         raise error.Abort(_("this repository requires that you enable the "
