@@ -182,18 +182,6 @@ utestpats = [
     (uprefix + r'.*:\.\S*/', "x:.y in a path does not work on msys, rewrite "
      "as x://.y, or see `hg log -k msys` for alternatives", r'-\S+:\.|' #-Rxxx
      '# no-msys'), # in test-pull.t which is skipped on windows
-    (r'^  saved backup bundle to \$TESTTMP.*\.hg$', winglobmsg),
-    (r'^  changeset .* references (corrupted|missing) \$TESTTMP/.*[^)]$',
-     winglobmsg),
-    (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg,
-     '\$TESTTMP/unix-repo$'), # in test-issue1802.t which skipped on windows
-    (r'^  reverting (?!subrepo ).*/.*[^)]$', winglobmsg),
-    (r'^  cloning subrepo \S+/.*[^)]$', winglobmsg),
-    (r'^  pushing to \$TESTTMP/.*[^)]$', winglobmsg),
-    (r'^  pushing subrepo \S+/\S+ to.*[^)]$', winglobmsg),
-    (r'^  moving \S+/.*[^)]$', winglobmsg),
-    (r'^  no changes made to subrepo since.*/.*[^)]$', winglobmsg),
-    (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$', winglobmsg),
     (r'^  .*file://\$TESTTMP',
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
     (r'^  [^$>].*27\.0\.0\.1',
