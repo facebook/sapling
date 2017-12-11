@@ -253,7 +253,7 @@ class mercurial_sink(common.converter_sink):
                 data = self._rewritetags(source, revmap, data)
             if f == '.hgsubstate':
                 data = self._rewritesubstate(source, data)
-            return context.memfilectx(self.repo, f, data, 'l' in mode,
+            return context.memfilectx(self.repo, memctx, f, data, 'l' in mode,
                                       'x' in mode, copies.get(f))
 
         pl = []
@@ -401,7 +401,7 @@ class mercurial_sink(common.converter_sink):
 
         data = "".join(newlines)
         def getfilectx(repo, memctx, f):
-            return context.memfilectx(repo, f, data, False, False, None)
+            return context.memfilectx(repo, memctx, f, data, False, False, None)
 
         self.ui.status(_("updating tags\n"))
         date = "%s 0" % int(time.mktime(time.gmtime()))

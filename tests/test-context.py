@@ -32,7 +32,7 @@ print("workingfilectx.date = (%d, %d)" % d)
 # test memctx with non-ASCII commit message
 
 def filectxfn(repo, memctx, path):
-    return context.memfilectx(repo, "foo", "")
+    return context.memfilectx(repo, memctx, "foo", "")
 
 ctx = context.memctx(repo, ['tip', None],
                      encoding.tolocal("Gr\xc3\xbcezi!"),
@@ -49,7 +49,7 @@ def getfilectx(repo, memctx, f):
     data, flags = fctx.data(), fctx.flags()
     if f == 'foo':
         data += 'bar\n'
-    return context.memfilectx(repo, f, data, 'l' in flags, 'x' in flags)
+    return context.memfilectx(repo, memctx, f, data, 'l' in flags, 'x' in flags)
 
 ctxa = repo.changectx(0)
 ctxb = context.memctx(repo, [ctxa.node(), None], "test diff", ["foo"],

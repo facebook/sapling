@@ -376,7 +376,7 @@ def synthesize(ui, repo, descpath, **opts):
                 dir = os.path.dirname(dir)
 
         def filectxfn(repo, memctx, path):
-            return context.memfilectx(repo, path, files[path])
+            return context.memfilectx(repo, memctx, path, files[path])
 
         ui.progress(_synthesizing, None)
         message = 'synthesized wide repo with %d files' % (len(files),)
@@ -468,7 +468,7 @@ def synthesize(ui, repo, descpath, **opts):
         def filectxfn(repo, memctx, path):
             if path not in changes:
                 return None
-            return context.memfilectx(repo, path, changes[path])
+            return context.memfilectx(repo, memctx, path, changes[path])
         if not changes:
             continue
         if revs:

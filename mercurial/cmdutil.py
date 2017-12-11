@@ -3195,7 +3195,7 @@ def amend(ui, repo, old, extra, pats, opts):
 
                     fctx = wctx[path]
                     flags = fctx.flags()
-                    mctx = context.memfilectx(repo,
+                    mctx = context.memfilectx(repo, ctx_,
                                               fctx.path(), fctx.data(),
                                               islink='l' in flags,
                                               isexec='x' in flags,

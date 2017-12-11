@@ -225,7 +225,8 @@ def debugbuilddag(ui, repo, text=None,
 
                 def fctxfn(repo, cx, path):
                     if path in filecontent:
-                        return context.memfilectx(repo, path, filecontent[path])
+                        return context.memfilectx(repo, cx, path,
+                                                  filecontent[path])
                     return None
 
                 if len(ps) == 0 or ps[0] < 0:

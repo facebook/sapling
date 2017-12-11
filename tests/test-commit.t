@@ -648,7 +648,8 @@ verify pathauditor blocks evil filepaths
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
-  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  >     return context.memfilectx(repo, memctx, path,
+  >         '[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)
@@ -673,7 +674,8 @@ verify pathauditor blocks evil filepaths
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
-  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  >     return context.memfilectx(repo, memctx, path,
+  >         '[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)
@@ -692,7 +694,8 @@ verify pathauditor blocks evil filepaths
   > u = uimod.ui.load()
   > r = hg.repository(u, '.')
   > def filectxfn(repo, memctx, path):
-  >     return context.memfilectx(repo, path, '[hooks]\nupdate = echo owned')
+  >     return context.memfilectx(repo, memctx, path,
+  >         '[hooks]\nupdate = echo owned')
   > c = context.memctx(r, [r['tip'].node(), node.nullid],
   >                    'evil', [notrc], filectxfn, 0)
   > r.commitctx(c)

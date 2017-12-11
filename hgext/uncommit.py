@@ -77,7 +77,7 @@ def _commitfiltered(repo, ctx, match, allowempty):
         if path not in contentctx:
             return None
         fctx = contentctx[path]
-        mctx = context.memfilectx(repo, fctx.path(), fctx.data(),
+        mctx = context.memfilectx(repo, memctx, fctx.path(), fctx.data(),
                                   fctx.islink(),
                                   fctx.isexec(),
                                   copied=copied.get(path))

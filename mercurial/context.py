@@ -2204,12 +2204,11 @@ class overlayworkingctx(committablectx):
         files = self._cache.keys()
         def getfile(repo, memctx, path):
             if self._cache[path]['exists']:
-                return memfilectx(repo, path,
+                return memfilectx(repo, memctx, path,
                                   self._cache[path]['data'],
                                   'l' in self._cache[path]['flags'],
                                   'x' in self._cache[path]['flags'],
-                                  self._cache[path]['copied'],
-                                  memctx)
+                                  self._cache[path]['copied'])
             else:
                 # Returning None, but including the path in `files`, is
                 # necessary for memctx to register a deletion.
@@ -2389,9 +2388,9 @@ def memfilefromctx(ctx):
         copied = fctx.renamed()
         if copied:
             copied = copied[0]
-        return memfilectx(repo, path, fctx.data(),
+        return memfilectx(repo, memctx, path, fctx.data(),
                           islink=fctx.islink(), isexec=fctx.isexec(),
-                          copied=copied, memctx=memctx)
+                          copied=copied)
 
     return getfilectx
 
@@ -2405,9 +2404,8 @@ def memfilefrompatch(patchstore):
         if data is None:
             return None
         islink, isexec = mode
-        return memfilectx(repo, path, data, islink=islink,
-                          isexec=isexec, copied=copied,
-                          memctx=memctx)
+        return memfilectx(repo, memctx, path, data, islink=islink,
+                          isexec=isexec, copied=copied)
 
     return getfilectx
 
@@ -2539,8 +2537,8 @@ class memfilectx(committablefilectx):
 
     See memctx and committablefilectx for more details.
     """
-    def __init__(self, repo, path, data, islink=False,
-                 isexec=False, copied=None, memctx=None):
+    def __init__(self, repo, changectx, path, data, islink=False,
+                 isexec=False, copied=None):
         """
         path is the normalized file path relative to repository root.
         data is the file content as a string.
@@ -2548,7 +2546,7 @@ class memfilectx(committablefilectx):
         isexec is True if the file is executable.
         copied is the source file path if current file was copied in the
         revision being committed, or None."""
-        super(memfilectx, self).__init__(repo, path, None, memctx)
+        super(memfilectx, self).__init__(repo, path, None, changectx)
         self._data = data
         self._flags = (islink and 'l' or '') + (isexec and 'x' or '')
         self._copied = None

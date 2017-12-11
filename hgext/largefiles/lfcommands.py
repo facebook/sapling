@@ -261,7 +261,8 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 # doesn't change after rename or copy
                 renamed = lfutil.standin(renamed[0])
 
-            return context.memfilectx(repo, f, lfiletohash[srcfname] + '\n',
+            return context.memfilectx(repo, memctx, f,
+                                      lfiletohash[srcfname] + '\n',
                                       'l' in fctx.flags(), 'x' in fctx.flags(),
                                       renamed)
         else:
@@ -313,7 +314,7 @@ def _getnormalcontext(repo, ctx, f, revmap):
     data = fctx.data()
     if f == '.hgtags':
         data = _converttags (repo.ui, revmap, data)
-    return context.memfilectx(repo, f, data, 'l' in fctx.flags(),
+    return context.memfilectx(repo, ctx, f, data, 'l' in fctx.flags(),
                               'x' in fctx.flags(), renamed)
 
 # Remap tag data using a revision map

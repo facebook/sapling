@@ -602,7 +602,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
         if path in headmf:
             fctx = last[path]
             flags = fctx.flags()
-            mctx = context.memfilectx(repo,
+            mctx = context.memfilectx(repo, ctx,
                                       fctx.path(), fctx.data(),
                                       islink='l' in flags,
                                       isexec='x' in flags,
