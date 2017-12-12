@@ -154,7 +154,7 @@ class EdenFS(object):
         return cmd
 
     def start(
-        self, timeout: float=30, takeover_from: Optional[int]=None
+        self, timeout: float=60, takeover_from: Optional[int]=None
     ):
         '''
         Run "eden daemon" to start the eden daemon.
