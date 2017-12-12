@@ -542,10 +542,10 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
 
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
-  edenMount->shutdown().then(
-      [unmountPromise = std::move(unmountPromise)]() mutable {
-        unmountPromise.setValue();
-      });
+  edenMount->shutdown().then([unmountPromise = std::move(unmountPromise)](
+                                 folly::Try<folly::Unit>&& result) mutable {
+    unmountPromise.setTry(std::move(result));
+  });
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {

@@ -203,7 +203,7 @@ class EdenServer : private TakeoverHandler {
 
  private:
   // Struct to store EdenMount along with SharedPromise that is set
-  // during unmount to allow synchronizaiton between unmoutFinished
+  // during unmount to allow synchronization between unmountFinished
   // and unmount functions.
   struct EdenMountInfo {
     std::shared_ptr<EdenMount> edenMount;
