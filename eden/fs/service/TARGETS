@@ -27,6 +27,7 @@ if is_facebook_internal():
 cpp_library(
     name = "server",
     srcs = [
+        "EdenCPUThreadPool.cpp",
         "EdenError.cpp",
         "EdenServer.cpp",
         "EdenServiceHandler.cpp",
@@ -34,6 +35,7 @@ cpp_library(
         "StreamingSubscriber.cpp",
     ],
     headers = [
+        "EdenCPUThreadPool.h",
         "EdenError.h",
         "EdenServer.h",
         "EdenServiceHandler.h",
@@ -66,7 +68,6 @@ cpp_library(
         "@/folly:synchronized",
         "@/folly:thread_local",
         "@/folly/container:access",
-        "@/folly/executors/task_queue:unbounded_blocking_queue",
         "@/folly/experimental:string_keyed_map",
         "@/folly/experimental/logging:init",
         "@/folly/experimental/logging:logging",

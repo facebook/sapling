@@ -13,8 +13,6 @@
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
-#include <folly/executors/task_queue/UnboundedBlockingQueue.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
@@ -26,6 +24,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -43,8 +42,6 @@ DEFINE_bool(
     false,
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
-
-DEFINE_int32(num_eden_threads, 12, "the number of eden CPU worker threads");
 
 DEFINE_string(thrift_address, "", "The address for the thrift server socket");
 DEFINE_int32(
@@ -136,10 +133,7 @@ EdenServer::EdenServer(
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
       rocksPath_(rocksPath),
-      threadPool_(make_shared<folly::CPUThreadPoolExecutor>(
-          FLAGS_num_eden_threads,
-          std::make_unique<folly::UnboundedBlockingQueue<
-              folly::CPUThreadPoolExecutor::CPUTask>>())) {}
+      threadPool_(std::make_shared<EdenCPUThreadPool>()) {}
 
 EdenServer::~EdenServer() {}
 

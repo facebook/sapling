@@ -43,6 +43,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::Future;
 using folly::Optional;

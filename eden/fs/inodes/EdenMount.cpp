@@ -590,7 +590,7 @@ folly::Future<folly::File> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
-    std::shared_ptr<folly::Executor> threadPool,
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
     bool debug) {
   return folly::makeFutureWith([this, eventBase, threadPool, debug] {
     if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {

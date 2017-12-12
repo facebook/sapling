@@ -12,6 +12,7 @@
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
@@ -21,6 +22,7 @@ namespace facebook {
 namespace eden {
 
 class LocalStore;
+class UnboundedQueueThreadPool;
 
 /**
  * A BackingStore implementation that loads data out of a mercurial repository.
@@ -37,7 +39,7 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       LocalStore* localStore,
-      folly::Executor* serverThreadPool);
+      UnboundedQueueThreadPool* serverThreadPool);
   ~HgBackingStore() override;
 
   folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) override;
@@ -57,8 +59,10 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Executor> importThreadPool_;
   // The main server thread pool; we push the Futures back into
   // this pool to run their completion code to avoid clogging
-  // the importer pool.
-  folly::Executor* serverThreadPool_;
+  // the importer pool. Queuing in this pool can never block (which would risk
+  // deadlock) or throw an exception when full (which would incorrectly fail the
+  // load).
+  UnboundedQueueThreadPool* serverThreadPool_;
 };
 } // namespace eden
 } // namespace facebook

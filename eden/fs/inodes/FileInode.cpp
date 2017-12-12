@@ -26,6 +26,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 #include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;

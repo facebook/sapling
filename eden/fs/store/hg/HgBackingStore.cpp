@@ -20,6 +20,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -85,7 +86,7 @@ class HgImporterThreadFactory : public folly::ThreadFactory {
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     LocalStore* localStore,
-    folly::Executor* serverThreadPool)
+    UnboundedQueueThreadPool* serverThreadPool)
     : localStore_(localStore),
       importThreadPool_(make_unique<folly::CPUThreadPoolExecutor>(
           FLAGS_num_hg_import_threads,

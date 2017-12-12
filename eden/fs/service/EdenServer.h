@@ -46,6 +46,7 @@ namespace eden {
 
 class BackingStore;
 class Dirstate;
+class EdenCPUThreadPool;
 class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
@@ -333,7 +334,7 @@ class EdenServer : private TakeoverHandler {
    * This is here because we need to keep it alive for the duration
    * of the server lifetime.
    */
-  std::shared_ptr<folly::Executor> threadPool_;
+  std::shared_ptr<EdenCPUThreadPool> threadPool_;
 };
 } // namespace eden
 } // namespace facebook

@@ -55,6 +55,7 @@ class ObjectStore;
 class Overlay;
 class Journal;
 class Tree;
+class UnboundedQueueThreadPool;
 
 class RenameLock;
 class SharedRenameLock;
@@ -203,7 +204,7 @@ class EdenMount {
   /**
    * Returns the server's thread pool.
    */
-  const std::shared_ptr<folly::Executor>& getThreadPool() const {
+  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const {
     return threadPool_;
   }
 
@@ -386,7 +387,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
       folly::EventBase* eventBase,
-      std::shared_ptr<folly::Executor> threadPool,
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
       bool debug);
 
   /**
@@ -663,9 +664,10 @@ class EdenMount {
   folly::EventBase* eventBase_{nullptr};
 
   /**
-   * The server's thread pool passed into startFuse().
+   * The server's thread pool passed into startFuse().  Notably, it is always
+   * safe to queue work into this pool.
    */
-  std::shared_ptr<folly::Executor> threadPool_;
+  std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
 
   std::shared_ptr<Clock> clock_;
 };
