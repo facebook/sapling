@@ -277,8 +277,12 @@ class abstractvfs(object):
         to ``__call__``/``open`` to result in the file possibly being closed
         asynchronously, on a background thread.
         """
-        # This is an arbitrary restriction and could be changed if we ever
-        # have a use case.
+        # Sharing backgroundfilecloser between threads is complex and using
+        # multiple instances puts us at risk of running out of file descriptors
+        # only allow to use backgroundfilecloser when in main thread.
+        if not isinstance(threading.currentThread(), threading._MainThread):
+            yield
+            return
         vfs = getattr(self, 'vfs', self)
         if getattr(vfs, '_backgroundfilecloser', None):
             raise error.Abort(
@@ -413,7 +417,8 @@ class vfs(abstractvfs):
                                     ' valid for checkambig=True') % mode)
             fp = checkambigatclosing(fp)
 
-        if backgroundclose:
+        if (backgroundclose and
+                isinstance(threading.currentThread(), threading._MainThread)):
             if not self._backgroundfilecloser:
                 raise error.Abort(_('backgroundclose can only be used when a '
                                   'backgroundclosing context manager is active')
