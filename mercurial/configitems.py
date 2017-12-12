@@ -1269,3 +1269,6 @@ coreconfigitem('experimental', 'rebaseskipobsolete',
 coreconfigitem('rebase', 'singletransaction',
     default=False,
 )
+coreconfigitem('rebase', 'experimental.inmemory',
+    default=False,
+)

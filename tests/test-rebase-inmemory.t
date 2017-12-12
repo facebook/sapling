@@ -4,6 +4,8 @@
   > amend=
   > rebase=
   > debugdrawdag=$TESTDIR/drawdag.py
+  > [rebase]
+  > experimental.inmemory=1
   > [diff]
   > git=1
   > [alias]
@@ -35,7 +37,7 @@ Rebase a simple DAG:
   c (no-eol)
   $ hg cat -r 2 b
   b (no-eol)
-  $ hg rebase --inmemory --debug -r b -d c | grep rebasing
+  $ hg rebase --debug -r b -d c | grep rebasing
   rebasing in-memory
   rebasing 2:db0e82a16a62 "b" (b)
   $ hg tglog
@@ -94,7 +96,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   b (no-eol)
   $ hg cat -r 3 e
   somefile (no-eol)
-  $ hg rebase --inmemory --debug -s b -d a | grep rebasing
+  $ hg rebase --debug -s b -d a | grep rebasing
   rebasing in-memory
   rebasing 2:db0e82a16a62 "b" (b)
   $ hg tglog
@@ -110,7 +112,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   c (no-eol)
   $ hg cat -r 3 b
   b (no-eol)
-  $ hg rebase --inmemory --debug -s 1 -d 3 | grep rebasing
+  $ hg rebase --debug -s 1 -d 3 | grep rebasing
   rebasing in-memory
   rebasing 1:02952614a83d "d" (d)
   rebasing 2:f56b71190a8f "c"
@@ -142,7 +144,7 @@ Rebase the working copy parent, which should default to an on-disk merge even if
 we requested in-memory.
   $ hg up -C 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase -r 3 -d 0 --inmemory --debug | grep rebasing
+  $ hg rebase -r 3 -d 0 --debug | grep rebasing
   rebasing on disk
   rebasing 3:753feb6fd12a "c" (tip)
   $ hg tglog

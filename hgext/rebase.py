@@ -136,7 +136,7 @@ def _ctxdesc(ctx):
 
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
-    def __init__(self, repo, ui, opts=None):
+    def __init__(self, repo, ui, inmemory=False, opts=None):
         if opts is None:
             opts = {}
 
@@ -179,7 +179,7 @@ class rebaseruntime(object):
         self.keepopen = opts.get('keepopen', False)
         self.obsoletenotrebased = {}
         self.obsoletewithoutsuccessorindestination = set()
-        self.inmemory = opts.get('inmemory', False)
+        self.inmemory = inmemory
 
     @property
     def repo(self):
@@ -645,7 +645,6 @@ class rebaseruntime(object):
     ('i', 'interactive', False, _('(DEPRECATED)')),
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
-    ('',  'inmemory', False, _('run rebase in-memory (EXPERIMENTAL)')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
     cmdutil.formatteropts,
     _('[-s REV | -b REV] [-d REV] [OPTION]'))
@@ -757,35 +756,40 @@ def rebase(ui, repo, **opts):
       [rebase]
       singletransaction = True
 
+    By default, rebase writes to the working copy, but you can configure it to
+    run in-memory for for better performance, and to allow it to run if the
+    working copy is dirty::
+
+      [rebase]
+      experimental.inmemory = True
+
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
     unresolved conflicts.
 
     """
+    inmemory = ui.configbool('rebase', 'experimental.inmemory')
     if opts.get('continue') or opts.get('abort'):
         # in-memory rebase is not compatible with resuming rebases.
-        opts['inmemory'] = False
+        inmemory = False
 
-    if opts.get('inmemory', False):
+    if inmemory:
         try:
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
-            return _origrebase(ui, repo, **opts)
+            return _origrebase(ui, repo, inmemory=inmemory, **opts)
         except error.InMemoryMergeConflictsError:
             ui.warn(_('hit merge conflicts; re-running rebase without in-memory'
                       ' merge\n'))
             _origrebase(ui, repo, **{'abort': True})
-            opts['inmemory'] = False
-            return _origrebase(ui, repo, **opts)
+            return _origrebase(ui, repo, inmemory=False, **opts)
     else:
         return _origrebase(ui, repo, **opts)
 
-def _origrebase(ui, repo, **opts):
+def _origrebase(ui, repo, inmemory=False, **opts):
     opts = pycompat.byteskwargs(opts)
-    if 'inmemory' not in opts:
-        opts['inmemory'] = False
-    rbsrt = rebaseruntime(repo, ui, opts)
+    rbsrt = rebaseruntime(repo, ui, inmemory, opts)
 
     with repo.wlock(), repo.lock():
         # Validate input and define rebasing points
@@ -832,10 +836,8 @@ def _origrebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
         else:
-            destmap = _definedestmap(ui, repo, destf, srcf, basef, revf,
-                                     destspace=destspace,
-                                     opts=opts)
-            rbsrt.inmemory = opts['inmemory']
+            destmap = _definedestmap(ui, repo, rbsrt, destf, srcf, basef, revf,
+                                     destspace=destspace)
             retcode = rbsrt._preparenewrebase(destmap)
             if retcode is not None:
                 return retcode
@@ -854,8 +856,8 @@ def _origrebase(ui, repo, **opts):
 
         rbsrt._finishrebase()
 
-def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
-                   destspace=None, opts=None):
+def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
+                   revf=None, destspace=None):
     """use revisions argument to define destmap {srcrev: destrev}"""
     if revf is None:
         revf = []
@@ -869,7 +871,7 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
     if revf and srcf:
         raise error.Abort(_('cannot specify both a revision and a source'))
 
-    if not opts['inmemory']:
+    if not rbsrt.inmemory:
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
@@ -955,8 +957,8 @@ def _definedestmap(ui, repo, destf=None, srcf=None, basef=None, revf=None,
     # stacks that include the WCP. However, I'm not yet sure where the cutoff
     # is.
     rebasingwcp = repo['.'].rev() in rebaseset
-    if opts['inmemory'] and rebasingwcp:
-        opts['inmemory'] = False
+    if rbsrt.inmemory and rebasingwcp:
+        rbsrt.inmemory = False
         # Check these since we did not before.
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
