@@ -27,6 +27,7 @@ cpp_library(
         "@/folly:exception",
         "@/folly:fbvector",
         "@/folly:file",
+        "@/folly:file_util",
         "@/folly:format",
         "@/folly:move_wrapper",
         "@/folly:portability",
