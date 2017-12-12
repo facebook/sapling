@@ -19,6 +19,7 @@ from mercurial import (
     url as urlmod,
     util,
     vfs as vfsmod,
+    worker,
 )
 
 from ..largefiles import lfutil
@@ -205,7 +206,7 @@ class _gitlfsremote(object):
 
         return filteredobjects
 
-    def _basictransfer(self, obj, action, localstore, progress=None):
+    def _basictransfer(self, obj, action, localstore):
         """Download or upload a single object using basic transfer protocol
 
         obj: dict, an object description returned by batch API
@@ -223,7 +224,7 @@ class _gitlfsremote(object):
         request = util.urlreq.request(href)
         if action == 'upload':
             # If uploading blobs, read data from local blobstore.
-            request.data = filewithprogress(localstore.vfs(oid), progress)
+            request.data = filewithprogress(localstore.vfs(oid), None)
             request.get_method = lambda: 'PUT'
 
         for k, v in headers:
@@ -236,8 +237,6 @@ class _gitlfsremote(object):
                 data = req.read(1048576)
                 if not data:
                     break
-                if action == 'download' and progress:
-                    progress(len(data))
                 response += data
         except util.urlerr.httperror as ex:
             raise LfsRemoteError(_('HTTP error: %s (oid=%s, action=%s)')
@@ -252,45 +251,51 @@ class _gitlfsremote(object):
             raise error.ProgrammingError('invalid Git-LFS action: %s' % action)
 
         response = self._batchrequest(pointers, action)
-        prunningsize = [0]
         objects = self._extractobjects(response, pointers, action)
         total = sum(x.get('size', 0) for x in objects)
+        sizes = {}
+        for obj in objects:
+            sizes[obj.get('oid')] = obj.get('size', 0)
         topic = {'upload': _('lfs uploading'),
                  'download': _('lfs downloading')}[action]
         if self.ui.verbose and len(objects) > 1:
             self.ui.write(_('lfs: need to transfer %d objects (%s)\n')
                           % (len(objects), util.bytecount(total)))
         self.ui.progress(topic, 0, total=total)
-        def progress(size):
-            # advance progress bar by "size" bytes
-            prunningsize[0] += size
-            self.ui.progress(topic, prunningsize[0], total=total)
-        for obj in sorted(objects, key=lambda o: o.get('oid')):
-            objsize = obj.get('size', 0)
-            if self.ui.verbose:
-                if action == 'download':
-                    msg = _('lfs: downloading %s (%s)\n')
-                elif action == 'upload':
-                    msg = _('lfs: uploading %s (%s)\n')
-                self.ui.write(msg % (obj.get('oid'), util.bytecount(objsize)))
-            origrunningsize = prunningsize[0]
-            retry = self.retry
-            while True:
-                prunningsize[0] = origrunningsize
-                try:
-                    self._basictransfer(obj, action, localstore,
-                                        progress=progress)
-                    break
-                except Exception as ex:
-                    if retry > 0:
-                        if self.ui.verbose:
-                            self.ui.write(
-                                _('lfs: failed: %r (remaining retry %d)\n')
-                                % (ex, retry))
-                        retry -= 1
-                        continue
-                    raise
+        def transfer(chunk):
+            for obj in chunk:
+                objsize = obj.get('size', 0)
+                if self.ui.verbose:
+                    if action == 'download':
+                        msg = _('lfs: downloading %s (%s)\n')
+                    elif action == 'upload':
+                        msg = _('lfs: uploading %s (%s)\n')
+                    self.ui.write(msg % (obj.get('oid'),
+                                  util.bytecount(objsize)))
+                retry = self.retry
+                while True:
+                    try:
+                        self._basictransfer(obj, action, localstore)
+                        yield 1, obj.get('oid')
+                        break
+                    except Exception as ex:
+                        if retry > 0:
+                            if self.ui.verbose:
+                                self.ui.write(
+                                    _('lfs: failed: %r (remaining retry %d)\n')
+                                    % (ex, retry))
+                            retry -= 1
+                            continue
+                        raise
 
+        oids = worker.worker(self.ui, 0.1, transfer, (),
+                             sorted(objects, key=lambda o: o.get('oid')))
+        processed = 0
+        for _one, oid in oids:
+            processed += sizes[oid]
+            self.ui.progress(topic, processed, total=total)
+            if self.ui.verbose:
+                self.ui.write(_('lfs: processed: %s\n') % oid)
         self.ui.progress(topic, pos=None, total=total)
 
     def __del__(self):
