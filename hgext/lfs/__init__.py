@@ -64,6 +64,10 @@ testedwith = 'ships-with-hg-core'
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem('experimental', 'lfs.user-agent',
+    default=None,
+)
+
 configitem('lfs', 'url',
     default=configitem.dynamicdefault,
 )
