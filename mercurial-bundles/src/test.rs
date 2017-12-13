@@ -16,7 +16,7 @@ use slog_term;
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
 
-use async_compression::{CompressorType, ZSTD_DEFAULT_LEVEL};
+use async_compression::{Bzip2Compression, CompressorType, ZSTD_DEFAULT_LEVEL};
 use async_compression::membuf::MemBuf;
 use futures_ext::StreamExt;
 use mercurial_types::{MPath, NodeHash, RepoPath, NULL_HASH};
@@ -86,6 +86,11 @@ fn test_empty_bundle_roundtrip_zstd() {
 }
 
 #[test]
+fn test_empty_bundle_roundtrip_bzip() {
+    empty_bundle_roundtrip(CompressorType::Bzip2(Bzip2Compression::Default));
+}
+
+#[test]
 fn test_empty_bundle_roundtrip_uncompressed() {
     empty_bundle_roundtrip(CompressorType::Uncompressed);
 }
@@ -133,6 +138,11 @@ fn test_unknown_part_zstd() {
     unknown_part(CompressorType::Zstd {
         level: ZSTD_DEFAULT_LEVEL,
     });
+}
+
+#[test]
+fn test_unknown_part_bzip() {
+    unknown_part(CompressorType::Bzip2(Bzip2Compression::Default));
 }
 
 #[test]
