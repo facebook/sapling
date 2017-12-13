@@ -81,10 +81,13 @@ type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
 struct Route(Regex, UrlParseFunc);
 
 const SCUBA_TABLE: &'static str = "mononoke_eden_server";
+const SCUBA_COL_ELAPSED_TIME: &'static str = "time_elapsed_ms";
 const SCUBA_COL_POLL_TIME: &'static str = "poll_time_ns";
 const SCUBA_COL_POLL_COUNT: &'static str = "poll_count";
 const SCUBA_COL_HASH: &'static str = "hash";
+const SCUBA_COL_HOSTNAME: &'static str = "hostname";
 const SCUBA_COL_OPERATION: &'static str = "operation";
+const SCUBA_COL_REPO: &'static str = "repo";
 const SCUBA_OPERATION_GET_TREE_CONTENT: &'static str = "get_tree_content";
 const SCUBA_OPERATION_GET_MENIFEST: &'static str = "get_root_tree_manifest_id";
 const SCUBA_OPERATION_GET_BLOB_CONTENT: &'static str = "get_blob_content";
@@ -267,7 +270,7 @@ where
 /// Add values from the given Stats struct to the given Scuba sample.
 fn add_common_stats(sample: &mut ScubaSample, stats: &Stats) {
     sample.add(
-        SCUBA_COL_POLL_TIME,
+        SCUBA_COL_ELAPSED_TIME,
         stats.completion_time.num_milliseconds(),
     );
     if let Some(nanos) = stats.poll_time.num_nanoseconds() {
@@ -290,6 +293,7 @@ where
 
         let scuba = self.scuba.clone();
         let mut sample = ScubaSample::new();
+        sample.add(SCUBA_COL_HOSTNAME, req.uri().host().unwrap_or("unknown"));
 
         let mut resp = Response::new();
         let parsed_req = match parse_url(req.uri().path(), &ROUTES) {
@@ -305,11 +309,13 @@ where
             ParsedUrl::RootTreeManifestId(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_MENIFEST);
+                sample.add(SCUBA_COL_REPO, reponame.clone());
                 self.get_root_tree_manifest_id(reponame, &hash)
             }
             ParsedUrl::TreeContent(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_TREE_CONTENT);
+                sample.add(SCUBA_COL_REPO, reponame.clone());
 
                 self.get_tree_content(reponame, &hash)
                     .map(|metadata| {
@@ -329,6 +335,7 @@ where
             ParsedUrl::BlobContent(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_BLOB_CONTENT);
+                sample.add(SCUBA_COL_REPO, reponame.clone());
                 self.get_blob_content(reponame, &hash)
             }
         };
