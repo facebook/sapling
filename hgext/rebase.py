@@ -390,6 +390,9 @@ class rebaseruntime(object):
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
+        self.repo.ui.log("rebase", "", {
+            'rebase_imm_used': self.wctx.isinmemory()
+        })
 
     def _performrebase(self, tr):
         self._assignworkingcopy()
@@ -957,6 +960,7 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
     # stacks that include the WCP. However, I'm not yet sure where the cutoff
     # is.
     rebasingwcp = repo['.'].rev() in rebaseset
+    ui.log("rebase", "", {'rebase_rebasing_wcp': rebasingwcp})
     if rbsrt.inmemory and rebasingwcp:
         rbsrt.inmemory = False
         # Check these since we did not before.
