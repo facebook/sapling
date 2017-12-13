@@ -744,8 +744,7 @@ def debugstate(ui, repo, **opts):
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
     opts = pycompat.byteskwargs(opts)
-    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl),
-                                      opts.get('branch'))
+    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl))
     remote = hg.peer(repo, opts, remoteurl)
     ui.status(_('comparing with %s\n') % util.hidepassword(remoteurl))
 
