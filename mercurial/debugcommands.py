@@ -782,26 +782,10 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         elif rheads <= common:
             ui.write(("remote is subset\n"))
 
-    serverlogs = opts.get('serverlog')
-    if serverlogs:
-        for filename in serverlogs:
-            with open(filename, 'r') as logfile:
-                line = logfile.readline()
-                while line:
-                    parts = line.strip().split(';')
-                    op = parts[1]
-                    if op == 'cg':
-                        pass
-                    elif op == 'cgss':
-                        doit(parts[2].split(' '), parts[3].split(' '))
-                    elif op == 'unb':
-                        doit(parts[3].split(' '), parts[2].split(' '))
-                    line = logfile.readline()
-    else:
-        remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
-                                                 opts.get('remote_head'))
-        localrevs = opts.get('rev')
-        doit(localrevs, remoterevs)
+    remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
+                                             opts.get('remote_head'))
+    localrevs = opts['rev']
+    doit(localrevs, remoterevs)
 
 @command('debugextensions', cmdutil.formatteropts, [], norepo=True)
 def debugextensions(ui, **opts):
