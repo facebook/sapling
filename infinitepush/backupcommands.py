@@ -295,9 +295,10 @@ def isbackedup(ui, repo, **opts):
 @revsetpredicate('backedup')
 def backedup(repo, subset, x):
     """Draft changesets that have been backed up by infinitepush"""
+    unfi = repo.unfiltered()
     bkpstate = _readlocalbackupstate(repo.ui, repo)
-    visiblebkpheads = [head for head in bkpstate.heads if head in repo]
-    return subset & repo.revs('draft() and ::%ls', visiblebkpheads)
+    return subset & unfi.revs('draft() and ::%ls and not hidden()',
+                              bkpstate.heads)
 
 @revsetpredicate('notbackedup')
 def notbackedup(repo, subset, x):
@@ -320,13 +321,15 @@ def notbackedup(repo, subset, x):
                 candidates.update([p.hex() for p in ctx.parents()])
     if notbackeduprevs:
         # Some revisions in this set may actually have been backed up by
-        # virtue of being an ancestor of a different backup head.  Find these
-        # and remove them from the set.
+        # virtue of being an ancestor of a different backup head, which may
+        # have been hidden since the backup was made.  Find these and remove
+        # them from the set.
+        unfi = repo.unfiltered()
         candidates = bkpheads
         while candidates:
             candidate = candidates.pop()
-            if candidate in repo:
-                ctx = repo[candidate]
+            if candidate in unfi:
+                ctx = unfi[candidate]
                 if ctx.phase() != phases.public:
                     notbackeduprevs.discard(ctx.rev())
                     candidates.update([p.hex() for p in ctx.parents()])

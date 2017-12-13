@@ -3,6 +3,7 @@
   > cat << EOF >> .hg/hgrc
   > [extensions]
   > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
   > smartlog=$TESTDIR/../hgext3rd/smartlog.py
   > [infinitepushbackup]
   > enablestatus = True
@@ -56,6 +57,22 @@ Setup client
   remote:     *  Backed up changeset (glob)
   remote:     *  Backed up changeset 2 (glob)
   finished in \d+\.(\d+)? seconds (re)
+
+Check hiding the backup head doesn't affect backed-up changesets
+  $ hg up -q 2
+  $ hg log -T '{rev} {desc}\n' -r 'backedup()'
+  2 Backed up changeset
+  3 Backed up changeset 2
+  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
+  $ hg hide 3
+  1 changesets hidden
+  $ hg log -T '{rev} {desc}\n' -r 'backedup()'
+  2 Backed up changeset
+  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
+  $ hg unhide 3
+  $ hg up -q 3
+
+Create some changesets that aren't backed up
   $ echo b > file1
   $ commit_time=`expr $now - 11 \* 60`
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset"
