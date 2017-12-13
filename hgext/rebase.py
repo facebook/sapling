@@ -1102,13 +1102,14 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
     if wctx.isinmemory():
         wctx.setbase(repo[p1])
     else:
-        # This is necessary to invalidate workingctx's caches.
-        wctx = repo[None]
         if repo['.'].rev() != p1:
             repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
             mergemod.update(repo, p1, False, True)
         else:
             repo.ui.debug(" already in destination\n")
+        # This is, alas, necessary to invalidate workingctx's manifest cache,
+        # as well as other data we litter on it in other places.
+        wctx = repo[None]
         repo.dirstate.write(repo.currenttransaction())
     repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
     if base is not None:
