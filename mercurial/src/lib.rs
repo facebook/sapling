@@ -48,4 +48,4 @@ pub mod symlink;
 mod errors;
 pub use errors::*;
 
-pub use revlogrepo::{RevlogManifest, RevlogRepo};
+pub use revlogrepo::{RevlogManifest, RevlogRepo, RevlogRepoOptions};

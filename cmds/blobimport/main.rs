@@ -66,7 +66,7 @@ use filelinknodes::FileLinknodes;
 use futures_ext::{BoxFuture, FutureExt};
 use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
-use mercurial::RevlogRepo;
+use mercurial::{RevlogRepo, RevlogRepoOptions};
 use rocksblob::Rocksblob;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
@@ -110,6 +110,7 @@ fn run_blobimport<In, Out>(
     skip: Option<u64>,
     commits_limit: Option<u64>,
     max_blob_size: Option<usize>,
+    inmemory_logs_capacity: Option<usize>,
 ) -> Result<()>
 where
     In: Into<PathBuf>,
@@ -176,7 +177,7 @@ where
         })
         .expect("cannot start iothread");
 
-    let repo = open_repo(&input)?;
+    let repo = open_repo(&input, inmemory_logs_capacity)?;
 
     info!(logger, "Converting: {}", input.display());
     let convert_context = convert::ConvertContext {
@@ -203,14 +204,25 @@ where
     res
 }
 
-fn open_repo<P: Into<PathBuf>>(input: P) -> Result<RevlogRepo> {
+fn open_repo<P: Into<PathBuf>>(
+    input: P,
+    inmemory_logs_capacity: Option<usize>,
+) -> Result<RevlogRepo> {
     let mut input = input.into();
     if !input.exists() || !input.is_dir() {
         bail_msg!("input {} doesn't exist or isn't a dir", input.display());
     }
     input.push(".hg");
 
-    let revlog = RevlogRepo::open(input)?;
+    let revlog = match inmemory_logs_capacity {
+        Some(inmemory_logs_capacity) => {
+            let options = RevlogRepoOptions {
+                inmemory_logs_capacity,
+            };
+            RevlogRepo::open_with_options(input, options)?
+        }
+        None => RevlogRepo::open(input)?,
+    };
 
     Ok(revlog)
 }
@@ -327,6 +339,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --skip [SKIP]            'skips commits from the beginning'
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
             --max-blob-size [LIMIT]  'max size of the blob to be inserted'
+            --inmemory-logs-capacity [CAPACITY]  'max number of filelogs and treelogs in memory'
         "#,
         )
         .arg(
@@ -343,6 +356,15 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("bucket")
                 .takes_value(true)
                 .help("bucket to use for manifold blobstore"),
+        )
+        .arg(
+            Arg::with_name("in-memory-logs-capacity")
+                .long("in-memory-logs-capacity")
+                .takes_value(true)
+                .help(
+                    "how many filelogs and tree revlogs to store in memory. \
+                     Lets one balance between memory usage and importing speed",
+                ),
         )
 }
 
@@ -441,6 +463,11 @@ fn main() {
             matches.value_of("max-blob-size").map(|size| {
                 size.parse()
                     .expect("max-blob-size must be positive integer")
+            }),
+            matches.value_of("inmemory-logs-capacity").map(|capacity| {
+                capacity
+                    .parse()
+                    .expect("inmemory_logs_capacity must be positive integer")
             }),
         )?;
 

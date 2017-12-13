@@ -32,7 +32,7 @@ use revlog::{self, Revlog, RevlogIter};
 
 type FutureResult<T> = future::FutureResult<T, Error>;
 
-const LOGS_CAPACITY: usize = 1000000;
+const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum Required {
@@ -120,6 +120,14 @@ pub struct RevlogRepo {
     changelog: Revlog,               // changes
     manifest: Revlog,                // manifest
     inner: Arc<RwLock<RevlogInner>>, // Inner parts
+    inmemory_logs_capacity: usize,   // Limit on the number of filelogs and tree revlogs in memory.
+                                     // Note: there can be 2 * inmemory_logs_capacity revlogs in
+                                     // memory in total: half for filelogs and half for revlogs.
+}
+
+
+pub struct RevlogRepoOptions {
+    pub inmemory_logs_capacity: usize,
 }
 
 #[derive(Debug)]
@@ -138,6 +146,16 @@ impl Eq for RevlogRepo {}
 
 impl RevlogRepo {
     pub fn open<P: Into<PathBuf>>(base: P) -> Result<RevlogRepo> {
+        let options = RevlogRepoOptions {
+            inmemory_logs_capacity: DEFAULT_LOGS_CAPACITY,
+        };
+        RevlogRepo::open_with_options(base, options)
+    }
+
+    pub fn open_with_options<P: Into<PathBuf>>(
+        base: P,
+        options: RevlogRepoOptions,
+    ) -> Result<RevlogRepo> {
         let base = base.into();
         let store = base.as_path().join("store");
 
@@ -165,6 +183,7 @@ impl RevlogRepo {
                 filelogcache: HashMap::new(),
                 treelogcache: HashMap::new(),
             })),
+            inmemory_logs_capacity: options.inmemory_logs_capacity,
         })
     }
 
@@ -264,7 +283,7 @@ impl RevlogRepo {
 
         // We may have memory issues if we are keeping too many revlogs in memory.
         // Let's clear them when we have too much
-        if inner.treelogcache.len() > LOGS_CAPACITY {
+        if inner.treelogcache.len() > self.inmemory_logs_capacity {
             inner.treelogcache.clear();
         }
         match inner.treelogcache.entry(path.clone()) {
@@ -291,7 +310,7 @@ impl RevlogRepo {
 
         // We may have memory issues if we are keeping too many revlogs in memory.
         // Let's clear them when we have too much
-        if inner.filelogcache.len() > LOGS_CAPACITY {
+        if inner.filelogcache.len() > self.inmemory_logs_capacity {
             inner.filelogcache.clear();
         }
         match inner.filelogcache.entry(path.clone()) {
