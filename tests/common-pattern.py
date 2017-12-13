@@ -1,6 +1,8 @@
 # common patterns in test at can safely be replaced
 from __future__ import absolute_import
 
+import os
+
 substitutions = [
     # list of possible compressions
     (br'(zstd,)?zlib,none,bzip2',
@@ -83,3 +85,48 @@ _errors = {
 
 for replace, msgs in _errors.items():
     substitutions.extend((m, replace) for m in msgs)
+
+# Output lines on Windows that can be autocorrected for '\' vs '/' path
+# differences.
+_winpathfixes = [
+    # cloning subrepo s\ss from $TESTTMP/t/s/ss
+    # cloning subrepo foo\bar from http://localhost:$HGPORT/foo/bar
+    br'(?m)^cloning subrepo \S+\\.*',
+
+    # pulling from $TESTTMP\issue1852a
+    br'(?m)^pulling from \$TESTTMP\\.*',
+
+    # pushing to $TESTTMP\a
+    br'(?m)^pushing to \$TESTTMP\\.*',
+
+    # pushing subrepo s\ss to $TESTTMP/t/s/ss
+    br'(?m)^pushing subrepo \S+\\\S+ to.*',
+
+    # moving d1\d11\a1 to d3/d11/a1
+    br'(?m)^moving \S+\\.*',
+
+    # d1\a: not recording move - dummy does not exist
+    br'\S+\\\S+: not recording move .+',
+
+    # reverting s\a
+    br'(?m)^reverting (?!subrepo ).*\\.*',
+
+    # saved backup bundle to
+    #     $TESTTMP\test\.hg\strip-backup/443431ffac4f-2fc5398a-backup.hg
+    br'(?m)^saved backup bundle to \$TESTTMP.*\.hg',
+
+    # no changes made to subrepo s\ss since last push to ../tcc/s/ss
+    br'(?m)^no changes made to subrepo \S+\\\S+ since.*',
+
+    # changeset 5:9cc5aa7204f0: stuff/maybelarge.dat references missing
+    #     $TESTTMP\largefiles-repo-hg\.hg\largefiles\76..38
+    br'(?m)^changeset .* references (corrupted|missing) \$TESTTMP\\.*',
+
+    # stuff/maybelarge.dat: largefile 76..38 not available from
+    #     file:/*/$TESTTMP\largefiles-repo (glob)
+    br'.*: largefile \S+ not available from file:/\*/.+',
+]
+
+if os.name == 'nt':
+    substitutions.extend([(s, lambda match: match.group().replace(b'\\', b'/'))
+                          for s in _winpathfixes])

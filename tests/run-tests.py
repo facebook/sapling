@@ -972,8 +972,6 @@ class Test(unittest.TestCase):
             self._portmap(0),
             self._portmap(1),
             self._portmap(2),
-            (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
-             br'\1'.replace(br'\\', br'/')),
             (br'([^0-9])%s' % re.escape(self._localip()), br'\1$LOCALIP'),
             (br'\bHG_TXNID=TXN:[a-f0-9]{40}\b', br'HG_TXNID=TXN:$ID$'),
             ]
