@@ -124,8 +124,7 @@
   $ hg repack --config "hooks.prerepack=sleep 3" &
   $ sleep 1
   $ hg repack
-  abort: skipping repack - another repack is already running
-  [255]
+  skipping repack - another repack is already running
   $ hg debugwaitonrepack >/dev/null 2>&1
 
 # Run repack in the background

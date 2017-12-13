@@ -28,6 +28,9 @@ import time
 
 osutil = policy.importmod(r'osutil')
 
+class RepackAlreadyRunning(error.Abort):
+    pass
+
 def backgroundrepack(repo, incremental=True, packsonly=False):
     cmd = [util.hgexecutable(), '-R', repo.origroot, 'repack']
     msg = _("(running background repack)\n")
@@ -360,8 +363,8 @@ def _runrepack(repo, data, history, packpath, category, fullhistory=None,
             try:
                 packer.run(dpack, hpack)
             except error.LockHeld:
-                raise error.Abort(_("skipping repack - another repack is "
-                                    "already running"))
+                raise RepackAlreadyRunning(_("skipping repack - another repack "
+                                             "is already running"))
 
 def keepset(repo, keyfn, lastkeepkeys=None):
     """Computes a keepset which is not garbage collected.

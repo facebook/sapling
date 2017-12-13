@@ -748,7 +748,7 @@ def gcclient(ui, cachepath):
                 repackmod.incrementalrepack(repo)
                 filesrepacked = True
                 continue
-            except IOError:
+            except (IOError, repackmod.RepackAlreadyRunning):
                 # If repack cannot be performed due to not enough disk space
                 # continue doing garbage collection of loose files w/o repack
                 pass
@@ -1038,7 +1038,12 @@ def repack(ui, repo, *pats, **opts):
 
     options = {'packsonly': opts.get('packsonly')}
 
-    if opts.get('incremental'):
-        repackmod.incrementalrepack(repo, options=options)
-    else:
-        repackmod.fullrepack(repo, options=options)
+    try:
+        if opts.get('incremental'):
+            repackmod.incrementalrepack(repo, options=options)
+        else:
+            repackmod.fullrepack(repo, options=options)
+    except repackmod.RepackAlreadyRunning as ex:
+        # Don't propogate the exception if the repack is already in
+        # progress, since we want the command to exit 0.
+        repo.ui.warn('%s\n' % ex)
