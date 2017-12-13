@@ -782,8 +782,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         elif rheads <= common:
             ui.write(("remote is subset\n"))
 
-    remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
-                                             opts.get('remote_head'))
+    remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches, revs=None)
     localrevs = opts['rev']
     doit(localrevs, remoterevs)
 
