@@ -34,7 +34,7 @@ class lfsvfs(vfsmod.vfs):
         return super(lfsvfs, self).join(path[0:2], path[2:])
 
     def walk(self, path=None, onerror=None):
-        """Yield (dirpath, '', oids) tuple for blobs under path
+        """Yield (dirpath, [], oids) tuple for blobs under path
 
         Oids only exist in the root of this vfs, so dirpath is always ''.
         """
@@ -53,7 +53,7 @@ class lfsvfs(vfsmod.vfs):
                 oids.extend([dirpath + f for f in files
                              if _lfsre.match(dirpath + f)])
 
-        yield ('', '', oids)
+        yield ('', [], oids)
 
 class filewithprogress(object):
     """a file-like object that supports __len__ and read.
