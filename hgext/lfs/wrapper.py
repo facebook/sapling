@@ -313,7 +313,7 @@ def upgradefinishdatamigration(orig, ui, srcrepo, dstrepo, requirements):
 
     for dirpath, dirs, files in srclfsvfs.walk():
         for oid in files:
-            srcrepo.ui.write(_('copying lfs blob %s\n') % oid)
+            ui.write(_('copying lfs blob %s\n') % oid)
             lfutil.link(srclfsvfs.join(oid), dstlfsvfs.join(oid))
 
 def upgraderequirements(orig, repo):
