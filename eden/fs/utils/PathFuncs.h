@@ -9,6 +9,7 @@
  */
 #pragma once
 #include <boost/operators.hpp>
+#include <folly/Expected.h>
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
@@ -1567,11 +1568,15 @@ AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base);
  * one.
  *
  * This will throw an exception if the specified path does not exist, or if it
- * or one of its parent directories is inaccessible.  (In the future it may be
- * worth adding a version of this function that simply performs normalization,
- * and can succeed even if the path does not exist.)
+ * or one of its parent directories is inaccessible.
  *
- * Use canonicalPath() if you want to normalize a path name that may not exist.
+ * You can use canonicalPath() instead if you just want to normalize the path
+ * string without attempting to resolve symlinks.  canonicalPath() will succeed
+ * even if the input path does not exist.
+ *
+ * You can use normalizeBestEffort() for a hybrid approach that attempts to
+ * resolve symlinks using realpath() if possible, but falls back to
+ * canonicalPath() if that fails.
  */
 AbsolutePath realpath(const char* path);
 AbsolutePath realpath(folly::StringPiece path);
@@ -1580,6 +1585,38 @@ typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
 realpath(const T& path) {
   return realpath(path.c_str());
 }
+
+/**
+ * Convert an arbitrary unsanitized input string to a normalized AbsolutePath.
+ *
+ * This is like realpath(), but uses a folly::Expected to return an
+ * AbsolutePath on success or an errno value on error.
+ */
+folly::Expected<AbsolutePath, int> realpathExpected(const char* path);
+folly::Expected<AbsolutePath, int> realpathExpected(folly::StringPiece path);
+template <typename T>
+typename std::enable_if<
+    folly::IsSomeString<T>::value,
+    folly::Expected<AbsolutePath, int>>::type
+realpathExpected(const T& path) {
+  return realpathExpected(path.c_str());
+}
+
+/**
+ * Attempt to normalize a path.
+ *
+ * This first attempts to normalize the path using realpath().  However, if
+ * that fails (for instance, if the specified path does not exist on disk or is
+ * not accessible), it falls back to using canonicalPath().
+ */
+AbsolutePath normalizeBestEffort(const char* path);
+AbsolutePath normalizeBestEffort(folly::StringPiece path);
+template <typename T>
+typename std::enable_if<folly::IsSomeString<T>::value, AbsolutePath>::type
+normalizeBestEffort(const T& path) {
+  return normalizeBestEffort(path.c_str());
+}
+
 } // namespace eden
 } // namespace facebook
 

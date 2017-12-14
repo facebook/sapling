@@ -700,6 +700,9 @@ TEST(PathFuncs, realpath) {
   EXPECT_EQ(
       tmpDir.pathStr + "/parent/child/file.txt",
       realpath("wonky_link").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/child/file.txt",
+      realpathExpected("wonky_link").value().value());
 
   EXPECT_EQ(
       tmpDir.pathStr + "/parent/child", realpath("parent///child//").value());
@@ -710,6 +713,24 @@ TEST(PathFuncs, realpath) {
   EXPECT_THROW_ERRNO(realpath("parent/loop_a"), ELOOP);
   EXPECT_THROW_ERRNO(realpath("loop_b"), ELOOP);
   EXPECT_THROW_ERRNO(realpath("parent/nosuchfile"), ENOENT);
+  EXPECT_EQ(ELOOP, realpathExpected("parent/loop_a").error());
+  EXPECT_EQ(ENOENT, realpathExpected("parent/nosuchfile").error());
+
+  // Perform some tests for normalizeBestEffort() as well
+  EXPECT_EQ(
+      tmpDir.pathStr + "/simple.txt",
+      normalizeBestEffort(tmpDir.pathStr + "//simple.txt").value());
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/nosuchfile",
+      normalizeBestEffort("parent/nosuchfile"));
+  EXPECT_EQ(
+      tmpDir.pathStr + "/nosuchfile",
+      normalizeBestEffort("parent/..//nosuchfile"));
+  EXPECT_EQ(
+      tmpDir.pathStr + "/parent/loop_a", normalizeBestEffort("parent/loop_a"));
+  EXPECT_EQ(
+      "/foo/bar/abc.txt", normalizeBestEffort("/..//foo/bar//abc.txt").value());
+  EXPECT_EQ(tmpDir.pathStr, normalizeBestEffort(tmpDir.pathStr));
 }
 
 template <typename StoredType, typename PieceType>

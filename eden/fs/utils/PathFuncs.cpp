@@ -7,13 +7,14 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PathFuncs.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/Exception.h>
 #include <folly/Optional.h>
 #include <folly/portability/Stdlib.h>
 #include <unistd.h>
 
+using folly::Expected;
 using folly::StringPiece;
 
 namespace facebook {
@@ -167,21 +168,49 @@ AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base) {
   return canonicalPathImpl(path, folly::Optional<AbsolutePathPiece>{base});
 }
 
-AbsolutePath realpath(const char* path) {
+Expected<AbsolutePath, int> realpathExpected(const char* path) {
   auto pathBuffer = ::realpath(path, nullptr);
   if (!pathBuffer) {
-    folly::throwSystemError("realpath(", path, ") failed");
+    return folly::makeUnexpected(errno);
   }
   SCOPE_EXIT {
     free(pathBuffer);
   };
 
-  return AbsolutePath(pathBuffer);
+  return folly::makeExpected<int>(AbsolutePath{pathBuffer});
+}
+
+Expected<AbsolutePath, int> realpathExpected(StringPiece path) {
+  // The input may not be nul-terminated, so we have to construct a std::string
+  return realpath(path.str().c_str());
+}
+
+AbsolutePath realpath(const char* path) {
+  auto result = realpathExpected(path);
+  if (!result) {
+    folly::throwSystemErrorExplicit(
+        result.error(), "realpath(", path, ") failed");
+  }
+  return result.value();
 }
 
 AbsolutePath realpath(StringPiece path) {
   // The input may not be nul-terminated, so we have to construct a std::string
   return realpath(path.str().c_str());
 }
+
+AbsolutePath normalizeBestEffort(const char* path) {
+  auto result = realpathExpected(path);
+  if (result) {
+    return result.value();
+  }
+
+  return canonicalPathImpl(path, folly::none);
+}
+
+AbsolutePath normalizeBestEffort(folly::StringPiece path) {
+  return normalizeBestEffort(path.str().c_str());
+}
+
 } // namespace eden
 } // namespace facebook

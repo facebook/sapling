@@ -55,6 +55,7 @@ cpp_library(
     headers = PATH_HEADERS,
     deps = [
         "@/folly:exception",
+        "@/folly:expected",
         "@/folly:format",
         "@/folly:optional",
         "@/folly:string",
