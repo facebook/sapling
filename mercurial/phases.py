@@ -203,7 +203,7 @@ class phasecache(object):
         if _load:
             # Cheap trick to allow shallow-copy without copy module
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-            self._loadedrevslen = nullrev
+            self._loadedrevslen = 0
             self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
@@ -294,7 +294,7 @@ class phasecache(object):
                 self._computephaserevspure(repo)
 
     def invalidate(self):
-        self._loadedrevslen = nullrev
+        self._loadedrevslen = 0
         self._phasesets = None
 
     def phase(self, repo, rev):
