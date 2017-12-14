@@ -918,7 +918,7 @@ def max_(context, mapping, args, **kwargs):
     """Return the max of an iterable"""
     if len(args) != 1:
         # i18n: "max" is a keyword
-        raise error.ParseError(_("max expects one arguments"))
+        raise error.ParseError(_("max expects one argument"))
 
     iterable = evalfuncarg(context, mapping, args[0])
     try:
@@ -933,7 +933,7 @@ def min_(context, mapping, args, **kwargs):
     """Return the min of an iterable"""
     if len(args) != 1:
         # i18n: "min" is a keyword
-        raise error.ParseError(_("min expects one arguments"))
+        raise error.ParseError(_("min expects one argument"))
 
     iterable = evalfuncarg(context, mapping, args[0])
     try:
@@ -958,7 +958,7 @@ def obsfateoperations(context, mapping, args):
     """Compute obsfate related information based on markers (EXPERIMENTAL)"""
     if len(args) != 1:
         # i18n: "obsfateoperations" is a keyword
-        raise error.ParseError(_("obsfateoperations expects one arguments"))
+        raise error.ParseError(_("obsfateoperations expects one argument"))
 
     markers = evalfuncarg(context, mapping, args[0])
 
@@ -975,7 +975,7 @@ def obsfatedate(context, mapping, args):
     """Compute obsfate related information based on markers (EXPERIMENTAL)"""
     if len(args) != 1:
         # i18n: "obsfatedate" is a keyword
-        raise error.ParseError(_("obsfatedate expects one arguments"))
+        raise error.ParseError(_("obsfatedate expects one argument"))
 
     markers = evalfuncarg(context, mapping, args[0])
 
@@ -992,7 +992,7 @@ def obsfateusers(context, mapping, args):
     """Compute obsfate related information based on markers (EXPERIMENTAL)"""
     if len(args) != 1:
         # i18n: "obsfateusers" is a keyword
-        raise error.ParseError(_("obsfateusers expects one arguments"))
+        raise error.ParseError(_("obsfateusers expects one argument"))
 
     markers = evalfuncarg(context, mapping, args[0])
 
