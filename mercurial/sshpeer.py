@@ -136,6 +136,8 @@ class sshpeer(wireproto.wirepeer):
 
         sshcmd = self.ui.config("ui", "ssh")
         remotecmd = self.ui.config("ui", "remotecmd")
+        sshaddenv = dict(self.ui.configitems("sshenv"))
+        sshenv = util.shellenviron(sshaddenv)
 
         args = util.sshargs(sshcmd, self._host, self._user, self._port)
 
@@ -144,11 +146,11 @@ class sshpeer(wireproto.wirepeer):
                 util.shellquote("%s init %s" %
                     (_serverquote(remotecmd), _serverquote(self._path))))
             ui.debug('running %s\n' % cmd)
-            res = ui.system(cmd, blockedtag='sshpeer')
+            res = ui.system(cmd, blockedtag='sshpeer', environ=sshenv)
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
-        self._validaterepo(sshcmd, args, remotecmd)
+        self._validaterepo(sshcmd, args, remotecmd, sshenv)
 
     # Begin of _basepeer interface.
 
@@ -180,7 +182,7 @@ class sshpeer(wireproto.wirepeer):
 
     # End of _basewirecommands interface.
 
-    def _validaterepo(self, sshcmd, args, remotecmd):
+    def _validaterepo(self, sshcmd, args, remotecmd, sshenv=None):
         # cleanup up previous run
         self._cleanup()
 
@@ -196,7 +198,7 @@ class sshpeer(wireproto.wirepeer):
         # no buffer allow the use of 'select'
         # feel free to remove buffering and select usage when we ultimately
         # move to threading.
-        sub = util.popen4(cmd, bufsize=0)
+        sub = util.popen4(cmd, bufsize=0, env=sshenv)
         self._pipeo, self._pipei, self._pipee, self._subprocess = sub
 
         self._pipei = util.bufferedinputpipe(self._pipei)

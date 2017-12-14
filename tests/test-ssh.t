@@ -596,3 +596,21 @@ abort with configured error hint when there is a ssh problem when pulling
   abort: no suitable response from remote hg!
   (Please see http://company/internalwiki/ssh.html)
   [255]
+
+test that custom environment is passed down to ssh executable
+  $ cat >>dumpenv <<EOF
+  > #! /bin/sh
+  > echo \$VAR >&2
+  > EOF
+  $ chmod +x dumpenv
+  $ hg pull ssh://something --config ui.ssh="./dumpenv"
+  pulling from ssh://something/
+  remote: 
+  abort: no suitable response from remote hg!
+  [255]
+  $ hg pull ssh://something --config ui.ssh="./dumpenv" --config sshenv.VAR=17
+  pulling from ssh://something/
+  remote: 17
+  abort: no suitable response from remote hg!
+  [255]
+
