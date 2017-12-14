@@ -815,7 +815,6 @@ def write_to_chrome(data, fp, minthreshold=0.005, maxthreshold=0.999):
         tos = sample.stack[0]
         name = tos.function
         path = simplifypath(tos.path)
-        category = '%s:%d' % (path, tos.lineno)
         stack = tuple((('%s:%d' % (simplifypath(frame.path), frame.lineno),
                         frame.function) for frame in sample.stack))
         qstack = collections.deque(stack)
