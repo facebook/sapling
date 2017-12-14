@@ -1176,10 +1176,15 @@ def graph(web, req, tmpl):
     Information rendered by this handler can be used to create visual
     representations of repository topology.
 
-    The ``revision`` URL parameter controls the starting changeset.
+    The ``revision`` URL parameter controls the starting changeset. If it's
+    absent, the default is ``tip``.
 
     The ``revcount`` query string argument can define the number of changesets
     to show information for.
+
+    The ``graphtop`` query string argument can specify the starting changeset
+    for producing ``jsdata`` variable that is used for rendering graph in
+    JavaScript. By default it has the same value as ``revision``.
 
     This handler will render the ``graph`` template.
     """
