@@ -149,7 +149,7 @@ def rewrite(repo, old, updates, head, newbases, commitopts):
             if path in headmf:
                 fctx = head[path]
                 flags = fctx.flags()
-                mctx = context.memfilectx(repo, fctx.path(), fctx.data(),
+                mctx = context.memfilectx(repo, ctx, fctx.path(), fctx.data(),
                                           islink='l' in flags,
                                           isexec='x' in flags,
                                           copied=copied.get(path))

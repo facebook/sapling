@@ -657,7 +657,7 @@ def _graft(op, rev, mapping, lastdestnode):
             copied = fctx.renamed()
             if copied:
                 copied = copied[0]
-            return context.memfilectx(repo, fctx.path(), fctx.data(),
+            return context.memfilectx(repo, memctx, fctx.path(), fctx.data(),
                               islink='l' in flags,
                               isexec='x' in flags,
                               copied=copied)
