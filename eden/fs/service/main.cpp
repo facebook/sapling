@@ -84,15 +84,20 @@ int main(int argc, char** argv) {
     fprintf(stderr, "error: the --edenDir argument is required\n");
     return EX_USAGE;
   }
-  auto edenDir = canonicalPath(FLAGS_edenDir);
-  auto etcEdenDir = canonicalPath(FLAGS_etcEdenDir);
+  // We require edenDir to already exist, so use realpath() to resolve it.
+  auto edenDir = facebook::eden::realpath(FLAGS_edenDir);
+
+  // It's okay if the etcEdenDir and configPath don't exist, so use
+  // normalizeBestEffort() to try resolving symlinks in these paths but don't
+  // fail if they don't exist.
+  auto etcEdenDir = normalizeBestEffort(FLAGS_etcEdenDir);
 
   AbsolutePath configPath;
   std::string configPathStr = FLAGS_configPath;
   if (configPathStr.empty()) {
     configPath = identity.getHomeDirectory() + PathComponentPiece{".edenrc"};
   } else {
-    configPath = canonicalPath(configPathStr);
+    configPath = normalizeBestEffort(configPathStr);
   }
 
   EdenServer server(edenDir, etcEdenDir, configPath);
