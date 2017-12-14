@@ -466,7 +466,7 @@ class cookiehandler(urlreq.basehandler):
 
 handlerfuncs = []
 
-def opener(ui, authinfo=None):
+def opener(ui, authinfo=None, useragent=None):
     '''
     construct an opener suitable for urllib2
     authinfo will be added to the password manager
@@ -512,8 +512,14 @@ def opener(ui, authinfo=None):
     # own distribution name. Since servers should not be using the user
     # agent string for anything, clients should be able to define whatever
     # user agent they deem appropriate.
-    agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
-    opener.addheaders = [(r'User-agent', pycompat.sysstr(agent))]
+    #
+    # The custom user agent is for lfs, because unfortunately some servers
+    # do look at this value.
+    if not useragent:
+        agent = 'mercurial/proto-1.0 (Mercurial %s)' % util.version()
+        opener.addheaders = [(r'User-agent', pycompat.sysstr(agent))]
+    else:
+        opener.addheaders = [(r'User-agent', pycompat.sysstr(useragent))]
 
     # This header should only be needed by wire protocol requests. But it has
     # been sent on all requests since forever. We keep sending it for backwards

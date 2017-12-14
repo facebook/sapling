@@ -125,7 +125,8 @@ class _gitlfsremote(object):
         self.ui = ui
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip('/')
-        self.urlopener = urlmod.opener(ui, authinfo)
+        useragent = 'mercurial/%s git/2.15.1' % util.version()
+        self.urlopener = urlmod.opener(ui, authinfo, useragent)
         self.retry = ui.configint('lfs', 'retry')
 
     def writebatch(self, pointers, fromstore):
