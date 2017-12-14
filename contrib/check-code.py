@@ -166,7 +166,6 @@ testfilters = [
     (r"<<(\S+)((.|\n)*?\n\1)", rephere),
 ]
 
-winglobmsg = "use (glob) to match Windows paths too"
 uprefix = r"^  \$ "
 utestpats = [
   [
