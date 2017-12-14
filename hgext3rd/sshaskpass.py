@@ -143,9 +143,9 @@ def _receivefds(sockpath):
     wfd = recv_handle(sock)
     return (rfd, wfd)
 
-def _validaterepo(orig, self, sshcmd, args, remotecmd):
+def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
     if not _isttyserverneeded():
-        return orig(self, sshcmd, args, remotecmd)
+        return orig(self, sshcmd, args, remotecmd, sshenv=sshenv)
 
     pid = sockpath = scriptpath = None
     with _silentexception(terminate=False):
@@ -167,7 +167,7 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd):
         sshcmd = '%s %s' % (prefix, sshcmd)
 
     try:
-        return orig(self, sshcmd, args, remotecmd)
+        return orig(self, sshcmd, args, remotecmd, sshenv=sshenv)
     finally:
         if pid:
             _killprocess(pid)
