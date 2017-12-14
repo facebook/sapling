@@ -8,8 +8,10 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+from textwrap import dedent
+
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
-from eden.integration.lib import eden_server_inspector
+from eden.integration.lib import eden_server_inspector, hgrepo
 
 
 @hg_test
@@ -20,28 +22,28 @@ class RebaseTest(EdenHgTestCase):
         self._base_commit = repo.commit('commit')
 
         repo.mkdir('numbers/1')
-        repo.write_file('numbers/1/11', '')
+        repo.write_file('numbers/1/11', '11\n')
         self._c11 = repo.commit('c11')
-        repo.write_file('numbers/1/12', '')
+        repo.write_file('numbers/1/12', '12\n')
         self._c12 = repo.commit('c12')
-        repo.write_file('numbers/1/13', '')
+        repo.write_file('numbers/1/13', '13\n')
         self._c13 = repo.commit('c13')
-        repo.write_file('numbers/1/14', '')
+        repo.write_file('numbers/1/14', '14\n')
         self._c14 = repo.commit('c14')
-        repo.write_file('numbers/1/15', '')
+        repo.write_file('numbers/1/15', '15\n')
         self._c15 = repo.commit('c15')
 
         repo.update(self._base_commit)
         repo.mkdir('numbers/2')
-        repo.write_file('numbers/2/21', '')
+        repo.write_file('numbers/2/21', '21\n')
         self._c21 = repo.commit('c21')
-        repo.write_file('numbers/2/22', '')
+        repo.write_file('numbers/2/22', '22\n')
         self._c22 = repo.commit('c22')
-        repo.write_file('numbers/2/23', '')
+        repo.write_file('numbers/2/23', '23\n')
         self._c23 = repo.commit('c23')
-        repo.write_file('numbers/2/24', '')
+        repo.write_file('numbers/2/24', '24\n')
         self._c24 = repo.commit('c24')
-        repo.write_file('numbers/2/25', '')
+        repo.write_file('numbers/2/25', '25\n')
         self._c25 = repo.commit('c25')
 
         repo.update(self._base_commit)
@@ -102,6 +104,107 @@ class RebaseTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assertFalse(os.path.exists(self.get_path('numbers/README')))
         self.assertEqual(7, len(self.repo.log()))
+
+    def test_rebase_stack_with_conflicts(self):
+        '''Create a stack of commits that has conflicts with the stack onto
+        which we rebase and verify that if we merge the expected conflicts along
+        the way, then we end up in the expected state.'''
+        self.mkdir('numbers/1')
+
+        self.write_file('numbers/1/11', 'new 11\n')
+        self.repo.add_file('numbers/1/11')
+        self.write_file('numbers/1/12', 'new 12\n')
+        self.repo.add_file('numbers/1/12')
+        commit = self.repo.commit('Introduce 1/11 and 1/12.')
+
+        self.write_file('numbers/1/12', 'change 12 again\n')
+        self.write_file('numbers/1/13', 'new 13\n')
+        self.repo.add_file('numbers/1/13')
+        self.write_file('numbers/1/14', 'new 14\n')
+        self.repo.add_file('numbers/1/14')
+        self.repo.commit('Introduce 1/13 and 1/14.')
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg('rebase', '-s', commit, '-d', self._c15)
+        self.assertIn(
+            b'conflicts while merging numbers/1/11! '
+            b'(edit, then use \'hg resolve --mark\')', context.exception.stderr
+        )
+        self.assert_unresolved(unresolved=[
+            'numbers/1/11',
+            'numbers/1/12',
+        ])
+        self.assert_status({
+            'numbers/1/11': 'M',
+            'numbers/1/12': 'M',
+        })
+        self.assertEqual(dedent('''\
+        <<<<<<< dest
+        11
+        =======
+        new 11
+        >>>>>>> source
+        '''), self.read_file('numbers/1/11'))
+        self.assertEqual(dedent('''\
+        <<<<<<< dest
+        12
+        =======
+        new 12
+        >>>>>>> source
+        '''), self.read_file('numbers/1/12'))
+
+        self.write_file('numbers/1/11', '11 merged.\n')
+        self.write_file('numbers/1/12', '12 merged.\n')
+        self.hg('resolve', '--mark', 'numbers/1/11', 'numbers/1/12')
+
+        with self.assertRaises(hgrepo.HgError) as context:
+            self.hg('rebase', '--continue')
+        self.assertIn(
+            b'conflicts while merging numbers/1/12! '
+            b'(edit, then use \'hg resolve --mark\')', context.exception.stderr
+        )
+        self.assert_unresolved(unresolved=[
+            'numbers/1/12',
+            'numbers/1/13',
+            'numbers/1/14',
+        ])
+        self.assert_status({
+            'numbers/1/12': 'M',
+            'numbers/1/13': 'M',
+            'numbers/1/14': 'M',
+        })
+        self.assertEqual(dedent('''\
+        <<<<<<< dest
+        12 merged.
+        =======
+        change 12 again
+        >>>>>>> source
+        '''), self.read_file('numbers/1/12'))
+        self.assertEqual(dedent('''\
+        <<<<<<< dest
+        13
+        =======
+        new 13
+        >>>>>>> source
+        '''), self.read_file('numbers/1/13'))
+        self.assertEqual(dedent('''\
+        <<<<<<< dest
+        14
+        =======
+        new 14
+        >>>>>>> source
+        '''), self.read_file('numbers/1/14'))
+
+        self.write_file('numbers/1/12', 'merged.\n')
+        self.write_file('numbers/1/13', 'merged.\n')
+        self.write_file('numbers/1/14', 'merged.\n')
+        self.hg('resolve', '--mark', 'numbers/1/12', 'numbers/1/13',
+                'numbers/1/14')
+        self.hg('rebase', '--continue')
+        commits = self.repo.log()
+        self.assertEqual(8, len(commits))
+        self.assertEqual([self._base_commit, self._c11, self._c12, self._c13,
+                          self._c14, self._c15], commits[0:6])
 
     def assert_update_logic(self, stdout: str, num_fast_path: int=0,
                             num_slow_path: int=0):

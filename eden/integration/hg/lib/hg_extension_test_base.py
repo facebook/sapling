@@ -8,7 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
 import json
@@ -308,6 +308,26 @@ class EdenHgTestCase(testcase.EdenTestCase):
             observed_map[dst] = src
         self.assertEqual(expected, observed_map)
 
+    def assert_unresolved(
+        self,
+        unresolved: Union[List[str], Set[str]],
+        resolved: Union[List[str], Set[str]] = None
+    ) -> None:
+        out = self.hg('resolve', '--list')
+        actual_resolved = set()
+        actual_unresolved = set()
+        for line in out.splitlines():
+            status, path = line.split(None, 1)
+            if status == 'U':
+                actual_unresolved.add(path)
+            elif status == 'R':
+                actual_resolved.add(path)
+            else:
+                self.fail('unexpected entry in `hg resolve --list` output: %r'
+                          % line)
+
+        self.assertEqual(actual_unresolved, set(unresolved))
+        self.assertEqual(actual_resolved, set(resolved or []))
 
 def _apply_flatmanifest_config(test, config):
     # flatmanifest is the default mercurial behavior
