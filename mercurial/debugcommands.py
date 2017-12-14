@@ -2086,10 +2086,12 @@ def debugssl(ui, repo, source=None, **opts):
     url = util.url(source)
     addr = None
 
-    if url.scheme == 'https':
-        addr = (url.host, url.port or 443)
-    elif url.scheme == 'ssh':
-        addr = (url.host, url.port or 22)
+    defaultport = {'https': 443, 'ssh': 22}
+    if url.scheme in defaultport:
+        try:
+            addr = (url.host, int(url.port or defaultport[url.scheme]))
+        except ValueError:
+            raise error.Abort(_("malformed port number in URL"))
     else:
         raise error.Abort(_("only https and ssh connections are supported"))
 
