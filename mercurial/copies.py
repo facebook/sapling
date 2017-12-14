@@ -107,7 +107,7 @@ def _findlimit(repo, a, b):
     return min(limit, a, b)
 
 def _chain(src, dst, a, b):
-    '''chain two sets of copies a->b'''
+    """chain two sets of copies a->b"""
     t = a.copy()
     for k, v in b.iteritems():
         if v in t:
@@ -130,8 +130,8 @@ def _chain(src, dst, a, b):
     return t
 
 def _tracefile(fctx, am, limit=-1):
-    '''return file context that is the ancestor of fctx present in ancestor
-    manifest am, stopping after the first ancestor lower than limit'''
+    """return file context that is the ancestor of fctx present in ancestor
+    manifest am, stopping after the first ancestor lower than limit"""
 
     for f in fctx.ancestors():
         if am.get(f.path(), None) == f.filenode():
@@ -157,7 +157,7 @@ def _computeforwardmissing(a, b, match=None):
     return mb.filesnotin(ma, match=match)
 
 def _forwardcopies(a, b, match=None):
-    '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''
+    """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
 
     # check for working copy
     w = None
@@ -223,7 +223,7 @@ def _backwardrenames(a, b):
     return r
 
 def pathcopies(x, y, match=None):
-    '''find {dst@y: src@x} copy mapping for directed compare'''
+    """find {dst@y: src@x} copy mapping for directed compare"""
     if x == y or not x or not y:
         return {}
     a = y.ancestor(x)
@@ -861,13 +861,13 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
                     return
 
 def duplicatecopies(repo, wctx, rev, fromrev, skiprev=None):
-    '''reproduce copies from fromrev to rev in the dirstate
+    """reproduce copies from fromrev to rev in the dirstate
 
     If skiprev is specified, it's a revision that should be used to
     filter copy records. Any copies that occur between fromrev and
     skiprev will not be duplicated, even if they appear in the set of
     copies between fromrev and rev.
-    '''
+    """
     exclude = {}
     if (skiprev is not None and
         repo.ui.config('experimental', 'copytrace') != 'off'):
