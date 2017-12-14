@@ -203,7 +203,7 @@ class phasecache(object):
         if _load:
             # Cheap trick to allow shallow-copy without copy module
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-            self._phasemaxrev = nullrev
+            self._loadedrevslen = nullrev
             self._phasesets = None
             self.filterunknown(repo)
             self.opener = repo.svfs
@@ -248,13 +248,13 @@ class phasecache(object):
         ph.phaseroots = self.phaseroots[:]
         ph.dirty = self.dirty
         ph.opener = self.opener
-        ph._phasemaxrev = self._phasemaxrev
+        ph._loadedrevslen = self._loadedrevslen
         ph._phasesets = self._phasesets
         return ph
 
     def replace(self, phcache):
         """replace all values in 'self' with content of phcache"""
-        for a in ('phaseroots', 'dirty', 'opener', '_phasemaxrev',
+        for a in ('phaseroots', 'dirty', 'opener', '_loadedrevslen',
                   '_phasesets'):
             setattr(self, a, getattr(phcache, a))
 
@@ -282,19 +282,19 @@ class phasecache(object):
                 ps.add(root)
             ps.difference_update(self._phasesets[secret])
             self._phasesets[draft] = ps
-        self._phasemaxrev = len(cl)
+        self._loadedrevslen = len(cl)
 
     def loadphaserevs(self, repo):
         """ensure phase information is loaded in the object"""
         if self._phasesets is None:
             try:
                 res = self._getphaserevsnative(repo)
-                self._phasemaxrev, self._phasesets = res
+                self._loadedrevslen, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
 
     def invalidate(self):
-        self._phasemaxrev = nullrev
+        self._loadedrevslen = nullrev
         self._phasesets = None
 
     def phase(self, repo, rev):
@@ -307,7 +307,7 @@ class phasecache(object):
             return public
         if rev < nullrev:
             raise ValueError(_('cannot lookup negative revision'))
-        if rev >= self._phasemaxrev:
+        if rev >= self._loadedrevslen:
             self.invalidate()
             self.loadphaserevs(repo)
         for phase in trackedphases:
