@@ -28,7 +28,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -796,6 +796,10 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
     def _get_clients_dir(self):
         return os.path.join(self._config_dir, CLIENTS_DIR)
+
+    def get_server_build_info(self) -> Dict[str, str]:
+        with self.get_thrift_client() as client:
+            return client.getRegexExportedValues('^build_.*')
 
 
 class HealthStatus(object):

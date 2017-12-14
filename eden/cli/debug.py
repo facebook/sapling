@@ -9,6 +9,7 @@
 
 import argparse
 import binascii
+import collections
 import os
 import stat
 import sys
@@ -149,6 +150,14 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
     file_type_str = _FILE_TYPE_FLAGS.get(stat.S_IFMT(mode), '?')
     perms = (mode & 0o7777)
     return file_type_str, perms
+
+
+def do_buildinfo(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    build_info = config.get_server_build_info()
+    sorted_build_info = collections.OrderedDict(sorted(build_info.items()))
+    for key, value in sorted_build_info.items():
+        print(f'{key}: {value}')
 
 
 def do_hg_copy_map_get_all(args: argparse.Namespace):
@@ -520,6 +529,11 @@ def setup_argparse(parser: argparse.ArgumentParser):
     parser.add_argument('mount', help='The eden mount point path.')
     parser.add_argument('id', help='The blob ID')
     parser.set_defaults(func=do_blobmeta)
+
+    parser = subparsers.add_parser(
+        'buildinfo',
+        help='Show the build info for the Eden server')
+    parser.set_defaults(func=do_buildinfo)
 
     parser = subparsers.add_parser(
         'hg_copy_map_get_all', help='Copymap for dirstate')
