@@ -80,6 +80,7 @@ using namespace facebook::eden;
 constexpr StringPiece kLockFileName{"lock"};
 constexpr StringPiece kThriftSocketName{"socket"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
+constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 
 folly::SocketAddress getThriftAddress(
     StringPiece argument,
@@ -127,12 +128,10 @@ class EdenServer::ThriftServerEventHandler
 EdenServer::EdenServer(
     AbsolutePathPiece edenDir,
     AbsolutePathPiece etcEdenDir,
-    AbsolutePathPiece configPath,
-    AbsolutePathPiece rocksPath)
+    AbsolutePathPiece configPath)
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
-      rocksPath_(rocksPath),
       threadPool_(std::make_shared<EdenCPUThreadPool>()) {}
 
 EdenServer::~EdenServer() {}
@@ -259,7 +258,8 @@ void EdenServer::prepare() {
   }
 
   XLOG(DBG2) << "opening local RocksDB store";
-  localStore_ = make_shared<LocalStore>(rocksPath_);
+  auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
+  localStore_ = make_shared<LocalStore>(rocksPath);
   XLOG(DBG2) << "done opening local RocksDB store";
 
   // Start listening for graceful takeover requests

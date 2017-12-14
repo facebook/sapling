@@ -27,7 +27,6 @@ DEFINE_string(
     "/etc/eden",
     "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
-DEFINE_string(rocksPath, "", "The path to the local RocksDB store");
 
 // The logging configuration parameter.  We default to DBG2 for everything in
 // eden, and WARNING for all other categories.
@@ -87,9 +86,6 @@ int main(int argc, char** argv) {
   }
   auto edenDir = canonicalPath(FLAGS_edenDir);
   auto etcEdenDir = canonicalPath(FLAGS_etcEdenDir);
-  auto rocksPath = FLAGS_rocksPath.empty()
-      ? edenDir + RelativePathPiece{"storage/rocks-db"}
-      : canonicalPath(FLAGS_rocksPath);
 
   AbsolutePath configPath;
   std::string configPathStr = FLAGS_configPath;
@@ -99,7 +95,7 @@ int main(int argc, char** argv) {
     configPath = canonicalPath(configPathStr);
   }
 
-  EdenServer server(edenDir, etcEdenDir, configPath, rocksPath);
+  EdenServer server(edenDir, etcEdenDir, configPath);
   server.run();
   return EX_OK;
 }

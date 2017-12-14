@@ -68,8 +68,7 @@ class EdenServer : private TakeoverHandler {
   EdenServer(
       AbsolutePathPiece edenDir,
       AbsolutePathPiece etcEdenDir,
-      AbsolutePathPiece configPath,
-      AbsolutePathPiece rocksPath);
+      AbsolutePathPiece configPath);
   virtual ~EdenServer();
 
   /**
@@ -287,7 +286,6 @@ class EdenServer : private TakeoverHandler {
   AbsolutePath edenDir_;
   AbsolutePath etcEdenDir_;
   AbsolutePath configPath_;
-  AbsolutePath rocksPath_;
   folly::File lockFile_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
