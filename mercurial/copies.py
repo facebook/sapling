@@ -195,21 +195,15 @@ def _forwardcopies(a, b, match=None):
     """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
 
     # check for working copy
-    w = None
     if b.rev() is None:
-        w = b
-        b = w.p1()
-        if a == b:
+        if a == b.p1():
             # short-circuit to avoid issues with merge states
-            return _dirstatecopies(w, match)
+            return _dirstatecopies(b, match)
 
-    cm = _committedforwardcopies(a, b, match)
-
-    # combine copies from dirstate if necessary
-    if w is not None:
-        cm = _chain(a, w, cm, _dirstatecopies(w, match))
-
-    return cm
+        cm = _committedforwardcopies(a, b.p1(), match)
+        # combine copies from dirstate if necessary
+        return _chain(a, b, cm, _dirstatecopies(b, match))
+    return _committedforwardcopies(a, b, match)
 
 def _backwardrenames(a, b):
     if a._repo.ui.config('experimental', 'copytrace') == 'off':
