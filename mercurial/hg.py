@@ -916,8 +916,13 @@ def incoming(ui, repo, source, opts):
     return _incoming(display, subreporecurse, ui, repo, source, opts)
 
 def _outgoing(ui, repo, dest, opts):
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = parseurl(dest, opts.get('branch'))
+    path = ui.paths.getpath(dest, default=('default-push', 'default'))
+    if not path:
+        raise error.Abort(_('default repository not configured!'),
+                hint=_("see 'hg help config.paths'"))
+    dest = path.pushloc or path.loc
+    branches = path.branch, opts.get('branch') or []
+
     ui.status(_('comparing with %s\n') % util.hidepassword(dest))
     revs, checkout = addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:

@@ -1418,8 +1418,16 @@ def outgoing(repo, subset, x):
     l = getargs(x, 0, 1, _("outgoing takes one or no arguments"))
     # i18n: "outgoing" is a keyword
     dest = l and getstring(l[0], _("outgoing requires a repository path")) or ''
-    dest = repo.ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest)
+    if not dest:
+        # ui.paths.getpath() explicitly tests for None, not just a boolean
+        dest = None
+    path = repo.ui.paths.getpath(dest, default=('default-push', 'default'))
+    if not path:
+        raise error.Abort(_('default repository not configured!'),
+                hint=_("see 'hg help config.paths'"))
+    dest = path.pushloc or path.loc
+    branches = path.branch, []
+
     revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
     if revs:
         revs = [repo.lookup(rev) for rev in revs]

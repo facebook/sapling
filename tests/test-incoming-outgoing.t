@@ -491,3 +491,63 @@ incoming from empty remote repository
   searching for changes
   no changes found
   [1]
+
+Create a "split" repo that pulls from r1 and pushes to r2, using default-push
+
+  $ hg clone r1 split
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat > split/.hg/hgrc << EOF
+  > [paths]
+  > default = $TESTTMP/r3
+  > default-push = $TESTTMP/r2
+  > EOF
+  $ hg -R split outgoing
+  comparing with $TESTTMP/r2
+  searching for changes
+  changeset:   0:3e92d79f743a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+
+Use default:pushurl instead of default-push
+
+Windows needs a leading slash to make a URL that passes all of the checks
+  $ WD=`pwd`
+#if windows
+  $ WD="/$WD"
+#endif
+  $ cat > split/.hg/hgrc << EOF
+  > [paths]
+  > default = $WD/r3
+  > default:pushurl = file://$WD/r2
+  > EOF
+  $ hg -R split outgoing
+  comparing with file:/*/$TESTTMP/r2 (glob)
+  searching for changes
+  changeset:   0:3e92d79f743a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+
+Push and then double-check outgoing
+
+  $ echo a >> split/foo
+  $ hg -R split commit -Ama
+  $ hg -R split push
+  pushing to file:/*/$TESTTMP/r2 (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  $ hg -R split outgoing
+  comparing with file:/*/$TESTTMP/r2 (glob)
+  searching for changes
+  no changes found
+  [1]
+
