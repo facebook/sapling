@@ -156,18 +156,8 @@ def _computeforwardmissing(a, b, match=None):
     mb = b.manifest()
     return mb.filesnotin(ma, match=match)
 
-def _forwardcopies(a, b, match=None):
-    """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
-
-    # check for working copy
-    w = None
-    if b.rev() is None:
-        w = b
-        b = w.p1()
-        if a == b:
-            # short-circuit to avoid issues with merge states
-            return _dirstatecopies(w, match)
-
+def _committedforwardcopies(a, b, match):
+    """Like _forwardcopies(), but b.rev() cannot be None (working copy)"""
     # files might have to be traced back to the fctx parent of the last
     # one-side-only changeset, but not further back than that
     limit = _findlimit(a._repo, a.rev(), b.rev())
@@ -199,6 +189,21 @@ def _forwardcopies(a, b, match=None):
         ofctx = _tracefile(fctx, am, limit)
         if ofctx:
             cm[f] = ofctx.path()
+    return cm
+
+def _forwardcopies(a, b, match=None):
+    """find {dst@b: src@a} copy mapping where a is an ancestor of b"""
+
+    # check for working copy
+    w = None
+    if b.rev() is None:
+        w = b
+        b = w.p1()
+        if a == b:
+            # short-circuit to avoid issues with merge states
+            return _dirstatecopies(w, match)
+
+    cm = _committedforwardcopies(a, b, match)
 
     # combine copies from dirstate if necessary
     if w is not None:
