@@ -280,17 +280,20 @@ Unamending in middle of a stack
   o  0:18d04c59bb5d  Added a
   
 
-  $ hg unamend
-  abort: cannot unamend a changeset with children
+  $ hg --config experimental.evolution=createmarkers unamend
+  abort: cannot unamend changeset with children
   [255]
+
+  $ hg unamend
 
 Trying to unamend a public changeset
 
-  $ hg up
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -C 23
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg phase -r . -p
   $ hg unamend
   abort: cannot unamend public changesets
+  (see 'hg help phases' for details)
   [255]
 
 Testing whether unamend retains copies or not

@@ -208,8 +208,7 @@ def unamend(ui, repo, **opts):
         # identify the commit from which to unamend
         curctx = repo['.']
 
-        if not curctx.mutable():
-            raise error.Abort(_('cannot unamend public changesets'))
+        rewriteutil.precheck(repo, [curctx.rev()], 'unamend')
 
         # identify the commit to which to unamend
         markers = list(predecessormarkers(curctx))
@@ -219,9 +218,6 @@ def unamend(ui, repo, **opts):
 
         prednode = markers[0].prednode()
         predctx = unfi[prednode]
-
-        if curctx.children():
-            raise error.Abort(_("cannot unamend a changeset with children"))
 
         # add an extra so that we get a new hash
         # note: allowing unamend to undo an unamend is an intentional feature
