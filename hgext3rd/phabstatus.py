@@ -9,11 +9,12 @@ from mercurial import cmdutil, extensions, registrar
 from mercurial import util as hgutil
 from mercurial.i18n import _
 from mercurial import obsutil
+import os
 
 from phabricator import (
     arcconfig,
-    conduit,
     diffprops,
+    graphql,
 )
 
 def memoize(f):
@@ -61,7 +62,6 @@ def _fail(repo, diffids, *msgs):
         repo.ui.warn(msg)
     return ["Error"] * len(diffids)
 
-
 @memoize
 def getdiffstatus(repo, *diffid):
     """Perform a Conduit API call to get the diff status
@@ -74,29 +74,28 @@ def getdiffstatus(repo, *diffid):
     ca_certs = repo.ui.configpath('web', 'cacerts')
 
     try:
-        resp = conduit.call_conduit('differential.querydiffhashes',
-                {'revisionIDs': diffid},
-                timeout=timeout, ca_certs=ca_certs)
+        client = graphql.Client(
+            repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
+        statuses = client.getrevisioninfo(timeout, diffid)
 
-    except conduit.ClientError as ex:
+    except graphql.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '
                 'provided.\n')
         hint = _("Error info: %s\n") % str(ex)
-        return _fail(repo, diffid, msg, hint)
+        ret = _fail(repo, diffid, msg, hint)
+        return ret
     except arcconfig.ArcConfigError as ex:
         msg = _('arcconfig configuration problem. No diff information can be '
                 'provided.\n')
         hint = _("Error info: %s\n") % str(ex)
-        return _fail(repo, diffid, msg, hint)
+        ret = _fail(repo, diffid, msg, hint)
+        return ret
 
-    if not resp:
-        resp = {}
-
-    # This makes the code more robust in case conduit does not return
-    # what we need
+    # This makes the code more robust in case we don't learn about any
+    # particular revision
     result = []
     for diff in diffid:
-        matchingresponse = resp.get(diff)
+        matchingresponse = statuses.get(str(diff))
         if not matchingresponse:
             result.append("Error")
         else:
@@ -184,8 +183,7 @@ def showsyncstatus(repo, ctx, templ, **args):
     if local == remote:
         return "sync"
     elif count == 1:
-        precursors = list(obsutil.allpredecessors(repo.obsstore,
-            [ctx.node()]))
+        precursors = list(obsutil.allpredecessors(repo.obsstore, [ctx.node()]))
         hashes = [repo.unfiltered()[h].hex() for h in precursors]
         # hashes[0] is the current
         # hashes[1] is the previous

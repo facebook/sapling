@@ -16,7 +16,7 @@ command = registrar.command(cmdtable)
 class ArcConfigError(Exception):
     pass
 
-def _load_file(filename):
+def _loadfile(filename):
     try:
         with open(filename, 'r') as f:
             return json.loads(f.read())
@@ -25,7 +25,7 @@ def _load_file(filename):
             return None
         raise
 
-def load_for_path(path):
+def loadforpath(path):
     # location where `arc install-certificate` writes .arcrc
     if os.name == 'nt':
         envvar = 'APPDATA'
@@ -36,13 +36,13 @@ def load_for_path(path):
         raise ArcConfigError('$%s environment variable not found' % envvar)
 
     # Use their own file as a basis
-    userconfig = _load_file(os.path.join(homedir, '.arcrc')) or {}
+    userconfig = _loadfile(os.path.join(homedir, '.arcrc')) or {}
 
     # Walk up the path and augment with an .arcconfig if we find it,
     # terminating the search at that point.
     path = os.path.abspath(path)
     while len(path) > 1:
-        config = _load_file(os.path.join(path, '.arcconfig'))
+        config = _loadfile(os.path.join(path, '.arcconfig'))
         if config is not None:
             userconfig.update(config)
             # Return the located path too, as we need this for figuring
@@ -57,7 +57,7 @@ def load_for_path(path):
 def debugarcconfig(ui, repo, *args, **opts):
     """ exists purely for testing and diagnostic purposes """
     try:
-        config = load_for_path(repo.root)
+        config = loadforpath(repo.root)
         ui.write(json.dumps(config, sort_keys=True), '\n')
     except ArcConfigError as ex:
         raise error.Abort(str(ex))

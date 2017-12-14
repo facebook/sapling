@@ -13,7 +13,7 @@ from mercurial.i18n import _
 
 from phabricator import (
     arcconfig,
-    conduit,
+    graphql,
     diffprops,
 )
 
@@ -21,23 +21,21 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'diff', _diff)
     options = entry[1]
     options.append(('', 'since-last-arc-diff', None,
-        _('show changes since last `arc diff`')))
+                    _('show changes since last `arc diff`')))
 
 def _differentialhash(ui, repo, phabrev):
     timeout = repo.ui.configint('ssl', 'timeout', 5)
     ca_certs = repo.ui.configpath('web', 'cacerts')
-    client = conduit.Client(ca_certs=ca_certs, timeout=timeout)
     try:
-        client.apply_arcconfig(arcconfig.load_for_path(repo.root))
-
-        diffid = diffprops.getcurrentdiffidforrev(client, phabrev)
-        if diffid is None:
+        client = graphql.Client(
+            repodir=repo.root, ca_bundle=ca_certs, repo=repo)
+        info = client.getrevisioninfo(timeout, [phabrev]).get(str(phabrev))
+        if not info:
             return None
+        return info
 
-        localcommits = diffprops.getlocalcommitfordiffid(client, diffid)
-        return localcommits.get('commit', None) if localcommits else None
-    except conduit.ClientError as e:
-        ui.warn(_('Error calling conduit: %s\n') % str(e))
+    except graphql.ClientError as e:
+        ui.warn(_('Error calling graphql: %s\n') % str(e))
         return None
     except arcconfig.ArcConfigError as e:
         raise error.Abort(str(e))
@@ -55,11 +53,12 @@ def _diff(orig, ui, repo, *pats, **opts):
         raise error.Abort(mess)
 
     rev = _differentialhash(ui, repo, phabrev)
-    if rev is None:
+
+    if rev is None or not isinstance(rev, dict) or "hash" not in rev:
         mess = _('unable to determine previous changeset hash')
         raise error.Abort(mess)
 
-    rev = str(rev)
+    rev = str(rev['hash'])
     opts['rev'] = [rev]
 
     # if patterns aren't provided, restrict diff to files in both changesets

@@ -22,15 +22,15 @@ With an invalid arc configuration
 
 Configure arc...
 
-  $ echo '{}' > .arcconfig
   $ echo '{}' > .arcrc
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
 
 And now with bad responses:
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}], "result": {}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  $ OVERRIDE_GRAPHQL_URI=https://a.com HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   Error
 
   $ cat > $TESTTMP/mockduit << EOF
@@ -76,4 +76,3 @@ And finally, the success case
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   committed
-

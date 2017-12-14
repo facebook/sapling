@@ -75,6 +75,9 @@ This file is backported from mercurial/tests/test-check-py3-compat.t.
   linelog/pyext/test-random-edits.py not using absolute_import
   phabricator/arcconfig.py not using absolute_import
   phabricator/diffprops.py not using absolute_import
+  phabricator/graphql.py not using absolute_import
+  phabricator/phabricator_graphql_client_requests.py not using absolute_import
+  phabricator/phabricator_graphql_client_urllib.py not using absolute_import
   remotefilelog/__init__.py not using absolute_import
   remotefilelog/cacheclient.py not using absolute_import
   remotefilelog/constants.py not using absolute_import

@@ -2,7 +2,6 @@
   > [extensions]
   > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
   > fastlog=$TESTDIR/../hgext3rd/fastlog.py
-  > fbconduit=$TESTDIR/../hgext3rd/fbconduit.py
   > [fbconduit]
   > host=our.intern.facebook.com
   > protocol=http
@@ -62,6 +61,7 @@ Graphlog still works
   |/
   o  0 a
   
+
 
 Create a merge
 
@@ -249,22 +249,3 @@ Multi-path queries
   11c9870ffc4024fab11bf166a00b2852ea36bcf6
   5946a2427fdfcb068a8aec1a59227d0d76062b43
   728676e01661ccc3d7e39de054ca3a7288d7e7b6
-
-Test with failed network call
-  $ cat > $TESTTMP/bad_conduit.py <<'EOF'
-  > def call_conduit(*args, **kwargs):
-  >   raise Exception('failed')
-  > def conduit_config(*args, **kwargs):
-  >   return True
-  > EOF
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fbconduit=$TESTTMP/bad_conduit.py
-  > EOF
-
-  $ hg log parent -T '{rev} {desc}\n' 2>&1 | grep --invert-match 'failed'
-  9 toys
-  8 treats
-  7 cookies
-  6 major repo reorg

@@ -22,8 +22,8 @@ With an invalid arc configuration
 
 Configure arc...
 
-  $ echo '{}' > .arcconfig
   $ echo '{}' > .arcrc
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
 
 And now with bad responses:
 
@@ -78,7 +78,9 @@ Make sure we get decent error messages when .arcrc is missing credential
 information.  We intentionally do not use HG_ARC_CONDUIT_MOCK for this test,
 so it tries to parse the (empty) arc config files.
 
+  $ echo '{}' > .arcrc
+  $ echo '{}' > .arcconfig
   $ hg log -T '{phabstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: arcrc is missing user credentials for host https://phabricator.intern.facebook.com/api/.  use "arc install-certificate" to fix.
+  Error info: arcrc is missing user credentials for host None.  use "arc install-certificate" to fix.
   Error

@@ -29,44 +29,34 @@ Fake a diff
 
 Prep configuration
 
-  $ echo '{}' > .arcconfig
   $ echo '{}' > .arcrc
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
 
 Now progressively test the response handling for variations of missing data
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": null}]
+  > [{"result": {}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": []}]}]
+  > [{"result": {"2" : {}}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": [1]}]},
-  >  {"cmd": ["differential.getdiffproperties", {
-  >              "diff_id": 1,
-  >              "names": ["local:commits"]}],
-  >   "result": []
-  > }]
+  > [{"result": {"1" : {"count": 3, "status": "Needs Review"}}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": [1]}]},
-  >  {"cmd": ["differential.getdiffproperties", {
-  >              "diff_id": 1,
-  >              "names": ["local:commits"]}],
-  >   "result": {"local:commits": []}
-  > }]
+  > [{"result": {"1" : {"status": "Needs Review"}}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
@@ -76,15 +66,7 @@ This is the case when the diff is up to date with the current commit;
 there is no diff since what was landed.
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": [1]}]},
-  >  {"cmd": ["differential.getdiffproperties", {
-  >              "diff_id": 1,
-  >               "names": ["local:commits"]}],
-  >   "result": {"local:commits": {
-  >                  "2e6531b7dada2a3e5638e136de05f51e94a427f4": {
-  >                      "commit": "2e6531b7dada2a3e5638e136de05f51e94a427f4",
-  >                      "time": 0}}}
-  > }]
+  > [{"result": {"1" : {"hash": "2e6531b7dada2a3e5638e136de05f51e94a427f4", "count": 1, "status": "Needs Review"}}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
 
@@ -94,18 +76,7 @@ the commit list returned from our mocked phabricator; it is present to
 assert that we order the commits consistently based on the time field.
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.query", {"ids": ["1"]}], "result": [{"diffs": [1]}]},
-  >  {"cmd": ["differential.getdiffproperties", {
-  >              "diff_id": 1,
-  >              "names": ["local:commits"]}],
-  >   "result": {"local:commits": {
-  >                  "88dd5a13bf28b99853a24bddfc93d4c44e07c6bd": {
-  >                      "commit": "88dd5a13bf28b99853a24bddfc93d4c44e07c6bd",
-  >                      "time": 10},
-  >                  "fakehashtotestsorting": {
-  >                      "commit": "fakehashtotestsorting",
-  >                      "time": 5}}}
-  > }]
+  > [{"result": {"1" : {"hash": "88dd5a13bf28b99853a24bddfc93d4c44e07c6bd", "count": 1, "status": "Needs Review"}}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff --nodates
   diff -r 88dd5a13bf28 foo
