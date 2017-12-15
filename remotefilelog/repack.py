@@ -616,19 +616,23 @@ class repacker(object):
                 # TODO: Optimize the deltachain fetching. Since we're
                 # iterating over the different version of the file, we may
                 # be fetching the same deltachain over and over again.
-                # TODO: reuse existing deltas if it matches our deltabase
+                meta = None
                 if deltabase != nullid:
-                    deltabasetext = self.data.get(filename, deltabase)
-                    original = self.data.get(filename, node)
-                    size = len(original)
-                    delta = mdiff.textdiff(deltabasetext, original)
+                    deltaentry = self.data.getdelta(filename, node)
+                    delta, deltabasename, origdeltabase, meta = deltaentry
+                    size = meta.get(constants.METAKEYSIZE)
+                    if (deltabasename != filename or origdeltabase != deltabase
+                        or size is None):
+                        deltabasetext = self.data.get(filename, deltabase)
+                        original = self.data.get(filename, node)
+                        size = len(original)
+                        delta = mdiff.textdiff(deltabasetext, original)
                 else:
                     delta = self.data.get(filename, node)
                     size = len(delta)
+                    meta = self.data.getmeta(filename, node)
 
                 # TODO: don't use the delta if it's larger than the fulltext
-                # TODO: don't use the delta if the chain is already long
-                meta = self.data.getmeta(filename, node)
                 if constants.METAKEYSIZE not in meta:
                     meta[constants.METAKEYSIZE] = size
                 target.add(filename, node, deltabase, delta, meta)

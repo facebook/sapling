@@ -454,3 +454,30 @@ Test huge pack cleanup using different values of packs.maxpacksize:
   $ hg repack --incremental --debug --config packs.maxpacksize=512
   removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.datapack (365 bytes)
   removing oversize packfile $TESTTMP/hgcache/master/packs/a2731c9a16403457b67337a620931797fce8c821.dataidx (1.21 KB)
+
+Do a repack where the new pack reuses a delta from the old pack
+  $ clearcache
+  $ hg prefetch -r '2::3'
+  2 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg repack
+  $ hg debugdatapack $CACHEDIR/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/abf210f6c3aa4dd0ecc7033633ad73591be16c95:
+  x:
+  Node          Delta Base    Delta Length  Blob Size
+  1bb2e6237e03  000000000000  8             8
+  d4a3ed9310e5  1bb2e6237e03  12            6
+  
+  Total:                      20            14        (42.9% bigger)
+  $ hg prefetch -r '0::1'
+  2 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg repack
+  $ hg debugdatapack $CACHEDIR/master/packs/*.datapack
+  $TESTTMP/hgcache/master/packs/09b8bf49256b3fc2175977ba97d6402e91a9a604:
+  x:
+  Node          Delta Base    Delta Length  Blob Size
+  1bb2e6237e03  000000000000  8             8
+  d4a3ed9310e5  1bb2e6237e03  12            6
+  aee31534993a  d4a3ed9310e5  12            4
+  1406e7411862  aee31534993a  12            2
+  
+  Total:                      44            20        (120.0% bigger)
