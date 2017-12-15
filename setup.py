@@ -522,6 +522,10 @@ class CleanExtCommand(Command):
 rust_ext_modules = []
 if USERUST:
     rust_ext_modules.extend([
+        RustExtension('indexes',
+            package='hgext3rd.rust',
+            manifest='rust/indexes/Cargo.toml',
+        ),
         RustExtension('treedirstate',
             package='hgext3rd.rust',
             manifest='rust/treedirstate/Cargo.toml',
