@@ -180,3 +180,12 @@ Check backup status with an unbacked up changeset that is disjoint from existing
   5 Backup pending changeset
   6 Not backed up changeset 2
   7 Not backed up changeset 3
+
+Test template keyword for when a backup is in progress
+  $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
+  No
+  $ echo fakelock > .hg/infinitepushbackup.lock
+  $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
+  Yes
+  $ rm -f .hg/infinitepushbackup.lock
+

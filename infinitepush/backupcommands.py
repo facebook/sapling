@@ -84,6 +84,7 @@ osutil = policy.importmod(r'osutil')
 cmdtable = {}
 command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
+templatekeyword = registrar.templatekeyword()
 
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])
@@ -336,6 +337,13 @@ def notbackedup(repo, subset, x):
                     notbackeduprevs.discard(ctx.rev())
                     candidates.update([p.hex() for p in ctx.parents()])
     return subset & notbackeduprevs
+
+@templatekeyword('backingup')
+def backingup(repo, ctx, **args):
+    """Whether infinitepush is currently backing up commits."""
+    # If the backup lock exists then a backup should be in progress.
+    srcrepo = shareutil.getsrcrepo(repo)
+    return srcrepo.vfs.lexists(_backuplockname)
 
 def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
