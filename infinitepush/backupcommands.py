@@ -77,6 +77,8 @@ from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev, short
 from mercurial.i18n import _
 
+from hgext3rd import shareutil
+
 osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
@@ -133,7 +135,7 @@ def backup(ui, repo, dest=None, **opts):
     try:
         # Wait at most 30 seconds, because that's the average backup time
         timeout = 30
-        srcrepo = _getsrcrepo(repo)
+        srcrepo = shareutil.getsrcrepo(repo)
         with lockmod.lock(srcrepo.vfs, _backuplockname, timeout=timeout):
             return _dobackup(ui, repo, dest, **opts)
     except error.LockHeld as e:
@@ -265,7 +267,7 @@ def waitbackup(ui, repo, timeout):
         raise error.Abort('timeout should be integer')
 
     try:
-        repo = _getsrcrepo(repo)
+        repo = shareutil.getsrcrepo(repo)
         with lockmod.lock(repo.vfs, _backuplockname, timeout=timeout):
             pass
     except error.LockHeld as e:
@@ -407,7 +409,7 @@ def _dobackup(ui, repo, dest, **opts):
     ui.status(_('starting backup %s\n') % time.strftime('%H:%M:%S %d %b %Y %Z'))
     start = time.time()
     # to handle multiple working copies correctly
-    repo = _getsrcrepo(repo)
+    repo = shareutil.getsrcrepo(repo)
     currentbkpgenerationvalue = _readbackupgenerationfile(repo.vfs)
     newbkpgenerationvalue = ui.configint('infinitepushbackup',
                                          'backupgeneration', 0)
@@ -820,7 +822,7 @@ def _deletebackupstate(repo):
     return repo.vfs.tryunlink(_backupstatefile)
 
 def _readlocalbackupstate(ui, repo):
-    repo = _getsrcrepo(repo)
+    repo = shareutil.getsrcrepo(repo)
     if not _localbackupstateexists(repo):
         return backupstate()
 
@@ -967,18 +969,3 @@ def _dictdiff(first, second):
         if second.get(book) != hexnode:
             result[book] = hexnode
     return result
-
-def _getsrcrepo(repo):
-    '''returns main repo in case of shared woking copy
-    '''
-    if repo.sharedpath == repo.path:
-        return repo
-
-    # the sharedpath always ends in the .hg; we want the path to the repo
-    source = repo.vfs.split(repo.sharedpath)[0]
-    srcurl, branches = hg.parseurl(source)
-    srcrepo = hg.repository(repo.ui, srcurl)
-    if srcrepo.local():
-        return srcrepo
-    else:
-        return repo
