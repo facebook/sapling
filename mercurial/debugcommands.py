@@ -740,7 +740,7 @@ def debugstate(ui, repo, **opts):
      _('use old-style discovery with non-heads included')),
     ('', 'rev', [], 'restrict discovery to this set of revs'),
     ] + cmdutil.remoteopts,
-    _('[-l REV] [-r REV] [-b BRANCH]... [OTHER]'))
+    _('[--rev REV] [OTHER]'))
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
     opts = pycompat.byteskwargs(opts)
