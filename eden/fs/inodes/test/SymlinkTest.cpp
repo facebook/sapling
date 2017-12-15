@@ -47,6 +47,7 @@ TEST_F(SymlinkTest, makeSymlink) {
 
   auto root = mount_.getTreeInode(RelativePathPiece());
   auto inode = root->symlink(PathComponentPiece{name}, target);
+  EXPECT_EQ(dtype_t::Symlink, inode->getType());
   EXPECT_EQ(inode->readlink().get(), target);
   // Let's make sure that we can load it up and see the right results
   auto loadedInode = mount_.getFileInode(RelativePathPiece{name});

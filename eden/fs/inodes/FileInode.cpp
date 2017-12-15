@@ -26,6 +26,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 #include "eden/fs/utils/XAttr.h"
 
@@ -177,7 +178,7 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t mode,
     const folly::Optional<Hash>& hash)
-    : InodeBase(ino, std::move(parentInode), name),
+    : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
       state_(
           folly::in_place,
           this,
@@ -194,7 +195,7 @@ FileInode::FileInode(
     folly::File&& file,
     timespec ctime,
     dev_t rdev)
-    : InodeBase(ino, std::move(parentInode), name),
+    : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
       state_(folly::in_place, this, mode, ctime, rdev) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {

@@ -139,7 +139,7 @@ TreeInode::TreeInode(
     TreeInodePtr parent,
     PathComponentPiece name,
     Dir&& dir)
-    : InodeBase(ino, parent, name), contents_(std::move(dir)) {
+    : InodeBase(ino, dtype_t::Dir, parent, name), contents_(std::move(dir)) {
   DCHECK_NE(ino, FUSE_ROOT_ID);
 }
 

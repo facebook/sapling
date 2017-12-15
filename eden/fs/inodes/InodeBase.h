@@ -16,6 +16,7 @@
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/fuse_headers.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -31,13 +32,18 @@ class InodeBase {
  public:
   /**
    * Constructor for the root TreeInode of an EdenMount.
+   * type is set to dtype_t::Dir
    */
   explicit InodeBase(EdenMount* mount);
 
   /**
    * Constructor for all non-root inodes.
    */
-  InodeBase(fuse_ino_t ino, TreeInodePtr parent, PathComponentPiece name);
+  InodeBase(
+      fuse_ino_t ino,
+      dtype_t type,
+      TreeInodePtr parent,
+      PathComponentPiece name);
 
   virtual ~InodeBase();
 
@@ -54,6 +60,10 @@ class InodeBase {
 
   fuse_ino_t getNodeId() const {
     return ino_;
+  }
+
+  dtype_t getType() const {
+    return type_;
   }
 
   /**
@@ -403,6 +413,8 @@ class InodeBase {
       int to_set) = 0;
 
   fuse_ino_t const ino_;
+
+  dtype_t const type_;
 
   /**
    * The EdenMount object that this inode belongs to.

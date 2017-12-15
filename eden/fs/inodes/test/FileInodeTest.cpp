@@ -167,6 +167,13 @@ class FileInodeTest : public ::testing::Test {
   TestMount mount_;
 };
 
+TEST_F(FileInodeTest, getType) {
+  auto dir = mount_.getTreeInode("dir/sub");
+  auto regularFile = mount_.getFileInode("dir/a.txt");
+  EXPECT_EQ(dtype_t::Dir, dir->getType());
+  EXPECT_EQ(dtype_t::Regular, regularFile->getType());
+}
+
 TEST_F(FileInodeTest, getattrFromBlob) {
   auto inode = mount_.getFileInode("dir/a.txt");
   auto attr = getFileAttr(inode);

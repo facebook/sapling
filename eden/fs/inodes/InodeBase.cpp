@@ -29,7 +29,8 @@ InodeBase::~InodeBase() {
 }
 
 InodeBase::InodeBase(EdenMount* mount)
-    : ino_(FUSE_ROOT_ID),
+    : ino_{FUSE_ROOT_ID},
+      type_{dtype_t::Dir},
       mount_{mount},
       location_{
           LocationInfo{nullptr,
@@ -42,11 +43,13 @@ InodeBase::InodeBase(EdenMount* mount)
 
 InodeBase::InodeBase(
     fuse_ino_t ino,
+    dtype_t type,
     TreeInodePtr parent,
     PathComponentPiece name)
-    : ino_(ino),
-      mount_(parent->mount_),
-      location_(LocationInfo(std::move(parent), name)) {
+    : ino_{ino},
+      type_{type},
+      mount_{parent->mount_},
+      location_{LocationInfo{std::move(parent), name}} {
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
   DCHECK_NE(ino_, 0);
