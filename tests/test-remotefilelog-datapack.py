@@ -108,11 +108,14 @@ class datapacktestsbase(object):
             filename = "foo%s" % i
             content = "abcdef%s" % i
             node = self.getHash(content)
-            revisions.append((filename, node, nullid, content))
+            revisions.append((filename, node, self.getFakeHash(), content))
 
         pack = self.createPack(revisions)
 
         for filename, node, base, content in revisions:
+            entry = pack.getdelta(filename, node)
+            self.assertEquals((content, filename, base, {}), entry)
+
             chain = pack.getdeltachain(filename, node)
             self.assertEquals(content, chain[0][4])
 
@@ -129,6 +132,11 @@ class datapacktestsbase(object):
             lastnode = node
 
         pack = self.createPack(revisions)
+
+        entry = pack.getdelta(filename, revisions[0][1])
+        realvalue = (revisions[0][3], filename, revisions[0][2], {})
+        self.assertEquals(entry, realvalue)
+
         # Test that the chain for the final entry has all the others
         chain = pack.getdeltachain(filename, node)
         for i in range(10):

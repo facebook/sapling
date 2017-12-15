@@ -62,6 +62,17 @@ class unioncontentstore(object):
 
         return text
 
+    def getdelta(self, name, node):
+        """Return the single delta entry for the given name/node pair.
+        """
+        for store in self.stores:
+            try:
+                return store.getdelta(name, node)
+            except KeyError:
+                pass
+
+        raise KeyError((name, hex(node)))
+
     def getdeltachain(self, name, node):
         """Returns the deltachain for the given name/node pair.
 
@@ -165,6 +176,12 @@ class remotefilelogcontentstore(basestore.basestore):
         revision = shallowutil.createrevlogtext(content, copyfrom, copyrev)
         return revision
 
+    def getdelta(self, name, node):
+        # Since remotefilelog content stores only contain full texts, just
+        # return that.
+        revision = self.get(name, node)
+        return revision, name, nullid, self.getmeta(name, node)
+
     def getdeltachain(self, name, node):
         # Since remotefilelog content stores just contain full texts, we return
         # a fake delta chain that just consists of a single full text revision.
@@ -209,6 +226,10 @@ class remotecontentstore(object):
                                    fetchdata=True)
         return self._shared.get(name, node)
 
+    def getdelta(self, name, node):
+        revision = self.get(name, node)
+        return revision, name, nullid, self._shared.getmeta(name, node)
+
     def getdeltachain(self, name, node):
         # Since our remote content stores just contain full texts, we return a
         # fake delta chain that just consists of a single full text revision.
@@ -241,6 +262,10 @@ class manifestrevlogstore(object):
 
     def get(self, name, node):
         return self._revlog(name).revision(node, raw=True)
+
+    def getdelta(self, name, node):
+        revision = self.get(name, node)
+        return revision, name, nullid, self.getmeta(name, node)
 
     def getdeltachain(self, name, node):
         revision = self.get(name, node)

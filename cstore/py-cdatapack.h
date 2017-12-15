@@ -450,6 +450,88 @@ err_cleanup:
 }
 
 /**
+ *  Finds a node and returns its delta entry (delta, deltabasenode,
+ *  meta) tuple if found.
+ */
+static PyObject *cdatapack_getdelta(
+    py_cdatapack *self,
+    PyObject *args) {
+  const char *node;
+  Py_ssize_t node_sz;
+
+  // 1. Parse the args
+  if (!PyArg_ParseTuple(args, "s#", &node, &node_sz)) {
+    return NULL;
+  }
+
+  if (node_sz != NODE_SZ) {
+    PyErr_Format(PyExc_ValueError, "node must be %d bytes long", NODE_SZ);
+    return NULL;
+  }
+
+  // 2. Read the delta chain
+  pack_index_entry_t index_entry;
+
+  if (find(self->handle, (const uint8_t *) node, &index_entry) == false) {
+    PyErr_SetObject(PyExc_KeyError, PyTuple_GET_ITEM(args, 0));
+    return NULL;
+  }
+
+  delta_chain_link_t link;
+
+  get_delta_chain_link_result_t next = getdeltachainlink(
+      self->handle,
+      ((uint8_t *) self->handle->data_mmap) + index_entry.data_offset,
+      &link);
+
+  if (next.code != GET_DELTA_CHAIN_LINK_OK) {
+    PyErr_SetObject(PyExc_KeyError, PyTuple_GET_ITEM(args, 0));
+    return NULL;
+  }
+
+  // Populate the link.delta pointer
+  if (!uncompressdeltachainlink(&link)) {
+    PyErr_Format(PyExc_ValueError, "unable to decompress pack entry");
+    return NULL;
+  }
+
+  // 3. Convert it into python objects
+  PyObject *tuple = NULL;
+  PyObject *delta = NULL, *deltabasenode = NULL, *meta =
+      NULL;
+
+  delta = PyBytes_FromStringAndSize(
+      (const char *) link.delta, (Py_ssize_t) link.delta_sz);
+  deltabasenode = PyBytes_FromStringAndSize(
+      (const char *) link.deltabase_node, NODE_SZ);
+  meta = readpymeta(&link);
+
+  if (deltabasenode != NULL &&
+      delta != NULL &&
+      meta != NULL) {
+    tuple = PyTuple_Pack(3, delta, deltabasenode, meta);
+  }
+
+  Py_XDECREF(delta);
+  Py_XDECREF(deltabasenode);
+  Py_XDECREF(meta);
+
+  if (tuple == NULL) {
+    goto err_cleanup;
+  }
+
+  goto cleanup;
+
+err_cleanup:
+  Py_XDECREF(tuple);
+  tuple = NULL;
+
+cleanup:
+  free((void *)link.delta);
+  return tuple;
+}
+
+/**
  * Finds a node and returns a list of (filename, node, filename, delta base
  * node, delta) tuples if found.
  */
@@ -575,6 +657,10 @@ static PyMethodDef cdatapack_methods[] = {
         METH_VARARGS,
         "Finds a node and returns a (node, deltabase index offset, "
             "data offset, data size) tuple if found."},
+    {"getdelta", (PyCFunction)cdatapack_getdelta,
+        METH_VARARGS,
+        "Finds a node and returns its delta entry (delta, deltabasename, "
+            "deltabasenode, meta) tuple if found."},
     {"getdeltachain", (PyCFunction)cdatapack_getdeltachain,
         METH_VARARGS,
         "Finds a node and returns a list of (filename, node, filename, delta "
