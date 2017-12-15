@@ -283,6 +283,17 @@ Empty file
     }
   ]
 
+treenode_simple - do not request sizes
+  $ curl https://localhost:$SOCKET/repo/treenode_simple/e7405b0462d8b2dd80219b713a93aea2c9a3c468 2> /dev/null | json_print
+  [
+    {
+      "hash": "7108421418404a937c684d2479a34a24d2ce4757",
+      "path": "content",
+      "size": null,
+      "type": "File"
+    }
+  ]
+
   $ curl https://localhost:$SOCKET/repo/blob/7108421418404a937c684d2479a34a24d2ce4757/ 2> /dev/null
   content
   $ curl https://localhost:$SOCKET/repo/blob/7108421418404a937c684d2479a34a24d2ce4757 2> /dev/null

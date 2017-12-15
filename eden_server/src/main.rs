@@ -60,7 +60,7 @@ use clap::App;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
 use futures_cpupool::CpuPool;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
@@ -89,6 +89,7 @@ const SCUBA_COL_HOSTNAME: &'static str = "hostname";
 const SCUBA_COL_OPERATION: &'static str = "operation";
 const SCUBA_COL_REPO: &'static str = "repo";
 const SCUBA_OPERATION_GET_TREE_CONTENT: &'static str = "get_tree_content";
+const SCUBA_OPERATION_GET_TREE_CONTENT_LIGHT: &'static str = "get_tree_content_light";
 const SCUBA_OPERATION_GET_MENIFEST: &'static str = "get_root_tree_manifest_id";
 const SCUBA_OPERATION_GET_BLOB_CONTENT: &'static str = "get_blob_content";
 
@@ -116,6 +117,12 @@ fn parse_tree_content_url(caps: Captures) -> Result<ParsedUrl> {
     Ok(ParsedUrl::TreeContent(repo, hash))
 }
 
+fn parse_tree_content_light_url(caps: Captures) -> Result<ParsedUrl> {
+    let repo = parse_capture::<String>(&caps, 1)?;
+    let hash = parse_capture::<NodeHash>(&caps, 2)?;
+    Ok(ParsedUrl::TreeContentLight(repo, hash))
+}
+
 fn parse_blob_content_url(caps: Captures) -> Result<ParsedUrl> {
     let repo = parse_capture::<String>(&caps, 1)?;
     let hash = parse_capture::<NodeHash>(&caps, 2)?;
@@ -137,6 +144,7 @@ fn parse_url(url: &str, routes: &[Route]) -> Result<ParsedUrl> {
 enum ParsedUrl {
     RootTreeManifestId(String, NodeHash),
     TreeContent(String, NodeHash),
+    TreeContentLight(String, NodeHash),
     BlobContent(String, NodeHash),
 }
 
@@ -147,6 +155,7 @@ lazy_static! {
             (r"^/(\w+)/cs/(\w+)/roottreemanifestid/?$",
             parse_root_treemanifest_id_url as UrlParseFunc),
             (r"^/(\w+)/treenode/(\w+)/?$", parse_tree_content_url as UrlParseFunc),
+            (r"^/(\w+)/treenode_simple/(\w+)/?$", parse_tree_content_light_url as UrlParseFunc),
             (r"^/(\w+)/blob/(\w+)/?$", parse_blob_content_url as UrlParseFunc),
         ].into_iter().map(|(re, func)| Route(Regex::new(re).expect("bad regex"), func)).collect()
     };
@@ -171,9 +180,12 @@ impl TreeMetadata {
         }
     }
 
-    fn from_entry(entry: Box<mercurial_types::Entry>) -> BoxFuture<TreeMetadata, Error> {
-        if entry.get_type() == mercurial_types::Type::Tree {
-            // No need to calculate the size of the directory
+    fn from_entry(
+        entry: Box<mercurial_types::Entry>,
+        options: &TreeMetadataOptions,
+    ) -> BoxFuture<TreeMetadata, Error> {
+        if entry.get_type() == mercurial_types::Type::Tree || !options.fetch_size {
+            // No need to calculate the size of the directory or if size wasn't requested
             Ok(TreeMetadata::new(None, entry)).into_future().boxify()
         } else {
             entry
@@ -182,6 +194,10 @@ impl TreeMetadata {
                 .boxify()
         }
     }
+}
+
+struct TreeMetadataOptions {
+    fetch_size: bool,
 }
 
 struct EdenServer<State> {
@@ -230,11 +246,12 @@ where
         &self,
         reponame: String,
         hash: &NodeHash,
-    ) -> Box<futures::Stream<Item = TreeMetadata, Error = Error> + Send> {
+        options: TreeMetadataOptions,
+    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
-                return futures::stream::once(Err(failure::err_msg("unknown repo"))).boxify();
+                return futures::future::err(failure::err_msg("unknown repo")).boxify();
             }
         };
 
@@ -242,9 +259,21 @@ where
         repo.get_manifest_by_nodeid(&hash)
             .map(|manifest| manifest.list())
             .flatten_stream()
-            .map(move |entry| cpupool.spawn(TreeMetadata::from_entry(entry)))
+            .map(move |entry| cpupool.spawn(TreeMetadata::from_entry(entry, &options)))
             .buffer_unordered(100) // Schedules 100 futures on cpupool
             .from_err()
+            .map(|metadata| {
+                let err_msg = format!(
+                    "failed to get metadata for {}",
+                    metadata.path.to_string_lossy()
+                );
+                serde_json::to_value(&metadata).unwrap_or(err_msg.into())
+            })
+            .collect()
+            .map(|entries| {
+                let x: serde_json::Value = entries.into();
+                x.to_string().into_bytes()
+            })
             .boxify()
     }
 
@@ -317,20 +346,16 @@ where
                 sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_TREE_CONTENT);
                 sample.add(SCUBA_COL_REPO, reponame.clone());
 
-                self.get_tree_content(reponame, &hash)
-                    .map(|metadata| {
-                        let err_msg = format!(
-                            "failed to get metadata for {}",
-                            metadata.path.to_string_lossy()
-                        );
-                        serde_json::to_value(&metadata).unwrap_or(err_msg.into())
-                    })
-                    .collect()
-                    .map(|entries| {
-                        let x: serde_json::Value = entries.into();
-                        x.to_string().into_bytes()
-                    })
-                    .boxify()
+                let options = TreeMetadataOptions { fetch_size: true };
+                self.get_tree_content(reponame, &hash, options).boxify()
+            }
+            ParsedUrl::TreeContentLight(reponame, hash) => {
+                sample.add(SCUBA_COL_HASH, hash.to_string());
+                sample.add(SCUBA_COL_OPERATION, SCUBA_OPERATION_GET_TREE_CONTENT_LIGHT);
+                sample.add(SCUBA_COL_REPO, reponame.clone());
+
+                let options = TreeMetadataOptions { fetch_size: false };
+                self.get_tree_content(reponame, &hash, options).boxify()
             }
             ParsedUrl::BlobContent(reponame, hash) => {
                 sample.add(SCUBA_COL_HASH, hash.to_string());
