@@ -14,6 +14,7 @@ import subprocess
 import sys
 import eden.dirstate
 from enum import Enum, auto
+from textwrap import dedent
 from typing import Dict, List, Set, TextIO
 from . import config as config_mod
 
@@ -46,11 +47,11 @@ def cure_what_ails_you(
     if not is_healthy:
         out.write('Eden is not running: cannot perform all checks.\n')
 
-    watchman_roots = _get_watch_roots_for_watchman()
+    # This list is a mix of messages to print to stdout and checks to perform.
+    checks_and_messages = []
+    checks_and_messages.append(EdenfsIsLatest(config))
 
-    num_fixes = 0
-    num_failed_fixes = 0
-    num_not_fixed_because_dry_run = 0
+    watchman_roots = _get_watch_roots_for_watchman()
     for mount_path in mount_paths:
         # For now, we assume that each mount_path is actively mounted. We should
         # update the listMounts() Thrift API to return information that notes
@@ -76,17 +77,27 @@ def cure_what_ails_you(
                 )
             )
 
-        out.write(f'Performing {len(checks)} checks for {mount_path}.\n')
-        for check in checks:
-            result = check.do_check(dry_run)
-            result_type = result.result_type
-            if result_type == CheckResultType.FIXED:
-                num_fixes += 1
-            elif result_type == CheckResultType.FAILED_TO_FIX:
-                num_failed_fixes += 1
-            elif result_type == CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN:
-                num_not_fixed_because_dry_run += 1
-            out.write(result.message)
+        checks_and_messages.append(
+            f'Performing {len(checks)} checks for {mount_path}.\n'
+        )
+        checks_and_messages.extend(checks)
+
+    num_fixes = 0
+    num_failed_fixes = 0
+    num_not_fixed_because_dry_run = 0
+    for item in checks_and_messages:
+        if isinstance(item, str):
+            out.write(item)
+            continue
+        result = item.do_check(dry_run)
+        result_type = result.result_type
+        if result_type == CheckResultType.FIXED:
+            num_fixes += 1
+        elif result_type == CheckResultType.FAILED_TO_FIX:
+            num_failed_fixes += 1
+        elif result_type == CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN:
+            num_not_fixed_because_dry_run += 1
+        out.write(result.message)
 
     if num_not_fixed_because_dry_run:
         out.write(
@@ -262,6 +273,40 @@ class SnapshotDirstateConsistencyCheck:
         return CheckResult(result_type, msg)
 
 
+class EdenfsIsLatest:
+    def __init__(self, config) -> None:
+        self._config = config
+
+    def do_check(self, dry_run: bool) -> CheckResult:
+        build_info = self._config.get_server_build_info()
+        version = build_info.get('build_package_version')
+        release = build_info.get('build_package_release')
+        if not version or not release:
+            # This could be a dev build that returns the empty string for both
+            # of these values.
+            return CheckResult(CheckResultType.NO_ISSUE, '')
+
+        running_version = f'fb-eden-{version}-{release}.x86_64'
+        installed_version = _call_rpm_q()
+        if running_version == installed_version:
+            return CheckResult(CheckResultType.NO_ISSUE, '')
+        else:
+            return CheckResult(
+                CheckResultType.FAILED_TO_FIX,
+                dedent(
+                    f'''\
+                    The version of Eden that is installed on your machine is:
+                        {installed_version}
+                    but the version of Eden that is currently running is:
+                        {running_version}
+                    Consider running `eden shutdown` followed by `eden daemon`
+                    to restart with the installed version, which may have
+                    important bug fixes or performance improvements.
+                    '''
+                )
+            )
+
+
 def _get_watch_roots_for_watchman() -> Set[str]:
     js = _call_watchman(['watch-list'])
     roots = set()
@@ -282,3 +327,7 @@ def _call_watchman(args: List[str]) -> Dict:
             f' failed with: {os.sterror(e.errno)}\n'
         )
         return {'error': str(e)}
+
+
+def _call_rpm_q() -> str:
+    return subprocess.check_output(['rpm', '-q', 'fb-eden']).rstrip()

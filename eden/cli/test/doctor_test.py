@@ -13,6 +13,7 @@ import shutil
 import tempfile
 import unittest
 from collections import OrderedDict
+from textwrap import dedent
 from typing import Any, Dict, Iterable, List, Optional
 from unittest.mock import call, patch
 import eden.cli.doctor as doctor
@@ -395,6 +396,59 @@ Number of issues that could not be fixed: 2.
         finally:
             shutil.rmtree(mount_path)
 
+    @patch('eden.cli.doctor._call_rpm_q')
+    def test_edenfs_when_installed_and_running_match(self, mock_rpm_q):
+        self._test_edenfs_version(
+            mock_rpm_q, 'fb-eden-20171213-165642.x86_64',
+            CheckResultType.NO_ISSUE, ''
+        )
+
+    @patch('eden.cli.doctor._call_rpm_q')
+    def test_edenfs_when_installed_and_running_differ(self, mock_rpm_q):
+        self._test_edenfs_version(
+            mock_rpm_q, 'fb-eden-20171120-246561.x86_64',
+            CheckResultType.FAILED_TO_FIX,
+            dedent(
+                '''\
+                The version of Eden that is installed on your machine is:
+                    fb-eden-20171120-246561.x86_64
+                but the version of Eden that is currently running is:
+                    fb-eden-20171213-165642.x86_64
+                Consider running `eden shutdown` followed by `eden daemon`
+                to restart with the installed version, which may have
+                important bug fixes or performance improvements.
+                '''
+            )
+        )
+
+    def _test_edenfs_version(
+        self,
+        mock_rpm_q,
+        rpm_value: str,
+        expected_check_result: CheckResultType,
+        expected_message: str,
+    ):
+        side_effects: List[str] = []
+        calls = []
+        calls.append(call())
+        side_effects.append(rpm_value)
+        mock_rpm_q.side_effect = side_effects
+
+        config = FakeConfig(
+            mount_paths={},
+            is_healthy=True,
+            build_info={
+                'build_package_version': '20171213',
+                'build_package_release': '165642',
+            }
+        )
+        version_check = doctor.EdenfsIsLatest(config)
+        check_result = version_check.do_check(dry_run=False)
+        self.assertEqual(expected_check_result, check_result.result_type)
+        self.assertEqual(expected_message, check_result.message)
+
+        mock_rpm_q.assert_has_calls(calls)
+
 
 def _create_watchman_subscription(
     filewatcher_subscription: Optional[str] = None,
@@ -435,10 +489,14 @@ def _create_watchman_subscription(
 
 class FakeConfig:
     def __init__(
-        self, mount_paths: Dict[str, Dict[str, str]], is_healthy: bool
+        self,
+        mount_paths: Dict[str, Dict[str, str]],
+        is_healthy: bool = True,
+        build_info: Optional[Dict[str, str]] = None,
     ) -> None:
         self._mount_paths = mount_paths
         self._is_healthy = is_healthy
+        self._build_info = build_info if build_info else {}
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._mount_paths.keys()
@@ -449,3 +507,6 @@ class FakeConfig:
 
     def get_client_info(self, mount_path: str) -> Dict[str, str]:
         return self._mount_paths[mount_path]
+
+    def get_server_build_info(self) -> Dict[str, str]:
+        return dict(self._build_info)
