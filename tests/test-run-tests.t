@@ -703,12 +703,14 @@ View the fix
 
 Accept the fix
 
-  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
-  $ echo "  saved backup bundle to \$TESTTMP/foo.hg" >> test-failure.t
-  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
-  $ echo "  saved backup bundle to \$TESTTMP\\foo.hg" >> test-failure.t
-  $ echo "  $ echo 'saved backup bundle to \$TESTTMP/foo.hg'" >> test-failure.t
-  $ echo "  saved backup bundle to \$TESTTMP/*.hg (glob)" >> test-failure.t
+  $ cat >> test-failure.t <<EOF
+  >   $ echo 'saved backup bundle to \$TESTTMP/foo.hg'
+  >   saved backup bundle to \$TESTTMP/foo.hg
+  >   $ echo 'saved backup bundle to \$TESTTMP/foo.hg'
+  >   saved backup bundle to $TESTTMP\\foo.hg
+  >   $ echo 'saved backup bundle to \$TESTTMP/foo.hg'
+  >   saved backup bundle to \$TESTTMP/*.hg (glob)
+  > EOF
   $ echo 'y' | rt -i 2>&1
   
   --- $TESTTMP/test-failure.t
