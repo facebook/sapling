@@ -9,15 +9,13 @@
 use std::cmp;
 use std::mem;
 
-use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
 use slog;
 use tokio_io::codec::Decoder;
 
-use mercurial_types::{Delta, RepoPath, NULL_HASH};
+use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Kind, Part};
-use delta;
 use errors::*;
 use part_inner::InnerPart;
 use utils::BytesExt;
@@ -78,14 +76,6 @@ impl Decoder for WirePackUnpacker {
 }
 
 const WIREPACK_END: &[u8] = b"\0\0\0\0\0\0\0\0\0\0";
-
-// See the history header definition below for the breakdown.
-const HISTORY_COPY_FROM_OFFSET: usize = 20 + 20 + 20 + 20;
-const HISTORY_HEADER_SIZE: usize = HISTORY_COPY_FROM_OFFSET + 2;
-
-// See the data header definition below for the breakdown.
-const DATA_DELTA_OFFSET: usize = 20 + 20;
-const DATA_HEADER_SIZE: usize = DATA_DELTA_OFFSET + 8;
 
 pub fn new(logger: slog::Logger, kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
@@ -219,93 +209,14 @@ impl UnpackerInner {
         }
     }
 
+    #[inline]
     fn decode_history(&mut self, buf: &mut BytesMut) -> Result<Option<HistoryEntry>> {
-        if buf.len() < HISTORY_HEADER_SIZE {
-            return Ok(None);
-        }
-
-        // A history revision has:
-        // ---
-        // node: NodeHash (20 bytes)
-        // p1: NodeHash (20 bytes)
-        // p2: NodeHash (20 bytes)
-        // link node: NodeHash (20 bytes)
-        // copy from len: u16 (2 bytes) -- 0 if this revision is not a copy
-        // copy from: RepoPath (<copy from len> bytes)
-        // ---
-        // Tree revisions are never copied, so <copy from len> is always 0.
-
-        let copy_from_len =
-            BigEndian::read_u16(&buf[HISTORY_COPY_FROM_OFFSET..HISTORY_HEADER_SIZE]) as usize;
-        if buf.len() < HISTORY_HEADER_SIZE + copy_from_len {
-            return Ok(None);
-        }
-
-        let node = buf.drain_node();
-        let p1 = buf.drain_node();
-        let p2 = buf.drain_node();
-        let linknode = buf.drain_node();
-        let _ = buf.drain_u16();
-        let copy_from = if copy_from_len > 0 {
-            let path = buf.drain_path(copy_from_len)?;
-            match self.kind {
-                Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
-                    "tree entry {} is marked as copied from path {}, but they cannot be copied",
-                    node,
-                    path
-                ))),
-                Kind::File => Some(RepoPath::file(path).with_context(|_| {
-                    ErrorKind::WirePackDecode("invalid copy from path".into())
-                })?),
-            }
-        } else {
-            None
-        };
-        Ok(Some(HistoryEntry {
-            node,
-            p1,
-            p2,
-            linknode,
-            copy_from,
-        }))
+        HistoryEntry::decode(buf, self.kind)
     }
 
+    #[inline]
     fn decode_data(&mut self, buf: &mut BytesMut) -> Result<Option<DataEntry>> {
-        if buf.len() < DATA_HEADER_SIZE {
-            return Ok(None);
-        }
-
-        // A data revision has:
-        // ---
-        // node: NodeHash (20 bytes)
-        // delta base: NodeHash (20 bytes) -- NULL_HASH if full text
-        // delta len: u64 (8 bytes)
-        // delta: Delta (<delta len> bytes)
-        // ---
-        // There's a bit of a wart in the current format: if delta base is NULL_HASH, instead of
-        // storing a delta with start = 0 and end = 0, we store the full text directly. This
-        // should be fixed in a future wire protocol revision.
-        let delta_len = BigEndian::read_u64(&buf[DATA_DELTA_OFFSET..DATA_HEADER_SIZE]) as usize;
-        if buf.len() < DATA_HEADER_SIZE + delta_len {
-            return Ok(None);
-        }
-
-        let node = buf.drain_node();
-        let delta_base = buf.drain_node();
-        let _ = buf.drain_u64();
-        let delta = buf.split_to(delta_len);
-
-        let delta = if delta_base == NULL_HASH {
-            Delta::new_fulltext(delta.to_vec())
-        } else {
-            delta::decode_delta(delta)?
-        };
-
-        Ok(Some(DataEntry {
-            node,
-            delta_base,
-            delta,
-        }))
+        DataEntry::decode(buf)
     }
 }
 
