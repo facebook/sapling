@@ -38,13 +38,13 @@ class fastverifier(verify.verifier):
         return super(fastverifier, self)._verifymanifest(*args, **kwargs)
 
     def _crosscheckfiles(self, *args, **kwargs):
-        if self.ui.configbool("verify", "skipmanifests"):
+        if self.ui.configbool("verify", "skipmanifests", True):
             return
 
         return super(fastverifier, self)._crosscheckfiles(*args, **kwargs)
 
     def _verifyfiles(self, *args, **kwargs):
-        if self.ui.configbool("verify", "skipmanifests"):
+        if self.ui.configbool("verify", "skipmanifests", True):
             return 0, 0
 
         return super(fastverifier, self)._verifyfiles(*args, **kwargs)
