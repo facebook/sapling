@@ -384,6 +384,7 @@ class treedirstatemap(object):
                 return None
         return _overlaydict(lookup)
 
+    @property
     def identity(self):
         if self._identity is None:
             self.read()
