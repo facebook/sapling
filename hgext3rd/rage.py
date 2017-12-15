@@ -21,6 +21,7 @@ from mercurial import (
 from mercurial import pycompat, scmutil
 from hgext import blackbox
 from hgext3rd import (
+    shareutil,
     smartlog,
     fbsparse as sparse,
 )
@@ -198,6 +199,7 @@ def rage(ui, repo, *pats, **opts):
     By default, the information will be uploaded to Phabricator and
     instructions about how to ask for help will be printed.
     """
+    srcrepo = shareutil.getsrcrepo(repo)
 
     def format(pair, basic=True):
         if basic:
@@ -217,11 +219,11 @@ def rage(ui, repo, *pats, **opts):
         finally:
             return ui.popbuffer()
 
-    def hgfile(filename):
-        if repo.vfs.exists(filename):
-            return repo.vfs(filename).read()
+    def hgsrcrepofile(filename):
+        if srcrepo.vfs.exists(filename):
+            return srcrepo.vfs(filename).read()
         else:
-            return "File not found: %s" % repo.vfs.join(filename)
+            return "File not found: %s" % srcrepo.vfs.join(filename)
 
     if opts.get('oncall') and opts.get('preview'):
         raise error.Abort('--preview and --oncall cannot be used together')
@@ -276,7 +278,7 @@ def rage(ui, repo, *pats, **opts):
         ('hg debugobsolete <smartlog>',
             _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
         ('infinitepush backup state',
-            _failsafe(lambda: hgfile('infinitepushbackupstate'))),
+            _failsafe(lambda: hgsrcrepofile('infinitepushbackupstate'))),
         ('infinitepush backup logs',
             _failsafe(lambda: infinitepushbackuplogs(ui, repo))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
