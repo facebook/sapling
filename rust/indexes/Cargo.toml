@@ -1,0 +1,14 @@
+[package]
+name = "indexes"
+version = "0.1.0"
+
+[profile.release]
+lto = true
+
+[lib]
+name = "indexes"
+crate-type = ["cdylib"]
+
+[dependencies]
+radixbuf = { path = "../radixbuf" }
+error-chain = "0.11"
