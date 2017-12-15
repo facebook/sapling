@@ -349,6 +349,11 @@ def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
         return
 
+    # Don't output the summary if a backup is currently in progress.
+    srcrepo = shareutil.getsrcrepo(repo)
+    if srcrepo.vfs.lexists(_backuplockname):
+        return
+
     unbackeduprevs = repo.revs('notbackedup()')
 
     # Count the number of changesets that haven't been backed up for 10 minutes.
