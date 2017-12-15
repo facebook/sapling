@@ -22,3 +22,4 @@ pub mod errors;
 pub mod base16;
 pub mod key;
 pub mod traits;
+pub mod radix;
