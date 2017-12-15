@@ -19,3 +19,4 @@ extern crate test;
 extern crate vlqencoding;
 
 pub mod errors;
+pub mod base16;
