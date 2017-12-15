@@ -10,7 +10,7 @@ It differs slightly to fix paths.
 run pyflakes on all tracked files ending in .py or without a file ending
 (skipping binary file random-seed)
 
-  $ hg locate 'set:**.py or grep("^#!.*python")' > "$TESTTMP/files1"
+  $ testrepohg locate 'set:**.py or grep("^#!.*python")' > "$TESTTMP/files1"
   $ if [ -n "$LINTFILES" ]; then
   >   printf "$LINTFILES" > "$TESTTMP/files2"
   >   join "$TESTTMP/files1" "$TESTTMP/files2"

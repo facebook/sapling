@@ -23,7 +23,8 @@ EOF
 fi
 
 # sanity check whether hg actually works or not
-if ! hg log -r tip -T '{author}' >/dev/null 2>"$TESTTMP/hg-err-check"; then
+if ! testrepohg log -r tip -T '{author}' >/dev/null 2>"$TESTTMP/hg-err-check";
+then
     echo 'hg does not work'
     exit 1
 fi

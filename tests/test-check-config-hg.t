@@ -11,8 +11,8 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ export RUNTESTDIR
   $ (
-  >   hg files "set:(**.py or **.txt) - tests/**"
-  >   hg files --cwd $RUNTESTDIR/.. "set:(**.py or **.txt) - tests/**" | sed "s#^#${RUNTESTDIR}/../#"
+  >   testrepohg files "set:(**.py or **.txt) - tests/**"
+  >   testrepohg files --cwd $RUNTESTDIR/.. "set:(**.py or **.txt) - tests/**" | sed "s#^#${RUNTESTDIR}/../#"
   > ) | sed 's|\\|/|g' |
   >   $PYTHON $RUNTESTDIR/../contrib/check-config.py
   undocumented: extensions.treemanifest (str)

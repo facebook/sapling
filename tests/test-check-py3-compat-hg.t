@@ -7,7 +7,7 @@ This file is backported from mercurial/tests/test-check-py3-compat.t.
   $ . "$TESTDIR/helper-testrepo.sh"
 
   $ cd "$TESTDIR"/..
-  $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON $RUNTESTDIR/../contrib/check-py3-compat.py
+  $ testrepohg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON $RUNTESTDIR/../contrib/check-py3-compat.py
   fastmanifest/__init__.py not using absolute_import
   fastmanifest/cachemanager.py not using absolute_import
   fastmanifest/concurrency.py not using absolute_import
