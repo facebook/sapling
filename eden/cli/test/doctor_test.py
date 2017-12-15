@@ -399,14 +399,14 @@ Number of issues that could not be fixed: 2.
     @patch('eden.cli.doctor._call_rpm_q')
     def test_edenfs_when_installed_and_running_match(self, mock_rpm_q):
         self._test_edenfs_version(
-            mock_rpm_q, 'fb-eden-20171213-165642.x86_64',
+            mock_rpm_q, '20171213-165642',
             CheckResultType.NO_ISSUE, ''
         )
 
     @patch('eden.cli.doctor._call_rpm_q')
     def test_edenfs_when_installed_and_running_differ(self, mock_rpm_q):
         self._test_edenfs_version(
-            mock_rpm_q, 'fb-eden-20171120-246561.x86_64',
+            mock_rpm_q, '20171120-246561',
             CheckResultType.FAILED_TO_FIX,
             dedent(
                 '''\

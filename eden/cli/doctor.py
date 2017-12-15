@@ -286,7 +286,7 @@ class EdenfsIsLatest:
             # of these values.
             return CheckResult(CheckResultType.NO_ISSUE, '')
 
-        running_version = f'fb-eden-{version}-{release}.x86_64'
+        running_version = f'{version}-{release}'
         installed_version = _call_rpm_q()
         if running_version == installed_version:
             return CheckResult(CheckResultType.NO_ISSUE, '')
@@ -296,9 +296,9 @@ class EdenfsIsLatest:
                 dedent(
                     f'''\
                     The version of Eden that is installed on your machine is:
-                        {installed_version}
+                        fb-eden-{installed_version}.x86_64
                     but the version of Eden that is currently running is:
-                        {running_version}
+                        fb-eden-{running_version}.x86_64
                     Consider running `eden shutdown` followed by `eden daemon`
                     to restart with the installed version, which may have
                     important bug fixes or performance improvements.
@@ -330,4 +330,6 @@ def _call_watchman(args: List[str]) -> Dict:
 
 
 def _call_rpm_q() -> str:
-    return subprocess.check_output(['rpm', '-q', 'fb-eden']).rstrip()
+    return subprocess.check_output(
+        ['rpm', '-q', 'fb-eden', '--queryfmt', '%{version}-%{release}']
+    ).decode('utf-8')
