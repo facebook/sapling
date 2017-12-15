@@ -331,5 +331,5 @@ def _call_watchman(args: List[str]) -> Dict:
 
 def _call_rpm_q() -> str:
     return subprocess.check_output(
-        ['rpm', '-q', 'fb-eden', '--queryfmt', '%{version}-%{release}']
+        ['rpm', '-q', 'fb-eden', '--queryformat', '%{version}-%{release}']
     ).decode('utf-8')
