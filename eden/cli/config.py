@@ -10,6 +10,7 @@
 import binascii
 import collections
 import configparser
+import datetime
 import errno
 import fcntl
 import itertools
@@ -800,6 +801,13 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
     def get_server_build_info(self) -> Dict[str, str]:
         with self.get_thrift_client() as client:
             return client.getRegexExportedValues('^build_.*')
+
+    def get_uptime(self) -> datetime.timedelta:
+        now = datetime.datetime.now()
+        with self.get_thrift_client() as client:
+            since_in_seconds = client.aliveSince()
+        since = datetime.datetime.fromtimestamp(since_in_seconds)
+        return now - since
 
 
 class HealthStatus(object):

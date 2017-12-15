@@ -160,6 +160,15 @@ def do_buildinfo(args: argparse.Namespace):
         print(f'{key}: {value}')
 
 
+def do_uptime(args: argparse.Namespace):
+    config = cmd_util.create_config(args)
+    uptime = config.get_uptime()  # Check if uptime is negative?
+    days = uptime.days
+    hours, remainder = divmod(uptime.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    print('%dd:%02dh:%02dm:%02ds' % (days, hours, minutes, seconds))
+
+
 def do_hg_copy_map_get_all(args: argparse.Namespace):
     mount, _ = get_mount_path(args.path)
     _parents, _dirstate_tuples, copymap = _get_dirstate_data(mount)
@@ -629,3 +638,8 @@ def setup_argparse(parser: argparse.ArgumentParser):
         help='Log level string as understood by stringToLogLevel.'
     )
     parser.set_defaults(func=do_set_log_level)
+
+    parser = subparsers.add_parser(
+        'uptime',
+        help='Check how long edenfs has been running.')
+    parser.set_defaults(func=do_uptime)
