@@ -12,7 +12,7 @@ Turn manifest verification on and off:
   > |/
   > a
   > EOS
-  $ hg verify
+  $ hg verify --config verify.skipmanifests=0
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
