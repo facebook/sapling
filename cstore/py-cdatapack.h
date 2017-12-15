@@ -382,6 +382,73 @@ static PyObject *cdatapack_find(
   return tuple;
 }
 
+PyObject *readpymeta(delta_chain_link_t *link) {
+  /* sync these with remotefilelog.constants */
+  const char METAKEYFLAG = 'f';
+  const char METAKEYSIZE = 's';
+
+  PyObject *pymeta = PyDict_New();
+  if (pymeta == NULL) {
+    return PyErr_NoMemory();
+  }
+
+  if (link->meta == NULL || link->meta_sz == 0) {
+    // no metadata, usually means it's version 0
+    return pymeta;
+  }
+
+  const char *p = (const char *)link->meta;
+  const char *end = p + link->meta_sz;
+
+  while (p + 3 <= end) { /* 3: ensure 1-byte key, 2-byte size exist */
+    const char key[2] = {*p, 0};
+    p += 1;
+
+    const uint16_t entry_size = ntohs(*((uint16_t *) p));
+    p += sizeof(entry_size); /* 2-byte size */
+
+    if (entry_size + p > end) {
+      goto err_cleanup;
+    }
+
+    PyObject *pyv = NULL;
+    switch (key[0]) {
+      case METAKEYFLAG:
+      case METAKEYSIZE:
+        { /* an integer field */
+          unsigned long long v = 0;
+          for (const char *vp = p; vp < p + entry_size; ++vp) {
+            v = (v << 8) | *((uint8_t *) vp);
+          }
+          pyv = PyLong_FromUnsignedLongLong(v);
+        }
+        break;
+      default:
+        { /* treat value as a string field */
+          pyv = PyString_FromStringAndSize(p, entry_size);
+        }
+    }
+    if (pyv == NULL) {
+      goto err_cleanup;
+    }
+    if (PyDict_SetItemString(pymeta, key, pyv) == -1) {
+      Py_XDECREF(pyv);
+      goto err_cleanup;
+    }
+    p += entry_size;
+  }
+  if (p != end) {
+    goto err_cleanup;
+  }
+
+  return pymeta;
+
+err_cleanup:
+  PyErr_Format(PyExc_ValueError, "corrupted datapack metadata");
+  Py_XDECREF(pymeta);
+  return NULL;
+}
+
 /**
  * Finds a node and returns a list of (filename, node, filename, delta base
  * node, delta) tuples if found.
@@ -464,10 +531,6 @@ cleanup:
 }
 
 static PyObject *cdatapack_getmeta(py_cdatapack *self, PyObject *args) {
-  /* sync these with remotefilelog.constants */
-  const char METAKEYFLAG = 'f';
-  const char METAKEYSIZE = 's';
-
   const char *node;
   Py_ssize_t node_sz;
 
@@ -498,66 +561,7 @@ static PyObject *cdatapack_getmeta(py_cdatapack *self, PyObject *args) {
     return NULL;
   }
 
-  PyObject *pymeta = PyDict_New();
-  if (pymeta == NULL) {
-    return PyErr_NoMemory();
-  }
-
-  if (link.meta == NULL || link.meta_sz == 0) {
-    // no metadata, usually means it's version 0
-    return pymeta;
-  }
-
-  const char *p = (const char *)link.meta;
-  const char *end = p + link.meta_sz;
-
-  while (p + 3 <= end) { /* 3: ensure 1-byte key, 2-byte size exist */
-    const char key[2] = {*p, 0};
-    p += 1;
-
-    const uint16_t entry_size = ntohs(*((uint16_t *) p));
-    p += sizeof(entry_size); /* 2-byte size */
-
-    if (entry_size + p > end) {
-      goto err_cleanup;
-    }
-
-    PyObject *pyv = NULL;
-    switch (key[0]) {
-      case METAKEYFLAG:
-      case METAKEYSIZE:
-        { /* an integer field */
-          unsigned long long v = 0;
-          for (const char *vp = p; vp < p + entry_size; ++vp) {
-            v = (v << 8) | *((uint8_t *) vp);
-          }
-          pyv = PyLong_FromUnsignedLongLong(v);
-        }
-        break;
-      default:
-        { /* treat value as a string field */
-          pyv = PyString_FromStringAndSize(p, entry_size);
-        }
-    }
-    if (pyv == NULL) {
-      goto err_cleanup;
-    }
-    if (PyDict_SetItemString(pymeta, key, pyv) == -1) {
-      Py_XDECREF(pyv);
-      goto err_cleanup;
-    }
-    p += entry_size;
-  }
-  if (p != end) {
-    goto err_cleanup;
-  }
-
-  return pymeta;
-
-err_cleanup:
-  PyErr_Format(PyExc_ValueError, "corrupted datapack metadata");
-  Py_XDECREF(pymeta);
-  return NULL;
+  return readpymeta(&link);
 }
 
 // ====  cdatapack ctype declaration ====
