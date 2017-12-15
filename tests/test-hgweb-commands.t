@@ -1814,8 +1814,6 @@ Overviews
   </div>
   
   <script>
-  <!-- hide script content
-  
   var data = [{"edges": [[0, 0, 1, 3, "FF0000"]], "node": "cad8025a2e87", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "1d22e65f027e", "vertex": [0, 1]}, {"edges": [[0, 0, 1, 3, ""]], "node": "a4f92ed23982", "vertex": [0, 1]}, {"edges": [], "node": "2ef0ac749a14", "vertex": [0, 1]}];
   var graph = new Graph();
   graph.scale(39);
@@ -1826,8 +1824,6 @@ Overviews
   }
   
   graph.render(data);
-  
-  // stop hiding script -->
   </script>
   
   <div class="extra_nav">

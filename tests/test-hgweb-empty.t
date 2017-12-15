@@ -300,8 +300,6 @@ Some tests for hgweb in an empty repository
   </div>
   
   <script type="text/javascript">
-  <!-- hide script content
-  
   var data = [];
   var graph = new Graph();
   graph.scale(39);
@@ -312,8 +310,6 @@ Some tests for hgweb in an empty repository
   }
   
   graph.render(data);
-  
-  // stop hiding script -->
   </script>
   
   <div class="navigate">
