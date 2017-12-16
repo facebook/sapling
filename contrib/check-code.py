@@ -185,7 +185,7 @@ utestpats = [
      'use $LOCALIP not an explicit loopback address'),
     (r'^  (?![>$] ).*\$LOCALIP.*[^)]$',
      'mark $LOCALIP output lines with (glob) to help tests in BSD jails'),
-    (r'^  (cat|find): .*: No such file or directory',
+    (r'^  (cat|find): .*: \$ENOENT\$',
      'use test -f to test for file existence'),
     (r'^  diff -[^ -]*p',
      "don't use (external) diff with -p for portability"),
