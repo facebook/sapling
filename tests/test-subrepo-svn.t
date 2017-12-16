@@ -91,10 +91,10 @@ debugsub
 
   $ hg debugsub
   path s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 2
   path subdir/s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 2
 
 change file in svn and hg, commit
@@ -117,10 +117,10 @@ change file in svn and hg, commit
   At revision 3.
   $ hg debugsub
   path s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 3
   path subdir/s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 2
 
 missing svn file, commit should fail
@@ -239,10 +239,10 @@ debugsub in clone
 
   $ hg debugsub
   path s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 3
   path subdir/s
-   source   file://*/svn-repo/src (glob)
+   source   file:/*/$TESTTMP/svn-repo/src (glob)
    revision 2
 
 verify subrepo is contained within the repo directory

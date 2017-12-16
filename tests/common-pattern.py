@@ -38,6 +38,14 @@ substitutions = [
     (br' - - \[\d\d/.../2\d\d\d \d\d:\d\d:\d\d] "GET',
      br' - - [$LOGDATE$] "GET'
     ),
+    # Windows has an extra '/' in the following lines that get globbed away:
+    #   pushing to file:/*/$TESTTMP/r2 (glob)
+    #   comparing with file:/*/$TESTTMP/r2 (glob)
+    #   sub/maybelarge.dat: largefile 34..9c not available from
+    #       file:/*/$TESTTMP/largefiles-repo (glob)
+    (br'(.*file:/)/?(/\$TESTTMP.*)',
+     lambda m: m.group(1) + b'*' + m.group(2) + b' (glob)'
+    ),
 ]
 
 # Various platform error strings, keyed on a common replacement string

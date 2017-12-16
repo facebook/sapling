@@ -181,8 +181,6 @@ utestpats = [
     (uprefix + r'.*:\.\S*/', "x:.y in a path does not work on msys, rewrite "
      "as x://.y, or see `hg log -k msys` for alternatives", r'-\S+:\.|' #-Rxxx
      '# no-msys'), # in test-pull.t which is skipped on windows
-    (r'^  .*file://\$TESTTMP',
-     'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
     (r'^  [^$>].*27\.0\.0\.1',
      'use $LOCALIP not an explicit loopback address'),
     (r'^  (?![>$] ).*\$LOCALIP.*[^)]$',
