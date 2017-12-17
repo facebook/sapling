@@ -2563,6 +2563,10 @@ Parallel master/worker configuration. We currently perform working
 directory updates in parallel on Unix-like systems, which greatly
 helps performance.
 
+``enabled``
+    Whether to enable workers code to be used.
+    (default: true)
+
 ``numcpus``
     Number of CPUs to use for parallel operations. A zero or
     negative value is treated as ``use the default``.

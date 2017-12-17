@@ -82,7 +82,8 @@ def worker(ui, costperarg, func, staticargs, args):
     args - arguments to split into chunks, to pass to individual
     workers
     '''
-    if worthwhile(ui, costperarg, len(args)):
+    enabled = ui.configbool('worker', 'enabled')
+    if enabled and worthwhile(ui, costperarg, len(args)):
         return _platformworker(ui, func, staticargs, args)
     return func(*staticargs + (args,))
 
