@@ -545,7 +545,8 @@ def compare(tmpl, context, leftlines, rightlines):
 def diffstatgen(ctx, basectx):
     '''Generator function that provides the diffstat data.'''
 
-    stats = patch.diffstatdata(util.iterlines(ctx.diff(basectx)))
+    stats = patch.diffstatdata(
+        util.iterlines(ctx.diff(basectx, noprefix=False)))
     maxname, maxtotal, addtotal, removetotal, binary = patch.diffstatsum(stats)
     while True:
         yield stats, maxname, maxtotal, addtotal, removetotal, binary
