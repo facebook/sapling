@@ -901,10 +901,9 @@ class Test(unittest.TestCase):
             # Diff generation may rely on written .err file.
             if (ret != 0 or out != self._refout) and not self._skipped \
                 and not self._debug:
-                f = open(self.errpath, 'wb')
-                for line in out:
-                    f.write(line)
-                f.close()
+                with open(self.errpath, 'wb') as f:
+                    for line in out:
+                        f.write(line)
 
             # The result object handles diff calculation for us.
             if self._result.addOutputMismatch(self, ret, out, self._refout):
@@ -941,10 +940,9 @@ class Test(unittest.TestCase):
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._debug and self._out:
-            f = open(self.errpath, 'wb')
-            for line in self._out:
-                f.write(line)
-            f.close()
+            with open(self.errpath, 'wb') as f:
+                for line in self._out:
+                    f.write(line)
 
         vlog("# Ret was:", self._ret, '(%s)' % self.name)
 
@@ -1087,32 +1085,31 @@ class Test(unittest.TestCase):
 
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
-        hgrc = open(path, 'wb')
-        hgrc.write(b'[ui]\n')
-        hgrc.write(b'slash = True\n')
-        hgrc.write(b'interactive = False\n')
-        hgrc.write(b'mergemarkers = detailed\n')
-        hgrc.write(b'promptecho = True\n')
-        hgrc.write(b'[defaults]\n')
-        hgrc.write(b'[devel]\n')
-        hgrc.write(b'all-warnings = true\n')
-        hgrc.write(b'default-date = 0 0\n')
-        hgrc.write(b'[largefiles]\n')
-        hgrc.write(b'usercache = %s\n' %
-                   (os.path.join(self._testtmp, b'.cache/largefiles')))
-        hgrc.write(b'[lfs]\n')
-        hgrc.write(b'usercache = %s\n' %
-                   (os.path.join(self._testtmp, b'.cache/lfs')))
-        hgrc.write(b'[web]\n')
-        hgrc.write(b'address = localhost\n')
-        hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))
+        with open(path, 'wb') as hgrc:
+            hgrc.write(b'[ui]\n')
+            hgrc.write(b'slash = True\n')
+            hgrc.write(b'interactive = False\n')
+            hgrc.write(b'mergemarkers = detailed\n')
+            hgrc.write(b'promptecho = True\n')
+            hgrc.write(b'[defaults]\n')
+            hgrc.write(b'[devel]\n')
+            hgrc.write(b'all-warnings = true\n')
+            hgrc.write(b'default-date = 0 0\n')
+            hgrc.write(b'[largefiles]\n')
+            hgrc.write(b'usercache = %s\n' %
+                       (os.path.join(self._testtmp, b'.cache/largefiles')))
+            hgrc.write(b'[lfs]\n')
+            hgrc.write(b'usercache = %s\n' %
+                       (os.path.join(self._testtmp, b'.cache/lfs')))
+            hgrc.write(b'[web]\n')
+            hgrc.write(b'address = localhost\n')
+            hgrc.write(b'ipv6 = %s\n' % str(self._useipv6).encode('ascii'))
 
-        for opt in self._extraconfigopts:
-            section, key = opt.encode('utf-8').split(b'.', 1)
-            assert b'=' in key, ('extra config opt %s must '
-                                 'have an = for assignment' % opt)
-            hgrc.write(b'[%s]\n%s\n' % (section, key))
-        hgrc.close()
+            for opt in self._extraconfigopts:
+                section, key = opt.encode('utf-8').split(b'.', 1)
+                assert b'=' in key, ('extra config opt %s must '
+                                     'have an = for assignment' % opt)
+                hgrc.write(b'[%s]\n%s\n' % (section, key))
 
     def fail(self, msg):
         # unittest differentiates between errored and failed.
@@ -1232,9 +1229,8 @@ class TTest(Test):
         return os.path.join(self._testdir, self.bname)
 
     def _run(self, env):
-        f = open(self.path, 'rb')
-        lines = f.readlines()
-        f.close()
+        with open(self.path, 'rb') as f:
+            lines = f.readlines()
 
         # .t file is both reference output and the test input, keep reference
         # output updated with the the test input. This avoids some race
@@ -1246,10 +1242,9 @@ class TTest(Test):
 
         # Write out the generated script.
         fname = b'%s.sh' % self._testtmp
-        f = open(fname, 'wb')
-        for l in script:
-            f.write(l)
-        f.close()
+        with open(fname, 'wb') as f:
+            for l in script:
+                f.write(l)
 
         cmd = b'%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
@@ -1884,9 +1879,8 @@ class TestSuite(unittest.TestSuite):
                     continue
 
                 if self._keywords:
-                    f = open(test.path, 'rb')
-                    t = f.read().lower() + test.bname.lower()
-                    f.close()
+                    with open(test.path, 'rb') as f:
+                        t = f.read().lower() + test.bname.lower()
                     ignored = False
                     for k in self._keywords.lower().split():
                         if k not in t:
@@ -2822,13 +2816,12 @@ class TestRunner(object):
                     if e.errno != errno.ENOENT:
                         raise
         else:
-            f = open(installerrs, 'rb')
-            for line in f:
-                if PYTHON3:
-                    sys.stdout.buffer.write(line)
-                else:
-                    sys.stdout.write(line)
-            f.close()
+            with open(installerrs, 'rb') as f:
+                for line in f:
+                    if PYTHON3:
+                        sys.stdout.buffer.write(line)
+                    else:
+                        sys.stdout.write(line)
             sys.exit(1)
         os.chdir(self._testdir)
 
@@ -2836,28 +2829,24 @@ class TestRunner(object):
 
         if self.options.py3k_warnings and not self.options.anycoverage:
             vlog("# Updating hg command to enable Py3k Warnings switch")
-            f = open(os.path.join(self._bindir, 'hg'), 'rb')
-            lines = [line.rstrip() for line in f]
-            lines[0] += ' -3'
-            f.close()
-            f = open(os.path.join(self._bindir, 'hg'), 'wb')
-            for line in lines:
-                f.write(line + '\n')
-            f.close()
+            with open(os.path.join(self._bindir, 'hg'), 'rb') as f:
+                lines = [line.rstrip() for line in f]
+                lines[0] += ' -3'
+            with open(os.path.join(self._bindir, 'hg'), 'wb') as f:
+                for line in lines:
+                    f.write(line + '\n')
 
         hgbat = os.path.join(self._bindir, b'hg.bat')
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
             # installation layout put it in bin/ directly. Fix it
-            f = open(hgbat, 'rb')
-            data = f.read()
-            f.close()
+            with open(hgbat, 'rb') as f:
+                data = f.read()
             if b'"%~dp0..\python" "%~dp0hg" %*' in data:
                 data = data.replace(b'"%~dp0..\python" "%~dp0hg" %*',
                                     b'"%~dp0python" "%~dp0hg" %*')
-                f = open(hgbat, 'wb')
-                f.write(data)
-                f.close()
+                with open(hgbat, 'wb') as f:
+                    f.write(data)
             else:
                 print('WARNING: cannot fix hg.bat reference to python.exe')
 
