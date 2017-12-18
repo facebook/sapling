@@ -124,7 +124,7 @@ def reposetup(ui, repo):
             if 'lfs' not in repo.requirements:
                 ctx = repo[kwargs['node']]
                 # TODO: is there a way to just walk the files in the commit?
-                if any(ctx[f].islfs() for f in ctx.files()):
+                if any(ctx[f].islfs() for f in ctx.files() if f in ctx):
                     repo.requirements.add('lfs')
                     repo._writerequirements()
 

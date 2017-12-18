@@ -680,3 +680,12 @@ This convert is trickier, because it contains deleted files (via `hg mv`)
 
   $ hg -R convert_lfs2 config --debug extensions | grep lfs
   $TESTTMP/convert_lfs2/.hg/hgrc:*: extensions.lfs= (glob)
+
+Committing deleted files works:
+
+  $ hg init $TESTTMP/repo-del
+  $ cd $TESTTMP/repo-del
+  $ echo 1 > A
+  $ hg commit -m 'add A' -A A
+  $ hg rm A
+  $ hg commit -m 'rm A'
