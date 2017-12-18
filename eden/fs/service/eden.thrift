@@ -284,17 +284,21 @@ struct MountInodeInfo {
  */
 struct InternalStats {
   1: i64 periodicUnloadCount
-/**
- * counters is the list of fb303 counters, key is the counter name, value is the
- * counter value.
- */
+  /**
+   * counters is the list of fb303 counters, key is the counter name, value is the
+   * counter value.
+   */
   2: map<string, i64> counters
-/**
- * mountPointInfo is a map whose key is the path of the mount point and value
- * is the details like number of loaded inodes,unloaded inodes in that mount
- * and number of materialized inodes in that mountpoint.
- */
+  /**
+   * mountPointInfo is a map whose key is the path of the mount point and value
+   * is the details like number of loaded inodes,unloaded inodes in that mount
+   * and number of materialized inodes in that mountpoint.
+   */
   3: map<string, MountInodeInfo> mountPointInfo
+  /**
+   * Linux-only: the contents of /proc/self/smaps, to be parsed by the caller.
+   */
+  4: binary smaps
 }
 
 struct ManifestEntry {

@@ -91,3 +91,15 @@ def _center_strip_right(text: str, width: int) -> str:
     would be centered within the specified `width` plus a trailing newline.'''
     space = (width - len(text)) // 2
     return space * ' ' + text + '\n'
+
+
+def format_size(size: int) -> str:
+    if size > 1000000000:
+        return '{:.1f} GB'.format(size / 1000000000)
+    if size > 1000000:
+        return '{:.1f} MB'.format(size / 1000000)
+    if size > 1000:
+        return '{:.1f} KB'.format(size / 1000)
+    if size > 0:
+        return '{} B'.format(size)
+    return '0'

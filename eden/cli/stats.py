@@ -8,57 +8,115 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import argparse
+import logging
 import sys
-from typing import Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from . import cmd_util
 from . import stats_print
+
+
+log = logging.getLogger('eden.cli.stats')
+
 
 DiagInfoCounters = Dict[str, int]
 Table = Dict[str, Tuple[int, int, int, int]]
 
 
-# Gets Information like memory usage, List of mount points and number of Inodes
-# loaded, unloaded and materialized in the mount points etc.
+# Shows information like memory usage, list of mount points and number of inodes
+# loaded, unloaded, and materialized in the mount points, etc.
 def do_stats_general(args: argparse.Namespace):
     out = sys.stdout
-    stats_print.write_heading('General Stat Information for EdenFs', out)
+    stats_print.write_heading('General EdenFS Statistics', out)
     config = cmd_util.create_config(args)
 
     with config.get_thrift_client() as client:
         diag_info = client.getStatInfo()
-        stats_print.write_mem_status_table(diag_info.counters, out)
-        format_str = '{:>40} {:^1} {:<20}\n'
 
-        # Print Inodes unloaded by unload Job.
+        parsed = parse_smaps(diag_info.smaps)
+        private_dirty_bytes = total_private_dirty(parsed)
+
+        format_str = '{:>40} {:^1} {:<20}\n'
         out.write(
             format_str.format(
-                'Inodes unloaded by Periodic Job', ':', '%d\n' %
-                diag_info.periodicUnloadCount
+                'edenfs process memory usage', ':',
+                stats_print.format_size(private_dirty_bytes)
             )
         )
+        out.write(
+            format_str.format(
+                'inodes unloaded by periodic job', ':',
+                '{}'.format(diag_info.periodicUnloadCount)
+            )
+        )
+        out.write('\n')
+
         # print InodeInfo for all the mountPoints
         inode_info = diag_info.mountPointInfo
         for key in inode_info:
-            out.write('MountPoint Information for %s\n' % key)
+            out.write('Mount information for %s\n' % key)
             out.write(
-                'Loaded Inodes in memory          : %d\n' %
+                '    Loaded inodes in memory      : %d\n' %
                 inode_info[key].loadedInodeCount
             )
             out.write(
-                'Unloaded Inodes in memory        : %d\n' %
+                '    Unloaded inodes in memory    : %d\n' %
                 inode_info[key].unloadedInodeCount
             )
             out.write(
-                'Materialized Inodes in memory    : %d\n\n' %
+                '    Materialized inodes in memory: %d\n\n' %
                 inode_info[key].materializedInodeCount
             )
+
+
+MemoryMapping = Dict[bytes, bytes]
+
+
+# Returns a list of all mappings
+def parse_smaps(smaps: bytes) -> List[MemoryMapping]:
+    output: List[MemoryMapping] = []
+    current: MemoryMapping = None
+    for line in smaps.splitlines():
+        if b'-' in line:  # blech
+            if current is not None:
+                output.append(current)
+            current = {}
+        else:
+            if current is None:
+                log.warning('first line should be range')
+                continue
+            split = line.split(b':')
+            if len(split) != 2:
+                log.warning('line not key: value')
+                continue
+            key, value = line.split(b':')
+            current[key.strip()] = value.strip()
+    if current is not None:
+        output.append(current)
+    return output
+
+
+def total_private_dirty(maps: List[MemoryMapping]) -> Optional[int]:
+    total = 0
+    for mapping in maps:
+        try:
+            private_dirty = mapping[b'Private_Dirty']
+        except KeyError:
+            pass
+        else:
+            if not private_dirty.endswith(b' kB'):
+                log.warning(
+                    'value does not end with kB: %s',
+                    private_dirty.decode(errors='backslashreplace'))
+                return None
+            total += int(private_dirty[:-3]) * 1024
+    return total
 
 
 # Function that shows memory related informtion like memory usage, free memory
 # etc
 def do_stats_memory(args: argparse.Namespace):
     out = sys.stdout
-    stats_print.write_heading('Memory Stats for EdenFs', out)
+    stats_print.write_heading('Memory Stats for EdenFS', out)
     config = cmd_util.create_config(args)
 
     with config.get_thrift_client() as client:

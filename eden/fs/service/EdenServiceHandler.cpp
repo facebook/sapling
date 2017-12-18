@@ -628,6 +628,12 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   result.counters = stats::ServiceData::get()->getCounters();
   result.periodicUnloadCount =
       result.counters[kPeriodicUnloadCounterKey.toString()];
+
+  // TODO: Linux-only
+  std::string smaps;
+  if (folly::readFile("/proc/self/smaps", smaps)) {
+    result.smaps = std::move(smaps);
+  }
 }
 
 void EdenServiceHandler::flushStatsNow() {
