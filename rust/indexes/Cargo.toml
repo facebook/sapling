@@ -19,4 +19,4 @@ default-features = false
 features = ["extension-module-2-7"]
 
 [dependencies.python27-sys]
-git = "https://github.com/dgrunwald/rust-cpython.git"
+git = "https://github.com/dgrunwald/rust-cpython.git" # subdir: python27-sys
