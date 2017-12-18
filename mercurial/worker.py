@@ -282,7 +282,7 @@ def _windowsworker(ui, func, staticargs, args):
                 if t.exception is not None:
                     raise t.exception
                 threads.remove(t)
-    except Exception: # re-raises
+    except (Exception, KeyboardInterrupt): # re-raises
         trykillworkers()
         raise
     while not resultqueue.empty():
