@@ -12,7 +12,7 @@ Convert while testing all possible outputs
 
   $ hg --debug convert svn-repo A-hg --config progress.debug=1
   initializing destination A-hg repository
-  reparent to file://*/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
   run hg sink pre-conversion action
   scanning source...
   found trunk at 'trunk'
@@ -21,7 +21,7 @@ Convert while testing all possible outputs
   found branch branch\xc3\xa9 at 5 (esc)
   found branch branch\xc3\xa9e at 6 (esc)
   scanning: 1/4 revisions (25.00%)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   fetching revision log for "/trunk" from 4 to 0
   parsing revision 4 (2 changes)
   parsing revision 3 (4 changes)
@@ -31,18 +31,18 @@ Convert while testing all possible outputs
   '/branches' is not under '/trunk', ignoring
   '/tags' is not under '/trunk', ignoring
   scanning: 2/4 revisions (50.00%)
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9 (glob)
   fetching revision log for "/branches/branch\xc3\xa9" from 5 to 0 (esc)
   parsing revision 5 (1 changes)
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9 (glob)
   found parent of branch /branches/branch\xc3\xa9 at 4: /trunk (esc)
   scanning: 3/4 revisions (75.00%)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
   fetching revision log for "/branches/branch\xc3\xa9e" from 6 to 0 (esc)
   parsing revision 6 (1 changes)
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
   found parent of branch /branches/branch\xc3\xa9e at 5: /branches/branch\xc3\xa9 (esc)
   scanning: 4/4 revisions (100.00%)
   scanning: 5/4 revisions (125.00%)
@@ -57,7 +57,7 @@ Convert while testing all possible outputs
   4 hello
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   scanning paths: /trunk/\xc3\xa0 0/3 paths (0.00%) (esc)
   scanning paths: /trunk/\xc3\xa0/e\xcc\x81 1/3 paths (33.33%) (esc)
   scanning paths: /trunk/\xc3\xa9 2/3 paths (66.67%) (esc)
@@ -74,14 +74,14 @@ Convert while testing all possible outputs
   converting: 2/6 revisions (33.33%)
   scanning paths: /trunk/\xc3\xa0 0/4 paths (0.00%) (esc)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   scanning paths: /trunk/\xc3\xa8 1/4 paths (25.00%) (esc)
   copied to \xc3\xa8 from \xc3\xa9@2 (esc)
   scanning paths: /trunk/\xc3\xa9 2/4 paths (50.00%) (esc)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   scanning paths: /trunk/\xc3\xb9 3/4 paths (75.00%) (esc)
   mark /trunk/\xc3\xb9 came from \xc3\xa0:2 (esc)
   getting files: \xc3\xa0/e\xcc\x81 1/4 files (25.00%) (esc)
@@ -101,12 +101,12 @@ Convert while testing all possible outputs
   converting: 3/6 revisions (50.00%)
   scanning paths: /trunk/\xc3\xa8 0/2 paths (0.00%) (esc)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   scanning paths: /trunk/\xc3\xb9 1/2 paths (50.00%) (esc)
   gone from -1
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/trunk (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/trunk (glob)
   getting files: \xc3\xa8 1/2 files (50.00%) (esc)
   getting files: \xc3\xb9/e\xcc\x81 2/2 files (100.00%) (esc)
   committing files:
@@ -116,21 +116,21 @@ Convert while testing all possible outputs
   1 branch to branch?
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
   converting: 4/6 revisions (66.67%)
-  reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9 (glob)
   scanning paths: /branches/branch\xc3\xa9 0/1 paths (0.00%) (esc)
   committing changelog
   updating the branch cache
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   converting: 5/6 revisions (83.33%)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
   scanning paths: /branches/branch\xc3\xa9e 0/1 paths (0.00%) (esc)
   committing changelog
   updating the branch cache
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
-  reparent to file://*/svn-repo (glob)
-  reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
+  reparent to file:/*/$TESTTMP/svn-repo (glob)
+  reparent to file:/*/$TESTTMP/svn-repo/branches/branch%C3%A9e (glob)
   updating tags
   committing files:
   .hgtags
