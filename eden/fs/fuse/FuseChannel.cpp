@@ -126,7 +126,7 @@ FuseChannel::FuseChannel(
   // so we use it too!
   constexpr size_t MIN_BUFSIZE = 0x21000;
   size_t bufsize =
-      std::min(static_cast<size_t>(getpagesize()) + 0x1000, MIN_BUFSIZE);
+      std::max(static_cast<size_t>(getpagesize()) + 0x1000, MIN_BUFSIZE);
   ch_ = fuse_chan_new(&op, fuseDevice_.fd(), bufsize, nullptr);
   if (!ch_) {
     throw std::runtime_error("failed to mount");
