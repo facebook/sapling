@@ -348,17 +348,13 @@ def revset_fromsvn(repo, subset, x):
     '''
     args = revset.getargs(x, 0, 0, "fromsvn takes no arguments")
 
-    rev = repo.changelog.rev
-    bin = node.bin
     meta = repo.svnmeta(skiperrorcheck=True)
     if not meta.revmapexists:
         raise hgutil.Abort("svn metadata is missing - "
                            "run 'hg svn rebuildmeta' to reconstruct it")
-    svnrevs = set(rev(h) for h in meta.revmap.hashes().keys())
-    filteredrevs = filter(svnrevs.__contains__, subset)
-    if smartset is not None:
-        filteredrevs = smartset.baseset(filteredrevs)
-    return filteredrevs
+    tonode = repo.changelog.node
+    hashes = meta.revmap.hashes()
+    return subset.filter(lambda r: tonode(r) in hashes)
 
 def revset_svnrev(repo, subset, x):
     '''``svnrev(number)``
