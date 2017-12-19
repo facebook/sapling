@@ -355,7 +355,19 @@ impl Arbitrary for MPathElement {
 }
 
 impl Arbitrary for MPath {
+    #[inline]
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        // Note that this can generate zero-length paths. To only generate non-zero-length paths,
+        // use arbitrary_params.
+        Self::arbitrary_params(g, true)
+    }
+
+    // Skip over shrink for now because it's non-trivial to do.
+}
+
+impl MPath {
+    pub fn arbitrary_params<G: Gen>(g: &mut G, empty_allowed: bool) -> Self {
+        let min_components = if empty_allowed { 0 } else { 1 };
         let size = g.size();
         // Up to sqrt(size) components, each with length from 1 to 2 *
         // sqrt(size) -- don't generate zero-length components. (This isn't
@@ -373,7 +385,7 @@ impl Arbitrary for MPath {
 
         let mut path = Vec::new();
 
-        for i in 0..g.gen_range(0, size_sqrt) {
+        for i in 0..g.gen_range(min_components, size_sqrt) {
             if i > 0 {
                 path.push(b'/');
             }
@@ -384,8 +396,6 @@ impl Arbitrary for MPath {
 
         MPath::new(path).unwrap()
     }
-
-    // Skip over shrink for now because it's non-trivial to do.
 }
 
 static HEX: &[u8] = b"0123456789abcdef";
@@ -632,6 +642,9 @@ impl fmt::Debug for MPath {
 
 #[cfg(test)]
 mod test {
+    use quickcheck::StdGen;
+    use rand;
+
     use super::*;
 
     quickcheck! {
@@ -651,6 +664,20 @@ mod test {
 
         fn path_len(p: MPath) -> bool {
             p.len() == p.to_vec().len()
+        }
+    }
+
+    /// Verify that arbitrary instances with empty_allowed set to false are not empty.
+    #[test]
+    fn path_non_empty() {
+        let mut rng = StdGen::new(rand::thread_rng(), 100);
+        for _n in 0..100 {
+            let path = MPath::arbitrary_params(&mut rng, false);
+            MPath::verify(&path.to_vec()).expect("arbitrary MPath should be valid");
+            assert!(
+                !path.is_empty(),
+                "empty_allowed is false so empty paths should not be generated"
+            );
         }
     }
 
