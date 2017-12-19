@@ -288,7 +288,7 @@ mod test {
         // - history count: b"\0\0\0\0"
         // - data count: b"\0\0\0\0"
         // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
-        let foo_dir = RepoPath::file("foo".as_ref()).unwrap();
+        let foo_dir = RepoPath::file("foo").unwrap();
         let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
         let unpacker = new(logger.clone(), Kind::File);
         let stream = FramedRead::new(empty_2, unpacker);

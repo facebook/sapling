@@ -29,7 +29,7 @@ use mercurial_types::RepoPath;
 use mercurial_types_mocks::nodehash::*;
 
 fn add_and_get<L: Linknodes>(linknodes: L) {
-    let path = RepoPath::file("abc".as_ref()).unwrap();
+    let path = RepoPath::file("abc").unwrap();
     linknodes
         .add(path.clone(), &NULL_HASH, &ONES_HASH)
         .wait()
@@ -64,7 +64,7 @@ fn add_and_get<L: Linknodes>(linknodes: L) {
 }
 
 fn not_found<L: Linknodes>(linknodes: L) {
-    let path = RepoPath::dir("abc".as_ref()).unwrap();
+    let path = RepoPath::dir("abc").unwrap();
     assert_matches!(
         linknodes
             .get(path.clone(), &NULL_HASH)

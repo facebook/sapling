@@ -371,7 +371,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(parts.next().unwrap(), Bundle2Item::Header(header));
 
     // These are a few identifiers present in the bundle.
-    let baz_dir = RepoPath::dir("baz".as_ref()).unwrap();
+    let baz_dir = RepoPath::dir("baz").unwrap();
     let baz_hash = NodeHash::from_str("dcb9fa4bb7cdb673cd5752088b48d4c3f9c1fc23").unwrap();
     let root_hash = NodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
     let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();

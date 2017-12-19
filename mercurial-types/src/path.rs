@@ -338,6 +338,14 @@ impl<'a> TryFrom<&'a [u8]> for MPath {
     }
 }
 
+impl<'a> TryFrom<&'a str> for MPath {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        MPath::new(value.as_bytes())
+    }
+}
+
 lazy_static! {
     static ref COMPONENT_CHARS: Vec<u8> = (1..b'/').chain((b'/' + 1)..255).collect();
 }
@@ -693,12 +701,9 @@ mod test {
         let path = MPath::new(b"abc").unwrap();
         assert_eq!(
             RepoPath::dir(path.clone()).unwrap(),
-            RepoPath::dir("abc".as_ref()).unwrap()
+            RepoPath::dir("abc").unwrap()
         );
-        assert_ne!(
-            RepoPath::dir(path).unwrap(),
-            RepoPath::file("abc".as_ref()).unwrap()
-        );
+        assert_ne!(RepoPath::dir(path).unwrap(), RepoPath::file("abc").unwrap());
     }
 
     #[test]
@@ -712,7 +717,7 @@ mod test {
             ),
         };
 
-        match RepoPath::dir(b"".as_ref()) {
+        match RepoPath::dir("") {
             Ok(bad) => panic!("unexpected success {:?}", bad),
             Err(err) => assert_matches!(
                 err.downcast::<ErrorKind>().unwrap(),
