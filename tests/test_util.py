@@ -712,6 +712,7 @@ class TestBase(unittest.TestCase):
             if source != dest:
                 copied = source
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=dest,
                                               data=newdata,
                                               islink=False,

@@ -347,6 +347,7 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
         if copied not in parentctx.manifest():
             copied = None
         return compathacks.makememfilectx(repo,
+                                          memctx=memctx,
                                           path=path,
                                           data=data,
                                           islink=islink,
@@ -559,6 +560,7 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
         if copied not in parentctx.manifest():
             copied = None
         return compathacks.makememfilectx(repo,
+                                          memctx=memctx,
                                           path=path,
                                           data=data,
                                           islink=islink,
@@ -736,6 +738,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                 if externals[path] is None:
                     raise IOError(errno.ENOENT, 'no externals')
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data=externals[path],
                                                   islink=False,

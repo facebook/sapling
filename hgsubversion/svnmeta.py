@@ -800,6 +800,7 @@ class SVNMeta(object):
         def hgtagsfn(repo, memctx, path):
             assert path == '.hgtags'
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data=tagdata,
                                               islink=False,
@@ -871,6 +872,7 @@ class SVNMeta(object):
             # add new changeset containing updated .hgtags
             def fctxfun(repo, memctx, path):
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path='.hgtags',
                                                   data=src,
                                                   islink=False,

@@ -20,16 +20,19 @@ def pickle_load(f):
     f.seek(0)
     return pickle.load(f)
 
-def makememfilectx(repo, path, data, islink, isexec, copied):
+def makememfilectx(repo, memctx, path, data, islink, isexec, copied):
     """Return a memfilectx
 
-    Works around memfilectx() adding a repo argument between 3.0 and 3.1.
+    Works around API change by 8a0cac20a1ad (first in 4.5).
     """
     from mercurial import context
     try:
-        return context.memfilectx(repo, path, data, islink, isexec, copied)
+        return context.memfilectx(repo=repo, path=path, data=data,
+                                  islink=islink, isexec=isexec, copied=copied,
+                                  changectx=memctx)
     except TypeError:
-        return context.memfilectx(path, data, islink, isexec, copied)
+        return context.memfilectx(repo=repo, path=path, data=data,
+                                  islink=islink, isexec=isexec, copied=copied)
 
 def filectxfn_deleted(memctx, path):
     """

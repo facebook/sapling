@@ -162,6 +162,7 @@ class UtilityTests(test_util.TestBase):
         parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='added',
                                               islink=False,
@@ -207,6 +208,7 @@ class UtilityTests(test_util.TestBase):
         parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='added',
                                               islink=False,
@@ -239,6 +241,7 @@ class UtilityTests(test_util.TestBase):
         parents = (self.repo[0].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='added',
                                               islink=False,

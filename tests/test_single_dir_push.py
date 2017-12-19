@@ -24,6 +24,7 @@ class TestSingleDirPush(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -31,6 +32,7 @@ class TestSingleDirPush(test_util.TestBase):
                                                   copied=False)
             elif path == 'adding_binary':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='\0binary',
                                                   islink=False,
@@ -65,6 +67,7 @@ class TestSingleDirPush(test_util.TestBase):
                                             subdir='trunk')
         def filectxfn(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='contents of %s' % path,
                                               islink=False,
@@ -99,6 +102,7 @@ class TestSingleDirPush(test_util.TestBase):
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         def file_callback(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='data of %s' % path,
                                               islink=False,
@@ -131,6 +135,7 @@ class TestSingleDirPush(test_util.TestBase):
             def cb(repo, memctx, path):
                 if path == data:
                     return compathacks.makememfilectx(repo,
+                                                      memctx=memctx,
                                                       path=path,
                                                       data=data,
                                                       islink=False,
@@ -180,6 +185,7 @@ class TestSingleDirPush(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,

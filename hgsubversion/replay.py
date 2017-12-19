@@ -174,6 +174,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             else:
                 data = parentctx.filectx(path).data()
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data=data,
                                               islink=islink,

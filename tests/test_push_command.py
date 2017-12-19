@@ -35,6 +35,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -61,6 +62,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -109,6 +111,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='foo',
                                               islink=False,
@@ -194,6 +197,7 @@ class PushTests(test_util.TestBase):
             def file_callback(repo, memctx, path):
                 if path == 'adding_file':
                     return compathacks.makememfilectx(repo,
+                                                      memctx=memctx,
                                                       path=path,
                                                       data='foo',
                                                       islink=False,
@@ -242,6 +246,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -271,6 +276,7 @@ class PushTests(test_util.TestBase):
     def test_push_two_revs_different_local_branch(self):
         def filectxfn(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data=path,
                                               islink=False,
@@ -313,6 +319,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file2':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo2',
                                                   islink=False,
@@ -349,6 +356,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -431,6 +439,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'gamma':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=False,
@@ -463,6 +472,7 @@ class PushTests(test_util.TestBase):
         def file_callback(repo, memctx, path):
             if path == 'gamma':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='foo',
                                                   islink=True,
@@ -493,6 +503,7 @@ class PushTests(test_util.TestBase):
         def file_callback2(repo, memctx, path):
             if path == 'gamma':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='a' * 129,
                                                   islink=True,
@@ -520,6 +531,7 @@ class PushTests(test_util.TestBase):
         def file_callback3(repo, memctx, path):
             if path == 'gamma':
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data='a' * 64 + 'b' * 65,
                                                   islink=True,
@@ -555,6 +567,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='foo',
                                               islink=link,
@@ -581,6 +594,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback2(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='bar',
                                               islink=link,
@@ -606,6 +620,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         def file_callback3(repo, memctx, path):
             return compathacks.makememfilectx(repo,
+                                              memctx=memctx,
                                               path=path,
                                               data='bar',
                                               islink=False,
@@ -755,6 +770,7 @@ class PushTests(test_util.TestBase):
                 if path == 'newdir/new_file':
                     testData = 'fooNewFile'
                 return compathacks.makememfilectx(repo,
+                                                  memctx=memctx,
                                                   path=path,
                                                   data=testData,
                                                   islink=False,
