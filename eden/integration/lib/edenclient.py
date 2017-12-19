@@ -181,6 +181,10 @@ class EdenFS(object):
             'daemon',
             '--daemon-binary', EDEN_DAEMON,
             '--foreground',
+            '--',
+            # Defaulting to 8 import processes is excessive when the test
+            # framework runs tests on each CPU core.
+            '--num_hg_import_threads', '2',
         )
         if takeover:
             args.append('--takeover')
