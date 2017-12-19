@@ -152,21 +152,26 @@ def _parse_mode(mode: int) -> Tuple[str, int]:
     return file_type_str, perms
 
 
-def do_buildinfo(args: argparse.Namespace):
+def do_buildinfo(args: argparse.Namespace, out: IO[bytes] = None):
+    if out is None:
+        out = sys.stdout.buffer
     config = cmd_util.create_config(args)
     build_info = config.get_server_build_info()
     sorted_build_info = collections.OrderedDict(sorted(build_info.items()))
     for key, value in sorted_build_info.items():
-        print(f'{key}: {value}')
+        out.write(f'{key}: {value}\n'.encode())
 
 
-def do_uptime(args: argparse.Namespace):
+def do_uptime(args: argparse.Namespace, out: IO[bytes] = None):
+    if out is None:
+        out = sys.stdout.buffer
     config = cmd_util.create_config(args)
     uptime = config.get_uptime()  # Check if uptime is negative?
     days = uptime.days
     hours, remainder = divmod(uptime.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    print('%dd:%02dh:%02dm:%02ds' % (days, hours, minutes, seconds))
+    uptime = '%dd:%02dh:%02dm:%02ds\n' % (days, hours, minutes, seconds)
+    out.write(uptime.encode())
 
 
 def do_hg_copy_map_get_all(args: argparse.Namespace):

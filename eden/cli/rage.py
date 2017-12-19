@@ -7,14 +7,13 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import eden.thrift
 import getpass
 import io
 import socket
 import subprocess
-import thrift
 
 from . import debug as debug_mod
+from . import doctor as doctor_mod
 from typing import IO
 
 
@@ -22,7 +21,17 @@ def print_diagnostic_info(config, args, out: IO[bytes]):
     out.write(b'User                    : %s\n' % getpass.getuser().encode())
     out.write(b'Hostname                : %s\n' % socket.gethostname().encode())
     print_rpm_version(out)
-    print_exported_values(config, out)
+
+    health_status = config.check_health()
+    if health_status.is_healthy():
+        out.write(b'\n')
+        debug_mod.do_buildinfo(args, out)
+        out.write(b'uptime: ')
+        debug_mod.do_uptime(args, out)
+        print_eden_doctor_report(config, out)
+    else:
+        out.write(b'Eden is not running. Some debug info will be omitted.\n')
+
     print_tail_of_log_file(config.get_log_path(), out)
     print_running_eden_process(out)
 
@@ -36,10 +45,11 @@ def print_diagnostic_info(config, args, out: IO[bytes]):
         out.write(b'\nMount point info for path %s:\n' % key.encode())
         for k, v in val.items():
             out.write('{:>10} : {}\n'.format(k, v).encode())
-    for path in mountpoint_paths:
-        out.write(b'\nInode information for path %s:\n' % path)
-        args.path = path.decode('utf8')
-        debug_mod.do_inode(args, out)
+    if health_status.is_healthy():
+        for path in mountpoint_paths:
+            out.write(b'\nInode information for path %s:\n' % path)
+            args.path = path.decode('utf8')
+            debug_mod.do_inode(args, out)
 
 
 def print_rpm_version(out: IO[bytes]):
@@ -53,26 +63,14 @@ def print_rpm_version(out: IO[bytes]):
         out.write(b'Error getting the Rpm version : %s\n' % str(e).encode())
 
 
-def print_exported_values(config, out: IO[bytes]):
-    try:
-        with config.get_thrift_client() as client:
-            data = client.getExportedValues()
-            out.write(
-                b'Package Version         : %s\n' %
-                data['build_package_version'].encode()
-            )
-            out.write(
-                b'Build Revision          : %s\n' %
-                data['build_revision'].encode()
-            )
-            out.write(
-                b'Build Upstream Revision : %s\n' %
-                data['build_upstream_revision'].encode()
-            )
-    except eden.thrift.EdenNotRunningError:
-        out.write(b'edenfs not running\n')
-    except thrift.Thrift.TException as e:
-        out.write(b'error talking to edenfs: %s\n' % str(e).encode())
+def print_eden_doctor_report(config, out: IO[bytes]):
+    dry_run = True
+    doctor_output = io.StringIO()
+    doctor_rc = doctor_mod.cure_what_ails_you(config, dry_run, doctor_output)
+    out.write(
+        b'\neden doctor --dry-run (exit code %d):\n%s\n' %
+        (doctor_rc, doctor_output.getvalue().encode())
+    )
 
 
 def print_tail_of_log_file(path: str, out: IO[bytes]):
