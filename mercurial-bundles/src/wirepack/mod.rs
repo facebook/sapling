@@ -9,7 +9,7 @@
 use std::fmt;
 
 use byteorder::{BigEndian, ByteOrder};
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 
 use mercurial_types::{Delta, NodeHash, RepoPath, NULL_HASH};
 
@@ -151,6 +151,29 @@ impl HistoryEntry {
         }))
     }
 
+    // This would ideally be generic over any BufMut, but that won't be very useful until
+    // https://github.com/carllerche/bytes/issues/170 is fixed.
+    #[allow(dead_code)]
+    pub(crate) fn encode(&self, kind: Kind, buf: &mut Vec<u8>) -> Result<()> {
+        self.verify(kind).with_context(|_| {
+            ErrorKind::WirePackEncode("attempted to encode an invalid history entry".into())
+        })?;
+        buf.put_slice(self.node.as_ref());
+        buf.put_slice(self.p1.as_ref());
+        buf.put_slice(self.p2.as_ref());
+        buf.put_slice(self.linknode.as_ref());
+        let path_vec = if let Some(ref path) = self.copy_from {
+            path.mpath()
+                .expect("verify ensures that path is always a RepoPath::FilePath")
+                .to_vec()
+        } else {
+            vec![]
+        };
+        buf.put_u16::<BigEndian>(path_vec.len() as u16);
+        buf.put_slice(&path_vec);
+        Ok(())
+    }
+
     pub fn verify(&self, kind: Kind) -> Result<()> {
         if let Some(ref path) = self.copy_from {
             match *path {
@@ -255,7 +278,9 @@ impl DataEntry {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::StdGen;
+    use std::cmp;
+
+    use quickcheck::{Gen, StdGen};
     use rand;
 
     use mercurial_types::delta::Fragment;
@@ -313,6 +338,48 @@ mod test {
                 .verify(Kind::File)
                 .expect("generated history entry should be valid");
         }
+    }
+
+    #[test]
+    fn test_history_roundtrip() {
+        let mut rng = StdGen::new(rand::thread_rng(), 100);
+        for _n in 0..100 {
+            history_roundtrip(&mut rng, Kind::Tree);
+            history_roundtrip(&mut rng, Kind::File);
+        }
+    }
+
+    fn history_roundtrip<G: Gen>(g: &mut G, kind: Kind) {
+        let entry = HistoryEntry::arbitrary_kind(g, kind);
+        let mut encoded = vec![];
+        entry
+            .encode(kind, &mut encoded)
+            .expect("encoding this history entry should succeed");
+
+        let mut encoded_bytes = BytesMut::from(encoded);
+
+        // Ensure that a partial entry results in None.
+        let bytes_len = encoded_bytes.len();
+        let reduced_len = unsafe {
+            let reduced_len = cmp::max(bytes_len - g.gen_range(1, bytes_len), 0);
+            encoded_bytes.set_len(reduced_len);
+            reduced_len
+        };
+        let decoded = HistoryEntry::decode(&mut encoded_bytes, kind)
+            .expect("decoding this history entry should succeed");
+        assert_eq!(decoded, None);
+        // Ensure that no bytes in encoded actually got read
+        assert_eq!(encoded_bytes.len(), reduced_len);
+
+        // Restore the original length for the next test.
+        unsafe {
+            encoded_bytes.set_len(bytes_len);
+        }
+
+        let decoded = HistoryEntry::decode(&mut encoded_bytes, kind)
+            .expect("decoding this history entry should succeed");
+        assert_eq!(Some(entry), decoded);
+        assert_eq!(encoded_bytes.len(), 0);
     }
 
     #[test]

@@ -16,6 +16,7 @@ pub enum ErrorKind {
     #[fail(display = "changegroup2 decode error: {}", _0)] Cg2Decode(String),
     #[fail(display = "changegroup2 encode error: {}", _0)] Cg2Encode(String),
     #[fail(display = "wirepack decode error: {}", _0)] WirePackDecode(String),
+    #[fail(display = "wirepack encode error: {}", _0)] WirePackEncode(String),
     #[fail(display = "bundle2 encode error: {}", _0)] Bundle2Encode(String),
     #[fail(display = "bundle2 chunk error: {}", _0)] Bundle2Chunk(String),
     #[fail(display = "invalid delta: {}", _0)] InvalidDelta(String),
