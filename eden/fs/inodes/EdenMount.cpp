@@ -61,7 +61,8 @@ namespace facebook {
 namespace eden {
 
 namespace {
-/** Helper for computing unclean paths when changing parents
+/**
+ * Helper for computing unclean paths when changing parents
  *
  * This InodeDiffCallback instance is used to compute the set
  * of unclean files before and after actions that change the
@@ -428,9 +429,24 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         auto& fromTree = std::get<0>(treeResults);
         auto& toTree = std::get<1>(treeResults);
 
-        return journalDiffCallback
-            ->performDiff(getObjectStore(), getRootInode(), fromTree)
-            .then([this, ctx, fromTree, toTree]() {
+        // Call JournalDiffCallback::performDiff() to compute the changes
+        // between the original working directory state and the source tree
+        // state.
+        //
+        // If we are doing a dry-run update we aren't going to create a journal
+        // entry, so we can skip this step entirely.
+        auto journalDiffFuture = Future<Unit>::makeEmpty();
+        if (ctx->isDryRun()) {
+          journalDiffFuture = makeFuture();
+        } else {
+          journalDiffFuture = journalDiffCallback->performDiff(
+              getObjectStore(), getRootInode(), fromTree);
+        }
+
+        // Perform the requested checkout operation after the journal diff
+        // completes.
+        return journalDiffFuture.then(
+            [this, ctx, fromTree, toTree]() {
               ctx->start(this->acquireRenameLock());
               return this->getRootInode()
                   ->checkout(ctx.get(), fromTree, toTree)
@@ -440,35 +456,35 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
                 std::shared_ptr<const Tree> toTree) {
         // Save the new snapshot hash
-        XLOG(DBG1) << "updating snapshot for " << this->getPath() << " from "
-                   << oldParents << " to " << snapshotHash;
         auto conflicts = ctx->finish(snapshotHash);
         if (ctx->isDryRun()) {
           // This is a dry run, so all we need to do is tell the caller about
           // the conflicts: we should not modify any files or add any entries to
           // the journal.
-          return folly::makeFuture(conflicts);
+          return conflicts;
         }
 
         this->config_->setParentCommits(snapshotHash);
+        XLOG(DBG1) << "updated snapshot for " << this->getPath() << " from "
+                   << oldParents << " to " << snapshotHash;
 
         // Write a journal entry
-        return journalDiffCallback
-            ->performDiff(getObjectStore(), getRootInode(), std::move(toTree))
-            .then([this,
-                   conflicts,
-                   journalDiffCallback,
-                   oldParents,
-                   snapshotHash]() {
+        //
+        // Note that we do not call journalDiffCallback->performDiff() a second
+        // time here to compute the files that are now different from the
+        // new state.  The checkout operation will only touch files that are
+        // changed between fromTree and toTree.
+        //
+        // Any files that are unclean after the checkout operation must have
+        // either been unclean before it started, or different between the
+        // two trees.  Therefore the JournalDelta already includes information
+        // that these files changed.
+        auto journalDelta = journalDiffCallback->stealJournalDelta();
+        journalDelta->fromHash = oldParents.parent1();
+        journalDelta->toHash = snapshotHash;
+        journal_.addDelta(std::move(journalDelta));
 
-              auto journalDelta = journalDiffCallback->stealJournalDelta();
-
-              journalDelta->fromHash = oldParents.parent1();
-              journalDelta->toHash = snapshotHash;
-              journal_.addDelta(std::move(journalDelta));
-
-              return conflicts;
-            });
+        return conflicts;
       });
 }
 
