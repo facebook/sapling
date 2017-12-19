@@ -1515,7 +1515,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                     match.uipath(matchroot), uirelroot))
 
     if stat:
-        diffopts = diffopts.copy(context=0)
+        diffopts = diffopts.copy(context=0, noprefix=False)
         width = 80
         if not ui.plain():
             width = ui.termwidth()
