@@ -42,16 +42,16 @@ impl fmt::Display for Kind {
 /// An atomic part returned from the wirepack.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Part {
-    HistoryMeta { path: RepoPath, entry_count: usize },
+    HistoryMeta { path: RepoPath, entry_count: u32 },
     History(HistoryEntry),
-    DataMeta { path: RepoPath, entry_count: usize },
+    DataMeta { path: RepoPath, entry_count: u32 },
     Data(DataEntry),
     End,
 }
 
 #[cfg(test)]
 impl Part {
-    pub(crate) fn unwrap_history_meta(self) -> (RepoPath, usize) {
+    pub(crate) fn unwrap_history_meta(self) -> (RepoPath, u32) {
         match self {
             Part::HistoryMeta { path, entry_count } => (path, entry_count),
             other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),
@@ -65,7 +65,7 @@ impl Part {
         }
     }
 
-    pub(crate) fn unwrap_data_meta(self) -> (RepoPath, usize) {
+    pub(crate) fn unwrap_data_meta(self) -> (RepoPath, u32) {
         match self {
             Part::DataMeta { path, entry_count } => (path, entry_count),
             other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),

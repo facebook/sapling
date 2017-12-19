@@ -154,7 +154,7 @@ impl UnpackerInner {
     }
 
     #[inline]
-    fn next_history_state<P: Into<RepoPath>>(&mut self, filename: P, entry_count: usize) -> State {
+    fn next_history_state<P: Into<RepoPath>>(&mut self, filename: P, entry_count: u32) -> State {
         if entry_count == 0 {
             State::DataStart(filename.into())
         } else {
@@ -163,7 +163,7 @@ impl UnpackerInner {
     }
 
     #[inline]
-    fn next_data_state<P: Into<RepoPath>>(&mut self, filename: P, entry_count: usize) -> State {
+    fn next_data_state<P: Into<RepoPath>>(&mut self, filename: P, entry_count: u32) -> State {
         if entry_count == 0 {
             State::Filename
         } else {
@@ -215,11 +215,11 @@ impl UnpackerInner {
         Ok(DecodeRes::Some(filename))
     }
 
-    fn decode_section_start(&mut self, buf: &mut BytesMut) -> Option<usize> {
+    fn decode_section_start(&mut self, buf: &mut BytesMut) -> Option<u32> {
         if buf.len() < 4 {
             None
         } else {
-            Some(buf.drain_u32() as usize)
+            Some(buf.drain_u32())
         }
     }
 
@@ -238,9 +238,9 @@ impl UnpackerInner {
 enum State {
     Filename,
     HistoryStart(RepoPath),
-    History(RepoPath, usize),
+    History(RepoPath, u32),
     DataStart(RepoPath),
-    Data(RepoPath, usize),
+    Data(RepoPath, u32),
     End,
     Invalid,
 }
