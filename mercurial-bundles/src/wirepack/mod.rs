@@ -17,6 +17,8 @@ use delta;
 use errors::*;
 use utils::BytesExt;
 
+#[cfg(test)]
+mod quickcheck_types;
 pub mod unpacker;
 
 /// What sort of wirepack this is.
@@ -253,6 +255,9 @@ impl DataEntry {
 
 #[cfg(test)]
 mod test {
+    use quickcheck::StdGen;
+    use rand;
+
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
 
@@ -298,6 +303,19 @@ mod test {
     }
 
     #[test]
+    fn test_history_verify_arbitrary() {
+        let mut rng = StdGen::new(rand::thread_rng(), 100);
+        for _n in 0..100 {
+            HistoryEntry::arbitrary_kind(&mut rng, Kind::Tree)
+                .verify(Kind::Tree)
+                .expect("generated history entry should be valid");
+            HistoryEntry::arbitrary_kind(&mut rng, Kind::File)
+                .verify(Kind::File)
+                .expect("generated history entry should be valid");
+        }
+    }
+
+    #[test]
     fn test_data_verify_basic() {
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let tests = vec![
@@ -320,6 +338,12 @@ mod test {
             } else {
                 result.expect_err("expected data entry to be invalid");
             }
+        }
+    }
+
+    quickcheck! {
+        fn test_data_verify_arbitrary(entry: DataEntry) -> bool {
+            entry.verify().is_ok()
         }
     }
 }
