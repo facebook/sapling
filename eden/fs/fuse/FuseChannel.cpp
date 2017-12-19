@@ -223,7 +223,11 @@ void FuseChannel::processSession() {
       }
       continue;
     }
-
+    // Start a new request and associate it with the current thread.
+    // It will be disassociated when we leave this scope, but will
+    // propagate across any futures that are spawned as part of this
+    // request.
+    RequestContextScopeGuard requestContextGuard;
     fuse_session_process(session_, buf.data(), res, ch);
   }
 }

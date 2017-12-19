@@ -36,14 +36,9 @@ RequestData::~RequestData() {
 void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
   auto& request = *reinterpret_cast<RequestData*>(data);
 
-  // Guarantee to preserve the current context
-  auto saved = folly::RequestContext::saveContext();
-  SCOPE_EXIT {
-    folly::RequestContext::setContext(saved);
-  };
-
   // Adopt the context of the target request
-  folly::RequestContext::setContext(request.requestContext_.lock());
+  // Guarantee to preserve the current context
+  RequestContextScopeGuard requestContextGuard(request.requestContext_.lock());
 
   if (request.interrupter_) {
     request.interrupter_->fut_.cancel();
@@ -64,7 +59,6 @@ RequestData& RequestData::get() {
 }
 
 RequestData& RequestData::create(fuse_req_t req) {
-  folly::RequestContext::create();
   auto dispatcher = static_cast<Dispatcher*>(fuse_req_userdata(req));
   folly::RequestContext::get()->setContextData(
       RequestData::kKey, std::make_unique<RequestData>(req, dispatcher));
