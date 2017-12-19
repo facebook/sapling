@@ -354,10 +354,9 @@ settings:
 
   ``hgsubversion.revmapimpl``
 
-    Set the revision map implementation. ``plain`` which is simple and works
+    Set the revision map implementation. Default is ``plain``, which works
     well for small repos. ``sqlite`` is a sqlite based implementation that
-    works better for large repos with a lot of revisions. The default is
-    ``plain``.
+    works better for large repos with a lot of revisions.
 
     If it is set to an implementation different from what the repo is using,
     a migration will run automatically when the revision map is accessed.
