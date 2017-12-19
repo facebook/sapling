@@ -236,10 +236,26 @@ impl DataEntry {
             delta,
         }))
     }
+
+    pub fn verify(&self) -> Result<()> {
+        // The only limitation is that the delta base being null means that the revision is a
+        // fulltext.
+        ensure_err!(
+            self.delta_base != NULL_HASH || self.delta.maybe_fulltext().is_some(),
+            ErrorKind::InvalidWirePackEntry(format!(
+                "data entry for {} has a null base but is not a fulltext",
+                self.node
+            ))
+        );
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
+    use mercurial_types::delta::Fragment;
+    use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
+
     use super::*;
 
     #[test]
@@ -278,6 +294,32 @@ mod test {
             p2: NULL_HASH,
             linknode: NULL_HASH,
             copy_from,
+        }
+    }
+
+    #[test]
+    fn test_data_verify_basic() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let tests = vec![
+            (NULL_HASH, vec![Fragment { start: 0, end: 0, content: vec![b'a'] }], true),
+            (NULL_HASH, vec![Fragment { start: 0, end: 5, content: vec![b'b'] }], false),
+            (AS_HASH, vec![Fragment { start: 0, end: 0, content: vec![b'c'] }], true),
+            (AS_HASH, vec![Fragment { start: 0, end: 5, content: vec![b'd'] }], true),
+        ];
+
+        for (delta_base, frags, is_valid) in tests.into_iter() {
+            let delta = Delta::new(frags).expect("test deltas should all be valid");
+            let entry = DataEntry {
+                node: BS_HASH,
+                delta_base,
+                delta,
+            };
+            let result = entry.verify();
+            if is_valid {
+                result.expect("expected data entry to be valid");
+            } else {
+                result.expect_err("expected data entry to be invalid");
+            }
         }
     }
 }

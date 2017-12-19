@@ -43,6 +43,8 @@ extern crate async_compression;
 extern crate futures_ext;
 extern crate mercurial_types;
 #[cfg(test)]
+extern crate mercurial_types_mocks;
+#[cfg(test)]
 extern crate partial_io;
 
 pub mod bundle2;

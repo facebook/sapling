@@ -40,6 +40,17 @@ impl Delta {
         self.frags.as_slice()
     }
 
+    /// If this delta might be a fulltext, return the fulltext. Note that we can only tell with
+    /// certainty that something is *not* a fulltext. A delta with one fragment that inserts text
+    /// in the beginning appears identical to a fulltext at this layer.
+    pub fn maybe_fulltext(&self) -> Option<&[u8]> {
+        if self.frags.len() == 1 && self.frags[0].start == 0 && self.frags[0].end == 0 {
+            Some(self.frags[0].content.as_slice())
+        } else {
+            None
+        }
+    }
+
     fn verify(frags: &[Fragment]) -> Result<()> {
         let mut prev_frag: Option<&Fragment> = None;
         for (i, frag) in frags.iter().enumerate() {
@@ -264,8 +275,8 @@ mod tests {
 
     /// Test that fragments are verified properly.
     #[test]
-    #[cfg_attr(rustfmt, rustfmt_skip)]
     fn test_delta_new() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let test_cases = vec![
             (vec![Fragment { start: 0, end: 0, content: vec![] }], true),
             (vec![Fragment { start: 0, end: 5, content: vec![] }], true),
@@ -285,6 +296,28 @@ mod tests {
                 assert!(delta.is_ok());
             } else {
                 assert!(delta.is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn test_maybe_fulltext() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let test_cases = vec![
+            (vec![Fragment { start: 0, end: 0, content: vec![] }], true),
+            (vec![Fragment { start: 0, end: 0, content: vec![b'a'] }], true),
+            (vec![Fragment { start: 0, end: 1, content: vec![b'b'] }], false),
+            (vec![Fragment { start: 1, end: 2, content: vec![b'c'] }], false),
+            (vec![Fragment { start: 0, end: 0, content: vec![b'd'] },
+                  Fragment { start: 1, end: 2, content: vec![b'e'] }], false),
+        ];
+
+        for (frags, maybe_fulltext) in test_cases.into_iter() {
+            let delta = Delta::new(frags).unwrap();
+            if maybe_fulltext {
+                assert!(delta.maybe_fulltext().is_some());
+            } else {
+                assert!(delta.maybe_fulltext().is_none());
             }
         }
     }
