@@ -29,24 +29,39 @@ pub enum Kind {
 /// An atomic part returned from the wirepack.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Part {
-    History(RepoPath, HistoryEntry),
-    Data(RepoPath, DataEntry),
+    HistoryMeta { path: RepoPath, entry_count: usize },
+    History(HistoryEntry),
+    DataMeta { path: RepoPath, entry_count: usize },
+    Data(DataEntry),
     End,
 }
 
+#[cfg(test)]
 impl Part {
-    #[cfg(test)]
-    pub(crate) fn unwrap_history(self) -> (RepoPath, HistoryEntry) {
+    pub(crate) fn unwrap_history_meta(self) -> (RepoPath, usize) {
         match self {
-            Part::History(path, entry) => (path, entry),
+            Part::HistoryMeta { path, entry_count } => (path, entry_count),
+            other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),
+        }
+    }
+
+    pub(crate) fn unwrap_history(self) -> HistoryEntry {
+        match self {
+            Part::History(entry) => entry,
             other => panic!("expected wirepack part to be History, was {:?}", other),
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn unwrap_data(self) -> (RepoPath, DataEntry) {
+    pub(crate) fn unwrap_data_meta(self) -> (RepoPath, usize) {
         match self {
-            Part::Data(path, entry) => (path, entry),
+            Part::DataMeta { path, entry_count } => (path, entry_count),
+            other => panic!("expected wirepack part to be HistoryMeta, was {:?}", other),
+        }
+    }
+
+    pub(crate) fn unwrap_data(self) -> DataEntry {
+        match self {
+            Part::Data(entry) => entry,
             other => panic!("expected wirepack part to be Data, was {:?}", other),
         }
     }

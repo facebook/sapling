@@ -377,20 +377,37 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
 
     // First entries received are for the directory "baz".
-    let (path, history_entry) = parts
+    let (path, entry_count) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_history_meta();
+    assert_eq!(path, baz_dir);
+    assert_eq!(entry_count, 1);
+
+    let history_entry = parts
         .next()
         .unwrap()
         .unwrap_inner()
         .unwrap_wirepack()
         .unwrap_history();
-    assert_eq!(path, baz_dir);
     assert_eq!(history_entry.node, baz_hash);
     assert_eq!(history_entry.p1, NULL_HASH);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, data_entry) = parts
+    let (path, entry_count) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_data_meta();
+    assert_eq!(path, baz_dir);
+    assert_eq!(entry_count, 1);
+
+    let data_entry = parts
         .next()
         .unwrap()
         .unwrap_inner()
@@ -406,26 +423,42 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(fragments[0].content.len(), 46);
 
     // Next entries received are for the root manifest.
-    let (path, history_entry) = parts
+    let (path, entry_count) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_history_meta();
+    assert_eq!(path, RepoPath::root());
+    assert_eq!(entry_count, 1);
+
+    let history_entry = parts
         .next()
         .unwrap()
         .unwrap_inner()
         .unwrap_wirepack()
         .unwrap_history();
-    assert_eq!(path, RepoPath::root());
     assert_eq!(history_entry.node, root_hash);
     assert_eq!(history_entry.p1, root_p1);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, data_entry) = parts
+    let (path, entry_count) = parts
+        .next()
+        .unwrap()
+        .unwrap_inner()
+        .unwrap_wirepack()
+        .unwrap_data_meta();
+    assert_eq!(path, RepoPath::root());
+    assert_eq!(entry_count, 1);
+
+    let data_entry = parts
         .next()
         .unwrap()
         .unwrap_inner()
         .unwrap_wirepack()
         .unwrap_data();
-    assert_eq!(path, RepoPath::root());
     assert_eq!(data_entry.node, root_hash);
     assert_eq!(data_entry.delta_base, NULL_HASH);
     let fragments = data_entry.delta.fragments();

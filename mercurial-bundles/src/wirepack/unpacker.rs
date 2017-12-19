@@ -107,7 +107,14 @@ impl UnpackerInner {
                 },
                 HistoryStart(f) => match self.decode_section_start(buf) {
                     Some(entry_count) => {
-                        state = self.next_history_state(f, entry_count);
+                        let next_state = self.next_history_state(&f, entry_count);
+                        return Ok((
+                            Some(Part::HistoryMeta {
+                                path: f,
+                                entry_count,
+                            }),
+                            next_state,
+                        ));
                     }
                     None => return Ok((None, HistoryStart(f))),
                 },
@@ -115,13 +122,20 @@ impl UnpackerInner {
                     Some(entry) => {
                         let entry_count = entry_count - 1;
                         let next_state = self.next_history_state(&f, entry_count);
-                        return Ok((Some(Part::History(f, entry)), next_state));
+                        return Ok((Some(Part::History(entry)), next_state));
                     }
                     None => return Ok((None, History(f, entry_count))),
                 },
                 DataStart(f) => match self.decode_section_start(buf) {
                     Some(entry_count) => {
-                        state = self.next_data_state(f, entry_count);
+                        let next_state = self.next_data_state(&f, entry_count);
+                        return Ok((
+                            Some(Part::DataMeta {
+                                path: f,
+                                entry_count,
+                            }),
+                            next_state,
+                        ));
                     }
                     None => return Ok((None, DataStart(f))),
                 },
@@ -129,7 +143,7 @@ impl UnpackerInner {
                     Some(entry) => {
                         let entry_count = entry_count - 1;
                         let next_state = self.next_data_state(&f, entry_count);
-                        return Ok((Some(Part::Data(f, entry)), next_state));
+                        return Ok((Some(Part::Data(entry)), next_state));
                     }
                     None => return Ok((None, Data(f, entry_count))),
                 },
@@ -274,13 +288,27 @@ mod test {
         // - history count: b"\0\0\0\0"
         // - data count: b"\0\0\0\0"
         // - next filename, end of stream: b"\0\0\0\0\0\0\0\0\0\0"
+        let foo_dir = RepoPath::file("foo".as_ref()).unwrap();
         let empty_2 = Cursor::new(b"\0\x03foo\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
         let unpacker = new(logger.clone(), Kind::File);
         let stream = FramedRead::new(empty_2, unpacker);
         let collect_fut = stream.collect();
 
         let parts = core.run(collect_fut).unwrap();
-        assert_eq!(parts, vec![InnerPart::WirePack(Part::End)]);
+        assert_eq!(
+            parts,
+            vec![
+                InnerPart::WirePack(Part::HistoryMeta {
+                    path: foo_dir.clone(),
+                    entry_count: 0,
+                }),
+                InnerPart::WirePack(Part::DataMeta {
+                    path: foo_dir,
+                    entry_count: 0,
+                }),
+                InnerPart::WirePack(Part::End),
+            ]
+        );
     }
 
     fn make_root_logger() -> slog::Logger {
