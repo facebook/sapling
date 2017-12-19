@@ -38,6 +38,12 @@ class FileHandle : public fusell::FileHandle {
   folly::Future<folly::Unit> fsync(bool datasync) override;
 
  private:
+  FileHandle() = delete;
+  FileHandle(const FileHandle&) = delete;
+  FileHandle(FileHandle&&) = delete;
+  FileHandle& operator=(const FileHandle&) = delete;
+  FileHandle& operator=(FileHandle&&) = delete;
+
   FileInodePtr inode_;
 };
 } // namespace eden
