@@ -16,8 +16,14 @@ extern crate bytes;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+#[cfg(test)]
+#[macro_use]
+extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;

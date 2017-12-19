@@ -19,6 +19,7 @@ pub enum ErrorKind {
     #[fail(display = "bundle2 encode error: {}", _0)] Bundle2Encode(String),
     #[fail(display = "bundle2 chunk error: {}", _0)] Bundle2Chunk(String),
     #[fail(display = "invalid delta: {}", _0)] InvalidDelta(String),
+    #[fail(display = "invalid wire pack entry: {}", _0)] InvalidWirePackEntry(String),
     #[fail(display = "unknown part type: {:?}", _0)] BundleUnknownPart(PartHeader),
     #[fail(display = "unknown params for bundle2 part '{}': {:?}", _0, _1)]
     BundleUnknownPartParams(AsciiString, Vec<String>),

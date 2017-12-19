@@ -6,6 +6,8 @@
 
 //! Wire packs. The format is currently undocumented.
 
+use std::fmt;
+
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
 
@@ -18,12 +20,21 @@ use utils::BytesExt;
 pub mod unpacker;
 
 /// What sort of wirepack this is.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Kind {
     /// A wire pack representing tree manifests.
     Tree,
     /// A wire pack representing file contents.
     File,
+}
+
+impl fmt::Display for Kind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Kind::Tree => write!(f, "tree"),
+            Kind::File => write!(f, "file"),
+        }
+    }
 }
 
 /// An atomic part returned from the wirepack.
@@ -137,6 +148,47 @@ impl HistoryEntry {
             copy_from,
         }))
     }
+
+    pub fn verify(&self, kind: Kind) -> Result<()> {
+        if let Some(ref path) = self.copy_from {
+            match *path {
+                RepoPath::RootPath => bail_err!(ErrorKind::InvalidWirePackEntry(format!(
+                    "history entry for {} is copied from the root path, which isn't allowed",
+                    self.node
+                ))),
+                RepoPath::DirectoryPath(ref path) => {
+                    bail_err!(ErrorKind::InvalidWirePackEntry(format!(
+                        "history entry for {} is copied from directory {}, which isn't allowed",
+                        self.node,
+                        path
+                    )))
+                }
+                RepoPath::FilePath(ref path) => {
+                    ensure_err!(
+                        kind == Kind::File,
+                        ErrorKind::InvalidWirePackEntry(format!(
+                            "history entry for {} is copied from file {}, but the pack is of \
+                             kind {}",
+                            self.node,
+                            path,
+                            kind
+                        ))
+                    );
+                    ensure_err!(
+                        path.len() <= (u16::max_value() as usize),
+                        ErrorKind::InvalidWirePackEntry(format!(
+                            "history entry for {} is copied from a path of length {} -- maximum \
+                             length supported is {}",
+                            self.node,
+                            path.len(),
+                            u16::max_value(),
+                        ),)
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -183,5 +235,49 @@ impl DataEntry {
             delta_base,
             delta,
         }))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_history_verify_basic() {
+        let foo_dir = RepoPath::dir("foo").unwrap();
+        let bar_file = RepoPath::file("bar").unwrap();
+        let root = RepoPath::root();
+
+        let valid = hashset! {
+            (Kind::Tree, None),
+            (Kind::File, None),
+            (Kind::File, Some(bar_file.clone())),
+        };
+        // Can't use arrays here because IntoIterator isn't supported for them:
+        // https://github.com/rust-lang/rust/issues/25725
+        let kinds = vec![Kind::Tree, Kind::File].into_iter();
+        let copy_froms = vec![None, Some(foo_dir), Some(bar_file), Some(root)].into_iter();
+
+        for pair in iproduct!(kinds, copy_froms) {
+            let is_valid = valid.contains(&pair);
+            let (kind, copy_from) = pair;
+            let entry = make_history_entry(copy_from);
+            let result = entry.verify(kind);
+            if is_valid {
+                result.expect("expected history entry to be valid");
+            } else {
+                result.expect_err("expected history entry to be invalid");
+            }
+        }
+    }
+
+    fn make_history_entry(copy_from: Option<RepoPath>) -> HistoryEntry {
+        HistoryEntry {
+            node: NULL_HASH,
+            p1: NULL_HASH,
+            p2: NULL_HASH,
+            linknode: NULL_HASH,
+            copy_from,
+        }
     }
 }
