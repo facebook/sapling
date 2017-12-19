@@ -373,14 +373,9 @@ def revset_svnrev(repo, subset, x):
     if not meta.revmapexists:
         raise hgutil.Abort("svn metadata is missing - "
                            "run 'hg svn rebuildmeta' to reconstruct it")
-    revs = []
-    for n in meta.revmap.revhashes(revnum):
-        r = repo[n].rev()
-        if r in subset:
-            revs.append(r)
-    if smartset is not None:
-        revs = smartset.baseset(revs)
-    return revs
+    torev = repo.changelog.rev
+    revs = revset.baseset(torev(r) for r in meta.revmap.revhashes(revnum))
+    return subset & revs
 
 revsets = {
     'fromsvn': revset_fromsvn,
