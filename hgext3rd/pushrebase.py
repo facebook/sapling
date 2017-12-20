@@ -930,8 +930,8 @@ def bundle2rebase(op, part):
     return 1
 
 def prepushrebasehooks(op, params, bundle, bundlefile):
-    prelockonto = resolveonto(op.repo,
-                              params.get('onto', donotrebasemarker))
+    onto = params.get('onto')
+    prelockonto = resolveonto(op.repo, onto or donotrebasemarker)
     prelockontonode = prelockonto.hex() if prelockonto else None
 
     # Allow running hooks on the new commits before we take the lock
@@ -941,6 +941,8 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     prelockrebaseargs['node'] = scmutil.revsingle(bundle,
                                                   'min(bundle())').hex()
     prelockrebaseargs['node_onto'] = prelockontonode
+    if onto:
+        prelockrebaseargs['onto'] = onto
     prelockrebaseargs['hook_bundlepath'] = bundlefile
 
     for path in op.records[treepackrecords]:
