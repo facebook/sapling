@@ -159,7 +159,7 @@ def do_buildinfo(args: argparse.Namespace, out: IO[bytes] = None):
     build_info = config.get_server_build_info()
     sorted_build_info = collections.OrderedDict(sorted(build_info.items()))
     for key, value in sorted_build_info.items():
-        out.write(f'{key}: {value}\n'.encode())
+        out.write(b'%s: %s\n' % (key.encode(), value.encode()))
 
 
 def do_uptime(args: argparse.Namespace, out: IO[bytes] = None):
@@ -170,8 +170,8 @@ def do_uptime(args: argparse.Namespace, out: IO[bytes] = None):
     days = uptime.days
     hours, remainder = divmod(uptime.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    uptime = '%dd:%02dh:%02dm:%02ds\n' % (days, hours, minutes, seconds)
-    out.write(uptime.encode())
+    uptime = b'%dd:%02dh:%02dm:%02ds\n' % (days, hours, minutes, seconds)
+    out.write(uptime)
 
 
 def do_hg_copy_map_get_all(args: argparse.Namespace):
