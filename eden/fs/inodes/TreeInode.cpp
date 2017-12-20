@@ -2094,6 +2094,51 @@ Future<Unit> TreeInode::checkout(
       });
 }
 
+bool TreeInode::canShortCircuitCheckout(
+    CheckoutContext* ctx,
+    const Hash& treeHash,
+    const Tree* fromTree,
+    const Tree* toTree) {
+  if (ctx->isDryRun()) {
+    // In a dry-run update we only care about checking for conflicts
+    // with the fromTree state.  Since we aren't actually performing any
+    // updates we can bail out early as long as there are no conflicts.
+    if (fromTree) {
+      return treeHash == fromTree->getHash();
+    } else {
+      // There is no fromTree.  If we are already in the desired destination
+      // state we don't have conflicts.  Otherwise we have to continue and
+      // check for conflicts.
+      return !toTree || treeHash == toTree->getHash();
+    }
+  }
+
+  // For non-dry-run updates we definitely have to keep going if we aren't in
+  // the desired destination state.
+  if (!toTree || treeHash != toTree->getHash()) {
+    return false;
+  }
+
+  // If we still here we are already in the desired destination state.
+  // If there is no fromTree then the only possible conflicts are
+  // UNTRACKED_ADDED conflicts, but since we are already in the desired
+  // destination state these aren't really conflicts and are automatically
+  // resolved.
+  if (!fromTree) {
+    return true;
+  }
+
+  // TODO: If we are doing a force update we should probably short circuit in
+  // this case, even if there are conflicts.  For now we don't short circuit
+  // just so we can report the conflicts even though we ignore them and perform
+  // the update anyway.  However, none of our callers need the conflict list.
+  // In the future we should probably just change the checkout API to never
+  // return conflict information for force update operations.
+
+  // Allow short circuiting if we are also the same as the fromTree state.
+  return treeHash == fromTree->getHash();
+}
+
 void TreeInode::computeCheckoutActions(
     CheckoutContext* ctx,
     const Tree* fromTree,
@@ -2103,26 +2148,13 @@ void TreeInode::computeCheckoutActions(
   // Grab the contents_ lock for the duration of this function
   auto contents = contents_.wlock();
 
-  // If we aren't materialized, look at our source control hash to see
-  // if we can short-circuit early if we have nothing to do.
-  if (contents->treeHash.hasValue() && toTree &&
-      contents->treeHash.value() == toTree->getHash()) {
-    // Our contents already match the desired toTree state.
-    // If they also match fromTree state we are guaranteed that we also don't
-    // have conflicts, and can stop here.
-    if (fromTree && contents->treeHash.value() == fromTree->getHash()) {
-      return;
-    }
-
-    // We match the desired toTree state, but not the original fromTree state,
-    // so there are conflicts to report.  We have to keep going just to report
-    // conflicts.
-    //
-    // TODO: It might be nice to return early here if we are doing a FORCE
-    // checkout.  For FORCE checkouts the caller generally doesn't care about
-    // the list of conflicts.  We should perhaps change the API contract for
-    // checkout operations so that we don't need to return conflicts for FORCE
-    // checkouts.
+  // If we are the same as some known source control Tree, check to see if we
+  // can quickly tell if we have nothing to do for this checkout operation and
+  // can return early.
+  if (contents->treeHash.hasValue() &&
+      canShortCircuitCheckout(
+          ctx, contents->treeHash.value(), fromTree, toTree)) {
+    return;
   }
 
   // Walk through fromTree and toTree, and call the above helper functions as

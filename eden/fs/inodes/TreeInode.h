@@ -717,6 +717,26 @@ class TreeInode : public InodeBase {
       std::unique_ptr<GitIgnoreStack> ignore,
       bool isIgnored);
 
+  /**
+   * Check to see if we can break out of a checkout() operation early.
+   *
+   * This should only be called for non-materialized TreeInodes that have a
+   * source control hash.
+   *
+   * @param ctx The CheckoutContext
+   * @param treeHash The source control hash for the TreeInode being updated.
+   * @param fromTree The source control Tree that this checkout operation is
+   *        moving away from.  This may be null if there was no source control
+   *        state at this location previously.
+   * @param toTree The destination source control Tree of the checkout.
+   *        of the checkout).  This may be null if the destination state has no
+   *        contents under this directory.
+   */
+  static bool canShortCircuitCheckout(
+      CheckoutContext* ctx,
+      const Hash& treeHash,
+      const Tree* fromTree,
+      const Tree* toTree);
   void computeCheckoutActions(
       CheckoutContext* ctx,
       const Tree* fromTree,
