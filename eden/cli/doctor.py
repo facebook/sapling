@@ -45,11 +45,27 @@ def cure_what_ails_you(
 
     is_healthy = config.check_health().is_healthy()
     if not is_healthy:
-        out.write('Eden is not running: cannot perform all checks.\n')
+        out.write(
+            dedent(
+                '''\
+        Eden is not running: cannot perform all checks.
+        To start Eden, run:
+
+            eden daemon
+
+        '''
+            )
+        )
 
     # This list is a mix of messages to print to stdout and checks to perform.
     checks_and_messages = []
-    checks_and_messages.append(EdenfsIsLatest(config))
+    if is_healthy:
+        checks_and_messages.append(EdenfsIsLatest(config))
+    else:
+        out.write(
+            'Cannot check if running latest edenfs because '
+            'the daemon is not running.\n'
+        )
 
     watchman_roots = _get_watch_roots_for_watchman()
     for mount_path in mount_paths:

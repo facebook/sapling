@@ -187,9 +187,18 @@ Number of issues that could not be fixed: 2.
         exit_code = doctor.cure_what_ails_you(config, dry_run, out)
 
         self.assertEqual(
-            'Eden is not running: cannot perform all checks.\n'
-            'Performing 3 checks for /path/to/eden-mount.\n'
-            'All is well.\n', out.getvalue()
+            dedent(
+                '''\
+Eden is not running: cannot perform all checks.
+To start Eden, run:
+
+    eden daemon
+
+Cannot check if running latest edenfs because the daemon is not running.
+Performing 3 checks for /path/to/eden-mount.
+All is well.
+'''
+            ), out.getvalue()
         )
         mock_watchman.assert_has_calls(calls)
         self.assertEqual(0, exit_code)
@@ -399,15 +408,13 @@ Number of issues that could not be fixed: 2.
     @patch('eden.cli.doctor._call_rpm_q')
     def test_edenfs_when_installed_and_running_match(self, mock_rpm_q):
         self._test_edenfs_version(
-            mock_rpm_q, '20171213-165642',
-            CheckResultType.NO_ISSUE, ''
+            mock_rpm_q, '20171213-165642', CheckResultType.NO_ISSUE, ''
         )
 
     @patch('eden.cli.doctor._call_rpm_q')
     def test_edenfs_when_installed_and_running_differ(self, mock_rpm_q):
         self._test_edenfs_version(
-            mock_rpm_q, '20171120-246561',
-            CheckResultType.FAILED_TO_FIX,
+            mock_rpm_q, '20171120-246561', CheckResultType.FAILED_TO_FIX,
             dedent(
                 '''\
                 The version of Eden that is installed on your machine is:
