@@ -52,6 +52,6 @@ class fastverifier(verify.verifier):
 def extsetup(ui):
     extensions.wrapfunction(verify, 'verify', _verify)
 
-def _verify(orig, repo):
+def _verify(orig, repo, *args, **kwds):
     with repo.lock():
-        return fastverifier(repo).verify()
+        return fastverifier(repo, *args, **kwds).verify()
