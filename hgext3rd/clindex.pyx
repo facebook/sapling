@@ -370,6 +370,7 @@ def _parseindex(orig, self, data, inline):
 # Simple utilities to log debug messages
 def _logandraise(vfs, message):
     _log(vfs, message)
+    _recover(vfs)
     raise RuntimeError(message)
 
 def _logifraise(vfs, func, infofunc):
@@ -377,7 +378,12 @@ def _logifraise(vfs, func, infofunc):
         return func()
     except RuntimeError as ex:
         _log(vfs, 'exception: %r %r' % (ex, infofunc()))
+        _recover(vfs)
         raise
+
+def _recover(vfs):
+    vfs.tryunlink('nodemap')
+    vfs.tryunlink('childmap')
 
 _logpath = None
 
