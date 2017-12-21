@@ -25,10 +25,6 @@ from hgext3rd import (
     smartlog,
     fbsparse as sparse,
 )
-from phabricator import (
-    arcconfig,
-    conduit,
-)
 import os, socket, re, tempfile, time, traceback
 
 from remotefilelog import (
@@ -320,34 +316,20 @@ def rage(ui, repo, *pats, **opts):
         return
 
     timeout = ui.configint('ssl', 'timeout', 5)
-    ca_certs = repo.ui.configpath('web', 'cacerts')
 
-    pasteurl = None
-
-    try:
-        resp = conduit.call_conduit('paste.create', {
-            'content': msg,
-            'title': 'hg rage for %s' % _failsafe(lambda: repo.root),
-            'language': 'hgrage'
-        }, timeout=timeout, ca_certs=ca_certs)
-        pasteurl = resp.get('uri')
-    except arcconfig.ArcConfigError:
-        ui.warn(_('arcconfig configuration problem.\n'))
-    except conduit.ClientError:
-        ui.warn(_('Error talking to phabricator.\n'))
-    except ValueError:
-        ui.warn(_('Bad response from phabricator.\n'))
-
-    if pasteurl:
-        if opts.get('oncall'):
-            createtask(ui, repo, 'rage info: %s' % pasteurl)
-        else:
-            ui.write(_('Please post your problem and the following link at'
-                       ' %s for help:\n%s\n')
-                     % (ui.config('ui', 'supportcontact'), pasteurl))
-    else:
+    fp = util.popen('arc paste --lang hgrage --title hgrage', 'w')
+    fp.write(msg)
+    ret = fp.close()
+    if ret:
         ui.warn(_('No paste was created.\n'))
         fd, tmpname = tempfile.mkstemp(prefix='hg-rage-')
         with os.fdopen(fd, r'w') as tmpfp:
             tmpfp.write(msg)
             ui.warn(_('Saved contents to %s\n') % tmpname)
+    else:
+        if opts.get('oncall'):
+            createtask(ui, repo, msg)
+        else:
+            ui.write(_('Please post your problem and the above link at'
+                       ' %s for help.\n')
+                     % (ui.config('ui', 'supportcontact'),))
