@@ -20,7 +20,7 @@ if is_facebook_internal():
           'facebook/RunServer.cpp',
         ],
         server_deps = [
-          '@/common/services/cpp:cpp',
+          '//common/services/cpp:cpp',
         ],
     )
 
@@ -45,35 +45,35 @@ cpp_library(
     undefined_symbols = True,  # TODO(T23121628): fix deps and remove
     deps = [
         ":thrift_cpp",
-        "@/common/fb303/cpp:fb303",
-        "@/eden/fs/config:config",
-        "@/eden/fs/fuse:fusell",
-        "@/eden/fs/fuse/privhelper:privhelper",
-        "@/eden/fs/inodes:inodes",
-        "@/eden/fs/store/git:git",
-        "@/eden/fs/store/hg:hg",
-        "@/eden/fs/takeover:takeover",
-        "@/folly:conv",
-        "@/folly:exception",
-        "@/folly:exception_wrapper",
-        "@/folly:executor",
-        "@/folly:file",
-        "@/folly:file_util",
-        "@/folly:format",
-        "@/folly:network_address",
-        "@/folly:portability",
-        "@/folly:range",
-        "@/folly:stop_watch",
-        "@/folly:string",
-        "@/folly:synchronized",
-        "@/folly:thread_local",
-        "@/folly/container:access",
-        "@/folly/experimental:string_keyed_map",
-        "@/folly/experimental/logging:init",
-        "@/folly/experimental/logging:logging",
-        "@/folly/init:init",
-        "@/thrift/lib/cpp/concurrency:thread_manager",
-        "@/thrift/lib/cpp2:server",
+        "//common/fb303/cpp:fb303",
+        "//eden/fs/config:config",
+        "//eden/fs/fuse:fusell",
+        "//eden/fs/fuse/privhelper:privhelper",
+        "//eden/fs/inodes:inodes",
+        "//eden/fs/store/git:git",
+        "//eden/fs/store/hg:hg",
+        "//eden/fs/takeover:takeover",
+        "//folly:conv",
+        "//folly:exception",
+        "//folly:exception_wrapper",
+        "//folly:executor",
+        "//folly:file",
+        "//folly:file_util",
+        "//folly:format",
+        "//folly:network_address",
+        "//folly:portability",
+        "//folly:range",
+        "//folly:stop_watch",
+        "//folly:string",
+        "//folly:synchronized",
+        "//folly:thread_local",
+        "//folly/container:access",
+        "//folly/experimental:string_keyed_map",
+        "//folly/experimental/logging:init",
+        "//folly/experimental/logging:logging",
+        "//folly/init:init",
+        "//thrift/lib/cpp/concurrency:thread_manager",
+        "//thrift/lib/cpp2:server",
     ],
 )
 
@@ -96,7 +96,7 @@ thrift_library(
         "eden.thrift": ["EdenService"],
     },
     deps = [
-        "@/common/fb303/if:fb303",
+        "//common/fb303/if:fb303",
     ],
 )
 
@@ -124,7 +124,7 @@ thrift_library(
         ],
     },
     deps = [
-        "@/common/fb303/if:fb303",
+        "//common/fb303/if:fb303",
     ],
 )
 
@@ -144,8 +144,8 @@ cpp_library(
     ],
     deps = [
         ":thrift-streaming-cpp2",
-        "@/folly:optional",
-        "@/folly:range",
+        "//folly:optional",
+        "//folly:range",
     ],
 )
 

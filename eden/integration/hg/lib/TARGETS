@@ -5,7 +5,7 @@ include_defs("//eden/DEFS")
 # will provide any additional signal.
 oss_suffix = get_oss_suffix()
 
-daemon_target = "@/eden/fs/service:edenfs%s" % oss_suffix
+daemon_target = "//eden/fs/service:edenfs%s" % oss_suffix
 
 artifacts = get_test_env_and_deps(oss_suffix)
 
@@ -16,8 +16,8 @@ python_library(
         "histedit_command.py",
     ],
     deps = [
-        "@/eden/hooks/hg:post-clone",
-        "@/eden/integration/lib:lib",
+        "//eden/hooks/hg:post-clone",
+        "//eden/integration/lib:lib",
     ],
 )
 

@@ -11,11 +11,11 @@ cpp_library(
         "GitTree.h",
     ],
     deps = [
-        "@/eden/fs/model:model",
-        "@/folly:format",
-        "@/folly:range",
-        "@/folly:string",
-        "@/folly/io:iobuf",
+        "//eden/fs/model:model",
+        "//folly:format",
+        "//folly:range",
+        "//folly:string",
+        "//folly/io:iobuf",
     ],
 )
 
@@ -33,9 +33,9 @@ cpp_library(
     ],
     deps = [
         ":glob",
-        "@/eden/fs/utils:path",
-        "@/folly:optional",
-        "@/folly:range",
+        "//eden/fs/utils:path",
+        "//folly:optional",
+        "//folly:range",
     ],
 )
 
@@ -48,8 +48,8 @@ cpp_library(
         "GlobMatcher.h",
     ],
     deps = [
-        "@/folly:expected",
-        "@/folly:range",
-        "@/folly/experimental/logging:logging",
+        "//folly:expected",
+        "//folly:range",
+        "//folly/experimental/logging:logging",
     ],
 )

@@ -12,14 +12,14 @@ python_unittest(
     srcs = glob(["*.py"]),
     env = artifacts["env"],
     deps = artifacts["deps"] + [
-        "@/eden/hg/eden:eden",
-        "@/eden/integration/hg/lib:testutil",
+        "//eden/hg/eden:eden",
+        "//eden/integration/hg/lib:testutil",
         # Note: pudb looks in $HOME/.config/pudb or $XDG_CONFIG_HOME/pudb for
         # its configuration settings. Because Eden's integration tests override
         # $HOME, it is a good idea to set $XDG_CONFIG_HOME if you want to use
         # pudb. If no config file is found, you will have to go through pudb's
         # welcome flow every time you use pudb to debug a test, which is pretty
         # annoying.
-        "@/pudb:pudb",  # For convenience so we don't have to rebuild to debug.
+        "//pudb:pudb",  # For convenience so we don't have to rebuild to debug.
     ],
 )

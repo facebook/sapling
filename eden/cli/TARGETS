@@ -7,7 +7,7 @@ python_binary(
     deps = [
         ":debug",
         ":lib",
-        "@/eden/fs/service:py-client",
+        "//eden/fs/service:py-client",
     ],
 )
 
@@ -24,8 +24,8 @@ python_library(
         "util.py",
     ],
     deps = [
-        "@/eden/fs/service:py-client",
-        "@/eden/py:py",
+        "//eden/fs/service:py-client",
+        "//eden/py:py",
     ],
     external_deps = [
         "toml",
@@ -39,8 +39,8 @@ python_library(
     ],
     deps = [
         ":lib",
-        "@/eden/fs/inodes:serialization-py",
-        "@/eden/py:py",
+        "//eden/fs/inodes:serialization-py",
+        "//eden/py:py",
     ],
 )
 
@@ -51,7 +51,7 @@ for build_target, suffix in get_daemon_versions():
       name = 'all%s' % suffix,
       srcs = [
         ':cli',
-        build_target.replace('@/', '//'),
+        build_target,
         '//eden/fs/service:thrift-EdenService-pyremote',
       ],
       out = 'eden%s-stamp' % suffix,

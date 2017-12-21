@@ -6,12 +6,12 @@ cpp_unittest(
     name = "test",
     srcs = glob(["*Test.cpp"]),
     deps = [
-        "@/eden/fs/model:model",
-        "@/eden/fs/model/git:git",
-        "@/eden/fs/model/git:gitignore",
-        "@/eden/fs/model/git:glob",
-        "@/folly:string",
-        "@/folly/io:iobuf",
+        "//eden/fs/model:model",
+        "//eden/fs/model/git:git",
+        "//eden/fs/model/git:gitignore",
+        "//eden/fs/model/git:glob",
+        "//folly:string",
+        "//folly/io:iobuf",
     ],
 )
 
@@ -24,10 +24,10 @@ if is_facebook_internal():
     name = 'benchmark',
     srcs = glob(['*Benchmark.cpp']),
     deps = [
-        "@/eden/fs/model/git:glob",
-        "@/folly/init:init",
-        "@/folly:benchmark",
-        "@/watchman/thirdparty/wildmatch:wildmatch",
+        "//eden/fs/model/git:glob",
+        "//folly/init:init",
+        "//folly:benchmark",
+        "//watchman/thirdparty/wildmatch:wildmatch",
     ],
     external_deps = [
       ('re2', None),

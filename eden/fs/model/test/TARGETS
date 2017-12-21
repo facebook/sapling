@@ -4,11 +4,11 @@ cpp_unittest(
     name = "test",
     srcs = glob(["*Test.cpp"]),
     deps = [
-        "@/eden/fs/model:model",
-        "@/eden/fs/testharness:testharness",
-        "@/eden/fs/utils:path",
-        "@/folly:string",
-        "@/folly/container:array",
-        "@/folly/io:iobuf",
+        "//eden/fs/model:model",
+        "//eden/fs/testharness:testharness",
+        "//eden/fs/utils:path",
+        "//folly:string",
+        "//folly/container:array",
+        "//folly/io:iobuf",
     ],
 )

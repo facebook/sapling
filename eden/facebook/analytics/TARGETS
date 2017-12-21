@@ -8,6 +8,6 @@ python_binary(
     check_types = True,
     main_module = "buck_history",
     deps = [
-        "@/libfb/py:parutil",
+        "//libfb/py:parutil",
     ],
 )

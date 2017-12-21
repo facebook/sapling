@@ -5,8 +5,8 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/folly:string",
-        "@/rocksdb:rocksdb",
+        "//folly:string",
+        "//rocksdb:rocksdb",
     ],
     external_deps = [
     ],

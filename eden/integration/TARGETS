@@ -13,7 +13,7 @@ python_unittest(
         # "HYPOTHESIS_VERBOSITY_LEVEL": "verbose",
     }),
     deps = artifacts["deps"] + [
-        "@/eden/integration/lib:lib",
+        "//eden/integration/lib:lib",
     ],
     external_deps = [
         "py-hypothesis",
@@ -37,6 +37,6 @@ if is_facebook_internal():
             "EDENFS_SUFFIX": suffix,
         }),
         deps = artifacts["deps"] + [
-            "@/eden/integration/lib:lib",
+            "//eden/integration/lib:lib",
         ],
     )

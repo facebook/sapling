@@ -6,8 +6,8 @@ cpp_unittest(
         ["*Test.cpp"],
     ),
     deps = [
-        "@/eden/fs/fuse:fusell",
-        "@/folly/experimental/logging:init",
-        "@/folly/init:init",
+        "//eden/fs/fuse:fusell",
+        "//folly/experimental/logging:init",
+        "//folly/init:init",
     ],
 )

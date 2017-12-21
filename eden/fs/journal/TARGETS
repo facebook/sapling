@@ -5,10 +5,10 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/eden/fs/model:model",
-        "@/eden/fs/utils:path",
-        "@/folly:function",
-        "@/folly:synchronized",
-        "@/folly/experimental/logging:logging",
+        "//eden/fs/model:model",
+        "//eden/fs/utils:path",
+        "//folly:function",
+        "//folly:synchronized",
+        "//folly/experimental/logging:logging",
     ],
 )
