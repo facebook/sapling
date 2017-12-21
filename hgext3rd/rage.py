@@ -315,8 +315,6 @@ def rage(ui, repo, *pats, **opts):
         ui.write('%s\n' % msg)
         return
 
-    timeout = ui.configint('ssl', 'timeout', 5)
-
     fp = util.popen('arc paste --lang hgrage --title hgrage', 'w')
     fp.write(msg)
     ret = fp.close()
