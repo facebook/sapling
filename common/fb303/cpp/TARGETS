@@ -3,6 +3,6 @@ cpp_library(
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
-        "@/common/fb303/if:fb303-cpp2",
+        "//common/fb303/if:fb303-cpp2",
     ],
 )
