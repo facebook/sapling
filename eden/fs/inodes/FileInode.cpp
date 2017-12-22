@@ -712,51 +712,74 @@ Future<Unit> FileInode::ensureDataLoaded() {
   }
 
   auto self = inodePtrFromThis(); // separate line for formatting
-  blobFuture.then([self](std::shared_ptr<const Blob> blob) {
-    folly::SharedPromise<Unit> promise;
+  blobFuture
+      .then([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) {
+        folly::SharedPromise<Unit> promise;
 
-    {
-      auto state = self->state_.wlock();
-      state->checkInvariants();
-      SCOPE_SUCCESS {
+        auto state = self->state_.wlock();
         state->checkInvariants();
-      };
 
-      switch (state->tag) {
-        // Since the load doesn't hold the state lock for its duration,
-        // sanity check that the inode is still in loading state.
-        //
-        // Note that FileInode can transition from loading to materialized
-        // with a concurrent materializeForWrite(O_TRUNC), in which case the
-        // state would have transitioned to 'materialized' before this
-        // callback runs.
-        case State::BLOB_LOADING:
-          // Transition to 'loaded' state.
-          state->blob = std::move(blob);
-          promise = std::move(*state->blobLoadingPromise);
-          state->blobLoadingPromise.clear();
-          state->tag = State::BLOB_LOADED;
-          break;
+        switch (state->tag) {
+          // Since the load doesn't hold the state lock for its duration,
+          // sanity check that the inode is still in loading state.
+          //
+          // Note that FileInode can transition from loading to materialized
+          // with a concurrent materializeForWrite(O_TRUNC), in which case the
+          // state would have transitioned to 'materialized' before this
+          // callback runs.
+          case State::BLOB_LOADING:
+            promise = std::move(*state->blobLoadingPromise);
+            state->blobLoadingPromise.clear();
 
-        case State::MATERIALIZED_IN_OVERLAY:
-          // The load raced with a materializeForWrite(O_TRUNC).  Nothing left
-          // to do here: ensureDataLoaded() guarantees `blob` or `file` is
-          // defined after its completion, and the materializeForWrite(O_TRUNC)
-          // fulfilled the promise.
-          CHECK(state->file);
-          break;
+            if (tryBlob.hasValue()) {
+              // Transition to 'loaded' state.
+              state->blob = std::move(tryBlob.value());
+              state->tag = State::BLOB_LOADED;
+              state->checkInvariants();
+              // Call the Future's subscribers while the state_ lock is not
+              // held. Even if the FileInode has transitioned to a materialized
+              // state, any pending loads must be unblocked.
+              state.unlock();
+              promise.setValue();
+            } else {
+              state->tag = State::NOT_LOADED;
+              state->checkInvariants();
+              // Call the Future's subscribers while the state_ lock is not
+              // held. Even if the FileInode has transitioned to a materialized
+              // state, any pending loads must be unblocked.
+              state.unlock();
+              promise.setException(tryBlob.exception());
+            }
+            break;
 
-        default:
-          EDEN_BUG()
-              << "Inode left in unexpected state after getBlob() completed";
-      }
-    }
+          case State::MATERIALIZED_IN_OVERLAY:
+            // The load raced with a materializeForWrite(O_TRUNC).  Nothing left
+            // to do here: ensureDataLoaded() guarantees `blob` or `file` is
+            // defined after its completion, and the
+            // materializeForWrite(O_TRUNC) fulfilled the promise.
+            CHECK(state->file);
+            // Call the Future's subscribers while the state_ lock is not held.
+            // Even if the FileInode has transitioned to a materialized state,
+            // any pending loads must be unblocked.
+            state.unlock();
+            promise.setValue();
+            break;
 
-    // Call the Future's subscribers while the state_ lock is not held.
-    // Even if the FileInode has transitioned to a materialized state, any
-    // pending loads must be unblocked.
-    promise.setValue();
-  });
+          default:
+            EDEN_BUG()
+                << "Inode left in unexpected state after getBlob() completed";
+        }
+      })
+      .onError([](const std::exception&) {
+        // We get here if EDEN_BUG() didn't terminate the process, or if we
+        // threw in the preceeding block.  Both are bad because we won't
+        // automatically propagate the exception to resultFuture and we
+        // can't trust the state of anything if we get here.
+        // Rather than leaving something hanging, we suicide.
+        // We could probably do a bit better with the error handling here :-/
+        XLOG(FATAL)
+            << "Failed to propagate failure in getBlob(), no choice but to die";
+      });
 
   return resultFuture;
 }
