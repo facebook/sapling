@@ -143,6 +143,9 @@ where
 
         let oldv = self.hash.insert(k, v);
         if let Some(oldv) = oldv.as_ref() {
+            // There already was an entry, and we've added the same key size twice.
+            // Remove it
+            self.keysizes -= kw;
             self.entrysizes -= oldv.get_weight();
         }
 

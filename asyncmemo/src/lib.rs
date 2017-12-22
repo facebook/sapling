@@ -398,6 +398,12 @@ where
         hash.len()
     }
 
+    /// Return current "weight" of the cache entries
+    pub fn total_weight(&self) -> usize {
+        let hash = self.inner.hash.lock().expect("lock poison");
+        hash.total_weight()
+    }
+
     /// Return true if cache is empty.
     pub fn is_empty(&self) -> bool {
         let hash = self.inner.hash.lock().expect("lock poison");
