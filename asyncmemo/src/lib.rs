@@ -33,8 +33,8 @@
 #![deny(warnings)]
 
 extern crate futures;
-extern crate linked_hash_map;
 extern crate heapsize;
+extern crate linked_hash_map;
 
 use std::fmt::{self, Debug};
 use std::hash::Hash;
@@ -254,14 +254,14 @@ where
                 hash.trim();
             }
             Ok(Some(Slot::Polling(tasks))) => wake_tasks(tasks),
-            Ok(Some(_)) | Ok(None) => (),   // nothing (interesting) there
+            Ok(Some(_)) | Ok(None) => (), // nothing (interesting) there
         }
     }
 
     fn handle(&self) -> Poll<<Self as Future>::Item, <Self as Future>::Error> {
         // First check to see if we already have a slot for this key and process it accordingly.
         match self.slot_present() {
-            None => (),     // nothing there for this key
+            None => (), // nothing there for this key
             Some(Slot::Complete(v)) => return Ok(Async::Ready(v)),
             Some(Slot::Polling(_)) => return Ok(Async::NotReady),
             Some(Slot::Waiting(mut fut)) => match fut.poll() {
