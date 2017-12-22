@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use super::*;
+use futures::executor::{spawn, Notify, NotifyHandle};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::usize;
 
@@ -156,38 +157,83 @@ impl<'a> Filler for Delayed<'a> {
     }
 }
 
+struct DummyNotify {}
+
+impl Notify for DummyNotify {
+    fn notify(&self, _id: usize) {}
+}
+
 #[test]
 fn delayed() {
     let count = AtomicUsize::new(0);
     let c = Asyncmemo::new_unbounded(Delayed(&count));
+
+    let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
+    let dummy_id = 0;
 
     assert!(c.is_empty());
     assert_eq!(c.len(), 0);
 
     assert_eq!(count.load(Ordering::Relaxed), 0);
 
-    let mut v = c.get("foo");
+    let mut v = spawn(c.get("foo"));
+
     assert_eq!(count.load(Ordering::Relaxed), 0);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::Ready("FOO".into())),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::Ready("FOO".into())),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 }
 
@@ -225,68 +271,88 @@ fn fibonacci() {
     let count = AtomicUsize::new(0);
     let c = Asyncmemo::new_unbounded(Fib(&count));
 
+    let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
+    let dummy_id = 0;
     {
-        let mut fib = c.get(1u32);
+        let mut fib = spawn(c.get(1u32));
 
-        assert_eq!(fib.poll(), Ok(Async::NotReady));
+        assert_eq!(
+            fib.poll_future_notify(&notify_handle, dummy_id),
+            Ok(Async::NotReady)
+        );
         assert_eq!(count.load(Ordering::Relaxed), 1);
 
-        assert_eq!(fib.poll(), Ok(Async::Ready(1)));
+        assert_eq!(
+            fib.poll_future_notify(&notify_handle, dummy_id),
+            Ok(Async::Ready(1))
+        );
         assert_eq!(count.load(Ordering::Relaxed), 1);
 
-        assert_eq!(fib.poll(), Ok(Async::Ready(1)));
+        assert_eq!(
+            fib.poll_future_notify(&notify_handle, dummy_id),
+            Ok(Async::Ready(1))
+        );
         assert_eq!(count.load(Ordering::Relaxed), 1);
 
-        println!("1: fib.poll()={:?}", fib.poll());
+        println!(
+            "1: fib.poll()={:?}",
+            fib.poll_future_notify(&notify_handle, dummy_id)
+        );
     }
 
     {
-        let mut fib = c.get(1u32);
+        let mut fib = spawn(c.get(1u32));
 
-        assert_eq!(fib.poll(), Ok(Async::Ready(1)));
+        assert_eq!(
+            fib.poll_future_notify(&notify_handle, dummy_id),
+            Ok(Async::Ready(1))
+        );
         assert_eq!(count.load(Ordering::Relaxed), 1);
 
-        println!("1: fib.poll()={:?}", fib.poll());
+        println!(
+            "1: fib.poll()={:?}",
+            fib.poll_future_notify(&notify_handle, dummy_id)
+        );
     }
 
     {
-        let mut fib = c.get(2u32);
+        let mut fib = spawn(c.get(2u32));
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("2: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::NotReady));
         assert_eq!(count.load(Ordering::Relaxed), 2);
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("2: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::Ready(3)));
         assert_eq!(count.load(Ordering::Relaxed), 2);
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("2: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::Ready(3)));
         assert_eq!(count.load(Ordering::Relaxed), 2);
     }
 
     {
-        let mut fib = c.get(4u32);
+        let mut fib = spawn(c.get(4u32));
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("4: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::NotReady));
         assert_eq!(count.load(Ordering::Relaxed), 4);
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("4: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::NotReady));
         assert_eq!(count.load(Ordering::Relaxed), 4);
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("4: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::Ready(10)));
         assert_eq!(count.load(Ordering::Relaxed), 4);
 
-        let res = fib.poll();
+        let res = fib.poll_future_notify(&notify_handle, dummy_id);
         println!("4: fib.poll()={:?}", res);
         assert_eq!(res, Ok(Async::Ready(10)));
         assert_eq!(count.load(Ordering::Relaxed), 4);
@@ -314,28 +380,56 @@ fn failing() {
     let count = AtomicUsize::new(0);
     let c = Asyncmemo::new_unbounded(Fails(&count));
 
+    let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
+    let dummy_id = 0;
+
     assert!(c.is_empty());
     assert_eq!(c.len(), 0);
 
     assert_eq!(count.load(Ordering::Relaxed), 0);
 
-    let mut v = c.get("foo");
+    let mut v = spawn(c.get("foo"));
     assert_eq!(count.load(Ordering::Relaxed), 0);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v.poll(), Err(()), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Err(()),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
     // retry
-    assert_eq!(v.poll(), Ok(Async::NotReady), "v={:#?}", v);
+    assert_eq!(
+        v.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v
+    );
     assert_eq!(count.load(Ordering::Relaxed), 2);
 }
 
@@ -344,34 +438,72 @@ fn multiwait() {
     let count = AtomicUsize::new(0);
     let c = Asyncmemo::new_unbounded(Delayed(&count));
 
+    let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
+    let dummy_id = 0;
+
     assert!(c.is_empty());
     assert_eq!(c.len(), 0);
 
-    let mut v1 = c.get("foo");
+    let mut v1 = spawn(c.get("foo"));
     assert_eq!(count.load(Ordering::Relaxed), 0);
-    let mut v2 = c.get("foo");
+    let mut v2 = spawn(c.get("foo"));
     assert_eq!(count.load(Ordering::Relaxed), 0);
 
     // polling on either future advances the state machine until its complete
 
-    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(
+        v1.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v1
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v2.poll(), Ok(Async::NotReady), "v={:#?}", v2);
+    assert_eq!(
+        v2.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v2
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(
+        v1.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v1
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v2.poll(), Ok(Async::NotReady), "v={:#?}", v2);
+    assert_eq!(
+        v2.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v2
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v1.poll(), Ok(Async::NotReady), "v={:#?}", v1);
+    assert_eq!(
+        v1.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::NotReady),
+        "v={:#?}",
+        v1
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v2.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v2);
+    assert_eq!(
+        v2.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::Ready("FOO".into())),
+        "v={:#?}",
+        v2
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 
-    assert_eq!(v1.poll(), Ok(Async::Ready("FOO".into())), "v={:#?}", v1);
+    assert_eq!(
+        v1.poll_future_notify(&notify_handle, dummy_id),
+        Ok(Async::Ready("FOO".into())),
+        "v={:#?}",
+        v1
+    );
     assert_eq!(count.load(Ordering::Relaxed), 1);
 }
