@@ -181,11 +181,14 @@ class EdenFS(object):
             'daemon',
             '--daemon-binary', EDEN_DAEMON,
             '--foreground',
+        )
+
+        extra_daemon_args = [
             '--',
             # Defaulting to 8 import processes is excessive when the test
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
-        )
+        ]
         if takeover:
             args.append('--takeover')
 
@@ -217,11 +220,11 @@ class EdenFS(object):
             logging_arg = ','.join('%s=%s' % (module, level)
                                    for module, level in sorted(
                                        self._logging_settings.items()))
-            args.extend(['--', '--logging=' + logging_arg])
+            extra_daemon_args.extend(['--logging=' + logging_arg])
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
-        self._process = subprocess.Popen(args)
+        self._process = subprocess.Popen(args + extra_daemon_args)
 
     def shutdown(self):
         '''
