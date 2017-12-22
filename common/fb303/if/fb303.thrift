@@ -38,7 +38,7 @@ service FacebookService {
   /**
    * Gets the status of this service
    */
-  fb_status getStatus(),
+  fb_status getStatus() (priority='IMPORTANT'),
 
   /**
    * Gets the counters for this service
@@ -50,4 +50,9 @@ service FacebookService {
    */
   oneway void shutdown(),
 
-} (priority = 'IMPORTANT')
+  /**
+   * Returns the unix time that the server has been running since
+   */
+  i64 aliveSince() (priority = 'IMPORTANT'),
+
+}
