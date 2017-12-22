@@ -20,6 +20,10 @@ Config example:
     # and a p4fastimporter import
     ignore-time-delta = None
 
+    # The P4 database can become corrupted when it tracks symlinks to
+    # directories. Keep this corruption out of the Mercurial repo.
+    checksymlinks = True
+
 """
 from __future__ import absolute_import
 
