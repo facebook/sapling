@@ -523,9 +523,9 @@ class SqliteRevMap(collections.MutableMapping):
     class ReverseRevMap(object):
         # collections.Mapping is not suitable since we don't want 2/3 of
         # its required interfaces: __iter__, __len__.
-        def __init__(self, revmap):
-            self.revmap = weakref.proxy(revmap)
-            self._cache = {}
+        def __init__(self, revmap, cache):
+            self.revmap = revmap
+            self._cache = cache
 
         def get(self, key, default=None):
             if key not in self._cache:
@@ -565,18 +565,17 @@ class SqliteRevMap(collections.MutableMapping):
         self._lastpulledpath = lastpulled_path
 
         self._db = None
-        self._hashes = None
         self._sqlitepragmas = sqlitepragmas
         self.firstpulled = 0
         self._updatefirstlastpulled()
         # __iter__ is expensive and thus disabled by default
         # it should only be enabled for testing
         self._allowiter = False
+        # used by self.hashes(), {hash: (rev, branch)}
+        self._hashescache = {}
 
     def hashes(self):
-        if self._hashes is None:
-            self._hashes = self.ReverseRevMap(self)
-        return self._hashes
+        return self.ReverseRevMap(self, self._hashescache)
 
     def branchedits(self, branch, revnum):
         return [((r[0], r[1] or None), bytes(r[2])) for r in
@@ -609,7 +608,7 @@ class SqliteRevMap(collections.MutableMapping):
         hgutil.unlinkpath(self._dbpath, ignoremissing=True)
         hgutil.unlinkpath(self._rowcountpath, ignoremissing=True)
         self._db = None
-        self._hashes = None
+        self._hashescache = {}
         self._firstpull = None
         self._lastpull = None
 
@@ -646,15 +645,15 @@ class SqliteRevMap(collections.MutableMapping):
             self.firstpulled = revnum
         if revnum > self.lastpulled or not self.lastpulled:
             self.lastpulled = revnum
-        if self._hashes is not None:
-            self._hashes._cache[binha] = key
+        if self._hashescache:
+            self._hashescache[binha] = key
 
     def __delitem__(self, key):
         for row in self._querybykey('DELETE', key):
             if self.rowcount > 0:
                 self.rowcount -= 1
             return
-        # For performance reason, self._hashes is not updated
+        # For performance reason, self._hashescache is not updated
         raise KeyError(key)
 
     @contextlib.contextmanager
