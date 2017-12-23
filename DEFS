@@ -150,7 +150,6 @@ def _translate_deps(deps, external_deps=None):
 
 def _translate_dep(dep):
     import re
-    dep = re.sub('^@/', '//', dep)
 
     # Translate thrift_library() suffixes
     dep = re.sub('-cpp2$', '#cpp2', dep)
