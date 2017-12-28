@@ -448,12 +448,12 @@ onto the newest successor of their parent.
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [*] add b (glob)
-  $ hg amend -m "successor 1"
+  $ hg amend -m "successor 1" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "successor 2"
+  $ hg amend -m "successor 2" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg up 1
@@ -687,10 +687,10 @@ Restack does topological sort and only rebases "D" once:
   > A
   > EOS
   $ hg update B -q
-  $ hg commit --amend -m B2 -q 2>/dev/null
+  $ hg commit --amend -m B2 -q --no-rebase 2>/dev/null
   $ hg tag --local B2
   $ hg rebase -r C -d B2 -q
-  $ hg commit --amend -m B3 -q 2>/dev/null
+  $ hg commit --amend -m B3 -q --no-rebase 2>/dev/null
   $ hg tag --local B3
   $ showgraph
   @  6 B3
@@ -867,3 +867,64 @@ Restack could resume after resolving merge conflicts.
   | o  2 C
   |/
   o  0 A
+
+Test auto-restack heuristics - no changes to manifest and clean working directory
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg update B -q
+  $ hg amend -m 'Unchanged manifest for B'
+  (auto-rebasing descendants, use --no-rebase to disable this)
+  rebasing 2:26805aba1e60 "C" (C)
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [426bad] A
+  $ hg amend -m 'Unchanged manifest for A'
+  (auto-rebasing descendants, use --no-rebase to disable this)
+  rebasing 3:5357953e3ea3 "Unchanged manifest for B"
+  rebasing 4:b635bd2cf20b "C"
+
+Test auto-restack heuristics - manifest changes
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg update B -q
+  $ echo 'new b' > B
+  $ hg amend -m 'Change manifest for B'
+  warning: the changeset's children were left behind
+  (use 'hg restack' to rebase them)
+
+Test auto-restack heuristics - no committed changes to manifest but dirty working directory
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  $ hg update B -q
+  $ echo 'new b' > B
+  $ hg amend a -m 'Unchanged manifest, but dirty workdir'
+  warning: the changeset's children were left behind
+  (use 'hg restack' to rebase them)
+
+Test auto-restack heuristics - no changes to manifest but no children
+  $ reset
+  $ hg debugdrawdag<<'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg update B -q
+  $ hg amend -m 'Unchanged manifest for B'

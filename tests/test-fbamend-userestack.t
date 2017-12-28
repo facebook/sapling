@@ -35,7 +35,7 @@ Test that no preamend bookmark is created.
   $ mkcommit d
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg book

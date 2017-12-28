@@ -184,6 +184,7 @@ def commit(orig, ui, repo, *pats, **opts):
 def amend(ui, repo, *pats, **opts):
     '''amend the current changeset with more changes
     '''
+    # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get('rebase')
     to = opts.get('to')
 
@@ -262,6 +263,21 @@ def amend(ui, repo, *pats, **opts):
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1
+
+        if haschildren and rebase is None and not _histediting(repo):
+            # If the user has chosen the default behaviour for the
+            # rebase, then see if we can apply any heuristics. This
+            # will not performed if a histedit is in flight.
+
+            newcommit = repo[node]
+            # If the rebase did not change the manifest and the
+            # working copy is clean, force the children to be
+            # restacked.
+            if (old.manifestnode() == newcommit.manifestnode() and
+                not repo[None].dirty()):
+                ui.status(_('(auto-rebasing descendants, use --no-rebase '
+                            'to disable this)\n'))
+                rebase = True
 
         if haschildren and not rebase:
             msg = _("warning: the changeset's children were left behind\n")

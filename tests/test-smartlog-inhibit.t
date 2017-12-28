@@ -15,7 +15,7 @@ with the inhibit extension enabled.
   $ hg book -r 3 test
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg smartlog -T '{rev} {bookmarks}'

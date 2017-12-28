@@ -35,7 +35,7 @@ Rebasing single changeset.
   $ hg debugbuilddag -n +4
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg next
@@ -89,7 +89,7 @@ Rebasing multiple changesets at once.
   $ hg debugbuilddag -n +5
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg next --rebase --top
@@ -115,7 +115,7 @@ Rebasing a stack one changeset at a time.
   $ hg debugbuilddag -n +5
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg next --rebase
@@ -165,7 +165,7 @@ Rebasing a stack two changesets at a time.
   $ hg debugbuilddag -n +6
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg next --rebase 2
@@ -216,7 +216,7 @@ Rebasing after multiple amends.
   $ hg debugbuilddag -n +5
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amend 1"
+  $ hg amend -m "amend 1" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg amend -m "amend 2"
@@ -257,7 +257,7 @@ Rebasing from below the amended changeset with the --newest flag.
   $ hg debugbuilddag -n +6
   $ hg up 2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ hg up 0
@@ -303,7 +303,7 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   $ hg debugbuilddag -n +6
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg amend -m "amended"
+  $ hg amend -m "amended" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ mkcommit a
@@ -365,7 +365,7 @@ Test a situation where there is a conflict.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo "conflict" > c
   $ hg add c
-  $ hg amend -m "amended to add c"
+  $ hg amend -m "amended to add c" --no-rebase
   warning: the changeset's children were left behind
   (use 'hg restack' to rebase them)
   $ showgraph
