@@ -127,24 +127,25 @@ class ChangeManifestImporter(object):
                 localname, baserev = info['localname'], info['baserev']
 
                 if self._ui.configbool('p4fastimport', 'checksymlinks', True):
-                    # Under rare situations, when a symlink points to a directory,
-                    # the P4 server can report a file "under" it (as if it really
-                    # were a directory). 'p4 sync' reports this as an error and
-                    # continues, but 'hg update' will abort if it encounters this.
-                    # We need to keep such damage out of the hg repository.
+                    # Under rare situations, when a symlink points to a
+                    # directory, the P4 server can report a file "under" it (as
+                    # if it really were a directory). 'p4 sync' reports this as
+                    # an error and continues, but 'hg update' will abort if it
+                    # encounters this.  We need to keep such damage out of the
+                    # hg repository.
                     depotparentname = os.path.dirname(depotname)
 
-                    # The manifest's flags for the parent haven't been updated to
-                    # reflect this changelist yet. If the parent's flags are
-                    # changing right now, use them. Otherwise, use the manifest's
-                    # flags.
+                    # The manifest's flags for the parent haven't been updated
+                    # to reflect this changelist yet. If the parent's flags are
+                    # changing right now, use them. Otherwise, use the
+                    # manifest's flags.
                     parentflags = None
                     parentinfo = fileinfo.get(depotparentname, None)
                     if parentinfo:
                         parentflags = parentinfo['flags'].get(change.cl, None)
 
                     localparentname = localname
-                    while parentflags == None:
+                    while parentflags is None:
                         # This P4 commit didn't change parent's flags at all.
                         # Therefore, we can consult the Hg metadata.
                         localparentname = os.path.dirname(localparentname)
@@ -156,12 +157,15 @@ class ChangeManifestImporter(object):
                         parentflags = mf.flags(localparentname, None)
 
                     if 'l' in parentflags:
-                        # It turns out that some parent is a symlink, so this file
-                        # can't exist. However, we already wrote the filelog! Oh
-                        # well. Just don't reference it in the manifest.
+                        # It turns out that some parent is a symlink, so this
+                        # file can't exist. However, we already wrote the
+                        # filelog! Oh well. Just don't reference it in the
+                        # manifest.
                         # TODO: hgfilelog.strip()?
-                        self._ui.warn("warning: ignoring {} because it's under a "
-                                "symlink ({})\n".format(localname, localparentname))
+                        msg = _("warning: ignoring {} because it's under a "
+                                "symlink ({})\n").format(localname,
+                                                         localparentname)
+                        self._ui.warn(msg)
                         continue
 
                 hgfilelog = self._repo.file(localname)
