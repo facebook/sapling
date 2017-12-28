@@ -100,6 +100,13 @@ def reposetup(ui, repo):
 
             repo.__class__ = perftweaksrepo
 
+        # record nodemap lag
+        try:
+            lag = repo.changelog.nodemap.lag
+            ui.log('nodemap_lag', '', nodemap_lag=lag)
+        except AttributeError:
+            pass
+
 def _singlenode(orig, self, repo, name):
     """Skips reading branches namespace if unnecessary"""
     # developer config: perftweaks.disableresolvingbranches
