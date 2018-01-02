@@ -40,6 +40,7 @@ extern crate tokio_proto;
 extern crate url;
 
 extern crate async_compression;
+extern crate bytes_ext;
 extern crate futures_ext;
 extern crate mercurial_types;
 #[cfg(test)]

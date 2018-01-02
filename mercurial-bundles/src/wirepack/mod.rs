@@ -262,6 +262,28 @@ impl DataEntry {
         }))
     }
 
+    // This would ideally be generic over any BufMut, but that won't be very useful until
+    // https://github.com/carllerche/bytes/issues/170 is fixed.
+    #[allow(dead_code)]
+    pub(crate) fn encode(&self, buf: &mut Vec<u8>) -> Result<()> {
+        self.verify()?;
+        buf.put_slice(self.node.as_ref());
+        buf.put_slice(self.delta_base.as_ref());
+        if self.delta_base == NULL_HASH {
+            // This is a fulltext -- the spec requires that instead of storing a delta with
+            // start = 0 and end = 0, the fulltext be stored directly.
+            let fulltext = self.delta
+                .maybe_fulltext()
+                .expect("verify will have already checked that the delta is a fulltext");
+            buf.put_u64::<BigEndian>(fulltext.len() as u64);
+            buf.put_slice(fulltext);
+        } else {
+            buf.put_u64::<BigEndian>(delta::encoded_len(&self.delta) as u64);
+            delta::encode_delta(&self.delta, buf);
+        }
+        Ok(())
+    }
+
     pub fn verify(&self) -> Result<()> {
         // The only limitation is that the delta base being null means that the revision is a
         // fulltext.
@@ -281,7 +303,7 @@ mod test {
     use std::cmp;
 
     use quickcheck::{Gen, StdGen};
-    use rand;
+    use rand::{self, Rng};
 
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
@@ -411,6 +433,39 @@ mod test {
     quickcheck! {
         fn test_data_verify_arbitrary(entry: DataEntry) -> bool {
             entry.verify().is_ok()
+        }
+
+        fn test_data_roundtrip(entry: DataEntry) -> bool {
+            let mut rng = StdGen::new(rand::thread_rng(), 100);
+
+            let mut encoded = vec![];
+            entry.encode(&mut encoded).expect("encoding this data entry should succeed");
+
+            let mut encoded_bytes = BytesMut::from(encoded);
+
+            // Ensure that a partial entry results in None.
+            let bytes_len = encoded_bytes.len();
+            let reduced_len = unsafe {
+                let reduced_len = cmp::max(bytes_len - rng.gen_range(1, bytes_len), 0);
+                encoded_bytes.set_len(reduced_len);
+                reduced_len
+            };
+            let decoded = DataEntry::decode(&mut encoded_bytes)
+                .expect("decoding this data entry should succeed");
+            assert_eq!(decoded, None);
+            // Ensure that no bytes in encoded actually got read.
+            assert_eq!(encoded_bytes.len(), reduced_len);
+
+            // Restore the original length for the next test.
+            unsafe {
+                encoded_bytes.set_len(bytes_len);
+            }
+
+            let decoded = DataEntry::decode(&mut encoded_bytes)
+                .expect("decoding this history entry should succeed");
+            assert_eq!(Some(entry), decoded);
+            assert_eq!(encoded_bytes.len(), 0);
+            true
         }
     }
 }

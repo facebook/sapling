@@ -8,6 +8,7 @@
 
 use bytes::{BigEndian, BufMut, BytesMut};
 
+use bytes_ext::SizeCounter;
 use mercurial_types::delta::{Delta, Fragment};
 
 use errors::*;
@@ -64,6 +65,13 @@ pub fn decode_delta(buf: BytesMut) -> Result<Delta> {
         .map_err(Error::from)
 }
 
+#[inline]
+pub fn encoded_len(delta: &Delta) -> usize {
+    let mut size_counter = SizeCounter::new();
+    encode_delta(delta, &mut size_counter);
+    size_counter.size()
+}
+
 pub fn encode_delta<B: BufMut>(delta: &Delta, out: &mut B) {
     for fragment in delta.fragments() {
         out.put_i32::<BigEndian>(fragment.start as i32);
@@ -112,6 +120,7 @@ mod test {
         fn roundtrip(delta: Delta) -> bool {
             let mut out = vec![];
             encode_delta(&delta, &mut out);
+            assert_eq!(encoded_len(&delta), out.len());
             delta == decode_delta(out.into()).unwrap()
         }
     }
