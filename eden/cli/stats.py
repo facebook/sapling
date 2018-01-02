@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import argparse
+import io
 import logging
 import sys
 from typing import List, Dict, Tuple, Optional
@@ -24,8 +25,7 @@ Table = Dict[str, Tuple[int, int, int, int]]
 
 # Shows information like memory usage, list of mount points and number of inodes
 # loaded, unloaded, and materialized in the mount points, etc.
-def do_stats_general(args: argparse.Namespace):
-    out = sys.stdout
+def do_stats_general(args: argparse.Namespace, out: io.TextIOWrapper=sys.stdout):
     stats_print.write_heading('General EdenFS Statistics', out)
     config = cmd_util.create_config(args)
 

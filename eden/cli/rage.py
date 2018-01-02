@@ -14,6 +14,7 @@ import subprocess
 
 from . import debug as debug_mod
 from . import doctor as doctor_mod
+from . import stats as stats_mod
 from typing import IO
 
 
@@ -46,10 +47,9 @@ def print_diagnostic_info(config, args, out: IO[bytes]):
         for k, v in val.items():
             out.write('{:>10} : {}\n'.format(k, v).encode())
     if health_status.is_healthy():
-        for path in mountpoint_paths:
-            out.write(b'\nInode information for path %s:\n' % path)
-            args.path = path.decode('utf8')
-            debug_mod.do_inode(args, out)
+        with io.StringIO() as stats_stream:
+            stats_mod.do_stats_general(args, out=stats_stream)
+            out.write(stats_stream.getvalue().encode())
 
 
 def print_rpm_version(out: IO[bytes]):
