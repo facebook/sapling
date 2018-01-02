@@ -48,11 +48,11 @@ Now import it
   $ hg update -r 0
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -l Main/d
-  lrwxrwxrwx 1 .* Main/d -> b (re)
+  lrwx.* 1 .* Main/d -> b (re)
   $ hg update -r tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -l Main/d
-  -rw-r--r-- 1 .* Main/d (re)
+  -rw-.* 1 .* Main/d (re)
 
 End Test
 
