@@ -702,8 +702,8 @@ def wrappull(orig, ui, repo, *args, **kwargs):
         downgrade(ui, repo)
     elif (ui.configbool('treedirstate', 'upgradeonpull') and
             not istreedirstate(repo) and not activealternativedirstates(repo)):
-        ui.status(_('migrating your repo to treedirstate which will make your '
-                    'hg commands faster...\n'))
+        ui.status(_('please wait while we migrate your repo to treedirstate\n'
+                    'this will make your hg commands faster...\n'))
         upgrade(ui, repo)
 
     return orig(ui, repo, *args, **kwargs)

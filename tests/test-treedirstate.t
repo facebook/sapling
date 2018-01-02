@@ -196,7 +196,8 @@ Test upgrade on pull with conflicting dirstate reimplementation
 Test upgrade on pull
 
   $ hg pull --config treedirstate.upgradeonpull=true
-  migrating your repo to treedirstate which will make your hg commands faster...
+  please wait while we migrate your repo to treedirstate
+  this will make your hg commands faster...
   pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
