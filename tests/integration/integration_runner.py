@@ -53,8 +53,13 @@ MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
     is_flag=True,
     help='keep temporary directory after running tests'
 )
+@click.argument(
+    'tests',
+    nargs=-1,
+    type=click.Path(),
+)
 @click.pass_context
-def run(ctx, dry_run, interactive, output, verbose, debug, keep_tmpdir):
+def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
     runner = hg_run_tests.TestRunner()
 
     testdir = parutil.get_dir_path(TESTDIR_PATH)
@@ -76,6 +81,8 @@ def run(ctx, dry_run, interactive, output, verbose, debug, keep_tmpdir):
         args.append('--debug')
     if keep_tmpdir:
         args.append('--keep-tmpdir')
+    if tests:
+        args.extend(tests)
 
     # In --dry-run mode, the xunit output has to be written to stdout.
     # In regular (run-tests) mode, the output has to be written to the specified
