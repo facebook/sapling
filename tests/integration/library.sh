@@ -6,6 +6,16 @@ function mononoke {
   echo $! >> "$DAEMON_PIDS"
 }
 
+# Wait until a Mononoke server is available for this repo.
+function wait_for_mononoke {
+  local socket="$1/.hg/mononoke.sock"
+  local attempts=50
+  until [[ -S $socket || $attempts -le 0 ]]; do
+    attempts=$((attempts - 1))
+    sleep 0.1
+  done
+}
+
 function blobimport {
   $MONONOKE_BLOBIMPORT "$@"
 }

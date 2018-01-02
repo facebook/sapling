@@ -6,6 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
+use failure::ResultExt;
 use futures::{future, Future, Sink, Stream};
 
 use tokio_core::reactor::Core;
@@ -49,7 +50,9 @@ fn ssh_relay<P: AsRef<Path>>(path: P) -> Result<()> {
     let stderr = fdio::stderr();
 
     // Open socket
-    let socket = UnixStream::connect(&path, &handle)?;
+    let socket = UnixStream::connect(&path, &handle).with_context(|_| {
+        format_err!("connecting to Mononoke socket '{}' failed", path.display())
+    })?;
 
     // Wrap the socket with the ssh codec
     let (socket_read, socket_write) = socket.split();
