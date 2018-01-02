@@ -174,7 +174,8 @@ def get_file(path, rev=None, clnum=None):
     return helper()
 
 def get_latest_cl(client):
-    cmd = 'p4 --client %s -G changes -m 1 -s submitted' % (
+    cmd = 'p4 --client %s -G changes -m 1 -s submitted //%s/...' % (
+            util.shellquote(client),
             util.shellquote(client))
     stdout = util.popen(cmd, mode='rb')
     parsed = marshal.load(stdout)
