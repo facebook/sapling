@@ -1,3 +1,5 @@
+subinclude:remotenames/.hgignore
+
 syntax: glob
 
 *.elc
