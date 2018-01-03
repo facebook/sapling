@@ -1310,6 +1310,9 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
     state.topmost = topmost
     state.replacements = []
 
+    ui.log("histedit", "%d actions to histedit", len(actions),
+           histedit_num_actions=len(actions))
+
     # Create a backup so we can always abort completely.
     backupfile = None
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
