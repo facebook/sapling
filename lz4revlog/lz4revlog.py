@@ -27,9 +27,18 @@ Interop with other Mercurial repositories is generally not affected by
 this extension.
 '''
 
-from mercurial import error, extensions, localrepo, revlog, util
-from mercurial.i18n import _
+from __future__ import absolute_import
+
 import lz4
+
+from mercurial.i18n import _
+from mercurial import (
+    error,
+    extensions,
+    localrepo,
+    revlog,
+    util,
+)
 
 testedwith = '3.9.1'
 
