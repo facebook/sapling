@@ -554,12 +554,5 @@ abort during pull is properly reported as such
   > [extensions]
   > crash = ${TESTDIR}/crashgetbundler.py
   > EOF
-  $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" pull
-  pulling from ssh://user@dummy/remote
-  searching for changes
-  adding changesets
+  $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" pull 2>&1 | grep "remote:"
   remote: abort: this is an exercise
-  transaction abort!
-  rollback completed
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
