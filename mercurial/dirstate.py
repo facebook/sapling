@@ -1268,7 +1268,7 @@ class dirstatemap(object):
             self._dirs.addpath(f)
         if oldstate == "?" and "_alldirs" in self.__dict__:
             self._alldirs.addpath(f)
-        self._map[f] = dirstatetuple(state, mode, size, mtime)
+        self._insert_tuple(f, state, mode, size, mtime)
         if state != 'n' or mtime == -1:
             self.nonnormalset.add(f)
         if size == -2:
@@ -1289,7 +1289,7 @@ class dirstatemap(object):
         if "filefoldmap" in self.__dict__:
             normed = util.normcase(f)
             self.filefoldmap.pop(normed, None)
-        self._map[f] = dirstatetuple('r', 0, size, 0)
+        self._insert_tuple(f, 'r', 0, size, 0)
         self.nonnormalset.add(f)
 
     def dropfile(self, f, oldstate):
@@ -1313,8 +1313,11 @@ class dirstatemap(object):
         for f in files:
             e = self.get(f)
             if e is not None and e[0] == 'n' and e[3] == now:
-                self._map[f] = dirstatetuple(e[0], e[1], e[2], -1)
+                self._insert_tuple(f, e[0], e[1], e[2], -1)
                 self.nonnormalset.add(f)
+
+    def _insert_tuple(self, f, state, mode, size, mtime):
+        self._map[f] = dirstatetuple(state, mode, size, mtime)
 
     def nonnormalentries(self):
         '''Compute the nonnormal dirstate entries from the dmap'''
