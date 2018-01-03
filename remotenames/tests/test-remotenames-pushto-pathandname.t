@@ -1,5 +1,5 @@
   > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  > echo "remotenames=" >> $HGRCPATH
   > echo "[remotenames]" >> $HGRCPATH
   > echo "rename.default = remote" >> $HGRCPATH
   > echo "disallowedto = ^remote/" >> $HGRCPATH

@@ -1,5 +1,5 @@
   > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  > echo "remotenames=" >> $HGRCPATH
 
   > FILTERPWD="sed s%`pwd`/%%g"
 

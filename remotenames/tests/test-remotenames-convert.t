@@ -2,7 +2,7 @@ Set up extension and repos
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > remotenames=`dirname $TESTDIR`/remotenames.py
+  > remotenames=
   > convert=
   > EOF
 

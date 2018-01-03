@@ -7,7 +7,7 @@ Skip if journal is not available in mercurial
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > journal=
-  > remotenames=`dirname $TESTDIR`/remotenames.py
+  > remotenames=
   > [remotenames]
   > rename.default=remote
   > EOF

@@ -13,7 +13,7 @@ Set up extension and repos to clone over wire protocol
   > [phases]
   > publish = False
   > [extensions]
-  > remotenames=`dirname $TESTDIR`/remotenames.py
+  > remotenames=
   > EOF
   $ hg init repo1
   $ hg clone  ssh://user@dummy/repo1 repo2

@@ -1,10 +1,10 @@
 Set up repo
 
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/remotenames.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext/remotenames.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > remotenames=$TESTTMP/remotenames.py
+  > remotenames=
   > EOF
 
   $ hg init repo

@@ -4,7 +4,7 @@ Set up repos
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > [extensions]
-  > remotenames=`dirname $TESTDIR`/remotenames.py
+  > remotenames=
   > EOF
   $ hg init remoterepo
   $ hg clone -q ssh://user@dummy/remoterepo localrepo

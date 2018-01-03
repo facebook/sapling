@@ -1,5 +1,5 @@
   > echo "[extensions]" >> $HGRCPATH
-  > echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  > echo "remotenames=" >> $HGRCPATH
   > echo "strip=" >> $HGRCPATH
 
 Test that hg strip -B stops at remotenames

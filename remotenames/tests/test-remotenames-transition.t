@@ -1,6 +1,6 @@
 Set up extension and repos
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=" >> $HGRCPATH
   $ hg init repo1
   $ cd repo1
   $ echo a > a

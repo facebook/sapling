@@ -2,7 +2,7 @@ Set up upstream repo
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "share=" >> $HGRCPATH
-  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=" >> $HGRCPATH
   $ hg init upstream
   $ cd upstream
   $ touch file0

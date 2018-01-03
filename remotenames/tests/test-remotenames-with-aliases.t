@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > remotenames=`dirname $TESTDIR`/remotenames.py
+  > remotenames=
   > [remotenames]
   > alias.default = True
   > EOF

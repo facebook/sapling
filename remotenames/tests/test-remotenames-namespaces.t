@@ -1,7 +1,7 @@
 Set up extension and repos
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=" >> $HGRCPATH
   $ echo "color=" >> $HGRCPATH
   $ echo "[color]" >> $HGRCPATH
   $ echo "log.remotebookmark = yellow" >> $HGRCPATH

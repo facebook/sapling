@@ -1,6 +1,6 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "schemes=" >> $HGRCPATH
-  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=" >> $HGRCPATH
 
   $ cat >> $HGRCPATH <<EOF
   > [schemes]

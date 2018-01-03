@@ -3,7 +3,7 @@ Set up extension and repos
   $ echo "[phases]" >> $HGRCPATH
   $ echo "publish = False" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "remotenames=`dirname $TESTDIR`/remotenames.py" >> $HGRCPATH
+  $ echo "remotenames=" >> $HGRCPATH
   $ hg init repo1
 
 Make sure we don't fail when rebase doesn't exist
