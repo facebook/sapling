@@ -898,7 +898,9 @@ if os.name == 'nt':
             msvccompilerclass.initialize(self)
             # "warning LNK4197: export 'func' specified multiple times"
             self.ldflags_shared.append('/ignore:4197')
+            self.ldflags_shared.append('/DEBUG')
             self.ldflags_shared_debug.append('/ignore:4197')
+            self.compile_options.append('/Z7')
 
     msvccompiler.MSVCCompiler = HackedMSVCCompiler
 
