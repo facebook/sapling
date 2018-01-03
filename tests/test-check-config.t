@@ -88,6 +88,19 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsql.user (str)
   undocumented: hgsql.verifybatchsize (int)
   undocumented: hgsql.waittimeout (str)
+  undocumented: hgsubversion.externals (str) ['svnexternals']
+  undocumented: hgsubversion.failoninvalidreplayfile (bool)
+  undocumented: hgsubversion.failonmissing (bool)
+  undocumented: hgsubversion.filestoresize (int) [200]
+  undocumented: hgsubversion.nativerevs (bool)
+  undocumented: hgsubversion.password (str)
+  undocumented: hgsubversion.password_stores (list)
+  undocumented: hgsubversion.revmapimpl (str)
+  undocumented: hgsubversion.startrev (str)
+  undocumented: hgsubversion.stupid (bool)
+  undocumented: hgsubversion.tunnels (list)
+  undocumented: hgsubversion.unsafeskip (list)
+  undocumented: hgsubversion.username (str)
   undocumented: infinitepush.bundle-stream (bool)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
