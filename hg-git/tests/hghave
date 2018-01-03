@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+"""Test the running system for features availability. Exit with zero
+if all features are there, non-zero otherwise. If a feature name is
+prefixed with "no-", the absence of feature is tested.
+"""
+import optparse
+import sys
+import hghave
+
+checks = hghave.checks
+
+def list_features():
+    for name, feature in checks.iteritems():
+        desc = feature[1]
+        print name + ':', desc
+
+def test_features():
+    failed = 0
+    for name, feature in checks.iteritems():
+        check, _ = feature
+        try:
+            check()
+        except Exception, e:
+            print "feature %s failed:  %s" % (name, e)
+            failed += 1
+    return failed
+
+parser = optparse.OptionParser("%prog [options] [features]")
+parser.add_option("--test-features", action="store_true",
+                  help="test available features")
+parser.add_option("--list-features", action="store_true",
+                  help="list available features")
+parser.add_option("-q", "--quiet", action="store_true",
+                  help="check features silently")
+
+if __name__ == '__main__':
+    options, args = parser.parse_args()
+    if options.list_features:
+        list_features()
+        sys.exit(0)
+
+    if options.test_features:
+        sys.exit(test_features())
+
+    quiet = options.quiet
+
+    failures = 0
+
+    def error(msg):
+        global failures
+        if not quiet:
+            sys.stderr.write(msg + '\n')
+        failures += 1
+
+    for feature in args:
+        negate = feature.startswith('no-')
+        if negate:
+            feature = feature[3:]
+
+        if feature not in checks:
+            error('skipped: unknown feature: ' + feature)
+            continue
+
+        check, desc = checks[feature]
+        try:
+            available = check()
+        except Exception, e:
+            error('hghave check failed: ' + feature)
+            continue
+
+        if not negate and not available:
+            error('skipped: missing feature: ' + desc)
+        elif negate and available:
+            error('skipped: system supports %s' % desc)
+
+    if failures != 0:
+        sys.exit(1)
