@@ -337,8 +337,7 @@ class bundlerepository(localrepo.localrepository):
         if version not in legalcgvers:
             msg = _('Unsupported changegroup version: %s')
             raise error.Abort(msg % version)
-        if bundle.compressed():
-            cgstream = self._writetempbundle(part.read, '.cg%sun' % version)
+        cgstream = self._writetempbundle(part.read, '.cg%sun' % version)
 
         self._cgunpacker = changegroup.getunbundler(version, cgstream, 'UN')
 
