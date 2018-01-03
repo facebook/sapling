@@ -772,6 +772,12 @@ def rebase(ui, repo, **opts):
       [rebase]
       experimental.inmemorywarning = Using experimental in-memory rebase
 
+    It will not run if any file paths in the source set match a particular
+    config::
+
+      [rebase]
+      experimental.inmemorydisallowedpaths = Types.php|build.jar
+
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -906,6 +912,21 @@ def _shoulddisableimm(ui, repo, rebaseset):
         ui.log("rebase", "disabling IMM because: %s" % whynotimm,
             why_not_imm=whynotimm)
         return True
+
+    # Check for paths in the rebaseset that are likely to later trigger
+    # conflicts or a mergedriver run (and thus cause the whole rebase to later
+    # be restarted).
+    badpaths = ui.config("rebase", "experimental.inmemorydisallowedpaths")
+    if badpaths:
+        badpathsre = util.re.compile(badpaths)
+        ctxs = [repo[rev] for rev in rebaseset]
+        paths = set.union(set(ctx.files()) for ctx in ctxs)
+        for path in paths:
+            if badpathsre.match(path):
+                whynotimm = "path matched inmemory_disallowed_paths: %s" % path
+                ui.log("rebase", "disabling IMM because: %s" % whynotimm,
+                    why_not_imm=whynotimm)
+                return True
 
     return False # no change
 
