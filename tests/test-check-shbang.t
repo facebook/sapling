@@ -13,7 +13,10 @@ In tests, enforce $PYTHON and *not* /usr/bin/env python or similar:
   > -X tests/test-check-execute.t \
   > -X tests/test-check-module-imports.t \
   > -X tests/test-check-pyflakes.t \
-  > -X tests/test-check-shbang.t
+  > -X tests/test-check-shbang.t \
+  > -X fb-hgext/tests/test-check-execute-hg.t \
+  > -X fb-hgext/tests/test-check-pyflakes-hg.t \
+  > -X fb-hgext/tests/test-check-shbang-hg.t
   [1]
 
 The above exclusions are because they're looking for files that
