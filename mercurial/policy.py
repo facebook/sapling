@@ -74,7 +74,7 @@ _cextversions = {
     (r'cext', r'bdiff'): 1,
     (r'cext', r'diffhelpers'): 1,
     (r'cext', r'mpatch'): 1,
-    (r'cext', r'osutil'): 1,
+    (r'cext', r'osutil'): 2,
     (r'cext', r'parsers'): 4,
 }
 

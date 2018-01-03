@@ -163,6 +163,10 @@ try:
     setprocname = osutil.setprocname
 except AttributeError:
     pass
+try:
+    unblocksignal = osutil.unblocksignal
+except AttributeError:
+    pass
 
 # Python compatibility
 
