@@ -20,6 +20,24 @@ verify
   checking files
   3 files, 1 changesets, 3 total revisions
 
+verify current commit
+
+  $ hg verify -r '.'
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  3 files, 1 changesets, 3 total revisions
+
+verify all commits using rev range
+
+  $ hg verify -r ':'
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  3 files, 1 changesets, 3 total revisions
+
 verify with journal
 
   $ touch .hg/store/journal
@@ -60,6 +78,22 @@ introduce some bugs in repo
   (first damaged changeset appears to be 0)
   [1]
 
+  $ hg verify -r '.'
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+   0: empty or missing FOO.txt
+   FOO.txt@0: manifest refers to unknown revision f62022d3d590
+   0: empty or missing QUICK.txt
+   QUICK.txt@0: manifest refers to unknown revision 88b857db8eba
+   0: empty or missing bar.txt
+   bar.txt@0: manifest refers to unknown revision 256559129457
+  3 files, 1 changesets, 0 total revisions
+  6 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+
   $ cd ../../..
   $ cd ..
 
@@ -77,7 +111,7 @@ Set up a repo for testing missing revlog entries
 Entire changelog missing
 
   $ rm .hg/store/00changelog.*
-  $ hg verify -q
+  $ hg verify -q 
    0: empty or missing changelog
    manifest@0: d0b6632564d4 not in changesets
    manifest@1: 941fc4534185 not in changesets
@@ -94,6 +128,16 @@ Entire manifest log missing
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
+  $ hg verify -q -r '.'
+   0: empty or missing manifest
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+  $ hg verify -q -r '.^'
+   0: empty or missing manifest
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
   $ cp -R .hg/store-full/. .hg/store
 
 Entire filelog missing
@@ -106,6 +150,19 @@ Entire filelog missing
    file@1: manifest refers to unknown revision c10f2164107d
   1 warnings encountered!
   hint: run "hg debugrebuildfncache" to recover from corrupt fncache
+  3 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+  $ hg verify -q -r '.'
+   1: empty or missing file
+   file@1: manifest refers to unknown revision c10f2164107d
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+  $ hg verify -q -r ':tip'
+   0: empty or missing file
+   file@0: manifest refers to unknown revision 362fef284ce2
+   file@1: manifest refers to unknown revision c10f2164107d
   3 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
@@ -152,6 +209,12 @@ Entire manifest log and filelog missing
   2 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
+  $ hg verify -q -r '.'
+   0: empty or missing manifest
+   1: empty or missing file
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
   $ cp -R .hg/store-full/. .hg/store
 
 Changelog missing entry
@@ -165,6 +228,12 @@ Changelog missing entry
   1 warnings encountered!
   3 integrity errors encountered!
   [1]
+  $ hg verify -q -r 0 
+  warning: ignoring unknown working parent c5ddb05ab828!
+  $ hg verify -q -r 1 
+  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: unknown revision '1'!
+  [255]
   $ cp -R .hg/store-full/. .hg/store
 
 Manifest log missing entry
@@ -176,6 +245,13 @@ Manifest log missing entry
   2 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
+  $ hg verify -q -r '.'
+   manifest@1: changeset refers to unknown revision 941fc4534185
+   file@1: in changeset but not in manifest
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+  $ hg verify -q -r '.^'
   $ cp -R .hg/store-full/. .hg/store
 
 Filelog missing entry
@@ -186,6 +262,12 @@ Filelog missing entry
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
+  $ hg verify -q -r'.'
+   file@1: manifest refers to unknown revision c10f2164107d
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+  $ hg verify -q -r'.^'
   $ cp -R .hg/store-full/. .hg/store
 
 Changelog and manifest log missing entry
@@ -199,6 +281,12 @@ Changelog and manifest log missing entry
   1 warnings encountered!
   2 integrity errors encountered!
   [1]
+  $ hg verify -q -r 0
+  warning: ignoring unknown working parent c5ddb05ab828!
+  $ hg verify -q -r 1
+  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: unknown revision '1'!
+  [255]
   $ cp -R .hg/store-full/. .hg/store
 
 Changelog and filelog missing entry
@@ -211,6 +299,12 @@ Changelog and filelog missing entry
    file@?: manifest refers to unknown revision c10f2164107d
   3 integrity errors encountered!
   [1]
+  $ hg verify -q -r 0
+  warning: ignoring unknown working parent c5ddb05ab828!
+  $ hg verify -q -r 1
+  warning: ignoring unknown working parent c5ddb05ab828!
+  abort: unknown revision '1'!
+  [255]
   $ cp -R .hg/store-full/. .hg/store
 
 Manifest and filelog missing entry
@@ -222,6 +316,13 @@ Manifest and filelog missing entry
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
+  $ hg verify -q -r '.'
+   manifest@1: changeset refers to unknown revision 941fc4534185
+   file@1: in changeset but not in manifest
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+  $ hg verify -q -r '.^'
   $ cp -R .hg/store-full/. .hg/store
 
 Corrupt changelog base node to cause failure to read revision
@@ -238,6 +339,16 @@ Corrupt changelog base node to cause failure to read revision
   4 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
+  $ hg verify -q -r '.'
+  $ hg verify -q -r '.^'
+   0: unpacking changeset 08b1860757c2: * (glob)
+   manifest@?: rev 0 points to unexpected changeset 0
+   manifest@?: d0b6632564d4 not in changesets
+   file@0: in manifest but not in changeset
+   file@?: rev 0 points to unexpected changeset 0
+  5 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
   $ cp -R .hg/store-full/. .hg/store
 
 Corrupt manifest log base node to cause failure to read revision
@@ -250,6 +361,13 @@ Corrupt manifest log base node to cause failure to read revision
   2 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
+  $ hg verify -q -r '.'
+  $ hg verify -q -r '.^'
+   manifest@0: reading delta d0b6632564d4: * (glob)
+   file@0: in changeset but not in manifest
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
   $ cp -R .hg/store-full/. .hg/store
 
 Corrupt filelog base node to cause failure to read revision
@@ -257,6 +375,12 @@ Corrupt filelog base node to cause failure to read revision
   $ printf abcd | dd conv=notrunc of=.hg/store/data/file.i bs=1 seek=16 \
   >   2> /dev/null
   $ hg verify -q
+   file@0: unpacking 362fef284ce2: * (glob)
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+  $ hg verify -q -r '.'
+  $ hg verify -q -r '.^'
    file@0: unpacking 362fef284ce2: * (glob)
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
@@ -302,6 +426,24 @@ test revlog corruption
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
+
+  $ hg verify -r '.'
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+   a@1: broken revlog! (index data/a.i is corrupted)
+  1 files, 1 changesets, 0 total revisions
+  1 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+
+  $ hg verify -r '.^'
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  0 files, 1 changesets, 0 total revisions
 
   $ cd ..
 

@@ -22,9 +22,9 @@ from . import (
     util,
 )
 
-def verify(repo):
+def verify(repo, revs=None):
     with repo.lock():
-        return verifier(repo).verify()
+        return verifier(repo, revs=revs).verify()
 
 def _normpath(f):
     # under hg < 2.4, convert didn't sanitize paths properly, so a
@@ -36,7 +36,7 @@ def _normpath(f):
 class verifier(object):
     # The match argument is always None in hg core, but e.g. the narrowhg
     # extension will pass in a matcher here.
-    def __init__(self, repo, match=None):
+    def __init__(self, repo, match=None, revs=None):
         self.repo = repo.unfiltered()
         self.ui = repo.ui
         self.match = match or scmutil.matchall(repo)
@@ -51,6 +51,7 @@ class verifier(object):
         self.fncachewarned = False
         # developer config: verify.skipflags
         self.skipflags = repo.ui.configint('verify', 'skipflags')
+        self.revs = revs
 
     def warn(self, msg):
         self.ui.warn(msg + "\n")
@@ -108,16 +109,17 @@ class verifier(object):
                 self.warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
             lr = None # can't be trusted
 
-        try:
-            p1, p2 = obj.parents(node)
-            if p1 not in seen and p1 != nullid:
-                self.err(lr, _("unknown parent 1 %s of %s") %
-                    (short(p1), short(node)), f)
-            if p2 not in seen and p2 != nullid:
-                self.err(lr, _("unknown parent 2 %s of %s") %
-                    (short(p2), short(node)), f)
-        except Exception as inst:
-            self.exc(lr, _("checking parents of %s") % short(node), inst, f)
+        if self.revs is None:
+            try:
+                p1, p2 = obj.parents(node)
+                if p1 not in seen and p1 != nullid:
+                    self.err(lr, _("unknown parent 1 %s of %s") %
+                        (short(p1), short(node)), f)
+                if p2 not in seen and p2 != nullid:
+                    self.err(lr, _("unknown parent 2 %s of %s") %
+                        (short(p2), short(node)), f)
+            except Exception as inst:
+                self.exc(lr, _("checking parents of %s") % short(node), inst, f)
 
         if node in seen:
             self.err(lr, _("duplicate revision %d (%d)") % (i, seen[node]), f)
@@ -148,8 +150,12 @@ class verifier(object):
 
         totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
 
+        if self.revs is not None:
+            totalchangesets = len(self.revs)
+        else:
+            totalchangesets = len(repo.changelog)
         ui.status(_("%d files, %d changesets, %d total revisions\n") %
-                       (totalfiles, len(repo.changelog), filerevisions))
+                       (totalfiles, totalchangesets, filerevisions))
         if self.warnings:
             ui.warn(_("%d warnings encountered!\n") % self.warnings)
         if self.fncachewarned:
@@ -172,9 +178,15 @@ class verifier(object):
         mflinkrevs = {}
         filelinkrevs = {}
         seen = {}
+
+        if self.revs is not None:
+            revs = self.revs
+        else:
+            revs = repo
+
         self.checklog(cl, "changelog", 0)
-        total = len(repo)
-        for i in repo:
+        total = len(revs)
+        for i in revs:
             ui.progress(_('checking'), i, total=total, unit=_('changesets'))
             n = cl.node(i)
             self.checkentry(cl, i, n, seen, [i], "changelog")
@@ -220,6 +232,8 @@ class verifier(object):
             self.checklog(mf, label, 0)
         total = len(mf)
         for i in mf:
+            if self.revs is not None and mf.linkrev(i) not in self.revs:
+                continue
             if not dir:
                 ui.progress(_('checking'), i, total=total, unit=_('manifests'))
             n = mf.node(i)
@@ -333,12 +347,13 @@ class verifier(object):
         ui.status(_("checking files\n"))
 
         storefiles = set()
-        for f, f2, size in repo.store.datafiles():
-            if not f:
-                self.err(None, _("cannot decode filename '%s'") % f2)
-            elif (size > 0 or not revlogv1) and f.startswith('data/'):
-                storefiles.add(_normpath(f))
-
+        if self.revs is None:
+            # only check store files when verifying the entire repo
+            for f, f2, size in repo.store.datafiles():
+                if not f:
+                    self.err(None, _("cannot decode filename '%s'") % f2)
+                elif (size > 0 or not revlogv1) and f.startswith('data/'):
+                    storefiles.add(_normpath(f))
         files = sorted(set(filenodes) | set(filelinkrevs))
         total = len(files)
         revisions = 0
@@ -361,17 +376,20 @@ class verifier(object):
                 self.err(lr, _("broken revlog! (%s)") % e, f)
                 continue
 
-            for ff in fl.files():
-                try:
-                    storefiles.remove(ff)
-                except KeyError:
-                    self.warn(_(" warning: revlog '%s' not in fncache!") % ff)
-                    self.fncachewarned = True
+            if self.revs is None:
+                for ff in fl.files():
+                    try:
+                        storefiles.remove(ff)
+                    except KeyError:
+                        self.warn(_(" warning: revlog '%s' not in fncache!") % ff)
+                        self.fncachewarned = True
 
             self.checklog(fl, f, lr)
             seen = {}
             rp = None
             for i in fl:
+                if self.revs is not None and fl.linkrev(i) not in self.revs:
+                    continue
                 revisions += 1
                 n = fl.node(i)
                 lr = self.checkentry(fl, i, n, seen, linkrevs, f)
@@ -482,7 +500,8 @@ class verifier(object):
                              short(node), f)
         ui.progress(_('checking'), None)
 
-        for f in sorted(storefiles):
-            self.warn(_("warning: orphan revlog '%s'") % f)
+        if self.revs is None:
+            for f in sorted(storefiles):
+                self.warn(_("warning: orphan revlog '%s'") % f)
 
         return len(files), revisions

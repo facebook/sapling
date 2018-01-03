@@ -4182,7 +4182,7 @@ def recover(ui, repo):
     Returns 0 if successful, 1 if nothing to recover or verify fails.
     """
     if repo.recover():
-        return hg.verify(repo)
+        return hg.verify(repo, None)
     return 1
 
 @command('^remove|rm',
@@ -5515,8 +5515,10 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         return hg.updatetotally(ui, repo, rev, brev, clean=clean,
                                 updatecheck=updatecheck)
 
-@command('verify', [])
-def verify(ui, repo):
+@command('verify',
+    [('r', 'rev', [], _('verify only the specified revision or revset'), _('REV')),
+    ])
+def verify(ui, repo, **opts):
     """verify the integrity of the repository
 
     Verify the integrity of the current repository.
@@ -5532,7 +5534,13 @@ def verify(ui, repo):
 
     Returns 0 on success, 1 if errors are encountered.
     """
-    return hg.verify(repo)
+    revrange = opts.get('rev')
+    if revrange:
+        revs = scmutil.revrange(repo, revrange)
+    else:
+        revs = None
+
+    return hg.verify(repo, revs)
 
 @command('version', [] + formatteropts, norepo=True, cmdtype=readonly)
 def version_(ui, **opts):
