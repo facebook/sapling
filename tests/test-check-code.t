@@ -12,6 +12,12 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X hgext/fsmonitor/pywatchman \
   > -X mercurial/thirdparty \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
+  Skipping hgsql/hgsql.py it has no-che?k-code (glob)
+  Skipping hgsql/tests/heredoctest.py it has no-che?k-code (glob)
+  Skipping hgsql/tests/killdaemons.py it has no-che?k-code (glob)
+  Skipping hgsql/tests/run-tests.py.old it has no-che?k-code (glob)
+  Skipping hgsql/tests/test-encoding.t it has no-che?k-code (glob)
+  Skipping hgsql/tests/test-race-conditions.t it has no-che?k-code (glob)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)

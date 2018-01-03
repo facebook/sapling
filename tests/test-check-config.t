@@ -45,6 +45,20 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
+  undocumented: format.usehgsql (bool)
+  undocumented: hgsql.bypass (bool)
+  undocumented: hgsql.database (str)
+  undocumented: hgsql.enabled (bool)
+  undocumented: hgsql.host (str)
+  undocumented: hgsql.locktimeout (str)
+  undocumented: hgsql.password (str)
+  undocumented: hgsql.port (int)
+  undocumented: hgsql.profileoutput (str)
+  undocumented: hgsql.profiler (str)
+  undocumented: hgsql.reponame (str)
+  undocumented: hgsql.user (str)
+  undocumented: hgsql.verifybatchsize (int)
+  undocumented: hgsql.waittimeout (str)
   undocumented: remotenames.alias.default (bool)
   undocumented: remotenames.allownonfastforward (bool)
   undocumented: remotenames.calculatedistance (bool)
