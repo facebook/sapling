@@ -642,10 +642,10 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     channel_->getSessionCompleteFuture().then([this] {
       // In case we are performing a graceful restart,
       // extract the fuse device now.
-      folly::File fuseDevice = channel_->stealFuseDevice();
+      folly::File fuseDev = channel_->stealFuseDevice();
       channel_.reset();
 
-      fuseCompletionPromise_.setValue(std::move(fuseDevice));
+      fuseCompletionPromise_.setValue(std::move(fuseDev));
     });
 
     // wait for init to complete or error; this will throw an exception
