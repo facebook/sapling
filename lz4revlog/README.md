@@ -39,7 +39,7 @@ lz4revlog includes some basic tests, which can be run by cloning the Mercurial
 repository to a separate directory:
 
     :::sh
-    hg clone http://selenic.com/hg
+    hg clone http://mercurial-scm.org/hg
 
 and then running the tests with:
 
