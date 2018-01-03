@@ -1,5 +1,6 @@
 subinclude:remotenames/.hgignore
 subinclude:hgsql/.hgignore
+subinclude:fb-hgext/.hgignore
 
 syntax: glob
 
