@@ -267,6 +267,7 @@ Test extension help:
        histedit      interactive history editing
        keyword       expand keywords in tracked files
        largefiles    track large binary files
+       lz4revlog     store revlog deltas using lz4 compression
        mq            manage a stack of patches
        notify        hooks for sending email push notifications
        patchbomb     command to send changesets as (a series of) patch emails
@@ -1348,6 +1349,8 @@ Separate sections from subsections
       "usefncache"
   
       "usestore"
+  
+      "uselz4"
   
       "profiling"
       -----------
