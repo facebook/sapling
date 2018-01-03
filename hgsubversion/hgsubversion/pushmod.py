@@ -141,7 +141,6 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                         props.setdefault(file, {}).update(autoprops)
 
                 action = 'add'
-                dirname = '/'.join(file.split('/')[:-1] + [''])
             else:
                 base_data = parent.filectx(file).data()
                 if ('x' in parent.filectx(file).flags()

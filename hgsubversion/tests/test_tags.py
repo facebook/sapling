@@ -1,17 +1,12 @@
 import test_util
 
-import os, sys, cStringIO, difflib
-import unittest
+import os, cStringIO, difflib
 
 from mercurial import commands
 from mercurial import error
-from mercurial import hg
-from mercurial import node
-from mercurial import ui
 
 from hgsubversion import compathacks
 from hgsubversion import svncommands
-from hgsubversion import svnrepo
 
 class TestTags(test_util.TestBase):
     stupid_mode_tests = True

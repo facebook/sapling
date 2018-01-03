@@ -1,8 +1,6 @@
 import test_util
 
-from mercurial import util as hgutil
 from hgsubversion import svnmeta, maps
-from mercurial.node import hex
 
 class TestRevMapMigrate(test_util.TestBase):
 

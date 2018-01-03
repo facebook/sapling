@@ -1,6 +1,6 @@
 import test_util
 
-import os, unittest, sys
+import os, sys
 
 from mercurial import commands
 from mercurial import util as hgutil
@@ -272,7 +272,7 @@ class TestPushExternals(test_util.TestBase):
     obsolete_mode_tests = True
 
     def test_push_externals(self):
-        repo = self._load_fixture_and_fetch('pushexternals.svndump')
+        self._load_fixture_and_fetch('pushexternals.svndump')
         # Add a new reference on an existing and non-existing directory
         changes = [
             ('.hgsvnexternals', '.hgsvnexternals',

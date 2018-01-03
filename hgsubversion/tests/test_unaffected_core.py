@@ -1,14 +1,10 @@
 import test_util
 
 import os
-import unittest
 
 from mercurial import commands
 from mercurial import dispatch
-from mercurial import error
 from mercurial import hg
-from mercurial import node
-from mercurial import ui
 
 def _dispatch(ui, cmd):
     assert '--quiet' in cmd

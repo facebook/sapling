@@ -18,8 +18,7 @@ For more information and instructions, see :hg:`help subversion`.
 testedwith = '3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4'
 
 import os
-import sys
-import traceback
+import zlib
 
 from mercurial import commands
 try:
@@ -28,6 +27,7 @@ try:
 except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
+from mercurial import base85
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg

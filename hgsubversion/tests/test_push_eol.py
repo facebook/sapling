@@ -1,7 +1,5 @@
 import test_util
 
-import unittest
-
 class TestPushEol(test_util.TestBase):
     obsolete_mode_tests = True
     stupid_mode_tests = True

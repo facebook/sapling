@@ -1,4 +1,3 @@
-import StringIO
 import difflib
 import errno
 import gettext
@@ -10,7 +9,6 @@ import sys
 import tarfile
 import tempfile
 import unittest
-import urllib
 
 _rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _rootdir)

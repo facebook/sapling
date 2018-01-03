@@ -9,6 +9,7 @@ want a couple of branches.
 
 import base
 
+from mercurial import util as hgutil
 
 class CustomLayout(base.BaseLayout):
 
@@ -30,12 +31,13 @@ class CustomLayout(base.BaseLayout):
             for other_svn in self.svn_to_hg:
                 if other_svn == svn_path:
                     msg = 'specified two hg branches for svn path %s: %s and %s'
+                    # XXX THERE IS CLEARLY A BUG HERE: other_hg is not defined
                     raise hgutil.Abort(msg % (svn_path, other_hg, hg_branch))
 
                 if (other_svn.startswith(svn_path + '/') or
                     svn_path.startswith(other_svn + '/')):
                     msg = 'specified mappings for nested svn paths: %s and %s'
-                    raise hgutl.Abort(msg % (svn_path, other_svn))
+                    raise hgutil.Abort(msg % (svn_path, other_svn))
 
             self.svn_to_hg[svn_path] = hg_branch
             self.hg_to_svn[hg_branch] = svn_path

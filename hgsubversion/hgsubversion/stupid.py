@@ -644,7 +644,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
                                  svn.checkpath, svn.list_files, firstrun)
-    brpaths = branches.values()
+    # brpaths = branches.values()
     bad_branch_paths = {}
     for br, bp in branches.iteritems():
         bad_branch_paths[br] = []

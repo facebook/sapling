@@ -1,14 +1,6 @@
 import test_util
 
-import errno
 import shutil
-import unittest
-
-from mercurial import commands
-from mercurial import context
-from mercurial import hg
-from mercurial import node
-from mercurial import ui
 
 from hgsubversion import compathacks
 

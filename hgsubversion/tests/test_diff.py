@@ -1,9 +1,5 @@
 import test_util
 
-import unittest
-
-from mercurial import ui
-
 from hgsubversion import wrappers
 
 expected_diff_output = '''Index: alpha

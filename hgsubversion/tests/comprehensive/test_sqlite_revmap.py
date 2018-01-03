@@ -1,5 +1,6 @@
+# no-check-code -- see T24862348
+
 import os
-import unittest
 import sys
 
 # wrapped in a try/except because of weirdness in how

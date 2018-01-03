@@ -1,8 +1,5 @@
 import test_util
 
-import sys
-import unittest
-
 class TestFetchDirectoryRemoval(test_util.TestBase):
     stupid_mode_tests = True
 

@@ -38,7 +38,6 @@ try:
 except ImportError:
     phases = None
 
-import re
 import util
 import wrappers
 import svnwrap

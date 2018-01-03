@@ -1,7 +1,5 @@
 import os
-import pickle
 import sys
-import unittest
 
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
@@ -15,11 +13,8 @@ import test_rebuildmeta
 
 from mercurial import context
 from mercurial import extensions
-from mercurial import hg
-from mercurial import ui
 
 from hgsubversion import svncommands
-from hgsubversion import svnmeta
 
 
 

@@ -1,7 +1,5 @@
 import unittest
 
-import test_util
-
 from hgsubversion import stupid
 
 

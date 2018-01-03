@@ -1,5 +1,4 @@
 import os
-import unittest
 import sys
 
 # wrapped in a try/except because of weirdness in how
@@ -14,10 +13,8 @@ from mercurial import context
 from mercurial import extensions
 from mercurial import hg
 from mercurial import localrepo
-from mercurial import ui
 from mercurial import util as hgutil
 
-from hgsubversion import compathacks
 from hgsubversion import svncommands
 from hgsubversion import svnmeta
 from hgsubversion import util

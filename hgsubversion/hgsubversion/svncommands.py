@@ -1,8 +1,6 @@
 import os
-import posixpath
 import sys
 import traceback
-import urlparse
 import errno
 
 from mercurial import commands
@@ -11,8 +9,6 @@ from mercurial import node
 from mercurial import util as hgutil
 from mercurial import error
 
-import layouts
-import maps
 import svnwrap
 import svnrepo
 import util

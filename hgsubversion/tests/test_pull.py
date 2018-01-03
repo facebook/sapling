@@ -1,9 +1,6 @@
 import test_util
 
-import os.path
-import subprocess
 from mercurial import node
-from mercurial import ui
 from mercurial import util as hgutil
 from mercurial import commands
 from hgsubversion import verify

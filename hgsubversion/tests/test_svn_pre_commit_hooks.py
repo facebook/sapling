@@ -1,10 +1,6 @@
 import os
-import sys
 import test_util
-import unittest
 
-from mercurial import hg
-from mercurial import commands
 from mercurial import util
 
 
@@ -14,12 +10,12 @@ class TestSvnPreCommitHooks(test_util.TestBase):
         self.repo_path = self.load_and_fetch('single_rev.svndump')[1]
         # creating pre-commit hook that doesn't allow any commit
         hook_file_name = os.path.join(
-			self.repo_path, 'hooks', 'pre-commit'
+            self.repo_path, 'hooks', 'pre-commit'
         )
         hook_file = open(hook_file_name, 'w')
         hook_file.write(
-        	'#!/bin/sh\n'
-        	'echo "Commits are not allowed" >&2; exit 1;\n'
+            '#!/bin/sh\n'
+            'echo "Commits are not allowed" >&2; exit 1;\n'
         )
         hook_file.close()
         os.chmod(hook_file_name, 0755)

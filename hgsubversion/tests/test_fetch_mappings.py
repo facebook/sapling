@@ -3,16 +3,12 @@
 import test_util
 
 import os
-import unittest
 
 from mercurial import commands
-from mercurial import hg
 from mercurial import node
-from mercurial import util as hgutil
 
 from hgsubversion import maps
 from hgsubversion import svncommands
-from hgsubversion import util
 from hgsubversion import verify
 
 class MapTests(test_util.TestBase):
@@ -156,7 +152,7 @@ class MapTests(test_util.TestBase):
 
     @test_util.requiresreplay
     def test_file_map_rule_order(self):
-        repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
+        self._loadwithfilemap('replace_trunk_with_branch.svndump',
             "exclude alpha\ninclude .\nexclude gamma\n")
         # The exclusion of alpha is overridden by the later rule to
         # include all of '.', whereas gamma should remain excluded
@@ -286,7 +282,6 @@ class MapTests(test_util.TestBase):
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
-        originfo = self.repo.svnmeta().branches
 
         # clone & rebuild
         ui = self.ui()
@@ -363,7 +358,8 @@ class MapTests(test_util.TestBase):
         ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, tagmap=self.tagmap)
-        tags = self.repo.tags()
+        # Wat? Revisit. T24862348
+        self.repo.tags()
 
     def test_empty_log_message(self):
         repo, repo_path = self.load_and_fetch('empty-log-message.svndump')

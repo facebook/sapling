@@ -1,13 +1,11 @@
 import test_util
 
 import os
-import unittest
 import urllib
 
 from mercurial import commands
 from mercurial import hg
 from mercurial import node
-from mercurial import ui
 from mercurial import encoding
 
 class TestBasicRepoLayout(test_util.TestBase):

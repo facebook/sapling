@@ -1,9 +1,7 @@
 import os
 import sys
-import unittest
 
 from mercurial import hg
-from mercurial import ui
 
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
@@ -13,7 +11,6 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     import test_util
 
-from hgsubversion import wrappers
 from hgsubversion import svnwrap
 
 

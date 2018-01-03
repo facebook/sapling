@@ -1,7 +1,5 @@
 import test_util
 
-import unittest
-
 class TestPushDirectories(test_util.TestBase):
     stupid_mode_tests = True
     obsolete_mode_tests = True

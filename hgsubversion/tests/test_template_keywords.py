@@ -1,7 +1,5 @@
 import test_util
 
-import unittest
-
 from mercurial import commands
 from mercurial import error
 from mercurial import ui

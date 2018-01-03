@@ -1,7 +1,6 @@
 import test_util
 
 import sys
-import unittest
 
 class TestPushRenames(test_util.TestBase):
     obsolete_mode_tests = True
@@ -22,8 +21,6 @@ class TestPushRenames(test_util.TestBase):
                     w('%s copied from %s\n' % (f, ctx[f].renamed()[0]))
 
     def test_push_renames(self):
-        repo = self.repo
-
         changes = [
             # Regular copy of a single file
             ('a', 'a2', None),
@@ -71,8 +68,6 @@ class TestPushRenames(test_util.TestBase):
                           'random2/dir with space/file with space'])
 
     def test_push_rename_tree(self):
-        repo = self.repo
-
         changes = [
             ('geek/alpha', 'geek/alpha', 'content',),
             ('geek/beta', 'geek/beta', 'content',),

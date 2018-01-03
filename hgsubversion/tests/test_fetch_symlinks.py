@@ -1,7 +1,5 @@
 import test_util
 
-import unittest
-
 class TestFetchSymlinks(test_util.TestBase):
     stupid_mode_tests = True
 

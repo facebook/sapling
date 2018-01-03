@@ -1,6 +1,5 @@
 import posixpath
 import os
-import tempfile
 
 from mercurial import context
 from mercurial import util as hgutil
@@ -902,8 +901,6 @@ class SVNMeta(object):
                 self.ui.status('Marked branch %s as closed.\n' % bname)
 
     def delbranch(self, branch, node, rev):
-        pctx = self.repo[node]
-        files = pctx.manifest().keys()
         extra = self.genextra(rev.revnum, branch)
         self.mapbranch(extra, True)
         ctx = context.memctx(self.repo,
@@ -914,5 +911,5 @@ class SVNMeta(object):
                              util.forceutf8(self.authors[rev.author]),
                              self.fixdate(rev.date),
                              extra)
-        new = self.repo.svn_commitctx(ctx)
+        self.repo.svn_commitctx(ctx)
         self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))

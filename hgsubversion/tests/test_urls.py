@@ -1,6 +1,5 @@
 import test_util
 
-import unittest
 import urllib
 
 from hgsubversion.svnwrap import parse_url

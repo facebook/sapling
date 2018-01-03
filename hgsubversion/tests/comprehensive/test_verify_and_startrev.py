@@ -1,6 +1,5 @@
 import os
 import sys
-import unittest
 
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
@@ -9,9 +8,6 @@ try:
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     import test_util
-
-from mercurial import hg
-from mercurial import ui
 
 from hgsubversion import verify
 

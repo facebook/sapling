@@ -405,7 +405,6 @@ class SubversionRepo(object):
                                                    None,
                                                    False,
                                                    self.pool)
-        checksum = []
         # internal dir batons can fall out of scope and get GCed before svn is
         # done with them. This prevents that (credit to gvn for the idea).
         batons = [edit_baton, ]

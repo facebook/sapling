@@ -7,7 +7,6 @@ import os
 import re
 import sqlite3
 import sys
-import weakref
 from mercurial import error
 from mercurial import util as hgutil
 from mercurial.node import bin, hex, nullid

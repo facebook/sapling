@@ -1,14 +1,11 @@
 import test_util
 
 import errno
-import shutil
-import unittest
 
 from mercurial import commands
 from mercurial import context
 from mercurial import hg
 from mercurial import node
-from mercurial import ui
 
 from hgsubversion import compathacks
 
@@ -81,7 +78,8 @@ class TestSingleDirPush(test_util.TestBase):
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
                              {'branch': 'localhacking', })
-        n = repo.commitctx(ctx)
+        # Why is this here? Revisit! T24862348
+        repo.commitctx(ctx)
         self.assertEqual(self.repo['tip']['bogus'].data(),
                          'contents of bogus')
         before = repo['tip'].hex()

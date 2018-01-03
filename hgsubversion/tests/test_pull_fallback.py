@@ -1,11 +1,8 @@
 import test_util
 
-import re
 import mercurial
 from mercurial import commands
 from hgsubversion import stupid
-from hgsubversion import svnwrap
-from hgsubversion import wrappers
 
 class TestPullFallback(test_util.TestBase):
     def setUp(self):

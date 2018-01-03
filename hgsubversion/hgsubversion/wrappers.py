@@ -17,17 +17,13 @@ from mercurial import util as hgutil
 from mercurial import node
 from mercurial import i18n
 from mercurial import extensions
-from mercurial import repair
-from mercurial import revset
 from mercurial import scmutil
 
 import inspect
-import layouts
 import replay
 import pushmod
 import stupid as stupidmod
 import svnwrap
-import svnrepo
 import util
 
 try:

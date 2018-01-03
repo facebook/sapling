@@ -5,8 +5,6 @@ of the API concrete layouts are expected to implement.
 
 """
 
-from mercurial import util as hgutil
-
 class BaseLayout(object):
 
     def __init__(self, meta):

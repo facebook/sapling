@@ -211,7 +211,9 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         if ha == node.nullid:
             continue
 
-        parent_ctx = meta.repo.changectx(ha)
+        # Why are we constructing this? Follow up! (T24862348)
+        meta.repo.changectx(ha)
+
         files = []
         def del_all_files(*args):
             raise IOError(errno.ENOENT, 'deleting all files')

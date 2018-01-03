@@ -1,9 +1,6 @@
 import cStringIO
 import errno
 import os
-import shutil
-import sys
-import tempfile
 import urllib
 import collections
 

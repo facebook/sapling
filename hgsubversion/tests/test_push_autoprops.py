@@ -1,6 +1,3 @@
-import subprocess
-import sys
-import unittest
 import os
 
 import test_util

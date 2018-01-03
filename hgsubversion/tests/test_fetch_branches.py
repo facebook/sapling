@@ -4,7 +4,6 @@ import unittest
 
 from mercurial import error
 from mercurial import hg
-from mercurial import node
 
 from hgsubversion import compathacks
 

@@ -1,7 +1,6 @@
 import test_util
 
 import sys
-import unittest
 
 class TestFetchRenames(test_util.TestBase):
     stupid_mode_tests = True

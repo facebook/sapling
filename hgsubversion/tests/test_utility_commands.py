@@ -1,7 +1,6 @@
 import test_util
 
 import os
-import unittest
 import re
 
 from hgext import rebase

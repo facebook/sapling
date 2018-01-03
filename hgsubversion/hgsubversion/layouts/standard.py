@@ -1,5 +1,3 @@
-import os.path
-
 import base
 
 class StandardLayout(base.BaseLayout):

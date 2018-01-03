@@ -1,7 +1,5 @@
 import test_util
 
-import unittest
-
 from mercurial import node
 
 class TestFetchExec(test_util.TestBase):

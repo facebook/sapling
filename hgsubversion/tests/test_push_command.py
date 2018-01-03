@@ -1,6 +1,5 @@
 import test_util
 
-import atexit
 import errno
 import os
 import sys
@@ -8,7 +7,6 @@ import random
 import shutil
 import socket
 import subprocess
-import unittest
 
 from mercurial import context
 from mercurial import commands
@@ -50,7 +48,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         old_tip = repo['tip'].node()
         self.pushrevisions()
@@ -78,7 +76,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         old_tip = repo['tip'].node()
         self.pushrevisions()
@@ -97,7 +95,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         old_tip = repo['tip'].node()
         try:
@@ -150,7 +148,7 @@ class PushTests(test_util.TestBase):
         # client and server both use the same IPv4 or IPv6 address.
         try:
             addrinfo = socket.getaddrinfo(self.host, self.port)
-        except socket.gaierror as e:
+        except socket.gaierror:
             # gethostname() can give a hostname that doesn't
             # resolve. Seems bad, but let's fall back to `localhost` in
             # that case and hope for the best.
@@ -212,7 +210,7 @@ class PushTests(test_util.TestBase):
                                  user='an_author',
                                  date='2008-10-07 20:59:48 -0500',
                                  extra={'branch': 'default', })
-            new_hash = repo.commitctx(ctx)
+            repo.commitctx(ctx)
             if not commit:
                 return # some tests use this test as an extended setup.
             hg.update(repo, repo['tip'].node())
@@ -261,7 +259,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         if not commit:
             return # some tests use this test as an extended setup.
         hg.update(repo, repo['tip'].node())
@@ -334,7 +332,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2008-10-07 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
         tip = self.repo['tip']
@@ -347,7 +345,7 @@ class PushTests(test_util.TestBase):
         try:
             self.assertEqual(tip.parents()[0]['adding_file2'].data(), 'foo')
             assert False, "this is impossible, adding_file2 should not be in this manifest."
-        except revlog.LookupError, e:
+        except revlog.LookupError:
             pass
         self.assertEqual(tip.branch(), 'default')
 
@@ -425,7 +423,7 @@ class PushTests(test_util.TestBase):
                              'an author',
                              '2008-10-29 21:26:00 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
         tip = self.repo['tip']
@@ -679,7 +677,7 @@ class PushTests(test_util.TestBase):
         self.pushrevisions()
 
     def test_push_emptying_changeset(self):
-        r = self.repo['tip']
+        self.repo['tip']
         changes = [
                 ('alpha', None, None),
                 ('beta', None, None),
@@ -704,13 +702,13 @@ class PushTests(test_util.TestBase):
         '''
 
         oldlen = test_util.repolen(self.repo)
-        oldtiphash = self.repo['default'].node()
+        self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
         newhash1 = self.commitchanges(changes)
 
         changes = [('delta', 'delta', 'sometext')]
-        newhash2 = self.commitchanges(changes)
+        self.commitchanges(changes)
 
         # push only the first commit
         repo = self.repo
@@ -735,7 +733,7 @@ class PushTests(test_util.TestBase):
         '''
 
         oldlen = test_util.repolen(self.repo)
-        oldtiphash = self.repo['default'].node()
+        self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
         newhash = self.commitchanges(changes)
@@ -785,7 +783,7 @@ class PushTests(test_util.TestBase):
                              'an_author',
                              '2012-12-13 20:59:48 -0500',
                              {'branch': 'default', })
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         p = os.path.join(repo.root, "newdir")
         os.mkdir(p)
         ctx = context.memctx(repo,
@@ -797,7 +795,7 @@ class PushTests(test_util.TestBase):
                              '2012-12-13 20:59:48 -0500',
                              {'branch': 'default', })
         os.chdir(p)
-        new_hash = repo.commitctx(ctx)
+        repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
         tip = self.repo['tip']

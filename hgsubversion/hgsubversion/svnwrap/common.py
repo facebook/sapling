@@ -1,13 +1,6 @@
-import cStringIO
-import getpass
-import errno
 import os
-import shutil
-import sys
-import tempfile
 import urlparse
 import urllib
-import collections
 import fnmatch
 import ConfigParser
 import sys
