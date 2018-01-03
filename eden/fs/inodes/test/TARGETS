@@ -29,6 +29,5 @@ cpp_unittest(
     ],
     external_deps = [
         ("googletest", None, "gmock"),
-        ("googletest", None, "gtest"),
     ],
 )

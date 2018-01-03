@@ -53,9 +53,9 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     const char* name;
     dtype_t type;
     /// If 0, look up/assign it based on name
-    fuse_ino_t ino;
+    fusell::InodeNumber ino;
 
-    Entry(const char* name, dtype_t type, fuse_ino_t ino = 0)
+    Entry(const char* name, dtype_t type, fusell::InodeNumber ino = 0)
         : name(name), type(type), ino(ino) {}
   };
   folly::fbvector<Entry> entries;
@@ -121,9 +121,8 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 }
 
 folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::setattr(
-    const struct stat& attr,
-    int to_set) {
-  return inode_->setattr(attr, to_set);
+    const fuse_setattr_in& attr) {
+  return inode_->setattr(attr);
 }
 
 folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
@@ -135,7 +134,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::getattr() {
   return inode_->getattr();
 }
 
-fuse_ino_t TreeInodeDirHandle::getInodeNumber() {
+fusell::InodeNumber TreeInodeDirHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
 } // namespace eden

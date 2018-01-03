@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <memory>
-#include "fuse_headers.h"
+#include "eden/fs/fuse/FuseTypes.h"
 
 namespace facebook {
 namespace eden {

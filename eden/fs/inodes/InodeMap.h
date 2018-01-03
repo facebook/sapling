@@ -15,7 +15,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -33,9 +33,10 @@ class TreeInode;
 class ParentInodeInfo;
 
 struct UnloadedInodeData {
-  UnloadedInodeData(fuse_ino_t p, PathComponentPiece n) : parent(p), name(n) {}
+  UnloadedInodeData(fusell::InodeNumber p, PathComponentPiece n)
+      : parent(p), name(n) {}
 
-  fuse_ino_t const parent;
+  fusell::InodeNumber const parent;
   PathComponent const name;
 };
 
@@ -43,16 +44,17 @@ class InodeMapLock;
 
 /**
  * InodeMap allows looking up Inode objects based on a inode number
- * (fuse_ino_t).
+ * (fusell::InodeNumber).
  *
  * All operations on this class are thread-safe.
  *
- * Note that fuse_ino_t values and Inode objects have separate lifetimes:
- * - fuse_ino_t numbers are allocated when we need to return a fuse_ino_t value
- *   to the FUSE APIs.  These are generally allocated by lookup() calls.
- *   FUSE will call forget() to let us know when we can forget about a
- *   fuse_ino_t value.  (We may not necessarily forget about the fuse_ino_t
- *   value immediately, though.)
+ * Note that fusell::InodeNumber values and Inode objects have separate
+ * lifetimes:
+ * - fusell::InodeNumber numbers are allocated when we need to return a
+ * fusell::InodeNumber value to the FUSE APIs.  These are generally allocated by
+ * lookup() calls. FUSE will call forget() to let us know when we can forget
+ * about a fusell::InodeNumber value.  (We may not necessarily forget about the
+ * fusell::InodeNumber value immediately, though.)
  *
  * - InodeBase objects are needed when we have to actually operate on a file or
  *   directory.  Any operation more than looking up a file name (or some of its
@@ -67,26 +69,26 @@ class InodeMapLock;
  *   the entire repository we don't want to keep Inode objects loaded for all
  *   files forever.)
  *
- * We can unload an InodeBase object even when the fuse_ino_t value is still
- * valid.  Therefore this class contains two separate maps:
- * - (fuse_ino_t --> InodeBase)
+ * We can unload an InodeBase object even when the fusell::InodeNumber value is
+ * still valid.  Therefore this class contains two separate maps:
+ * - (fusell::InodeNumber --> InodeBase)
  *   This map stores all currently loaded Inodes.
- * - (fuse_ino_t --> (parent fuse_ino_t, name))
+ * - (fusell::InodeNumber --> (parent fusell::InodeNumber, name))
  *   This map contains information about Inodes that are not currently loaded.
  *   This map contains enough information to identify the file or directory in
  *   question if we do need to load the inode.  The parent directory's
- *   fuse_ino_t may not be loaded either; we have to load it first in order to
- *   load the inode in question.
+ *   fusell::InodeNumber may not be loaded either; we have to load it first in
+ * order to load the inode in question.
  *
- * Additional Notes about fuse_ino_t allocation:
- * - fuse_ino_t numbers are primarily allocated via the
+ * Additional Notes about fusell::InodeNumber allocation:
+ * - fusell::InodeNumber numbers are primarily allocated via the
  *   EdenDispatcher::lookup() call.
  *
- *   Rather than only allocate a fuse_ino_t in this case, we go ahead and load
- *   the actual TreeInode/FileInode, since FUSE is very likely to make another
- *   call for this inode next.  Therefore, in this case the newly allocated
- *   inode number is inserted directly into loadedInodes_, without ever being
- *   in unloadedInodes_.
+ *   Rather than only allocate a fusell::InodeNumber in this case, we go ahead
+ * and load the actual TreeInode/FileInode, since FUSE is very likely to make
+ * another call for this inode next.  Therefore, in this case the newly
+ * allocated inode number is inserted directly into loadedInodes_, without ever
+ * being in unloadedInodes_.
  *
  *   The unloadedInodes_ map is primarily for inodes that were loaded and have
  *   since been unloaded due to inactivity.
@@ -94,8 +96,8 @@ class InodeMapLock;
  * - Inode objects can either be allocated via EdenDispatcher::lookup(), or via
  *   an operation on a TreeInode looking up a child entry.
  *
- *   We currently always allocate a fuse_ino_t value for any new Inode object
- *   even if it is not needed yet by the FUSE APIs.
+ *   We currently always allocate a fusell::InodeNumber value for any new Inode
+ * object even if it is not needed yet by the FUSE APIs.
  */
 class InodeMap {
  public:
@@ -125,7 +127,7 @@ class InodeMap {
    *     mounted before, this should be the maximum value across all the
    *     outstanding inodes.
    */
-  void initialize(TreeInodePtr root, fuse_ino_t maxExistingInode);
+  void initialize(TreeInodePtr root, fusell::InodeNumber maxExistingInode);
 
   /**
    * Get the root inode.
@@ -154,7 +156,7 @@ class InodeMap {
    * invoked immediately in the calling thread (if the Inode is already
    * available), or it may be invoked later in a different thread.
    */
-  folly::Future<InodePtr> lookupInode(fuse_ino_t number);
+  folly::Future<InodePtr> lookupInode(fusell::InodeNumber number);
 
   /**
    * Lookup a TreeInode object by inode number.
@@ -163,7 +165,7 @@ class InodeMap {
    * The returned Future throws ENOTDIR if this inode number does not refer to
    * a directory.
    */
-  folly::Future<TreeInodePtr> lookupTreeInode(fuse_ino_t number);
+  folly::Future<TreeInodePtr> lookupTreeInode(fusell::InodeNumber number);
 
   /**
    * Lookup a FileInode object by inode number.
@@ -172,7 +174,7 @@ class InodeMap {
    * The returned Future throws EISDIR if this inode number refers to a
    * directory.
    */
-  folly::Future<FileInodePtr> lookupFileInode(fuse_ino_t number);
+  folly::Future<FileInodePtr> lookupFileInode(fusell::InodeNumber number);
 
   /**
    * Lookup an Inode object by inode number, if it alread exists.
@@ -181,7 +183,7 @@ class InodeMap {
    * but nullptr if one is not loaded.  lookupUnloadedInode() can then be
    * called to find data for the unloaded inode.
    */
-  InodePtr lookupLoadedInode(fuse_ino_t number);
+  InodePtr lookupLoadedInode(fusell::InodeNumber number);
 
   /**
    * Lookup a loaded TreeInode object by inode number, if it alread exists.
@@ -189,7 +191,7 @@ class InodeMap {
    * Returns nullptr if this inode object is not currently loaded.
    * Throws ENOTDIR if this inode is loaded but does not refer to a directory.
    */
-  TreeInodePtr lookupLoadedTree(fuse_ino_t number);
+  TreeInodePtr lookupLoadedTree(fusell::InodeNumber number);
 
   /**
    * Lookup a loaded FileInode object by inode number, if it alread exists.
@@ -197,7 +199,7 @@ class InodeMap {
    * Returns nullptr if this inode object is not currently loaded.
    * Throws EISDIR if this inode is loaded but refers to a directory.
    */
-  FileInodePtr lookupLoadedFile(fuse_ino_t number);
+  FileInodePtr lookupLoadedFile(fusell::InodeNumber number);
 
   /**
    * Lookup data about an unloaded Inode object.
@@ -206,7 +208,7 @@ class InodeMap {
    * inode is not currently loaded.  Unloaded inode data will only be found if
    * the object is not currently loaded.
    */
-  UnloadedInodeData lookupUnloadedInode(fuse_ino_t number);
+  UnloadedInodeData lookupUnloadedInode(fusell::InodeNumber number);
 
   /**
    * Recursively determines the path for a loaded or unloaded inode. If the
@@ -218,7 +220,8 @@ class InodeMap {
    * If there is an unlinked inode in the path, this function returns
    * folly::none. If the inode is invalid, it throws EINVAL.
    */
-  folly::Optional<RelativePath> getPathForInode(fuse_ino_t inodeNumber);
+  folly::Optional<RelativePath> getPathForInode(
+      fusell::InodeNumber inodeNumber);
 
   /**
    * Decrement the number of outstanding FUSE references to an inode number.
@@ -230,7 +233,7 @@ class InodeMap {
    * object.  Therefore decrements are performed on the InodeMap so that we can
    * avoid loading an Inode object just to decrement its reference count.
    */
-  void decFuseRefcount(fuse_ino_t number, uint32_t count = 1);
+  void decFuseRefcount(fusell::InodeNumber number, uint32_t count = 1);
 
   /**
    * Persist the inode number state to disk.
@@ -332,7 +335,7 @@ class InodeMap {
   bool shouldLoadChild(
       const TreeInode* parent,
       PathComponentPiece name,
-      fuse_ino_t childInode,
+      fusell::InodeNumber childInode,
       folly::Promise<InodePtr> promise);
 
   /**
@@ -361,7 +364,7 @@ class InodeMap {
    *
    * @return Returns the newly allocated child inode number.
    */
-  fuse_ino_t newChildLoadStarted(
+  fusell::InodeNumber newChildLoadStarted(
       const TreeInode* parent,
       PathComponentPiece name,
       folly::Promise<InodePtr> promise);
@@ -387,7 +390,7 @@ class InodeMap {
    * This should be called when an attempt to load a child inode fails.
    */
   void inodeLoadFailed(
-      fuse_ino_t number,
+      fusell::InodeNumber number,
       const folly::exception_wrapper& exception);
 
   /**
@@ -401,7 +404,7 @@ class InodeMap {
    *   inodeCreated() should be called immediately afterwards to register the
    *   new child Inode object.
    */
-  fuse_ino_t allocateInodeNumber();
+  fusell::InodeNumber allocateInodeNumber();
   void inodeCreated(const InodePtr& inode);
 
   uint64_t getLoadedInodeCount() {
@@ -422,13 +425,13 @@ class InodeMap {
    */
   struct UnloadedInode {
     UnloadedInode(
-        fuse_ino_t num,
-        fuse_ino_t parentNum,
+        fusell::InodeNumber num,
+        fusell::InodeNumber parentNum,
         PathComponentPiece entryName)
         : number(num), parent(parentNum), name(entryName) {}
 
-    fuse_ino_t const number;
-    fuse_ino_t const parent;
+    fusell::InodeNumber const number;
+    fusell::InodeNumber const parent;
     PathComponent const name;
 
     /**
@@ -469,15 +472,15 @@ class InodeMap {
      * looked up the InodeMap will wrap the Inode in an InodePtr so that the
      * caller acquires a reference.
      */
-    std::unordered_map<fuse_ino_t, InodeBase*> loadedInodes_;
+    std::unordered_map<fusell::InodeNumber, InodeBase*> loadedInodes_;
 
     /**
      * The map of currently unloaded inodes
      */
-    std::unordered_map<fuse_ino_t, UnloadedInode> unloadedInodes_;
+    std::unordered_map<fusell::InodeNumber, UnloadedInode> unloadedInodes_;
 
     /** The next inode number to allocate */
-    fuse_ino_t nextInodeNumber_{FUSE_ROOT_ID + 1};
+    fusell::InodeNumber nextInodeNumber_{FUSE_ROOT_ID + 1};
 
     /**
      * A promise to fulfill once shutdown() completes.
@@ -502,12 +505,12 @@ class InodeMap {
       folly::Promise<InodePtr>& promise,
       PathComponentPiece childName,
       bool isUnlinked,
-      fuse_ino_t childInodeNumber);
+      fusell::InodeNumber childInodeNumber);
   void startChildLookup(
       const InodePtr& parent,
       PathComponentPiece childName,
       bool isUnlinked,
-      fuse_ino_t childInodeNumber);
+      fusell::InodeNumber childInodeNumber);
 
   /**
    * Extract the list of promises waiting on the specified inode number to be
@@ -516,12 +519,12 @@ class InodeMap {
    * This method acquires the data_ lock internally.
    * It should never be called while already holding the lock.
    */
-  PromiseVector extractPendingPromises(fuse_ino_t number);
+  PromiseVector extractPendingPromises(fusell::InodeNumber number);
 
-  fuse_ino_t allocateInodeNumber(Members& data);
+  fusell::InodeNumber allocateInodeNumber(Members& data);
 
   folly::Optional<RelativePath> getPathForInodeHelper(
-      fuse_ino_t inodeNumber,
+      fusell::InodeNumber inodeNumber,
       const folly::Synchronized<Members>::ConstLockedPtr& data);
 
   /**

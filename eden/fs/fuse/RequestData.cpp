@@ -21,11 +21,15 @@ namespace fusell {
 
 const std::string RequestData::kKey("fusell");
 
-RequestData::RequestData(fuse_req_t req, Dispatcher* dispatcher)
-    : req_(req),
+RequestData::RequestData(
+    FuseChannel* channel,
+    const fuse_in_header& fuseHeader,
+    Dispatcher* dispatcher)
+    : channel_(channel),
+      fuseHeader_(fuseHeader),
       requestContext_(folly::RequestContext::saveContext()),
       dispatcher_(dispatcher) {
-  fuse_req_interrupt_func(req, RequestData::interrupter, this);
+  //  fuse_req_interrupt_func(req, RequestData::interrupter, this);
   dispatcher_->incNumOutstandingRequests();
 }
 
@@ -33,6 +37,7 @@ RequestData::~RequestData() {
   dispatcher_->decNumOutstandingRequests();
 }
 
+#if 0 // TODO: move this to the FUSE_INTERRUPT handler in FuseChannel.cpp
 void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
   auto& request = *reinterpret_cast<RequestData*>(data);
 
@@ -44,6 +49,7 @@ void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
     request.interrupter_->fut_.cancel();
   }
 }
+#endif
 
 bool RequestData::isFuseRequest() {
   return folly::RequestContext::get()->getContextData(kKey) != nullptr;
@@ -58,10 +64,13 @@ RequestData& RequestData::get() {
   return *dynamic_cast<RequestData*>(data);
 }
 
-RequestData& RequestData::create(fuse_req_t req) {
-  auto dispatcher = static_cast<Dispatcher*>(fuse_req_userdata(req));
+RequestData& RequestData::create(
+    FuseChannel* channel,
+    const fuse_in_header& fuseHeader,
+    Dispatcher* dispatcher) {
   folly::RequestContext::get()->setContextData(
-      RequestData::kKey, std::make_unique<RequestData>(req, dispatcher));
+      RequestData::kKey,
+      std::make_unique<RequestData>(channel, fuseHeader, dispatcher));
   return get();
 }
 
@@ -84,25 +93,20 @@ void RequestData::finishRequest() {
   stats_ = nullptr;
 }
 
-fuse_req_t RequestData::stealReq() {
-  fuse_req_t res = req_;
-  if (res == nullptr || !req_.compare_exchange_strong(res, nullptr)) {
+fuse_in_header RequestData::stealReq() {
+  if (fuseHeader_.opcode == 0) {
     throw std::runtime_error("req_ has been released");
   }
+  fuse_in_header res = fuseHeader_;
+  fuseHeader_.opcode = 0;
   return res;
 }
 
-fuse_req_t RequestData::getReq() const {
-  if (req_ == nullptr) {
+const fuse_in_header& RequestData::getReq() const {
+  if (fuseHeader_.opcode == 0) {
     throw std::runtime_error("req_ has been released");
   }
-  return req_;
-}
-
-const fuse_ctx& RequestData::getContext() const {
-  auto ctx = fuse_req_ctx(getReq());
-  DCHECK(ctx != nullptr) << "request is missing its context!?";
-  return *ctx;
+  return fuseHeader_;
 }
 
 Dispatcher* RequestData::getDispatcher() const {
@@ -110,117 +114,15 @@ Dispatcher* RequestData::getDispatcher() const {
 }
 
 bool RequestData::wasInterrupted() const {
-  return fuse_req_interrupted(getReq());
-}
-
-std::vector<gid_t> RequestData::getGroups() const {
-  std::vector<gid_t> grps;
-#if FUSE_MINOR_VERSION >= 8
-  grps.resize(64);
-
-  int ngroups = fuse_req_getgroups(getReq(), grps.size(), grps.data());
-  if (ngroups < 0) {
-    // OS doesn't support this operation
-    return grps;
-  }
-
-  if (ngroups > grps.size()) {
-    grps.resize(ngroups);
-    ngroups = fuse_req_getgroups(getReq(), grps.size(), grps.data());
-  }
-
-  grps.resize(ngroups);
-#endif
-  return grps;
+  return false;
 }
 
 void RequestData::replyError(int err) {
-  checkKernelError(fuse_reply_err(stealReq(), err));
+  channel_->replyError(stealReq(), err);
 }
 
 void RequestData::replyNone() {
-  fuse_reply_none(stealReq());
-}
-
-void RequestData::replyEntry(const struct fuse_entry_param& e) {
-  checkKernelError(fuse_reply_entry(stealReq(), &e));
-}
-
-bool RequestData::replyCreate(
-    const struct fuse_entry_param& e,
-    const struct fuse_file_info& fi) {
-  int err = fuse_reply_create(stealReq(), &e, &fi);
-  if (err == -ENOENT) {
-    return false;
-  } else {
-    checkKernelError(err);
-  }
-  return true;
-}
-
-void RequestData::replyAttr(const struct stat& attr, double attr_timeout) {
-  checkKernelError(fuse_reply_attr(stealReq(), &attr, attr_timeout));
-}
-
-void RequestData::replyReadLink(const std::string& link) {
-  checkKernelError(fuse_reply_readlink(stealReq(), link.c_str()));
-}
-
-bool RequestData::replyOpen(const struct fuse_file_info& fi) {
-  int err = fuse_reply_open(stealReq(), &fi);
-  if (err == -ENOENT) {
-    return false;
-  } else {
-    checkKernelError(err);
-  }
-  return true;
-}
-
-void RequestData::replyWrite(size_t count) {
-  checkKernelError(fuse_reply_write(stealReq(), count));
-}
-
-void RequestData::replyBuf(const char* buf, size_t size) {
-  if (size == 0) {
-    buf = nullptr;
-  }
-  checkKernelError(fuse_reply_buf(stealReq(), buf, size));
-}
-
-void RequestData::replyIov(const struct iovec* iov, int count) {
-  checkKernelError(fuse_reply_iov(stealReq(), iov, count));
-}
-
-void RequestData::replyStatfs(const struct statvfs& st) {
-  checkKernelError(fuse_reply_statfs(stealReq(), &st));
-}
-
-void RequestData::replyXattr(size_t count) {
-  checkKernelError(fuse_reply_xattr(stealReq(), count));
-}
-
-void RequestData::replyLock(struct flock& lock) {
-  checkKernelError(fuse_reply_lock(stealReq(), &lock));
-}
-
-void RequestData::replyBmap(uint64_t idx) {
-  checkKernelError(fuse_reply_bmap(stealReq(), idx));
-}
-
-void RequestData::replyIoctl(int result, const struct iovec* iov, int count) {
-#ifdef FUSE_IOCTL_UNRESTRICTED
-  checkKernelError(fuse_reply_ioctl(stealReq(), result, iov, count));
-#else
-  throwSystemErrorExplicit(ENOSYS);
-#endif
-}
-
-void RequestData::replyPoll(unsigned revents) {
-#if FUSE_MINOR_VERSION >= 8
-  checkKernelError(fuse_reply_poll(stealReq(), revents));
-#else
-  throwSystemErrorExplicit(ENOSYS);
-#endif
+  stealReq();
 }
 
 void RequestData::systemErrorHandler(const std::system_error& err) {

@@ -75,7 +75,7 @@ class TreeInode::IncompleteInodeLoad {
       TreeInode* inode,
       Future<unique_ptr<InodeBase>>&& future,
       PathComponentPiece name,
-      fuse_ino_t number)
+      fusell::InodeNumber number)
       : treeInode_{inode},
         number_{number},
         name_{name},
@@ -116,13 +116,13 @@ class TreeInode::IncompleteInodeLoad {
   // to null in any IncompleteInodeLoad objects that are moved-away from.
   // We don't actually own the TreeInode and we don't destroy it.
   std::unique_ptr<TreeInode, NoopDeleter> treeInode_;
-  fuse_ino_t number_;
+  fusell::InodeNumber number_;
   PathComponent name_;
   Future<unique_ptr<InodeBase>> future_;
 };
 
 TreeInode::TreeInode(
-    fuse_ino_t ino,
+    fusell::InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     std::shared_ptr<const Tree>&& tree)
@@ -135,7 +135,7 @@ TreeInode::TreeInode(
               parent->getMount()->getLastCheckoutTime())) {}
 
 TreeInode::TreeInode(
-    fuse_ino_t ino,
+    fusell::InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     Dir&& dir)
@@ -189,7 +189,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   folly::Optional<Future<InodePtr>> returnFuture;
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;
-  fuse_ino_t childNumber;
+  fusell::InodeNumber childNumber;
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(name);
@@ -315,7 +315,7 @@ Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
   return future.ensure([p = std::move(processor)]() mutable { p.reset(); });
 }
 
-fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {
+fusell::InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   auto contents = contents_.wlock();
   auto iter = contents->entries.find(name);
   if (iter == contents->entries.end()) {
@@ -336,7 +336,9 @@ fuse_ino_t TreeInode::getChildInodeNumber(PathComponentPiece name) {
   return inodeNumber;
 }
 
-void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
+void TreeInode::loadChildInode(
+    PathComponentPiece name,
+    fusell::InodeNumber number) {
   folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
   {
     auto contents = contents_.rlock();
@@ -375,7 +377,7 @@ void TreeInode::loadChildInode(PathComponentPiece name, fuse_ino_t number) {
 void TreeInode::registerInodeLoadComplete(
     folly::Future<unique_ptr<InodeBase>>& future,
     PathComponentPiece name,
-    fuse_ino_t number) {
+    fusell::InodeNumber number) {
   // This method should never be called with the contents_ lock held.  If the
   // future is already ready we will try to acquire the contents_ lock now.
   future
@@ -432,7 +434,7 @@ void TreeInode::inodeLoadComplete(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     Entry* entry,
     PathComponentPiece name,
-    fuse_ino_t number) noexcept {
+    fusell::InodeNumber number) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -454,7 +456,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     Entry* entry,
     PathComponentPiece name,
-    fuse_ino_t number) {
+    fusell::InodeNumber number) {
   XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
              << " / \"" << name << "\"";
   DCHECK(entry->getInode() == nullptr);
@@ -499,7 +501,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 }
 
 folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
-    const struct fuse_file_info&) {
+    int /* flags */) {
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
 }
 
@@ -566,7 +568,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
 void TreeInode::childMaterialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
-    fuse_ino_t childNodeId) {
+    fusell::InodeNumber childNodeId) {
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -2652,7 +2654,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   DCHECK(!entry->getInode());
 
   bool startLoad;
-  fuse_ino_t childNumber;
+  fusell::InodeNumber childNumber;
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
   if (entry->hasInodeNumber()) {
@@ -2994,8 +2996,7 @@ void TreeInode::updateOverlayHeader() const {
   }
 }
 folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
-    const struct stat& attr,
-    int to_set) {
+    const fuse_setattr_in& attr) {
   materialize();
   fusell::Dispatcher::Attr result(getMount()->initStatData());
 
@@ -3008,7 +3009,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   result.st.st_ino = getNodeId();
   result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
-  setattrTimes(attr, to_set, contents->timeStamps);
+  setattrTimes(attr, contents->timeStamps);
   result.st.st_atim = contents->timeStamps.atime;
   result.st.st_ctim = contents->timeStamps.ctime;
   result.st.st_mtim = contents->timeStamps.mtime;

@@ -372,7 +372,7 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
   return objectStore_->getTreeForCommit(commitHash);
 }
 
-fuse_ino_t EdenMount::getDotEdenInodeNumber() const {
+fusell::InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
 }
 
@@ -606,9 +606,8 @@ folly::Future<folly::File> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-    bool debug) {
-  return folly::makeFutureWith([this, eventBase, threadPool, debug] {
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
+  return folly::makeFutureWith([this, eventBase, threadPool] {
     if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
       throw std::runtime_error("mount point has already been started");
     }
@@ -618,7 +617,7 @@ folly::Future<folly::Unit> EdenMount::startFuse(
 
     auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
     channel_ = std::make_unique<fusell::FuseChannel>(
-        std::move(fuseDevice), debug, dispatcher_.get());
+        std::move(fuseDevice), dispatcher_.get());
 
     // we'll use this shortly to wait until the mount is started successfully.
     auto initFuture = initFusePromise_.getFuture();

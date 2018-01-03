@@ -545,7 +545,7 @@ void EdenServiceHandler::debugGetInodePath(
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
   INSTRUMENT_THRIFT_CALL(DBG3);
-  auto inodeNum = static_cast<fuse_ino_t>(inodeNumber);
+  auto inodeNum = static_cast<fusell::InodeNumber>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
   folly::Optional<RelativePath> relativePath =

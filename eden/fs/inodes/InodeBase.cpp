@@ -42,7 +42,7 @@ InodeBase::InodeBase(EdenMount* mount)
 }
 
 InodeBase::InodeBase(
-    fuse_ino_t ino,
+    fusell::InodeNumber ino,
     dtype_t type,
     TreeInodePtr parent,
     PathComponentPiece name)
@@ -326,12 +326,11 @@ ParentInodeInfo InodeBase::getParentInfo() const {
 
 // See Dispatcher::setattr
 folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
-    const struct stat& attr,
-    int to_set) {
+    const fuse_setattr_in& attr) {
   // Check if gid and uid are same or not.
-  if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
-    if ((to_set & FUSE_SET_ATTR_UID && attr.st_uid != getMount()->getUid()) ||
-        (to_set & FUSE_SET_ATTR_GID && attr.st_gid != getMount()->getGid())) {
+  if (attr.valid & (FATTR_UID | FATTR_GID)) {
+    if ((attr.valid & FATTR_UID && attr.uid != getMount()->getUid()) ||
+        (attr.valid & FATTR_GID && attr.gid != getMount()->getGid())) {
       folly::throwSystemErrorExplicit(
           EACCES, "changing the owner/group is not supported");
     }
@@ -339,7 +338,7 @@ folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
   }
 
   // Set FileInode or TreeInode specific data.
-  return setInodeAttr(attr, to_set);
+  return setInodeAttr(attr);
 }
 
 timespec InodeBase::getNow() const {
@@ -348,22 +347,23 @@ timespec InodeBase::getNow() const {
 
 // Helper function to set timeStamps of FileInode and TreeInode
 void InodeBase::setattrTimes(
-    const struct stat& attr,
-    int to_set,
+    const fuse_setattr_in& attr,
     InodeTimestamps& timeStamps) {
   auto currentTime = getNow();
 
   // Set atime for TreeInode.
-  if (to_set & FUSE_SET_ATTR_ATIME) {
-    timeStamps.atime = attr.st_atim;
-  } else if (to_set & FUSE_SET_ATTR_ATIME_NOW) {
+  if (attr.valid & FATTR_ATIME) {
+    timeStamps.atime.tv_sec = attr.atime;
+    timeStamps.atime.tv_nsec = attr.atimensec;
+  } else if (attr.valid & FATTR_ATIME_NOW) {
     timeStamps.atime = currentTime;
   }
 
   // Set mtime for TreeInode.
-  if (to_set & FUSE_SET_ATTR_MTIME) {
-    timeStamps.mtime = attr.st_mtim;
-  } else if (to_set & FUSE_SET_ATTR_MTIME_NOW) {
+  if (attr.valid & FATTR_MTIME) {
+    timeStamps.mtime.tv_sec = attr.mtime;
+    timeStamps.mtime.tv_nsec = attr.mtimensec;
+  } else if (attr.valid & FATTR_MTIME_NOW) {
     timeStamps.mtime = currentTime;
   }
 

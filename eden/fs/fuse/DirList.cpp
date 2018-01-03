@@ -9,8 +9,7 @@
  */
 #include "DirList.h"
 
-#include <linux/fuse.h>
-#include "fuse_headers.h"
+#include "eden/fs/fuse/FuseTypes.h"
 
 using folly::StringPiece;
 

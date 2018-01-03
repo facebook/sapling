@@ -247,11 +247,7 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   auto file = getFileInode(path);
-
-  fuse_file_info info;
-  info.flags = O_RDWR | O_TRUNC;
-  info.fh = file->getNodeId();
-  auto fileHandle = file->open(info).get();
+  auto fileHandle = file->open(O_RDWR | O_TRUNC).get();
   off_t offset = 0;
   fileHandle->write(contents, offset);
   fileHandle->fsync(/*datasync*/ true);
@@ -308,10 +304,11 @@ void TestMount::rmdir(folly::StringPiece path) {
 void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
   auto inode = getInode(RelativePathPiece{path});
 
-  struct stat desiredAttr;
+  fuse_setattr_in desiredAttr;
   memset(&desiredAttr, 0, sizeof(desiredAttr));
-  desiredAttr.st_mode = permissions;
-  inode->setattr(desiredAttr, FUSE_SET_ATTR_MODE).get();
+  desiredAttr.mode = permissions;
+  desiredAttr.valid = FATTR_MODE;
+  inode->setattr(desiredAttr).get();
 }
 
 InodePtr TestMount::getInode(RelativePathPiece path) const {

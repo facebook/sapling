@@ -45,43 +45,47 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 
-void EdenDispatcher::initConnection(fuse_conn_info&) {
+void EdenDispatcher::onConnectionReady() {
   mount_->mountStarted();
 }
 
 namespace {
 
-/** Compute a fuse_entry_param */
-fuse_entry_param computeEntryParam(
-    fuse_ino_t number,
+/** Compute a fuse_entry_out */
+fuse_entry_out computeEntryParam(
+    fusell::InodeNumber number,
     const fusell::Dispatcher::Attr& attr) {
-  fuse_entry_param entry;
-  entry.ino = number;
+  fuse_entry_out entry;
+  entry.nodeid = number;
   entry.generation = 1;
-  entry.attr = attr.st;
-  entry.attr_timeout = attr.timeout;
-  entry.entry_timeout = attr.timeout;
+  auto fuse_attr = attr.asFuseAttr();
+  entry.attr = fuse_attr.attr;
+  entry.attr_valid = fuse_attr.attr_valid;
+  entry.attr_valid_nsec = fuse_attr.attr_valid_nsec;
+  entry.entry_valid = fuse_attr.attr_valid;
+  entry.entry_valid_nsec = fuse_attr.attr_valid_nsec;
   return entry;
 }
 } // namespace
 
 folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::getattr(
-    fuse_ino_t ino) {
+    fusell::InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getattr({})", ino);
   return inodeMap_->lookupInode(ino).then(
       [](const InodePtr& inode) { return inode->getattr(); });
 }
 
 folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
-    fuse_ino_t ino,
-    const struct fuse_file_info& fi) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({})", ino);
+    fusell::InodeNumber ino,
+    int flags) {
+  FB_LOGF(
+      mount_->getStraceLogger(), DBG7, "opendir({}, flags={:x})", ino, flags);
   return inodeMap_->lookupTreeInode(ino).then(
-      [fi](const TreeInodePtr& inode) { return inode->opendir(fi); });
+      [flags](const TreeInodePtr& inode) { return inode->opendir(flags); });
 }
 
-folly::Future<fuse_entry_param> EdenDispatcher::lookup(
-    fuse_ino_t parent,
+folly::Future<fuse_entry_out> EdenDispatcher::lookup(
+    fusell::InodeNumber parent,
     PathComponentPiece namepiece) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({}, {})", parent, namepiece);
   return inodeMap_->lookupTreeInode(parent)
@@ -98,16 +102,16 @@ folly::Future<fuse_entry_param> EdenDispatcher::lookup(
       });
 }
 
-folly::Future<fusell::Dispatcher::Attr>
-EdenDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int toSet) {
+folly::Future<fusell::Dispatcher::Attr> EdenDispatcher::setattr(
+    fusell::InodeNumber ino,
+    const fuse_setattr_in& attr) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "setattr({})", ino);
-  return inodeMap_->lookupInode(ino).then([attr, toSet](const InodePtr& inode) {
-    return inode->setattr(attr, toSet);
-  });
+  return inodeMap_->lookupInode(ino).then(
+      [attr](const InodePtr& inode) { return inode->setattr(attr); });
 }
 
 folly::Future<folly::Unit> EdenDispatcher::forget(
-    fuse_ino_t ino,
+    fusell::InodeNumber ino,
     unsigned long nlookup) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "forget({}, {})", ino, nlookup);
   inodeMap_->decFuseRefcount(ino, nlookup);
@@ -115,16 +119,15 @@ folly::Future<folly::Unit> EdenDispatcher::forget(
 }
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> EdenDispatcher::open(
-    fuse_ino_t ino,
-    const struct fuse_file_info& fi) {
-  FB_LOGF(
-      mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, fi.flags);
+    fusell::InodeNumber ino,
+    int flags) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
   return inodeMap_->lookupFileInode(ino).then(
-      [fi](const FileInodePtr& inode) { return inode->open(fi); });
+      [flags](const FileInodePtr& inode) { return inode->open(flags); });
 }
 
 folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
-    fuse_ino_t parent,
+    fusell::InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
     int flags) {
@@ -151,14 +154,14 @@ folly::Future<fusell::Dispatcher::Create> EdenDispatcher::create(
       });
 }
 
-folly::Future<std::string> EdenDispatcher::readlink(fuse_ino_t ino) {
+folly::Future<std::string> EdenDispatcher::readlink(fusell::InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readlink({})", ino);
   return inodeMap_->lookupFileInode(ino).then(
       [](const FileInodePtr& inode) { return inode->readlink(); });
 }
 
-folly::Future<fuse_entry_param> EdenDispatcher::mknod(
-    fuse_ino_t parent,
+folly::Future<fuse_entry_out> EdenDispatcher::mknod(
+    fusell::InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev) {
@@ -180,8 +183,10 @@ folly::Future<fuse_entry_param> EdenDispatcher::mknod(
       });
 }
 
-folly::Future<fuse_entry_param>
-EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
+folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
+    fusell::InodeNumber parent,
+    PathComponentPiece name,
+    mode_t mode) {
   FB_LOGF(
       mount_->getStraceLogger(),
       DBG7,
@@ -200,7 +205,7 @@ EdenDispatcher::mkdir(fuse_ino_t parent, PathComponentPiece name, mode_t mode) {
 }
 
 folly::Future<folly::Unit> EdenDispatcher::unlink(
-    fuse_ino_t parent,
+    fusell::InodeNumber parent,
     PathComponentPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).then(
@@ -210,7 +215,7 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::rmdir(
-    fuse_ino_t parent,
+    fusell::InodeNumber parent,
     PathComponentPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "rmdir({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).then(
@@ -219,8 +224,8 @@ folly::Future<folly::Unit> EdenDispatcher::rmdir(
       });
 }
 
-folly::Future<fuse_entry_param> EdenDispatcher::symlink(
-    fuse_ino_t parent,
+folly::Future<fuse_entry_out> EdenDispatcher::symlink(
+    fusell::InodeNumber parent,
     PathComponentPiece name,
     StringPiece link) {
   FB_LOGF(
@@ -237,9 +242,9 @@ folly::Future<fuse_entry_param> EdenDispatcher::symlink(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::rename(
-    fuse_ino_t parent,
+    fusell::InodeNumber parent,
     PathComponentPiece namePiece,
-    fuse_ino_t newParent,
+    fusell::InodeNumber newParent,
     PathComponentPiece newNamePiece) {
   FB_LOGF(
       mount_->getStraceLogger(),
@@ -264,9 +269,9 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
   });
 }
 
-folly::Future<fuse_entry_param> EdenDispatcher::link(
-    fuse_ino_t ino,
-    fuse_ino_t newParent,
+folly::Future<fuse_entry_out> EdenDispatcher::link(
+    fusell::InodeNumber ino,
+    fusell::InodeNumber newParent,
     PathComponentPiece newName) {
   FB_LOGF(
       mount_->getStraceLogger(),
@@ -283,7 +288,9 @@ folly::Future<fuse_entry_param> EdenDispatcher::link(
       EPERM, "hard links are not supported in eden mount points");
 }
 
-Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
+Future<string> EdenDispatcher::getxattr(
+    fusell::InodeNumber ino,
+    StringPiece name) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "getxattr({}, {})", ino, name);
   return inodeMap_->lookupInode(ino).then(
       [attrName = name.str()](const InodePtr& inode) {
@@ -291,7 +298,7 @@ Future<string> EdenDispatcher::getxattr(fuse_ino_t ino, StringPiece name) {
       });
 }
 
-Future<vector<string>> EdenDispatcher::listxattr(fuse_ino_t ino) {
+Future<vector<string>> EdenDispatcher::listxattr(fusell::InodeNumber ino) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "listxattr({})", ino);
   return inodeMap_->lookupInode(ino).then(
       [](const InodePtr& inode) { return inode->listxattr(); });

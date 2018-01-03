@@ -36,7 +36,10 @@
 #include "eden/fs/takeover/TakeoverServer.h"
 #include "eden/fs/utils/Clock.h"
 
-DEFINE_bool(debug, false, "run fuse in debug mode");
+DEFINE_bool(
+    debug,
+    false,
+    "run fuse in debug mode"); // TODO: remove; no longer needed
 DEFINE_bool(
     takeover,
     false,
@@ -459,8 +462,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               addToMountPoints(edenMount);
 
               // Start up the fuse workers.
-              return edenMount->startFuse(
-                  getMainEventBase(), threadPool_, FLAGS_debug);
+              return edenMount->startFuse(getMainEventBase(), threadPool_);
             })
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture

@@ -42,8 +42,6 @@ cpp_library(
         "//folly/io:iobuf",
         "//folly/io/async:request_context",
         "//folly/stats:timeseries_histogram",
-    ],
-    external_deps = [
-        ("fuse", None, "fuse"),
+        "//eden/third-party:fuse_kernel",
     ],
 )

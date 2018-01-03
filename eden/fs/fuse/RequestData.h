@@ -11,8 +11,10 @@
 #include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
+#include <sys/stat.h>
 #include "eden/fs/fuse/EdenStats.h"
-#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/FuseTypes.h"
 
 namespace facebook {
 namespace eden {
@@ -21,7 +23,8 @@ namespace fusell {
 class Dispatcher;
 
 class RequestData : public folly::RequestData {
-  std::atomic<fuse_req_t> req_;
+  FuseChannel* channel_;
+  fuse_in_header fuseHeader_;
   // We're managed by this context, so we only keep a weak ref
   std::weak_ptr<folly::RequestContext> requestContext_;
   // Needed to track stats
@@ -30,8 +33,7 @@ class RequestData : public folly::RequestData {
   ThreadLocalEdenStats* stats_{nullptr};
   Dispatcher* dispatcher_{nullptr};
 
-  static void interrupter(fuse_req_t req, void* data);
-  fuse_req_t stealReq();
+  fuse_in_header stealReq();
 
   struct Cancel {
     folly::Future<folly::Unit> fut_;
@@ -44,10 +46,16 @@ class RequestData : public folly::RequestData {
   RequestData& operator=(const RequestData&) = delete;
   RequestData(RequestData&&) = default;
   RequestData& operator=(RequestData&&) = default;
-  explicit RequestData(fuse_req_t req, Dispatcher* dispatcher);
+  explicit RequestData(
+      FuseChannel* channel,
+      const fuse_in_header& fuseHeader,
+      Dispatcher* dispatcher);
   ~RequestData();
   static RequestData& get();
-  static RequestData& create(fuse_req_t req);
+  static RequestData& create(
+      FuseChannel* channel,
+      const fuse_in_header& fuseHeader,
+      Dispatcher* dispatcher);
 
   bool hasCallback() override {
     return false;
@@ -62,15 +70,12 @@ class RequestData : public folly::RequestData {
       EdenStats::HistogramPtr histogram);
   void finishRequest();
 
-  // Returns the request context, which holds uid, gid, pid and umask info
-  const fuse_ctx& getContext() const;
-
   // Returns the associated dispatcher instance
   Dispatcher* getDispatcher() const;
 
   // Returns the underlying fuse request, throwing an error if it has
   // already been released
-  fuse_req_t getReq() const;
+  const fuse_in_header& getReq() const;
 
   // Check whether the request has already been interrupted
   bool wasInterrupted() const;
@@ -100,43 +105,28 @@ class RequestData : public folly::RequestData {
   static void systemErrorHandler(const std::system_error& err);
   static void genericErrorHandler(const std::exception& err);
 
-  // Returns the supplementary group IDs for the process making the
-  // current request
-  std::vector<gid_t> getGroups() const;
+  template <typename T>
+  void sendReply(const T& payload) {
+    channel_->sendReply(stealReq(), payload);
+  }
 
-  // The various fuse_reply_XXX functions implicity free the request
-  // pointer.  We prefer to avoid keeping a stale pointer, hence these
-  // methods to maintain consistency.
-  // If the replyXXX function returns false, it means that the request
-  // was interrupted and that the dispatcher may need to clean up some
-  // of its state.
+  void sendReply(folly::ByteRange bytes) {
+    channel_->sendReply(stealReq(), bytes);
+  }
+
+  void sendReply(folly::fbvector<iovec>&& vec) {
+    channel_->sendReply(stealReq(), std::move(vec));
+  }
+
+  void sendReply(folly::StringPiece piece) {
+    channel_->sendReply(stealReq(), folly::ByteRange(piece));
+  }
 
   // Reply with a negative errno value or 0 for success
   void replyError(int err);
 
   // Don't send a reply, just release req_
   void replyNone();
-
-  // Reply with a directory entry
-  void replyEntry(const struct fuse_entry_param& e);
-
-  // Reply with a directory entry and open params
-  bool replyCreate(
-      const struct fuse_entry_param& e,
-      const struct fuse_file_info& fi);
-
-  void replyAttr(const struct stat& attr, double attr_timeout);
-  void replyReadLink(const std::string& link);
-  bool replyOpen(const struct fuse_file_info& fi);
-  void replyWrite(size_t count);
-  void replyBuf(const char* buf, size_t size);
-  void replyIov(const struct iovec* iov, int count);
-  void replyStatfs(const struct statvfs& st);
-  void replyXattr(size_t count);
-  void replyLock(struct flock& lock);
-  void replyBmap(uint64_t idx);
-  void replyIoctl(int result, const struct iovec* iov, int count);
-  void replyPoll(unsigned revents);
 
  private:
   std::unique_ptr<Cancel> interrupter_;

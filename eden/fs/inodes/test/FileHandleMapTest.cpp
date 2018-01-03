@@ -23,16 +23,16 @@ namespace {
 
 class FakeDirHandle : public DirHandle {
  public:
-  explicit FakeDirHandle(fuse_ino_t inode) : inode_(inode) {}
+  explicit FakeDirHandle(fusell::InodeNumber inode) : inode_(inode) {}
 
-  fuse_ino_t getInodeNumber() override {
+  fusell::InodeNumber getInodeNumber() override {
     return inode_;
   }
   folly::Future<Dispatcher::Attr> getattr() override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<Dispatcher::Attr> setattr(const struct stat& attr, int to_set)
-      override {
+  folly::Future<Dispatcher::Attr> setattr(
+      const fuse_setattr_in& /* attr */) override {
     throw std::runtime_error("fake!");
   }
   folly::Future<DirList> readdir(DirList&& list, off_t off) override {
@@ -44,21 +44,21 @@ class FakeDirHandle : public DirHandle {
   }
 
  private:
-  fuse_ino_t inode_;
+  fusell::InodeNumber inode_;
 };
 
 class FakeFileHandle : public FileHandle {
  public:
-  explicit FakeFileHandle(fuse_ino_t inode) : inode_(inode) {}
+  explicit FakeFileHandle(fusell::InodeNumber inode) : inode_(inode) {}
 
-  fuse_ino_t getInodeNumber() override {
+  fusell::InodeNumber getInodeNumber() override {
     return inode_;
   }
   folly::Future<Dispatcher::Attr> getattr() override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<Dispatcher::Attr> setattr(const struct stat& attr, int to_set)
-      override {
+  folly::Future<Dispatcher::Attr> setattr(
+      const fuse_setattr_in& /* attr */) override {
     throw std::runtime_error("fake!");
   }
 
@@ -79,11 +79,12 @@ class FakeFileHandle : public FileHandle {
   }
 
  private:
-  fuse_ino_t inode_;
+  fusell::InodeNumber inode_;
 };
 } // namespace
 
-FileHandleMapEntry makeEntry(fuse_ino_t inode, uint64_t handleId, bool isDir) {
+FileHandleMapEntry
+makeEntry(fusell::InodeNumber inode, uint64_t handleId, bool isDir) {
   FileHandleMapEntry entry;
   entry.inodeNumber = inode;
   entry.handleId = (int64_t)handleId;

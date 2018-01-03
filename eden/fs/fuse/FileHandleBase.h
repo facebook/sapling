@@ -27,7 +27,7 @@ class FileHandleBase {
    * Return the inode number.
    * This is used in lieu of getattr() by the code that serializes
    * the FileHandleMap. */
-  virtual fuse_ino_t getInodeNumber() = 0;
+  virtual fusell::InodeNumber getInodeNumber() = 0;
 
   /**
    * Get file attributes
@@ -45,8 +45,7 @@ class FileHandleBase {
    * @param to_set bit mask of attributes which should be set
    */
   virtual folly::Future<Dispatcher::Attr> setattr(
-      const struct stat& attr,
-      int to_set) = 0;
+      const fuse_setattr_in& attr) = 0;
 
   /* The result of an ioctl operation */
   struct Ioctl {

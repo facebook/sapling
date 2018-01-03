@@ -93,9 +93,8 @@ fusell::Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
 
 fusell::Dispatcher::Attr setFileAttr(
     const FileInodePtr& inode,
-    const struct stat& desired,
-    int setattrMask) {
-  auto attrFuture = inode->setattr(desired, setattrMask);
+    const fuse_setattr_in& desired) {
+  auto attrFuture = inode->setattr(desired);
   if (!attrFuture.isReady()) {
     ADD_FAILURE() << "setattr() future is not ready";
     throw std::runtime_error("setattr future is not ready");
@@ -200,8 +199,9 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
 
 TEST_F(FileInodeTest, setattrTruncateAll) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_SIZE);
+  fuse_setattr_in desired = {};
+  desired.valid = FATTR_SIZE;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
@@ -212,9 +212,10 @@ TEST_F(FileInodeTest, setattrTruncateAll) {
 
 TEST_F(FileInodeTest, setattrTruncatePartial) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
-  desired.st_size = 4;
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_SIZE);
+  fuse_setattr_in desired = {};
+  desired.size = 4;
+  desired.valid = FATTR_SIZE;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
@@ -225,9 +226,10 @@ TEST_F(FileInodeTest, setattrTruncatePartial) {
 
 TEST_F(FileInodeTest, setattrBiggerSize) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
-  desired.st_size = 30;
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_SIZE);
+  fuse_setattr_in desired = {};
+  desired.size = 30;
+  desired.valid = FATTR_SIZE;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
@@ -242,11 +244,12 @@ TEST_F(FileInodeTest, setattrBiggerSize) {
 
 TEST_F(FileInodeTest, setattrPermissions) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
+  fuse_setattr_in desired = {};
 
   for (int n = 0; n <= 0777; ++n) {
-    desired.st_mode = n;
-    auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_MODE);
+    desired.mode = n;
+    desired.valid = FATTR_MODE;
+    auto attr = setFileAttr(inode, desired);
 
     BASIC_ATTR_CHECKS(inode, attr);
     EXPECT_EQ((S_IFREG | n), attr.st.st_mode);
@@ -257,11 +260,12 @@ TEST_F(FileInodeTest, setattrPermissions) {
 
 TEST_F(FileInodeTest, setattrFileType) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
+  fuse_setattr_in desired = {};
 
   // File type bits in the mode should be ignored.
-  desired.st_mode = S_IFLNK | 0755;
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_MODE);
+  desired.mode = S_IFLNK | 0755;
+  desired.valid = FATTR_MODE;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0755), attr.st.st_mode)
@@ -273,17 +277,18 @@ TEST_F(FileInodeTest, setattrFileType) {
 TEST_F(FileInodeTest, setattrUid) {
   auto inode = mount_.getFileInode("dir/a.txt");
   uid_t uid = inode->getMount()->getUid();
-  struct stat desired = {};
-  desired.st_uid = uid + 1;
+  fuse_setattr_in desired = {};
+  desired.uid = uid + 1;
+  desired.valid = FATTR_UID;
 
   // We do not support changing the UID to something else.
-  EXPECT_THROW_ERRNO(setFileAttr(inode, desired, FUSE_SET_ATTR_UID), EACCES);
+  EXPECT_THROW_ERRNO(setFileAttr(inode, desired), EACCES);
   auto attr = BASIC_ATTR_CHECKS(inode);
   EXPECT_EQ(uid, attr.st.st_uid);
 
   // But setting the UID to the same value should succeed.
-  desired.st_uid = uid;
-  attr = setFileAttr(inode, desired, FUSE_SET_ATTR_UID);
+  desired.uid = uid;
+  attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
@@ -294,17 +299,18 @@ TEST_F(FileInodeTest, setattrUid) {
 TEST_F(FileInodeTest, setattrGid) {
   auto inode = mount_.getFileInode("dir/a.txt");
   gid_t gid = inode->getMount()->getGid();
-  struct stat desired = {};
-  desired.st_gid = gid + 1;
+  fuse_setattr_in desired = {};
+  desired.gid = gid + 1;
+  desired.valid = FATTR_GID;
 
   // We do not support changing the GID to something else.
-  EXPECT_THROW_ERRNO(setFileAttr(inode, desired, FUSE_SET_ATTR_GID), EACCES);
+  EXPECT_THROW_ERRNO(setFileAttr(inode, desired), EACCES);
   auto attr = BASIC_ATTR_CHECKS(inode);
   EXPECT_EQ(gid, attr.st.st_gid);
 
   // But setting the GID to the same value should succeed.
-  desired.st_gid = gid;
-  attr = setFileAttr(inode, desired, FUSE_SET_ATTR_GID);
+  desired.gid = gid;
+  attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
@@ -314,12 +320,13 @@ TEST_F(FileInodeTest, setattrGid) {
 
 TEST_F(FileInodeTest, setattrAtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
+  fuse_setattr_in desired = {};
+  desired.valid = FATTR_ATIME;
 
   // Set the atime to a specific value
-  desired.st_atim.tv_sec = 1234;
-  desired.st_atim.tv_nsec = 5678;
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_ATIME);
+  desired.atime = 1234;
+  desired.atimensec = 5678;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_atime);
@@ -329,9 +336,10 @@ TEST_F(FileInodeTest, setattrAtime) {
   mount_.getClock().advance(10min);
 
   // Ask to set the atime to the current time
-  desired.st_atim.tv_sec = 8765;
-  desired.st_atim.tv_nsec = 4321;
-  attr = setFileAttr(inode, desired, FUSE_SET_ATTR_ATIME_NOW);
+  desired.atime = 8765;
+  desired.atimensec = 4321;
+  desired.valid = FATTR_ATIME_NOW;
+  attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(
@@ -341,12 +349,13 @@ TEST_F(FileInodeTest, setattrAtime) {
 
 TEST_F(FileInodeTest, setattrMtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  struct stat desired = {};
+  fuse_setattr_in desired = {};
 
   // Set the mtime to a specific value
-  desired.st_mtim.tv_sec = 1234;
-  desired.st_mtim.tv_nsec = 5678;
-  auto attr = setFileAttr(inode, desired, FUSE_SET_ATTR_MTIME);
+  desired.mtime = 1234;
+  desired.mtimensec = 5678;
+  desired.valid = FATTR_MTIME;
+  auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_mtime);
@@ -356,9 +365,10 @@ TEST_F(FileInodeTest, setattrMtime) {
   // Ask to set the mtime to the current time
   mount_.getClock().advance(1234min);
   auto start = mount_.getClock().getTimePoint();
-  desired.st_mtim.tv_sec = 8765;
-  desired.st_mtim.tv_nsec = 4321;
-  attr = setFileAttr(inode, desired, FUSE_SET_ATTR_MTIME_NOW);
+  desired.mtime = 8765;
+  desired.mtimensec = 4321;
+  desired.valid = FATTR_MTIME_NOW;
+  attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(start, folly::to<FakeClock::time_point>(attr.st.st_mtim));
@@ -378,10 +388,7 @@ TEST_F(FileInodeTest, writingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  fuse_file_info fi;
-  memset(&fi, 0, sizeof(fuse_file_info));
-  fi.flags = O_WRONLY;
-  auto handle = inode->open(fi).get();
+  auto handle = inode->open(O_WRONLY).get();
   auto written = handle->write("abcd", 0).get();
   EXPECT_EQ(4, written);
 
@@ -397,10 +404,7 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  fuse_file_info fi;
-  memset(&fi, 0, sizeof(fuse_file_info));
-  fi.flags = O_WRONLY | O_TRUNC;
-  (void)inode->open(fi).get();
+  (void)inode->open(O_WRONLY | O_TRUNC).get();
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
   EXPECT_EQ(true, isInodeMaterialized(parent));

@@ -14,7 +14,7 @@
 #include <memory>
 #include <vector>
 #include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -40,7 +40,7 @@ class InodeBase {
    * Constructor for all non-root inodes.
    */
   InodeBase(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       dtype_t type,
       TreeInodePtr parent,
       PathComponentPiece name);
@@ -58,7 +58,7 @@ class InodeBase {
     void setTimestampValues(const timespec& timeStamp);
   };
 
-  fuse_ino_t getNodeId() const {
+  fusell::InodeNumber getNodeId() const {
     return ino_;
   }
 
@@ -116,8 +116,7 @@ class InodeBase {
 
   // See Dispatcher::setattr
   virtual folly::Future<fusell::Dispatcher::Attr> setattr(
-      const struct stat& attr,
-      int to_set);
+      const fuse_setattr_in& attr);
 
   virtual folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
@@ -355,10 +354,7 @@ class InodeBase {
    * Helper function to update timeStamps passed by FileInode and TreeInode in
    * InodeBase
    */
-  void setattrTimes(
-      const struct stat& attr,
-      int to_set,
-      InodeTimestamps& timeStamps);
+  void setattrTimes(const fuse_setattr_in& attr, InodeTimestamps& timeStamps);
   /**
    * Helper function to update Journal in FileInode and TreeInode.
    */
@@ -409,10 +405,9 @@ class InodeBase {
    * TreeInode related fields.
    */
   virtual folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
-      const struct stat& attr,
-      int to_set) = 0;
+      const fuse_setattr_in& attr) = 0;
 
-  fuse_ino_t const ino_;
+  fusell::InodeNumber const ino_;
 
   dtype_t const type_;
 
@@ -430,8 +425,8 @@ class InodeBase {
    * API has performed on this inode.  We must remember this inode number
    * for as long as the FUSE API has references to it.  (However, we may unload
    * the Inode object itself, destroying ourself and letting the InodeMap
-   * simply remember the association of the fuse_ino_t with our location in the
-   * file system.)
+   * simply remember the association of the fusell::InodeNumber with our
+   * location in the file system.)
    */
   std::atomic<uint32_t> numFuseReferences_{0};
 

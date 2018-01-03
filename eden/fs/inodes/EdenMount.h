@@ -21,7 +21,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include "eden/fs/fuse/EdenStats.h"
-#include "eden/fs/fuse/fuse_headers.h"
+#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/journal/JournalDelta.h"
 #include "eden/fs/model/ParentCommits.h"
@@ -219,7 +219,7 @@ class EdenMount {
   TreeInodePtr getRootInode() const;
 
   /** Get the inode number for the .eden dir */
-  fuse_ino_t getDotEdenInodeNumber() const;
+  fusell::InodeNumber getDotEdenInodeNumber() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::shared_ptr<const Tree> getRootTree() const;
@@ -387,8 +387,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
       folly::EventBase* eventBase,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-      bool debug);
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
 
   /**
    * Obtains a future that will complete once the state transitions to
@@ -551,7 +550,7 @@ class EdenMount {
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
-  fuse_ino_t dotEdenInodeNumber_{0};
+  fusell::InodeNumber dotEdenInodeNumber_{0};
 
   /**
    * A mutex around all name-changing operations in this mount point.

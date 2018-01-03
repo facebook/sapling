@@ -81,7 +81,7 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a materialized entry.
      */
-    Entry(mode_t m, fuse_ino_t number, dev_t rdev = 0)
+    Entry(mode_t m, fusell::InodeNumber number, dev_t rdev = 0)
         : mode_(m), inodeNumber_{number}, rdev_(rdev) {}
 
     Entry(Entry&& e) = default;
@@ -109,17 +109,17 @@ class TreeInode : public InodeBase {
     bool hasInodeNumber() const {
       return inodeNumber_ != 0;
     }
-    fuse_ino_t getInodeNumber() const {
+    fusell::InodeNumber getInodeNumber() const {
       DCHECK_NE(inodeNumber_, 0);
       return inodeNumber_;
     }
-    void setInodeNumber(fuse_ino_t number) {
+    void setInodeNumber(fusell::InodeNumber number) {
       DCHECK_EQ(inodeNumber_, 0);
       DCHECK(!inode_);
       inodeNumber_ = number;
     }
 
-    void setMaterialized(fuse_ino_t inode) {
+    void setMaterialized(fusell::InodeNumber inode) {
       DCHECK(inodeNumber_ == 0 || inode == inodeNumber_);
       inodeNumber_ = inode;
       hash_.clear();
@@ -210,7 +210,7 @@ class TreeInode : public InodeBase {
      * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
      * is set.)
      */
-    fuse_ino_t inodeNumber_{0};
+    fusell::InodeNumber inodeNumber_{0};
 
     /**
      * The value of the rdev field that we report in stat.
@@ -272,14 +272,14 @@ class TreeInode : public InodeBase {
   };
 
   TreeInode(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       std::shared_ptr<const Tree>&& tree);
 
   /// Construct an inode that only has backing in the Overlay area
   TreeInode(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       Dir&& dir);
@@ -315,10 +315,9 @@ class TreeInode : public InodeBase {
    */
   folly::Future<InodePtr> getChildRecursive(RelativePathPiece name);
 
-  fuse_ino_t getChildInodeNumber(PathComponentPiece name);
+  fusell::InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
-      const struct fuse_file_info& fi);
+  folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(int flags);
   folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
@@ -446,7 +445,7 @@ class TreeInode : public InodeBase {
   void childMaterialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
-      fuse_ino_t childNodeId);
+      fusell::InodeNumber childNodeId);
 
   /**
    * Update this directory when a child entry is dematerialized.
@@ -474,7 +473,7 @@ class TreeInode : public InodeBase {
    * The TreeInode will call InodeMap::inodeLoadComplete() or
    * InodeMap::inodeLoadFailed() when the load finishes.
    */
-  void loadChildInode(PathComponentPiece name, fuse_ino_t number);
+  void loadChildInode(PathComponentPiece name, fusell::InodeNumber number);
 
   /**
    * Unload all unreferenced children under this tree (recursively).
@@ -569,7 +568,7 @@ class TreeInode : public InodeBase {
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
       PathComponentPiece name,
-      fuse_ino_t number);
+      fusell::InodeNumber number);
   void inodeLoadComplete(
       PathComponentPiece childName,
       std::unique_ptr<InodeBase> childInode);
@@ -577,10 +576,12 @@ class TreeInode : public InodeBase {
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       Entry* entry,
       PathComponentPiece name,
-      fuse_ino_t number) noexcept;
+      fusell::InodeNumber number) noexcept;
 
-  folly::Future<std::unique_ptr<InodeBase>>
-  startLoadingInode(Entry* entry, PathComponentPiece name, fuse_ino_t number);
+  folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
+      Entry* entry,
+      PathComponentPiece name,
+      fusell::InodeNumber number);
 
   /**
    * Materialize this directory in the overlay.
@@ -765,8 +766,7 @@ class TreeInode : public InodeBase {
    * specific operation during setattr.
    */
   folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
-      const struct stat& attr,
-      int to_set) override;
+      const fuse_setattr_in& attr) override;
 
   /**
    * Internal function used by unloadChildrenNow(std::chrono::nanoseconds age)

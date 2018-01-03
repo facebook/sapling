@@ -42,7 +42,7 @@ class FileInode : public InodeBase {
    * returns a new FileHandle to it.
    */
   static std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> create(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
@@ -56,7 +56,7 @@ class FileInode : public InodeBase {
    * NOT_LOADED state.
    */
   FileInode(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
@@ -68,7 +68,7 @@ class FileInode : public InodeBase {
    * Overlay::openFile.
    */
   FileInode(
-      fuse_ino_t ino,
+      fusell::InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
@@ -81,8 +81,7 @@ class FileInode : public InodeBase {
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink();
 
-  folly::Future<std::shared_ptr<fusell::FileHandle>> open(
-      const struct fuse_file_info& fi);
+  folly::Future<std::shared_ptr<fusell::FileHandle>> open(int flags);
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
@@ -373,8 +372,7 @@ class FileInode : public InodeBase {
    * during setattr.
    */
   folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
-      const struct stat& attr,
-      int to_set) override;
+      const fuse_setattr_in& attr) override;
 
   folly::Synchronized<State> state_;
 

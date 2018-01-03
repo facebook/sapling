@@ -71,7 +71,9 @@ namespace {
  * significant byte.  Inode numbers are allocated in monotonically increasing
  * order, so this helps spread them out across the subdirectories.
  */
-void formatSubdirPath(MutableStringPiece subdirPath, fuse_ino_t inode) {
+void formatSubdirPath(
+    MutableStringPiece subdirPath,
+    fusell::InodeNumber inode) {
   constexpr char hexdigit[] = "0123456789abcdef";
   DCHECK_EQ(subdirPath.size(), 2);
   subdirPath[0] = hexdigit[(inode >> 4) & 0xf];
@@ -204,7 +206,8 @@ void Overlay::initNewOverlay() {
       infoPath.stringPiece(), ByteRange(infoHeader.data(), infoHeader.size()));
 }
 
-Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
+Optional<TreeInode::Dir> Overlay::loadOverlayDir(
+    fusell::InodeNumber inodeNumber) const {
   TreeInode::Dir result;
   auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
   if (!dirData.hasValue()) {
@@ -230,7 +233,7 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(fuse_ino_t inodeNumber) const {
 }
 
 void Overlay::saveOverlayDir(
-    fuse_ino_t inodeNumber,
+    fusell::InodeNumber inodeNumber,
     const TreeInode::Dir* dir) {
   // TODO: T20282158 clean up access of child inode information.
   //
@@ -279,14 +282,14 @@ void Overlay::saveOverlayDir(
       getFilePath(inodeNumber).stringPiece(), iov.data(), iov.size());
 }
 
-void Overlay::removeOverlayData(fuse_ino_t inodeNumber) const {
+void Overlay::removeOverlayData(fusell::InodeNumber inodeNumber) const {
   auto path = getFilePath(inodeNumber);
   if (::unlink(path.value().c_str()) != 0 && errno != ENOENT) {
     folly::throwSystemError("error unlinking overlay file: ", path);
   }
 }
 
-fuse_ino_t Overlay::getMaxRecordedInode() {
+fusell::InodeNumber Overlay::getMaxRecordedInode() {
   // TODO: We should probably store the max inode number in the header file
   // during graceful unmount.  When opening an overlay we can then simply read
   // back the max inode number from this file if the overlay was shut down
@@ -304,8 +307,8 @@ fuse_ino_t Overlay::getMaxRecordedInode() {
   // we could tell if it was a file or directory.  This way we could do a
   // simpler scan of opening every single file.  For now we have to walk the
   // directory tree from the root downwards.
-  fuse_ino_t maxInode = FUSE_ROOT_ID;
-  std::vector<fuse_ino_t> toProcess;
+  fusell::InodeNumber maxInode = FUSE_ROOT_ID;
+  std::vector<fusell::InodeNumber> toProcess;
   toProcess.push_back(FUSE_ROOT_ID);
   while (!toProcess.empty()) {
     auto dirInodeNumber = toProcess.back();
@@ -318,7 +321,8 @@ fuse_ino_t Overlay::getMaxRecordedInode() {
     }
 
     for (const auto& entry : dir.value().entries) {
-      auto entryInode = static_cast<fuse_ino_t>(entry.second.inodeNumber);
+      auto entryInode =
+          static_cast<fusell::InodeNumber>(entry.second.inodeNumber);
       if (entryInode == 0) {
         continue;
       }
@@ -341,7 +345,7 @@ fuse_ino_t Overlay::getMaxRecordedInode() {
     auto boostPath = boost::filesystem::path{subdirPath.value().c_str()};
     for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
       auto entryInodeNumber =
-          folly::tryTo<fuse_ino_t>(entry.path().filename().string());
+          folly::tryTo<fusell::InodeNumber>(entry.path().filename().string());
       if (entryInodeNumber.hasValue()) {
         maxInode = std::max(maxInode, entryInodeNumber.value());
       }
@@ -355,7 +359,7 @@ const AbsolutePath& Overlay::getLocalDir() const {
   return localDir_;
 }
 
-AbsolutePath Overlay::getFilePath(fuse_ino_t inodeNumber) const {
+AbsolutePath Overlay::getFilePath(fusell::InodeNumber inodeNumber) const {
   std::array<char, 2> subdir;
   formatSubdirPath(
       MutableStringPiece{subdir.data(), subdir.size()}, inodeNumber);
@@ -366,7 +370,7 @@ AbsolutePath Overlay::getFilePath(fuse_ino_t inodeNumber) const {
 }
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
-    fuse_ino_t inodeNumber,
+    fusell::InodeNumber inodeNumber,
     InodeBase::InodeTimestamps& timeStamps) const {
   auto path = getFilePath(inodeNumber);
 
@@ -464,7 +468,9 @@ void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
 }
 
 // Helper function to create an overlay file
-folly::File Overlay::createOverlayFile(fuse_ino_t childNumber, timespec ctime) {
+folly::File Overlay::createOverlayFile(
+    fusell::InodeNumber childNumber,
+    timespec ctime) {
   auto filePath = getFilePath(childNumber);
   folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
 

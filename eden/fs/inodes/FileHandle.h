@@ -23,11 +23,10 @@ class FileHandle : public fusell::FileHandle {
   explicit FileHandle(FileInodePtr inode);
   ~FileHandle() override;
 
-  fuse_ino_t getInodeNumber() override;
+  fusell::InodeNumber getInodeNumber() override;
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<fusell::Dispatcher::Attr> setattr(
-      const struct stat& attr,
-      int to_set) override;
+      const fuse_setattr_in& attr) override;
   bool preserveCache() const override;
   bool isSeekable() const override;
   folly::Future<fusell::BufVec> read(size_t size, off_t off) override;

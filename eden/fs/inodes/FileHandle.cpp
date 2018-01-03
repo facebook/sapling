@@ -35,19 +35,18 @@ folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   return inode_->getattr();
 }
 
-fuse_ino_t FileHandle::getInodeNumber() {
+fusell::InodeNumber FileHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
-    const struct stat& attr,
-    int to_set) {
+    const fuse_setattr_in& attr) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
       "setattr({})",
       inode_->getNodeId());
-  return inode_->setattr(attr, to_set);
+  return inode_->setattr(attr);
 }
 
 bool FileHandle::preserveCache() const {
