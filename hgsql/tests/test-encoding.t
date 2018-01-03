@@ -1,3 +1,5 @@
+no-check-code
+
 Python2 is required for its binary path handling
 
   $ hash python2 &>/dev/null || { echo 'skipped: missing python2'; exit 80; }

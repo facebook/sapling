@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-check-code
 
 from __future__ import absolute_import
 

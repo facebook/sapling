@@ -1,3 +1,5 @@
+no-check-code
+
   $ . "$TESTDIR/library.sh"
 
 # Populate the db with an initial commit

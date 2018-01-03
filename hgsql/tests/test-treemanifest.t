@@ -1,6 +1,6 @@
   $ $PYTHON -c 'import treemanifest' || exit 80
 
-  $ CACHEDIR=$PWD/hgcache
+  $ CACHEDIR=`pwd`/hgcache
   $ . "$TESTDIR/library.sh"
 
   $ cat >> $HGRCPATH <<EOF

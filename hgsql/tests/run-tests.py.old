@@ -6,6 +6,8 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+#
+# no-check-code
 
 # Modifying this script is tricky because it has many modes:
 #   - serial (default) vs parallel (-jN, N > 1)
