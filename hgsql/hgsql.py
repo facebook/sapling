@@ -14,7 +14,7 @@ from mercurial import error, revlog, localrepo, extensions, registrar
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
-import os, struct, time, Queue, threading
+import os, time, Queue, threading
 import warnings
 import sys
 

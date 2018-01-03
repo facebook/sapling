@@ -32,7 +32,7 @@ command="hg-ssh --read-only repos/*"
 # enable importing on demand to reduce startup time
 from mercurial import demandimport; demandimport.enable()
 
-from mercurial import dispatch, ui as uimod
+from mercurial import dispatch
 
 import sys, os, shlex
 
