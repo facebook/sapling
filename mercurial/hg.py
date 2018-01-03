@@ -970,13 +970,9 @@ def outgoing(ui, repo, dest, opts):
     recurse()
     return 0 # exit code is zero since we found outgoing changes
 
-def verify(repo, revs=None):
-    """verify the consistency of a repository
-    If revs is None, verify everything in the repository.
-    Otherwise, revs is a smartset that specifies revisions to verify
-    and some checks requiring knowledge about the entire repo will be skipped.
-    """
-    ret = verifymod.verify(repo, revs)
+def verify(repo):
+    """verify the consistency of a repository"""
+    ret = verifymod.verify(repo)
 
     # Broken subrepo references in hidden csets don't seem worth worrying about,
     # since they can't be pushed/pulled, and --hidden can be used if they are a
