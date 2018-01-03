@@ -2,6 +2,7 @@ subinclude:remotenames/.hgignore
 subinclude:hgsql/.hgignore
 subinclude:fb-hgext/.hgignore
 subinclude:hg-git/.hgignore
+subinclude:hgsubversion/.hgignore
 
 syntax: glob
 
