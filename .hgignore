@@ -1,4 +1,5 @@
 subinclude:remotenames/.hgignore
+subinclude:hgsql/.hgignore
 
 syntax: glob
 
