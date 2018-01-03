@@ -1556,6 +1556,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     usemergedriver = not overwrite and mergeactions and ms.mergedriver
 
     if usemergedriver:
+        if wctx.isinmemory():
+            raise error.InMemoryMergeConflictsError("in-memory merge does not "
+                                                    "support mergedriver")
         ms.commit()
         proceed = driverpreprocess(repo, ms, wctx, labels=labels)
         # the driver might leave some files unresolved
