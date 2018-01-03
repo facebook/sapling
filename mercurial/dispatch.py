@@ -237,6 +237,17 @@ def _runcatch(req):
             # it's not a command that server operators expect to
             # be safe to offer to users in a sandbox.
             pass
+
+        if realcmd == 'serve' and '--read-only' in req.args:
+            req.args.remove('--read-only')
+
+            if not req.ui:
+                req.ui = uimod.ui.load()
+            req.ui.setconfig('hooks', 'pretxnopen.readonlyrejectpush',
+                             rejectpush, 'dispatch')
+            req.ui.setconfig('hooks', 'prepushkey.readonlyrejectpush',
+                             rejectpush, 'dispatch')
+
         if realcmd == 'serve' and '--stdio' in cmdargs:
             # We want to constrain 'hg serve --stdio' instances pretty
             # closely, as many shared-ssh access tools want to grant
@@ -994,3 +1005,9 @@ def handlecommandexception(ui):
     ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
     ui.warn(warning)
     return False  # re-raise the exception
+
+def rejectpush(ui, **kwargs):
+    ui.warn(("Permission denied\n"))
+    # mercurial hooks use unix process conventions for hook return values
+    # so a truthy return means failure
+    return True

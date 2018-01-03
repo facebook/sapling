@@ -4683,8 +4683,9 @@ def root(ui, repo):
     ('t', 'templates', '', _('web templates to use'), _('TEMPLATE')),
     ('', 'style', '', _('template style to use'), _('STYLE')),
     ('6', 'ipv6', None, _('use IPv6 in addition to IPv4')),
-    ('', 'certificate', '', _('SSL certificate file'), _('FILE'))]
-     + subrepoopts,
+    ('', 'certificate', '', _('SSL certificate file'), _('FILE')),
+    ('', 'read-only', None, _('only allow read operations')),
+    ] + subrepoopts,
     _('[OPTION]...'),
     optionalrepo=True)
 def serve(ui, repo, **opts):

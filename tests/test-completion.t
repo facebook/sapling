@@ -186,6 +186,7 @@ Show the options for the "serve" command
   --prefix
   --profile
   --quiet
+  --read-only
   --repository
   --stdio
   --style
@@ -232,7 +233,7 @@ Show all commands + options
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, pushvars, ssh, remotecmd, insecure
   remove: after, force, subrepos, include, exclude
-  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate, subrepos
+  serve: accesslog, daemon, daemon-postexec, errorlog, port, address, prefix, name, web-conf, webdir-conf, pid-file, stdio, cmdserver, templates, style, ipv6, certificate, read-only, subrepos
   status: all, modified, added, removed, deleted, clean, unknown, ignored, no-status, terse, copies, print0, rev, change, include, exclude, subrepos, template
   summary: remote
   update: clean, check, merge, date, rev, tool

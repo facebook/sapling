@@ -430,7 +430,7 @@ Test hg-ssh in read-only mode:
   pushing to ssh://user@dummy/*/remote (glob)
   searching for changes
   remote: Permission denied
-  remote: pretxnopen.hg-ssh hook failed
+  remote: pretxnopen.readonlyrejectpush hook failed
   abort: push failed on remote
   [255]
 
