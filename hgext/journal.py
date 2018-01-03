@@ -480,6 +480,7 @@ def journal(ui, repo, *args, **opts):
 
     limit = cmdutil.loglimit(opts)
     entry = None
+    ui.pager('journal')
     for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break
