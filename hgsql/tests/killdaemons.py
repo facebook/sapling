@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import os, sys, time, errno, signal
 
 if os.name =='nt':
