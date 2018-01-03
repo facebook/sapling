@@ -112,7 +112,6 @@ if usable:
             if util.safehasattr(self, '_lz4') and self._lz4:
                 if not text:
                     return ('', text)
-                l = len(text)
                 c = lz4compressHC(text)
                 if len(text) <= len(c):
                     if text[0] == '\0':
