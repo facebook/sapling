@@ -1,3 +1,4 @@
+# no-check-code -- see T24862348
 import test_util
 
 import os

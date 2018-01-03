@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 """
 repository class-based interface for hgsubversion
 

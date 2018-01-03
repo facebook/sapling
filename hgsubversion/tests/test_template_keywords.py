@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 import test_util
 
 from mercurial import commands

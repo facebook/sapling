@@ -1,5 +1,7 @@
 #!/usr/bin/env python2
 
+# no-check-code -- see T24862348
+
 # LICENSE
 #
 # Copyright (c) 2004, Francois Beausoleil
@@ -70,7 +72,7 @@ def usage(error=None):
 
 class Transaction:
   """Represents a transaction in a Subversion repository
-  
+
      Transactions are long-lived objects which exist in the repository,
      and are used to build an intermediate representation of a new
      revision.  Once the transaction is committed, the repository

@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 """Module to hold the base API for layout classes.
 
 This module should not contain any implementation, just a definition

@@ -1,5 +1,7 @@
 """Functions to work around API changes."""
 
+# no-check-code -- see T24862348
+
 import errno
 import sys
 

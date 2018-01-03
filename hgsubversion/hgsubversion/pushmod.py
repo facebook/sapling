@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 from mercurial import util as hgutil
 
 import svnwrap

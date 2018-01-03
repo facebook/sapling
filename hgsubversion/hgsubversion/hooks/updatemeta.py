@@ -5,6 +5,8 @@
 # [hooks]
 # changegroup = python:hgsubversion.hooks.updatemeta.hook
 
+# no-check-code -- see T24862348
+
 from mercurial import node
 
 import hgsubversion

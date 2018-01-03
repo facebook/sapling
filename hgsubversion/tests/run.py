@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# no-check-code -- see T24862348
+
 import optparse
 import os
 import sys

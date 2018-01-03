@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 '''integration with Subversion repositories
 
 hgsubversion is an extension for Mercurial that allows it to act as a Subversion

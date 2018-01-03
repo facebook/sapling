@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 ''' Module for self-contained maps. '''
 
 import collections

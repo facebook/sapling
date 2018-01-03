@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+# no-check-code -- see T24862348
+
 import os
 import re
 import subprocess

@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 import base
 
 class StandardLayout(base.BaseLayout):

@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 """Tests for author maps and file maps.
 """
 import test_util

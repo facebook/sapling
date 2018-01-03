@@ -1,3 +1,5 @@
+# no-check-code -- see T24862348
+
 """Layout that allows you to define arbitrary subversion to mercurial mappings.
 
 This is the simplest layout to use if your layout is just plain weird.

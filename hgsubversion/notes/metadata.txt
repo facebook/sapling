@@ -16,8 +16,8 @@ Tags
 Note that if a tag is committed to, we can handle that case by making a branch
 and then marking it as deleted. The revmap line would look something like this:
 10 <hash> tags/the_tag
-And the commit would be done on the hg branch 'modified-tag/the_tag'. Note that 
-if this was 'tags/releases/1.0.0', then the branch would be 
+And the commit would be done on the hg branch 'modified-tag/the_tag'. Note that
+if this was 'tags/releases/1.0.0', then the branch would be
 'modified-tag/releases/1.0.0'.
 
 Detecting Closing of Branches
@@ -50,7 +50,7 @@ chosen to be compatible with the convert extension so that repos originally
 converted to hg using convert can be maintained using hgsubversion if desired.
 
 Tags (tag_info) can be reconstructed by listing the tags directory and then
-running log on each tag to determine its parent changeset. 
+running log on each tag to determine its parent changeset.
 
 The last revision converted (last_rev) can be converted simply by using the
 highest revision number encountered while rebuilding the revision map.
@@ -58,7 +58,7 @@ highest revision number encountered while rebuilding the revision map.
 The legacy tag_locations file does not need to be replaced - it will be
 obsoleted as part of the long-term branch refactor.
 
-The url will have to be provided by the user. The uuid can be re-requested from 
+The url will have to be provided by the user. The uuid can be re-requested from
 the repository.
 
 branch_info can be rebuilt during the rebuild of the revision map by recording
