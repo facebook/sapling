@@ -3,7 +3,11 @@
 
 from __future__ import absolute_import
 
-import os, sys, time, errno, signal
+import errno
+import os
+import signal
+import sys
+import time
 
 if os.name =='nt':
     import ctypes

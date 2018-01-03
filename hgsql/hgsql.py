@@ -9,16 +9,38 @@
 
 from __future__ import absolute_import
 
+import Queue
+import os
+import sys
+import threading
+import time
+import warnings
+
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import error, revlog, localrepo, extensions, registrar
-from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
-from mercurial import util, changegroup, exchange, bundle2, bundlerepo
-from mercurial import demandimport
-import os, time, Queue, threading
-import warnings
-import sys
+from mercurial import (
+    bookmarks,
+    bundle2,
+    bundlerepo,
+    changegroup,
+    commands,
+    demandimport,
+    error,
+    exchange,
+    extensions,
+    hg,
+    localrepo,
+    mdiff,
+    phases,
+    registrar,
+    repair,
+    revlog,
+    util,
+    wireproto,
+)
+
+wrapcommand = extensions.wrapcommand
+wrapfunction = extensions.wrapfunction
 
 # mysql.connector does not import nicely with the demandimporter, so temporarily
 # disable it.
