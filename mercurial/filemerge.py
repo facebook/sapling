@@ -490,6 +490,18 @@ def _forcedump(repo, mynode, orig, fcd, fco, fca, toolconf, files,
     return _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files,
                 labels=labels)
 
+def _xmergeimm(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    # In-memory merge simply raises an exception on all external merge tools,
+    # for now.
+    #
+    # It would be possible to run most tools with temporary files, but this
+    # raises the question of what to do if the user only partially resolves the
+    # file -- we can't leave a merge state. (Copy to somewhere in the .hg/
+    # directory and tell the user how to get it is my best idea, but it's
+    # clunky.)
+    raise error.InMemoryMergeConflictsError('in-memory merge does not support '
+                                            'external merge tools')
+
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
     if fcd.isabsent() or fco.isabsent():
@@ -688,15 +700,13 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
         onfailure = func.onfailure
         precheck = func.precheck
     else:
-        func = _xmerge
+        if wctx.isinmemory():
+            func = _xmergeimm
+        else:
+            func = _xmerge
         mergetype = fullmerge
         onfailure = _("merging %s failed!\n")
         precheck = None
-
-        if wctx.isinmemory():
-            raise error.InMemoryMergeConflictsError('in-memory merge does not '
-                                                    'support external merge '
-                                                    'tools')
 
     toolconf = tool, toolpath, binary, symlink
 
