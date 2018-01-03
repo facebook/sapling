@@ -10,7 +10,7 @@ having lz4revlog enabled should not affect an existing repo
 
   $ for i in 0 1 2 3 4 5 6 7 8 9; do
   >   echo qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqquuuuuuuuuuuuuuuuuuuuqqqq$i >> a
-  $ done
+  > done
   $ hg ci -q -m 1
   $ hg verify -q
 
@@ -79,7 +79,7 @@ a new repo should use lz4 by default
   $ hg ci -q -A -m lz0
   $ for i in 0 1 2 3 4 5 6 7 8 9; do
   >   echo qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqquuuuuuuuuuuuuuuuuuuu$i >> a
-  $ done
+  > done
   $ hg ci -q -m lz1
   $ hg verify -q
   $ hg tip
