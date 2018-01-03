@@ -823,6 +823,9 @@ Example for ``~/.hgrc``::
 
     Enabled by default.
 
+``uselz4``
+    Enable or disable the lz4 compression format on the revlogs.
+
 ``graph``
 ---------
 
