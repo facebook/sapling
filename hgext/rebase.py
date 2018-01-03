@@ -779,8 +779,11 @@ def rebase(ui, repo, **opts):
 
     """
     inmemory = ui.configbool('rebase', 'experimental.inmemory')
-    if opts.get('continue') or opts.get('abort'):
+    if (opts.get('continue') or opts.get('abort') or
+        repo.currenttransaction() is not None):
         # in-memory rebase is not compatible with resuming rebases.
+        # (Or if it is run within a transaction, since the restart logic can
+        # fail the entire transaction.)
         inmemory = False
 
     if inmemory:
