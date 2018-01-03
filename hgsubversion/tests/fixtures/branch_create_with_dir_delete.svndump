@@ -1,0 +1,237 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 88f76347-3f0e-4a36-b1e1-8dec7ad11590
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-04-07T22:37:33.524401Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 102
+Content-length: 102
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-07T22:37:34.076074Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 10
+Add files.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-07T22:37:35.119223Z
+PROPS-END
+
+Node-path: trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: trunk/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Node-path: trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 3
+Prop-content-length: 140
+Content-length: 140
+
+K 7
+svn:log
+V 40
+add directory al to delete on the branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-07T22:37:36.075475Z
+PROPS-END
+
+Node-path: trunk/al
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/al/foo
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Content-length: 14
+
+PROPS-END
+foo
+
+
+Revision-number: 4
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-07T22:37:39.073788Z
+PROPS-END
+
+Node-path: branches/dev_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk
+
+
+Node-path: branches/dev_branch/al
+Node-action: delete
+
+
+Revision-number: 5
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+branch changes
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-07T22:37:40.093715Z
+PROPS-END
+
+Node-path: branches/dev_branch/alpha
+Node-kind: file
+Node-action: change
+Text-content-length: 5
+Text-content-md5: 5e723ed52db2000686425ca28bc5ba4a
+Content-length: 5
+
+narf
+
+
+Node-path: branches/dev_branch/iota
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: ebcf3971120220589f1dfbf8d56e25b9
+Content-length: 15
+
+PROPS-END
+iota
+
+
+Node-path: branches/dev_branch/delta
+Node-action: delete
+
+

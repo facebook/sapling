@@ -1,0 +1,306 @@
+SVN-fs-dump-format-version: 2
+
+UUID: b402ceb9-6185-4dce-93a1-92de515c5c8b
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2011-02-25T13:54:38.654361Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:38.675100Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+addfiles
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:39.078800Z
+PROPS-END
+
+Node-path: trunk/common
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/common/ext
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/common/ext/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Text-content-sha1: 2b66fd261ee5c6cfc8de7fa466bab600bcfe4f69
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: trunk/d1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d1/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/d2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d2/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 3
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+addexternals
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:41.071346Z
+PROPS-END
+
+Node-path: trunk/d1
+Node-kind: dir
+Node-action: change
+Prop-content-length: 58
+Content-length: 58
+
+K 13
+svn:externals
+V 23
+^/trunk/common/ext ext
+
+PROPS-END
+
+
+Node-path: trunk/d2
+Node-kind: dir
+Node-action: change
+Prop-content-length: 58
+Content-length: 58
+
+K 13
+svn:externals
+V 23
+^/trunk/common/ext ext
+
+PROPS-END
+
+
+Revision-number: 4
+Prop-content-length: 110
+Content-length: 110
+
+K 7
+svn:log
+V 9
+addbranch
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:44.043149Z
+PROPS-END
+
+Node-path: branches/branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk
+
+
+Revision-number: 5
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 11
+touchbranch
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:45.080319Z
+PROPS-END
+
+Node-path: branches/branch/d3
+Node-kind: dir
+Node-action: add
+Prop-content-length: 59
+Content-length: 59
+
+K 13
+svn:externals
+V 24
+^/trunk/common/ext ext3
+
+PROPS-END
+
+
+Node-path: branches/branch/d3/d
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Text-content-sha1: e983f374794de9c64e3d1c1de1d490c0756eeeff
+Content-length: 12
+
+PROPS-END
+d
+
+
+Revision-number: 6
+Prop-content-length: 106
+Content-length: 106
+
+K 7
+svn:log
+V 5
+merge
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2011-02-25T13:54:48.049151Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 55
+Content-length: 55
+
+K 13
+svn:mergeinfo
+V 20
+/branches/branch:4-5
+PROPS-END
+
+
+Node-path: trunk/d3
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: branches/branch/d3
+Prop-content-length: 59
+Content-length: 59
+
+K 13
+svn:externals
+V 24
+^/trunk/common/ext ext3
+
+PROPS-END
+
+

@@ -1,0 +1,171 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 5b65bade-98f3-4993-a01f-b7a6710da339
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-16T16:37:53.651472Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 106
+Content-length: 106
+
+K 7
+svn:log
+V 7
+initial
+K 10
+svn:author
+V 5
+Augie
+K 8
+svn:date
+V 27
+2008-12-16T16:37:54.139835Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 2
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+branch
+K 10
+svn:author
+V 5
+Augie
+K 8
+svn:date
+V 27
+2008-12-16T16:37:57.116844Z
+PROPS-END
+
+Node-path: branches/test
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+
+
+Revision-number: 3
+Prop-content-length: 103
+Content-length: 103
+
+K 7
+svn:log
+V 4
+Mod.
+K 10
+svn:author
+V 5
+Augie
+K 8
+svn:date
+V 27
+2008-12-16T16:37:59.118952Z
+PROPS-END
+
+Node-path: branches/test/alpha
+Node-kind: file
+Node-action: change
+Text-content-length: 10
+Text-content-md5: 54add8695a828f4e66224b1ecfd9c576
+Content-length: 10
+
+alpha
+foo
+
+
+Revision-number: 4
+Prop-content-length: 102
+Content-length: 102
+
+K 7
+svn:log
+V 4
+blah
+K 10
+svn:author
+V 4
+evil
+K 8
+svn:date
+V 27
+2008-12-16T16:38:00.236345Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: delete
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: branches/test
+
+
+
+

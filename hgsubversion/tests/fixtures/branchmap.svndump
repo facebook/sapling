@@ -1,0 +1,140 @@
+SVN-fs-dump-format-version: 2
+
+UUID: e45f170d-c19e-4c14-836b-556bb41c9429
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-02-23T17:55:37.753400Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 100
+Content-length: 100
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 3
+djc
+K 8
+svn:date
+V 27
+2010-02-23T17:55:38.066481Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 106
+Content-length: 106
+
+K 7
+svn:log
+V 9
+Add file.
+K 10
+svn:author
+V 3
+djc
+K 8
+svn:date
+V 27
+2010-02-23T17:55:39.058424Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 21
+Branch to be renamed.
+K 10
+svn:author
+V 3
+djc
+K 8
+svn:date
+V 27
+2010-02-23T17:55:42.051658Z
+PROPS-END
+
+Node-path: branches/badname
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 119
+Content-length: 119
+
+K 7
+svn:log
+V 21
+Branch to be unnamed.
+K 10
+svn:author
+V 3
+djc
+K 8
+svn:date
+V 27
+2010-02-23T17:55:45.050455Z
+PROPS-END
+
+Node-path: branches/feature
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk
+
+

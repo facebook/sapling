@@ -1,0 +1,388 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 8ede5731-e772-49cc-a297-c19c9844b692
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-06-01T16:09:33.850620Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 3
+btt
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:34.084216Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/magic
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 14
+Add file alpha
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:35.078795Z
+PROPS-END
+
+Node-path: branches/magic/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Text-content-sha1: d046cd9b7ffb7661e449683313d41f6fc33e3130
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Revision-number: 3
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 13
+Add file beta
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:36.385254Z
+PROPS-END
+
+Node-path: branches/magic/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Text-content-sha1: 6c007a14875d53d9bf0ef5a6fc0257c817f0fb83
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Revision-number: 4
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 14
+Add file gamma
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:37.081077Z
+PROPS-END
+
+Node-path: branches/magic/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Text-content-sha1: 37f385b028bf2f93a4b497ca9ff44eea63945b7f
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 5
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 14
+Add file delta
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:38.071461Z
+PROPS-END
+
+Node-path: branches/magic/delta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: d2840cc81bc032bd1141b56687d0f93c
+Text-content-sha1: 4bd6315d6d7824c4e376847ca7d116738ad2f29a
+Content-length: 16
+
+PROPS-END
+delta
+
+
+Revision-number: 6
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 13
+Add file iota
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:39.073363Z
+PROPS-END
+
+Node-path: branches/magic/iota
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: ebcf3971120220589f1dfbf8d56e25b9
+Text-content-sha1: 47e9aceee5149402971cda8590e9b912c1b1053e
+Content-length: 15
+
+PROPS-END
+iota
+
+
+Revision-number: 7
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 13
+Add file zeta
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:40.082055Z
+PROPS-END
+
+Node-path: branches/magic/zeta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: 2db8f255a13ae1e49099d9dad57b4a37
+Text-content-sha1: 2c5ea36ead157ee3089bcd883f26ea2c899b2521
+Content-length: 15
+
+PROPS-END
+zeta
+
+
+Revision-number: 8
+Prop-content-length: 115
+Content-length: 115
+
+K 7
+svn:log
+V 12
+Add file eta
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:41.072675Z
+PROPS-END
+
+Node-path: branches/magic/eta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: 655d1abbe3e97298b0948ba964ad2522
+Text-content-sha1: 3c106a7ec1fe510152eebcf2cc76e135cca63f62
+Content-length: 14
+
+PROPS-END
+eta
+
+
+Revision-number: 9
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 14
+Add file theta
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:42.080715Z
+PROPS-END
+
+Node-path: branches/magic/theta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9485edf7b8ec0fdf0bc3bdb9d5fc6c28
+Text-content-sha1: dde607ddc995205a6a521f47511bd04fa506e286
+Content-length: 16
+
+PROPS-END
+theta
+
+
+Revision-number: 10
+Prop-content-length: 117
+Content-length: 117
+
+K 7
+svn:log
+V 14
+Make magic tag
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:44.048672Z
+PROPS-END
+
+Node-path: tags/magic
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 9
+Node-copyfrom-path: branches/magic
+
+
+Revision-number: 11
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 13
+remove a file
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:44.080801Z
+PROPS-END
+
+Node-path: branches/magic/theta
+Node-action: delete
+
+
+Revision-number: 12
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 15
+Tag magic again
+K 10
+svn:author
+V 8
+afackler
+K 8
+svn:date
+V 27
+2009-06-01T16:09:44.115205Z
+PROPS-END
+
+Node-path: tags/magic2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 11
+Node-copyfrom-path: branches/magic
+
+

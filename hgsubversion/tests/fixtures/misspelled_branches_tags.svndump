@@ -1,0 +1,227 @@
+SVN-fs-dump-format-version: 2
+
+UUID: a4f285b8-14d5-4bc0-92c8-0e5438624f2e
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2013-06-13T00:26:00.303912Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 120
+Content-length: 120
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:00.666275Z
+K 7
+svn:log
+V 14
+Initial commit
+PROPS-END
+
+Node-path: branchez
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tagz
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 125
+Content-length: 125
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:00.997106Z
+K 7
+svn:log
+V 19
+Added file in trunk
+PROPS-END
+
+Node-path: trunk/file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: edf45fe5c98c5367733b39bbb2bb20d9
+Text-content-sha1: 7361d1685e5c86dfc523620cfaf598f196f86239
+Content-length: 16
+
+PROPS-END
+trunk
+
+
+Revision-number: 3
+Prop-content-length: 128
+Content-length: 128
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:01.435764Z
+K 7
+svn:log
+V 22
+created tag from trunk
+PROPS-END
+
+Node-path: tagz/tag_from_trunk
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+
+
+Node-path: tagz/tag_from_trunk/file
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/file
+Text-copy-source-md5: edf45fe5c98c5367733b39bbb2bb20d9
+Text-copy-source-sha1: 7361d1685e5c86dfc523620cfaf598f196f86239
+
+
+Revision-number: 4
+Prop-content-length: 131
+Content-length: 131
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:01.816716Z
+K 7
+svn:log
+V 25
+created branch from trunk
+PROPS-END
+
+Node-path: branchez/branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+
+
+Node-path: branchez/branch/file
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/file
+Text-copy-source-md5: edf45fe5c98c5367733b39bbb2bb20d9
+Text-copy-source-sha1: 7361d1685e5c86dfc523620cfaf598f196f86239
+
+
+Revision-number: 5
+Prop-content-length: 129
+Content-length: 129
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:02.232496Z
+K 7
+svn:log
+V 23
+committed to the branch
+PROPS-END
+
+Node-path: branchez/branch/file
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 99df69f80e72a660346459fa63c31fd4
+Text-content-sha1: f49390feacc0a7fb2b36ad16dc0bc44036193402
+Content-length: 7
+
+branch
+
+
+Revision-number: 6
+Prop-content-length: 128
+Content-length: 128
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-06-13T00:26:02.596105Z
+K 7
+svn:log
+V 22
+create tag from branch
+PROPS-END
+
+Node-path: tagz/tag_from_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 4
+Node-copyfrom-path: branchez/branch
+
+
+Node-path: tagz/tag_from_branch/file
+Node-kind: file
+Node-action: delete
+
+Node-path: tagz/tag_from_branch/file
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: branchez/branch/file
+Text-copy-source-md5: 99df69f80e72a660346459fa63c31fd4
+Text-copy-source-sha1: f49390feacc0a7fb2b36ad16dc0bc44036193402
+
+
+
+

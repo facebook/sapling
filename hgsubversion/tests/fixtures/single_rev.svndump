@@ -1,0 +1,89 @@
+SVN-fs-dump-format-version: 2
+
+UUID: df2126f7-00ab-4d49-b42c-7e981dde0bcf
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-10-07T22:49:12.059692Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 11
+Empty dirs.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-07T22:49:41.118037Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 108
+Content-length: 108
+
+K 7
+svn:log
+V 9
+Add alpha
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-10-07T23:23:02.991743Z
+PROPS-END
+
+Node-path: trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 12
+Text-content-md5: 3c72ebf8bbd7fa88b1fdcee5398b5a17
+Content-length: 22
+
+PROPS-END
+file: alpha
+
+

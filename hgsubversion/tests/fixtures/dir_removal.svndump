@@ -1,0 +1,103 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 5554378f-55cc-437f-9045-6148f657307d
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2017-05-23T11:48:49.399395Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 103
+Content-length: 103
+
+K 10
+svn:author
+V 8
+testuser
+K 8
+svn:date
+V 27
+2017-05-23T11:49:53.974692Z
+K 7
+svn:log
+V 1
+1
+PROPS-END
+
+Node-path: dir1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dir1/1.txt
+Node-kind: file
+Node-action: add
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Prop-content-length: 10
+Text-content-length: 0
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dir2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: dir2/2.txt
+Node-kind: file
+Node-action: add
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Prop-content-length: 10
+Text-content-length: 0
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 103
+Content-length: 103
+
+K 10
+svn:author
+V 8
+testuser
+K 8
+svn:date
+V 27
+2017-05-23T11:50:14.852941Z
+K 7
+svn:log
+V 1
+2
+PROPS-END
+
+Node-path: dir1/dir2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: dir2
+
+
+Node-path: dir2
+Node-action: delete
+
+

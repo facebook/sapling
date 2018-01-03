@@ -1,0 +1,196 @@
+SVN-fs-dump-format-version: 2
+
+UUID: c91f719a-92f6-401b-a65d-c6820897c57c
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-15T21:48:44.999817Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-15T21:48:45.636944Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 11
+add entries
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-15T21:48:46.249879Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/aa
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 3
+Text-content-md5: d404401c8c6495b206fc35c95e55a6d5
+Content-length: 13
+
+PROPS-END
+aa
+
+
+Node-path: trunk/d1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d1/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: trunk/d1/d2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d1/d2/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: e29311f6f1bf1af907f9ef9f44b8328b
+Content-length: 12
+
+PROPS-END
+d
+
+
+Node-path: trunk/d1/d2/d3
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/d1/d2/d3/e
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9ffbf43126e33be52cd2bf7e01d627f9
+Content-length: 12
+
+PROPS-END
+e
+
+
+Node-path: trunk/d1/d2/d3/f
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 9a8ad92c50cae39aa2c5604fd0ab6d8c
+Content-length: 12
+
+PROPS-END
+f
+
+
+Node-path: trunk/d1/d2prefix
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 9
+Text-content-md5: 74409dc69996f46a4f59d3f7f39bf7c0
+Content-length: 19
+
+PROPS-END
+d2prefix
+
+
+Revision-number: 3
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 14
+remove entries
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-15T21:48:47.188246Z
+PROPS-END
+
+Node-path: trunk/d1/d2
+Node-action: delete
+
+
+Node-path: trunk/a
+Node-action: delete
+
+

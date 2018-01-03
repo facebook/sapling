@@ -1,0 +1,285 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 288797d9-b527-4683-aa49-2eb9e084ffad
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.334418Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 108
+Content-length: 108
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.393547Z
+K 7
+svn:log
+V 3
+btt
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 123
+Content-length: 123
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.442353Z
+K 7
+svn:log
+V 17
+Add file and dir.
+PROPS-END
+
+Node-path: trunk/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/dir/file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 7
+Text-content-md5: 5f2a436c7d4aa15dfbdca7b303fcae35
+Text-content-sha1: 391157987cb6fefff86fd89353356611ea621906
+Content-length: 17
+
+PROPS-END
+trunk1
+
+
+Node-path: trunk/file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 7
+Text-content-md5: 5f2a436c7d4aa15dfbdca7b303fcae35
+Text-content-sha1: 391157987cb6fefff86fd89353356611ea621906
+Content-length: 17
+
+PROPS-END
+trunk1
+
+
+Revision-number: 3
+Prop-content-length: 112
+Content-length: 112
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.504478Z
+K 7
+svn:log
+V 7
+Branch.
+PROPS-END
+
+Node-path: branches/test
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 121
+Content-length: 121
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.549176Z
+K 7
+svn:log
+V 15
+edit on branch.
+PROPS-END
+
+Node-path: branches/test/dir/file
+Node-kind: file
+Node-action: change
+Text-content-length: 8
+Text-content-md5: ed787ace107676c1dfcced2ae527df92
+Text-content-sha1: b8486c4feca589a4237a1ee428322d7109ede12e
+Content-length: 8
+
+branch1
+
+
+Node-path: branches/test/file
+Node-kind: file
+Node-action: change
+Text-content-length: 8
+Text-content-md5: ed787ace107676c1dfcced2ae527df92
+Text-content-sha1: b8486c4feca589a4237a1ee428322d7109ede12e
+Content-length: 8
+
+branch1
+
+
+Revision-number: 5
+Prop-content-length: 119
+Content-length: 119
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.600193Z
+K 7
+svn:log
+V 13
+edit on trunk
+PROPS-END
+
+Node-path: trunk/dir/file
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 28d0a7e7ef2864416b7a9398623e4d09
+Text-content-sha1: 91454e2d3487f712490f17481157e389c11a6fe0
+Content-length: 7
+
+trunk2
+
+
+Node-path: trunk/file
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 28d0a7e7ef2864416b7a9398623e4d09
+Text-content-sha1: 91454e2d3487f712490f17481157e389c11a6fe0
+Content-length: 7
+
+trunk2
+
+
+Revision-number: 6
+Prop-content-length: 118
+Content-length: 118
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.650888Z
+K 7
+svn:log
+V 12
+Close trunk.
+PROPS-END
+
+Node-path: trunk
+Node-action: delete
+
+
+Revision-number: 7
+Prop-content-length: 134
+Content-length: 134
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2014-04-03T22:42:41.757761Z
+K 7
+svn:log
+V 28
+copy from trunk before close
+PROPS-END
+
+Node-path: branches/test/dir
+Node-kind: dir
+Node-action: delete
+
+Node-path: branches/test/dir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk/dir
+
+
+
+
+Node-path: branches/test/file
+Node-kind: file
+Node-action: delete
+
+Node-path: branches/test/file
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 5
+Node-copyfrom-path: trunk/file
+Text-copy-source-md5: 28d0a7e7ef2864416b7a9398623e4d09
+Text-copy-source-sha1: 91454e2d3487f712490f17481157e389c11a6fe0
+
+
+
+

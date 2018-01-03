@@ -1,0 +1,71 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 2abea918-74b5-4124-b744-a1f76c91de90
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-11-18T14:30:05.275138Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 100
+Content-length: 100
+
+K 7
+svn:log
+V 0
+
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2010-11-18T14:30:36.517160Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/A
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+

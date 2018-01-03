@@ -1,0 +1,147 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 124c25c6-3b41-4c6b-a3a3-a0c9809dc9cb
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-08-14T19:08:00.090868Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 10
+Add files.
+K 10
+svn:author
+V 9
+anonymous
+K 8
+svn:date
+V 27
+2010-08-14T19:09:04.290181Z
+PROPS-END
+
+Node-path: A
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 16
+Text-content-md5: 98475036dc73d318982805bf4b16e8b2
+Text-content-sha1: d7dff2b1ef48b9c20c23d7b3a08b557957cec3c9
+Content-length: 26
+
+PROPS-END
+This is a file.
+
+
+Node-path: B
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 22
+Text-content-md5: d54ff73404ed6041a3bd66850b061bff
+Text-content-sha1: 4bdb40dfd6ec75cb730e678b5d7786e30170c5fb
+Content-length: 32
+
+PROPS-END
+This is another file.
+
+
+Revision-number: 2
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 10
+Add trunk.
+K 10
+svn:author
+V 9
+anonymous
+K 8
+svn:date
+V 27
+2010-08-14T19:09:23.652445Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 3
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 12
+Move a file.
+K 10
+svn:author
+V 9
+anonymous
+K 8
+svn:date
+V 27
+2010-08-14T19:09:33.945291Z
+PROPS-END
+
+Node-path: trunk/A
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: A
+Text-copy-source-md5: 98475036dc73d318982805bf4b16e8b2
+Text-copy-source-sha1: d7dff2b1ef48b9c20c23d7b3a08b557957cec3c9
+
+
+Node-path: A
+Node-action: delete
+
+
+Revision-number: 4
+Prop-content-length: 122
+Content-length: 122
+
+K 7
+svn:log
+V 18
+Move another file.
+K 10
+svn:author
+V 9
+anonymous
+K 8
+svn:date
+V 27
+2010-08-14T19:10:03.135714Z
+PROPS-END
+
+Node-path: trunk/B
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: B
+Text-copy-source-md5: d54ff73404ed6041a3bd66850b061bff
+Text-copy-source-sha1: 4bdb40dfd6ec75cb730e678b5d7786e30170c5fb
+
+
+Node-path: B
+Node-action: delete
+
+

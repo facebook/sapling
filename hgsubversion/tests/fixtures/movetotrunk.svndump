@@ -1,0 +1,154 @@
+SVN-fs-dump-format-version: 2
+
+UUID: bb3f8dfd-83a8-4fe0-b57e-00a3838532ab
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2012-10-20T20:23:15.254324Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 109
+Content-length: 109
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-20T20:23:15.271492Z
+K 7
+svn:log
+V 8
+subpaths
+PROPS-END
+
+Node-path: sub1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: sub1/sub2
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-20T20:23:16.068226Z
+K 7
+svn:log
+V 4
+adda
+PROPS-END
+
+Node-path: sub1/sub2/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: sub1/sub2/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: sub1/sub2/dir/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 3
+Prop-content-length: 115
+Content-length: 115
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-20T20:23:20.043626Z
+K 7
+svn:log
+V 13
+move to trunk
+PROPS-END
+
+Node-path: sub1/sub2/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: sub1/sub2/trunk/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: sub1/sub2/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-copy-source-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+
+
+Node-path: sub1/sub2/trunk/dir
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: sub1/sub2/dir
+
+
+Node-path: sub1/sub2/dir
+Node-action: delete
+
+
+Node-path: sub1/sub2/a
+Node-action: delete
+
+

@@ -1,0 +1,231 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 20b2173d-0f26-4070-9891-00196be06b32
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-11-25T23:08:28.726784Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:28.798249Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 14
+add a in trunk
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:29.163194Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+add b in branch1
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:30.176855Z
+PROPS-END
+
+Node-path: branches/branch1
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/branch1/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 4
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+add b to branch2
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:32.174817Z
+PROPS-END
+
+Node-path: branches/branch2
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+
+Node-path: branches/branch2/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/a
+Text-copy-source-md5: 60b725f10c9c85c70d97880dfe8191b3
+
+
+Node-path: branches/branch2/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 5
+Prop-content-length: 120
+Content-length: 120
+
+K 7
+svn:log
+V 18
+add c in branches/
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:33.166454Z
+PROPS-END
+
+Node-path: branches/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Content-length: 12
+
+PROPS-END
+c
+
+
+Revision-number: 6
+Prop-content-length: 109
+Content-length: 109
+
+K 7
+svn:log
+V 8
+change c
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-11-25T23:08:34.144541Z
+PROPS-END
+
+Node-path: branches/c
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 63fad9092ad37713ebe26b3193f89c41
+Content-length: 4
+
+c
+c
+
+

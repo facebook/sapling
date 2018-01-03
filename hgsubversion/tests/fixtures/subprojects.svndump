@@ -1,0 +1,283 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 03c99a5f-42f9-43e0-bb0d-03549a88a7e4
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2013-07-23T22:47:56.963334Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 120
+Content-length: 120
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:47:57.401454Z
+K 7
+svn:log
+V 14
+Initial commit
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: tags
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 135
+Content-length: 135
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:47:57.849874Z
+K 7
+svn:log
+V 29
+Added file and phile in trunk
+PROPS-END
+
+Node-path: trunk/other
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/other/phile
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 12
+Text-content-md5: fe5279547ba9d8c257b67c1938853896
+Text-content-sha1: 6c94bf284aa7bc931c358ae3dfcfb4fc9f335579
+Content-length: 22
+
+PROPS-END
+other trunk
+
+
+Node-path: trunk/project
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/project/file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 14
+Text-content-md5: d61b3a5935cb974e41082d9eb8eb912e
+Text-content-sha1: 1e7f7740062dc540ab20fb6cf395cad3c55f396f
+Content-length: 24
+
+PROPS-END
+project trunk
+
+
+Revision-number: 3
+Prop-content-length: 128
+Content-length: 128
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:47:58.281764Z
+K 7
+svn:log
+V 22
+created tag from trunk
+PROPS-END
+
+Node-path: tags/tag_from_trunk
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 131
+Content-length: 131
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:47:59.456625Z
+K 7
+svn:log
+V 25
+created branch from trunk
+PROPS-END
+
+Node-path: branches/branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk
+
+
+Revision-number: 5
+Prop-content-length: 137
+Content-length: 137
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:47:59.862054Z
+K 7
+svn:log
+V 31
+committed to the project branch
+PROPS-END
+
+Node-path: branches/branch/project/file
+Node-kind: file
+Node-action: change
+Text-content-length: 15
+Text-content-md5: 64cdb38c10361681c4c2918a222a3102
+Text-content-sha1: 545ef3bb672a1dd01fb9bd2a2eb7621882a4c701
+Content-length: 15
+
+project branch
+
+
+Revision-number: 6
+Prop-content-length: 130
+Content-length: 130
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:48:00.345069Z
+K 7
+svn:log
+V 24
+committed to trunk again
+PROPS-END
+
+Node-path: trunk/project/file
+Node-kind: file
+Node-action: change
+Text-content-length: 7
+Text-content-md5: 28d0a7e7ef2864416b7a9398623e4d09
+Text-content-sha1: 91454e2d3487f712490f17481157e389c11a6fe0
+Content-length: 7
+
+trunk2
+
+
+Revision-number: 7
+Prop-content-length: 135
+Content-length: 135
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:48:00.751804Z
+K 7
+svn:log
+V 29
+committed to the other branch
+PROPS-END
+
+Node-path: branches/branch/other/phile
+Node-kind: file
+Node-action: change
+Text-content-length: 13
+Text-content-md5: 7c133b867f55c0ba8688e1f111ddebaf
+Text-content-sha1: aee59a1c349cedc1ab035263bd7f14d58c6ab33b
+Content-length: 13
+
+other branch
+
+
+Revision-number: 8
+Prop-content-length: 128
+Content-length: 128
+
+K 10
+svn:author
+V 10
+dschleimer
+K 8
+svn:date
+V 27
+2013-07-23T22:48:01.199203Z
+K 7
+svn:log
+V 22
+create tag from branch
+PROPS-END
+
+Node-path: tags/tag_from_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: branches/branch
+
+

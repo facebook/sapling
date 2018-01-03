@@ -1,0 +1,175 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 0f1e934c-2a07-4fc9-acf5-47264bd6bc41
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-06T16:48:56.303240Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 12
+init project
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-06T16:48:56.429957Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 116
+Content-length: 116
+
+K 7
+svn:log
+V 14
+add a in trunk
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-06T16:48:57.178238Z
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 122
+Content-length: 122
+
+K 7
+svn:log
+V 20
+add b and z in trunk
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-06T16:48:58.191379Z
+PROPS-END
+
+Node-path: trunk/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Content-length: 12
+
+PROPS-END
+b
+
+
+Node-path: trunk/z
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: a8a78d0ff555c931f045b6f448129846
+Content-length: 12
+
+PROPS-END
+z
+
+
+Revision-number: 4
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 16
+branch and add c
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2008-12-06T16:49:02.185634Z
+PROPS-END
+
+Node-path: branches/branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Node-path: branches/branch/c
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 2cd6ee2c70b0bde53fbe6cac3c8b8bb1
+Content-length: 12
+
+PROPS-END
+c
+
+
+Node-path: branches/branch/z
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk/z
+Text-copy-source-md5: a8a78d0ff555c931f045b6f448129846
+Prop-content-length: 34
+Content-length: 34
+
+K 13
+svn:mergeinfo
+V 0
+
+PROPS-END
+
+

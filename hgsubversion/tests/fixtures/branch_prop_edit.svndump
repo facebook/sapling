@@ -1,0 +1,191 @@
+SVN-fs-dump-format-version: 2
+
+UUID: ab14e60b-7e4b-473f-980a-26ace458a00f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2008-12-12T00:18:13.309956Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 114
+Content-length: 114
+
+K 7
+svn:log
+V 14
+branches trunk
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-12-12T00:18:14.083854Z
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+Files.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-12-12T00:18:16.270290Z
+PROPS-END
+
+Node-path: trunk/alpha
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 9f9f90dbe3e5ee1218c86b8839db1995
+Content-length: 16
+
+PROPS-END
+alpha
+
+
+Node-path: trunk/beta
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: f0cf2a92516045024a0c99147b28f05b
+Content-length: 15
+
+PROPS-END
+beta
+
+
+Node-path: trunk/gamma
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 303febb9068384eca46b5b6516843b35
+Content-length: 16
+
+PROPS-END
+gamma
+
+
+Revision-number: 3
+Prop-content-length: 113
+Content-length: 113
+
+K 7
+svn:log
+V 13
+make a branch
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-12-12T00:18:19.069446Z
+PROPS-END
+
+Node-path: branches/dev_branch
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 125
+Content-length: 125
+
+K 7
+svn:log
+V 25
+Add a file on the branch.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-12-12T00:18:21.088611Z
+PROPS-END
+
+Node-path: branches/dev_branch/epsilon
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 8
+Text-content-md5: c40719840583e3f3e6744c02828d7cd9
+Content-length: 18
+
+PROPS-END
+epsilon
+
+
+Revision-number: 5
+Prop-content-length: 124
+Content-length: 124
+
+K 7
+svn:log
+V 24
+Commit bogus propchange.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2008-12-12T00:18:23.078263Z
+PROPS-END
+
+Node-path: branches/dev_branch
+Node-kind: dir
+Node-action: change
+Prop-content-length: 37
+Content-length: 37
+
+K 10
+svn:ignore
+V 6
+delta
+
+PROPS-END
+
+

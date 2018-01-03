@@ -1,0 +1,89 @@
+SVN-fs-dump-format-version: 2
+
+UUID: c866b883-4c03-404b-8609-dade481701a6
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-04-15T03:39:30.544797Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 104
+Content-length: 104
+
+K 7
+svn:log
+V 5
+trunk
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-15T03:39:31.069518Z
+PROPS-END
+
+Node-path: project
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: project/trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 118
+Content-length: 118
+
+K 7
+svn:log
+V 18
+file and empty dir
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-04-15T03:39:32.069497Z
+PROPS-END
+
+Node-path: project/trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: project/trunk/narf
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+

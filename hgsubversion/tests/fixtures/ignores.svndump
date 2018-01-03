@@ -1,0 +1,132 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 8ad10f29-7a81-4fb6-a789-b0b0ade2ec54
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2009-02-24T20:04:33.977054Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 111
+Content-length: 111
+
+K 7
+svn:log
+V 11
+Add a file.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-02-24T20:05:12.825468Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/bar
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Text-content-sha1: f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+Content-length: 14
+
+PROPS-END
+foo
+
+
+Revision-number: 2
+Prop-content-length: 105
+Content-length: 105
+
+K 7
+svn:log
+V 6
+ignore
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-02-24T20:05:49.334191Z
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 47
+Content-length: 47
+
+K 10
+svn:ignore
+V 15
+blah
+otherblah
+
+PROPS-END
+
+
+Revision-number: 3
+Prop-content-length: 124
+Content-length: 124
+
+K 7
+svn:log
+V 24
+another file and ignore.
+K 10
+svn:author
+V 5
+durin
+K 8
+svn:date
+V 27
+2009-02-24T20:07:13.884019Z
+PROPS-END
+
+Node-path: trunk/baz
+Node-kind: dir
+Node-action: add
+Prop-content-length: 37
+Content-length: 37
+
+K 10
+svn:ignore
+V 6
+magic
+
+PROPS-END
+
+
+Node-path: trunk/baz/xyzzy
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 6
+Text-content-md5: 89d447eb9afaeb94e463615e8ded6479
+Text-content-sha1: 9b3802ecbad114267dd0d1a431e57b0bca95930a
+Content-length: 16
+
+PROPS-END
+xyzzy
+
+

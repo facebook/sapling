@@ -1,0 +1,69 @@
+.. -*-restructuredtext-*-
+
+============
+hgsubversion
+============
+
+hgsubversion is an extension for Mercurial that allows using Mercurial
+as a Subversion client.
+
+At this point, hgsubversion is usable by users reasonably familiar with
+Mercurial as a VCS. It's not recommended to dive into hgsubversion as an
+introduction to Mercurial, since hgsubversion "bends the rules" a little
+and violates some of the typical assumptions of early Mercurial users.
+
+Installation
+------------
+You need to have either have Subversion 1.5 (or later) installed along with
+either Subvertpy 0.7.4 (or later) or the Subversion SWIG Python bindings. You
+need Mercurial 2.0 or later.
+
+.. _mercurial: http://selenic.com/repo/hg
+.. _mercurial-stable: http://selenic.com/repo/hg-stable
+.. _crew: http://hg.intevation.org/mercurial/crew
+.. _crew-stable: http://hg.intevation.org/mercurial/crew-stable
+
+If you are unfamiliar with installing Mercurial extensions, please see
+the UsingExtensions_ page in the Mercurial wiki. Look at the example
+for specifying an absolute path near the bottom of the page. You want
+to give the path to the top level of your clone of this repository.
+
+.. _UsingExtensions: http://mercurial.selenic.com/wiki/UsingExtensions
+
+Before using hgsubversion, I *strongly* encourage you to run the
+automated tests. Just use nose_ if you have it (or ``easy_install
+nose`` if you want it), or use ``python tests/run.py`` to run the
+suite with the conventional test runner. Note that because I use nose,
+there's a lot of stdout spew in the tests right now. The important
+part is that all the tests pass.
+
+.. _nose: http://code.google.com/p/python-nose/
+
+You can check that hgsubversion is installed and properly activated using the
+following command::
+
+ $ hg version --svn
+ Mercurial Distributed SCM (version ...)
+
+ Copyright (C) 2005-2010 Matt Mackall <mpm@selenic.com> and others
+ This is free software; see the source for copying conditions. There is NO
+ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+ hgsubversion: ...
+ Subversion: ...
+ bindings: Subvertpy ...
+
+If your bindings are listed as `SWIG`, please consider installing Subvertpy_.
+
+.. _Subvertpy: http://pypi.python.org/pypi/subvertpy
+
+Further Reading
+---------------
+
+More information on how to use hgsubversion is available from within Mercurial
+in the `subversion` help topic. To view it, use::
+
+ $ hg help subversion
+
+The Restructured Text source for this topic is also available in the file
+``hgsubverson/help/subversion.rst``.

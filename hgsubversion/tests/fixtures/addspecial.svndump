@@ -1,0 +1,302 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 01df53ad-5d72-4756-8742-f669dc98f791
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2012-05-13T22:22:43.218190Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 118
+Content-length: 118
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:44.112163Z
+K 7
+svn:log
+V 17
+initial structure
+PROPS-END
+
+Node-path: branches
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 103
+Content-length: 103
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:45.111247Z
+K 7
+svn:log
+V 3
+ci1
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 3
+Prop-content-length: 111
+Content-length: 111
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:48.110257Z
+K 7
+svn:log
+V 10
+branch foo
+PROPS-END
+
+Node-path: branches/foo
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk
+
+
+Revision-number: 4
+Prop-content-length: 107
+Content-length: 107
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:49.115096Z
+K 7
+svn:log
+V 7
+symlink
+PROPS-END
+
+Node-path: branches/foo/fnord
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: c118dba188202a1efc975bef6064180b
+Text-content-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link a
+
+Revision-number: 5
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:50.119266Z
+K 7
+svn:log
+V 5
+spacy
+PROPS-END
+
+Node-path: branches/foo/spacy name
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: branches/foo/spacy name/spacy file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Revision-number: 6
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:52.123367Z
+K 7
+svn:log
+V 5
+tilde
+PROPS-END
+
+Node-path: branches/foo/spacy name/surprise ~
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 7
+Prop-content-length: 111
+Content-length: 111
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:54.129462Z
+K 7
+svn:log
+V 10
+executable
+PROPS-END
+
+Node-path: branches/foo/exe
+Node-kind: file
+Node-action: add
+Prop-content-length: 36
+Text-content-length: 4
+Text-content-md5: d3b07384d113edec49eaa6238ad5ff00
+Text-content-sha1: f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+Content-length: 40
+
+K 14
+svn:executable
+V 1
+*
+PROPS-END
+foo
+
+
+Revision-number: 8
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 6
+bryano
+K 8
+svn:date
+V 27
+2012-05-13T22:22:57.111370Z
+K 7
+svn:log
+V 5
+merge
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: change
+Prop-content-length: 52
+Content-length: 52
+
+K 13
+svn:mergeinfo
+V 17
+/branches/foo:3-7
+PROPS-END
+
+
+Node-path: trunk/exe
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: branches/foo/exe
+Text-copy-source-md5: d3b07384d113edec49eaa6238ad5ff00
+Text-copy-source-sha1: f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
+
+
+Node-path: trunk/fnord
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: branches/foo/fnord
+Text-copy-source-md5: c118dba188202a1efc975bef6064180b
+Text-copy-source-sha1: 41f94e4692313bf7f7c92aa600002f1dff93d6bf
+
+
+Node-path: trunk/spacy name
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 7
+Node-copyfrom-path: branches/foo/spacy name
+
+
