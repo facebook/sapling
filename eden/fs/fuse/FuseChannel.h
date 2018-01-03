@@ -10,12 +10,14 @@
 #pragma once
 #include <folly/File.h>
 #include <folly/futures/Future.h>
+#include <folly/io/async/Request.h>
 #include <stdlib.h>
 #include <sys/uio.h>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
@@ -145,6 +147,8 @@ class FuseChannel {
                          sizeof(T)});
   }
 
+  void finishRequest(const fuse_in_header& header);
+
   folly::Future<folly::Unit> fuseRead(
       const fuse_in_header* header,
       const uint8_t* arg);
@@ -245,6 +249,9 @@ class FuseChannel {
   folly::File fuseDevice_;
   fuse_init_out connInfo_;
   std::atomic<bool> sessionFinished_{false};
+  folly::Synchronized<
+      std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>>>
+      requests_;
 };
 } // namespace fusell
 } // namespace eden

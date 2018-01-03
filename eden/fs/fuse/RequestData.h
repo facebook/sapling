@@ -12,6 +12,7 @@
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
 #include <sys/stat.h>
+#include <utility>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
@@ -25,8 +26,6 @@ class Dispatcher;
 class RequestData : public folly::RequestData {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
-  // We're managed by this context, so we only keep a weak ref
-  std::weak_ptr<folly::RequestContext> requestContext_;
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   EdenStats::HistogramPtr latencyHistogram_{nullptr};
@@ -34,11 +33,6 @@ class RequestData : public folly::RequestData {
   Dispatcher* dispatcher_{nullptr};
 
   fuse_in_header stealReq();
-
-  struct Cancel {
-    folly::Future<folly::Unit> fut_;
-    explicit Cancel(folly::Future<folly::Unit>&& fut) : fut_(std::move(fut)) {}
-  };
 
  public:
   static const std::string kKey;
@@ -88,8 +82,7 @@ class RequestData : public folly::RequestData {
    */
   template <typename FUTURE>
   void setRequestFuture(FUTURE&& fut) {
-    this->interrupter_ =
-        std::make_unique<Cancel>(this->catchErrors(std::move(fut)));
+    this->interrupter_ = this->catchErrors(std::forward<FUTURE>(fut));
   }
 
   /** Append error handling clauses to a future chain
@@ -128,8 +121,14 @@ class RequestData : public folly::RequestData {
   // Don't send a reply, just release req_
   void replyNone();
 
+  // Notify this request about EINTR.  This causes the future to be
+  // cancel()'d and may result in it stopping what it was doing
+  // before it is complete.
+  void interrupt();
+
  private:
-  std::unique_ptr<Cancel> interrupter_;
+  folly::Future<folly::Unit> interrupter_;
+  std::atomic<bool> interrupted_{false};
 };
 } // namespace fusell
 } // namespace eden

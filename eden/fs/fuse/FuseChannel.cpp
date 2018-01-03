@@ -9,6 +9,7 @@
  */
 #include "eden/fs/fuse/FuseChannel.h"
 #include <folly/experimental/logging/xlog.h>
+#include <folly/io/async/Request.h>
 #include <sys/statvfs.h>
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/Dispatcher.h"
@@ -413,11 +414,35 @@ void FuseChannel::processSession() {
         replyError(*header, ENOSYS);
         break;
 
-      case FUSE_INTERRUPT:
-        // TODO: handle interrupt.
+      case FUSE_INTERRUPT: {
         // no reply is required
         XLOG(DBG7) << "FUSE_INTERRUPT";
+        auto in = reinterpret_cast<const fuse_interrupt_in*>(arg);
+
+        // Look up the fuse request; if we find it and the context
+        // is still alive, ctx will be set to it
+        std::shared_ptr<folly::RequestContext> ctx;
+
+        {
+          auto requests = requests_.wlock();
+          auto requestIter = requests->find(in->unique);
+          if (requestIter != requests->end()) {
+            ctx = requestIter->second.lock();
+          }
+        }
+
+        // If we found an existing request, temporarily activate that request
+        // context so that we can test whether the request is definitely a fuse
+        // request; if so, interrupt it.
+        if (ctx) {
+          RequestContextScopeGuard guard(ctx);
+          if (RequestData::isFuseRequest()) {
+            RequestData::get().interrupt();
+          }
+        }
+
         break;
+      }
 
       case FUSE_DESTROY:
         XLOG(DBG7) << "FUSE_DESTROY";
@@ -440,6 +465,13 @@ void FuseChannel::processSession() {
           // request.
           RequestContextScopeGuard requestContextGuard;
 
+          // Save a weak reference to this new request context.
+          // We'll need this to process FUSE_INTERRUPT requests.
+          requests_->emplace(
+              header->unique,
+              std::weak_ptr<folly::RequestContext>(
+                  RequestContext::saveContext()));
+
           auto& request = RequestData::create(this, *header, dispatcher_);
           auto& entry = handlerIter->second;
 
@@ -461,6 +493,10 @@ void FuseChannel::processSession() {
       }
     }
   }
+}
+
+void FuseChannel::finishRequest(const fuse_in_header& header) {
+  requests_->erase(header.unique);
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(

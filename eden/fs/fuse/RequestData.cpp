@@ -25,31 +25,25 @@ RequestData::RequestData(
     FuseChannel* channel,
     const fuse_in_header& fuseHeader,
     Dispatcher* dispatcher)
-    : channel_(channel),
-      fuseHeader_(fuseHeader),
-      requestContext_(folly::RequestContext::saveContext()),
-      dispatcher_(dispatcher) {
-  //  fuse_req_interrupt_func(req, RequestData::interrupter, this);
+    : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {
   dispatcher_->incNumOutstandingRequests();
 }
 
 RequestData::~RequestData() {
+  channel_->finishRequest(fuseHeader_);
   dispatcher_->decNumOutstandingRequests();
 }
 
-#if 0 // TODO: move this to the FUSE_INTERRUPT handler in FuseChannel.cpp
-void RequestData::interrupter(fuse_req_t /*req*/, void* data) {
-  auto& request = *reinterpret_cast<RequestData*>(data);
-
-  // Adopt the context of the target request
-  // Guarantee to preserve the current context
-  RequestContextScopeGuard requestContextGuard(request.requestContext_.lock());
-
-  if (request.interrupter_) {
-    request.interrupter_->fut_.cancel();
+void RequestData::interrupt() {
+  // I don't believe that we have to deal with racing to
+  // process multiple concurrent interrupt() calls.
+  // The potential race is between an interrupt() call
+  // and the completion of the request.
+  if (!interrupted_) {
+    interrupter_.cancel();
+    interrupted_ = true;
   }
 }
-#endif
 
 bool RequestData::isFuseRequest() {
   return folly::RequestContext::get()->getContextData(kKey) != nullptr;
@@ -114,7 +108,7 @@ Dispatcher* RequestData::getDispatcher() const {
 }
 
 bool RequestData::wasInterrupted() const {
-  return false;
+  return interrupted_;
 }
 
 void RequestData::replyError(int err) {
