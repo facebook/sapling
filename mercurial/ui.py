@@ -486,7 +486,8 @@ class ui(object):
                 itemdefault = item.default()
             else:
                 itemdefault = item.default
-        else:
+        # fbonly: disabled in a hotfix because it's so expensive to fix
+        elif False:
             msg = ("accessing unregistered config item: '%s.%s'")
             msg %= (section, name)
             self.develwarn(msg, 2, 'warn-config-unknown')
