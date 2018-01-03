@@ -387,6 +387,9 @@ class rebaseruntime(object):
             from mercurial.context import overlayworkingctx
             self.wctx = overlayworkingctx(self.repo)
             self.repo.ui.debug("rebasing in-memory\n")
+            msg = self.repo.ui.config('rebase', 'experimental.inmemorywarning')
+            if msg:
+                self.repo.ui.warn(msg)
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
@@ -764,6 +767,11 @@ def rebase(ui, repo, **opts):
       [rebase]
       experimental.inmemory = True
 
+    It will also print a configurable warning::
+
+      [rebase]
+      experimental.inmemorywarning = Using experimental in-memory rebase
+
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -783,6 +791,7 @@ def rebase(ui, repo, **opts):
         except error.InMemoryMergeConflictsError:
             ui.warn(_('hit merge conflicts; re-running rebase without in-memory'
                       ' merge\n'))
+            ui.log("rebase", "", rebase_imm_restart=True)
             _origrebase(ui, repo, **{'abort': True})
             return _origrebase(ui, repo, inmemory=False, **opts)
     else:
