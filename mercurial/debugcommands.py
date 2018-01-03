@@ -407,8 +407,8 @@ def debugcheckstate(ui, repo):
             ui.warn(_("%s in manifest1, but listed as state %s") % (f, state))
             errors += 1
     if errors:
-        error = _(".hg/dirstate inconsistent with current parent's manifest")
-        raise error.Abort(error)
+        msg = _(".hg/dirstate inconsistent with current parent's manifest")
+        raise error.Abort(msg)
 
 @command('debugcolor',
         [('', 'style', None, _('show all configured styles'))],
