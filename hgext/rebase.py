@@ -568,8 +568,6 @@ class rebaseruntime(object):
             revtoreuse = max(self.state)
 
             dsguard = None
-            if ui.configbool('rebase', 'singletransaction'):
-                dsguard = dirstateguard.dirstateguard(repo, 'rebase')
             if self.inmemory:
                 newnode = concludememorynode(repo, revtoreuse, p1,
                     self.external,
@@ -579,6 +577,8 @@ class rebaseruntime(object):
                     keepbranches=self.keepbranchesf,
                     date=self.date, wctx=self.wctx)
             else:
+                if ui.configbool('rebase', 'singletransaction'):
+                    dsguard = dirstateguard.dirstateguard(repo, 'rebase')
                 with util.acceptintervention(dsguard):
                     newnode = concludenode(repo, revtoreuse, p1, self.external,
                         commitmsg=commitmsg,
@@ -861,8 +861,14 @@ def _origrebase(ui, repo, inmemory=False, **opts):
         singletr = ui.configbool('rebase', 'singletransaction')
         if singletr:
             tr = repo.transaction('rebase')
+
+        # If `rebase.singletransaction` is enabled, wrap the entire operation in
+        # one transaction here. Otherwise, transactions are obtained when
+        # committing each node, which is slower but allows partial success.
         with util.acceptintervention(tr):
-            if singletr:
+            # Same logic for the dirstate guard, except we don't create one when
+            # rebasing in-memory (it's not needed).
+            if singletr and not inmemory:
                 dsguard = dirstateguard.dirstateguard(repo, 'rebase')
             with util.acceptintervention(dsguard):
                 rbsrt._performrebase(tr)
@@ -1042,8 +1048,8 @@ def externalparent(repo, state, destancestors):
 def concludememorynode(repo, rev, p1, p2, wctx=None,
                        commitmsg=None, editor=None, extrafn=None,
                        keepbranches=False, date=None):
-    '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
-    but also store useful information in extra.
+    '''Commit the memory changes with parents p1 and p2. Reuse commit info from
+    rev but also store useful information in extra.
     Return node of committed revision.'''
     ctx = repo[rev]
     if commitmsg is None:
