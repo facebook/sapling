@@ -779,12 +779,24 @@ def rebase(ui, repo, **opts):
 
     """
     inmemory = ui.configbool('rebase', 'experimental.inmemory')
-    if (opts.get('continue') or opts.get('abort') or
-        repo.currenttransaction() is not None):
+
+    # Check for conditions that disable in-memory merge if it was requested.
+    if inmemory:
+        whynotimm = None
+
         # in-memory rebase is not compatible with resuming rebases.
-        # (Or if it is run within a transaction, since the restart logic can
-        # fail the entire transaction.)
-        inmemory = False
+        if opts.get('continue') or opts.get('abort'):
+            whynotimm = "--continue or --abort passed"
+
+        # in-memory rebase cannot currently run within a parent transaction,
+        # since the restarting logic will fail the entire transaction.
+        elif repo.currenttransaction() is not None:
+            whynotimm = "rebase run inside a transaction"
+
+        if whynotimm:
+            ui.log("rebase", "disabling IMM because: %s" % whynotimm,
+                why_not_imm=whynotimm)
+            inmemory = False
 
     if inmemory:
         try:
@@ -979,6 +991,10 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
     ui.log("rebase", "", rebase_rebasing_wcp=rebasingwcp)
     if rbsrt.inmemory and rebasingwcp:
         rbsrt.inmemory = False
+        whynotimm = "wcp in rebaseset"
+        ui.log("rebase", "disabling IMM because: %s" % whynotimm,
+            why_not_imm=whynotimm)
+
         # Check these since we did not before.
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
