@@ -21,6 +21,53 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
+namespace {
+
+using Handler = folly::Future<folly::Unit> (
+    FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
+
+struct HandlerEntry {
+  Handler handler;
+  EdenStats::HistogramPtr histogram;
+};
+
+const std::unordered_map<uint32_t, HandlerEntry> handlerMap = {
+    {FUSE_READ, {&FuseChannel::fuseRead, &EdenStats::read}},
+    {FUSE_WRITE, {&FuseChannel::fuseWrite, &EdenStats::write}},
+    {FUSE_LOOKUP, {&FuseChannel::fuseLookup, &EdenStats::lookup}},
+    {FUSE_FORGET, {&FuseChannel::fuseForget, &EdenStats::forget}},
+    {FUSE_GETATTR, {&FuseChannel::fuseGetAttr, &EdenStats::getattr}},
+    {FUSE_SETATTR, {&FuseChannel::fuseSetAttr, &EdenStats::setattr}},
+    {FUSE_READLINK, {&FuseChannel::fuseReadLink, &EdenStats::readlink}},
+    {FUSE_SYMLINK, {&FuseChannel::fuseSymlink, &EdenStats::symlink}},
+    {FUSE_MKNOD, {&FuseChannel::fuseMknod, &EdenStats::mknod}},
+    {FUSE_MKDIR, {&FuseChannel::fuseMkdir, &EdenStats::mkdir}},
+    {FUSE_UNLINK, {&FuseChannel::fuseUnlink, &EdenStats::unlink}},
+    {FUSE_RMDIR, {&FuseChannel::fuseRmdir, &EdenStats::rmdir}},
+    {FUSE_RENAME, {&FuseChannel::fuseRename, &EdenStats::rename}},
+    {FUSE_LINK, {&FuseChannel::fuseLink, &EdenStats::link}},
+    {FUSE_OPEN, {&FuseChannel::fuseOpen, &EdenStats::open}},
+    {FUSE_STATFS, {&FuseChannel::fuseStatFs, &EdenStats::statfs}},
+    {FUSE_RELEASE, {&FuseChannel::fuseRelease, &EdenStats::release}},
+    {FUSE_FSYNC, {&FuseChannel::fuseFsync, &EdenStats::fsync}},
+    {FUSE_SETXATTR, {&FuseChannel::fuseSetXAttr, &EdenStats::setxattr}},
+    {FUSE_GETXATTR, {&FuseChannel::fuseGetXAttr, &EdenStats::getxattr}},
+    {FUSE_LISTXATTR, {&FuseChannel::fuseListXAttr, &EdenStats::listxattr}},
+    {FUSE_REMOVEXATTR,
+     {&FuseChannel::fuseRemoveXAttr, &EdenStats::removexattr}},
+    {FUSE_FLUSH, {&FuseChannel::fuseFlush, &EdenStats::flush}},
+    {FUSE_OPENDIR, {&FuseChannel::fuseOpenDir, &EdenStats::opendir}},
+    {FUSE_READDIR, {&FuseChannel::fuseReadDir, &EdenStats::readdir}},
+    {FUSE_RELEASEDIR, {&FuseChannel::fuseReleaseDir, &EdenStats::releasedir}},
+    {FUSE_FSYNCDIR, {&FuseChannel::fuseFsyncDir, &EdenStats::fsyncdir}},
+    {FUSE_ACCESS, {&FuseChannel::fuseAccess, &EdenStats::access}},
+    {FUSE_CREATE, {&FuseChannel::fuseCreate, &EdenStats::create}},
+    {FUSE_BMAP, {&FuseChannel::fuseBmap, &EdenStats::bmap}},
+    {FUSE_BATCH_FORGET,
+     {&FuseChannel::fuseBatchForget, &EdenStats::forgetmulti}},
+};
+} // namespace
+
 static iovec inline make_iovec(const void* addr, size_t len) {
   iovec iov;
   iov.iov_base = const_cast<void*>(addr);
@@ -283,12 +330,6 @@ void FuseChannel::processSession() {
       // ENOENT means the operation was interrupted; it's safe to restart
       continue;
     }
-    // Start a new request and associate it with the current thread.
-    // It will be disassociated when we leave this scope, but will
-    // propagate across any futures that are spawned as part of this
-    // request.
-    RequestContextScopeGuard requestContextGuard;
-
     if (res == -ENODEV) {
       // ENODEV means the filesystem was unmounted
       sessionFinished_.store(true);
@@ -311,7 +352,7 @@ void FuseChannel::processSession() {
     }
 
     const auto* header = reinterpret_cast<fuse_in_header*>(buf.data());
-    const void* arg = reinterpret_cast<const void*>(header + 1);
+    const uint8_t* arg = reinterpret_cast<const uint8_t*>(header + 1);
 
     XLOG(DBG7) << "fuse request opcode=" << header->opcode
                << " unique=" << header->unique << " len=" << header->len
@@ -364,576 +405,6 @@ void FuseChannel::processSession() {
         break;
       }
 
-      case FUSE_LOOKUP: {
-        PathComponentPiece name{reinterpret_cast<const char*>(arg)};
-        auto parent = header->nodeid;
-
-        XLOG(DBG7) << "FUSE_LOOKUP";
-
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::lookup)
-                .then([=] { return dispatcher_->lookup(parent, name); })
-                .then([](fuse_entry_out param) {
-                  RequestData::get().sendReply(param);
-                }));
-
-        break;
-      }
-
-      case FUSE_FORGET: {
-        auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        XLOG(DBG7) << "FUSE_FORGET";
-        request.catchErrors(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::forget)
-                .then([=] {
-                  return dispatcher_->forget(header->nodeid, forget->nlookup);
-                })
-                .then([]() { RequestData::get().replyNone(); }));
-        break;
-      }
-
-      case FUSE_GETATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        XLOG(DBG7) << "FUSE_GETATTR";
-
-        // If we're new enough, check to see if a file handle was provided
-        if (connInfo_.minor >= 9) {
-          auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);
-          if (getattr->getattr_flags & FUSE_GETATTR_FH) {
-            request.setRequestFuture(
-                request
-                    .startRequest(dispatcher_->getStats(), &EdenStats::getattr)
-                    .then([=] {
-                      return dispatcher_->getGenericFileHandle(getattr->fh)
-                          ->getattr();
-                    })
-                    .then([](Dispatcher::Attr attr) {
-                      RequestData::get().sendReply(attr.asFuseAttr());
-                    }));
-            break;
-          }
-          // otherwise, fall through to regular inode based lookup
-        }
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::getattr)
-                .then([=] { return dispatcher_->getattr(header->nodeid); })
-                .then([](Dispatcher::Attr attr) {
-                  RequestData::get().sendReply(attr.asFuseAttr());
-                }));
-        break;
-      }
-
-      case FUSE_SETATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg);
-        XLOG(DBG7) << "FUSE_SETATTR";
-        if (setattr->valid & FATTR_FH) {
-          request.setRequestFuture(
-              request.startRequest(dispatcher_->getStats(), &EdenStats::setattr)
-                  .then([=]() {
-                    return dispatcher_->getGenericFileHandle(setattr->fh)
-                        ->setattr(*setattr);
-                  })
-                  .then([](Dispatcher::Attr attr) {
-                    RequestData::get().sendReply(attr.asFuseAttr());
-                  }));
-        } else {
-          request.setRequestFuture(
-              request.startRequest(dispatcher_->getStats(), &EdenStats::setattr)
-                  .then([=]() {
-                    return dispatcher_->setattr(header->nodeid, *setattr);
-                  })
-                  .then([](Dispatcher::Attr attr) {
-                    RequestData::get().sendReply(attr.asFuseAttr());
-                  }));
-        }
-        break;
-      }
-
-      case FUSE_READLINK: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        XLOG(DBG7) << "FUSE_READLINK";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::readlink)
-                .then([=] { return dispatcher_->readlink(header->nodeid); })
-                .then([](std::string&& str) {
-                  RequestData::get().sendReply(folly::StringPiece(str));
-                }));
-        break;
-      }
-
-      case FUSE_SYMLINK: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto nameStr = reinterpret_cast<const char*>(arg);
-        XLOG(DBG7) << "FUSE_SYMLINK";
-        PathComponentPiece name{nameStr};
-        StringPiece link{nameStr + name.stringPiece().size() + 1};
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::symlink)
-                .then([=] {
-                  return dispatcher_->symlink(header->nodeid, name, link);
-                })
-                .then([](fuse_entry_out param) {
-                  RequestData::get().sendReply(param);
-                }));
-        break;
-      }
-      case FUSE_MKNOD: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto nod = reinterpret_cast<const fuse_mknod_in*>(arg);
-        auto nameStr = reinterpret_cast<const char*>(nod + 1);
-
-        if (connInfo_.minor >= 12) {
-          // TODO: do something useful with nod->umask
-        } else {
-          // Else: no umask or padding fields available
-          nameStr =
-              reinterpret_cast<const char*>(arg) + FUSE_COMPAT_MKNOD_IN_SIZE;
-        }
-
-        PathComponentPiece name{nameStr};
-        XLOG(DBG7) << "FUSE_MKNOD " << name;
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::mknod)
-                .then([=] {
-                  return dispatcher_->mknod(
-                      header->nodeid, name, nod->mode, nod->rdev);
-                })
-                .then([](fuse_entry_out entry) {
-                  RequestData::get().sendReply(entry);
-                }));
-        break;
-      }
-
-      case FUSE_MKDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto dir = reinterpret_cast<const fuse_mkdir_in*>(arg);
-        auto nameStr = reinterpret_cast<const char*>(dir + 1);
-        PathComponentPiece name{nameStr};
-
-        XLOG(DBG7) << "FUSE_MKDIR " << name;
-
-        // TODO: do something useful with dir->umask
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::mkdir)
-                .then([=] {
-                  return dispatcher_->mkdir(header->nodeid, name, dir->mode);
-                })
-                .then([](fuse_entry_out entry) {
-                  RequestData::get().sendReply(entry);
-                }));
-
-        break;
-      }
-
-      case FUSE_UNLINK: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto nameStr = reinterpret_cast<const char*>(arg);
-        PathComponentPiece name{nameStr};
-
-        XLOG(DBG7) << "FUSE_UNLINK " << name;
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::unlink)
-                .then([=] { return dispatcher_->unlink(header->nodeid, name); })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-      case FUSE_RMDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto nameStr = reinterpret_cast<const char*>(arg);
-        PathComponentPiece name{nameStr};
-
-        XLOG(DBG7) << "FUSE_RMDIR " << name;
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::rmdir)
-                .then([=] { return dispatcher_->rmdir(header->nodeid, name); })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-      case FUSE_RENAME: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto rename = reinterpret_cast<const fuse_rename_in*>(arg);
-        auto oldNameStr = reinterpret_cast<const char*>(rename + 1);
-        PathComponentPiece oldName{oldNameStr};
-        PathComponentPiece newName{oldNameStr + oldName.stringPiece().size() +
-                                   1};
-
-        XLOG(DBG7) << "FUSE_RENAME " << oldName << " -> " << newName;
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::rename)
-                .then([=] {
-                  return dispatcher_->rename(
-                      header->nodeid, oldName, rename->newdir, newName);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-
-        break;
-      }
-
-      case FUSE_LINK: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto link = reinterpret_cast<const fuse_link_in*>(arg);
-        auto nameStr = reinterpret_cast<const char*>(link + 1);
-        PathComponentPiece newName{nameStr};
-
-        XLOG(DBG7) << "FUSE_LINK " << newName;
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::link)
-                .then([=] {
-                  return dispatcher_->link(
-                      link->oldnodeid, header->nodeid, newName);
-                })
-                .then([](fuse_entry_out param) {
-                  RequestData::get().sendReply(param);
-                }));
-        break;
-      }
-
-      case FUSE_OPEN: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto open = reinterpret_cast<const fuse_open_in*>(arg);
-        XLOG(DBG7) << "FUSE_OPEN";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::open)
-                .then([=] {
-                  return dispatcher_->open(header->nodeid, open->flags);
-                })
-                .then([this](std::shared_ptr<FileHandle> fh) {
-                  if (!fh) {
-                    throw std::runtime_error(
-                        "Dispatcher::open failed to set fh");
-                  }
-                  fuse_open_out out;
-                  memset(&out, 0, sizeof(out));
-                  if (fh->usesDirectIO()) {
-                    out.open_flags |= FOPEN_DIRECT_IO;
-                  }
-                  if (fh->preserveCache()) {
-                    out.open_flags |= FOPEN_KEEP_CACHE;
-                  }
-                  if (!fh->isSeekable()) {
-                    out.open_flags |= FOPEN_NONSEEKABLE;
-                  }
-                  out.fh =
-                      dispatcher_->getFileHandles().recordHandle(std::move(fh));
-                  try {
-                    RequestData::get().sendReply(out);
-                  } catch (const std::system_error&) {
-                    // Was interrupted, tidy up.
-                    dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-                    throw;
-                  }
-                }));
-        break;
-      }
-
-      case FUSE_READ: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto read = reinterpret_cast<const fuse_read_in*>(arg);
-
-        XLOG(DBG7) << "FUSE_READ";
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::read)
-                .then([=] {
-                  auto fh = dispatcher_->getFileHandle(read->fh);
-                  XLOG(DBG7) << "reading " << read->size << "@" << read->offset;
-                  return fh->read(read->size, read->offset);
-                })
-                .then([](BufVec&& buf) {
-                  RequestData::get().sendReply(buf.getIov());
-                }));
-
-        break;
-      }
-
-      case FUSE_WRITE: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto write = reinterpret_cast<const fuse_write_in*>(arg);
-        auto bufPtr = reinterpret_cast<const char*>(write + 1);
-        if (connInfo_.minor < 9) {
-          bufPtr =
-              reinterpret_cast<const char*>(arg) + FUSE_COMPAT_WRITE_IN_SIZE;
-        }
-        XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::write)
-                .then([=] {
-                  auto fh = dispatcher_->getFileHandle(write->fh);
-
-                  return fh->write(
-                      folly::StringPiece(bufPtr, write->size), write->offset);
-                })
-                .then([](size_t wrote) {
-                  fuse_write_out out;
-                  memset(&out, 0, sizeof(out));
-                  out.size = wrote;
-                  RequestData::get().sendReply(out);
-                }));
-
-        break;
-      }
-      case FUSE_STATFS: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        XLOG(DBG7) << "FUSE_STATFS";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::statfs)
-                .then([=] { return dispatcher_->statfs(header->nodeid); })
-                .then([](struct statvfs&& info) {
-                  fuse_statfs_out out;
-                  memset(&out, 0, sizeof(out));
-                  out.st.blocks = info.f_blocks;
-                  out.st.bfree = info.f_bfree;
-                  out.st.bavail = info.f_bavail;
-                  out.st.files = info.f_files;
-                  out.st.ffree = info.f_ffree;
-                  out.st.bsize = info.f_bsize;
-                  out.st.namelen = info.f_namemax;
-                  out.st.frsize = info.f_frsize;
-                  RequestData::get().sendReply(out);
-                }));
-        break;
-      }
-
-      case FUSE_RELEASE: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto release = reinterpret_cast<const fuse_release_in*>(arg);
-        XLOG(DBG7) << "FUSE_RELEASE";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::release)
-                .then([=] {
-                  dispatcher_->getFileHandles().forgetGenericHandle(
-                      release->fh);
-                  RequestData::get().replyError(0);
-                }));
-        break;
-      }
-
-      case FUSE_FSYNC: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
-        // There's no symbolic constant for this :-/
-        bool datasync = fsync->fsync_flags & 1;
-
-        XLOG(DBG7) << "FUSE_FSYNC";
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::fsync)
-                .then([=] {
-                  auto fh = dispatcher_->getFileHandle(fsync->fh);
-                  return fh->fsync(datasync);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-
-      case FUSE_SETXATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto setxattr = reinterpret_cast<const fuse_setxattr_in*>(arg);
-        auto nameStr = reinterpret_cast<const char*>(setxattr + 1);
-        StringPiece attrName{nameStr};
-        auto bufPtr = nameStr + attrName.size() + 1;
-        StringPiece value(bufPtr, setxattr->size);
-
-        XLOG(DBG7) << "FUSE_SETXATTR";
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::setxattr)
-                .then([=] {
-                  return dispatcher_->setxattr(
-                      header->nodeid, attrName, value, setxattr->flags);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-
-      case FUSE_GETXATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
-        auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
-        StringPiece attrName{nameStr};
-        XLOG(DBG7) << "FUSE_GETXATTR";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::getxattr)
-                .then([=] {
-                  return dispatcher_->getxattr(header->nodeid, attrName);
-                })
-                .then([size = getxattr->size](std::string attr) {
-                  auto& request = RequestData::get();
-                  if (size == 0) {
-                    fuse_getxattr_out out;
-                    memset(&out, 0, sizeof(out));
-                    out.size = attr.size();
-                    request.sendReply(out);
-                  } else if (size < attr.size()) {
-                    request.replyError(ERANGE);
-                  } else {
-                    request.sendReply(StringPiece(attr));
-                  }
-                }));
-        break;
-      }
-
-      case FUSE_LISTXATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
-        XLOG(DBG7) << "FUSE_LISTXATTR";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::listxattr)
-                .then([=] { return dispatcher_->listxattr(header->nodeid); })
-                .then([size = listattr->size](std::vector<std::string> attrs) {
-                  auto& request = RequestData::get();
-
-                  // Initialize count to include the \0 for each
-                  // entry.
-                  size_t count = attrs.size();
-                  for (auto& attr : attrs) {
-                    count += attr.size();
-                  }
-
-                  fuse_getxattr_out out;
-                  memset(&out, 0, sizeof(out));
-                  out.size = count;
-
-                  if (size == 0) {
-                    // caller is asking for the overall size
-                    request.sendReply(out);
-                  } else if (size < count) {
-                    XLOG(DBG7) << "LISTXATTR input size is " << size
-                               << " and count is " << count;
-                    request.replyError(ERANGE);
-                  } else {
-                    std::string buf;
-                    folly::join('\0', attrs, buf);
-                    buf.push_back('\0');
-                    DCHECK(count == buf.size());
-                    XLOG(DBG7) << "LISTXATTR: " << buf;
-                    folly::fbvector<iovec> vec;
-                    vec.reserve(3);
-                    vec.push_back(make_iovec(out));
-                    vec.push_back(make_iovec(buf.data(), buf.size()));
-                    request.sendReply(std::move(vec));
-                  }
-                }));
-        break;
-      }
-
-      case FUSE_REMOVEXATTR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto nameStr = reinterpret_cast<const char*>(arg);
-        StringPiece attrName{nameStr};
-        XLOG(DBG7) << "FUSE_REMOVEXATTR";
-        request.setRequestFuture(
-            request
-                .startRequest(dispatcher_->getStats(), &EdenStats::removexattr)
-                .then([=] {
-                  return dispatcher_->removexattr(header->nodeid, attrName);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-
-        break;
-      }
-      case FUSE_FLUSH: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
-        XLOG(DBG7) << "FUSE_FLUSH";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::flush)
-                .then([=] {
-                  auto fh = dispatcher_->getFileHandle(flush->fh);
-
-                  return fh->flush(flush->lock_owner);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-      case FUSE_OPENDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto open = reinterpret_cast<const fuse_open_in*>(arg);
-        XLOG(DBG7) << "FUSE_OPENDIR";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::opendir)
-                .then([=] {
-                  return dispatcher_->opendir(header->nodeid, open->flags);
-                })
-                .then([this](std::shared_ptr<DirHandle> dh) {
-                  if (!dh) {
-                    throw std::runtime_error(
-                        "Dispatcher::opendir failed to set dh");
-                  }
-                  fuse_open_out out;
-                  memset(&out, 0, sizeof(out));
-                  out.fh =
-                      dispatcher_->getFileHandles().recordHandle(std::move(dh));
-                  XLOG(DBG7) << "OPENDIR fh=" << out.fh;
-                  try {
-                    RequestData::get().sendReply(out);
-                  } catch (const std::system_error&) {
-                    // Was interrupted, tidy up
-                    dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-                    throw;
-                  }
-                }));
-        break;
-      }
-      case FUSE_READDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto read = reinterpret_cast<const fuse_read_in*>(arg);
-        XLOG(DBG7) << "FUSE_READDIR";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::readdir)
-                .then([=] {
-                  auto dh = dispatcher_->getDirHandle(read->fh);
-                  return dh->readdir(DirList(read->size), read->offset);
-                })
-                .then([](DirList&& list) {
-                  auto buf = list.getBuf();
-                  RequestData::get().sendReply(StringPiece(buf));
-                }));
-        break;
-      }
-      case FUSE_RELEASEDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto release = reinterpret_cast<const fuse_release_in*>(arg);
-        XLOG(DBG7) << "FUSE_RELEASEDIR";
-        request.setRequestFuture(
-            request
-                .startRequest(dispatcher_->getStats(), &EdenStats::releasedir)
-                .then([=] {
-                  dispatcher_->getFileHandles().forgetGenericHandle(
-                      release->fh);
-                  RequestData::get().replyError(0);
-                }));
-        break;
-      }
-      case FUSE_FSYNCDIR: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
-        // There's no symbolic constant for this :-/
-        bool datasync = fsync->fsync_flags & 1;
-
-        XLOG(DBG7) << "FUSE_FSYNCDIR";
-
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::fsyncdir)
-                .then([=] {
-                  auto dh = dispatcher_->getDirHandle(fsync->fh);
-                  return dh->fsyncdir(datasync);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-
       case FUSE_GETLK:
       case FUSE_SETLK:
       case FUSE_SETLKW:
@@ -942,88 +413,11 @@ void FuseChannel::processSession() {
         replyError(*header, ENOSYS);
         break;
 
-      case FUSE_ACCESS: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto access = reinterpret_cast<const fuse_access_in*>(arg);
-        XLOG(DBG7) << "FUSE_ACCESS";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::access)
-                .then([=] {
-                  return dispatcher_->access(header->nodeid, access->mask);
-                })
-                .then([]() { RequestData::get().replyError(0); }));
-        break;
-      }
-
-      case FUSE_CREATE: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto create = reinterpret_cast<const fuse_create_in*>(arg);
-        PathComponentPiece name{reinterpret_cast<const char*>(create + 1)};
-        XLOG(DBG7) << "FUSE_CREATE " << name;
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::create)
-                .then([=] {
-                  return dispatcher_->create(
-                      header->nodeid, name, create->mode, create->flags);
-                })
-                .then([this](Dispatcher::Create info) {
-
-                  fuse_open_out out;
-                  memset(&out, 0, sizeof(out));
-                  if (info.fh->usesDirectIO()) {
-                    out.open_flags |= FOPEN_DIRECT_IO;
-                  }
-                  if (info.fh->preserveCache()) {
-                    out.open_flags |= FOPEN_KEEP_CACHE;
-                  }
-                  if (!info.fh->isSeekable()) {
-                    out.open_flags |= FOPEN_NONSEEKABLE;
-                  }
-                  out.fh = dispatcher_->getFileHandles().recordHandle(
-                      std::move(info.fh));
-
-                  XLOG(DBG7)
-                      << "CREATE fh=" << out.fh << " flags=" << out.open_flags;
-
-                  folly::fbvector<iovec> vec;
-                  vec.reserve(3);
-
-                  vec.push_back(make_iovec(info.entry));
-                  vec.push_back(make_iovec(out));
-
-                  try {
-                    RequestData::get().sendReply(std::move(vec));
-                  } catch (const std::system_error&) {
-                    // Was interrupted, tidy up.
-                    dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
-                    throw;
-                  }
-                }));
-        break;
-      }
       case FUSE_INTERRUPT:
         // TODO: handle interrupt.
         // no reply is required
         XLOG(DBG7) << "FUSE_INTERRUPT";
         break;
-
-      case FUSE_BMAP: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto bmap = reinterpret_cast<const fuse_bmap_in*>(arg);
-        XLOG(DBG7) << "FUSE_BMAP";
-        request.setRequestFuture(
-            request.startRequest(dispatcher_->getStats(), &EdenStats::bmap)
-                .then([=] {
-                  return dispatcher_->bmap(
-                      header->nodeid, bmap->blocksize, bmap->block);
-                })
-                .then([](uint64_t resultIdx) {
-                  fuse_bmap_out out;
-                  out.block = resultIdx;
-                  RequestData::get().sendReply(out);
-                }));
-        break;
-      }
 
       case FUSE_DESTROY:
         XLOG(DBG7) << "FUSE_DESTROY";
@@ -1037,36 +431,26 @@ void FuseChannel::processSession() {
         // a way to fulfil the promise
         break;
 
-      case FUSE_BATCH_FORGET: {
-        auto& request = RequestData::create(this, *header, dispatcher_);
-        auto forgets = reinterpret_cast<const fuse_batch_forget_in*>(arg);
-        auto item = reinterpret_cast<const fuse_forget_one*>(forgets + 1);
-        auto end = item + forgets->count;
-        XLOG(DBG7) << "FUSE_BATCH_FORGET";
-
-        request.catchErrors(
-            request
-                .startRequest(dispatcher_->getStats(), &EdenStats::forgetmulti)
-                .then([=]() mutable {
-                  while (item != end) {
-                    dispatcher_->forget(item->nodeid, item->nlookup);
-                    ++item;
-                  }
-                  return Unit{};
-                })
-                .then([]() { RequestData::get().replyNone(); }));
-
-        break;
-      }
-
-      case FUSE_FALLOCATE:
-      case FUSE_READDIRPLUS:
-      case FUSE_RENAME2:
-      case FUSE_LSEEK:
-
-      case FUSE_IOCTL:
-      case FUSE_POLL:
       default: {
+        auto handlerIter = handlerMap.find(header->opcode);
+        if (handlerIter != handlerMap.end()) {
+          // Start a new request and associate it with the current thread.
+          // It will be disassociated when we leave this scope, but will
+          // propagate across any futures that are spawned as part of this
+          // request.
+          RequestContextScopeGuard requestContextGuard;
+
+          auto& request = RequestData::create(this, *header, dispatcher_);
+          auto& entry = handlerIter->second;
+
+          request.setRequestFuture(
+              request.startRequest(dispatcher_->getStats(), entry.histogram)
+                  .then([=, &request] {
+                    return (this->*entry.handler)(&request.getReq(), arg);
+                  }));
+          break;
+        }
+
         XLOG(ERR) << "unhandled fuse opcode " << header->opcode;
         try {
           replyError(*header, ENOSYS);
@@ -1078,6 +462,532 @@ void FuseChannel::processSession() {
     }
   }
 }
+
+folly::Future<folly::Unit> FuseChannel::fuseRead(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto read = reinterpret_cast<const fuse_read_in*>(arg);
+
+  XLOG(DBG7) << "FUSE_READ";
+
+  auto fh = dispatcher_->getFileHandle(read->fh);
+  XLOG(DBG7) << "reading " << read->size << "@" << read->offset;
+  return fh->read(read->size, read->offset).then([](BufVec&& buf) {
+    RequestData::get().sendReply(buf.getIov());
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseWrite(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto write = reinterpret_cast<const fuse_write_in*>(arg);
+  auto bufPtr = reinterpret_cast<const char*>(write + 1);
+  if (connInfo_.minor < 9) {
+    bufPtr = reinterpret_cast<const char*>(arg) + FUSE_COMPAT_WRITE_IN_SIZE;
+  }
+  XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
+
+  auto fh = dispatcher_->getFileHandle(write->fh);
+
+  return fh->write(folly::StringPiece(bufPtr, write->size), write->offset)
+      .then([](size_t wrote) {
+        fuse_write_out out;
+        memset(&out, 0, sizeof(out));
+        out.size = wrote;
+        RequestData::get().sendReply(out);
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseLookup(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  PathComponentPiece name{reinterpret_cast<const char*>(arg)};
+  auto parent = header->nodeid;
+
+  XLOG(DBG7) << "FUSE_LOOKUP";
+
+  return dispatcher_->lookup(parent, name).then([](fuse_entry_out param) {
+    RequestData::get().sendReply(param);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseForget(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
+  XLOG(DBG7) << "FUSE_FORGET";
+  return dispatcher_->forget(header->nodeid, forget->nlookup).then([]() {
+    RequestData::get().replyNone();
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  XLOG(DBG7) << "FUSE_GETATTR";
+
+  // If we're new enough, check to see if a file handle was provided
+  if (connInfo_.minor >= 9) {
+    auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);
+    if (getattr->getattr_flags & FUSE_GETATTR_FH) {
+      return dispatcher_->getGenericFileHandle(getattr->fh)
+          ->getattr()
+          .then([](Dispatcher::Attr attr) {
+            RequestData::get().sendReply(attr.asFuseAttr());
+          });
+    }
+    // otherwise, fall through to regular inode based lookup
+  }
+
+  return dispatcher_->getattr(header->nodeid).then([](Dispatcher::Attr attr) {
+    RequestData::get().sendReply(attr.asFuseAttr());
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg);
+  XLOG(DBG7) << "FUSE_SETATTR";
+  if (setattr->valid & FATTR_FH) {
+    return dispatcher_->getGenericFileHandle(setattr->fh)
+        ->setattr(*setattr)
+        .then([](Dispatcher::Attr attr) {
+          RequestData::get().sendReply(attr.asFuseAttr());
+        });
+  } else {
+    return dispatcher_->setattr(header->nodeid, *setattr)
+        .then([](Dispatcher::Attr attr) {
+          RequestData::get().sendReply(attr.asFuseAttr());
+        });
+  }
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseReadLink(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  XLOG(DBG7) << "FUSE_READLINK";
+  return dispatcher_->readlink(header->nodeid).then([](std::string&& str) {
+    RequestData::get().sendReply(folly::StringPiece(str));
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseSymlink(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto nameStr = reinterpret_cast<const char*>(arg);
+  XLOG(DBG7) << "FUSE_SYMLINK";
+  PathComponentPiece name{nameStr};
+  StringPiece link{nameStr + name.stringPiece().size() + 1};
+
+  return dispatcher_->symlink(header->nodeid, name, link)
+      .then([](fuse_entry_out param) { RequestData::get().sendReply(param); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseMknod(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto nod = reinterpret_cast<const fuse_mknod_in*>(arg);
+  auto nameStr = reinterpret_cast<const char*>(nod + 1);
+
+  if (connInfo_.minor >= 12) {
+    // TODO: do something useful with nod->umask
+  } else {
+    // Else: no umask or padding fields available
+    nameStr = reinterpret_cast<const char*>(arg) + FUSE_COMPAT_MKNOD_IN_SIZE;
+  }
+
+  PathComponentPiece name{nameStr};
+  XLOG(DBG7) << "FUSE_MKNOD " << name;
+
+  return dispatcher_->mknod(header->nodeid, name, nod->mode, nod->rdev)
+      .then([](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseMkdir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto dir = reinterpret_cast<const fuse_mkdir_in*>(arg);
+  auto nameStr = reinterpret_cast<const char*>(dir + 1);
+  PathComponentPiece name{nameStr};
+
+  XLOG(DBG7) << "FUSE_MKDIR " << name;
+
+  // TODO: do something useful with dir->umask
+
+  return dispatcher_->mkdir(header->nodeid, name, dir->mode)
+      .then([](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseUnlink(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto nameStr = reinterpret_cast<const char*>(arg);
+  PathComponentPiece name{nameStr};
+
+  XLOG(DBG7) << "FUSE_UNLINK " << name;
+
+  return dispatcher_->unlink(header->nodeid, name).then([]() {
+    RequestData::get().replyError(0);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseRmdir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto nameStr = reinterpret_cast<const char*>(arg);
+  PathComponentPiece name{nameStr};
+
+  XLOG(DBG7) << "FUSE_RMDIR " << name;
+
+  return dispatcher_->rmdir(header->nodeid, name).then([]() {
+    RequestData::get().replyError(0);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseRename(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto rename = reinterpret_cast<const fuse_rename_in*>(arg);
+  auto oldNameStr = reinterpret_cast<const char*>(rename + 1);
+  PathComponentPiece oldName{oldNameStr};
+  PathComponentPiece newName{oldNameStr + oldName.stringPiece().size() + 1};
+
+  XLOG(DBG7) << "FUSE_RENAME " << oldName << " -> " << newName;
+  return dispatcher_->rename(header->nodeid, oldName, rename->newdir, newName)
+      .then([]() { RequestData::get().replyError(0); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseLink(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto link = reinterpret_cast<const fuse_link_in*>(arg);
+  auto nameStr = reinterpret_cast<const char*>(link + 1);
+  PathComponentPiece newName{nameStr};
+
+  XLOG(DBG7) << "FUSE_LINK " << newName;
+
+  return dispatcher_->link(link->oldnodeid, header->nodeid, newName)
+      .then([](fuse_entry_out param) { RequestData::get().sendReply(param); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseOpen(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto open = reinterpret_cast<const fuse_open_in*>(arg);
+  XLOG(DBG7) << "FUSE_OPEN";
+  return dispatcher_->open(header->nodeid, open->flags)
+      .then([this](std::shared_ptr<FileHandle> fh) {
+        if (!fh) {
+          throw std::runtime_error("Dispatcher::open failed to set fh");
+        }
+        fuse_open_out out;
+        memset(&out, 0, sizeof(out));
+        if (fh->usesDirectIO()) {
+          out.open_flags |= FOPEN_DIRECT_IO;
+        }
+        if (fh->preserveCache()) {
+          out.open_flags |= FOPEN_KEEP_CACHE;
+        }
+        if (!fh->isSeekable()) {
+          out.open_flags |= FOPEN_NONSEEKABLE;
+        }
+        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(fh));
+        try {
+          RequestData::get().sendReply(out);
+        } catch (const std::system_error&) {
+          // Was interrupted, tidy up.
+          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
+          throw;
+        }
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseStatFs(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  XLOG(DBG7) << "FUSE_STATFS";
+  return dispatcher_->statfs(header->nodeid).then([](struct statvfs&& info) {
+    fuse_statfs_out out;
+    memset(&out, 0, sizeof(out));
+    out.st.blocks = info.f_blocks;
+    out.st.bfree = info.f_bfree;
+    out.st.bavail = info.f_bavail;
+    out.st.files = info.f_files;
+    out.st.ffree = info.f_ffree;
+    out.st.bsize = info.f_bsize;
+    out.st.namelen = info.f_namemax;
+    out.st.frsize = info.f_frsize;
+    RequestData::get().sendReply(out);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseRelease(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto release = reinterpret_cast<const fuse_release_in*>(arg);
+  XLOG(DBG7) << "FUSE_RELEASE";
+  dispatcher_->getFileHandles().forgetGenericHandle(release->fh);
+  RequestData::get().replyError(0);
+  return Unit{};
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseFsync(
+
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
+  // There's no symbolic constant for this :-/
+  bool datasync = fsync->fsync_flags & 1;
+
+  XLOG(DBG7) << "FUSE_FSYNC";
+
+  auto fh = dispatcher_->getFileHandle(fsync->fh);
+  return fh->fsync(datasync).then([]() { RequestData::get().replyError(0); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto setxattr = reinterpret_cast<const fuse_setxattr_in*>(arg);
+  auto nameStr = reinterpret_cast<const char*>(setxattr + 1);
+  StringPiece attrName{nameStr};
+  auto bufPtr = nameStr + attrName.size() + 1;
+  StringPiece value(bufPtr, setxattr->size);
+
+  XLOG(DBG7) << "FUSE_SETXATTR";
+
+  return dispatcher_->setxattr(header->nodeid, attrName, value, setxattr->flags)
+      .then([]() { RequestData::get().replyError(0); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
+  auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
+  StringPiece attrName{nameStr};
+  XLOG(DBG7) << "FUSE_GETXATTR";
+  return dispatcher_->getxattr(header->nodeid, attrName)
+      .then([size = getxattr->size](std::string attr) {
+        auto& request = RequestData::get();
+        if (size == 0) {
+          fuse_getxattr_out out;
+          memset(&out, 0, sizeof(out));
+          out.size = attr.size();
+          request.sendReply(out);
+        } else if (size < attr.size()) {
+          request.replyError(ERANGE);
+        } else {
+          request.sendReply(StringPiece(attr));
+        }
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
+  XLOG(DBG7) << "FUSE_LISTXATTR";
+  return dispatcher_->listxattr(header->nodeid)
+      .then([size = listattr->size](std::vector<std::string> attrs) {
+        auto& request = RequestData::get();
+
+        // Initialize count to include the \0 for each
+        // entry.
+        size_t count = attrs.size();
+        for (auto& attr : attrs) {
+          count += attr.size();
+        }
+
+        fuse_getxattr_out out;
+        memset(&out, 0, sizeof(out));
+        out.size = count;
+
+        if (size == 0) {
+          // caller is asking for the overall size
+          request.sendReply(out);
+        } else if (size < count) {
+          XLOG(DBG7) << "LISTXATTR input size is " << size << " and count is "
+                     << count;
+          request.replyError(ERANGE);
+        } else {
+          std::string buf;
+          folly::join('\0', attrs, buf);
+          buf.push_back('\0');
+          DCHECK(count == buf.size());
+          XLOG(DBG7) << "LISTXATTR: " << buf;
+          folly::fbvector<iovec> vec;
+          vec.reserve(3);
+          vec.push_back(make_iovec(out));
+          vec.push_back(make_iovec(buf.data(), buf.size()));
+          request.sendReply(std::move(vec));
+        }
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto nameStr = reinterpret_cast<const char*>(arg);
+  StringPiece attrName{nameStr};
+  XLOG(DBG7) << "FUSE_REMOVEXATTR";
+  return dispatcher_->removexattr(header->nodeid, attrName).then([]() {
+    RequestData::get().replyError(0);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseFlush(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
+  XLOG(DBG7) << "FUSE_FLUSH";
+  auto fh = dispatcher_->getFileHandle(flush->fh);
+
+  return fh->flush(flush->lock_owner).then([]() {
+    RequestData::get().replyError(0);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto open = reinterpret_cast<const fuse_open_in*>(arg);
+  XLOG(DBG7) << "FUSE_OPENDIR";
+  return dispatcher_->opendir(header->nodeid, open->flags)
+      .then([this](std::shared_ptr<DirHandle> dh) {
+        if (!dh) {
+          throw std::runtime_error("Dispatcher::opendir failed to set dh");
+        }
+        fuse_open_out out;
+        memset(&out, 0, sizeof(out));
+        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(dh));
+        XLOG(DBG7) << "OPENDIR fh=" << out.fh;
+        try {
+          RequestData::get().sendReply(out);
+        } catch (const std::system_error&) {
+          // Was interrupted, tidy up
+          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
+          throw;
+        }
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseReadDir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto read = reinterpret_cast<const fuse_read_in*>(arg);
+  XLOG(DBG7) << "FUSE_READDIR";
+  auto dh = dispatcher_->getDirHandle(read->fh);
+  return dh->readdir(DirList(read->size), read->offset)
+      .then([](DirList&& list) {
+        auto buf = list.getBuf();
+        RequestData::get().sendReply(StringPiece(buf));
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto release = reinterpret_cast<const fuse_release_in*>(arg);
+  XLOG(DBG7) << "FUSE_RELEASEDIR";
+  dispatcher_->getFileHandles().forgetGenericHandle(release->fh);
+  RequestData::get().replyError(0);
+  return Unit{};
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
+  // There's no symbolic constant for this :-/
+  bool datasync = fsync->fsync_flags & 1;
+
+  XLOG(DBG7) << "FUSE_FSYNCDIR";
+
+  auto dh = dispatcher_->getDirHandle(fsync->fh);
+  return dh->fsyncdir(datasync).then(
+      []() { RequestData::get().replyError(0); });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseAccess(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto access = reinterpret_cast<const fuse_access_in*>(arg);
+  XLOG(DBG7) << "FUSE_ACCESS";
+  return dispatcher_->access(header->nodeid, access->mask).then([]() {
+    RequestData::get().replyError(0);
+  });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseCreate(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto create = reinterpret_cast<const fuse_create_in*>(arg);
+  PathComponentPiece name{reinterpret_cast<const char*>(create + 1)};
+  XLOG(DBG7) << "FUSE_CREATE " << name;
+  return dispatcher_->create(header->nodeid, name, create->mode, create->flags)
+      .then([this](Dispatcher::Create info) {
+
+        fuse_open_out out;
+        memset(&out, 0, sizeof(out));
+        if (info.fh->usesDirectIO()) {
+          out.open_flags |= FOPEN_DIRECT_IO;
+        }
+        if (info.fh->preserveCache()) {
+          out.open_flags |= FOPEN_KEEP_CACHE;
+        }
+        if (!info.fh->isSeekable()) {
+          out.open_flags |= FOPEN_NONSEEKABLE;
+        }
+        out.fh = dispatcher_->getFileHandles().recordHandle(std::move(info.fh));
+
+        XLOG(DBG7) << "CREATE fh=" << out.fh << " flags=" << out.open_flags;
+
+        folly::fbvector<iovec> vec;
+        vec.reserve(3);
+
+        vec.push_back(make_iovec(info.entry));
+        vec.push_back(make_iovec(out));
+
+        try {
+          RequestData::get().sendReply(std::move(vec));
+        } catch (const std::system_error&) {
+          // Was interrupted, tidy up.
+          dispatcher_->getFileHandles().forgetGenericHandle(out.fh);
+          throw;
+        }
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseBmap(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto bmap = reinterpret_cast<const fuse_bmap_in*>(arg);
+  XLOG(DBG7) << "FUSE_BMAP";
+  return dispatcher_->bmap(header->nodeid, bmap->blocksize, bmap->block)
+      .then([](uint64_t resultIdx) {
+        fuse_bmap_out out;
+        out.block = resultIdx;
+        RequestData::get().sendReply(out);
+      });
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
+    const fuse_in_header* header,
+    const uint8_t* arg) {
+  auto forgets = reinterpret_cast<const fuse_batch_forget_in*>(arg);
+  auto item = reinterpret_cast<const fuse_forget_one*>(forgets + 1);
+  auto end = item + forgets->count;
+  XLOG(DBG7) << "FUSE_BATCH_FORGET";
+
+  while (item != end) {
+    dispatcher_->forget(item->nodeid, item->nlookup);
+    ++item;
+  }
+  return Unit{};
+}
+
 } // namespace fusell
 } // namespace eden
 } // namespace facebook
