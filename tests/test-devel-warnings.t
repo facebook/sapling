@@ -379,7 +379,5 @@ Test warning on config option access and registration
   devel-warn: specifying a mismatched default value for a registered config item: 'test.some' 'bar' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: config item requires an explicit default value: 'test.dynamic' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a mismatched default value for a registered config item: 'test.callable' 'foo' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: accessing unregistered config item: 'test.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
-  devel-warn: accessing unregistered config item: 'unregistered.unregistered' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
 
   $ cd ..
