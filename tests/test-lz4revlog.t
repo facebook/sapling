@@ -4,7 +4,7 @@
   $ hg ci -q -A -m 0
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "lz4revlog=$TESTDIR/../lz4revlog.py" >> $HGRCPATH
+  $ echo "lz4revlog=$TESTDIR/../hgext/lz4revlog.py" >> $HGRCPATH
 
 having lz4revlog enabled should not affect an existing repo
 
