@@ -79,7 +79,7 @@ except (AttributeError, ImportError):
         usable = localrepo.localrepository.openerreqs
     except (AttributeError, ImportError):
         def lz4missing(eek):
-            raise util.Abort(_('the lz4revlog extension requires lz4 support'))
+            raise error.Abort(_('the lz4revlog extension requires lz4 support'))
         lz4compress = lz4compressHC = lz4decompress = lz4missing
         usable = False
 
