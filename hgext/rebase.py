@@ -389,7 +389,7 @@ class rebaseruntime(object):
             self.repo.ui.debug("rebasing in-memory\n")
             msg = self.repo.ui.config('rebase', 'experimental.inmemorywarning')
             if msg:
-                self.repo.ui.warn(msg)
+                self.repo.ui.warn(msg + '\n')
         else:
             self.wctx = self.repo[None]
             self.repo.ui.debug("rebasing on disk\n")
