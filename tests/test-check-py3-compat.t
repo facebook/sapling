@@ -5,6 +5,7 @@
 
   $ testrepohg files 'set:(**.py)' \
   > -X hgdemandimport/demandimportpy2.py \
+  > -X hg-git \
   > | sed 's|\\|/|g' | xargs $PYTHON contrib/check-py3-compat.py
   contrib/python-zstandard/setup.py not using absolute_import
   contrib/python-zstandard/setup_zstd.py not using absolute_import
