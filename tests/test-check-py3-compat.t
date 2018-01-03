@@ -19,6 +19,8 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
+  hgext/remotenames.py not using absolute_import
+  remotenames/setup.py not using absolute_import
   setup.py not using absolute_import
 
 #if py3exe

@@ -45,3 +45,23 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
+  undocumented: remotenames.alias.default (bool)
+  undocumented: remotenames.allownonfastforward (bool)
+  undocumented: remotenames.calculatedistance (bool)
+  undocumented: remotenames.disallowedbookmarks (list)
+  undocumented: remotenames.disallowedhint (str)
+  undocumented: remotenames.disallowedto (str)
+  undocumented: remotenames.fastheaddiscovery (bool)
+  undocumented: remotenames.forcecompat (bool)
+  undocumented: remotenames.forceto (bool)
+  undocumented: remotenames.hoist (str)
+  undocumented: remotenames.pushanonheads (bool)
+  undocumented: remotenames.pushrev (str)
+  undocumented: remotenames.resolvenodes (bool)
+  undocumented: remotenames.selectivepull (bool)
+  undocumented: remotenames.selectivepulldefault (list)
+  undocumented: remotenames.suppressbranches (bool)
+  undocumented: remotenames.syncbookmarks (bool)
+  undocumented: remotenames.tracking (bool)
+  undocumented: remotenames.transitionmessage (str)
+  undocumented: remotenames.upstream (list)
