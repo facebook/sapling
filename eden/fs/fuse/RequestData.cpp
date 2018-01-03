@@ -26,12 +26,10 @@ RequestData::RequestData(
     const fuse_in_header& fuseHeader,
     Dispatcher* dispatcher)
     : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {
-  dispatcher_->incNumOutstandingRequests();
 }
 
 RequestData::~RequestData() {
   channel_->finishRequest(fuseHeader_);
-  dispatcher_->decNumOutstandingRequests();
 }
 
 void RequestData::interrupt() {

@@ -10,6 +10,8 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/Request.h>
+#include <folly/system/ThreadName.h>
+#include <signal.h>
 #include <sys/statvfs.h>
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/Dispatcher.h"
@@ -199,10 +201,28 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
   }
 }
 
-FuseChannel::FuseChannel(folly::File&& fuseDevice, Dispatcher* const dispatcher)
-    : dispatcher_(dispatcher), fuseDevice_(std::move(fuseDevice)) {}
+FuseChannel::FuseChannel(
+    folly::File&& fuseDevice,
+    AbsolutePathPiece mountPath,
+    folly::EventBase* eventBase,
+    size_t numThreads,
+    Dispatcher* const dispatcher)
+    : dispatcher_(dispatcher),
+      fuseDevice_(std::move(fuseDevice)),
+      eventBase_(eventBase),
+      numThreads_(numThreads),
+      mountPath_(mountPath) {
+  workerThreads_.reserve(numThreads);
+  for (auto i = 0; i < numThreads; ++i) {
+    workerThreads_.emplace_back(
+        std::thread([this, i] { fuseWorkerThread(i); }));
+  }
+}
 
-FuseChannel::~FuseChannel() {}
+FuseChannel::~FuseChannel() {
+  CHECK_EQ(joinedThreads_, numThreads_)
+      << "we MUST have joined all of the threads";
+}
 
 folly::File FuseChannel::stealFuseDevice() {
   // Claim the fd
@@ -300,8 +320,61 @@ void FuseChannel::invalidateEntry(
   }
 }
 
+folly::Future<folly::Unit> FuseChannel::getThreadsFinishedFuture() {
+  return threadsFinishedPromise_.getFuture();
+}
+
+folly::Future<folly::Unit> FuseChannel::getThreadsStoppingFuture() {
+  return threadsStoppingPromise_.getFuture();
+}
+
+folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
+  return sessionCompletePromise_.getFuture();
+}
+
 void FuseChannel::requestSessionExit() {
-  sessionFinished_.store(true);
+  bool no = false;
+  if (sessionFinished_.compare_exchange_strong(no, true)) {
+    // We transitioned it to stopping.  Let's notify potentially
+    // interested folks about this
+    threadsStoppingPromise_.setValue();
+
+    // Knock our workers out of their blocking read() syscalls
+    for (auto& thr : workerThreads_) {
+      if (thr.get_id() != std::this_thread::get_id()) {
+        pthread_kill(thr.native_handle(), SIGPIPE);
+      }
+    }
+  }
+}
+
+void FuseChannel::fuseWorkerThread(size_t threadNumber) {
+  setThreadName(to<std::string>("fuse", mountPath_.basename()));
+  processSession();
+  eventBase_->runInEventBaseThread([this, threadNumber]() {
+    workerThreads_[threadNumber].join();
+    if (++joinedThreads_ == numThreads_) {
+      threadsFinishedPromise_.setValue();
+
+      // We may be complete; check to see if there are any
+      // outstanding requests.  Take care to avoid triggering
+      // the promise callbacks while we hold a lock.
+      bool complete = false;
+      {
+        auto requests = requests_.wlock();
+        // there may be outstanding requests even though we have
+        // now shut down all of the fuse device processing threads.
+        // If there are none outstanding then we can consider the
+        // FUSE requests all complete.  Otherwise, we have logic
+        // to detect the completion transition in the finishRequest()
+        // method below.
+        complete = requests->size() == 0;
+      }
+      if (complete) {
+        sessionCompletePromise_.setValue();
+      }
+    }
+  });
 }
 
 void FuseChannel::processSession() {
@@ -333,13 +406,13 @@ void FuseChannel::processSession() {
     }
     if (res == -ENODEV) {
       // ENODEV means the filesystem was unmounted
-      sessionFinished_.store(true);
+      requestSessionExit();
       break;
     }
     if (res < 0) {
       XLOG(WARNING) << "error reading from fuse channel: "
                     << folly::errnoStr(-res);
-      sessionFinished_.store(true);
+      requestSessionExit();
       break;
     }
 
@@ -348,7 +421,7 @@ void FuseChannel::processSession() {
     if (arg_size < sizeof(struct fuse_in_header)) {
       XLOG(ERR) << "read truncated message from kernel fuse device: len="
                 << arg_size;
-      sessionFinished_.store(true);
+      requestSessionExit();
       break;
     }
 
@@ -489,6 +562,7 @@ void FuseChannel::processSession() {
         } catch (const std::system_error& exc) {
           XLOG(ERR) << "Failed to write error response to fuse: " << exc.what();
           sessionFinished_.store(true);
+          requestSessionExit();
         }
       }
     }
@@ -496,7 +570,24 @@ void FuseChannel::processSession() {
 }
 
 void FuseChannel::finishRequest(const fuse_in_header& header) {
-  requests_->erase(header.unique);
+  // Remove the current request from the map.
+  // We may be complete; check to see if all requests are
+  // done and whether there are any threads remaining.
+  // Take care to avoid triggering the promise callbacks
+  // while we hold a lock.
+  bool complete = false;
+  {
+    auto requests = requests_.wlock();
+    bool erased = requests->erase(header.unique) > 0;
+
+    // We only want to fulfil on the transition, so we take
+    // care to gate this on whether we actually erased and
+    // element in the map above.
+    complete = erased && requests->size() == 0 && joinedThreads_ == numThreads_;
+  }
+  if (complete) {
+    sessionCompletePromise_.setValue();
+  }
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(

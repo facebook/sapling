@@ -523,9 +523,6 @@ class EdenMount {
   folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::Future<folly::Unit> shutdownImpl();
 
-  // Dispatches fuse requests
-  void fuseWorkerThread();
-
   struct timespec getCurrentCheckoutTime();
 
   /**
@@ -650,11 +647,6 @@ class EdenMount {
    * The associated fuse channel to the kernel.
    */
   std::unique_ptr<fusell::FuseChannel> channel_;
-
-  /**
-   * The pool of fuse dispatching threads.
-   */
-  std::vector<std::thread> threads_;
 
   /**
    * The main eventBase of the program; this is used to join and dispatch

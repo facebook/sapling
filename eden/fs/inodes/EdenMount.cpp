@@ -617,15 +617,36 @@ folly::Future<folly::Unit> EdenMount::startFuse(
 
     auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
     channel_ = std::make_unique<fusell::FuseChannel>(
-        std::move(fuseDevice), dispatcher_.get());
+        std::move(fuseDevice),
+        path_,
+        eventBase_,
+        FLAGS_fuseNumThreads,
+        dispatcher_.get());
 
     // we'll use this shortly to wait until the mount is started successfully.
     auto initFuture = initFusePromise_.getFuture();
 
-    threads_.reserve(FLAGS_fuseNumThreads);
-    for (auto i = 0; i < FLAGS_fuseNumThreads; ++i) {
-      threads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
-    }
+    channel_->getThreadsStoppingFuture().then([this] {
+      // If threads are stopping before we got as far as setting the state to
+      // RUNNING, we must have experienced an error
+      if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
+        initFusePromise_.setException(
+            std::runtime_error("fuse session failed to initialize"));
+      } else {
+        // If we were RUNNING and a thread stopped, then record
+        // that transition to FUSE_DONE.
+        doStateTransition(State::RUNNING, State::FUSE_DONE);
+      }
+    });
+
+    channel_->getSessionCompleteFuture().then([this] {
+      // In case we are performing a graceful restart,
+      // extract the fuse device now.
+      folly::File fuseDevice = channel_->stealFuseDevice();
+      channel_.reset();
+
+      fuseCompletionPromise_.setValue(std::move(fuseDevice));
+    });
 
     // wait for init to complete or error; this will throw an exception
     // if the init procedure failed.
@@ -639,51 +660,6 @@ void EdenMount::mountStarted() {
   if (doStateTransition(State::STARTING, State::RUNNING)) {
     // Let ::start() know that we're up and running
     initFusePromise_.setValue();
-  }
-}
-
-void EdenMount::fuseWorkerThread() {
-  setThreadName(to<std::string>("fuse", path_.basename()));
-
-  // The channel is responsible for running the loop.  It will
-  // continue to do so until the fuse session is exited, either
-  // due to error or because the filesystem was unmounted, or
-  // because FuseChannel::requestSessionExit() was called.
-  channel_->processSession();
-
-  bool shouldJoin = false;
-  bool shouldComplete = false;
-
-  if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
-    // If we didn't get as far as setting the state to RUNNING,
-    // we must have experienced an error
-    shouldJoin = true;
-    initFusePromise_.setException(
-        std::runtime_error("fuse session failed to initialize"));
-  } else if (doStateTransition(State::RUNNING, State::FUSE_DONE)) {
-    // We are the first one to stop, so we get to share the news.
-    shouldJoin = true;
-    shouldComplete = true;
-  }
-
-  if (shouldJoin) {
-    // We are the first thread to exit the loop; we get to arrange
-    // to join and notify the server of our completion
-    eventBase_->runInEventBaseThread([this, shouldComplete] {
-      // Wait for all workers to be done
-      for (auto& thr : threads_) {
-        thr.join();
-      }
-
-      // and tear down the fuse session.  In case we are performing a graceful
-      // restart, extract the fuse device now.
-      folly::File fuseDevice = channel_->stealFuseDevice();
-      channel_.reset();
-
-      if (shouldComplete) {
-        fuseCompletionPromise_.setValue(std::move(fuseDevice));
-      }
-    });
   }
 }
 

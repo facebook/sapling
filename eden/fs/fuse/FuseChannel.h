@@ -10,6 +10,8 @@
 #pragma once
 #include <folly/File.h>
 #include <folly/futures/Future.h>
+#include <folly/futures/Promise.h>
+#include <folly/io/async/EventBase.h>
 #include <folly/io/async/Request.h>
 #include <stdlib.h>
 #include <sys/uio.h>
@@ -22,6 +24,7 @@
 
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
+
 namespace facebook {
 namespace eden {
 namespace fusell {
@@ -39,7 +42,12 @@ class FuseChannel {
    * have been obtained via privilegedFuseMount() or may have
    * been passed to us as part of a graceful restart procedure.
    */
-  FuseChannel(folly::File&& fuseDevice, Dispatcher* const dispatcher);
+  FuseChannel(
+      folly::File&& fuseDevice,
+      AbsolutePathPiece mountPath,
+      folly::EventBase* eventBase,
+      size_t numThreads,
+      Dispatcher* const dispatcher);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;
@@ -243,15 +251,49 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
+  /**
+   * Returns a Future that will complete when all of the fuse
+   * threads have been joined.
+   * Will throw if called more than once.
+   */
+  folly::Future<folly::Unit> getThreadsFinishedFuture();
+
+  /**
+   * Returns a Future that will complete when the first fuse
+   * thread has been joined; this marks the beginning of the
+   * shutdown of the fuse dispatching performed by this class.
+   * Will throw if called more than once.
+   */
+  folly::Future<folly::Unit> getThreadsStoppingFuture();
+
+  /**
+   * Returns a Future that will complete when all of the
+   * fuse threads have been joined and when all pending
+   * fuse requests initiated by the kernel have been
+   * responded to.
+   * Will throw if called more than once.
+   */
+  folly::Future<folly::Unit> getSessionCompleteFuture();
+
  private:
+  void fuseWorkerThread(size_t threadNumber);
+  void maybeDispatchSessionComplete();
 
   Dispatcher* const dispatcher_{nullptr};
   folly::File fuseDevice_;
+  folly::EventBase* eventBase_;
   fuse_init_out connInfo_;
   std::atomic<bool> sessionFinished_{false};
   folly::Synchronized<
       std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>>>
       requests_;
+  std::vector<std::thread> workerThreads_;
+  std::atomic<size_t> joinedThreads_{0};
+  const size_t numThreads_;
+  const AbsolutePath mountPath_;
+  folly::Promise<folly::Unit> threadsFinishedPromise_;
+  folly::Promise<folly::Unit> threadsStoppingPromise_;
+  folly::Promise<folly::Unit> sessionCompletePromise_;
 };
 } // namespace fusell
 } // namespace eden
