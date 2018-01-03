@@ -1,0 +1,7 @@
+syntax: regexp
+\.pyc$
+\.so$
+^build/
+\.err$
+tests/getdb\.sh
+.testtimes
