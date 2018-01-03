@@ -1,0 +1,27 @@
+[package]
+name = "treedirstate"
+version = "0.1.0"
+authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
+
+[profile.release]
+lto = true
+
+[lib]
+name = "treedirstate"
+crate-type = ["cdylib"]
+
+[dependencies]
+byteorder = "*"
+error-chain = "*"
+vlqencoding = { version = "*", path = "../vlqencoding" }
+
+[dev-dependencies]
+itertools = "0.7.2"
+quickcheck = "*"
+tempdir = "*"
+
+[dependencies.cpython]
+version = "0.1"
+default-features = false
+features = ["python27-sys", "extension-module-2-7"]
+git = "https://github.com/dgrunwald/rust-cpython.git"

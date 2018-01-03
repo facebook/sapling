@@ -1,0 +1,14 @@
+rmdir d1 - should fail with ENOTEMPTY
+  error: Non-empty directory
+rmdir d1/d2 - should succeed
+  success
+rmdir d1 - should fail with ENOTEMPTY
+  error: Non-empty directory
+rmdir d1 - should succeed
+  success
+rmdir d1 - should fail with ENOENT
+  error: *
+removedirs d2 (and d1) - should succeed
+  success
+removedirs d1 - should fail with ENOENT
+  error: *

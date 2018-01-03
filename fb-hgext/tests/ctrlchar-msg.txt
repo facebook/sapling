@@ -1,0 +1,8 @@
+This is a commit with bad chars in the message - but this one is OK
+
+That was a blank line
+
+This has a sneaky ctrl-A: 
+And this has esc: 
+
+Finish off with an OK line
