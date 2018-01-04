@@ -148,19 +148,6 @@ class FileInode : public InodeBase {
    */
   FOLLY_NODISCARD folly::Future<std::string> readAll();
 
-  /**
-   * Read up to size bytes from the file at the specified offset.
-   *
-   * Returns an IOBuf containing the data.  This may return fewer bytes than
-   * requested.  If the specified offset is at or past the end of the buffer an
-   * empty IOBuf will be returned.  Otherwise between 1 and size bytes will be
-   * returned.  If fewer than size bytes are returned this does *not* guarantee
-   * that the end of the file was reached.
-   *
-   * May throw exceptions on error.
-   */
-  std::unique_ptr<folly::IOBuf> readIntoBuffer(size_t size, off_t off);
-
   folly::Future<size_t> write(folly::StringPiece data, off_t off);
 
   /**
@@ -365,7 +352,22 @@ class FileInode : public InodeBase {
       const folly::File& file,
       Hash sha1);
 
+  /**
+   * Read up to size bytes from the file at the specified offset.
+   *
+   * Returns a BufVec containing the data.  This may return fewer bytes than
+   * requested.  If the specified offset is at or past the end of the buffer an
+   * empty IOBuf will be returned.  Otherwise between 1 and size bytes will be
+   * returned.  If fewer than size bytes are returned this does *not* guarantee
+   * that the end of the file was reached.
+   *
+   * May throw exceptions on error.
+   *
+   * Precondition: openCount > 0.  This is held because read is only called by
+   * FileInode or FileHandle.
+   */
   fusell::BufVec read(size_t size, off_t off);
+
   folly::Future<size_t> write(fusell::BufVec&& buf, off_t off);
 
   folly::Future<struct stat> stat();

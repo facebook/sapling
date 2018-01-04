@@ -534,46 +534,6 @@ void FileInode::fsync(bool datasync) {
   }
 }
 
-std::unique_ptr<folly::IOBuf> FileInode::readIntoBuffer(
-    size_t size,
-    off_t off) {
-  // It's potentially possible here to optimize a fast path here only requiring
-  // a read lock.  However, since a write lock is required to update atime and
-  // cache the file handle in the case of a materialized file, do the simple
-  // thing and just acquire a write lock.
-
-  auto state = state_.wlock();
-  SCOPE_SUCCESS {
-    state->timeStamps.atime = getNow();
-  };
-
-  if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-    auto file = getFile(*state);
-    auto buf = folly::IOBuf::createCombined(size);
-    auto res = ::pread(
-        file.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
-
-    checkUnixError(res);
-    buf->append(res);
-    return buf;
-  }
-
-  auto buf = state->blob->getContents();
-  folly::io::Cursor cursor(&buf);
-
-  if (!cursor.canAdvance(off)) {
-    // Seek beyond EOF.  Return an empty result.
-    return folly::IOBuf::wrapBuffer("", 0);
-  }
-
-  cursor.skip(off);
-
-  std::unique_ptr<folly::IOBuf> result;
-  cursor.cloneAtMost(result, size);
-
-  return result;
-}
-
 folly::Future<std::string> FileInode::readAll() {
   return ensureDataLoaded().then([self = inodePtrFromThis()] {
     // We need to take the wlock instead of the rlock because the lseek() call
@@ -606,8 +566,41 @@ folly::Future<std::string> FileInode::readAll() {
 }
 
 fusell::BufVec FileInode::read(size_t size, off_t off) {
-  auto buf = readIntoBuffer(size, off);
-  return fusell::BufVec(std::move(buf));
+  // It's potentially possible here to optimize a fast path here only requiring
+  // a read lock.  However, since a write lock is required to update atime and
+  // cache the file handle in the case of a materialized file, do the simple
+  // thing and just acquire a write lock.
+
+  auto state = state_.wlock();
+  SCOPE_SUCCESS {
+    state->timeStamps.atime = getNow();
+  };
+
+  if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+    auto file = getFile(*state);
+    auto buf = folly::IOBuf::createCombined(size);
+    auto res = ::pread(
+        file.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
+
+    checkUnixError(res);
+    buf->append(res);
+    return fusell::BufVec{std::move(buf)};
+  } else {
+    auto buf = state->blob->getContents();
+    folly::io::Cursor cursor(&buf);
+
+    if (!cursor.canAdvance(off)) {
+      // Seek beyond EOF.  Return an empty result.
+      return fusell::BufVec{folly::IOBuf::wrapBuffer("", 0)};
+    }
+
+    cursor.skip(off);
+
+    std::unique_ptr<folly::IOBuf> result;
+    cursor.cloneAtMost(result, size);
+
+    return fusell::BufVec{std::move(result)};
+  }
 }
 
 folly::Future<size_t> FileInode::write(fusell::BufVec&& buf, off_t off) {

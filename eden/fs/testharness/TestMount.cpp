@@ -254,11 +254,7 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
 }
 
 std::string TestMount::readFile(folly::StringPiece path) {
-  auto file = getFileInode(path);
-  auto attr = file->getattr().get();
-  auto buf = file->readIntoBuffer(
-      /* size */ attr.st.st_size, /* off */ 0);
-  return std::string(reinterpret_cast<const char*>(buf->data()), buf->length());
+  return getFileInode(path)->readAll().get();
 }
 
 bool TestMount::hasFileAt(folly::StringPiece path) {
