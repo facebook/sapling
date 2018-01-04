@@ -37,7 +37,7 @@ enum : char { kDirSeparator = '/' };
 /* Some helpers for working with path composition.
  * Goals:
  *
- * 1. Be fbstring and StringPiece friendly
+ * 1. Be StringPiece friendly
  * 2. Allow strong typing to help us work with the various
  *    units of a path.
  * 3. To be able to produce a composed path string without
@@ -86,13 +86,13 @@ template <typename STR>
 class AbsolutePathBase;
 } // namespace detail
 
-using PathComponent = detail::PathComponentBase<folly::fbstring>;
+using PathComponent = detail::PathComponentBase<std::string>;
 using PathComponentPiece = detail::PathComponentBase<folly::StringPiece>;
 
-using RelativePath = detail::RelativePathBase<folly::fbstring>;
+using RelativePath = detail::RelativePathBase<std::string>;
 using RelativePathPiece = detail::RelativePathBase<folly::StringPiece>;
 
-using AbsolutePath = detail::AbsolutePathBase<folly::fbstring>;
+using AbsolutePath = detail::AbsolutePathBase<std::string>;
 using AbsolutePathPiece = detail::AbsolutePathBase<folly::StringPiece>;
 
 namespace detail {
@@ -120,7 +120,7 @@ struct StoredOrPieceComparableAsStringPiece {
  * two flavors of the same template with the same comparison ops.
  */
 template <
-    typename Stored, // eg: Foo<fbstring>
+    typename Stored, // eg: Foo<std::string>
     typename Piece // eg: Foo<StringPiece>
     >
 struct PathOperators {
@@ -185,21 +185,21 @@ struct PathOperators {
  * It is templated around 4 type parameters:
  *
  * 1. Storage defines the nature of the data storage.  We only
- *    use either fbstring or StringPiece.
+ *    use either std::string or StringPiece.
  * 2. SanityChecker defines a "Deleter" style type that is used
  *    to validate the input for the constructors that apply sanity
  *    checks.
  * 3. Stored defines the ultimate type of the variation that manages
- *    its own storage. eg: PathComponentBase<fbstring>.  We need this
+ *    its own storage. eg: PathComponentBase<std::string>.  We need this
  *    type to define appropriate relational operators and methods.
  * 4. Piece defines the ultimate type of the variation that has no
  *    storage of its own. eg: PathComponentBase<StringPiece>.  Similar
  *    to Stored above, we need this for relational operators and methods.
  */
 template <
-    typename Storage, // eg: fbstring or StringPiece
+    typename Storage, // eg: std::string or StringPiece
     typename SanityChecker, // "Deleter" style type for checks
-    typename Stored, // eg: Foo<fbstring>
+    typename Stored, // eg: Foo<std::string>
     typename Piece // eg: Foo<StringPiece>
     >
 class PathBase :
@@ -253,10 +253,10 @@ class PathBase :
        * the class template parameter in the is_same check below */
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
-          std::is_same<StorageAlias, folly::fbstring>::value>::type>
+          std::is_same<StorageAlias, std::string>::value>::type>
   explicit PathBase(Stored&& other) : path_(std::move(other.path_)) {}
 
-  /** Move construct from an fbstring value.
+  /** Move construct from an std::string value.
    * Applies sanity checks.
    * The template gunk only enables this constructor if we are the
    * Stored flavor of this type.
@@ -266,12 +266,12 @@ class PathBase :
        * the class template parameter in the is_same check below */
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
-          std::is_same<StorageAlias, folly::fbstring>::value>::type>
-  explicit PathBase(folly::fbstring&& str) : path_(std::move(str)) {
+          std::is_same<StorageAlias, std::string>::value>::type>
+  explicit PathBase(std::string&& str) : path_(std::move(str)) {
     SanityChecker()(path_);
   }
 
-  /** Move construct from an fbstring value.
+  /** Move construct from an std::string value.
    * Skips sanity checks.
    * The template gunk only enables this constructor if we are the
    * Stored flavor of this type.
@@ -281,8 +281,8 @@ class PathBase :
        * the class template parameter in the is_same check below */
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
-          std::is_same<StorageAlias, folly::fbstring>::value>::type>
-  explicit PathBase(folly::fbstring&& str, SkipPathSanityCheck)
+          std::is_same<StorageAlias, std::string>::value>::type>
+  explicit PathBase(std::string&& str, SkipPathSanityCheck)
       : path_(std::move(str)) {
     SanityChecker()(path_);
   }
@@ -740,9 +740,9 @@ class PathIteratorRange {
  * and AbsolutePath so that we can share the definition of the methods below.
  * */
 template <
-    typename Storage, // eg: fbstring or StringPiece
+    typename Storage, // eg: std::string or StringPiece
     typename SanityChecker, // "Deleter" style type for checks
-    typename Stored, // eg: Foo<fbstring>
+    typename Stored, // eg: Foo<std::string>
     typename Piece // eg: Foo<StringPiece>
     >
 class ComposedPathBase
@@ -1179,11 +1179,11 @@ class AbsolutePathBase : public ComposedPathBase<
     if (this->stringPiece() == "/") {
       // Special case to avoid building a string like "//foo"
       return AbsolutePath(
-          folly::to<folly::fbstring>(this->stringPiece(), b.stringPiece()),
+          folly::to<std::string>(this->stringPiece(), b.stringPiece()),
           detail::SkipPathSanityCheck());
     }
     return AbsolutePath(
-        folly::to<folly::fbstring>(this->stringPiece(), "/", b.stringPiece()),
+        folly::to<std::string>(this->stringPiece(), "/", b.stringPiece()),
         detail::SkipPathSanityCheck());
   }
 
@@ -1202,7 +1202,7 @@ class AbsolutePathBase : public ComposedPathBase<
        * the class template parameter in the is_same check below */
       typename StorageAlias = Storage,
       typename = typename std::enable_if<
-          std::is_same<StorageAlias, folly::fbstring>::value>::type>
+          std::is_same<StorageAlias, std::string>::value>::type>
   const char* c_str() const {
     return this->path_.c_str();
   }
@@ -1485,7 +1485,7 @@ RelativePath operator+(
   // PathComponents can never be empty, so this is always a simple
   // join around a "/" character.
   return RelativePath(
-      folly::to<folly::fbstring>(a.stringPiece(), "/", b.stringPiece()),
+      folly::to<std::string>(a.stringPiece(), "/", b.stringPiece()),
       detail::SkipPathSanityCheck());
 }
 
@@ -1503,7 +1503,7 @@ RelativePath operator+(
     return a.copy();
   }
   return RelativePath(
-      folly::to<folly::fbstring>(a.stringPiece(), "/", b.stringPiece()),
+      folly::to<std::string>(a.stringPiece(), "/", b.stringPiece()),
       detail::SkipPathSanityCheck());
 }
 

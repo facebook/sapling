@@ -27,7 +27,6 @@ using folly::File;
 using folly::MutableStringPiece;
 using folly::Optional;
 using folly::StringPiece;
-using folly::fbstring;
 using folly::fbvector;
 using std::make_unique;
 using std::string;
@@ -101,7 +100,7 @@ void Overlay::initOverlay() {
     throw std::runtime_error(
         "The eden overlay format has been upgraded. "
         "This version of eden cannot use the old overlay directory at " +
-        localDir_.value().toStdString());
+        localDir_.value());
   }
 
   // Read the info file.

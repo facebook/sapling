@@ -360,7 +360,7 @@ HgImporter::HgImporter(AbsolutePathPiece repoPath, LocalStore* store)
     : repoPath_{repoPath}, store_{store} {
   auto importHelper = getImportHelperPath();
   std::vector<string> cmd = {
-      importHelper.value().toStdString(),
+      importHelper.value(),
       repoPath.value().str(),
       "--out-fd",
       folly::to<string>(HELPER_PIPE_FD),

@@ -68,10 +68,9 @@ string HgRepo::hg(vector<string> args) {
   args.insert(args.begin(), "hg");
 
   XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
-  auto options =
-      Subprocess::Options().chdir(path_.value().toStdString()).pipeStdout();
+  const auto options{Subprocess::Options().chdir(path_.value()).pipeStdout()};
   Subprocess p(args, options, hgCmd_.value().c_str(), &hgEnv_);
-  auto outputs = p.communicate();
+  const auto outputs{p.communicate()};
   p.waitChecked();
   return outputs.first;
 }
@@ -83,7 +82,7 @@ void HgRepo::hgInit() {
   // function.  The hg() function requires the repository directory to already
   // exist.
   Subprocess p(
-      {"hg", "init", path_.value().toStdString()},
+      {"hg", "init", path_.value()},
       Subprocess::Options(),
       hgCmd_.value().c_str(),
       &hgEnv_);

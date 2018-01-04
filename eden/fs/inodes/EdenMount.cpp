@@ -184,8 +184,7 @@ EdenMount::EdenMount(
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       socketPath_(socketPath),
-      straceLogger_{kEdenStracePrefix.str() +
-                    config_->getMountPath().value().toStdString()},
+      straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{clock->getRealtime()},
       path_(config_->getMountPath()),
       uid_(getuid()),

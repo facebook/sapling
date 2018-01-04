@@ -94,7 +94,7 @@ void CheckoutContext::addError(
 
   auto path = parentPath.value() + name;
   CheckoutConflict conflict;
-  conflict.path = path.value().toStdString();
+  conflict.path = path.value();
   conflict.type = ConflictType::ERROR;
   conflict.message = folly::exceptionStr(ew).toStdString();
   conflicts_.wlock()->push_back(std::move(conflict));

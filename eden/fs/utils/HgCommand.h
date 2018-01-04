@@ -31,8 +31,8 @@ struct HgFileInformation {
 };
 
 struct HgDirInformation {
-  folly::fbvector<folly::fbstring> files;
-  folly::fbvector<folly::fbstring> dirs;
+  folly::fbvector<std::string> files;
+  folly::fbvector<std::string> dirs;
 };
 
 class HgTreeInformation

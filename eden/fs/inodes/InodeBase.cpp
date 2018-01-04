@@ -188,13 +188,7 @@ std::string InodeBase::getLogPath() const {
   if (unlinked) {
     return folly::to<std::string>("<deleted:", path.stringPiece(), ">");
   }
-  // TODO: We should probably adjust the PathFuncs code to use std::string
-  // instead of fbstring.  For FB builds, std::string is the fbstring
-  // implementation.  For external builds, with gcc 5+, std::string is very
-  // similar to fbstring anyway.
-  //
-  // return std::move(path).value();
-  return path.stringPiece().str();
+  return std::move(path).value();
 }
 
 std::unique_ptr<InodeBase> InodeBase::markUnlinked(

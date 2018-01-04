@@ -109,7 +109,7 @@ AbsolutePath canonicalPathImpl(
       length += part.size();
     }
 
-    folly::fbstring value;
+    std::string value;
     value.reserve(length);
     for (const auto& part : parts) {
       value.push_back('/');

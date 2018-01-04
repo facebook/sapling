@@ -55,7 +55,7 @@ inline typename CONT::iterator sorted_insert(CONT& vec, T&& val, COMP compare) {
 }
 
 struct compare_str {
-  inline bool operator()(const folly::fbstring& a, const folly::fbstring& b) {
+  inline bool operator()(const std::string& a, const std::string& b) {
     // Bias dotfiles later so that we're more likely to match `ls` access
     // patterns
     int ascore = a[0] == '.' ? 0 : 1;
@@ -273,12 +273,12 @@ HgTreeInformation::statDir(folly::StringPiece name) {
 
   for (auto& file_name : stat.dirs) {
     names.emplace_back(
-        name.empty() ? file_name.toStdString()
+        name.empty() ? file_name
                      : folly::to<std::string>(name, "/", file_name));
   }
   for (auto& file_name : stat.files) {
     names.emplace_back(
-        name.empty() ? file_name.toStdString()
+        name.empty() ? file_name
                      : folly::to<std::string>(name, "/", file_name));
   }
 
