@@ -128,7 +128,10 @@ def showdoc(ui):
              "   :depth: 1\n\n"))
 
     for extensionname in sorted(allextensionnames()):
-        mod = extensions.load(ui, extensionname, None)
+        try:
+            mod = extensions.load(ui, extensionname, None)
+        except Exception:
+            continue
         ui.write(minirst.subsection(extensionname))
         ui.write("%s\n\n" % gettext(mod.__doc__))
         cmdtable = getattr(mod, 'cmdtable', None)
