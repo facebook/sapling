@@ -550,7 +550,7 @@ def create_parser():
 
     mount_parser = subparsers.add_parser(
         'mount', help='Remount an existing client (for instance, after it was '
-        'unmounted with "unmount -n")')
+        'unmounted with "unmount")')
     mount_parser.add_argument(
         'path', help='The client mount path')
     mount_parser.set_defaults(func=do_mount)
