@@ -55,7 +55,7 @@ use std::sync::Arc;
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, BlobState, FilesBlobState, RocksBlobState, TestManifoldBlobState};
+use blobrepo::{BlobRepo, BlobState, RocksBlobState, TestManifoldBlobState};
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
@@ -477,7 +477,6 @@ fn start_server<State, P>(
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
-    #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:manifold")] BlobManifold,
 }
@@ -527,16 +526,6 @@ fn main() {
     };
 
     match config.repotype {
-        RawRepoType::BlobFiles => start_server(
-            &config.addr,
-            config.reponame,
-            FilesBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
-                .expect("couldn't open blob state"),
-            root_logger.clone(),
-            config.cert,
-            config.private_key,
-            config.ca_pem_file,
-        ),
         RawRepoType::BlobRocks => start_server(
             &config.addr,
             config.reponame,
