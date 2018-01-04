@@ -3,7 +3,7 @@ no-check-code
 Python2 is required for its binary path handling
 
   $ hash python2 &>/dev/null || { echo 'skipped: missing python2'; exit 80; }
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 Create a repo with non-ascii paths
 

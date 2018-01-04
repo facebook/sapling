@@ -1,5 +1,4 @@
 subinclude:remotenames/.hgignore
-subinclude:hgsql/.hgignore
 subinclude:fb-hgext/.hgignore
 subinclude:hg-git/.hgignore
 subinclude:hgsubversion/.hgignore
@@ -33,6 +32,7 @@ tests/annotated
 tests/exceptions
 tests/*.err
 tests/htmlcov
+tests/hgsql/getdb.sh
 build
 contrib/chg/chg
 contrib/hgsh/hgsh

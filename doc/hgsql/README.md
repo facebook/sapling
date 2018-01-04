@@ -8,11 +8,11 @@ This improves server scalability by allowing load to be distributed amongst mult
 Installing
 ==========
 
-hgsql can be installed like any other Mercurial extension. Download the source code and add the hgsql file to your repositories `hgrc`:
+hgsql is part of this Mercurial distribution.  Enable it through configuration:
 
     :::ini
     [extensions]
-    hgsql=path/to/hgsql/hgsql.py
+    hgsql=
 
 Configuring
 -----------
@@ -46,10 +46,10 @@ An example server configuration:
 
 **Database**
 
-See `schema.sql` for required tables. You can create them using commands like:
+See `tests/hgsql/schema.sql` for required tables. You can create them using commands like:
 
     :::bash
-    mysql -uroot -D hgsql < ./schema.sql
+    mysql -uroot -D hgsql < tests/hgsql/schema.sql
 
 MySQL is recommended. Other implementations like MariaDB may have compatibility issues.
 
@@ -80,13 +80,11 @@ Contributing
 
 Patches are welcome as pull requests, though they will be collapsed and rebased to maintain a linear history.
 
-To run tests, copy `tests/getdb.sh.example` to `tests/getdb.sh`, and edit it to provide MySQL host, port, user and password. Then run the actual tests via:
+To run tests, copy `tests/hgsql/getdb.sh.example` to `tests/hgsql/getdb.sh`, and edit it to provide MySQL host, port, user and password. Then run the actual tests via:
 
     :::bash
     cd tests
-    ./run-tests.py --with-hg=/path/to/hg
-    # Alternatively, you can use run-tests.py from a checkout of the hg repo
-    /path/to/repo/hg/tests/run-tests.py
+    ./run-tests.py test-hgsql-*.t
 
 We (Facebook) have to ask for a "Contributor License Agreement" from someone who sends in a patch or code that we want to include in the codebase. This is a legal requirement; a similar situation applies to Apache and other ASF projects.
 

@@ -1,4 +1,4 @@
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 Populate the db with an initial commit
 
@@ -32,7 +32,7 @@ Run with incorrect local revlogs
   $ hg log -r tip --forcesync -T '{desc}\n'
   add b
   $ hg sqlverify 2>&1 | grep Corruption
-  hgext_hgsql.CorruptionException: '*' with linkrev *, disk does not match mysql (glob)
+  hgext.hgsql.CorruptionException: '*' with linkrev *, disk does not match mysql (glob)
 
   $ hg strip -q -r 1: --config hgsql.bypass=True --no-backup
   $ hg log -r tip --forcesync -T '\n'

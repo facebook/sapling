@@ -1,4 +1,4 @@
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 # Populate the db with an initial commit
 

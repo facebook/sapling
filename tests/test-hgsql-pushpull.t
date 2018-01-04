@@ -1,4 +1,4 @@
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 # Populate the db with an initial commit
 
@@ -140,7 +140,7 @@
   > export SSH_ORIGINAL_COMMAND
   > PYTHONPATH="$PYTHONPATH"
   > export PYTHONPATH
-  > ${PYTHON:-python} "$TESTDIR/hg-ssh" --read-only "$TESTTMP/master"
+  > ${PYTHON:-python} "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/master"
   > EOF
 
   $ hg -R master --config hgsql.bypass=True strip -r tip

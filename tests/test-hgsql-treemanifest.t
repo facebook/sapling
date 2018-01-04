@@ -1,7 +1,7 @@
   $ $PYTHON -c 'import treemanifest' || exit 80
 
   $ CACHEDIR=`pwd`/hgcache
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

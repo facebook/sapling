@@ -1,4 +1,4 @@
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 # Create initial repo that can be pulled out of order
 

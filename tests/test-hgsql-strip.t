@@ -1,4 +1,4 @@
-  $ . "$TESTDIR/library.sh"
+  $ . "$TESTDIR/hgsql/library.sh"
 
 Populate the db with an initial commit
 
@@ -111,8 +111,8 @@ Verify master2 is stripped
 Verify master is broken
 
   $ cd ../master
-  $ hg log 2>&1 | egrep 'hgext_hgsql.CorruptionException'
-  hgext_hgsql.CorruptionException: heads don't match after sync
+  $ hg log 2>&1 | egrep 'hgext.hgsql.CorruptionException'
+  hgext.hgsql.CorruptionException: heads don't match after sync
 
 Run sqlstrip on master as well
 

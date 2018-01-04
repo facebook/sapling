@@ -1,5 +1,5 @@
 TESTDIR=${TESTDIR:-.}
-if [[ ! -f "$TESTDIR/getdb.sh" ]]; then
+if [[ ! -f "$TESTDIR/hgsql/getdb.sh" ]]; then
   echo "skipped: getdb.sh missing. copy from getdb.sh.example and edit it"
   exit 80
 fi
@@ -9,7 +9,7 @@ if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
   exit 80
 fi
 
-source "$TESTDIR/getdb.sh" >/dev/null
+source "$TESTDIR/hgsql/getdb.sh" >/dev/null
 
 # Convert legacy fields from legacy getdb.sh implementation
 if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
@@ -31,7 +31,7 @@ CREATE DATABASE IF NOT EXISTS $DBNAME;
 USE $DBNAME;
 DROP TABLE IF EXISTS revisions;
 DROP TABLE IF EXISTS revision_references;
-$(cat $TESTDIR/../schema.sql)
+$(cat $TESTDIR/hgsql/schema.sql)
 EOF
 
 if [[ $? != 0 ]]; then
@@ -48,14 +48,14 @@ EOF
 [[ $DBAUTODROP == 1 ]] && trap droptestdb EXIT
 
 function initserver() {
-  hg init --config extensions.hgsql=$TESTDIR/../hgsql.py $1
+  hg init --config extensions.hgsql= $1
   configureserver $1 $2
 }
 
 configureserver() {
   cat >> $1/.hg/hgrc <<EOF
 [extensions]
-hgsql=$TESTDIR/../hgsql.py
+hgsql=
 strip=
 
 [hgsql]
@@ -87,7 +87,7 @@ configureclient() {
 ssh=python "$TESTDIR/dummyssh"
 
 [extensions]
-hgsql=$TESTDIR/../hgsql.py
+hgsql=
 strip=
 EOF
 }
