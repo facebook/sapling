@@ -111,8 +111,24 @@ def do_repository(args):
 
 def do_list(args):
     config = create_config(args)
-    for path in sorted(config.get_mount_paths()):
-        print(path)
+
+    try:
+        with config.get_thrift_client() as client:
+            active_mount_points = set(
+                mount.mountPoint
+                for mount in client.listMounts())
+    except EdenNotRunningError:
+        active_mount_points = set()
+
+    config_mount_points = set(config.get_mount_paths())
+
+    for path in sorted(active_mount_points | config_mount_points):
+        if path not in config_mount_points:
+            print(path + ' (unconfigured)')
+        elif path in active_mount_points:
+            print(path + ' (active)')
+        else:
+            print(path)
 
 
 def do_clone(args) -> int:
