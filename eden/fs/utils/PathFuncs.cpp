@@ -51,6 +51,13 @@ struct CanonicalData {
   bool isAbsolute{false};
 };
 
+/**
+ * Parse path into a collection of path components such that:
+ * - "." (single dot) and "" (empty) components are discarded.
+ * - ".." component either destructively combines with the last
+ *   parsed path component, or becomes the first component when
+ *   the vector of previously extracted components is empty.
+ */
 CanonicalData canonicalPathData(StringPiece path) {
   CanonicalData data;
   const char* componentStart = path.begin();
@@ -104,7 +111,7 @@ AbsolutePath canonicalPathImpl(
       return AbsolutePath{};
     }
 
-    size_t length = 1;
+    size_t length = 1; // reserve 1 byte for terminating '\0'
     for (const auto& part : parts) {
       length += part.size();
     }
@@ -166,6 +173,26 @@ AbsolutePath canonicalPath(folly::StringPiece path) {
 
 AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base) {
   return canonicalPathImpl(path, folly::Optional<AbsolutePathPiece>{base});
+}
+
+folly::Expected<RelativePath, int> joinAndNormalize(
+    RelativePathPiece base,
+    folly::StringPiece path) {
+  if (path.startsWith(kDirSeparator)) {
+    return folly::makeUnexpected(EPERM);
+  }
+  const std::string joined = base.value().empty()
+      ? path.str()
+      : path.empty() ? base.value().str()
+                     : folly::to<std::string>(base, kDirSeparator, path);
+  const CanonicalData cdata{canonicalPathData(joined)};
+  const auto& parts{cdata.components};
+  DCHECK(!cdata.isAbsolute);
+  if (!parts.empty() && parts[0] == "..") {
+    return folly::makeUnexpected(EXDEV);
+  } else {
+    return folly::makeExpected<int>(RelativePath{parts.begin(), parts.end()});
+  }
 }
 
 Expected<AbsolutePath, int> realpathExpected(const char* path) {

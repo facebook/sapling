@@ -33,6 +33,7 @@ folly::StringPiece dirname(folly::StringPiece path);
  * and don't want an actual symbol emitted by the compiler.)
  */
 enum : char { kDirSeparator = '/' };
+constexpr folly::StringPiece kDirSeparatorStr{"/"};
 
 /* Some helpers for working with path composition.
  * Goals:
@@ -488,8 +489,8 @@ class ComposedPathIterator
  protected:
   const char* pathBegin() {
     if (std::is_same<Piece, AbsolutePathPiece>::value) {
-      // Always start iterators at the initial "/" character, so that
-      // begin() yields "/" instead of the empty string.
+      // Always start iterators at the initial "/" character, so
+      // that begin() yields "/" instead of the empty string.
       return path_.begin() + 1;
     } else {
       return path_.begin();
@@ -570,19 +571,19 @@ class PathComponentIterator
     if (IsReverse) {
       start_ = path_.end();
       end_ = path_.end();
-      // Back start_ up to just after the last '/'
-      while (start_ != path_.begin() && *(start_ - 1) != '/') {
+      // Back start_ up to just after the last kDirSeparator
+      while (start_ != path_.begin() && *(start_ - 1) != kDirSeparator) {
         --start_;
       }
     } else {
       // Skip over any leading slash, to handle absolute paths
       start_ = path_.begin();
-      while (start_ != path_.end() && *start_ == '/') {
+      while (start_ != path_.end() && *start_ == kDirSeparator) {
         ++start_;
       }
       // Advance end_ until the next slash or the end of the path
       end_ = start_;
-      while (end_ != path_.end() && *end_ != '/') {
+      while (end_ != path_.end() && *end_ != kDirSeparator) {
         ++end_;
       }
     }
@@ -682,7 +683,7 @@ class PathComponentIterator
     }
     ++end_;
     start_ = end_;
-    while (end_ != path_.end() && *end_ != '/') {
+    while (end_ != path_.end() && *end_ != kDirSeparator) {
       ++end_;
     }
   }
@@ -697,7 +698,7 @@ class PathComponentIterator
 
     --start_;
     end_ = start_;
-    while (start_ != path_.begin() && *(start_ - 1) != '/') {
+    while (start_ != path_.begin() && *(start_ - 1) != kDirSeparator) {
       --start_;
     }
   }
@@ -993,11 +994,10 @@ class RelativePathBase : public ComposedPathBase<
   RelativePathBase(Iterator begin, Iterator end) {
     folly::fbvector<folly::StringPiece> components;
     while (begin != end) {
-      PathComponentPiece piece(begin->piece());
-      components.emplace_back(piece.stringPiece());
+      components.emplace_back(PathComponentPiece{*begin}.stringPiece());
       ++begin;
     }
-    folly::join("/", components, this->path_);
+    folly::join(kDirSeparatorStr, components, this->path_);
   }
 
   /** Construct from a container that holds PathComponents.
@@ -1076,7 +1076,7 @@ class AbsolutePathBase : public ComposedPathBase<
   using base_type::base_type;
 
   // Default construct to the root of the VFS
-  AbsolutePathBase() : base_type("/", SkipPathSanityCheck()) {}
+  AbsolutePathBase() : base_type(kDirSeparatorStr, SkipPathSanityCheck()) {}
 
   // For iteration
   using iterator = ComposedPathIterator<AbsolutePathPiece, false>;
@@ -1093,8 +1093,8 @@ class AbsolutePathBase : public ComposedPathBase<
   iterator_range paths() const {
     auto p = this->piece();
     // The +1 allows us to deal with the case where we're iterating
-    // over literally "/".  Without this +1, we would emit "/" twice
-    // and we don't want that.
+    // over literally "/".  Without this +1, we would emit
+    // "/" twice and we don't want that.
     return iterator_range(iterator{p}, iterator{p, nullptr});
   }
 
@@ -1176,14 +1176,15 @@ class AbsolutePathBase : public ComposedPathBase<
     if (b.stringPiece().empty()) {
       return this->copy();
     }
-    if (this->stringPiece() == "/") {
+    if (this->stringPiece() == kDirSeparatorStr) {
       // Special case to avoid building a string like "//foo"
       return AbsolutePath(
           folly::to<std::string>(this->stringPiece(), b.stringPiece()),
           detail::SkipPathSanityCheck());
     }
     return AbsolutePath(
-        folly::to<std::string>(this->stringPiece(), "/", b.stringPiece()),
+        folly::to<std::string>(
+            this->stringPiece(), kDirSeparatorStr, b.stringPiece()),
         detail::SkipPathSanityCheck());
   }
 
@@ -1485,7 +1486,8 @@ RelativePath operator+(
   // PathComponents can never be empty, so this is always a simple
   // join around a "/" character.
   return RelativePath(
-      folly::to<std::string>(a.stringPiece(), "/", b.stringPiece()),
+      folly::to<std::string>(
+          a.stringPiece(), kDirSeparatorStr, b.stringPiece()),
       detail::SkipPathSanityCheck());
 }
 
@@ -1503,7 +1505,8 @@ RelativePath operator+(
     return a.copy();
   }
   return RelativePath(
-      folly::to<std::string>(a.stringPiece(), "/", b.stringPiece()),
+      folly::to<std::string>(
+          a.stringPiece(), kDirSeparatorStr, b.stringPiece()),
       detail::SkipPathSanityCheck());
 }
 
@@ -1554,11 +1557,23 @@ AbsolutePath getcwd();
 AbsolutePath canonicalPath(folly::StringPiece path);
 
 /**
- * Canonicalize a path string.
+ * Canonicalize a path string relative to absolute path base
  *
  * If the input is a relative path, the specified base path is prepended to it.
  */
 AbsolutePath canonicalPath(folly::StringPiece path, AbsolutePathPiece base);
+
+/**
+ * Canonicalize a path string relative to a relative path base
+ *
+ * Returns a RelativePath that does not start with ".." or fails and returns:
+ *  error code EPERM if path is an absolute path
+ *  error code EXDEV if the return value would start with "../"
+ *                   e.g. base="a" and path="../.."
+ */
+folly::Expected<RelativePath, int> joinAndNormalize(
+    RelativePathPiece base,
+    folly::StringPiece path);
 
 /**
  * Convert an arbitrary unsanitized input string to a normalized AbsolutePath.

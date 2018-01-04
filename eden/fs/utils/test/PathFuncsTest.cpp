@@ -649,6 +649,30 @@ TEST(PathFuncs, canonicalPath) {
       canonicalPath("foo/../a//d/../b/./c.txt").value());
 }
 
+TEST(PathFuncs, joinAndNormalize) {
+  const auto good = [](const char* base, const char* path) {
+    return joinAndNormalize(RelativePath{base}, path).value();
+  };
+  const auto bad = [](const char* base, const char* path) {
+    return joinAndNormalize(RelativePath{base}, path).error();
+  };
+
+  EXPECT_EQ(good("a/b/c", "d"), RelativePath{"a/b/c/d"});
+  EXPECT_EQ(good("a/b/c/d", "../../e"), RelativePath{"a/b/e"});
+  EXPECT_EQ(good("a/b/c", ""), RelativePath{"a/b/c"});
+  EXPECT_EQ(good("", ""), RelativePath{""});
+  EXPECT_EQ(good("", "a/b"), RelativePath{"a/b"});
+  EXPECT_EQ(good("a/b", "../.."), RelativePath{""});
+  EXPECT_EQ(good("a/b/c", "../.."), RelativePath{"a"});
+
+  EXPECT_EQ(bad("a", "/b/c"), EPERM);
+  EXPECT_EQ(bad("a/b/c", "/"), EPERM);
+
+  EXPECT_EQ(bad("", ".."), EXDEV);
+  EXPECT_EQ(bad("a/b", "../../.."), EXDEV);
+  EXPECT_EQ(bad("a", "b/../../.."), EXDEV);
+}
+
 TEST(PathFuncs, realpath) {
   TmpWorkingDir tmpDir;
 

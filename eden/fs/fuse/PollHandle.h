@@ -17,7 +17,7 @@ namespace fusell {
 
 // Some compatibility cruft for working with OSX Fuse
 #if FUSE_MINOR_VERSION < 8
-typedef void* fuse_pollhandle;
+using fuse_pollhandle = void*;
 #endif
 
 class PollHandle {
