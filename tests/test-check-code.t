@@ -14,12 +14,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X fb-hgext \
   > -X hg-git \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  Skipping hgsql/hgsql.py it has no-che?k-code (glob)
-  Skipping hgsql/tests/heredoctest.py it has no-che?k-code (glob)
-  Skipping hgsql/tests/killdaemons.py it has no-che?k-code (glob)
-  Skipping hgsql/tests/run-tests.py.old it has no-che?k-code (glob)
-  Skipping hgsql/tests/test-encoding.t it has no-che?k-code (glob)
-  Skipping hgsql/tests/test-race-conditions.t it has no-che?k-code (glob)
+  Skipping hgext/hgsql.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/__init__.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/compathacks.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/editor.py it has no-che?k-code (glob)
@@ -75,6 +70,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   Skipping tests/badserverext.py it has no-che?k-code (glob)
+  Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
+  Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
   tests/test-remotenames-basic.t:308:
    >   $ hg help bookmarks  | grep -A 3 -- '--track'
    don't use grep's context flags
