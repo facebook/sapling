@@ -48,7 +48,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
 use std::os::unix::ffi::OsStringExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
@@ -390,16 +390,9 @@ where
 
 // Builds an acceptor that has `accept_async()` method that handles tls handshake
 // and returns decrypted stream.
-fn build_tls_acceptor<P>(
-    cert_pem_file: P,
-    private_key_pem_file: P,
-    ca_pem_file: P,
-) -> Result<TlsAcceptor>
-where
-    P: AsRef<Path>,
-{
-    let pkcs12 = secure_utils::build_pkcs12(cert_pem_file, private_key_pem_file)
-        .context("failed to build pkcs12")?;
+fn build_tls_acceptor(ssl: Ssl) -> Result<TlsAcceptor> {
+    let pkcs12 =
+        secure_utils::build_pkcs12(ssl.cert, ssl.private_key).context("failed to build pkcs12")?;
     let mut tlsacceptor_builder = TlsAcceptor::builder(pkcs12)?;
 
     // Set up client authentication
@@ -407,7 +400,7 @@ where
         let sslcontextbuilder = tlsacceptor_builder.builder_mut();
 
         sslcontextbuilder
-            .set_ca_file(ca_pem_file)
+            .set_ca_file(ssl.ca_pem_file)
             .context("cannot set CA file")?;
 
         // SSL_VERIFY_PEER checks client certificate if it was supplied.
@@ -420,24 +413,16 @@ where
     tlsacceptor_builder.build().map_err(Error::from)
 }
 
-fn start_server<State, P>(
-    addr: &str,
-    reponame: String,
-    state: State,
-    logger: Logger,
-    cert: P,
-    private_key: P,
-    ca_pem_file: P,
-) where
+fn start_server<State>(addr: &str, reponame: String, state: State, logger: Logger, ssl: Ssl)
+where
     State: BlobState,
-    P: AsRef<Path>,
 {
     let addr = addr.parse().expect("Failed to parse address");
     let mut map = HashMap::new();
     let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
-    let tlsacceptor = build_tls_acceptor(cert, private_key, ca_pem_file);
+    let tlsacceptor = build_tls_acceptor(ssl);
     let tlsacceptor = match tlsacceptor {
         Ok(tlsacceptor) => tlsacceptor,
         Err(err) => {
@@ -482,15 +467,20 @@ enum RawRepoType {
 }
 
 #[derive(Debug, Deserialize)]
+struct Ssl {
+    cert: String,
+    private_key: String,
+    ca_pem_file: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct RawRepoConfig {
     path: Option<PathBuf>,
     manifold_bucket: Option<String>,
     repotype: RawRepoType,
     reponame: String,
     addr: String,
-    cert: String,
-    private_key: String,
-    ca_pem_file: String,
+    ssl: Ssl,
 }
 
 fn main() {
@@ -532,9 +522,7 @@ fn main() {
             RocksBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
-            config.cert,
-            config.private_key,
-            config.ca_pem_file,
+            config.ssl,
         ),
         RawRepoType::BlobManifold => {
             let (sender, receiver) = oneshot::channel();
@@ -563,9 +551,7 @@ fn main() {
                     &remote,
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
-                config.cert,
-                config.private_key,
-                config.ca_pem_file,
+                config.ssl,
             )
         }
     };

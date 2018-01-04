@@ -109,6 +109,8 @@ Add commit with a directory
   $ echo 'reponame="repo"' >> $TESTTMP/config
   $ echo "path=\"$TESTTMP/blobrepo\"" >> $TESTTMP/config
   $ echo "addr='127.0.0.1:$SOCKET'" >> $TESTTMP/config
+  $ echo 'repotype="blob:rocks"' >> $TESTTMP/config
+  $ echo "[ssl]" >> $TESTTMP/config
   $ echo "cert=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
@@ -132,7 +134,6 @@ Heads output order is unpredictable, let's sort them by commit hash
   I* compaction finished (glob)
 Temporary hack because blobimport doesn't import bookmarks yet
   $ mkdir $TESTTMP/blobrepo/books
-  $ echo 'repotype="blob:rocks"' >> $TESTTMP/config
   $ edenserver --config-file $TESTTMP/config
 
 Temporary hack to make sure server is ready
