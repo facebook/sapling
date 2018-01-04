@@ -26,10 +26,5 @@ inline typename CONT::iterator sorted_insert(CONT& vec, T&& val, COMP compare) {
   return vec.emplace(find, val);
 }
 
-struct CompareString {
-  inline bool operator()(const std::string& a, const std::string& b) {
-    return a < b;
-  }
-};
 } // namespace eden
 } // namespace facebook
