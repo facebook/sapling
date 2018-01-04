@@ -676,7 +676,7 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
 // Waits until inode is either in 'loaded' or 'materialized' state.
 Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
-  Future<FileHandlePtr> resultFuture{FileHandlePtr{nullptr}};
+  folly::Optional<Future<FileHandlePtr>> resultFuture;
   auto blobFuture = Future<std::shared_ptr<const Blob>>::makeEmpty();
 
   {
@@ -720,11 +720,13 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
     }
   }
 
+  // Execution only gets here in the NOT_LOADED case, in which case resultFuture
+  // is initialized.
+  CHECK(resultFuture);
+
   auto self = inodePtrFromThis(); // separate line for formatting
   blobFuture
       .then([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) {
-        folly::SharedPromise<FileHandlePtr> promise;
-
         auto state = self->state_.wlock();
         state->checkInvariants();
 
@@ -736,8 +738,8 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
           // with a concurrent materializeForWrite(O_TRUNC), in which case the
           // state would have transitioned to 'materialized' before this
           // callback runs.
-          case State::BLOB_LOADING:
-            promise = std::move(*state->blobLoadingPromise);
+          case State::BLOB_LOADING: {
+            auto promise = std::move(*state->blobLoadingPromise);
             state->blobLoadingPromise.clear();
 
             if (tryBlob.hasValue()) {
@@ -766,26 +768,14 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
               promise.setException(tryBlob.exception());
             }
             break;
+          }
 
-          case State::MATERIALIZED_IN_OVERLAY: {
+          case State::MATERIALIZED_IN_OVERLAY:
             // The load raced with a materializeForWrite(O_TRUNC).  Nothing left
             // to do here: ensureDataLoaded() guarantees `blob` or `file` is
             // defined after its completion, and the
             // materializeForWrite(O_TRUNC) fulfilled the promise.
-            CHECK(state->file);
-            // The FileHandle must be allocated while the lock is held so the
-            // blob field is set and the openCount incremented atomically, so
-            // that no other thread can cause the blob to get unset before
-            // openCount is incremented.
-            auto result = std::make_shared<FileHandle>(
-                self, [&state] { fileHandleDidOpen(*state); });
-            // Call the Future's subscribers while the state_ lock is not held.
-            // Even if the FileInode has transitioned to a materialized state,
-            // any pending loads must be unblocked.
-            state.unlock();
-            promise.setValue(result);
             break;
-          }
 
           default:
             EDEN_BUG()
@@ -794,7 +784,7 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
       })
       .onError([](const std::exception&) {
         // We get here if EDEN_BUG() didn't terminate the process, or if we
-        // threw in the preceeding block.  Both are bad because we won't
+        // threw in the preceding block.  Both are bad because we won't
         // automatically propagate the exception to resultFuture and we
         // can't trust the state of anything if we get here.
         // Rather than leaving something hanging, we suicide.
@@ -803,7 +793,7 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
             << "Failed to propagate failure in getBlob(), no choice but to die";
       });
 
-  return resultFuture;
+  return std::move(*resultFuture);
 }
 
 namespace {
@@ -894,7 +884,7 @@ Future<Unit> FileInode::materializeForWrite() {
 
 void FileInode::materializeAndTruncate() {
   // Set if in 'loading' state.  Fulfilled outside of the scopes of any locks.
-  folly::Optional<folly::SharedPromise<FileHandlePtr>> sharedPromise;
+  folly::SharedPromise<FileHandlePtr> sharedPromise;
 
   // Notifying the parent of materialization must occur outside of the lock.
   bool didMaterialize = false;
@@ -934,7 +924,7 @@ void FileInode::materializeAndTruncate() {
       // Transition to `loaded`.
       if (state->blobLoadingPromise) { // Loading.
         // Move the promise out so it's fulfilled outside of the lock.
-        sharedPromise.emplace(std::move(*state->blobLoadingPromise));
+        sharedPromise = std::move(*state->blobLoadingPromise);
         state->blobLoadingPromise.reset();
       } else if (state->blob) { // Loaded.
         state->blob.reset();
@@ -961,9 +951,7 @@ void FileInode::materializeAndTruncate() {
   }
 
   // Fulfill outside of the lock.
-  if (sharedPromise) {
-    sharedPromise->setTry(std::move(try_));
-  }
+  sharedPromise.setTry(std::move(try_));
 }
 
 ObjectStore* FileInode::getObjectStore() const {

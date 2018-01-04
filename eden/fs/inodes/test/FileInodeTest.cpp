@@ -410,6 +410,38 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(true, isInodeMaterialized(parent));
 }
 
+TEST(FileInodeTest_, truncatingDuringLoad) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
+
+  TestMount mount_;
+  mount_.initialize(builder, false);
+
+  auto inode = mount_.getFileInode("notready.txt");
+
+  auto backingStore = mount_.getBackingStore();
+  auto storedBlob = backingStore->getStoredBlob(*inode->getBlobHash());
+
+  auto readAllFuture = inode->readAll();
+  EXPECT_EQ(false, readAllFuture.isReady());
+
+  {
+    // Synchronously truncate the file while the load is in progress.
+    auto handleFuture = inode->open(O_TRUNC);
+    EXPECT_EQ(true, handleFuture.isReady());
+    EXPECT_EQ(true, handleFuture.hasValue());
+    // Deallocate the handle here, closing the open file.
+  }
+
+  // Verify, from the caller's perspective, the load is complete (but empty).
+  EXPECT_EQ(true, readAllFuture.isReady());
+  EXPECT_EQ("", readAllFuture.value());
+
+  // Now finish the ObjectStore load request to make sure the FileInode
+  // handles the state correctly.
+  storedBlob->setReady();
+}
+
 // TODO: test multiple flags together
 // TODO: ensure ctime is updated after every call to setattr()
 // TODO: ensure mtime is updated after opening a file, writing to it, then
