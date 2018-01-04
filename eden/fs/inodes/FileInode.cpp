@@ -102,6 +102,9 @@ void FileInode::State::State::checkInvariants() {
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
       CHECK(!blob);
+      if (file) {
+        CHECK_GT(openCount, 0);
+      }
       if (openCount == 0) {
         // file is lazily set, so the only interesting assertion is
         // that it's not open if openCount is zero.
@@ -291,11 +294,21 @@ void FileInode::fileHandleDidClose() {
   auto state = state_.wlock();
   DCHECK_GT(state->openCount, 0);
   if (--state->openCount == 0) {
-    // TODO: Before closing the file handle, it might make sense to write
-    // in-memory timestamps into the overlay, even if the inode remains in
-    // memory. This would ensure timestamps persist even if the edenfs process
-    // crashes or otherwise exits without unloading all inodes.
-    state->closeFile();
+    switch (state->tag) {
+      case State::BLOB_LOADED:
+        state->blob.reset();
+        state->tag = State::NOT_LOADED;
+        break;
+      case State::MATERIALIZED_IN_OVERLAY:
+        // TODO: Before closing the file handle, it might make sense to write
+        // in-memory timestamps into the overlay, even if the inode remains in
+        // memory. This would ensure timestamps persist even if the edenfs
+        // process crashes or otherwise exits without unloading all inodes.
+        state->closeFile();
+        break;
+      default:
+        break;
+    }
   }
 }
 
@@ -475,6 +488,8 @@ folly::Future<struct stat> FileInode::stat() {
       st.st_size -= Overlay::kHeaderLength;
       st.st_rdev = state->rdev;
     } else {
+      // blob is guaranteed set because ensureDataLoaded() returns a FileHandle
+      // so openCount > 0.
       CHECK(state->blob);
       auto buf = state->blob->getContents();
       st.st_size = buf.computeChainDataLength();
@@ -572,6 +587,7 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
   // thing and just acquire a write lock.
 
   auto state = state_.wlock();
+  state->checkInvariants();
   SCOPE_SUCCESS {
     state->timeStamps.atime = getNow();
   };
@@ -586,6 +602,9 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
     buf->append(res);
     return fusell::BufVec{std::move(buf)};
   } else {
+    // read() is either called by the FileHandle or FileInode.  They must
+    // guarantee openCount > 0.
+    CHECK(state->blob);
     auto buf = state->blob->getContents();
     folly::io::Cursor cursor(&buf);
 
@@ -859,13 +878,14 @@ Future<Unit> FileInode::materializeForWrite() {
         // than to read the file out of the overlay later.
       }
 
+      // ensureDataLoaded() returns a FileHandle; therefore openCount must be
+      // positive; therefore it's okay to set file.
+      CHECK_GT(state->openCount, 0);
+
       // Update the FileInode to indicate that we are materialized now.
       state->blob.reset();
       state->hash = folly::none;
-      // If a FileHandle is already open cache the newly-opened file.
-      if (state->openCount) {
-        state->file = std::move(file);
-      }
+      state->file = std::move(file);
       state->tag = State::MATERIALIZED_IN_OVERLAY;
     }
     self->materializeInParent();
