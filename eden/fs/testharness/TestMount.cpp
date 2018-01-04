@@ -232,17 +232,28 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
 
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
-  auto treeInode = getTreeInode(relativePath.dirname());
-  mode_t mode = 0644;
-  int flags = 0;
-  auto dispatcher = edenMount_->getDispatcher();
-  auto createResult =
-      dispatcher
-          ->create(treeInode->getNodeId(), relativePath.basename(), mode, flags)
-          .get();
-  off_t off = 0;
-  createResult.fh->write(contents, off);
+  const auto treeInode = getTreeInode(relativePath.dirname());
+  auto createResult = edenMount_->getDispatcher()
+                          ->create(
+                              treeInode->getNodeId(),
+                              relativePath.basename(),
+                              /*mode*/ 0644,
+                              /*flags*/ 0)
+                          .get();
+  createResult.fh->write(contents, /*off*/ 0);
   createResult.fh->fsync(/*datasync*/ true);
+}
+
+void TestMount::addSymlink(
+    folly::StringPiece path,
+    folly::StringPiece pointsTo) {
+  const RelativePathPiece relativePath{path};
+  edenMount_->getDispatcher()
+      ->symlink(
+          getTreeInode(relativePath.dirname())->getNodeId(),
+          relativePath.basename(),
+          pointsTo)
+      .get(); // discard the result but throw exception on bad future
 }
 
 void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {

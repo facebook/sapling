@@ -181,6 +181,11 @@ class TestMount {
    */
   void addFile(folly::StringPiece path, folly::StringPiece contents);
 
+  /**
+   * Creaate symlink named path pointing to pointsTo or throw exception if fail
+   */
+  void addSymlink(folly::StringPiece path, folly::StringPiece pointsTo);
+
   void mkdir(folly::StringPiece path);
 
   /** Overwrites the contents of an existing file. */
