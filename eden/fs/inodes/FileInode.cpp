@@ -144,7 +144,7 @@ folly::File FileInode::getFile(FileInode::State& state) const {
  */
 FileInode::State::~State() = default;
 
-std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
+std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
     fusell::InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
@@ -156,19 +156,14 @@ std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> FileInode::create(
   auto inode = FileInodePtr::makeNew(
       ino, parentInode, name, mode, std::move(file), ctime, rdev);
 
-  // This next line increments openCount.
-  auto fileHandle = std::make_shared<FileHandle>(inode);
-
-  // It would be nice to perform this move under the same wlock that we
-  // use in FileHandle::FileHandle when it calls FileInode::fileHandleDidOpen,
-  // but it feels like a lot of impact in other classes to propagate that
-  // through and around.
-  auto state = inode->state_.wlock();
-  state->file = std::move(file);
-  DCHECK_EQ(state->openCount, 1)
-      << "open count cannot be anything other than 1";
-
-  return std::make_tuple(inode, fileHandle);
+  return inode->state_.withWLock([&](auto& state) {
+    auto fileHandle = std::make_shared<FileHandle>(
+        inode, [&state] { fileHandleDidOpen(state); });
+    state.file = std::move(file);
+    DCHECK_EQ(state.openCount, 1)
+        << "open count cannot be anything other than 1";
+    return std::make_tuple(inode, fileHandle);
+  });
 }
 
 // The FileInode is in NOT_LOADED or MATERIALIZED_IN_OVERLAY state.
@@ -286,10 +281,10 @@ folly::Future<std::string> FileInode::readlink() {
   return readAll();
 }
 
-void FileInode::fileHandleDidOpen() {
+void FileInode::fileHandleDidOpen(State& state) {
   // Don't immediately open the file when transitioning from 0 to 1. Open it
   // when getFile() is called.
-  state_.wlock()->openCount += 1;
+  state.openCount += 1;
 }
 
 void FileInode::fileHandleDidClose() {
@@ -376,9 +371,13 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(int flags) {
     }
   }
 
-  // Creating the FileHandle increments openCount, which causes the truncation
-  // and materialization paths to cache the overlay's file handle in the state.
-  auto fileHandle = std::make_shared<FileHandle>(inodePtrFromThis());
+  auto fileHandle = state_.withWLock([&](auto& state) {
+    // Creating the FileHandle increments openCount, which causes the truncation
+    // and materialization paths to cache the overlay's file handle in the
+    // state.
+    return std::make_shared<FileHandle>(
+        inodePtrFromThis(), [&state] { fileHandleDidOpen(state); });
+  });
 
   if (flags & O_TRUNC) {
     materializeAndTruncate();
@@ -664,8 +663,8 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 }
 
 // Waits until inode is either in 'loaded' or 'materialized' state.
-Future<Unit> FileInode::ensureDataLoaded() {
-  Future<Unit> resultFuture;
+Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
+  Future<FileHandlePtr> resultFuture{FileHandlePtr{nullptr}};
   auto blobFuture = Future<std::shared_ptr<const Blob>>::makeEmpty();
 
   {
@@ -686,7 +685,8 @@ Future<Unit> FileInode::ensureDataLoaded() {
       case State::BLOB_LOADED:
       case State::MATERIALIZED_IN_OVERLAY:
         // Nothing to do if loaded or materialized.
-        return makeFuture();
+        return makeFuture(std::make_shared<FileHandle>(
+            inodePtrFromThis(), [&state] { fileHandleDidOpen(*state); }));
 
       case State::NOT_LOADED:
         // Start the blob load first in case this throws an exception.
@@ -696,7 +696,7 @@ Future<Unit> FileInode::ensureDataLoaded() {
 
         // We need to load the blob data.  Arrange to do so in a way that
         // multiple callers can wait for.
-        folly::SharedPromise<Unit> promise;
+        folly::SharedPromise<FileHandlePtr> promise;
         // The resultFuture will complete after we have loaded the blob
         // and updated state_.
         resultFuture = promise.getFuture();
@@ -711,7 +711,7 @@ Future<Unit> FileInode::ensureDataLoaded() {
   auto self = inodePtrFromThis(); // separate line for formatting
   blobFuture
       .then([self](folly::Try<std::shared_ptr<const Blob>> tryBlob) {
-        folly::SharedPromise<Unit> promise;
+        folly::SharedPromise<FileHandlePtr> promise;
 
         auto state = self->state_.wlock();
         state->checkInvariants();
@@ -733,11 +733,17 @@ Future<Unit> FileInode::ensureDataLoaded() {
               state->blob = std::move(tryBlob.value());
               state->tag = State::BLOB_LOADED;
               state->checkInvariants();
+              // The FileHandle must be allocated while the lock is held so the
+              // blob field is set and the openCount incremented atomically, so
+              // that no other thread can cause the blob to get unset before
+              // openCount is incremented.
+              auto result = std::make_shared<FileHandle>(
+                  self, [&state] { fileHandleDidOpen(*state); });
               // Call the Future's subscribers while the state_ lock is not
               // held. Even if the FileInode has transitioned to a materialized
               // state, any pending loads must be unblocked.
               state.unlock();
-              promise.setValue();
+              promise.setValue(std::move(result));
             } else {
               state->tag = State::NOT_LOADED;
               state->checkInvariants();
@@ -749,18 +755,25 @@ Future<Unit> FileInode::ensureDataLoaded() {
             }
             break;
 
-          case State::MATERIALIZED_IN_OVERLAY:
+          case State::MATERIALIZED_IN_OVERLAY: {
             // The load raced with a materializeForWrite(O_TRUNC).  Nothing left
             // to do here: ensureDataLoaded() guarantees `blob` or `file` is
             // defined after its completion, and the
             // materializeForWrite(O_TRUNC) fulfilled the promise.
             CHECK(state->file);
+            // The FileHandle must be allocated while the lock is held so the
+            // blob field is set and the openCount incremented atomically, so
+            // that no other thread can cause the blob to get unset before
+            // openCount is incremented.
+            auto result = std::make_shared<FileHandle>(
+                self, [&state] { fileHandleDidOpen(*state); });
             // Call the Future's subscribers while the state_ lock is not held.
             // Even if the FileInode has transitioned to a materialized state,
             // any pending loads must be unblocked.
             state.unlock();
-            promise.setValue();
+            promise.setValue(result);
             break;
+          }
 
           default:
             EDEN_BUG()
@@ -868,12 +881,12 @@ Future<Unit> FileInode::materializeForWrite() {
 
 void FileInode::materializeAndTruncate() {
   // Set if in 'loading' state.  Fulfilled outside of the scopes of any locks.
-  folly::Optional<folly::SharedPromise<folly::Unit>> sharedPromise;
+  folly::Optional<folly::SharedPromise<FileHandlePtr>> sharedPromise;
 
   // Notifying the parent of materialization must occur outside of the lock.
   bool didMaterialize = false;
 
-  auto exceptionWrapper = folly::try_and_catch<const std::exception>([&] {
+  auto try_ = folly::makeTryWith([&] {
     auto state = state_.wlock();
     state->checkInvariants();
     SCOPE_SUCCESS {
@@ -925,6 +938,9 @@ void FileInode::materializeAndTruncate() {
       didMaterialize = true;
     }
     storeSha1(state, file, Hash::sha1(ByteRange{}));
+
+    return std::make_shared<FileHandle>(
+        inodePtrFromThis(), [&state] { fileHandleDidOpen(*state); });
   });
 
   if (didMaterialize) {
@@ -933,11 +949,7 @@ void FileInode::materializeAndTruncate() {
 
   // Fulfill outside of the lock.
   if (sharedPromise) {
-    if (exceptionWrapper) {
-      sharedPromise->setException(exceptionWrapper);
-    } else {
-      sharedPromise->setValue();
-    }
+    sharedPromise->setTry(std::move(try_));
   }
 }
 

@@ -20,7 +20,22 @@ class LocalStore;
 
 class FileHandle : public fusell::FileHandle {
  public:
-  explicit FileHandle(FileInodePtr inode);
+  /**
+   * The caller is responsible for incrementing any reference counts in the
+   * given function.  This constructor does nothing but retain the specified
+   * inode.
+   *
+   * Note that, for exception safety, the given function has to run during
+   * FileHandle construction - if it throws, we don't want ~FileHandle to call
+   * fileHandleDidClose.
+   */
+  template <typename Func>
+  explicit FileHandle(FileInodePtr inode, Func&& func)
+      : inode_(std::move(inode)) {
+    func();
+  }
+
+  // Calls fileHandleDidClose on the associated inode.
   ~FileHandle() override;
 
   fusell::InodeNumber getInodeNumber() override;

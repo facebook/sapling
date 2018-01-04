@@ -34,6 +34,8 @@ class ObjectStore;
 
 class FileInode : public InodeBase {
  public:
+  using FileHandlePtr = std::shared_ptr<FileHandle>;
+
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
 
   /**
@@ -41,7 +43,7 @@ class FileInode : public InodeBase {
    * constructor simultaneously allocates a FileInode given the File and
    * returns a new FileHandle to it.
    */
-  static std::tuple<FileInodePtr, std::shared_ptr<FileHandle>> create(
+  static std::tuple<FileInodePtr, FileHandlePtr> create(
       fusell::InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
@@ -173,8 +175,11 @@ class FileInode : public InodeBase {
    * If this file is materialized, this opens its file in the overlay.
    * If the file is not materialized, this loads the Blob data from the
    * ObjectStore.
+   *
+   * Returns a FileHandle that, while it's alive, either State::blob is non-null
+   * or getFile() will return a File handle.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> ensureDataLoaded();
+  FOLLY_NODISCARD folly::Future<FileHandlePtr> ensureDataLoaded();
 
   /**
    * Materialize the file data.  If already materialized, the future is
@@ -270,7 +275,7 @@ class FileInode : public InodeBase {
     /**
      * Set if 'loading'.
      */
-    folly::Optional<folly::SharedPromise<folly::Unit>> blobLoadingPromise;
+    folly::Optional<folly::SharedPromise<FileHandlePtr>> blobLoadingPromise;
 
     /**
      * Set if 'loaded', references immutable data from the backing store.
@@ -320,7 +325,7 @@ class FileInode : public InodeBase {
   /**
    * Called as part of setting up an open file handle.
    */
-  void fileHandleDidOpen();
+  static void fileHandleDidOpen(State& state);
 
   /**
    * Called as part of shutting down an open handle.

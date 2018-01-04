@@ -18,10 +18,6 @@
 namespace facebook {
 namespace eden {
 
-FileHandle::FileHandle(FileInodePtr inode) : inode_(std::move(inode)) {
-  inode_->fileHandleDidOpen();
-}
-
 FileHandle::~FileHandle() {
   inode_->fileHandleDidClose();
 }
