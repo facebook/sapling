@@ -2,7 +2,7 @@
 
 cpp_unittest(
     name = "test",
-    srcs = glob(["*Test.cpp"]),
+    srcs = ["main.cpp"] + glob(["*Test.cpp"]),
     deps = [
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
@@ -10,7 +10,14 @@ cpp_unittest(
         "//folly:exception",
         "//folly:exception_wrapper",
         "//folly:file",
+        "//folly:range",
+        "//folly:string",
         "//folly/experimental:test_util",
+        "//folly/experimental/logging:init",
+        "//folly/experimental/logging:logging",
+        "//folly/futures:core",
+        "//folly/init:init",
+        "//folly/io:iobuf",
         "//folly/io/async:async",
         "//folly/test:test_utils",
     ],
@@ -24,7 +31,10 @@ cpp_library(
     name = "test_lib",
     srcs = glob(
         ["*.cpp"],
-        excludes = ["*Test.cpp"],
+        excludes = [
+            "*Test.cpp",
+            "main.cpp",
+        ],
     ),
     headers = glob(["*.h"]),
     deps = [
