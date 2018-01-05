@@ -266,6 +266,22 @@ class EdenMount {
   FileInodePtr getFileInodeBlocking(RelativePathPiece path) const;
 
   /**
+   * Chases (to bounded depth) and returns the final non-symlink in the
+   * (possibly 0-length) chain of symlinks rooted at pInode.  Specifically:
+   * If pInode is a file or directory, it is immediately returned.
+   * If pInode is a symlink, the chain rooted at it chased down until
+   * one of the following conditions:
+   * 1) an entity outside this mount is encountered => error (EXDEV);
+   * 2) an non-symlink item under this mount is found => this item is returned;
+   * 3) a maximum depth is exceeded => error (ELOOP).
+   * 4) absolute path entity is encountered => error (EPERM).
+   * 5) the input inode refers to an unlinked inode => error (ENOENT).
+   * 6) a symlink points to a non-existing entity => error (ENOENT)
+   * NOTE: a loop in the chain is handled by max depth length logic.
+   */
+  folly::Future<InodePtr> resolveSymlink(InodePtr pInode) const;
+
+  /**
    * Check out the specified commit.
    */
   folly::Future<std::vector<CheckoutConflict>> checkout(
@@ -495,6 +511,12 @@ class EdenMount {
   };
 
   /**
+   * Recursive method used for resolveSymlink() implementation
+   */
+  folly::Future<InodePtr>
+  resolveSymlinkImpl(InodePtr pInode, RelativePath&& path, size_t depth) const;
+
+  /**
    * Attempt to transition from expected -> newState.
    * If the current state is expected then the state is set to newState
    * and returns boolean.
@@ -533,6 +555,8 @@ class EdenMount {
    * std::unique_ptr or std::shared_ptr).
    */
   ~EdenMount();
+
+  static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
   /**
    * The stats instance associated with this mount point.
