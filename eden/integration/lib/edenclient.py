@@ -14,7 +14,8 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Dict, Optional
+from types import TracebackType
+from typing import cast, Dict, Optional, List
 
 import eden.thrift
 from fb303.ttypes import fb_status
@@ -24,37 +25,45 @@ from .find_executables import EDEN_CLI, EDEN_DAEMON
 class EdenFS(object):
     '''Manages an instance of the eden fuse server.'''
 
-    def __init__(self, eden_dir=None, etc_eden_dir=None, home_dir=None,
-                 logging_settings=None):
+    def __init__(
+        self,
+        eden_dir: Optional[str] = None,
+        etc_eden_dir: Optional[str] = None,
+        home_dir: Optional[str] = None,
+        logging_settings: Optional[Dict[str, str]] = None
+    ) -> None:
         if eden_dir is None:
             eden_dir = tempfile.mkdtemp(prefix='eden_test.')
         self._eden_dir = eden_dir
 
-        self._process = None
+        self._process: Optional[subprocess.Popen] = None
         self._etc_eden_dir = etc_eden_dir
         self._home_dir = home_dir
         self._logging_settings = logging_settings
 
     @property
-    def eden_dir(self):
+    def eden_dir(self) -> str:
         return self._eden_dir
 
-    def __enter__(self):
+    def __enter__(self) -> 'EdenFS':
         return self
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(
+        self, exc_type: type, exc_value: BaseException, tb: TracebackType
+    ) -> bool:
         self.cleanup()
+        return False
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         '''Stop the instance and clean up its temporary directories'''
         self.kill()
         self.cleanup_dirs()
 
-    def cleanup_dirs(self):
+    def cleanup_dirs(self) -> None:
         '''Remove any temporary dirs we have created.'''
         shutil.rmtree(self._eden_dir, ignore_errors=True)
 
-    def kill(self):
+    def kill(self) -> None:
         '''Stops and unmounts this instance.'''
         if self._process is None or self._process.returncode is not None:
             return
@@ -62,7 +71,7 @@ class EdenFS(object):
 
     def _wait_for_healthy(
         self, timeout: float, exclude_pid: Optional[int]=None
-    ):
+    ) -> None:
         '''Wait for edenfs to start and report that it is healthy.
 
         Throws an error if it doesn't come up within the specified time.
@@ -88,6 +97,7 @@ class EdenFS(object):
             except eden.thrift.EdenNotRunningError as ex:
                 pass
 
+            assert self._process is not None
             status = self._process.poll()
             if status is not None:
                 if status < 0:
@@ -100,10 +110,12 @@ class EdenFS(object):
             time.sleep(0.1)
         raise Exception("edenfs didn't start within timeout of %s" % timeout)
 
-    def get_thrift_client(self):
+    def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self._eden_dir)
 
-    def run_cmd(self, command, *args, cwd=None):
+    def run_cmd(
+        self, command: str, *args: str, cwd: Optional[str] = None
+    ) -> str:
         '''
         Run the specified eden command.
 
@@ -120,9 +132,9 @@ class EdenFS(object):
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex)
-        return completed_process.stdout.decode('utf-8')
+        return cast(str, completed_process.stdout.decode('utf-8'))
 
-    def run_unchecked(self, command, *args):
+    def run_unchecked(self, command: str, *args: str) -> int:
         '''
         Run the specified eden command.
 
@@ -133,7 +145,7 @@ class EdenFS(object):
         cmd = self._get_eden_args(command, *args)
         return subprocess.call(cmd)
 
-    def _get_eden_args(self, command, *args):
+    def _get_eden_args(self, command: str, *args: str) -> List[str]:
         '''Combines the specified eden command args with the appropriate
         defaults.
 
@@ -155,7 +167,7 @@ class EdenFS(object):
 
     def start(
         self, timeout: float=60, takeover_from: Optional[int]=None
-    ):
+    ) -> None:
         '''
         Run "eden daemon" to start the eden daemon.
         '''
@@ -173,7 +185,7 @@ class EdenFS(object):
 
         self._wait_for_healthy(timeout, exclude_pid=takeover_from)
 
-    def _spawn(self, gdb=False, takeover=False):
+    def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
         if self._process is not None:
             raise Exception('cannot start an already-running eden client')
 
@@ -226,10 +238,11 @@ class EdenFS(object):
 
         self._process = subprocess.Popen(args + extra_daemon_args)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         '''
         Run "eden shutdown" to stop the eden daemon.
         '''
+        assert self._process is not None
         self.run_cmd('shutdown')
         return_code = self._process.wait()
         self._process = None
@@ -237,7 +250,8 @@ class EdenFS(object):
             raise Exception('eden exited unsuccessfully with status {}'.format(
                 return_code))
 
-    def graceful_restart(self, timeout=30):
+    def graceful_restart(self, timeout: float = 30) -> None:
+        assert self._process is not None
         # Get the process ID of the old edenfs process.
         # Note that this is not necessarily self._process.pid, since the eden
         # CLI may have spawned eden using sudo, and self._process may refer to
@@ -256,13 +270,13 @@ class EdenFS(object):
             raise Exception('eden exited unsuccessfully with status {}'.format(
                 return_code))
 
-    def add_repository(self, name, repo_path):
+    def add_repository(self, name: str, repo_path: str) -> None:
         '''
         Run "eden repository" to define a repository configuration
         '''
         self.run_cmd('repository', name, repo_path)
 
-    def repository_cmd(self):
+    def repository_cmd(self) -> str:
         '''
         Executes "eden repository" to list the repositories,
         and returns the output as a string.
@@ -301,7 +315,7 @@ class EdenFS(object):
 
         return results
 
-    def clone(self, repo, path):
+    def clone(self, repo: str, path: str) -> None:
         '''
         Run "eden clone"
         '''
@@ -311,13 +325,13 @@ class EdenFS(object):
 
         self.run_cmd('clone', repo, path)
 
-    def unmount(self, path):
+    def unmount(self, path: str) -> None:
         '''
         Run "eden unmount --destroy <path>"
         '''
         self.run_cmd('unmount', '--destroy', path)
 
-    def in_proc_mounts(self, mount_path):
+    def in_proc_mounts(self, mount_path: str) -> bool:
         '''Gets all eden mounts found in /proc/mounts, and returns
         true if this eden instance exists in list.
         '''
@@ -326,23 +340,26 @@ class EdenFS(object):
                       if line.split(' ')[0] == 'edenfs']
         return mount_path in mounts
 
-    def is_healthy(self):
+    def is_healthy(self) -> bool:
         '''Executes `eden health` and returns True if it exited with code 0.'''
         return_code = self.run_unchecked('health')
         return return_code == 0
 
 
 class EdenCommandError(subprocess.CalledProcessError):
-    def __init__(self, ex):
+    def __init__(self, ex: subprocess.CalledProcessError) -> None:
         super().__init__(ex.returncode, ex.cmd, output=ex.output,
                          stderr=ex.stderr)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return ("eden command '%s' returned non-zero exit status %d\n"
                 "stderr=%s" % (self.cmd, self.returncode, self.stderr))
 
 
-def can_run_eden():
+_can_run_eden: Optional[bool] = None
+
+
+def can_run_eden() -> bool:
     '''
     Determine if we can run eden.
 
@@ -356,10 +373,7 @@ def can_run_eden():
     return _can_run_eden
 
 
-_can_run_eden = None
-
-
-def _compute_can_run_eden():
+def _compute_can_run_eden() -> bool:
     # FUSE must be available
     if not os.path.exists('/dev/fuse'):
         return False
@@ -371,7 +385,7 @@ def _compute_can_run_eden():
     return _can_run_sudo()
 
 
-def _can_run_sudo():
+def _can_run_sudo() -> bool:
     cmd = ['/usr/bin/sudo', '-E', '/bin/true']
     with open('/dev/null', 'r') as dev_null:
         # Close stdout, stderr, and stdin, and call setsid() to make
