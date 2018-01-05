@@ -7,11 +7,11 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Bug.h"
+#include "eden/fs/utils/Bug.h"
 
 #include <folly/Conv.h>
 #include <folly/ExceptionWrapper.h>
-#include <glog/logging.h>
+#include <folly/experimental/logging/xlog.h>
 
 namespace {
 static std::atomic<int> edenBugDisabledCount{0};
@@ -52,16 +52,14 @@ folly::exception_wrapper EdenBug::toException() {
 }
 
 void EdenBug::logError() {
-  // TODO: We should log to scuba here in addition to logging locally.
-  google::LogMessage(file_, lineNumber_, google::GLOG_ERROR).stream()
-      << message_;
+  XLOG(CRITICAL) << "EDEN_BUG at " << file_ << lineNumber_ << ": " << message_;
 
 #ifndef NDEBUG
   // Crash in debug builds.
   // However, allow test code to disable crashing so that we can exercise
   // EDEN_BUG() code paths in tests.
   if (edenBugDisabledCount.load() == 0) {
-    abort();
+    XLOG(FATAL) << "crashing due to EDEN_BUG";
   }
 #endif
 }

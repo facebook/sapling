@@ -46,10 +46,10 @@ cpp_library(
         "//folly/experimental/logging:logging",
         "//folly/futures:core",
         "//folly/futures:shared_promise",
+        "//folly/lang:cold_class",
     ],
     external_deps = [
         "gflags",
-        "glog",
     ],
 )
 

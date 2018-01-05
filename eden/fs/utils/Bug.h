@@ -10,6 +10,7 @@
 #pragma once
 
 #include <folly/Conv.h>
+#include <folly/lang/ColdClass.h>
 #include <atomic>
 #include <string>
 
@@ -61,7 +62,7 @@ namespace eden {
  * In debug builds EdenBug causes the program to abort rather than throwing or
  * returning an exception.
  */
-class EdenBug {
+class EdenBug : public folly::ColdClass {
  public:
   EdenBug(const char* file, int lineNumber);
   EdenBug(EdenBug&& other) noexcept;
