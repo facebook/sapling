@@ -182,16 +182,18 @@ echo -n "$1" >> "{scratch_file}"
         self.assertFalse(self.eden.is_healthy())
 
         # Check `eden list`.
-        expected_list_output = f'{self.mount}\n'
         list_output = self.eden.list_cmd()
-        self.assertEqual(expected_list_output, list_output,
+        self.assertEqual({self.mount: self.eden.CLIENT_INACTIVE}, list_output,
                          msg='Eden should have one mount.')
 
         # Verify that clone starts the daemon.
         tmp = self._new_tmp_dir()
         self.eden.run_cmd('clone', self.repo.path, tmp)
         self.assertTrue(self.eden.is_healthy(), msg='clone should start Eden.')
-        mount_points = '\n'.join(sorted([self.mount, tmp])) + '\n'
+        mount_points = {
+            self.mount: self.eden.CLIENT_ACTIVE,
+            tmp: self.eden.CLIENT_ACTIVE,
+        }
         self.assertEqual(mount_points, self.eden.list_cmd(),
                          msg='Eden should have two mounts.')
         self.assertEqual('hola\n', _read_all(os.path.join(tmp, 'hello')))

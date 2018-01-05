@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 import eden.thrift
 from fb303.ttypes import fb_status
@@ -269,12 +269,37 @@ class EdenFS(object):
         '''
         return self.run_cmd('repository')
 
-    def list_cmd(self):
+    CLIENT_ACTIVE = 'active'
+    CLIENT_INACTIVE = 'inactive'
+    CLIENT_UNCONFIGURED = 'unconfigured'
+
+    def list_cmd(self) -> Dict[str, str]:
         '''
         Executes "eden list" to list the client directories,
-        and returns the output as a string.
+        and returns the output as a dictionary of { client_path -> status }
+
+        The status can be one of the CLIENT_ACTIVE, CLIENT_INACTIVE, or
+        CLIENT_UNCONFIGURED constants.
+        'active', 'inactive', or 'unconfigured'
         '''
-        return self.run_cmd('list')
+        lines = self.run_cmd('list').splitlines()
+
+        results = {}
+        active_suffix = ' (active)'
+        unconfigured_suffix = ' (unconfigured)'
+        for line in lines:
+            if line.endswith(active_suffix):
+                path = line[:-len(active_suffix)]
+                status = self.CLIENT_ACTIVE
+            elif line.endswith(unconfigured_suffix):
+                path = line[:-len(active_suffix)]
+                status = self.CLIENT_UNCONFIGURED
+            else:
+                path = line
+                status = self.CLIENT_INACTIVE
+            results[path] = status
+
+        return results
 
     def clone(self, repo, path):
         '''

@@ -21,21 +21,17 @@ class RCTest:
         self.repo.commit('Initial commit.')
 
     def test_eden_list(self):
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(1, len(mount_paths),
-                         msg='There should only be 1 mount path')
-        self.assertEqual(self.mount, mount_paths[0])
+        mounts = self.eden.list_cmd()
+        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
         self.eden.unmount(self.mount)
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(0, len(mount_paths),
+        mounts = self.eden.list_cmd()
+        self.assertEqual({}, mounts,
                          msg='There should be 0 mount paths after unmount')
 
         self.eden.clone(self.repo_name, self.mount)
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(1, len(mount_paths),
-                         msg='There should be 1 mount path after clone')
-        self.assertEqual(self.mount, mount_paths[0])
+        mounts = self.eden.list_cmd()
+        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
     def test_unmount_rmdir(self):
         clients = os.path.join(self.eden_dir, 'clients')
@@ -45,28 +41,24 @@ class RCTest:
         test_client_dir = os.path.join(clients, client_names[0])
 
         # Eden list command uses keys of directory map to get mount paths
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(1, len(mount_paths),
-                         msg='There should only be 1 path in the directory map')
-        self.assertEqual(self.mount, mount_paths[0])
+        mounts = self.eden.list_cmd()
+        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
         self.eden.unmount(self.mount)
         self.assertFalse(os.path.isdir(test_client_dir))
 
         # Check that _remove_path_from_directory_map in unmount is successful
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(0, len(mount_paths),
+        mounts = self.eden.list_cmd()
+        self.assertEqual({}, mounts,
                          msg='There should be 0 paths in the directory map')
 
         self.eden.clone(self.repo_name, self.mount)
         self.assertTrue(os.path.isdir(test_client_dir),
                         msg='Client name should be restored verbatim because \
                              it should be a function of the mount point')
-        mount_paths = self.eden.list_cmd().split('\n')[:-1]
-        self.assertEqual(1, len(mount_paths),
+        mounts = self.eden.list_cmd()
+        self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts,
                          msg='The client directory should have been restored')
-        self.assertEqual(self.mount, mount_paths[0],
-                         msg='Client directory name should match client name')
 
     def test_override_system_config(self):
         system_repo = self.create_repo('system_repo', self.get_repo_class())
