@@ -21,11 +21,3 @@ struct OverlayDir {
   // The contents of this dir.
   1: map<PathComponent, OverlayEntry> entries
 }
-
-struct OverlayData {
-  // A map of RelativePath -> OverlayDir for the entire contents of the
-  // overlay area.  The assumption is that the locally materialized data
-  // (since it should be O(things-changed-in-1-diff) should reasonably
-  // fit in memory and thus that this won't be too big to work with.
-  1: map<RelativePath, OverlayDir> localDirs
-}
