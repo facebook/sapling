@@ -8,6 +8,7 @@
  *
  */
 #include <folly/ExceptionWrapper.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -761,6 +762,38 @@ TEST(DiffTest, ignoreSystemLevelAndUser) {
   result = test.diff(true /* listIgnored */, "", "");
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
   EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+}
+
+// test gitignore file which is a symlink
+TEST(DiffTest, ignoreSymlink) {
+  DiffTest test({
+      {"actual", "/1.txt\nignore.txt\njunk/\n!important.txt\n"},
+      {"a/b.txt", "test\n"},
+      {"src/x.txt", "test\n"},
+      {"src/y.txt", "test\n"},
+      {"src/z.txt", "test\n"},
+      {"src/foo/bar.txt", "test\n"},
+  });
+  test.getMount().addFile("1.txt", "new\n");
+  test.getMount().addFile("ignore.txt", "new\n");
+
+  test.getMount().addSymlink(".gitignore", "a/second");
+  test.getMount().addSymlink("a/second", "../actual");
+  test.getMount().addSymlink("a/.gitignore", ".gitignore");
+  test.getMount().mkdir("b");
+  test.getMount().addSymlink("b/.gitignore", "../b");
+  test.getMount().addSymlink("src/.gitignore", "broken/link/to/nowhere");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+
+  result = test.diff(true);
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getIgnored(),
+      UnorderedElementsAre(RelativePath{"1.txt"}, RelativePath{"ignore.txt"}));
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
 }
 
 // Test with a .gitignore file in the top-level directory

@@ -1709,7 +1709,7 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
     shared_ptr<const Tree> tree,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored) {
-  auto fileInode = gitignoreInode.asFileOrNull();
+  const auto fileInode = gitignoreInode.asFileOrNull();
   if (!fileInode) {
     // Ignore .gitignore directories.
     // We should have caught this already in diff(), though, so it's unexpected
@@ -1725,30 +1725,57 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
         isIgnored);
   }
 
-  if (S_ISLNK(fileInode->getMode())) {
-    return fileInode->readAll().then([](std::string&& /*symlinkContents*/) {
-      // TODO: Look up the symlink destination and continue.
-      // The symlink might point to another path inside our mount point, or
-      // it may point outside.
-      return makeFuture<Unit>(std::runtime_error(
-          "handling .gitignore symlinks not implemented yet"));
-    });
+  if (dtype_t::Symlink == gitignoreInode->getType()) {
+    return getMount()
+        ->resolveSymlink(gitignoreInode)
+        .onError([](const folly::exception_wrapper& ex) {
+          XLOG(WARN) << "error resolving gitignore symlink: "
+                     << folly::exceptionStr(ex);
+          return InodePtr{};
+        })
+        .then([self = inodePtrFromThis(),
+               context,
+               currentPath = currentPath.copy(),
+               tree,
+               parentIgnore,
+               isIgnored](InodePtr pResolved) mutable {
+          if (!pResolved) {
+            return self->computeDiff(
+                self->contents_.wlock(),
+                context,
+                currentPath,
+                std::move(tree),
+                make_unique<GitIgnoreStack>(parentIgnore),
+                isIgnored);
+          }
+          // Note: infinite recursion is not a concern because resolveSymlink()
+          // can not return a symlink
+          return self->loadGitIgnoreThenDiff(
+              pResolved, context, currentPath, tree, parentIgnore, isIgnored);
+        });
   }
 
-  return fileInode->readAll().then(
-      [self = inodePtrFromThis(),
-       context,
-       currentPath = RelativePath{currentPath},
-       tree = std::move(tree),
-       parentIgnore,
-       isIgnored](std::string&& ignoreFileContents) mutable {
-        return self->computeDiff(
-            self->contents_.wlock(),
-            context,
-            currentPath,
-            std::move(tree),
-            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-            isIgnored);
+  return fileInode->readAll()
+      .onError([](const folly::exception_wrapper& ex) {
+        XLOG(WARN) << "error reading ignore file: " << folly::exceptionStr(ex);
+        return std::string{};
+      })
+      .then([self = inodePtrFromThis(),
+             context,
+             currentPath = RelativePath{currentPath}, // deep copy
+             tree,
+             parentIgnore,
+             isIgnored](std::string&& ignoreFileContents) mutable {
+        if (!ignoreFileContents.empty()) {
+          return self->computeDiff(
+              self->contents_.wlock(),
+              context,
+              currentPath,
+              std::move(tree),
+              make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+              isIgnored);
+        }
+        return makeFuture();
       });
 }
 
