@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <utility>
 #ifdef __linux__
 #include "eden/third-party/fuse_kernel_linux.h"
 #else
@@ -19,6 +20,7 @@ namespace fusell {
 
 /** Represents ino_t in a differently portable way */
 using InodeNumber = uint64_t;
+using FuseOpcode = decltype(std::declval<fuse_in_header>().opcode);
 
 } // namespace fusell
 } // namespace eden

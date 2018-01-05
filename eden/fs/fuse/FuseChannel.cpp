@@ -26,6 +26,103 @@ namespace fusell {
 
 namespace {
 
+StringPiece fuseOpcodeName(FuseOpcode opcode) {
+  switch (opcode) {
+    case FUSE_LOOKUP:
+      return "FUSE_LOOKUP";
+    case FUSE_FORGET:
+      return "FUSE_FORGET";
+    case FUSE_GETATTR:
+      return "FUSE_GETATTR";
+    case FUSE_SETATTR:
+      return "FUSE_SETATTR";
+    case FUSE_READLINK:
+      return "FUSE_READLINK";
+    case FUSE_SYMLINK:
+      return "FUSE_SYMLINK";
+    case FUSE_MKNOD:
+      return "FUSE_MKNOD";
+    case FUSE_MKDIR:
+      return "FUSE_MKDIR";
+    case FUSE_UNLINK:
+      return "FUSE_UNLINK";
+    case FUSE_RMDIR:
+      return "FUSE_RMDIR";
+    case FUSE_RENAME:
+      return "FUSE_RENAME";
+    case FUSE_LINK:
+      return "FUSE_LINK";
+    case FUSE_OPEN:
+      return "FUSE_OPEN";
+    case FUSE_READ:
+      return "FUSE_READ";
+    case FUSE_WRITE:
+      return "FUSE_WRITE";
+    case FUSE_STATFS:
+      return "FUSE_STATFS";
+    case FUSE_RELEASE:
+      return "FUSE_RELEASE";
+    case FUSE_FSYNC:
+      return "FUSE_FSYNC";
+    case FUSE_SETXATTR:
+      return "FUSE_SETXATTR";
+    case FUSE_GETXATTR:
+      return "FUSE_GETXATTR";
+    case FUSE_LISTXATTR:
+      return "FUSE_LISTXATTR";
+    case FUSE_REMOVEXATTR:
+      return "FUSE_REMOVEXATTR";
+    case FUSE_FLUSH:
+      return "FUSE_FLUSH";
+    case FUSE_INIT:
+      return "FUSE_INIT";
+    case FUSE_OPENDIR:
+      return "FUSE_OPENDIR";
+    case FUSE_READDIR:
+      return "FUSE_READDIR";
+    case FUSE_RELEASEDIR:
+      return "FUSE_RELEASEDIR";
+    case FUSE_FSYNCDIR:
+      return "FUSE_FSYNCDIR";
+    case FUSE_GETLK:
+      return "FUSE_GETLK";
+    case FUSE_SETLK:
+      return "FUSE_SETLK";
+    case FUSE_SETLKW:
+      return "FUSE_SETLKW";
+    case FUSE_ACCESS:
+      return "FUSE_ACCESS";
+    case FUSE_CREATE:
+      return "FUSE_CREATE";
+    case FUSE_INTERRUPT:
+      return "FUSE_INTERRUPT";
+    case FUSE_BMAP:
+      return "FUSE_BMAP";
+    case FUSE_DESTROY:
+      return "FUSE_DESTROY";
+    case FUSE_IOCTL:
+      return "FUSE_IOCTL";
+    case FUSE_POLL:
+      return "FUSE_POLL";
+    case FUSE_NOTIFY_REPLY:
+      return "FUSE_NOTIFY_REPLY";
+    case FUSE_BATCH_FORGET:
+      return "FUSE_BATCH_FORGET";
+    case FUSE_FALLOCATE:
+      return "FUSE_FALLOCATE";
+    case FUSE_READDIRPLUS:
+      return "FUSE_READDIRPLUS";
+    case FUSE_RENAME2:
+      return "FUSE_RENAME2";
+    case FUSE_LSEEK:
+      return "FUSE_LSEEK";
+
+    case CUSE_INIT:
+      return "CUSE_INIT";
+  }
+  return "<unknown>";
+}
+
 using Handler = folly::Future<folly::Unit> (
     FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
 
@@ -559,7 +656,8 @@ void FuseChannel::processSession() {
         unhandledOpcodes_.withULockPtr([&](auto ulock) {
           auto opcode = header->opcode;
           if (ulock->find(opcode) == ulock->end()) {
-            XLOG(ERR) << "unhandled fuse opcode " << opcode;
+            XLOG(ERR) << "unhandled fuse opcode " << opcode << "("
+                      << fuseOpcodeName(opcode) << ")";
             auto wlock = ulock.moveFromUpgradeToWrite();
             wlock->insert(opcode);
           }
