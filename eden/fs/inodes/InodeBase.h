@@ -85,8 +85,8 @@ class InodeBase {
    * This is generally intended for use by FUSE APIs that return an inode
    * number to the kernel: lookup(), create(), mkdir(), symlink(), link()
    */
-  void incFuseRefcount() {
-    numFuseReferences_.fetch_add(1, std::memory_order_acq_rel);
+  void incFuseRefcount(uint32_t count = 1) {
+    numFuseReferences_.fetch_add(count, std::memory_order_acq_rel);
   }
 
   /**
