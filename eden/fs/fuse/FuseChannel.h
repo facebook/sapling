@@ -294,6 +294,11 @@ class FuseChannel {
   folly::Promise<folly::Unit> threadsFinishedPromise_;
   folly::Promise<folly::Unit> threadsStoppingPromise_;
   folly::Promise<folly::Unit> sessionCompletePromise_;
+
+  // To prevent logging unsupported opcodes twice.
+  folly::Synchronized<
+      std::unordered_set<decltype(std::declval<fuse_in_header>().opcode)>>
+      unhandledOpcodes_;
 };
 } // namespace fusell
 } // namespace eden

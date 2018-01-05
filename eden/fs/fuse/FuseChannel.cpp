@@ -556,7 +556,15 @@ void FuseChannel::processSession() {
           break;
         }
 
-        XLOG(ERR) << "unhandled fuse opcode " << header->opcode;
+        unhandledOpcodes_.withULockPtr([&](auto ulock) {
+          auto opcode = header->opcode;
+          if (ulock->find(opcode) == ulock->end()) {
+            XLOG(ERR) << "unhandled fuse opcode " << opcode;
+            auto wlock = ulock.moveFromUpgradeToWrite();
+            wlock->insert(opcode);
+          }
+        });
+
         try {
           replyError(*header, ENOSYS);
         } catch (const std::system_error& exc) {
