@@ -41,19 +41,6 @@ class TakeoverData {
     std::vector<AbsolutePath> bindMounts;
     folly::File fuseFD;
   };
-  struct HeaderInfo {
-    uint32_t messageType{0};
-    uint64_t bodyLength{0};
-  };
-
-  /**
-   * The length of the serialized header.
-   *
-   * This is a 4-byte protocol identifier followed by the fields in the
-   * HeaderInfo struct.
-   */
-  static constexpr uint32_t kHeaderLength =
-      sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t);
 
   /**
    * Serialize the TakeoverData into a buffer that can be sent to a remote
@@ -62,28 +49,17 @@ class TakeoverData {
    * This includes all data except for file descriptors.  The file descriptors
    * must be sent separately.
    */
-  std::unique_ptr<folly::IOBuf> serialize();
+  folly::IOBuf serialize();
 
   /**
    * Serialize an exception.
    */
-  static std::unique_ptr<folly::IOBuf> serializeError(
-      const folly::exception_wrapper& ew);
+  static folly::IOBuf serializeError(const folly::exception_wrapper& ew);
 
   /**
-   * Deserialize the header portion of a TakeoverData message.
-   *
-   * The input buffer should contain to only the message header data (and not
-   * more data after this).
+   * Deserialize the TakeoverData from a buffer.
    */
-  static HeaderInfo deserializeHeader(const folly::IOBuf* buf);
-
-  /**
-   * Deserialize the body portion of a TakeoverData message
-   */
-  static TakeoverData deserializeBody(
-      const HeaderInfo& header,
-      const folly::IOBuf* buf);
+  static TakeoverData deserialize(const folly::IOBuf* buf);
 
   /**
    * The main eden lock file that prevents two edenfs processes from running at
@@ -108,8 +84,6 @@ class TakeoverData {
   folly::Promise<folly::Unit> takeoverComplete;
 
  private:
-  static constexpr uint32_t kMagicNumber = 0xede0ede1;
-
   /**
    * Message type values.
    * If we ever need to include more information in the takeover data in the
@@ -120,6 +94,12 @@ class TakeoverData {
     ERROR = 1,
     MOUNTS = 2,
   };
+
+  /**
+   * The length of the serialized header.
+   * This is just a 4-byte message type field.
+   */
+  static constexpr uint32_t kHeaderLength = sizeof(uint32_t);
 };
 
 } // namespace eden

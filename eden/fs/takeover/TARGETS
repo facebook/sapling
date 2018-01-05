@@ -7,7 +7,6 @@ cpp_library(
     deps = [
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
-        "//folly:exception",
         "//folly:file",
         "//folly:file_util",
         "//folly:format",
@@ -18,7 +17,5 @@ cpp_library(
         "//folly/io:iobuf",
         "//folly/io/async:async",
         "//folly/io/async:server_socket",
-        "//folly/portability:fcntl",
-        "//folly/portability:sockets",
     ],
 )

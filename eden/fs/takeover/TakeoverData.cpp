@@ -19,9 +19,7 @@ using std::string;
 namespace facebook {
 namespace eden {
 
-constexpr uint32_t TakeoverData::kMagicNumber;
-
-std::unique_ptr<IOBuf> TakeoverData::serialize() {
+IOBuf TakeoverData::serialize() {
   // Compute the body data length
   uint64_t bodyLength = sizeof(uint32_t);
   for (const auto& mount : mountPoints) {
@@ -34,13 +32,11 @@ std::unique_ptr<IOBuf> TakeoverData::serialize() {
 
   // Build a buffer with all of the mount paths
   auto fullCapacity = kHeaderLength + bodyLength;
-  auto buf = IOBuf::create(fullCapacity);
-  folly::io::Appender app(buf.get(), 0);
+  IOBuf buf(IOBuf::CREATE, fullCapacity);
+  folly::io::Appender app(&buf, 0);
 
-  // Serialize the header data
-  app.writeBE<uint32_t>(kMagicNumber);
+  // Serialize the message type
   app.writeBE<uint32_t>(MessageType::MOUNTS);
-  app.writeBE<uint64_t>(bodyLength);
 
   // Write the number of mount points
   app.writeBE<uint32_t>(mountPoints.size());
@@ -62,8 +58,7 @@ std::unique_ptr<IOBuf> TakeoverData::serialize() {
   return buf;
 }
 
-std::unique_ptr<folly::IOBuf> TakeoverData::serializeError(
-    const folly::exception_wrapper& ew) {
+folly::IOBuf TakeoverData::serializeError(const folly::exception_wrapper& ew) {
   // Compute the body data length
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
@@ -72,13 +67,11 @@ std::unique_ptr<folly::IOBuf> TakeoverData::serializeError(
 
   // Allocate the buffer
   auto fullCapacity = kHeaderLength + bodyLength;
-  auto buf = IOBuf::create(fullCapacity);
-  folly::io::Appender app(buf.get(), 0);
+  IOBuf buf(IOBuf::CREATE, fullCapacity);
+  folly::io::Appender app(&buf, 0);
 
-  // Serialize the header data
-  app.writeBE<uint32_t>(kMagicNumber);
+  // Serialize the message type
   app.writeBE<uint32_t>(MessageType::ERROR);
-  app.writeBE<uint64_t>(bodyLength);
 
   // Write the error type and message
   app.writeBE<uint32_t>(exceptionClassName.size());
@@ -89,34 +82,17 @@ std::unique_ptr<folly::IOBuf> TakeoverData::serializeError(
   return buf;
 }
 
-TakeoverData::HeaderInfo TakeoverData::deserializeHeader(const IOBuf* buf) {
-  DCHECK_EQ(buf->computeChainDataLength(), kHeaderLength);
+TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
   folly::io::Cursor cursor(buf);
 
-  HeaderInfo header;
-  auto magic = cursor.readBE<uint32_t>();
-  if (magic != kMagicNumber) {
-    throw std::runtime_error(folly::sformat(
-        "unexpected takeover data serialization ID {:#x}", magic));
+  auto messageType = cursor.readBE<uint32_t>();
+  if (messageType != MessageType::ERROR && messageType != MessageType::MOUNTS) {
+    throw std::runtime_error(
+        folly::to<string>("unknown takeover data message type ", messageType));
   }
-  header.messageType = cursor.readBE<uint32_t>();
-  if (header.messageType != MessageType::ERROR &&
-      header.messageType != MessageType::MOUNTS) {
-    throw std::runtime_error(folly::to<string>(
-        "unknown takeover data message type ", header.messageType));
-  }
-  header.bodyLength = cursor.readBE<uint64_t>();
-
-  return header;
-}
-
-TakeoverData TakeoverData::deserializeBody(
-    const HeaderInfo& header,
-    const IOBuf* buf) {
-  folly::io::Cursor cursor(buf);
 
   // Check the message type
-  if (header.messageType == MessageType::ERROR) {
+  if (messageType == MessageType::ERROR) {
     auto errorTypeLength = cursor.readBE<uint32_t>();
     auto errorType = cursor.readFixedString(errorTypeLength);
     auto errorMessageLength = cursor.readBE<uint32_t>();
@@ -124,13 +100,12 @@ TakeoverData TakeoverData::deserializeBody(
 
     throw std::runtime_error(errorType + ": " + errorMessage);
   }
-  if (header.messageType != MessageType::MOUNTS) {
-    throw std::runtime_error(folly::to<string>(
-        "unknown takeover data message type ", header.messageType));
+  if (messageType != MessageType::MOUNTS) {
+    throw std::runtime_error(
+        folly::to<string>("unknown takeover data message type ", messageType));
   }
 
   TakeoverData data;
-
   auto numMounts = cursor.readBE<uint32_t>();
   for (uint32_t mountIdx = 0; mountIdx < numMounts; ++mountIdx) {
     auto pathLength = cursor.readBE<uint32_t>();
