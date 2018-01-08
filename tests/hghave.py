@@ -240,6 +240,15 @@ def has_lsprof():
     except ImportError:
         return False
 
+@check("lz4", "lz4 compress module")
+def has_lz4():
+    try:
+        import lz4
+        lz4.compress # silence unused import warning
+        return True
+    except ImportError:
+        return False
+
 def gethgversion():
     m = matchoutput('hg --version --quiet 2>&1', br'(\d+)\.(\d+)')
     if not m:

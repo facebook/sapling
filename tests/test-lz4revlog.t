@@ -1,10 +1,12 @@
+#require lz4
+
   $ hg init a
   $ cd a
   $ echo a>a
   $ hg ci -q -A -m 0
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "lz4revlog=$TESTDIR/../hgext/lz4revlog.py" >> $HGRCPATH
+  $ echo "lz4revlog=" >> $HGRCPATH
 
 having lz4revlog enabled should not affect an existing repo
 
