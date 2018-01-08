@@ -6,7 +6,8 @@ from mercurial import (
     ui as uimod,
 )
 
-ignore = {b'highlight', b'win32text', b'factotum', b'remotenames'}
+ignore = {b'highlight', b'win32text', b'factotum', b'remotenames',
+          b'lz4revlog', b'hgsql'}
 
 if os.name != 'nt':
     ignore.add(b'win32mbcs')
