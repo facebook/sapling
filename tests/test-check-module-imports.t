@@ -96,11 +96,6 @@ outputs, which should be fixed later.
   fb-hgext/hgext3rd/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
   fb-hgext/hgext3rd/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
   fb-hgext/hgext3rd/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/lfs/__init__.py:43: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/lfs/blobstore.py:21: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/lfs/pointer.py:15: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/lfs/wrapper.py:18: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/lfs/wrapper.py:19: symbol import follows non-symbol import: mercurial.node
   fb-hgext/hgext3rd/p4fastimport/__init__.py:35: imports from fb-hgext.hgext3rd.p4fastimport not lexically sorted: importer < p4
   fb-hgext/hgext3rd/p4fastimport/__init__.py:35: imports from fb-hgext.hgext3rd.p4fastimport not lexically sorted: filetransaction < importer
   fb-hgext/hgext3rd/p4fastimport/__init__.py:41: direct symbol import runworker, lastcl, decodefileflags from fb-hgext.hgext3rd.p4fastimport.util
