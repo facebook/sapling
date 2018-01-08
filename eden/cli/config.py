@@ -13,7 +13,6 @@ import configparser
 import datetime
 import errno
 import fcntl
-import itertools
 import json
 import os
 import shutil
@@ -336,7 +335,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         basename = os.path.basename(path)
         if basename == '':
             raise Exception('Suspicious attempt to clone into: %s' % path)
-        for i in itertools.count(start=0):
+
+        i = 0
+        while True:
             if i == 0:
                 dir_name = basename
             else:
@@ -350,6 +351,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                 if e.errno == errno.EEXIST:
                     # A directory with the specified name already exists: try
                     # again with the next candidate name.
+                    i += 1
                     continue
                 raise
 

@@ -25,7 +25,7 @@ from . import util
 from .cmd_util import create_config
 from .util import print_stderr
 from facebook.eden import EdenService
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 def infer_client_from_cwd(config, clientname):
@@ -204,7 +204,7 @@ def try_create_config_from_repo(
         raise Exception(f'Could not determine repo type for: {path_to_repo}')
 
     hooks_path = config.get_default_hooks_path()
-    bind_mounts = {}
+    bind_mounts: Dict[bytes, Any] = {}
     return config_mod.ClientConfig(path_to_repo, scm_type, hooks_path,
                                    bind_mounts)
 
@@ -299,9 +299,11 @@ def start_daemon(
     config.migrate_internal_edenrc_files_to_config_toml_files()
 
     if daemon_binary is None:
-        daemon_binary = _find_default_daemon_binary()
+        valid_daemon_binary = _find_default_daemon_binary()
+    else:
+        valid_daemon_binary = daemon_binary
     try:
-        health_info = config.spawn(daemon_binary, edenfs_args,
+        health_info = config.spawn(valid_daemon_binary, edenfs_args,
                                    takeover=takeover, gdb=gdb,
                                    gdb_args=gdb_args, strace_file=strace_file,
                                    foreground=foreground,

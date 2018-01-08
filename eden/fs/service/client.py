@@ -10,6 +10,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from typing import Any, cast
 from facebook.eden import EdenService
 from thrift.protocol.THeaderProtocol import THeaderProtocol
 from thrift.transport.THeaderTransport import THeaderTransport
@@ -35,7 +36,8 @@ def _eden_thrift_error_str(ex):
     return ex.message
 
 
-EdenService.EdenError.__str__ = _eden_thrift_error_str
+# TODO: https://github.com/python/mypy/issues/2427
+cast(Any, EdenService.EdenError).__str__ = _eden_thrift_error_str
 
 
 class EdenClient(EdenService.Client):

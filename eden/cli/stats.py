@@ -11,7 +11,7 @@ import argparse
 import io
 import logging
 import sys
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Optional, cast
 from . import cmd_util
 from . import stats_print
 
@@ -20,12 +20,18 @@ log = logging.getLogger('eden.cli.stats')
 
 
 DiagInfoCounters = Dict[str, int]
-Table = Dict[str, Tuple[int, int, int, int]]
+Table = Dict[str, List[int]]
+Table2D = Dict[str, List[List[int]]]
+
+# TODO: https://github.com/python/typeshed/issues/1240
+stdoutWrapper = cast(io.TextIOWrapper, sys.stdout)
 
 
 # Shows information like memory usage, list of mount points and number of inodes
 # loaded, unloaded, and materialized in the mount points, etc.
-def do_stats_general(args: argparse.Namespace, out: io.TextIOWrapper=sys.stdout):
+def do_stats_general(
+        args: argparse.Namespace,
+        out: io.TextIOWrapper=stdoutWrapper):
     stats_print.write_heading('General EdenFS Statistics', out)
     config = cmd_util.create_config(args)
 
@@ -36,12 +42,13 @@ def do_stats_general(args: argparse.Namespace, out: io.TextIOWrapper=sys.stdout)
         private_dirty_bytes = total_private_dirty(parsed)
 
         format_str = '{:>40} {:^1} {:<20}\n'
-        out.write(
-            format_str.format(
-                'edenfs process memory usage', ':',
-                stats_print.format_size(private_dirty_bytes)
+        if private_dirty_bytes is not None:
+            out.write(
+                format_str.format(
+                    'edenfs process memory usage', ':',
+                    stats_print.format_size(private_dirty_bytes)
+                )
             )
-        )
         out.write(
             format_str.format(
                 'inodes unloaded by periodic job', ':',
@@ -74,7 +81,7 @@ MemoryMapping = Dict[bytes, bytes]
 # Returns a list of all mappings
 def parse_smaps(smaps: bytes) -> List[MemoryMapping]:
     output: List[MemoryMapping] = []
-    current: MemoryMapping = None
+    current: Optional[MemoryMapping] = None
     for line in smaps.splitlines():
         if b'-' in line:  # blech
             if current is not None:
@@ -133,7 +140,7 @@ def do_stats_memory(args: argparse.Namespace):
 
 # Returns all the memory counters in ServiceData in a table format.
 def get_memory_counters(counters: DiagInfoCounters) -> Table:
-    table = {}
+    table: Table = {}
     index = {'60': 0, '600': 1, '3600': 2}
     for key in counters:
         if key.startswith('memory') and key.find('.') != -1:
@@ -169,7 +176,7 @@ def do_stats_io(args: argparse.Namespace):
 # system calls which are present in the list syscalls, which is a list of
 # frequently called io system calls.
 def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
-    table = {}
+    table: Table = {}
     index = {'60': 0, '600': 1, '3600': 2}
 
     # list of io system calls, if all flag is set we return counters for all the
@@ -189,9 +196,9 @@ def get_fuse_counters(counters: DiagInfoCounters, all_flg: bool) -> Table:
             if syscall not in table.keys():
                 table[syscall] = [0, 0, 0, 0]
             if len(tokens) == 3:
-                table[syscall][3] = str(counters[key])
+                table[syscall][3] = int(counters[key])
             else:
-                table[syscall][index[tokens[3]]] = str(counters[key])
+                table[syscall][index[tokens[3]]] = int(counters[key])
 
     return table
 
@@ -213,8 +220,8 @@ def do_stats_latency(args: argparse.Namespace):
 # If all_flg is true we get the counters for all the system calls, otherwise we
 # get the counters of the system calls which are present in the list syscalls,
 # which is a list of frequently called io system calls.
-def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table:
-    table = {}
+def get_fuse_latency(counters: DiagInfoCounters, all_flg: bool) -> Table2D:
+    table: Table2D = {}
     index = {'60': 0, '600': 1, '3600': 2}
     percentile = {'p50': 0, 'p90': 1, 'p99': 2}
     syscalls = [
@@ -256,7 +263,7 @@ def do_stats_thrift(args: argparse.Namespace):
 
 
 def get_thrift_counters(counters: DiagInfoCounters) -> Table:
-    table = {}
+    table: Table = {}
 
     for key in counters:
         segments = key.split('.')

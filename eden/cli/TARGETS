@@ -3,6 +3,7 @@ include_defs("//eden/DEFS")
 python_binary(
     name = "cli",
     srcs = ["main.py"],
+    check_types = True,
     main_module = "eden/cli/main",
     deps = [
         ":debug",
@@ -23,6 +24,7 @@ python_library(
         "stats_print.py",
         "util.py",
     ],
+    check_types = True,
     deps = [
         "//eden/fs/service:py-client",
         "//eden/py:py",
@@ -37,6 +39,7 @@ python_library(
     srcs = [
         "debug.py",
     ],
+    check_types = True,
     deps = [
         ":lib",
         "//eden/fs/inodes:serialization-py",

@@ -330,6 +330,7 @@ def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
         return
     name_width = max(len(name) for name in tree_data.entries)
     for name, entry in tree_data.entries.items():
+        assert entry.mode is not None
         perms = entry.mode & 0o7777
         file_type = stat.S_IFMT(entry.mode)
         if file_type == stat.S_IFREG:
@@ -352,17 +353,18 @@ def _find_overlay_tree_rel(
         path_parts: List[str]) -> int:
     desired = path_parts[0]
     rest = path_parts[1:]
-    for name, entry in root.entries.items():  # noqa: ignore=B007
+    entries = [] if root.entries is None else root.entries.items()
+    for name, entry in entries:  # noqa: ignore=B007
         if name == desired:
             break
     else:
         raise Exception('path does not exist')
 
-    if stat.S_IFMT(entry.mode) != stat.S_IFDIR:
+    if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
         raise Exception('path does not not refer to a directory')
     if entry.hash:
         raise Exception('path is not materialized')
-    if entry.inodeNumber == 0:
+    if entry.inodeNumber is None or entry.inodeNumber == 0:
         raise Exception('path is not loaded')
 
     if rest:
@@ -395,11 +397,12 @@ def _display_overlay(
     if args.depth >= 0 and level >= args.depth:
         return
 
-    for name, entry in data.entries.items():
-        if entry.hash or entry.inodeNumber == 0:
+    entries = {} if data.entries is None else data.entries
+    for name, entry in entries.items():
+        if entry.hash or entry.inodeNumber is None or entry.inodeNumber == 0:
             # This entry is not materialized
             continue
-        if stat.S_IFMT(entry.mode) != stat.S_IFDIR:
+        if entry.mode is None or stat.S_IFMT(entry.mode) != stat.S_IFDIR:
             # Only display data for directories
             continue
         print()

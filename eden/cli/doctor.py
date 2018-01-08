@@ -15,7 +15,7 @@ import sys
 import eden.dirstate
 from enum import Enum, auto
 from textwrap import dedent
-from typing import Dict, List, Set, TextIO
+from typing import Dict, List, Set, TextIO, Union
 from . import config as config_mod
 
 
@@ -30,9 +30,14 @@ class CheckResultType(Enum):
 class CheckResult:
     __slots__ = ('result_type', 'message')
 
-    def __init__(self, result_type: CheckResultType, message: str):
+    def __init__(self, result_type: CheckResultType, message: str) -> None:
         self.result_type = result_type
         self.message = message
+
+
+class Check:
+    def do_check(self, dry_run: bool) -> CheckResult:
+        pass
 
 
 def cure_what_ails_you(
@@ -58,7 +63,7 @@ def cure_what_ails_you(
         )
 
     # This list is a mix of messages to print to stdout and checks to perform.
-    checks_and_messages = []
+    checks_and_messages: List[Union[str, Check]] = []
     if is_healthy:
         checks_and_messages.append(EdenfsIsLatest(config))
     else:
@@ -72,7 +77,7 @@ def cure_what_ails_you(
         # For now, we assume that each mount_path is actively mounted. We should
         # update the listMounts() Thrift API to return information that notes
         # whether a mount point is active and use it here.
-        checks = []
+        checks: List[Union[str, Check]] = []
         checks.append(
             WatchmanUsingEdenSubscriptionCheck(
                 mount_path, watchman_roots, is_healthy
@@ -137,7 +142,7 @@ def cure_what_ails_you(
         return 0
 
 
-class WatchmanUsingEdenSubscriptionCheck:
+class WatchmanUsingEdenSubscriptionCheck(Check):
     def __init__(self, path: str, watchman_roots: Set[str],
                  is_healthy: bool) -> None:
         self._path = path
@@ -193,7 +198,7 @@ class WatchmanUsingEdenSubscriptionCheck:
         return CheckResult(result_type, msg)
 
 
-class NuclideHasExpectedWatchmanSubscriptions:
+class NuclideHasExpectedWatchmanSubscriptions(Check):
     def __init__(self, path: str, watchman_roots: Set[str],
                  is_healthy: bool) -> None:
         self._path = path
@@ -255,7 +260,7 @@ class NuclideHasExpectedWatchmanSubscriptions:
         return CheckResult(result_type, msg)
 
 
-class SnapshotDirstateConsistencyCheck:
+class SnapshotDirstateConsistencyCheck(Check):
     def __init__(self, path: str, snapshot_hex: str, is_healthy: bool) -> None:
         self._path = path
         self._snapshot_hex = snapshot_hex
@@ -289,7 +294,7 @@ class SnapshotDirstateConsistencyCheck:
         return CheckResult(result_type, msg)
 
 
-class EdenfsIsLatest:
+class EdenfsIsLatest(Check):
     def __init__(self, config) -> None:
         self._config = config
 
@@ -340,7 +345,7 @@ def _call_watchman(args: List[str]) -> Dict:
     except OSError as e:
         sys.stderr.write(
             f'Calling `{" ".join(full_args)}`'
-            f' failed with: {os.sterror(e.errno)}\n'
+            f' failed with: {str(e) if e.strerror is None else e.strerror}\n'
         )
         return {'error': str(e)}
 
