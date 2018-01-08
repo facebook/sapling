@@ -213,7 +213,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     const fuse_setattr_in& attr) {
-  // Minor optimization: if we know that the file is being completed truncated
+  // Minor optimization: if we know that the file is being completely truncated
   // as part of this operation, there's no need to fetch the underlying data,
   // so pass on the truncate flag our underlying open call
 
