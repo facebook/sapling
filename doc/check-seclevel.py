@@ -98,7 +98,10 @@ def checkhghelps(ui):
 
     for name in sorted(list(extensions.enabled()) +
                        list(extensions.disabled())):
-        mod = extensions.load(ui, name, None)
+        try:
+            mod = extensions.load(ui, name, None)
+        except ImportError:
+            continue
         if not mod.__doc__:
             ui.note(('skip checking %s extension: no help document\n') % name)
             continue
