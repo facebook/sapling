@@ -73,7 +73,6 @@
   fb-hgext/hgext3rd/sampling.py not using absolute_import
   fb-hgext/hgext3rd/sigtrace.py not using absolute_import
   fb-hgext/hgext3rd/simplecache.py not using absolute_import
-  fb-hgext/hgext3rd/sparse.py not using absolute_import
   fb-hgext/hgext3rd/sshaskpass.py not using absolute_import
   fb-hgext/hgext3rd/stat.py not using absolute_import
   fb-hgext/hgext3rd/upgradegeneraldelta.py not using absolute_import
@@ -121,12 +120,12 @@
   fb-hgext/tests/ls-l.py requires print_function
   fb-hgext/tests/perftest.py not using absolute_import
   fb-hgext/tests/perftest.py requires print_function
-  fb-hgext/tests/test-absorb-filefixupstate.py not using absolute_import
-  fb-hgext/tests/test-extutil.py not using absolute_import
-  fb-hgext/tests/test-fastmanifest.py not using absolute_import
-  fb-hgext/tests/test-generic-bisect.py not using absolute_import
-  fb-hgext/tests/test-patchpython.py not using absolute_import
-  fb-hgext/tests/test-sshaskpass.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-absorb-filefixupstate.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-extutil.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-fastmanifest.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-generic-bisect.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-patchpython.py not using absolute_import
+  fb-hgext/tests/test-fb-hgext-sshaskpass.py not using absolute_import
   fb-hgext/tests/treemanifest_correctness.py not using absolute_import
   fb-hgext/tests/waitforfile.py not using absolute_import
   fb-hgext/treemanifest/__init__.py not using absolute_import
