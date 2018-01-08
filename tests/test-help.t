@@ -263,6 +263,7 @@ Test extension help:
        factotum      http authentication with factotum
        gpg           commands to sign and verify changesets
        hgk           browse the repository in a graphical way
+       hgsql         (no help text available)
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
        keyword       expand keywords in tracked files
