@@ -138,7 +138,35 @@ from distutils.errors import (
     DistutilsExecError,
 )
 from distutils.sysconfig import get_python_inc, get_config_var
-from distutils.version import StrictVersion
+from distutils.version import (
+    StrictVersion,
+    LooseVersion,
+)
+from distutils_rust import (
+    RustExtension,
+    BuildRustExt,
+)
+
+if 'USERUST' in os.environ:
+    USERUST = int(os.environ['USERUST'])
+else:
+    USERUST = False
+    try:
+        cargo_version = subprocess.check_output(
+                ['cargo', '--version']).split()[1]
+    except Exception:
+        sys.stderr.write(
+                "not compiling Rust extensions: cargo is not available\n")
+    else:
+        required_cargo_version = '0.21'
+        if (LooseVersion(cargo_version) >=
+                LooseVersion(required_cargo_version)):
+            USERUST = True
+        else:
+            sys.stderr.write(
+                    "not compiling Rust extensions: cargo is too old " +
+                    "(found %s, need %s or higher)\n"
+                    % (cargo_version, required_cargo_version))
 
 iswindows = os.name == 'nt'
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
@@ -800,6 +828,7 @@ cmdclass = {'build': hgbuild,
             'install_lib': hginstalllib,
             'install_scripts': hginstallscripts,
             'build_hgexe': buildhgexe,
+            'build_rust_ext': BuildRustExt,
             }
 
 packages = ['mercurial',
@@ -810,7 +839,7 @@ packages = ['mercurial',
             'mercurial.pure',
             'mercurial.thirdparty',
             'mercurial.thirdparty.attr',
-            'hgext', 'hgext.convert', 'hgext.fsmonitor',
+            'hgext', 'hgext.convert', 'hgext.extlib', 'hgext.fsmonitor',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
             'hgext.largefiles', 'hgext.lfs', 'hgext.zeroconf', 'hgext3rd',
             'hgdemandimport']
@@ -1082,6 +1111,17 @@ def build_libraries(self, libraries):
                                         debug=self.debug)
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
+rustextmodules = [
+    RustExtension('indexes',
+        package='hgext.extlib',
+        manifest='hgext/extlib/indexes/Cargo.toml',
+    ),
+    RustExtension('treedirstate',
+        package='hgext.extlib',
+        manifest='hgext/extlib/treedirstate/Cargo.toml',
+    ),
+]
+
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
@@ -1118,6 +1158,7 @@ setup(name='mercurial',
       packages=packages,
       ext_modules=extmodules,
       libraries=libraries,
+      rust_ext_modules=rustextmodules,
       data_files=datafiles,
       package_data=packagedata,
       cmdclass=cmdclass,

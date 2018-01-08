@@ -54,7 +54,7 @@ import random
 import struct
 import string
 
-from hgext3rd.rust.treedirstate import treedirstatemap as rusttreedirstatemap
+from hgext.extlib.treedirstate import treedirstatemap as rusttreedirstatemap
 
 dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1

@@ -62,6 +62,11 @@ i18n/hg.pot
 locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
 
+# Rust libraries and extensions
+lib/*/Cargo.lock
+lib/*/target
+hgext/extlib/*/target
+
 # Generated wheels
 wheelhouse/
 

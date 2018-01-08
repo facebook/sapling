@@ -50,7 +50,7 @@ from mercurial.node import (
     nullid,
 )
 
-from .rust import indexes
+from hgext.extlib import indexes
 
 configtable = {}
 configitem = registrar.configitem(configtable)
