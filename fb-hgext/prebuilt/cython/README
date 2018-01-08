@@ -1,2 +1,0 @@
-Files prebuilt by Cython on a POSIX platform. They will be used when Cython is
-not available at build time.
