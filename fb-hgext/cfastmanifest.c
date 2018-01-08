@@ -412,7 +412,7 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args, PyObject 
 
   if (match && match != Py_None) {
     PyErr_Format(PyExc_ValueError,
-          "fastmaniest.diff does not support the match argument");
+          "fastmanifest.diff does not support the match argument");
     return NULL;
   }
 
