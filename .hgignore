@@ -52,6 +52,7 @@ patches
 mercurial/__modulepolicy__.py
 mercurial/__version__.py
 mercurial/hgpythonlib.h
+mercurial/cyext/*.c
 mercurial.egg-info
 .DS_Store
 tags

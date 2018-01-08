@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
 
-import linelog
 import random
 import sys
+from mercurial.cyext import linelog
 
 randint = random.randint
 

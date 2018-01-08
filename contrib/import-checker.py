@@ -188,6 +188,8 @@ def populateextmods(localmods):
             m = n[len('mercurial.pure.'):]
             newlocalmods.add('mercurial.cext.' + m)
             newlocalmods.add('mercurial.cffi._' + m)
+    for name in ['linelog']:
+        newlocalmods.add('mercurial.cyext.%s' % name)
     return newlocalmods
 
 def list_stdlib_modules():

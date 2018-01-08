@@ -4,6 +4,7 @@
 # 'python setup.py install', or
 # 'python setup.py --help' for more options
 
+from distutils.version import LooseVersion
 import os
 
 supportedpy = '~= 2.7'
@@ -39,6 +40,18 @@ else:
         f.write(b' '.join(args) + end)
     def sysstr(s):
         return s
+
+try:
+    import Cython
+except ImportError:
+    havecython = False
+else:
+    havecython = (LooseVersion(Cython.__version__) >= LooseVersion('0.22'))
+
+if not havecython:
+    raise RuntimeError('Cython >= 0.22 is required')
+
+from Cython.Build import cythonize
 
 # Attempt to guide users to a modern pip - this means that 2.6 users
 # should have a chance of getting a 4.2 release, and when we ratchet
@@ -938,6 +951,18 @@ extmodules = [
     Extension('hgext.fsmonitor.pywatchman.bser',
               ['hgext/fsmonitor/pywatchman/bser.c']),
     ]
+
+# Cython modules
+# see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
+cythonopts = {
+    'unraisable_tracebacks': False,
+    'c_string_type': 'bytes',
+}
+
+extmodules += cythonize(Extension('mercurial.cyext.linelog',
+                                  sources=['mercurial/cyext/linelog.pyx'],
+                                  extra_compile_args=filter(None, [STDC99])),
+                        compiler_directives=cythonopts)
 
 libraries = [
     ("sha1detectcoll", {

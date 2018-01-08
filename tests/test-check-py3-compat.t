@@ -83,7 +83,6 @@
   fb-hgext/infinitepush/indexapi.py not using absolute_import
   fb-hgext/infinitepush/sqlindexapi.py not using absolute_import
   fb-hgext/infinitepush/store.py not using absolute_import
-  fb-hgext/linelog/pyext/test-random-edits.py not using absolute_import
   fb-hgext/phabricator/arcconfig.py not using absolute_import
   fb-hgext/phabricator/diffprops.py not using absolute_import
   fb-hgext/phabricator/graphql.py not using absolute_import

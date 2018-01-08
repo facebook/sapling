@@ -8,7 +8,7 @@ IF UNAME_SYSNAME != "Windows":
 
 import os
 
-cdef extern from "../linelog.c":
+cdef extern from "../../lib/linelog/linelog.c":
     # (duplicated) declarations for Cython, as Cython cannot parse .h file
     ctypedef uint32_t linelog_linenum
     ctypedef uint32_t linelog_revnum
