@@ -28,8 +28,9 @@ amend modified chunks into the corresponding non-public changesets.
 from __future__ import absolute_import
 
 import collections
-import linelog
 
+from mercurial.i18n import _
+from mercurial.cyext import linelog
 from mercurial import (
     cmdutil,
     commands,
@@ -47,7 +48,6 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
 
 testedwith = 'ships-with-fb-hgext'
 

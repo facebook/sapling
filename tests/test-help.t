@@ -250,6 +250,7 @@ Test extension help:
   
       disabled extensions:
   
+       absorb        apply working directory changes to changesets
        acl           hooks for controlling repository access
        blackbox      log repository events to a blackbox for debugging
        bugzilla      hooks for integrating with the Bugzilla bug tracker

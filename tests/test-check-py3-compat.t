@@ -119,7 +119,6 @@
   fb-hgext/tests/ls-l.py requires print_function
   fb-hgext/tests/perftest.py not using absolute_import
   fb-hgext/tests/perftest.py requires print_function
-  fb-hgext/tests/test-fb-hgext-absorb-filefixupstate.py not using absolute_import
   fb-hgext/tests/test-fb-hgext-extutil.py not using absolute_import
   fb-hgext/tests/test-fb-hgext-fastmanifest.py not using absolute_import
   fb-hgext/tests/test-fb-hgext-generic-bisect.py not using absolute_import

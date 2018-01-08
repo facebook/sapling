@@ -57,7 +57,6 @@ outputs, which should be fixed later.
   fb-hgext/distutils_rust/__init__.py:9: direct symbol import log from distutils
   fb-hgext/distutils_rust/__init__.py:10: relative import of stdlib module
   fb-hgext/distutils_rust/__init__.py:10: direct symbol import build from distutils.command.build
-  fb-hgext/hgext3rd/absorb/__init__.py:50: symbol import follows non-symbol import: mercurial.i18n
   fb-hgext/hgext3rd/age.py:21: imports not lexically sorted: re < time
   fb-hgext/hgext3rd/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
   fb-hgext/hgext3rd/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge

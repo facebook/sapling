@@ -2,7 +2,7 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > absorb=$TESTDIR/../hgext3rd/absorb
+  > absorb=
   > drawdag=$RUNTESTDIR/drawdag.py
   > EOF
 

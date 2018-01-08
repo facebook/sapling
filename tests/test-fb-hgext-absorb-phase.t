@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > absorb=$TESTDIR/../hgext3rd/absorb
+  > absorb=
   > drawdag=$RUNTESTDIR/drawdag.py
   > EOF
 
