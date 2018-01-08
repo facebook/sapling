@@ -140,6 +140,26 @@ from distutils.errors import (
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
 
+iswindows = os.name == 'nt'
+NOOPTIMIZATION = "/Od" if iswindows else "-O0"
+PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
+SHA1_LIBRARY = "sha1detectcoll"
+SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
+STDC99 = "" if iswindows else "-std=c99"
+WALL = "/Wall" if iswindows else "-Wall"
+WERROR = "/WX" if iswindows else "-Werror"
+WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
+
+cflags = [SHA1LIB_DEFINE]
+
+# if this is set, compile all C extensions with -O0 -g for easy debugging.  note
+# that this is not manifested in any way in the Makefile dependencies.
+# therefore, if you already have build products, they won't be rebuilt!
+if os.getenv('FB_HGEXT_CDEBUG') is not None:
+    cflags.extend([NOOPTIMIZATION, PRODUCEDEBUGSYMBOLS])
+else:
+    cflags.append(WERROR)
+
 def write_if_changed(path, content):
     """Write content to a file iff the content hasn't changed."""
     if os.path.exists(path):
@@ -800,6 +820,38 @@ common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/cext/util.h']
 common_include_dirs = ['mercurial']
 
+def get_env_path_list(var_name, default=None):
+    '''Get a path list from an environment variable.  The variable is parsed as
+    a colon-separated list.'''
+    value = os.environ.get(var_name)
+    if not value:
+        return default
+    return value.split(os.path.pathsep)
+
+def filter_existing_dirs(dirs):
+    '''Filters the given list and keeps only existing directory names.'''
+    return [d for d in dirs if os.path.isdir(d)]
+
+# Historical default values.
+# We should perhaps clean these up in the future after verifying that it
+# doesn't break the build on any platforms.
+#
+# The /usr/local/* directories shouldn't actually be needed--the compiler
+# should already use these directories when appropriate (e.g., if we are
+# using the standard system compiler that has them in its default paths).
+#
+# The /opt/local paths may be necessary on Darwin builds.
+include_dirs = get_env_path_list('INCLUDE_DIRS')
+if include_dirs is None:
+    if iswindows:
+        include_dirs = []
+    else:
+        include_dirs = filter_existing_dirs([
+            '/usr/local/include',
+            '/opt/local/include',
+            '/opt/homebrew/include/',
+        ])
+
 osutil_cflags = []
 osutil_ldflags = []
 
@@ -857,6 +909,18 @@ extmodules = [
     Extension('hgext.fsmonitor.pywatchman.bser',
               ['hgext/fsmonitor/pywatchman/bser.c']),
     ]
+
+libraries = [
+    ("sha1detectcoll", {
+        "sources" : [
+            "lib/third-party/sha1dc/sha1.c",
+            "lib/third-party/sha1dc/ubc_check.c",
+        ],
+        "include_dirs" : ["lib/third-party"] + include_dirs,
+        "extra_args" : filter(None,
+            [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+    }),
+]
 
 sys.path.insert(0, 'contrib/python-zstandard')
 import setup_zstd
@@ -982,6 +1046,42 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
             os.environ['CFLAGS'] = (
                 os.environ.get('CFLAGS', '') + ' -Qunused-arguments')
 
+import distutils.command.build_clib
+from distutils.errors import DistutilsSetupError
+def build_libraries(self, libraries):
+    for (lib_name, build_info) in libraries:
+        sources = build_info.get('sources')
+        if sources is None or not isinstance(sources, (list, tuple)):
+            raise DistutilsSetupError(
+                   "in 'libraries' option (library '%s'), " +
+                   "'sources' must be present and must be " +
+                   "a list of source filenames") % lib_name
+        sources = list(sources)
+
+        # First, compile the source code to object files in the library
+        # directory.  (This should probably change to putting object
+        # files in a temporary build directory.)
+        macros = build_info.get('macros')
+        include_dirs = build_info.get('include_dirs')
+        extra_args = build_info.get('extra_args')
+        objects = self.compiler.compile(sources,
+                                        output_dir=self.build_temp,
+                                        macros=macros,
+                                        include_dirs=include_dirs,
+                                        debug=self.debug,
+                                        extra_postargs=extra_args)
+
+        # Now "link" the object files together into a static library.
+        # (On Unix at least, this isn't really linking -- it just
+        # builds an archive.  Whatever.)
+        libraries = build_info.get('libraries', [])
+        for lib in libraries:
+            self.compiler.add_library(lib)
+        self.compiler.create_static_lib(objects, lib_name,
+                                        output_dir=self.build_clib,
+                                        debug=self.debug)
+distutils.command.build_clib.build_clib.build_libraries = build_libraries
+
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
@@ -1017,6 +1117,7 @@ setup(name='mercurial',
       scripts=scripts,
       packages=packages,
       ext_modules=extmodules,
+      libraries=libraries,
       data_files=datafiles,
       package_data=packagedata,
       cmdclass=cmdclass,

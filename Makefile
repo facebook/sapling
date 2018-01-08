@@ -47,6 +47,7 @@ all: build doc
 local:
 	$(PYTHON) setup.py $(PURE) \
 	  build_py -c -d . \
+	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
 	  build_hgexe $(COMPILERFLAG) -i \
 	  build_mo

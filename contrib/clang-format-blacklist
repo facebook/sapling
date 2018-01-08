@@ -67,6 +67,10 @@ contrib/python-zstandard/zstd/dictBuilder/zdict.c
 contrib/python-zstandard/zstd/dictBuilder/zdict.h
 contrib/python-zstandard/zstd/zstd.h
 hgext/fsmonitor/pywatchman/bser.c
+lib/third-party/sha1dc/sha1.c
+lib/third-party/sha1dc/sha1.h
+lib/third-party/sha1dc/ubc_check.c
+lib/third-party/sha1dc/ubc_check.h
 # Temporary hack before we figure out how to fix it. See T24862348
 fb-hgext/cdatapack/cdatapack.c
 fb-hgext/cdatapack/cdatapack.h
@@ -144,8 +148,3 @@ fb-hgext/linelog/linelogcli.c
 fb-hgext/prebuilt/cython/clindex.c
 fb-hgext/prebuilt/cython/linelog.c
 fb-hgext/prebuilt/cython/patchrmdir.c
-fb-hgext/third-party/sha1dc/sha1.c
-fb-hgext/third-party/sha1dc/sha1.h
-fb-hgext/third-party/sha1dc/ubc_check.c
-fb-hgext/third-party/sha1dc/ubc_check.h
-

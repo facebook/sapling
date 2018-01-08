@@ -11,6 +11,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X contrib/python-zstandard \
   > -X hgext/fsmonitor/pywatchman \
   > -X mercurial/thirdparty \
+  > -X lib/third-party \
   > -X fb-hgext \
   > -X hg-git \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
