@@ -208,14 +208,42 @@
   $ testrepohg files 'set:(**.py) - grep(pygments)' \
   > -X hgdemandimport/demandimportpy2.py \
   > -X hgext/fsmonitor/pywatchman \
+  > -X hg-git \
   > | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
+  fb-hgext/scripts/lint.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
+  fb-hgext/tests/get-with-headers.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
+  fb-hgext/tests/heredoctest.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
   hgext/convert/transport.py: error importing: <*Error> No module named 'svn.client' (error at transport.py:*) (glob)
+  hgext/hgsql.py: error importing: <ModuleNotFoundError> No module named 'Queue' (error at hgsql.py:*)
+  hgext/lz4revlog.py: error importing: <ModuleNotFoundError> No module named 'lz4' (error at lz4revlog.py:*)
+  hgext/remotenames.py: error importing: <ModuleNotFoundError> No module named 'UserDict' (error at remotenames.py:*)
+  hgsubversion/hgsubversion/compathacks.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/editor.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/hooks/updatemeta.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/maps.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/pushmod.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/stupid.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svncommands.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svnmeta.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svnrepo.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svnwrap/__init__.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svnwrap/subvertpy_wrapper.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/svnwrap/svn_swig_wrapper.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/hgsubversion/util.py: invalid syntax: invalid token (<unknown>, line *)
+  hgsubversion/hgsubversion/wrappers.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/tests/fixtures/rsvn.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
+  hgsubversion/tests/test_externals.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/tests/test_push_command.py: invalid syntax: invalid syntax (<unknown>, line *)
+  hgsubversion/tests/test_single_dir_clone.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
+  hgsubversion/tests/test_svn_pre_commit_hooks.py: invalid syntax: invalid token (<unknown>, line *)
+  hgsubversion/tests/test_template_keywords.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *)
+  hgsubversion/tests/test_util.py: invalid syntax: invalid syntax (<unknown>, line *)
   mercurial/cffi/bdiff.py: error importing: <ImportError> cannot import name '_bdiff' (error at bdiff.py:*)
-  mercurial/cffi/bdiffbuild.py: error importing: <ImportError> No module named 'cffi' (error at bdiffbuild.py:*)
+  mercurial/cffi/bdiffbuild.py: error importing: <ModuleNotFoundError> No module named 'cffi' (error at bdiffbuild.py:*)
   mercurial/cffi/mpatch.py: error importing: <ImportError> cannot import name '_mpatch' (error at mpatch.py:*)
-  mercurial/cffi/mpatchbuild.py: error importing: <ImportError> No module named 'cffi' (error at mpatchbuild.py:*)
-  mercurial/cffi/osutilbuild.py: error importing: <ImportError> No module named 'cffi' (error at osutilbuild.py:*)
+  mercurial/cffi/mpatchbuild.py: error importing: <ModuleNotFoundError> No module named 'cffi' (error at mpatchbuild.py:*)
+  mercurial/cffi/osutilbuild.py: error importing: <ModuleNotFoundError> No module named 'cffi' (error at osutilbuild.py:*)
   mercurial/scmwindows.py: error importing: <*Error> No module named 'msvcrt' (error at win32.py:*) (glob)
   mercurial/win32.py: error importing: <*Error> No module named 'msvcrt' (error at win32.py:*) (glob)
   mercurial/windows.py: error importing: <*Error> No module named 'msvcrt' (error at windows.py:*) (glob)
@@ -226,4 +254,5 @@
   $ testrepohg files 'set:(**.py) and grep(pygments)' | sed 's|\\|/|g' \
   > | xargs $PYTHON3 contrib/check-py3-compat.py \
   > | sed 's/[0-9][0-9]*)$/*)/'
+  hg-git/tests/hghave.py: invalid syntax: invalid token (<unknown>, line *)
 #endif
