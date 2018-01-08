@@ -162,25 +162,21 @@ def WangleBuilder(opts):
 
 
 def FbthriftBuilder(opts):
-    include_dirs = [
-        opts.project_dir('folly'),
-        opts.project_dir('wangle'),
-        opts.project_dir('mstch', 'include'),
-        opts.project_dir('zstd', 'lib'),
-    ]
     lib_dirs = [
         opts.project_dir('folly', 'folly/.libs'),
         opts.project_dir('wangle', 'wangle/build/lib'),
         opts.project_dir('mstch', 'build/src'),
         opts.project_dir('zstd', 'lib'),
     ]
-    inc_flags = [shellquote('-I' + path) for path in include_dirs]
     libdir_flags = [shellquote('-L' + path) for path in lib_dirs]
-    make_env = {
-        'CPPFLAGS': ' '.join(inc_flags),
+    cmake_env = {
+        'FOLLY_INCLUDE_DIR': opts.project_dir('folly'),
+        'MSTCH_INCLUDE_DIRS': opts.project_dir('mstch', 'include'),
+        'WANGLE_INCLUDE_DIRS': opts.project_dir('wangle'),
+        'ZSTD_INCLUDE_DIRS': opts.project_dir('zstd', 'lib'),
         'LDFLAGS': ' '.join(libdir_flags),
     }
-    return AutoconfBuilder(subdir='thrift', env=make_env)
+    return CMakeBuilder(subdir='thrift', env=cmake_env)
 
 
 def get_projects(opts):
