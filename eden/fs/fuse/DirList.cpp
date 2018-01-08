@@ -21,10 +21,6 @@ DirList::DirList(size_t maxSize)
     : buf_(new char[maxSize]), end_(buf_.get() + maxSize), cur_(buf_.get()) {}
 
 bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
-  // The libfuse APIs unfortunately only accept null terminated strings,
-  // so we manually add the fuse_dirent object here rather than using
-  // fuse_add_direntry().
-
   size_t avail = end_ - cur_;
   auto entLength = FUSE_NAME_OFFSET + name.size();
   auto fullSize = FUSE_DIRENT_ALIGN(entLength);
