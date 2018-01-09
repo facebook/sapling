@@ -7,7 +7,7 @@
   > [diff]
   > git=1
   > [extensions]
-  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
+  > fastannotate=
   > [fastannotate]
   > modes=fctx
   > forcefollow=False
@@ -603,7 +603,7 @@ annotate missing file
   [255]
 #else
   $ hg annotate -ncr "wdir()" baz
-  abort: No such file or directory: $TESTTMP/repo/baz
+  abort: $ENOENT$: $TESTTMP/repo/baz
   [255]
 #endif
 
@@ -616,7 +616,7 @@ annotate removed file
   [255]
 #else
   $ hg annotate -ncr "wdir()" baz
-  abort: No such file or directory: $TESTTMP/repo/baz
+  abort: $ENOENT$: $TESTTMP/repo/baz
   [255]
 #endif
 

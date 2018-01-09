@@ -112,8 +112,6 @@ outputs, which should be fixed later.
   fb-hgext/tests/test-fb-hgext-cstore-uniondatapackstore.py:24: direct symbol import datapack, mutabledatapack from remotefilelog.datapack
   fb-hgext/tests/test-fb-hgext-cstore-uniondatapackstore.py:30: symbol import follows non-symbol import: mercurial.node
   fb-hgext/tests/test-fb-hgext-cstore-uniondatapackstore.py:31: imports not lexically sorted: mercurial.ui < pythonpath
-  fb-hgext/tests/test-fb-hgext-fastannotate-revmap.py:10: relative import of stdlib module
-  fb-hgext/tests/test-fb-hgext-fastannotate-revmap.py:10: direct symbol import error, revmap from hgext3rd.fastannotate
   fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
@@ -320,6 +318,8 @@ outputs, which should be fixed later.
   hgext/undo.py:45: direct symbol import interactiveui from hgext3rd
   hgext/undo.py:45: symbol import follows non-symbol import: hgext3rd
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
+  tests/test-fb-hgext-fastannotate-revmap.py:10: relative import of stdlib module
+  tests/test-fb-hgext-fastannotate-revmap.py:10: direct symbol import error, revmap from hgext3rd.fastannotate
   tests/test-fb-hgext-remotefilelog-datapack.py:19: imports not lexically sorted: pythonpath < silenttestrunner
   tests/test-fb-hgext-remotefilelog-datapack.py:22: relative import of stdlib module
   tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from remotefilelog.datapack
