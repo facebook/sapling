@@ -1019,6 +1019,13 @@ cythonmodules = [
               extra_compile_args=filter(None, [STDC99]))
 ]
 
+if not iswindows:
+    cythonmodules += [
+        Extension('mercurial.cyext.clindex',
+                  sources=['mercurial/cyext/clindex.pyx'],
+                  extra_compile_args=filter(None, [STDC99])),
+    ]
+
 for cm in cythonmodules:
     extmodules += cythonize(cm, compiler_directives=cythonopts)
 
