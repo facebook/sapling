@@ -635,7 +635,8 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
         # merging in-memory, we must redirect the backup to the memory context
         # so we don't disturb the working directory.
         relpath = back[len(repo.wvfs.base) + 1:]
-        wctx[relpath].write(fcd.data(), fcd.flags())
+        if premerge:
+            wctx[relpath].write(fcd.data(), fcd.flags())
         return wctx[relpath]
     else:
         # Otherwise, write to wherever the user specified the backups should go.
