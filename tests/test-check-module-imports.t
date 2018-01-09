@@ -302,6 +302,18 @@ outputs, which should be fixed later.
   hgext/treedirstate.py:55: imports not lexically sorted: string < struct
   hgext/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
   hgext/treedirstate.py:57: import should be relative: hgext.extlib.treedirstate
+  hgext/treemanifest/__init__.py:99: symbol import follows non-symbol import: hgext.extlib
+  hgext/treemanifest/__init__.py:100: symbol import follows non-symbol import: hgext.remotefilelog
+  hgext/treemanifest/__init__.py:108: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore
+  hgext/treemanifest/__init__.py:108: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
+  hgext/treemanifest/__init__.py:112: direct symbol import unionmetadatastore from hgext.remotefilelog.metadatastore
+  hgext/treemanifest/__init__.py:112: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
+  hgext/treemanifest/__init__.py:115: direct symbol import datapack, datapackstore, mutabledatapack from hgext.remotefilelog.datapack
+  hgext/treemanifest/__init__.py:115: symbol import follows non-symbol import: hgext.remotefilelog.datapack
+  hgext/treemanifest/__init__.py:120: direct symbol import historypack, historypackstore, mutablehistorypack from hgext.remotefilelog.historypack
+  hgext/treemanifest/__init__.py:120: symbol import follows non-symbol import: hgext.remotefilelog.historypack
+  hgext/treemanifest/__init__.py:125: direct symbol import _computeincrementaldatapack, _computeincrementalhistorypack, _runrepack, _topacks, backgroundrepack from hgext.remotefilelog.repack
+  hgext/treemanifest/__init__.py:125: symbol import follows non-symbol import: hgext.remotefilelog.repack
   hgext/tweakdefaults.py:69: imports from mercurial not lexically sorted: encoding < error
   hgext/tweakdefaults.py:87: import should be relative: hgext
   hgext/tweakdefaults.py:88: stdlib import "inspect" follows local import: hgext

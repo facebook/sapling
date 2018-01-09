@@ -373,6 +373,7 @@ Test extension help:
        strip         strip changesets and their descendants from history
        transplant    command to transplant changesets from another branch
        treedirstate  tree-based dirstate implementation
+       treemanifest
        tweakdefaults
                      user friendly defaults
        undo          (no help text available)

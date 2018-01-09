@@ -24,6 +24,7 @@ allowsymbolimports = (
     'bzrlib',
     'hgclient',
     'hgext.extlib',
+    'hgext.remotefilelog',
     'mercurial',
     'mercurial.hgweb.common',
     'mercurial.hgweb.request',

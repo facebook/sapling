@@ -58,7 +58,6 @@
   fb-hgext/tests/test-fb-hgext-fastmanifest.py not using absolute_import
   fb-hgext/tests/treemanifest_correctness.py not using absolute_import
   fb-hgext/tests/waitforfile.py not using absolute_import
-  fb-hgext/treemanifest/__init__.py not using absolute_import
   hgext/arcdiff.py not using absolute_import
   hgext/backups.py not using absolute_import
   hgext/catnotate.py not using absolute_import

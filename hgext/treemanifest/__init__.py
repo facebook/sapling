@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 """
-The treemanifest extension is to aid in the transition from flat manifests to
+treemanifest extension is to aid in the transition from flat manifests to
 treemanifests. It has a client portion that's used to construct trees during
 client pulls and commits, and a server portion which is used to generate
 tree manifests side-by-side normal flat manifests.
@@ -14,9 +14,8 @@ Configs:
 
     ``treemanifest.server`` is used to indicate that this repo can serve
     treemanifests
-"""
 
-"""allows using and migrating to tree manifests
+allows using and migrating to tree manifests
 
 When autocreatetrees is enabled, you can limit which bookmarks are initially
 converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
@@ -64,7 +63,15 @@ to prevent accesses of flat manifests.
   treeonly = True
 
 """
+from __future__ import absolute_import
 
+import os
+import shutil
+import struct
+import time
+
+from mercurial.i18n import _
+from mercurial.node import bin, hex, nullid
 from mercurial import (
     bundle2,
     bundlerepo,
@@ -88,49 +95,40 @@ from mercurial import (
     util,
     wireproto,
 )
-from mercurial.i18n import _
-from mercurial.node import bin, hex, nullid
 
-from remotefilelog import (
+from ..extlib import cstore
+from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
-    resolveprefetchopts,
-)
-from remotefilelog.contentstore import (
-    manifestrevlogstore,
-    unioncontentstore,
-)
-from remotefilelog.metadatastore import (
-    unionmetadatastore,
-)
-from remotefilelog.datapack import (
-    datapack,
-    datapackstore,
-    mutabledatapack,
-)
-from remotefilelog.historypack import (
-    historypack,
-    historypackstore,
-    mutablehistorypack,
-)
-from remotefilelog import (
     connectionpool,
+    resolveprefetchopts,
     shallowrepo,
     shallowutil,
     wirepack,
 )
-from remotefilelog.repack import (
+from ..remotefilelog.contentstore import (
+    manifestrevlogstore,
+    unioncontentstore,
+)
+from ..remotefilelog.metadatastore import (
+    unionmetadatastore,
+)
+from ..remotefilelog.datapack import (
+    datapack,
+    datapackstore,
+    mutabledatapack,
+)
+from ..remotefilelog.historypack import (
+    historypack,
+    historypackstore,
+    mutablehistorypack,
+)
+from ..remotefilelog.repack import (
     _computeincrementaldatapack,
     _computeincrementalhistorypack,
     _runrepack,
     _topacks,
     backgroundrepack,
 )
-import cstore
-
-import os
-import shutil
-import struct
-import time
 
 osutil = policy.importmod(r'osutil')
 
