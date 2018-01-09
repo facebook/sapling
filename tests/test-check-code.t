@@ -46,7 +46,37 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping hgext/extlib/ctreemanifest/manifest_ptr.h it has no-che?k-code (glob)
   Skipping hgext/extlib/ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
   Skipping hgext/extlib/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
+  hgext/fastannotate/commands.py:43:
+   >         reldir = os.path.relpath(os.getcwd(), reporoot)
+   use pycompat.getcwd instead (py3)
+  hgext/fbsparse.py:1177:
+   >     cwd = util.normpath(os.getcwd())
+   use pycompat.getcwd instead (py3)
   Skipping hgext/hgsql.py it has no-che?k-code (glob)
+  hgext/morestatus.py:49:
+   >                 os.getcwd()) for path in unresolvedlist])
+   use pycompat.getcwd instead (py3)
+  hgext/phabstatus.py:78:
+   >             repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
+   use pycompat.getcwd instead (py3)
+  hgext/treedirstate.py:674:
+   >     if 'CHGINTERNALMARK' in os.environ:
+   use encoding.environ instead (py3)
+  hgext/tweakdefaults.py:275:
+   >     if pipei_bufsize != 4096 and os.name == 'nt':
+   use pycompat.osname instead (py3)
+  hgext/undo.py:71:
+   >     if 'CHGINTERNALMARK' in os.environ:
+   use encoding.environ instead (py3)
+  hgext/undo.py:89:
+   >     if '_undologactive' in os.environ:
+   use encoding.environ instead (py3)
+  hgext/undo.py:97:
+   >             os.environ['_undologactive'] = "active"
+   use encoding.environ instead (py3)
+  hgext/undo.py:127:
+   >                 del os.environ['_undologactive']
+   use encoding.environ instead (py3)
   Skipping hgsubversion/hgsubversion/__init__.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/compathacks.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/editor.py it has no-che?k-code (glob)
@@ -110,9 +140,20 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   Skipping tests/badserverext.py it has no-che?k-code (glob)
+  Skipping tests/conduithttp.py it has no-che?k-code (glob)
+  tests/test-fb-hgext-myparent.t:56:
+   >   $ hg help templates | grep -A2 myparent
+   don't use grep's context flags
+  tests/test-fb-hgext-rage.t:10:
+   >   $ echo "rpmbin = /bin/rpm" >> .hg/hgrc
+   don't use explicit paths for tools
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
+  tests/test-fb-hgext-smartlog.t:483:
+   >   $ hg help templates | egrep -A2 '(amend|fold|histedit|rebase|singlepublic|split|undo)'successor
+   don't use grep's context flags
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
+  [1]
 
 @commands in debugcommands.py should be in alphabetical order.
 
