@@ -2,9 +2,9 @@ Set up test environment.
 This test confirms cacheinvalidation in hg fold.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > undo=$TESTDIR/../hgext3rd/undo.py
+  > fbamend=
+  > inhibit=
+  > undo=
   > rebase=
   > [experimental]
   > evolution = createmarkers, allowunstable

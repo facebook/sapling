@@ -2,8 +2,8 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > tweakdefaults=
+  > fbamend=
   > rebase=
   > histedit=
   > [experimental]
@@ -431,7 +431,6 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   > pick 18
   > pick 17
   > EOF
-  [1]
   $ hg log -l 3 -T "{date} {rev} {desc}\n"
   0.00 18 commit 2 for histedit
   0.00 17 commit 3 for histedit
@@ -443,7 +442,6 @@ Test histedit date when tweakdefaults.histeditkeepdate is not set
   > pick 18
   > pick 17
   > EOF
-  [1]
   $ hg log -l 2 -T "{rev} {desc}\n" -d "yesterday to today"
   18 commit 3 for histedit
   17 commit 2 for histedit
@@ -528,7 +526,7 @@ and allowance of prune rebases
   > evolution.allowdivergence=off
   > [extensions]
   > strip=
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > EOF
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
@@ -557,7 +555,7 @@ Test that we show divergence warning if inhibit is disabled
 
 Test that we do not show divergence warning if inhibit is enabled
   $ cat >> .hg/hgrc <<EOF
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > inhibit=
   > EOF
   $ hg rebase -r 1 -d 3 --hidden
   rebasing 1:09d39afb522a "a"

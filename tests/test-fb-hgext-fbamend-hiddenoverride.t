@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > blackbox=
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = all

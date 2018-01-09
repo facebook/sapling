@@ -11,7 +11,7 @@ Require lfs-test-server (https://github.com/git-lfs/lfs-test-server)
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs
+  > lfs=
   > [lfs]
   > url=http://foo:bar@$LFS_HOST/
   > threshold=1

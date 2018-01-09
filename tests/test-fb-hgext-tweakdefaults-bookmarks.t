@@ -4,8 +4,8 @@ Set up
   > [experimental]
   > evolution=all
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > fbamend=
+  > tweakdefaults=
   > EOF
 
 Test hg bookmark works with hidden commits

@@ -13,7 +13,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > sigtrace=$TESTDIR/../hgext3rd/sigtrace.py
+  > sigtrace=
   > signal=$TESTTMP/signal.py
   > [sigtrace]
   > pathformat=$TESTTMP/dump-%(pid)s-%(time)s.log

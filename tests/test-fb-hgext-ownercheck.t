@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > ownercheck=$TESTDIR/../hgext3rd/ownercheck.py
+  > ownercheck=
   > EOF
 
 ownercheck does not prevent normal hg operations

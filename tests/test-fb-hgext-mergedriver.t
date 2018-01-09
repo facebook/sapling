@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > mergedriver=$TESTDIR/../hgext3rd/mergedriver.py
+  > mergedriver=
   > EOF
 
 basic merge driver: just lists out files and contents, doesn't resolve any files

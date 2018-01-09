@@ -14,7 +14,7 @@
   > unified = 0
   > [extensions]
   > rebase=
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > [experimental]
   > evolution=createmarkers, allowunstable
   > EOF
@@ -268,7 +268,7 @@ make the top commit non-empty
 test histedit compat
 
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py" >> $HGRCPATH
+  $ echo "fbhistedit=" >> $HGRCPATH
   $ echo "histedit=" >> $HGRCPATH
 
   $ hg export -r .

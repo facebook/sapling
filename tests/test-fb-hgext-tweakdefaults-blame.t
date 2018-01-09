@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > EOF
 
 Test wrapped blame to be able to handle the usual command line attributes

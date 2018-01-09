@@ -7,7 +7,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastpartialmatch=$TESTDIR/../hgext3rd/fastpartialmatch.py
+  > fastpartialmatch=
   > shelve=
   > [ui]
   > ssh = python "$TESTDIR/dummyssh"

@@ -1,7 +1,7 @@
 
   $ cat << EOF >> $HGRCPATH
   > [extensions]
-  > age=$TESTDIR/../hgext3rd/age.py
+  > age=
   > EOF
 
 Setup repo

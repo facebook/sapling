@@ -529,7 +529,7 @@ Test that the prepushrebase hook can run against the bundle repo
   > [hooks]
   > prepushrebase = $TESTTMP/prerebase.sh
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > [experimental]
   > bundle2lazylocking = True
   > EOF
@@ -549,7 +549,7 @@ Test that the prepushrebase hook can run against the bundle repo
   $ cd prepushrebaseclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ touch b && hg add b && hg commit -qm b
   $ hg push --to master
@@ -562,7 +562,7 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: summary:     b
   remote: 
   remote: Checking if lock exists (it should not):
-  remote: ls: *.hg/store/lock*: No such file or directory (glob)
+  remote: ls: *.hg/store/lock*: $ENOENT$ (glob)
   remote: prepushrebase hook exited with status * (glob)
   abort: push failed on remote
   [255]
@@ -586,7 +586,7 @@ Test that hooks are fired with the correct variables
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ touch file && hg ci -Aqm initial
   pretxnclose hook: HG_HOOKNAME=pretxnclose HG_HOOKTYPE=pretxnclose HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -604,7 +604,7 @@ Test that hooks are fired with the correct variables
   $ cd hookclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ hg update master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -640,7 +640,7 @@ Test date rewriting
   $ cd rewritedate
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > [pushrebase]
   > rewritedates = True
   > EOF
@@ -655,7 +655,7 @@ Test date rewriting
   $ cd rewritedateclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -727,7 +727,7 @@ Test pushrebase on merge commit where master is on the p2 side
   $ cd p2mergeserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ echo a >> a && hg commit -Aqm 'add a'
   $ hg bookmark master
@@ -737,7 +737,7 @@ Test pushrebase on merge commit where master is on the p2 side
   $ cd p2mergeclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ hg up -q null
   $ echo b >> b && hg commit -Aqm 'add b'
@@ -783,7 +783,7 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ cd ..
@@ -797,7 +797,7 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -829,7 +829,7 @@ Make sure that no hg-bundle-* files left
 (the '|| true' and '*' prefix is because ls has different behavior on linux
 and osx)
   $ ls ../server/.hg/hg-bundle-* || true
-  ls: *../server/.hg/hg-bundle-*: No such file or directory (glob)
+  ls: *../server/.hg/hg-bundle-*: $ENOENT$ (glob)
 
 Server with obsstore disabled can still send obsmarkers useful to client, and
 phase is updated correctly with the marker information.
@@ -844,7 +844,7 @@ phase is updated correctly with the marker information.
   $ cd server1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ echo a > a
   $ hg commit -m a -A a -q
@@ -904,7 +904,7 @@ Push a file-copy changeset and the copy source gets modified by others:
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
 
   $ echo 1 > A

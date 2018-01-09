@@ -2,7 +2,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
-  > copytrace=$TESTDIR/../hgext3rd/copytrace.py
+  > copytrace=
   > [experimental]
   > copytrace=off
   > EOF

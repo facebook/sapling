@@ -8,10 +8,10 @@ Setup
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > inhibit=
+  > fbamend=
   > rebase=
-  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > fbhistedit=
   > [experimental]
   > evolution = createmarkers
   > EOF

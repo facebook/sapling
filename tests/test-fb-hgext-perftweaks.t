@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py
-  > perftweaks=$TESTDIR/../hgext3rd/perftweaks.py
+  > perftweaks=
   > EOF
 
 Test disabling the tag cache
@@ -191,7 +191,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > key.sparse_profiles=sparse_profiles
   > filepath = $LOGDIR/samplingpath.txt
   > [extensions]
-  > sampling=$TESTDIR/../hgext3rd/sampling.py
+  > sampling=
   > EOF
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
@@ -202,12 +202,12 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     print '{0}: {1}'.format(parsedrecord['category'],
-  ...                             parsedrecord['data']['dirstate_size'])
+  ...     print('{0}: {1}'.format(parsedrecord['category'],
+  ...                             parsedrecord['data']['dirstate_size']))
   dirstate_size: 1
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > EOF
   $ cat >> profile_base << EOF
   > [include]
@@ -225,7 +225,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
   ...     if parsedrecord['category'] == 'sparse_profiles':
-  ...         print 'active_profiles:', parsedrecord['data']['active_profiles']
+  ...         print('active_profiles:', parsedrecord['data']['active_profiles'])
   active_profiles: 
   active_profiles: 
   active_profiles: profile_base,profile_extended

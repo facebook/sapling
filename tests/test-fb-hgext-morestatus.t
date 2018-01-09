@@ -2,11 +2,11 @@
   > [morestatus]
   > show=True
   > [extensions]
-  > morestatus=$TESTDIR/../hgext3rd/morestatus.py
-  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > morestatus=
+  > fbhistedit=
   > histedit=
   > rebase=
-  > reset=$TESTDIR/../hgext3rd/reset.py
+  > reset=
   > EOF
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys

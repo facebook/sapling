@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > grpcheck = $TESTDIR/../hgext3rd/grpcheck.py
+  > grpcheck=
   > EOF
 
   $ hg init repo

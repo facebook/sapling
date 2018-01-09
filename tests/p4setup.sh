@@ -1,6 +1,6 @@
 cat >> $HGRCPATH<<EOF
 [extensions]
-p4fastimport=$TESTDIR/../hgext3rd/p4fastimport
+p4fastimport=$TESTDIR/../hgext/p4fastimport
 EOF
 
 # create p4 depot

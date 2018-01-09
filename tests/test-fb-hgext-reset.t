@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > reset=$TESTDIR/../hgext3rd/reset.py
+  > reset=
   > EOF
 
   $ hg init repo
@@ -153,7 +153,7 @@ Reset + Obsolete tests
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > rebase=
   > [experimental]
   > evolution=all
@@ -196,8 +196,8 @@ Reset + Inhibit tests, with inhibit reset revives the same commit
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > fbamend=
+  > inhibit=
   > rebase=
   > EOF
 

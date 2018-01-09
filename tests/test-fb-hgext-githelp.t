@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > githelp=$TESTDIR/../hgext3rd/githelp.py
+  > githelp=
   > EOF
 
   $ hg init repo
@@ -277,6 +277,6 @@ githelp for git blame (tweakdefaults disabled)
   hg annotate -udl
 
 githelp for git blame (tweakdefaults enabled)
-  $ hg --config extensions.tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py githelp -- git blame
+  $ hg --config extensions.tweakdefaults= githelp -- git blame
   hg annotate -pudl
 

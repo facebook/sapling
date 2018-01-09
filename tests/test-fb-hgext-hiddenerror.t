@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > hiddenerror=$TESTDIR/../hgext3rd/hiddenerror.py
+  > hiddenerror=
   > [experimental]
   > evolution=all
   > EOF

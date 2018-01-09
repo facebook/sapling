@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > dirsync=$TESTDIR/../hgext3rd/dirsync.py
+  > dirsync=
   > EOF
 
   $ hg init repo

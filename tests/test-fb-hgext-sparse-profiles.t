@@ -4,7 +4,7 @@ test sparse
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > purge=
   > strip=
   > rebase=
@@ -252,7 +252,7 @@ Test file permissions changing across a sparse profile change
   $ cd sparseperm
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > EOF
   $ touch a b
   $ cat > .hgsparse <<EOF
@@ -278,7 +278,7 @@ Test profile discovery
   $ cd sparseprofiles
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > EOF
   $ mkdir -p profiles/foo profiles/bar
   $ touch profiles/README.txt

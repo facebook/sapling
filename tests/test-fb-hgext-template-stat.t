@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > stat=$TESTDIR/../hgext3rd/stat.py
+  > stat=
   > EOF
 
 Setup repo

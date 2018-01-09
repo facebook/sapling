@@ -2,8 +2,8 @@ Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > fbamend=
+  > inhibit=
   > rebase=
   > [experimental]
   > evolution.allowdivergence = True

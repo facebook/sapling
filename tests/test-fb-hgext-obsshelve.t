@@ -4,7 +4,7 @@
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > mq =
-  > obsshelve=$TESTDIR/../hgext3rd/obsshelve.py
+  > obsshelve=
   > [defaults]
   > diff = --nodates --git
   > qnew = --date '0 0'
@@ -1058,7 +1058,7 @@ Wreak havoc on the unshelve process
   $ rm .hg/unshelverebasestate
   $ hg unshelve --abort
   unshelve of 'default' aborted
-  abort: (No such file or directory|The system cannot find the file specified) (re)
+  abort: $ENOENT$
   [255]
 Can the user leave the current state?
   $ hg up -C .
@@ -1564,7 +1564,7 @@ Unshelving a stripped commit aborts with an explanatory message
   [255]
 
 Enabling both shelve and obsshelve should not be allowed
-  $ hg --config extensions.obsshelve=$TESTDIR/../hgext3rd/obsshelve.py --config extensions.shelve= log -r .
+  $ hg --config extensions.obsshelve= --config extensions.shelve= log -r .
   extension 'shelve' overrides commands: * (glob)
   abort: shelve must be disabled when obsshelve is enabled
   [255]

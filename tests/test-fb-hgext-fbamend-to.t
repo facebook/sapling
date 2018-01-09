@@ -1,10 +1,10 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > debuginhibit=$TESTDIR/../hgext3rd/debuginhibit.py
-  > directaccess=$TESTDIR/../hgext3rd/directaccess.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > debuginhibit=
+  > directaccess=
+  > fbamend=
+  > inhibit=
   > histedit=
   > rebase=
   > [experimental]

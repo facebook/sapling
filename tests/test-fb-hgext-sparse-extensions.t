@@ -4,7 +4,7 @@ test sparse interaction with other extensions
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > strip=
   > [simplecache]
   > cachedir=$TESTTMP/hgsimplecache
@@ -12,7 +12,7 @@ test sparse interaction with other extensions
 
 Test integration with simplecache for profile reads
 
-  $ $PYTHON -c 'import hgext3rd.simplecache' || exit 80
+  $ $PYTHON -c 'import hgext.simplecache' || exit 80
   $ printf "[include]\nfoo\n" > .hgsparse
   $ hg add .hgsparse
   $ hg commit -qm 'Add profile'

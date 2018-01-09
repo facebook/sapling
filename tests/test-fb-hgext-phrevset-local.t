@@ -1,7 +1,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > phrevset=$TESTDIR/../hgext3rd/phrevset.py
+  > phrevset=
   > EOF
   $ hg init repo
   $ cd repo

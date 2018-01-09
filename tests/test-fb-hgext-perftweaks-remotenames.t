@@ -4,8 +4,8 @@
   > [ui]
   > ssh=python "$TESTDIR/dummyssh"
   > [extensions]
-  > perftweaks=$TESTDIR/../hgext3rd/perftweaks.py
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > perftweaks=
+  > tweakdefaults=
   > remotenames=
   > rebase=
   > EOF

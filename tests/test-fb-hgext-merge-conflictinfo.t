@@ -4,7 +4,7 @@
   $ hg init
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > conflictinfo=$TESTDIR/../hgext3rd/conflictinfo.py
+  > conflictinfo=
   > EOF
 
 2) Can't run dumpjson outside a conflict
@@ -104,7 +104,7 @@ Setup
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
-  > conflictinfo=$TESTDIR/../hgext3rd/conflictinfo.py
+  > conflictinfo=
   > EOF
 
   $ reset() {

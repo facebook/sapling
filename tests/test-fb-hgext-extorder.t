@@ -3,7 +3,7 @@ Set up repository
   $ hg init repo
   $ cd repo
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "extorder = $TESTDIR/../hgext3rd/extorder.py" >> .hg/hgrc
+  $ echo "extorder=" >> .hg/hgrc
   $ echo "rebase =" >> .hg/hgrc
   $ echo "dummyext1 = $TESTDIR/dummyext1.py" >> .hg/hgrc
   $ echo "dummyext2 = $TESTDIR/dummyext2.py" >> .hg/hgrc
@@ -38,4 +38,4 @@ Conflicting deps
   $ hg id > out.txt 2>&1
   [1]
   $ grep MercurialExtOrderException < out.txt
-  hgext_extorder.MercurialExtOrderException: extorder: conflicting extension order
+  hgext.extorder.MercurialExtOrderException: extorder: conflicting extension order

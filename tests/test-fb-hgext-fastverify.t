@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py
-  > fastverify=$TESTDIR/../hgext3rd/fastverify.py
+  > fastverify=
   > EOF
 
 Turn manifest verification on and off:

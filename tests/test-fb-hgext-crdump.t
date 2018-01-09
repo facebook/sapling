@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py
-  > crdump=$TESTDIR/../hgext3rd/crdump.py
+  > crdump=
   > EOF
 
 Create repo
@@ -143,16 +143,16 @@ Test basic dump of two commits
   ...     data = json.loads(f.read())
   ...     outdir = data['output_directory']
   ...     for commit in data['commits']:
-  ...         print "#### commit %s" % commit['node']
-  ...         print open(path.join(outdir, commit['patch_file'])).read()
+  ...         print("#### commit %s" % commit['node'])
+  ...         print(open(path.join(outdir, commit['patch_file'])).read())
   ...         for binfile in commit['binary_files']:
-  ...             print "######## file %s" % binfile['file_name']
+  ...             print("######## file %s" % binfile['file_name'])
   ...             if binfile['old_file'] is not None:
-  ...                 print "######## old"
-  ...                 print open(path.join(outdir, binfile['old_file'])).read().encode('hex')
+  ...                 print("######## old")
+  ...                 print(open(path.join(outdir, binfile['old_file'])).read().encode('hex'))
   ...             if binfile['new_file'] is not None:
-  ...                 print "######## new"
-  ...                 print open(path.join(outdir, binfile['new_file'])).read().encode('hex')
+  ...                 print("######## new")
+  ...                 print(open(path.join(outdir, binfile['new_file'])).read().encode('hex'))
   ...     import shutil
   ...     shutil.rmtree(outdir)
   #### commit 65d913976cc18347138f7b9f5186010d39b39b0f

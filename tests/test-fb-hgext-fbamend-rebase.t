@@ -1,7 +1,7 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > rebase=
   > [experimental]
   > evolution = createmarkers, allowunstable

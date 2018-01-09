@@ -10,7 +10,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > noinline=$TESTTMP/noinline.py
-  > fixcorrupt=$TESTDIR/../hgext3rd/fixcorrupt.py
+  > fixcorrupt=
   > EOF
 
   $ rebuildrepo() {

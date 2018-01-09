@@ -7,10 +7,10 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastpartialmatch=$TESTDIR/../hgext3rd/fastpartialmatch.py
+  > fastpartialmatch=
   > strip=
   > histedit=
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > [ui]

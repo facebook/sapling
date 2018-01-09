@@ -4,7 +4,7 @@ Setup the extension
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > simplecache=$TESTDIR/../hgext3rd/simplecache.py
+  > simplecache=
   > [simplecache]
   > cachedir=$TESTTMP/hgsimplecache
   > caches=memcache

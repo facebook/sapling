@@ -6,7 +6,7 @@ should not print the related ui.status outputs
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > tweakdefaults = $TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > EOF
 
 Set up the repository.

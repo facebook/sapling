@@ -4,7 +4,7 @@ Test catnotate
   $ cd repo1
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > catnotate=$TESTDIR/../hgext3rd/catnotate.py
+  > catnotate=
   > strip=
   > EOF
 

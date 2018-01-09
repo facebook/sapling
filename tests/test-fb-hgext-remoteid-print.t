@@ -14,7 +14,7 @@
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > remoteid=$TESTDIR/../hgext3rd/remoteid.py
+  > remoteid=
   > [remotefilelog]
   > server=True
   > EOF

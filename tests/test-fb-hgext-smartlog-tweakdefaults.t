@@ -1,9 +1,9 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
-  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > smartlog=
+  > tweakdefaults=
+  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > evolution.allowdivergence=on

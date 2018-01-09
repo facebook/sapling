@@ -6,7 +6,7 @@ import sys
 # make it runnable using python directly without run-tests.py
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
-from hgext3rd.lfs import pointer
+from hgext.lfs import pointer
 
 def tryparse(text):
     r = {}

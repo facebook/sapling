@@ -6,7 +6,7 @@ Set up extensions (order is important here, we must test tweakdefaults loading l
   > [extensions]
   > rebase=
   > remotenames=
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > EOF
 
 Run test

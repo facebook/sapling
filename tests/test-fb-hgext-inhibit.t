@@ -3,7 +3,7 @@
   > evolution=createmarkers
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > inhibit=
   > EOF
 
   $ hg init inhibit
@@ -124,7 +124,7 @@ Test date is set correctly
   $ hg update -q G
   $ echo 1 >> G
   $ hg commit --amend -m G1 --config devel.default-date='123456 0'
-  $ hg unamend --config extensions.fbamend=$TESTDIR/../hgext3rd/fbamend
+  $ hg unamend --config extensions.fbamend=
   $ hg debugobsolete | tail -1
   b7e6ea8355346dbbedcb23188c3a5de400e780ae cf43ad9da869111bee585c5475aefe61f6f74649 0 (Fri Jan 02 10:17:37 1970 +0000) {'ef1': '9', 'user': 'test'}
   $ echo 2 >> G
@@ -136,7 +136,7 @@ Do not use a mocked date
   > %unset default-date
   > EOF
   $ hg commit --amend -m G2
-  $ hg unamend --config extensions.fbamend=$TESTDIR/../hgext3rd/fbamend
+  $ hg unamend --config extensions.fbamend=
   $ hg debugobsolete | tail -1
   51313a3d2b65bd2cbc4828a7309af84eb5914bdb cf43ad9da869111bee585c5475aefe61f6f74649 0 (*) {'ef1': '9', 'user': 'test'} (glob)
   $ hg debugobsolete | tail -1 | grep ' 1970 +0000'

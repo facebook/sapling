@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > fbamend=
+  > inhibit=
   > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = createmarkers, allowunstable

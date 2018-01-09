@@ -14,13 +14,13 @@ Test that hg pull creates obsolescence markers for landed diffs
   > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > inhibit=
+  > fbamend=
   > strip=
   > rebase=
   > remotenames =
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > pullcreatemarkers= $TESTDIR/../hgext3rd/pullcreatemarkers.py
+  > pushrebase=
+  > pullcreatemarkers=
   > [remotenames]
   > allownonfastforward=True
   > [fbamend]

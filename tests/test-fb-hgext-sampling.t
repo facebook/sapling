@@ -40,7 +40,7 @@ logged
   > [sampling]
   > key.commit=commit_table
   > [extensions]
-  > sampling=$TESTDIR/../hgext3rd/sampling.py
+  > sampling=
   > EOF
   $ LOGDIR=`pwd`/logs
   $ mkdir $LOGDIR

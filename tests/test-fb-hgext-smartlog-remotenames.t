@@ -1,7 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
+  > smartlog=
   > remotenames=
   > EOF
 

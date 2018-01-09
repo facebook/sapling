@@ -2,7 +2,7 @@
   > [ui]
   > interface=editor
   > [extensions]
-  > edrecord=$TESTDIR/../hgext3rd/edrecord.py
+  > edrecord=
   > __EOF__
 
   $ hg init repo

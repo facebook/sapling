@@ -2,7 +2,7 @@
   $ cd repo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > dragdag=$RUNTESTDIR/drawdag.py
   > rebase=
   > EOF

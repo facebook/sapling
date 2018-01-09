@@ -2,7 +2,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs/
+  > lfs=
   > [lfs]
   > threshold=1000B
   > EOF
@@ -416,7 +416,7 @@
   $ cd repo10
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs/
+  > lfs=
   > [lfs]
   > threshold=1
   > EOF

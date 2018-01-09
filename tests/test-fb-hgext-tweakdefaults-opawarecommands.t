@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > tweakdefaults=
+  > fbamend=
   > rebase=
   > [experimental]
   > evolution=createmarkers

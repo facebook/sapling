@@ -2,7 +2,7 @@ Test functionality is present
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > rebase=
   > EOF
   $ mkcommit() {
@@ -205,7 +205,7 @@ Test that unbookmarked re-amends work well
 Test interaction with histedit
 
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py" >> $HGRCPATH
+  $ echo "fbhistedit=" >> $HGRCPATH
   $ echo "histedit=" >> $HGRCPATH
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -307,7 +307,7 @@ Test that the extension disables itself when evolution is enabled
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > EOF
 
 noisy warning during amend
@@ -474,7 +474,7 @@ Test hg amend works with a logfile
 Test fbamend with inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > inhibit=
   > EOF
   $ cd ..
   $ hg init inhibitrepo
@@ -536,7 +536,7 @@ Prepare a repo for unamend testing
   $ cd unamendrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > EOF
@@ -592,7 +592,7 @@ Make sure that unamend does not work without inhibit
 Make sure that unamend works as expected with inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > inhibit=
   > EOF
   $ hg unamend
 

@@ -2,7 +2,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > fbhistedit=
   > histedit=
   > rebase=
   > EOF
@@ -195,7 +195,6 @@ retry should try to execute the command again and continue if succeeded
   > exec exit 2
   > edit 652413bf663e f
   > EOF
-  [1]
 
   $ hg histedit --retry
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -346,7 +345,7 @@ Test that we can recover exec with fbamend on
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > [experimental]
   > evolution=createmarkers, allowunstable
   > EOF

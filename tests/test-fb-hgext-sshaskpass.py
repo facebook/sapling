@@ -2,8 +2,7 @@ import os
 import sys
 
 # Make sure we use sshaskpass.py in this repo, unaffected by PYTHONPATH
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../hgext3rd'))
-import sshaskpass
+from hgext import sshaskpass
 
 # stdin, stderr have to be tty to run test
 pid, master = os.forkpty()

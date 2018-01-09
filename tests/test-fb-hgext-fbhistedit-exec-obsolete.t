@@ -2,7 +2,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > fbhistedit=
   > histedit=
   > rebase=
   > EOF

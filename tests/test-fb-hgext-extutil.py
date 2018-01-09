@@ -15,7 +15,7 @@ from mercurial import (
 )
 
 if __name__ == '__main__':
-    sys.path.insert(0, os.path.join(os.environ["TESTDIR"], "..", "hgext3rd"))
+    sys.path.insert(0, os.path.join(os.environ["TESTDIR"], "..", "hgext"))
 
 import extutil
 

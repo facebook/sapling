@@ -6,7 +6,7 @@ Set up
   > [extensions]
   > rebase=
   > remotenames=
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > EOF
 
   $ hg init repo

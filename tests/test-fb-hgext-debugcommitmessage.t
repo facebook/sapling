@@ -1,7 +1,7 @@
 Set up extension
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > debugcommitmessage = $TESTDIR/../hgext3rd/debugcommitmessage.py
+  > debugcommitmessage=
   > EOF
 
 Set up repo

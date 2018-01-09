@@ -2,7 +2,7 @@ Set up without remotenames
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > EOF
 
   $ hg init repo

@@ -11,7 +11,7 @@ except ImportError:
     import socketserver as SocketServer
 
 # Make sure we use patchpython.py in this repo, unaffected by PYTHONPATH
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../hgext3rd'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../hgext'))
 import patchpython
 
 assert patchpython # pass pyflakes "import but unused" check

@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > configwarn=$TESTDIR/../hgext3rd/configwarn.py
+  > configwarn=
   > [configwarn]
   > systemconfigs=diff.git, phases.publish
   > [alias]

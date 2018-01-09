@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > checkmessagehook = $TESTDIR/../hgext3rd/checkmessagehook.py
+  > checkmessagehook=
   > EOF
 
 Build up a repo

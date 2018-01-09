@@ -1,8 +1,8 @@
 #testcases onlymapdelta.true onlymapdelta.false
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup = $TESTDIR/../hgext3rd/gitlookup.py" >> $HGRCPATH
-  $ echo "gitrevset = $TESTDIR/../hgext3rd/gitrevset.py" >> $HGRCPATH
+  $ echo "gitlookup=" >> $HGRCPATH
+  $ echo "gitrevset=" >> $HGRCPATH
   $ echo "strip = " >> $HGRCPATH
   $ echo "[ui]" >> $HGRCPATH
   $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH

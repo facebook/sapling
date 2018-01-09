@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
-  > fastlog=$TESTDIR/../hgext3rd/fastlog.py
+  > tweakdefaults=
+  > fastlog=
   > [fbconduit]
   > host=our.intern.facebook.com
   > protocol=http

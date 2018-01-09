@@ -1,8 +1,8 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > cleanobsstore=$TESTDIR/../hgext3rd/cleanobsstore.py
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > cleanobsstore=
+  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > EOF

@@ -1,8 +1,8 @@
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > fbamend=
+  > inhibit=
   > rebase=
   > [experimental]
   > evolution = createmarkers

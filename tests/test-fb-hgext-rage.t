@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > rage=$TESTDIR/../hgext3rd/rage.py
+  > rage=
   > EOF
 
   $ hg init repo

@@ -1,11 +1,11 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > histedit=
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > inhibit=
   > rebase=
-  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > smartlog=
+  > tweakdefaults=
   > [tweakdefaults]
   > histeditkeepdate = true
   > [experimental]

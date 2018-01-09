@@ -10,7 +10,7 @@ Basic functionality.
   $ cd basic
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbconduit = $TESTDIR/../hgext3rd/fbconduit.py
+  > fbconduit=
   > [fbconduit]
   > reponame = basic
   > host = localhost:$CONDUIT_PORT
@@ -48,7 +48,7 @@ Test with one backing repos specified.
   $ hg init single_backingrepo
   $ cd single_backingrepo
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
+  $ echo "fbconduit=" >> .hg/hgrc
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = single" >> .hg/hgrc
   $ echo "backingrepos = single_src" >> .hg/hgrc
@@ -75,7 +75,7 @@ Test with multiple backing repos specified.
   $ hg init backingrepos
   $ cd backingrepos
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
+  $ echo "fbconduit=" >> .hg/hgrc
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = multiple" >> .hg/hgrc
   $ echo "backingrepos = src_a src_b src_c" >> .hg/hgrc
@@ -136,7 +136,7 @@ Test with a bad server port, where we get connection refused errors.
   $ hg init errortest
   $ cd errortest
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "fbconduit = $TESTDIR/../hgext3rd/fbconduit.py" >> .hg/hgrc
+  $ echo "fbconduit=" >> .hg/hgrc
   $ echo "[fbconduit]" >> .hg/hgrc
   $ echo "reponame = errortest" >> .hg/hgrc
   $ echo "host = localhost:9" >> .hg/hgrc

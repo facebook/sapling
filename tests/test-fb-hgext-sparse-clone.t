@@ -5,7 +5,7 @@ test sparse
   > ssh = python "$RUNTESTDIR/dummyssh"
   > username = nobody <no.reply@fb.com>
   > [extensions]
-  > sparse=$TESTDIR/../hgext3rd/fbsparse.py
+  > sparse=$TESTDIR/../hgext/fbsparse.py
   > purge=
   > strip=
   > rebase=

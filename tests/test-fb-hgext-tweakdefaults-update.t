@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > rebase=
   > [experimental]
   > updatecheck=noconflict

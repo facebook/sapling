@@ -2,7 +2,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fbhistedit=$TESTDIR/../hgext3rd/fbhistedit.py
+  > fbhistedit=
   > histedit=
   > rebase=
   > [alias]
@@ -50,7 +50,6 @@ Use histedit to graft an extra commit into current history
   > graft 581a2eefdc84
   > pick f9d2e574dc58
   > EOF
-  [1]
 
   $ hg tglog
   @  7:fc9a25c1b8afb917f8e3dacad873f0d0bea14a96:draft 'c'

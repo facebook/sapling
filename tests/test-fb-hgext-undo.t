@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > undo = $TESTDIR/../hgext3rd/undo.py
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > undo=
+  > inhibit=
   > [undo]
   > _duringundologlock=1
   > [experimental]
@@ -125,7 +125,7 @@ Test gap in data (extension dis and enabled)
   $ touch cmiss && hg add cmiss && hg ci -mcmiss
   $ cat >>$HGRCPATH <<EOF
   > [extensions]
-  > undo = $TESTDIR/../hgext3rd/undo.py
+  > undo=
   > EOF
   $ touch a5 && hg add a5 && hg ci -ma5
   $ hg debugundohistory -l
@@ -379,9 +379,9 @@ divergence cases in undo.  The original split/divergence obsmarkers suffice for
 checking split/divergence.
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > smartlog = $TESTDIR/../hgext3rd/smartlog.py
-  > tweakdefaults = $TESTDIR/../hgext3rd/tweakdefaults.py
-  > fbamend = $TESTDIR/../hgext3rd/fbamend/
+  > smartlog=
+  > tweakdefaults=
+  > fbamend=
   > EOF
   $ hg undo
   undone to *, before commit --amend (glob)
@@ -701,7 +701,7 @@ Check local undo with facebook style strip
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > strip =
-  > fbamend = $TESTDIR/../hgext3rd/fbamend/
+  > fbamend=
   > EOF
   $ hg strip 3ee6
   advice: 'hg hide' provides a better UI for hiding commits
@@ -1258,7 +1258,7 @@ permanently delete a commit, we do not want to undo to this state.
 Obsmarkers for instack amend
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > fbamend = $TESTDIR/../hgext3rd/fbamend/
+  > fbamend=
   > EOF
   $ hg update 0963
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

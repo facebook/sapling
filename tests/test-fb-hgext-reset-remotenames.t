@@ -1,7 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > reset=$TESTDIR/../hgext3rd/reset.py
+  > reset=
   > remotenames=
   > EOF
 

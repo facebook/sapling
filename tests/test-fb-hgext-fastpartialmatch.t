@@ -7,7 +7,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > fastpartialmatch=$TESTDIR/../hgext3rd/fastpartialmatch.py
+  > fastpartialmatch=
   > strip=
   > histedit=
   > [ui]

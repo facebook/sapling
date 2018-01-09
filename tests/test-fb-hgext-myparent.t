@@ -4,7 +4,7 @@ Setup
   $ export PYTHONPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > myparent=$TESTDIR/../hgext3rd/myparent.py
+  > myparent=
   > EOF
   $ hg init repo
   $ cd repo

@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > morecolors=$TESTDIR/../hgext3rd/morecolors.py
+  > morecolors=
   > [ui]
   > color=always
   > [color]

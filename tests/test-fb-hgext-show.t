@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > show=$TESTDIR/../hgext3rd/fbshow.py
+  > show=$TESTDIR/../hgext/fbshow.py
   > EOF
 
 We assume that log basically works (it has its own tests). This just covers uses

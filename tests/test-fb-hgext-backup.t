@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > backups=$TESTDIR/../hgext3rd/backups.py
+  > backups=
   > strip=
   > EOF
 

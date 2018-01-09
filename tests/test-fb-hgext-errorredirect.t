@@ -8,7 +8,7 @@
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > errorredirect=$TESTDIR/../hgext3rd/errorredirect.py
+  > errorredirect=
   > crash=$TESTTMP/crash.py
   > EOF
 
