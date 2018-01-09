@@ -119,8 +119,9 @@ class BuildRustExt(distutils.core.Command):
             os.makedirs(os.path.dirname(dest))
         except OSError:
             pass
-        shutil.copyfile(src, dest)
-        shutil.copymode(src, dest)
+        desttmp = dest + '.tmp'
+        shutil.copy(src, desttmp)
+        shutil.move(desttmp, dest)
 
 distutils.dist.Distribution.rust_ext_modules = ()
 distutils.command.build.build.sub_commands.append(
