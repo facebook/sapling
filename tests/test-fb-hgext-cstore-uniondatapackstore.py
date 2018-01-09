@@ -16,12 +16,12 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 import pythonpath
 pythonpath.setcstorepath()
 
-from cstore import (
+from hgext.extlib.cstore import (
     datapackstore,
     uniondatapackstore,
 )
 
-from remotefilelog.datapack import (
+from hgext.remotefilelog.datapack import (
     datapack,
     mutabledatapack,
 )
