@@ -117,7 +117,7 @@ def getdraftstack(headctx, limit=None):
     result.reverse()
     return result
 
-def getfilestack(stack, path, seenfctxs=set()):
+def getfilestack(stack, path, seenfctxs=None):
     """([ctx], str, set) -> [fctx], {ctx: fctx}
 
     stack is a list of contexts, from old to new. usually they are what
@@ -155,6 +155,9 @@ def getfilestack(stack, path, seenfctxs=set()):
       removed, since 1 is immutable.
     """
     assert stack
+
+    if seenfctxs is None:
+        seenfctxs = set()
 
     if path not in stack[-1]:
         return [], {}
