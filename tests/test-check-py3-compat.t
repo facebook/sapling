@@ -48,9 +48,7 @@
   fb-hgext/tests/ls-l.py requires print_function
   fb-hgext/tests/perftest.py not using absolute_import
   fb-hgext/tests/perftest.py requires print_function
-  fb-hgext/tests/test-fb-hgext-fastmanifest.py not using absolute_import
   fb-hgext/tests/treemanifest_correctness.py not using absolute_import
-  fb-hgext/tests/waitforfile.py not using absolute_import
   hgext/arcdiff.py not using absolute_import
   hgext/backups.py not using absolute_import
   hgext/catnotate.py not using absolute_import
@@ -199,11 +197,13 @@
   tests/dummyext2.py not using absolute_import
   tests/hggit/commitextra.py not using absolute_import
   tests/test-fb-hgext-extutil.py not using absolute_import
+  tests/test-fb-hgext-fastmanifest.py not using absolute_import
   tests/test-fb-hgext-generic-bisect.py not using absolute_import
   tests/test-fb-hgext-patchpython.py not using absolute_import
   tests/test-fb-hgext-sshaskpass.py not using absolute_import
   tests/test-hggit-url-parsing.py not using absolute_import
   tests/test-hggit-url-parsing.py requires print_function
+  tests/waitforfile.py not using absolute_import
 
 #if py3exe
   $ testrepohg files 'set:(**.py) - grep(pygments)' \

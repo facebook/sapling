@@ -14,7 +14,7 @@ Set up server repository
   $ cd server
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ echo foo > a
   $ echo foo > b
@@ -30,7 +30,7 @@ Set up client repository 1 with pushrebase enabled
   $ cd client1
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ cd ..
 
@@ -40,8 +40,8 @@ Set up client repository 2 with pushrebase enabled / fastmanifest enabled
   $ cd client2
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > pushrebase=
+  > fastmanifest=
   > EOF
   $ cd ..
 

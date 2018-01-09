@@ -17,7 +17,7 @@ Check that remotename changes trigger caching
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > remotenames=
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > [fastmanifest]
   > cacheonchange=True
   > cacheonchangebackground=False

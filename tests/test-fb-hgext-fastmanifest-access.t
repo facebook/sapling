@@ -51,7 +51,7 @@ Check diagnosis, debugging information
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > [fastmanifest]
   > cachecutoffdays=-1
   > logfile=$TESTTMP/logfile
