@@ -13,7 +13,7 @@ Setup
   $ chmod +x $TESTTMP/pretxnchangegroup.sh
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > tweakdefaults=$TESTDIR/../hgext3rd/tweakdefaults.py
+  > tweakdefaults=
   > remotenames=
   > [hooks]
   > pretxnchangegroup = $TESTTMP/pretxnchangegroup.sh
