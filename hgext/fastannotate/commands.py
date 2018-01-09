@@ -79,7 +79,7 @@ fastannotatecommandargs = {
         ('l', 'line-number', None, _('show line number at the first '
                                      'appearance')),
         ('e', 'deleted', None, _('show deleted lines (slow) (EXPERIMENTAL)')),
-        ('h', 'no-content', None, _('do not show file content (EXPERIMENTAL)')),
+        ('', 'no-content', None, _('do not show file content (EXPERIMENTAL)')),
         ('', 'no-follow', None, _("don't follow copies and renames")),
         ('', 'linear', None, _('enforce linear history, ignore second parent '
                                'of merges (EXPERIMENTAL)')),
