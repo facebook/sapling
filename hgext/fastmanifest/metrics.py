@@ -22,6 +22,7 @@
 # To debug metrics use fastmanifest.debugmetrics = True, this will print
 # the metrics collected for each command with ui.status at the end of each
 # command.
+from __future__ import absolute_import
 
 FASTMANIFEST_DONOTREPORT_METRICS = set([
     "cachehit",

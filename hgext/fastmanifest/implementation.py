@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 import collections
 import os
@@ -17,7 +18,6 @@ from mercurial import (
     revlog,
     util,
 )
-from . import cachemanager
 from hgext.extlib import cfastmanifest
 from .metrics import metricscollector
 from .constants import (
@@ -719,6 +719,8 @@ class fastmanifestcache(object):
     @staticmethod
     def getinstance(opener, ui):
         if not util.safehasattr(opener, 'fastmanifestcache'):
+            # Avoid circular imports
+            from . import cachemanager
             limit = cachemanager._systemawarecachelimit(opener=opener, ui=ui)
             opener.fastmanifestcache = fastmanifestcache(opener, ui, limit)
         return opener.fastmanifestcache

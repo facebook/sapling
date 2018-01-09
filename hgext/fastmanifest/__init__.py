@@ -93,6 +93,7 @@ is not normally accessible to manifests.
 manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
 '''
+from __future__ import absolute_import
 
 import sys
 

@@ -66,13 +66,6 @@
   hgext/fastannotate/formatter.py not using absolute_import
   hgext/fastannotate/protocol.py not using absolute_import
   hgext/fastlog.py not using absolute_import
-  hgext/fastmanifest/__init__.py not using absolute_import
-  hgext/fastmanifest/cachemanager.py not using absolute_import
-  hgext/fastmanifest/concurrency.py not using absolute_import
-  hgext/fastmanifest/constants.py not using absolute_import
-  hgext/fastmanifest/debug.py not using absolute_import
-  hgext/fastmanifest/implementation.py not using absolute_import
-  hgext/fastmanifest/metrics.py not using absolute_import
   hgext/fastpartialmatch.py not using absolute_import
   hgext/fbconduit.py not using absolute_import
   hgext/fbhistedit.py not using absolute_import

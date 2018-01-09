@@ -76,7 +76,7 @@ class HybridManifest(unittest.TestCase):
                         "%s missing in hybrid manifest" % method
 
     def test_cachelimit(self):
-        from fastmanifest.cachemanager import _systemawarecachelimit
+        from hgext.fastmanifest.cachemanager import _systemawarecachelimit
         cachealloc = _systemawarecachelimit.cacheallocation
         GB = fastmanifest.cachemanager.GB
         MB = fastmanifest.cachemanager.MB
@@ -175,5 +175,5 @@ class HybridManifest(unittest.TestCase):
 
 if __name__ == "__main__":
     sys.path.insert(0, os.path.join(os.environ["TESTDIR"], ".."))
-    import fastmanifest
+    from hgext import fastmanifest
     silenttestrunner.main(__name__)

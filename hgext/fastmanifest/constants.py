@@ -6,6 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 # fastmanifests are cached in .hg/store/<CACHE_SUBDIR>
+from __future__ import absolute_import
+
 CACHE_SUBDIR = "manifestcache"
 
 # See _systemawarecachelimit in cachemanager
