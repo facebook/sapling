@@ -39,6 +39,9 @@ _builtin = {
     'inotify',
     'hgcia'
 }
+_blacklist = {
+    'extlib',
+}
 
 def extensions(ui=None):
     if ui:
@@ -612,7 +615,7 @@ def disabled():
         from hgext import __index__
         return dict((name, gettext(desc))
                     for name, desc in __index__.docs.iteritems()
-                    if name not in _order)
+                    if name not in _order and name not in _blacklist)
     except (ImportError, AttributeError):
         pass
 
@@ -623,7 +626,7 @@ def disabled():
     exts = {}
     for name, path in paths.iteritems():
         doc = _disabledhelp(path)
-        if doc:
+        if doc and name not in _blacklist:
             exts[name] = doc.splitlines()[0]
 
     return exts
@@ -634,13 +637,15 @@ def disabledext(name):
         from hgext import __index__
         if name in _order:  # enabled
             return
+        elif name in _blacklist:  # blacklisted
+            return
         else:
             return gettext(__index__.docs.get(name))
     except (ImportError, AttributeError):
         pass
 
     paths = _disabledpaths()
-    if name in paths:
+    if name in paths and name not in _blacklist:
         return _disabledhelp(paths[name])
 
 def disabledcmd(ui, cmd, strict=False):
