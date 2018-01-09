@@ -626,6 +626,12 @@ void FuseChannel::processSession() {
         // a way to fulfil the promise
         break;
 
+      case FUSE_IOCTL:
+        // Rather than the default ENOSYS, we need to return ENOTTY
+        // to indicate that the requested ioctl is not supported
+        replyError(*header, ENOTTY);
+        break;
+
       default: {
         auto handlerIter = handlerMap.find(header->opcode);
         if (handlerIter != handlerMap.end()) {
@@ -1033,12 +1039,11 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
           count += attr.size();
         }
 
-        fuse_getxattr_out out;
-        memset(&out, 0, sizeof(out));
-        out.size = count;
-
         if (size == 0) {
           // caller is asking for the overall size
+          fuse_getxattr_out out;
+          memset(&out, 0, sizeof(out));
+          out.size = count;
           request.sendReply(out);
         } else if (size < count) {
           XLOG(DBG7) << "LISTXATTR input size is " << size << " and count is "
@@ -1048,13 +1053,8 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
           std::string buf;
           folly::join('\0', attrs, buf);
           buf.push_back('\0');
-          DCHECK(count == buf.size());
           XLOG(DBG7) << "LISTXATTR: " << buf;
-          folly::fbvector<iovec> vec;
-          vec.reserve(3);
-          vec.push_back(make_iovec(out));
-          vec.push_back(make_iovec(buf.data(), buf.size()));
-          request.sendReply(std::move(vec));
+          request.sendReply(folly::StringPiece(buf));
         }
       });
 }
