@@ -13,8 +13,8 @@
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > reponame=master
@@ -34,8 +34,8 @@
   $ hg init ../client2
   $ cat >> ../client2/.hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > reponame=master
@@ -57,7 +57,7 @@ Pushing with treemanifest disabled does nothing
 (disable demand import so treemanifest.py is forced to load)
   $ HGDEMANDIMPORT=disable hg push -q ../client2 --config extensions.treemanifest=! --config fastmanifest.usetree=False
   $ ls ../client2/.hg/store/packs/manifests || true
-  * No such file or directory (glob)
+  * $ENOENT$ (glob)
 
   $ hg -R ../client2 strip -q -r tip
 

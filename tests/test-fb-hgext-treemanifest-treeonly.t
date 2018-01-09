@@ -13,9 +13,9 @@ Setup the server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > bundle2hooks=$TESTDIR/../hgext3rd/bundle2hooks.py
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > treemanifest=$TESTDIR/../treemanifest
+  > bundle2hooks=
+  > pushrebase=
+  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -40,8 +40,8 @@ Create flat manifest client
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > fbamend=
+  > pushrebase=
   > EOF
 
 Make a flat-only draft commit
@@ -53,8 +53,8 @@ Make a flat-only draft commit
 Transition to hybrid flat+tree client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=
+  > fastmanifest=
   > [fastmanifest]
   > usetree=True
   > usecache=False

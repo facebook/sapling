@@ -33,7 +33,7 @@ There are three cases which are of interest in this test:
   $ hg commit -Am 'modify x'
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > 
   > [remotefilelog]
   > server=True
@@ -78,8 +78,8 @@ There are three cases which are of interest in this test:
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=
+  > fastmanifest=
   > [remotefilelog]
   > reponame = master
   > prefetchdays=0
@@ -106,7 +106,7 @@ Test prefetch
   29938257d506f677320d5abec8e34a1a9ed635fe.histpack
   8adc618d23082c0a5311a4bbf9ac08b9b9672471.dataidx
   8adc618d23082c0a5311a4bbf9ac08b9b9672471.datapack
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > --long $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
   subdir:
@@ -133,7 +133,7 @@ Test prefetch
   Node                                      Delta Base                                Delta Length  Blob Size
   ef362f8bbe8aa457b0cfc49f200cbeb7747984ed  0000000000000000000000000000000000000000  46            (missing)
   
-  $ hg debughistorypack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debughistorypack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.histidx
   
   
@@ -150,7 +150,7 @@ Test prefetch
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
   ddb35f099a64  000000000000  000000000000  f15c65c6e9bd  
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > --node ef362f8bbe8aa457b0cfc49f200cbeb7747984ed $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
   
@@ -191,7 +191,7 @@ requires tree manifest for the base commit.
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
 #endif
 
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
   dir:
@@ -207,7 +207,7 @@ Test auto prefetch during normal access
   $ rm -rf $CACHEDIR/master
 || ( exit 1 ) is needed because ls on OSX and Linux exits differently
   $ ls $CACHEDIR/master/packs/manifests || ( exit 1 )
-  *No such file or directory (glob)
+  * $ENOENT$ (glob)
   [1]
   $ hg log -r tip --stat --pager=off
   3 trees fetched over * (glob)
@@ -232,7 +232,7 @@ Test auto prefetch during normal access
   e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histidx
   e5c44a5c1bbfd8841df1c6c4b7cca54536e016db.histpack
 
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675
   $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675:
   dir:
@@ -249,7 +249,7 @@ Test auto prefetch during normal access
   
 
 - Note that subdir/ is not downloaded again
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
   dir:
@@ -287,7 +287,7 @@ Test auto prefetch during pull
   no changes found
   prefetching trees
   6 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/8adc618d23082c0a5311a4bbf9ac08b9b9672471:
   subdir:
@@ -325,7 +325,7 @@ Test auto prefetch during pull
   no changes found
   prefetching trees
   3 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/4ee15de76c068ec1c80e3e61f2c3c476a779078a:
   dir:
@@ -357,7 +357,7 @@ Test auto prefetch during pull
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/148e9eb32f473ea522c591c95be0f9e772be9675.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   >  $CACHEDIR/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c.dataidx
   $TESTTMP/hgcache/master/packs/manifests/3fb59713808147bda39cbd97b9cd862406f5865c:
   dir:
@@ -390,7 +390,7 @@ Test prefetching certain revs during pull
   (run 'hg update' to get a working copy)
   prefetching trees
   3 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
   $TESTTMP/hgcache/master/packs/manifests/4ee15de76c068ec1c80e3e61f2c3c476a779078a:
   dir:
@@ -414,7 +414,7 @@ Test prefetching certain revs during pull
   no changes found
   prefetching trees
   2 trees fetched over * (glob)
-  $ hg debugdatapack --config extensions.remotefilelog=$TESTDIR/../remotefilelog \
+  $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58.dataidx
   $TESTTMP/hgcache/master/packs/manifests/99050e724a9236121684523ba3f4db270e62fb58:
   dir:

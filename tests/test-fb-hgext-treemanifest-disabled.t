@@ -8,8 +8,8 @@
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > reponame=master

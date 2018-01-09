@@ -16,8 +16,8 @@ Setup the server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastannotate=
+  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -45,9 +45,9 @@ Run blame on client
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastannotate=$TESTDIR/../hgext3rd/fastannotate
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastannotate=
+  > fastmanifest=
+  > treemanifest=
   > [fastmanifest]
   > usecache=False
   > usetree=True

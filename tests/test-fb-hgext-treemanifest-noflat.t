@@ -38,9 +38,9 @@ This file tests that normal mercurial operations almost never read the flat mani
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > flatcheck=$TESTTMP/flatcheck.py
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True

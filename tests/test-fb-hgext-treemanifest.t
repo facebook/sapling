@@ -18,8 +18,8 @@
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
@@ -142,8 +142,8 @@ Test rebasing a stack of commits results in a pack with all the trees
 Test treemanifest with sparse enabled
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > sparse = $TESTDIR/../hgext3rd/fbsparse.py
-  > reset = $TESTDIR/../hgext3rd/reset.py
+  > fbsparse=
+  > reset=
   > EOF
   $ hg sparse -I subdir
   $ hg reset '.^'

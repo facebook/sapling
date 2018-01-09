@@ -13,8 +13,8 @@
   $ cd ../client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
@@ -175,8 +175,8 @@ Test repacking from revlogs to pack files on the server
 
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > remotefilelog=$TESTDIR/../remotefilelog
+  > treemanifest=
+  > remotefilelog=
   > [remotefilelog]
   > server=True
   > [treemanifest]

@@ -11,8 +11,8 @@
   > [paths]
   > default=ssh://user@dummy/master
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > [fastmanifest]
   > usetree=True
   > usecache=False
@@ -36,7 +36,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > [experimental]
   > bundle2lazylocking=True
   > [remotefilelog]
@@ -49,7 +49,7 @@ Test that multiple fighting pushes result in the correct flat and tree manifests
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > [treemanifest]
   > server=True
   > # Sleep gives all the hg serve processes time to load the original repo
@@ -111,8 +111,8 @@ Test that pushrebase hooks can access the commit data
   $ cd hook_client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > [fastmanifest]
   > usetree=True
   > usecache=False

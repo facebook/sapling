@@ -7,8 +7,8 @@
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > treemanifest=$TESTDIR/../treemanifest
+  > pushrebase=
+  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -27,8 +27,8 @@ Create client
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=
+  > fastmanifest=
   > [fastmanifest]
   > usetree=True
   > usecache=False
@@ -89,7 +89,7 @@ Test pushing only flat fails if forcetreereceive is on
   > EOF
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > pushrebase=
   > EOF
   $ mv .hg/store/packs .hg/store/packs.bak
   $ hg push --to mybook

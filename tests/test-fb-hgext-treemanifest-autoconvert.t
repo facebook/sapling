@@ -7,7 +7,7 @@
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > [treemanifest]
   > server=True
   > [remotefilelog]
@@ -22,8 +22,8 @@
   $ cd client
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
-  > treemanifest=$TESTDIR/../treemanifest
+  > fastmanifest=
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
