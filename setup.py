@@ -1049,21 +1049,14 @@ cythonopts = {
     'c_string_type': 'bytes',
 }
 
-cythonmodules = [
+extmodules += cythonize([
+    Extension('mercurial.cyext.clindex',
+              sources=['mercurial/cyext/clindex.pyx'],
+              extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
     Extension('mercurial.cyext.linelog',
               sources=['mercurial/cyext/linelog.pyx'],
-              extra_compile_args=filter(None, [STDC99]))
-]
-
-if not iswindows:
-    cythonmodules += [
-        Extension('mercurial.cyext.clindex',
-                  sources=['mercurial/cyext/clindex.pyx'],
-                  extra_compile_args=filter(None, [STDC99])),
-    ]
-
-for cm in cythonmodules:
-    extmodules += cythonize(cm, compiler_directives=cythonopts)
+              extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
+], compiler_directives=cythonopts)
 
 libraries = [
     ("datapack", {
