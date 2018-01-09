@@ -27,56 +27,6 @@
   fb-hgext/fastmanifest/debug.py not using absolute_import
   fb-hgext/fastmanifest/implementation.py not using absolute_import
   fb-hgext/fastmanifest/metrics.py not using absolute_import
-  fb-hgext/hgext3rd/arcdiff.py not using absolute_import
-  fb-hgext/hgext3rd/backups.py not using absolute_import
-  fb-hgext/hgext3rd/catnotate.py not using absolute_import
-  fb-hgext/hgext3rd/checkmessagehook.py not using absolute_import
-  fb-hgext/hgext3rd/chistedit.py not using absolute_import
-  fb-hgext/hgext3rd/copytrace.py not using absolute_import
-  fb-hgext/hgext3rd/debugcommitmessage.py not using absolute_import
-  fb-hgext/hgext3rd/dialect.py not using absolute_import
-  fb-hgext/hgext3rd/directaccess.py not using absolute_import
-  fb-hgext/hgext3rd/drop.py not using absolute_import
-  fb-hgext/hgext3rd/edrecord.py not using absolute_import
-  fb-hgext/hgext3rd/errorredirect.py not using absolute_import
-  fb-hgext/hgext3rd/extorder.py not using absolute_import
-  fb-hgext/hgext3rd/fastannotate/error.py not using absolute_import
-  fb-hgext/hgext3rd/fastannotate/formatter.py not using absolute_import
-  fb-hgext/hgext3rd/fastannotate/protocol.py not using absolute_import
-  fb-hgext/hgext3rd/fastlog.py not using absolute_import
-  fb-hgext/hgext3rd/fastpartialmatch.py not using absolute_import
-  fb-hgext/hgext3rd/fbconduit.py not using absolute_import
-  fb-hgext/hgext3rd/fbhistedit.py not using absolute_import
-  fb-hgext/hgext3rd/fbshow.py not using absolute_import
-  fb-hgext/hgext3rd/fbsparse.py not using absolute_import
-  fb-hgext/hgext3rd/generic_bisect.py not using absolute_import
-  fb-hgext/hgext3rd/githelp.py not using absolute_import
-  fb-hgext/hgext3rd/gitlookup.py not using absolute_import
-  fb-hgext/hgext3rd/grepdiff.py not using absolute_import
-  fb-hgext/hgext3rd/grpcheck.py not using absolute_import
-  fb-hgext/hgext3rd/linkrevcache.py not using absolute_import
-  fb-hgext/hgext3rd/logginghelper.py not using absolute_import
-  fb-hgext/hgext3rd/morestatus.py not using absolute_import
-  fb-hgext/hgext3rd/myparent.py not using absolute_import
-  fb-hgext/hgext3rd/nointerrupt.py not using absolute_import
-  fb-hgext/hgext3rd/ownercheck.py not using absolute_import
-  fb-hgext/hgext3rd/p4fastimport/filetransaction.py not using absolute_import
-  fb-hgext/hgext3rd/patchpython.py not using absolute_import
-  fb-hgext/hgext3rd/perftweaks.py not using absolute_import
-  fb-hgext/hgext3rd/phabdiff.py not using absolute_import
-  fb-hgext/hgext3rd/phabstatus.py not using absolute_import
-  fb-hgext/hgext3rd/phrevset.py not using absolute_import
-  fb-hgext/hgext3rd/pullcreatemarkers.py not using absolute_import
-  fb-hgext/hgext3rd/rage.py not using absolute_import
-  fb-hgext/hgext3rd/remoteid.py not using absolute_import
-  fb-hgext/hgext3rd/reset.py not using absolute_import
-  fb-hgext/hgext3rd/sampling.py not using absolute_import
-  fb-hgext/hgext3rd/sigtrace.py not using absolute_import
-  fb-hgext/hgext3rd/simplecache.py not using absolute_import
-  fb-hgext/hgext3rd/sshaskpass.py not using absolute_import
-  fb-hgext/hgext3rd/stat.py not using absolute_import
-  fb-hgext/hgext3rd/upgradegeneraldelta.py not using absolute_import
-  fb-hgext/hgext3rd/whereami.py not using absolute_import
   fb-hgext/infinitepush/bundleparts.py not using absolute_import
   fb-hgext/infinitepush/common.py not using absolute_import
   fb-hgext/infinitepush/fileindexapi.py not using absolute_import
@@ -94,9 +44,6 @@
   fb-hgext/scripts/utils.py not using absolute_import
   fb-hgext/setup.py not using absolute_import
   fb-hgext/tests/bundlerepologger.py not using absolute_import
-  fb-hgext/tests/conduithttp.py not using absolute_import
-  fb-hgext/tests/dummyext1.py not using absolute_import
-  fb-hgext/tests/dummyext2.py not using absolute_import
   fb-hgext/tests/get-with-headers.py not using absolute_import
   fb-hgext/tests/get-with-headers.py requires print_function
   fb-hgext/tests/getflogheads.py not using absolute_import
@@ -107,15 +54,61 @@
   fb-hgext/tests/ls-l.py requires print_function
   fb-hgext/tests/perftest.py not using absolute_import
   fb-hgext/tests/perftest.py requires print_function
-  fb-hgext/tests/test-fb-hgext-extutil.py not using absolute_import
   fb-hgext/tests/test-fb-hgext-fastmanifest.py not using absolute_import
-  fb-hgext/tests/test-fb-hgext-generic-bisect.py not using absolute_import
-  fb-hgext/tests/test-fb-hgext-patchpython.py not using absolute_import
-  fb-hgext/tests/test-fb-hgext-sshaskpass.py not using absolute_import
   fb-hgext/tests/treemanifest_correctness.py not using absolute_import
   fb-hgext/tests/waitforfile.py not using absolute_import
   fb-hgext/treemanifest/__init__.py not using absolute_import
+  hgext/arcdiff.py not using absolute_import
+  hgext/backups.py not using absolute_import
+  hgext/catnotate.py not using absolute_import
+  hgext/checkmessagehook.py not using absolute_import
+  hgext/chistedit.py not using absolute_import
+  hgext/copytrace.py not using absolute_import
+  hgext/debugcommitmessage.py not using absolute_import
+  hgext/dialect.py not using absolute_import
+  hgext/directaccess.py not using absolute_import
+  hgext/drop.py not using absolute_import
+  hgext/edrecord.py not using absolute_import
+  hgext/errorredirect.py not using absolute_import
+  hgext/extorder.py not using absolute_import
+  hgext/fastannotate/error.py not using absolute_import
+  hgext/fastannotate/formatter.py not using absolute_import
+  hgext/fastannotate/protocol.py not using absolute_import
+  hgext/fastlog.py not using absolute_import
+  hgext/fastpartialmatch.py not using absolute_import
+  hgext/fbconduit.py not using absolute_import
+  hgext/fbhistedit.py not using absolute_import
+  hgext/fbshow.py not using absolute_import
+  hgext/fbsparse.py not using absolute_import
+  hgext/generic_bisect.py not using absolute_import
+  hgext/githelp.py not using absolute_import
+  hgext/gitlookup.py not using absolute_import
+  hgext/grepdiff.py not using absolute_import
+  hgext/grpcheck.py not using absolute_import
+  hgext/linkrevcache.py not using absolute_import
+  hgext/logginghelper.py not using absolute_import
+  hgext/morestatus.py not using absolute_import
+  hgext/myparent.py not using absolute_import
+  hgext/nointerrupt.py not using absolute_import
+  hgext/ownercheck.py not using absolute_import
+  hgext/p4fastimport/filetransaction.py not using absolute_import
+  hgext/patchpython.py not using absolute_import
+  hgext/perftweaks.py not using absolute_import
+  hgext/phabdiff.py not using absolute_import
+  hgext/phabstatus.py not using absolute_import
+  hgext/phrevset.py not using absolute_import
+  hgext/pullcreatemarkers.py not using absolute_import
+  hgext/rage.py not using absolute_import
+  hgext/remoteid.py not using absolute_import
   hgext/remotenames.py not using absolute_import
+  hgext/reset.py not using absolute_import
+  hgext/sampling.py not using absolute_import
+  hgext/sigtrace.py not using absolute_import
+  hgext/simplecache.py not using absolute_import
+  hgext/sshaskpass.py not using absolute_import
+  hgext/stat.py not using absolute_import
+  hgext/upgradegeneraldelta.py not using absolute_import
+  hgext/whereami.py not using absolute_import
   hgsubversion/hgsubversion/__init__.py not using absolute_import
   hgsubversion/hgsubversion/compathacks.py not using absolute_import
   hgsubversion/hgsubversion/editor.py not using absolute_import
@@ -189,6 +182,13 @@
   hgsubversion/tests/test_utility_commands.py not using absolute_import
   remotenames/setup.py not using absolute_import
   setup.py not using absolute_import
+  tests/conduithttp.py not using absolute_import
+  tests/dummyext1.py not using absolute_import
+  tests/dummyext2.py not using absolute_import
+  tests/test-fb-hgext-extutil.py not using absolute_import
+  tests/test-fb-hgext-generic-bisect.py not using absolute_import
+  tests/test-fb-hgext-patchpython.py not using absolute_import
+  tests/test-fb-hgext-sshaskpass.py not using absolute_import
 
 #if py3exe
   $ testrepohg files 'set:(**.py) - grep(pygments)' \
