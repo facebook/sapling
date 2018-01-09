@@ -1013,10 +1013,14 @@ cythonopts = {
     'c_string_type': 'bytes',
 }
 
-extmodules += cythonize(Extension('mercurial.cyext.linelog',
-                                  sources=['mercurial/cyext/linelog.pyx'],
-                                  extra_compile_args=filter(None, [STDC99])),
-                        compiler_directives=cythonopts)
+cythonmodules = [
+    Extension('mercurial.cyext.linelog',
+              sources=['mercurial/cyext/linelog.pyx'],
+              extra_compile_args=filter(None, [STDC99]))
+]
+
+for cm in cythonmodules:
+    extmodules += cythonize(cm, compiler_directives=cythonopts)
 
 libraries = [
     ("datapack", {
