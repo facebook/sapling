@@ -24,7 +24,6 @@ from mercurial import (
     encoding,
     phases,
     util as hgutil,
-    url,
     vfs as vfsmod,
 )
 

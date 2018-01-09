@@ -11,7 +11,6 @@ except ImportError:
 from dulwich import errors
 from mercurial.i18n import _
 from mercurial import (
-    encoding,
     error,
     lock as lockmod,
     util as hgutil,

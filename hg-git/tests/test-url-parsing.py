@@ -2,11 +2,12 @@ import sys
 
 try:
     import dulwich
+    type(dulwich) # avoid pyflakes unused import error
 except ImportError:
     print "skipped: missing feature: dulwich"
     sys.exit(80)
 
-import os, tempfile, unittest, shutil
+import os, tempfile, shutil
 from mercurial import ui, hg, commands
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))

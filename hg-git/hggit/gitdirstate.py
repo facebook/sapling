@@ -6,29 +6,13 @@ import errno
 from mercurial import (
     dirstate,
     match as matchmod,
-    scmutil,
     util,
 )
 
-try:
-    # 4.3 Moved osutil to cext
-    from mercurial.cext import osutil
-except (AttributeError, ImportError):
-    from mercurial import osutil
-
-try:
-    from mercurial import ignore
-    ignore.readpats
-    ignoremod = True
-except (AttributeError, ImportError):
-    # ignore module was removed in Mercurial 3.5
-    ignoremod = False
+# ignore module was removed in Mercurial 3.5
+ignoremod = False
 # pathauditor moved to pathutil in 2.9
-try:
-    from mercurial import pathutil
-    pathutil.pathauditor
-except (AttributeError, ImportError):
-    pathutil = scmutil
+from mercurial import pathutil
 from mercurial.i18n import _
 
 def gignorepats(orig, lines, root=None):
@@ -79,10 +63,7 @@ def gignorepats(orig, lines, root=None):
 def gignore(root, files, warn, extrapatterns=None):
     allpats = []
     pats = []
-    if ignoremod:
-        pats = ignore.readpats(root, files, warn)
-    else:
-        pats = [(f, ['include:%s' % f]) for f in files]
+    pats = [(f, ['include:%s' % f]) for f in files]
     for f, patlist in pats:
         allpats.extend(patlist)
 
