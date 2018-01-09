@@ -66,6 +66,11 @@ contrib/python-zstandard/zstd/dictBuilder/divsufsort.h
 contrib/python-zstandard/zstd/dictBuilder/zdict.c
 contrib/python-zstandard/zstd/dictBuilder/zdict.h
 contrib/python-zstandard/zstd/zstd.h
+hgext/extlib/ctreemanifest/manifest.h
+hgext/extlib/ctreemanifest/manifest_entry.h
+hgext/extlib/ctreemanifest/manifest_fetcher.h
+hgext/extlib/ctreemanifest/manifest_ptr.h
+hgext/extlib/ctreemanifest/treemanifest.h
 hgext/fsmonitor/pywatchman/bser.c
 lib/cdatapack/cdatapack.c
 lib/cdatapack/cdatapack.h
@@ -137,11 +142,6 @@ fb-hgext/cstore/pythonkeyiterator.h
 fb-hgext/cstore/pythonutil.h
 fb-hgext/cstore/store.h
 fb-hgext/cstore/uniondatapackstore.h
-fb-hgext/ctreemanifest/manifest.h
-fb-hgext/ctreemanifest/manifest_entry.h
-fb-hgext/ctreemanifest/manifest_fetcher.h
-fb-hgext/ctreemanifest/manifest_ptr.h
-fb-hgext/ctreemanifest/treemanifest.h
 fb-hgext/linelog/linelog.c
 fb-hgext/linelog/linelog.h
 fb-hgext/linelog/linelogcli.c

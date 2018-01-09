@@ -16,6 +16,16 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X fb-hgext \
   > -X hg-git \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
+  Skipping hgext/extlib/ctreemanifest/manifest.cpp it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest.h it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_entry.cpp it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_entry.h it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_fetcher.cpp it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_ptr.cpp it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/manifest_ptr.h it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/treemanifest.cpp it has no-che?k-code (glob)
+  Skipping hgext/extlib/ctreemanifest/treemanifest.h it has no-che?k-code (glob)
   Skipping hgext/hgsql.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/__init__.py it has no-che?k-code (glob)
   Skipping hgsubversion/hgsubversion/compathacks.py it has no-che?k-code (glob)
