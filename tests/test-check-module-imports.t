@@ -42,6 +42,10 @@ outputs, which should be fixed later.
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
   > | sed 's-\\-/-g' | $PYTHON "$import_checker" -
+  contrib/traceprof.py:5: direct symbol import traceprof from hgext
+  contrib/traceprof.py:6: ui from mercurial must be "as" aliased to uimod
+  contrib/traceprof.py:8: stdlib import "os" follows local import: mercurial
+  contrib/traceprof.py:9: stdlib import "sys" follows local import: mercurial
   fb-hgext/contrib/git-sl:13: relative import of stdlib module
   fb-hgext/contrib/git-sl:13: direct symbol import Popen from subprocess
   fb-hgext/contrib/git-sl:15: relative import of stdlib module
@@ -83,10 +87,6 @@ outputs, which should be fixed later.
   fb-hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: fb-hgext.infinitepush.common
   fb-hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
   fb-hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/scripts/traceprof.py:5: direct symbol import traceprof from hgext3rd
-  fb-hgext/scripts/traceprof.py:6: ui from mercurial must be "as" aliased to uimod
-  fb-hgext/scripts/traceprof.py:8: stdlib import "os" follows local import: mercurial
-  fb-hgext/scripts/traceprof.py:9: stdlib import "sys" follows local import: mercurial
   fb-hgext/tests/check-ext.py:4: relative import of stdlib module
   fb-hgext/tests/check-ext.py:4: direct symbol import glob from glob
   fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
