@@ -131,9 +131,6 @@ outputs, which should be fixed later.
   fb-hgext/hgext3rd/treedirstate.py:54: stdlib import "struct" follows local import: mercurial.i18n
   fb-hgext/hgext3rd/treedirstate.py:55: imports not lexically sorted: string < struct
   fb-hgext/hgext3rd/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:57: relative import of stdlib module
-  fb-hgext/hgext3rd/treedirstate.py:57: direct symbol import treedirstatemap from hgext3rd.rust.treedirstate
-  fb-hgext/hgext3rd/treedirstate.py:57: symbol import follows non-symbol import: hgext3rd.rust.treedirstate
   fb-hgext/hgext3rd/tweakdefaults.py:70: imports from mercurial not lexically sorted: encoding < error
   fb-hgext/hgext3rd/tweakdefaults.py:89: stdlib import "inspect" follows local import: hgext
   fb-hgext/hgext3rd/tweakdefaults.py:90: stdlib import "json" follows local import: hgext

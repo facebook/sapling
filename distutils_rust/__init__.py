@@ -3,11 +3,10 @@
 # Copyright 2017 Facebook, Inc.
 
 from __future__ import absolute_import
-from distutils.core import Command
-from distutils.dist import Distribution
-from distutils.errors import CompileError
-from distutils import log
-from distutils.command.build import build
+import distutils
+import distutils.command.build
+import distutils.core
+import distutils.errors
 import distutils.util
 import os
 import shutil
@@ -31,7 +30,7 @@ class RustExtension(object):
         self.package = package
         self.manifest = manifest or 'Cargo.toml'
 
-class BuildRustExt(Command):
+class BuildRustExt(distutils.core.Command):
 
     description = "build Rust extensions (compile/link to build directory)"
 
@@ -100,7 +99,7 @@ class BuildRustExt(Command):
         return os.path.join(package_dir, name)
 
     def build_ext(self, ext):
-        log.info("building '%s' extension", ext.name)
+        distutils.log.info("building '%s' extension", ext.name)
 
         cmd = ['cargo', 'build', '--manifest-path', ext.manifest]
         if not self.debug:
@@ -111,7 +110,7 @@ class BuildRustExt(Command):
 
         rc = subprocess.call(cmd, env=env)
         if rc:
-            raise CompileError(
+            raise distutils.errors.CompileError(
                 "compilation of Rust extension '%s' failed" % ext.name)
 
         src = os.path.join(self.get_temp_path(ext), self.get_temp_output(ext))
@@ -119,6 +118,6 @@ class BuildRustExt(Command):
         shutil.copyfile(src, dest)
         shutil.copymode(src, dest)
 
-Distribution.rust_ext_modules = ()
-build.sub_commands.append(
+distutils.dist.Distribution.rust_ext_modules = ()
+distutils.command.build.build.sub_commands.append(
     ('build_rust_ext', lambda self: bool(self.distribution.rust_ext_modules)))
