@@ -18,7 +18,7 @@
 #include <string>
 
 extern "C" {
-#include "cdatapack/cdatapack.h"
+#include "../lib/cdatapack/cdatapack.h"
 }
 
 #include "cstore/datapackstore.h"

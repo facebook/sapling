@@ -11,7 +11,7 @@
 #define FBHGEXT_DELTACHAIN_H
 
 extern "C" {
-#include "cdatapack/cdatapack.h"
+#include "../lib/cdatapack/cdatapack.h"
 }
 
 #include <memory>

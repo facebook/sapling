@@ -18,7 +18,7 @@
 #define _BSD_SOURCE
 #endif /* ndef _BSD_SOURCE */
 
-#include "cdatapack/cdatapack.h"
+#include "lib/cdatapack/cdatapack.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -44,9 +44,9 @@
 
 #include <lz4.h>
 
-#include "clib/buffer.h"
-#include "clib/portability/inet.h"
-#include "clib/portability/unistd.h"
+#include "lib/clib/buffer.h"
+#include "lib/clib/portability/inet.h"
+#include "lib/clib/portability/unistd.h"
 
 #define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)
 

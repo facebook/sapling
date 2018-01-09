@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "clib/portability/portability.h"
+#include "lib/clib/portability/portability.h"
 
 #define NODE_SZ 20
 

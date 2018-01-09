@@ -968,6 +968,13 @@ extmodules += cythonize(Extension('mercurial.cyext.linelog',
                         compiler_directives=cythonopts)
 
 libraries = [
+    ("cdatapack", {
+        "sources" : ["lib/cdatapack/cdatapack.c"],
+        "include_dirs" : ["."] + include_dirs,
+        "libraries" : ["lz4", SHA1_LIBRARY],
+        "extra_args" : filter(None,
+            [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+    }),
     ("sha1detectcoll", {
         "sources" : [
             "lib/third-party/sha1dc/sha1.c",

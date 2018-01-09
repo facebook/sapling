@@ -10,8 +10,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ testrepohg locate \
   > -X contrib/python-zstandard \
   > -X hgext/fsmonitor/pywatchman \
-  > -X mercurial/thirdparty \
+  > -X lib/cdatapack \
   > -X lib/third-party \
+  > -X mercurial/thirdparty \
   > -X fb-hgext \
   > -X hg-git \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false

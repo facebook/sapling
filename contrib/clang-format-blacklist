@@ -67,6 +67,10 @@ contrib/python-zstandard/zstd/dictBuilder/zdict.c
 contrib/python-zstandard/zstd/dictBuilder/zdict.h
 contrib/python-zstandard/zstd/zstd.h
 hgext/fsmonitor/pywatchman/bser.c
+lib/cdatapack/cdatapack.c
+lib/cdatapack/cdatapack.h
+lib/cdatapack/cdatapack_dump.c
+lib/cdatapack/cdatapack_get.c
 lib/clib/buffer.c
 lib/clib/buffer.h
 lib/clib/convert.h
@@ -80,10 +84,6 @@ lib/third-party/sha1dc/sha1.h
 lib/third-party/sha1dc/ubc_check.c
 lib/third-party/sha1dc/ubc_check.h
 # Temporary hack before we figure out how to fix it. See T24862348
-fb-hgext/cdatapack/cdatapack.c
-fb-hgext/cdatapack/cdatapack.h
-fb-hgext/cdatapack/cdatapack_dump.c
-fb-hgext/cdatapack/cdatapack_get.c
 fb-hgext/cfastmanifest.c
 fb-hgext/cfastmanifest/bsearch.c
 fb-hgext/cfastmanifest/bsearch.h
