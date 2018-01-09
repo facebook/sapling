@@ -57,94 +57,6 @@ outputs, which should be fixed later.
   fb-hgext/distutils_rust/__init__.py:9: direct symbol import log from distutils
   fb-hgext/distutils_rust/__init__.py:10: relative import of stdlib module
   fb-hgext/distutils_rust/__init__.py:10: direct symbol import build from distutils.command.build
-  fb-hgext/hgext3rd/age.py:21: imports not lexically sorted: re < time
-  fb-hgext/hgext3rd/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge
-  fb-hgext/hgext3rd/crdump.py:5: multiple imported names: json, re, shutil, tempfile
-  fb-hgext/hgext3rd/crdump.py:6: relative import of stdlib module
-  fb-hgext/hgext3rd/crdump.py:6: direct symbol import path from os
-  fb-hgext/hgext3rd/crdump.py:16: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/crdump.py:17: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fastannotate/context.py:23: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fastannotate/context.py:30: imports not lexically sorted: linelog < os
-  fb-hgext/hgext3rd/fastannotate/context.py:30: stdlib import "linelog" follows local import: fb-hgext.hgext3rd.fastannotate
-  fb-hgext/hgext3rd/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/fastverify.py:24: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/__init__.py:58: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/fbamend/__init__.py:60: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/__init__.py:81: stdlib import "tempfile" follows local import: fb-hgext.hgext3rd.fbamend
-  fb-hgext/hgext3rd/fbamend/common.py:10: relative import of stdlib module
-  fb-hgext/hgext3rd/fbamend/common.py:10: direct symbol import defaultdict from collections
-  fb-hgext/hgext3rd/fbamend/common.py:21: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/common.py:22: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/fbamend/fold.py:23: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/hiddenoverride.py:10: direct symbol import extutil from hgext3rd
-  fb-hgext/hgext3rd/fbamend/hide.py:12: imports from mercurial not lexically sorted: extensions < hg
-  fb-hgext/hgext3rd/fbamend/hide.py:22: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/metaedit.py:23: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/movement.py:10: relative import of stdlib module
-  fb-hgext/hgext3rd/fbamend/movement.py:10: direct symbol import count from itertools
-  fb-hgext/hgext3rd/fbamend/movement.py:21: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/movement.py:22: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/fbamend/prune.py:14: imports from mercurial not lexically sorted: repair < util
-  fb-hgext/hgext3rd/fbamend/prune.py:26: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/split.py:25: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/fbamend/unamend.py:17: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/gitrevset.py:25: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:35: imports from fb-hgext.hgext3rd.p4fastimport not lexically sorted: importer < p4
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:35: imports from fb-hgext.hgext3rd.p4fastimport not lexically sorted: filetransaction < importer
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:41: direct symbol import runworker, lastcl, decodefileflags from fb-hgext.hgext3rd.p4fastimport.util
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:41: symbol import follows non-symbol import: fb-hgext.hgext3rd.p4fastimport.util
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:41: imports from fb-hgext.hgext3rd.p4fastimport.util not lexically sorted: lastcl < runworker
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:41: imports from fb-hgext.hgext3rd.p4fastimport.util not lexically sorted: decodefileflags < lastcl
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:43: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:44: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/p4fastimport/__init__.py:44: imports from mercurial.node not lexically sorted: hex < short
-  fb-hgext/hgext3rd/p4fastimport/importer.py:19: direct symbol import caseconflict, localpath from fb-hgext.hgext3rd.p4fastimport.util
-  fb-hgext/hgext3rd/p4fastimport/importer.py:19: symbol import follows non-symbol import: fb-hgext.hgext3rd.p4fastimport.util
-  fb-hgext/hgext3rd/p4fastimport/p4.py:11: direct symbol import runworker from fb-hgext.hgext3rd.p4fastimport.util
-  fb-hgext/hgext3rd/pushrebase.py:27: multiple imported names: errno, os, tempfile, mmap, time
-  fb-hgext/hgext3rd/pushrebase.py:49: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
-  fb-hgext/hgext3rd/pushrebase.py:49: symbol import follows non-symbol import: mercurial.extensions
-  fb-hgext/hgext3rd/pushrebase.py:49: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
-  fb-hgext/hgext3rd/pushrebase.py:50: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/pushrebase.py:50: imports from mercurial.node not lexically sorted: hex < nullid
-  fb-hgext/hgext3rd/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
-  fb-hgext/hgext3rd/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/pushrebase.py:53: relative import of stdlib module
-  fb-hgext/hgext3rd/pushrebase.py:53: direct symbol import contentstore, datapack, historypack, metadatastore, wirepack from remotefilelog
-  fb-hgext/hgext3rd/pushrebase.py:53: symbol import follows non-symbol import: remotefilelog
-  fb-hgext/hgext3rd/smartlog.py:29: imports not lexically sorted: anydbm < contextlib
-  fb-hgext/hgext3rd/smartlog.py:30: relative import of stdlib module
-  fb-hgext/hgext3rd/smartlog.py:30: direct symbol import chain from itertools
-  fb-hgext/hgext3rd/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:48: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:49: stdlib import "errno" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:50: stdlib import "heapq" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:51: stdlib import "itertools" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:52: stdlib import "os" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:53: stdlib import "random" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:54: stdlib import "struct" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/treedirstate.py:55: imports not lexically sorted: string < struct
-  fb-hgext/hgext3rd/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
-  fb-hgext/hgext3rd/tweakdefaults.py:70: imports from mercurial not lexically sorted: encoding < error
-  fb-hgext/hgext3rd/tweakdefaults.py:89: stdlib import "inspect" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:90: stdlib import "json" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:91: stdlib import "os" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:92: stdlib import "re" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:93: stdlib import "shlex" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:94: stdlib import "subprocess" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:95: imports not lexically sorted: stat < subprocess
-  fb-hgext/hgext3rd/tweakdefaults.py:95: stdlib import "stat" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:96: stdlib import "time" follows local import: hgext
-  fb-hgext/hgext3rd/tweakdefaults.py:1059: multiple imported names: msvcrt, _subprocess
-  fb-hgext/hgext3rd/undo.py:39: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/hgext3rd/undo.py:45: direct symbol import interactiveui from hgext3rd
-  fb-hgext/hgext3rd/undo.py:45: symbol import follows non-symbol import: hgext3rd
   fb-hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from fb-hgext.infinitepush.bundleparts
   fb-hgext/infinitepush/__init__.py:108: imports from fb-hgext.infinitepush not lexically sorted: common < infinitepushcommands
   fb-hgext/infinitepush/__init__.py:113: relative import of stdlib module
@@ -202,11 +114,70 @@ outputs, which should be fixed later.
   fb-hgext/tests/test-fb-hgext-cstore-uniondatapackstore.py:31: imports not lexically sorted: mercurial.ui < pythonpath
   fb-hgext/tests/test-fb-hgext-fastannotate-revmap.py:10: relative import of stdlib module
   fb-hgext/tests/test-fb-hgext-fastannotate-revmap.py:10: direct symbol import error, revmap from hgext3rd.fastannotate
-  fb-hgext/tests/test-fb-hgext-lfs-pointer.py:9: relative import of stdlib module
-  fb-hgext/tests/test-fb-hgext-lfs-pointer.py:9: direct symbol import pointer from hgext3rd.lfs
   fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
-  fb-hgext/tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: merge < registrar
-  fb-hgext/tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: encoding < merge
+  hgext/age.py:21: imports not lexically sorted: re < time
+  hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
+  hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge
+  hgext/crdump.py:5: multiple imported names: json, re, shutil, tempfile
+  hgext/crdump.py:6: relative import of stdlib module
+  hgext/crdump.py:6: direct symbol import path from os
+  hgext/crdump.py:16: symbol import follows non-symbol import: mercurial.i18n
+  hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.node
+  hgext/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fastannotate/context.py:23: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fastannotate/context.py:30: imports not lexically sorted: linelog < os
+  hgext/fastannotate/context.py:30: stdlib import "linelog" follows local import: hgext.fastannotate
+  hgext/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
+  hgext/fastverify.py:24: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/__init__.py:58: symbol import follows non-symbol import: mercurial.node
+  hgext/fbamend/__init__.py:60: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/__init__.py:62: import should be relative: hgext
+  hgext/fbamend/__init__.py:81: stdlib import "tempfile" follows local import: hgext.fbamend
+  hgext/fbamend/common.py:10: relative import of stdlib module
+  hgext/fbamend/common.py:10: direct symbol import defaultdict from collections
+  hgext/fbamend/common.py:12: import should be relative: hgext
+  hgext/fbamend/common.py:21: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/common.py:22: symbol import follows non-symbol import: mercurial.node
+  hgext/fbamend/fold.py:23: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/hiddenoverride.py:10: direct symbol import extutil from hgext3rd
+  hgext/fbamend/hide.py:12: imports from mercurial not lexically sorted: extensions < hg
+  hgext/fbamend/hide.py:22: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/metaedit.py:23: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/movement.py:10: relative import of stdlib module
+  hgext/fbamend/movement.py:10: direct symbol import count from itertools
+  hgext/fbamend/movement.py:21: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/movement.py:22: symbol import follows non-symbol import: mercurial.node
+  hgext/fbamend/prune.py:14: imports from mercurial not lexically sorted: repair < util
+  hgext/fbamend/prune.py:26: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/restack.py:16: import should be relative: hgext
+  hgext/fbamend/split.py:25: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/unamend.py:17: symbol import follows non-symbol import: mercurial.i18n
+  hgext/gitrevset.py:25: symbol import follows non-symbol import: mercurial.i18n
+  hgext/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
+  hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
+  hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
+  hgext/obsshelve.py:56: import should be relative: hgext
+  hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: importer < p4
+  hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: filetransaction < importer
+  hgext/p4fastimport/__init__.py:41: direct symbol import runworker, lastcl, decodefileflags from hgext.p4fastimport.util
+  hgext/p4fastimport/__init__.py:41: symbol import follows non-symbol import: hgext.p4fastimport.util
+  hgext/p4fastimport/__init__.py:41: imports from hgext.p4fastimport.util not lexically sorted: lastcl < runworker
+  hgext/p4fastimport/__init__.py:41: imports from hgext.p4fastimport.util not lexically sorted: decodefileflags < lastcl
+  hgext/p4fastimport/__init__.py:43: symbol import follows non-symbol import: mercurial.i18n
+  hgext/p4fastimport/__init__.py:44: symbol import follows non-symbol import: mercurial.node
+  hgext/p4fastimport/__init__.py:44: imports from mercurial.node not lexically sorted: hex < short
+  hgext/p4fastimport/importer.py:19: direct symbol import caseconflict, localpath from hgext.p4fastimport.util
+  hgext/p4fastimport/importer.py:19: symbol import follows non-symbol import: hgext.p4fastimport.util
+  hgext/p4fastimport/p4.py:11: direct symbol import runworker from hgext.p4fastimport.util
+  hgext/pushrebase.py:27: multiple imported names: errno, os, tempfile, mmap, time
+  hgext/pushrebase.py:49: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
+  hgext/pushrebase.py:49: symbol import follows non-symbol import: mercurial.extensions
+  hgext/pushrebase.py:49: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
+  hgext/pushrebase.py:50: symbol import follows non-symbol import: mercurial.node
+  hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: hex < nullid
+  hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
+  hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
+  hgext/pushrebase.py:53: relative import of stdlib module
   hgext/remotefilelog/__init__.py:57: imports from hgext.remotefilelog not lexically sorted: remotefilectx < remotefilelog
   hgext/remotefilelog/__init__.py:58: multiple imported names: shallowbundle, debugcommands, remotefilelogserver, shallowverifier
   hgext/remotefilelog/__init__.py:59: multiple imported names: shallowutil, shallowrepo
@@ -319,6 +290,35 @@ outputs, which should be fixed later.
   hgext/remotefilelog/wirepack.py:16: direct symbol import readexactly, readunpack, mkstickygroupdir, readpath from shallowutil
   hgext/remotefilelog/wirepack.py:16: imports from shallowutil not lexically sorted: mkstickygroupdir < readunpack
   hgext/remotefilelog/wirepack.py:17: multiple imported names: datapack, historypack, shallowutil
+  hgext/smartlog.py:29: imports not lexically sorted: anydbm < contextlib
+  hgext/smartlog.py:30: relative import of stdlib module
+  hgext/smartlog.py:30: direct symbol import chain from itertools
+  hgext/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
+  hgext/treedirstate.py:48: symbol import follows non-symbol import: mercurial.i18n
+  hgext/treedirstate.py:49: stdlib import "errno" follows local import: mercurial.i18n
+  hgext/treedirstate.py:50: stdlib import "heapq" follows local import: mercurial.i18n
+  hgext/treedirstate.py:51: stdlib import "itertools" follows local import: mercurial.i18n
+  hgext/treedirstate.py:52: stdlib import "os" follows local import: mercurial.i18n
+  hgext/treedirstate.py:53: stdlib import "random" follows local import: mercurial.i18n
+  hgext/treedirstate.py:54: stdlib import "struct" follows local import: mercurial.i18n
+  hgext/treedirstate.py:55: imports not lexically sorted: string < struct
+  hgext/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
+  hgext/treedirstate.py:57: import should be relative: hgext.extlib.treedirstate
+  hgext/tweakdefaults.py:69: imports from mercurial not lexically sorted: encoding < error
+  hgext/tweakdefaults.py:87: import should be relative: hgext
+  hgext/tweakdefaults.py:88: stdlib import "inspect" follows local import: hgext
+  hgext/tweakdefaults.py:89: stdlib import "json" follows local import: hgext
+  hgext/tweakdefaults.py:90: stdlib import "os" follows local import: hgext
+  hgext/tweakdefaults.py:91: stdlib import "re" follows local import: hgext
+  hgext/tweakdefaults.py:92: stdlib import "shlex" follows local import: hgext
+  hgext/tweakdefaults.py:93: stdlib import "subprocess" follows local import: hgext
+  hgext/tweakdefaults.py:94: imports not lexically sorted: stat < subprocess
+  hgext/tweakdefaults.py:94: stdlib import "stat" follows local import: hgext
+  hgext/tweakdefaults.py:95: stdlib import "time" follows local import: hgext
+  hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
+  hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
+  hgext/undo.py:45: direct symbol import interactiveui from hgext3rd
+  hgext/undo.py:45: symbol import follows non-symbol import: hgext3rd
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
   tests/test-fb-hgext-remotefilelog-datapack.py:19: imports not lexically sorted: pythonpath < silenttestrunner
   tests/test-fb-hgext-remotefilelog-datapack.py:22: relative import of stdlib module
@@ -336,5 +336,7 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-remotefilelog-histpack.py:26: relative import of stdlib module
   tests/test-fb-hgext-remotefilelog-histpack.py:26: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from remotefilelog.basepack
   tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
+  tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: merge < registrar
+  tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: encoding < merge
   Import cycle: fb-hgext.fastmanifest.cachemanager -> fb-hgext.fastmanifest.implementation -> fb-hgext.fastmanifest.cachemanager
   [1]
