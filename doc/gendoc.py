@@ -129,7 +129,7 @@ def showdoc(ui):
 
     for extensionname in sorted(allextensionnames()):
         try:
-            mod = extensions.load(ui, extensionname, None)
+            mod = extensions.load(ui, extensionname, '../hgext')
         except Exception:
             continue
         ui.write(minirst.subsection(extensionname))
