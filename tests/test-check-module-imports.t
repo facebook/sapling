@@ -42,10 +42,6 @@ outputs, which should be fixed later.
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
   > | sed 's-\\-/-g' | $PYTHON "$import_checker" -
-  contrib/traceprof.py:5: direct symbol import traceprof from hgext
-  contrib/traceprof.py:6: ui from mercurial must be "as" aliased to uimod
-  contrib/traceprof.py:8: stdlib import "os" follows local import: mercurial
-  contrib/traceprof.py:9: stdlib import "sys" follows local import: mercurial
   fb-hgext/contrib/git-sl:13: relative import of stdlib module
   fb-hgext/contrib/git-sl:13: direct symbol import Popen from subprocess
   fb-hgext/contrib/git-sl:15: relative import of stdlib module
@@ -90,7 +86,6 @@ outputs, which should be fixed later.
   fb-hgext/tests/check-ext.py:4: relative import of stdlib module
   fb-hgext/tests/check-ext.py:4: direct symbol import glob from glob
   fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
-  hgext/absorb/__init__.py:32: import should be relative: hgext.extlib
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
   hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge
@@ -100,9 +95,6 @@ outputs, which should be fixed later.
   hgext/crdump.py:16: symbol import follows non-symbol import: mercurial.i18n
   hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.node
   hgext/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fastannotate/context.py:23: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fastannotate/context.py:30: import should be relative: hgext.extlib
-  hgext/fastannotate/context.py:30: symbol import follows non-symbol import: hgext.extlib
   hgext/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
   hgext/fastmanifest/__init__.py:103: symbol import follows non-symbol import: mercurial.i18n
   hgext/fastmanifest/__init__.py:106: direct symbol import metricscollector from hgext.fastmanifest.metrics
@@ -113,7 +105,6 @@ outputs, which should be fixed later.
   hgext/fastmanifest/__init__.py:108: imports from hgext.fastmanifest.implementation not lexically sorted: fastmanifestcache < manifestfactory
   hgext/fastmanifest/cachemanager.py:10: imports not lexically sorted: errno < os
   hgext/fastmanifest/cachemanager.py:21: import should be relative: hgext.extlib
-  hgext/fastmanifest/cachemanager.py:21: symbol import follows non-symbol import: hgext.extlib
   hgext/fastmanifest/cachemanager.py:22: imports from hgext.fastmanifest not lexically sorted: concurrency < constants
   hgext/fastmanifest/cachemanager.py:23: direct symbol import metricscollector from hgext.fastmanifest.metrics
   hgext/fastmanifest/cachemanager.py:23: symbol import follows non-symbol import: hgext.fastmanifest.metrics
@@ -122,7 +113,6 @@ outputs, which should be fixed later.
   hgext/fastmanifest/cachemanager.py:24: imports from hgext.fastmanifest.implementation not lexically sorted: CacheFullException < fastmanifestcache
   hgext/fastmanifest/implementation.py:12: imports not lexically sorted: heapq < time
   hgext/fastmanifest/implementation.py:21: import should be relative: hgext.extlib
-  hgext/fastmanifest/implementation.py:21: symbol import follows non-symbol import: hgext.extlib
   hgext/fastmanifest/implementation.py:22: direct symbol import metricscollector from hgext.fastmanifest.metrics
   hgext/fastmanifest/implementation.py:22: symbol import follows non-symbol import: hgext.fastmanifest.metrics
   hgext/fastmanifest/implementation.py:23: direct symbol import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES from hgext.fastmanifest.constants
@@ -306,7 +296,6 @@ outputs, which should be fixed later.
   hgext/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
   hgext/treedirstate.py:57: import should be relative: hgext.extlib.treedirstate
   hgext/treemanifest/__init__.py:99: import should be relative: hgext.extlib
-  hgext/treemanifest/__init__.py:99: symbol import follows non-symbol import: hgext.extlib
   hgext/treemanifest/__init__.py:100: import should be relative: hgext.remotefilelog
   hgext/treemanifest/__init__.py:100: symbol import follows non-symbol import: hgext.remotefilelog
   hgext/treemanifest/__init__.py:108: import should be relative: hgext.remotefilelog.contentstore

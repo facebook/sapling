@@ -29,9 +29,8 @@ from __future__ import absolute_import
 
 import collections
 
-from hgext.extlib import linelog
-
 from mercurial.i18n import _
+from ..extlib import linelog
 from mercurial import (
     cmdutil,
     commands,

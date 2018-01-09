@@ -11,11 +11,11 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 import pythonpath
 pythonpath.setcstorepath()
 
+from mercurial.node import hex, nullid
+
 import silenttestrunner
 
 from hgext.extlib import cstore
-
-from mercurial.node import hex, nullid
 from mercurial import (
     manifest,
     match as matchmod

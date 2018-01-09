@@ -23,7 +23,6 @@ allowsymbolimports = (
     '__future__',
     'bzrlib',
     'hgclient',
-    'hgext.extlib',
     'hgext.remotefilelog',
     'mercurial',
     'mercurial.hgweb.common',
@@ -183,15 +182,25 @@ def fromlocalfunc(modulename, localmods):
     return fromlocal
 
 def populateextmods(localmods):
-    """Populate C extension modules based on pure modules"""
+    """Populate non-pure Python extension modules"""
     newlocalmods = set(localmods)
+    # C extensions based on pure mercurial.pure modules
     for n in localmods:
         if n.startswith('mercurial.pure.'):
             m = n[len('mercurial.pure.'):]
             newlocalmods.add('mercurial.cext.' + m)
             newlocalmods.add('mercurial.cffi._' + m)
-    for name in ['linelog']:
-        newlocalmods.add('mercurial.cyext.%s' % name)
+    # Other non-pure extensions
+    newlocalmods.update([
+        'hgext.clindex',
+        'hgext.extlib.cfastmanifest',
+        'hgext.extlib.cstore',
+        'hgext.extlib.indexes',
+        'hgext.extlib.linelog',
+        'hgext.extlib.treedirstate',
+        'hgext.patchrmdir',
+        'hgext.traceprof',
+    ])
     return newlocalmods
 
 def list_stdlib_modules():
