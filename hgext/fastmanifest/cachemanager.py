@@ -8,7 +8,14 @@
 import os
 import errno
 
-from mercurial import extensions, revlog, scmutil, util, error
+from mercurial import (
+    encoding,
+    error,
+    extensions,
+    revlog,
+    scmutil,
+    util,
+)
 
 import cfastmanifest
 import concurrency
@@ -330,7 +337,7 @@ class triggers(object):
 
                 # see if the user wants us to invoke a specific instance of
                 # mercurial.
-                workerexe = os.environ.get("SCM_WORKER_EXE")
+                workerexe = encoding.environ.get("SCM_WORKER_EXE")
 
                 cmd = util.hgcmd()[:]
                 if workerexe is not None:

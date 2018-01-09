@@ -84,12 +84,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   hgext/fastannotate/commands.py:43:
    >         reldir = os.path.relpath(os.getcwd(), reporoot)
    use pycompat.getcwd instead (py3)
-  hgext/fastmanifest/__init__.py:7:
-   > """
-   don't capitalize docstring title
-  hgext/fastmanifest/cachemanager.py:333:
-   >                 workerexe = os.environ.get("SCM_WORKER_EXE")
-   use encoding.environ instead (py3)
   hgext/fbsparse.py:1177:
    >     cwd = util.normpath(os.getcwd())
    use pycompat.getcwd instead (py3)

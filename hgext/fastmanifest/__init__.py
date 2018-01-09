@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""
+'''
 This extension adds fastmanifest, a treemanifest disk cache for speeding up
 manifest comparison. It also contains utilities to investigate manifest access
 patterns.
@@ -92,7 +92,7 @@ is not normally accessible to manifests.
 `debugcachemanifest` is a command calling `_cachemanifest`, a function to add
 manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
-"""
+'''
 
 import sys
 
