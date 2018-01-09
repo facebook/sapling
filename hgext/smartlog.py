@@ -534,7 +534,6 @@ def smartlogrevset(repo, subset, x):
 
 
 @command('^smartlog|slog', [
-    ('', 'template', '', _('display with template'), _('TEMPLATE')),
     ('', 'master', '', _('master bookmark'), _('BOOKMARK')),
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
     ('', 'all', False, _('don\'t hide old local changesets'), ''),
