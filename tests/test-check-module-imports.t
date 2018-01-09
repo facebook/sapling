@@ -90,6 +90,7 @@ outputs, which should be fixed later.
   fb-hgext/tests/check-ext.py:4: relative import of stdlib module
   fb-hgext/tests/check-ext.py:4: direct symbol import glob from glob
   fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
+  hgext/absorb/__init__.py:32: import should be relative: hgext.extlib
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
   hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge
@@ -100,9 +101,35 @@ outputs, which should be fixed later.
   hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.node
   hgext/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
   hgext/fastannotate/context.py:23: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fastannotate/context.py:30: imports not lexically sorted: linelog < os
-  hgext/fastannotate/context.py:30: stdlib import "linelog" follows local import: hgext.fastannotate
+  hgext/fastannotate/context.py:30: import should be relative: hgext.extlib
+  hgext/fastannotate/context.py:30: symbol import follows non-symbol import: hgext.extlib
   hgext/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
+  hgext/fastmanifest/__init__.py:103: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fastmanifest/__init__.py:106: direct symbol import metricscollector from hgext.fastmanifest.metrics
+  hgext/fastmanifest/__init__.py:106: symbol import follows non-symbol import: hgext.fastmanifest.metrics
+  hgext/fastmanifest/__init__.py:107: multiple "from . import" statements
+  hgext/fastmanifest/__init__.py:108: direct symbol import manifestfactory, fastmanifestcache from hgext.fastmanifest.implementation
+  hgext/fastmanifest/__init__.py:108: symbol import follows non-symbol import: hgext.fastmanifest.implementation
+  hgext/fastmanifest/__init__.py:108: imports from hgext.fastmanifest.implementation not lexically sorted: fastmanifestcache < manifestfactory
+  hgext/fastmanifest/cachemanager.py:10: imports not lexically sorted: errno < os
+  hgext/fastmanifest/cachemanager.py:21: import should be relative: hgext.extlib
+  hgext/fastmanifest/cachemanager.py:21: symbol import follows non-symbol import: hgext.extlib
+  hgext/fastmanifest/cachemanager.py:22: imports from hgext.fastmanifest not lexically sorted: concurrency < constants
+  hgext/fastmanifest/cachemanager.py:23: direct symbol import metricscollector from hgext.fastmanifest.metrics
+  hgext/fastmanifest/cachemanager.py:23: symbol import follows non-symbol import: hgext.fastmanifest.metrics
+  hgext/fastmanifest/cachemanager.py:24: direct symbol import fastmanifestcache, CacheFullException from hgext.fastmanifest.implementation
+  hgext/fastmanifest/cachemanager.py:24: symbol import follows non-symbol import: hgext.fastmanifest.implementation
+  hgext/fastmanifest/cachemanager.py:24: imports from hgext.fastmanifest.implementation not lexically sorted: CacheFullException < fastmanifestcache
+  hgext/fastmanifest/implementation.py:12: imports not lexically sorted: heapq < time
+  hgext/fastmanifest/implementation.py:21: import should be relative: hgext.extlib
+  hgext/fastmanifest/implementation.py:21: symbol import follows non-symbol import: hgext.extlib
+  hgext/fastmanifest/implementation.py:22: direct symbol import metricscollector from hgext.fastmanifest.metrics
+  hgext/fastmanifest/implementation.py:22: symbol import follows non-symbol import: hgext.fastmanifest.metrics
+  hgext/fastmanifest/implementation.py:23: direct symbol import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES from hgext.fastmanifest.constants
+  hgext/fastmanifest/implementation.py:23: symbol import follows non-symbol import: hgext.fastmanifest.constants
+  hgext/fastmanifest/implementation.py:29: import should be relative: hgext.extlib
+  hgext/fastmanifest/implementation.py:30: import should be relative: hgext
+  hgext/fastmanifest/implementation.py:31: import should be relative: hgext.remotefilelog
   hgext/fastverify.py:24: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/__init__.py:58: symbol import follows non-symbol import: mercurial.node
   hgext/fbamend/__init__.py:60: symbol import follows non-symbol import: mercurial.i18n
@@ -114,7 +141,8 @@ outputs, which should be fixed later.
   hgext/fbamend/common.py:21: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/common.py:22: symbol import follows non-symbol import: mercurial.node
   hgext/fbamend/fold.py:23: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fbamend/hiddenoverride.py:10: direct symbol import extutil from hgext3rd
+  hgext/fbamend/hiddenoverride.py:10: import should be relative: hgext
+  hgext/fbamend/hiddenoverride.py:12: symbol import follows non-symbol import: mercurial.node
   hgext/fbamend/hide.py:12: imports from mercurial not lexically sorted: extensions < hg
   hgext/fbamend/hide.py:22: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/metaedit.py:23: symbol import follows non-symbol import: mercurial.i18n
@@ -152,18 +180,15 @@ outputs, which should be fixed later.
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: hex < nullid
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
   hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
-  hgext/pushrebase.py:53: relative import of stdlib module
-  hgext/remotefilelog/__init__.py:58: imports from hgext.remotefilelog not lexically sorted: remotefilectx < remotefilelog
-  hgext/remotefilelog/__init__.py:59: multiple imported names: shallowbundle, debugcommands, remotefilelogserver, shallowverifier
-  hgext/remotefilelog/__init__.py:60: multiple imported names: shallowutil, shallowrepo
-  hgext/remotefilelog/__init__.py:61: imports not lexically sorted: repack < shallowutil
-  hgext/remotefilelog/__init__.py:62: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/__init__.py:63: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:64: direct symbol import wrapfunction from mercurial.extensions
-  hgext/remotefilelog/__init__.py:64: symbol import follows non-symbol import: mercurial.extensions
-  hgext/remotefilelog/__init__.py:94: stdlib import "os" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:95: stdlib import "time" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:96: stdlib import "traceback" follows local import: mercurial
+  hgext/pushrebase.py:53: import should be relative: hgext.remotefilelog
+  hgext/pushrebase.py:628: import should be relative: hgext.extlib
+  hgext/remotefilelog/__init__.py:71: symbol import follows non-symbol import: mercurial.node
+  hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.i18n
+  hgext/remotefilelog/__init__.py:73: direct symbol import wrapfunction from mercurial.extensions
+  hgext/remotefilelog/__init__.py:73: symbol import follows non-symbol import: mercurial.extensions
+  hgext/remotefilelog/__init__.py:103: stdlib import "os" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:104: stdlib import "time" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:105: stdlib import "traceback" follows local import: mercurial
   hgext/remotefilelog/basepack.py:3: multiple imported names: errno, hashlib, mmap, os, struct, time
   hgext/remotefilelog/basepack.py:5: relative import of stdlib module
   hgext/remotefilelog/basepack.py:5: direct symbol import defaultdict from collections
@@ -182,8 +207,7 @@ outputs, which should be fixed later.
   hgext/remotefilelog/datapack.py:13: import should be relative: hgext.extlib
   hgext/remotefilelog/debugcommands.py:10: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/debugcommands.py:11: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/debugcommands.py:12: direct symbol import extutil from hgext3rd
-  hgext/remotefilelog/debugcommands.py:12: symbol import follows non-symbol import: hgext3rd
+  hgext/remotefilelog/debugcommands.py:12: import should be relative: hgext
   hgext/remotefilelog/debugcommands.py:21: direct symbol import repacklockvfs from hgext.remotefilelog.repack
   hgext/remotefilelog/debugcommands.py:21: symbol import follows non-symbol import: hgext.remotefilelog.repack
   hgext/remotefilelog/debugcommands.py:22: direct symbol import lz4decompress from hgext.remotefilelog.lz4wrapper
@@ -202,10 +226,11 @@ outputs, which should be fixed later.
   hgext/remotefilelog/historypack.py:4: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/lz4wrapper.py:3: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/lz4wrapper.py:5: stdlib import "lz4" follows local import: mercurial.i18n
-  hgext/remotefilelog/metadatastore.py:2: multiple imported names: basestore, shallowutil
+  hgext/remotefilelog/metadatastore.py:3: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: ancestor < error
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: extensions < phases
+  hgext/remotefilelog/remotefilectx.py:25: import should be relative: hgext
   hgext/remotefilelog/remotefilelog.py:15: multiple imported names: collections, os
   hgext/remotefilelog/remotefilelog.py:15: stdlib import "collections" follows local import: hgext.remotefilelog
   hgext/remotefilelog/remotefilelog.py:16: symbol import follows non-symbol import: mercurial.node
@@ -221,9 +246,9 @@ outputs, which should be fixed later.
   hgext/remotefilelog/remotefilelogserver.py:14: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/remotefilelogserver.py:22: multiple imported names: errno, stat, os, time
   hgext/remotefilelog/remotefilelogserver.py:22: stdlib import "errno" follows local import: hgext.remotefilelog
-  hgext/remotefilelog/repack.py:4: relative import of stdlib module
-  hgext/remotefilelog/repack.py:4: direct symbol import runshellcommand, flock from hgext3rd.extutil
-  hgext/remotefilelog/repack.py:4: imports from hgext3rd.extutil not lexically sorted: flock < runshellcommand
+  hgext/remotefilelog/repack.py:4: import should be relative: hgext.extutil
+  hgext/remotefilelog/repack.py:4: direct symbol import runshellcommand, flock from hgext.extutil
+  hgext/remotefilelog/repack.py:4: imports from hgext.extutil not lexically sorted: flock < runshellcommand
   hgext/remotefilelog/repack.py:15: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/repack.py:19: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/repack.py:28: stdlib import "time" follows local import: hgext.remotefilelog
@@ -233,38 +258,39 @@ outputs, which should be fixed later.
   hgext/remotefilelog/shallowbundle.py:12: imports from mercurial not lexically sorted: bundlerepo < match
   hgext/remotefilelog/shallowbundle.py:13: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/shallowbundle.py:14: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/shallowrepo.py:9: relative import of stdlib module
-  hgext/remotefilelog/shallowrepo.py:9: direct symbol import runshellcommand from hgext3rd.extutil
+  hgext/remotefilelog/shallowrepo.py:9: import should be relative: hgext.extutil
+  hgext/remotefilelog/shallowrepo.py:9: direct symbol import runshellcommand from hgext.extutil
   hgext/remotefilelog/shallowrepo.py:12: imports from mercurial not lexically sorted: match < util
-  hgext/remotefilelog/shallowrepo.py:13: imports from hgext.remotefilelog not lexically sorted: remotefilectx < remotefilelog
-  hgext/remotefilelog/shallowrepo.py:19: multiple imported names: constants, shallowutil
-  hgext/remotefilelog/shallowrepo.py:20: direct symbol import remotefilelogcontentstore, unioncontentstore from contentstore
-  hgext/remotefilelog/shallowrepo.py:20: symbol import follows non-symbol import: contentstore
-  hgext/remotefilelog/shallowrepo.py:21: direct symbol import remotecontentstore from contentstore
-  hgext/remotefilelog/shallowrepo.py:21: symbol import follows non-symbol import: contentstore
-  hgext/remotefilelog/shallowrepo.py:22: direct symbol import remotefilelogmetadatastore, unionmetadatastore from metadatastore
-  hgext/remotefilelog/shallowrepo.py:22: symbol import follows non-symbol import: metadatastore
-  hgext/remotefilelog/shallowrepo.py:23: direct symbol import remotemetadatastore from metadatastore
-  hgext/remotefilelog/shallowrepo.py:23: symbol import follows non-symbol import: metadatastore
-  hgext/remotefilelog/shallowrepo.py:24: direct symbol import datapackstore from datapack
-  hgext/remotefilelog/shallowrepo.py:24: symbol import follows non-symbol import: datapack
-  hgext/remotefilelog/shallowrepo.py:25: direct symbol import historypackstore from historypack
-  hgext/remotefilelog/shallowrepo.py:25: symbol import follows non-symbol import: historypack
-  hgext/remotefilelog/shallowrepo.py:27: stdlib import "os" follows local import: historypack
+  hgext/remotefilelog/shallowrepo.py:21: direct symbol import remotefilelogcontentstore, unioncontentstore from hgext.remotefilelog.contentstore
+  hgext/remotefilelog/shallowrepo.py:21: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
+  hgext/remotefilelog/shallowrepo.py:22: direct symbol import remotecontentstore from hgext.remotefilelog.contentstore
+  hgext/remotefilelog/shallowrepo.py:22: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
+  hgext/remotefilelog/shallowrepo.py:23: direct symbol import remotefilelogmetadatastore, unionmetadatastore from hgext.remotefilelog.metadatastore
+  hgext/remotefilelog/shallowrepo.py:23: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
+  hgext/remotefilelog/shallowrepo.py:24: direct symbol import remotemetadatastore from hgext.remotefilelog.metadatastore
+  hgext/remotefilelog/shallowrepo.py:24: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
+  hgext/remotefilelog/shallowrepo.py:25: direct symbol import datapackstore from hgext.remotefilelog.datapack
+  hgext/remotefilelog/shallowrepo.py:25: symbol import follows non-symbol import: hgext.remotefilelog.datapack
+  hgext/remotefilelog/shallowrepo.py:26: direct symbol import historypackstore from hgext.remotefilelog.historypack
+  hgext/remotefilelog/shallowrepo.py:26: symbol import follows non-symbol import: hgext.remotefilelog.historypack
+  hgext/remotefilelog/shallowrepo.py:28: stdlib import "os" follows local import: hgext.remotefilelog.historypack
   hgext/remotefilelog/shallowutil.py:9: multiple imported names: errno, hashlib, os, stat, struct, tempfile
   hgext/remotefilelog/shallowutil.py:11: relative import of stdlib module
   hgext/remotefilelog/shallowutil.py:11: direct symbol import defaultdict from collections
   hgext/remotefilelog/shallowutil.py:12: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/shallowutil.py:13: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/shallowverifier.py:9: direct symbol import verifier from mercurial.verify
-  hgext/remotefilelog/wirepack.py:12: stdlib import "struct" follows local import: constants
+  hgext/remotefilelog/wirepack.py:12: stdlib import "struct" follows local import: hgext.remotefilelog
   hgext/remotefilelog/wirepack.py:13: relative import of stdlib module
   hgext/remotefilelog/wirepack.py:13: direct symbol import StringIO from StringIO
+  hgext/remotefilelog/wirepack.py:13: symbol import follows non-symbol import: StringIO
   hgext/remotefilelog/wirepack.py:14: relative import of stdlib module
   hgext/remotefilelog/wirepack.py:14: direct symbol import defaultdict from collections
-  hgext/remotefilelog/wirepack.py:16: direct symbol import readexactly, readunpack, mkstickygroupdir, readpath from shallowutil
-  hgext/remotefilelog/wirepack.py:16: imports from shallowutil not lexically sorted: mkstickygroupdir < readunpack
-  hgext/remotefilelog/wirepack.py:17: multiple imported names: datapack, historypack, shallowutil
+  hgext/remotefilelog/wirepack.py:14: symbol import follows non-symbol import: collections
+  hgext/remotefilelog/wirepack.py:16: direct symbol import readexactly, readunpack, mkstickygroupdir, readpath from hgext.remotefilelog.shallowutil
+  hgext/remotefilelog/wirepack.py:16: symbol import follows non-symbol import: hgext.remotefilelog.shallowutil
+  hgext/remotefilelog/wirepack.py:16: imports from hgext.remotefilelog.shallowutil not lexically sorted: mkstickygroupdir < readunpack
+  hgext/remotefilelog/wirepack.py:17: multiple "from . import" statements
   hgext/smartlog.py:29: imports not lexically sorted: anydbm < contextlib
   hgext/smartlog.py:30: relative import of stdlib module
   hgext/smartlog.py:30: direct symbol import chain from itertools
@@ -279,16 +305,23 @@ outputs, which should be fixed later.
   hgext/treedirstate.py:55: imports not lexically sorted: string < struct
   hgext/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
   hgext/treedirstate.py:57: import should be relative: hgext.extlib.treedirstate
+  hgext/treemanifest/__init__.py:99: import should be relative: hgext.extlib
   hgext/treemanifest/__init__.py:99: symbol import follows non-symbol import: hgext.extlib
+  hgext/treemanifest/__init__.py:100: import should be relative: hgext.remotefilelog
   hgext/treemanifest/__init__.py:100: symbol import follows non-symbol import: hgext.remotefilelog
+  hgext/treemanifest/__init__.py:108: import should be relative: hgext.remotefilelog.contentstore
   hgext/treemanifest/__init__.py:108: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore
   hgext/treemanifest/__init__.py:108: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
+  hgext/treemanifest/__init__.py:112: import should be relative: hgext.remotefilelog.metadatastore
   hgext/treemanifest/__init__.py:112: direct symbol import unionmetadatastore from hgext.remotefilelog.metadatastore
   hgext/treemanifest/__init__.py:112: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
+  hgext/treemanifest/__init__.py:115: import should be relative: hgext.remotefilelog.datapack
   hgext/treemanifest/__init__.py:115: direct symbol import datapack, datapackstore, mutabledatapack from hgext.remotefilelog.datapack
   hgext/treemanifest/__init__.py:115: symbol import follows non-symbol import: hgext.remotefilelog.datapack
+  hgext/treemanifest/__init__.py:120: import should be relative: hgext.remotefilelog.historypack
   hgext/treemanifest/__init__.py:120: direct symbol import historypack, historypackstore, mutablehistorypack from hgext.remotefilelog.historypack
   hgext/treemanifest/__init__.py:120: symbol import follows non-symbol import: hgext.remotefilelog.historypack
+  hgext/treemanifest/__init__.py:125: import should be relative: hgext.remotefilelog.repack
   hgext/treemanifest/__init__.py:125: direct symbol import _computeincrementaldatapack, _computeincrementalhistorypack, _runrepack, _topacks, backgroundrepack from hgext.remotefilelog.repack
   hgext/treemanifest/__init__.py:125: symbol import follows non-symbol import: hgext.remotefilelog.repack
   hgext/tweakdefaults.py:69: imports from mercurial not lexically sorted: encoding < error
@@ -304,41 +337,30 @@ outputs, which should be fixed later.
   hgext/tweakdefaults.py:95: stdlib import "time" follows local import: hgext
   hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
   hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
-  hgext/undo.py:45: direct symbol import interactiveui from hgext3rd
-  hgext/undo.py:45: symbol import follows non-symbol import: hgext3rd
+  hgext/undo.py:45: import should be relative: hgext
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
   tests/test-fb-hgext-cstore-datapackstore.py:17: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-cstore-datapackstore.py:20: relative import of stdlib module
-  tests/test-fb-hgext-cstore-datapackstore.py:20: direct symbol import datapackstore from cstore
-  tests/test-fb-hgext-cstore-datapackstore.py:24: relative import of stdlib module
-  tests/test-fb-hgext-cstore-datapackstore.py:24: direct symbol import fastdatapack, mutabledatapack from remotefilelog.datapack
+  tests/test-fb-hgext-cstore-datapackstore.py:20: direct symbol import datapackstore from hgext.extlib.cstore
+  tests/test-fb-hgext-cstore-datapackstore.py:24: direct symbol import fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-cstore-datapackstore.py:30: imports not lexically sorted: mercurial.ui < pythonpath
   tests/test-fb-hgext-cstore-uniondatapackstore.py:16: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:19: relative import of stdlib module
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:19: direct symbol import datapackstore, uniondatapackstore from cstore
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:24: relative import of stdlib module
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:24: direct symbol import datapack, mutabledatapack from remotefilelog.datapack
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:19: direct symbol import datapackstore, uniondatapackstore from hgext.extlib.cstore
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:24: direct symbol import datapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-cstore-uniondatapackstore.py:30: symbol import follows non-symbol import: mercurial.node
   tests/test-fb-hgext-cstore-uniondatapackstore.py:31: imports not lexically sorted: mercurial.ui < pythonpath
   tests/test-fb-hgext-fastannotate-revmap.py:10: relative import of stdlib module
   tests/test-fb-hgext-fastannotate-revmap.py:10: direct symbol import error, revmap from hgext3rd.fastannotate
   tests/test-fb-hgext-remotefilelog-datapack.py:19: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-remotefilelog-datapack.py:22: relative import of stdlib module
-  tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from remotefilelog.datapack
-  tests/test-fb-hgext-remotefilelog-datapack.py:28: relative import of stdlib module
-  tests/test-fb-hgext-remotefilelog-datapack.py:28: direct symbol import SMALLFANOUTCUTOFF, SMALLFANOUTPREFIX, LARGEFANOUTPREFIX from remotefilelog.basepack
-  tests/test-fb-hgext-remotefilelog-datapack.py:28: imports from remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTPREFIX
-  tests/test-fb-hgext-remotefilelog-datapack.py:33: relative import of stdlib module
-  tests/test-fb-hgext-remotefilelog-datapack.py:33: direct symbol import constants from remotefilelog
+  tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
+  tests/test-fb-hgext-remotefilelog-datapack.py:28: direct symbol import SMALLFANOUTCUTOFF, SMALLFANOUTPREFIX, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
+  tests/test-fb-hgext-remotefilelog-datapack.py:28: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTPREFIX
+  tests/test-fb-hgext-remotefilelog-datapack.py:35: symbol import follows non-symbol import: mercurial.node
   tests/test-fb-hgext-remotefilelog-datapack.py:36: imports not lexically sorted: mercurial.ui < pythonpath
   tests/test-fb-hgext-remotefilelog-histpack.py:18: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-remotefilelog-histpack.py:21: relative import of stdlib module
-  tests/test-fb-hgext-remotefilelog-histpack.py:21: direct symbol import historypack, mutablehistorypack from remotefilelog.historypack
+  tests/test-fb-hgext-remotefilelog-histpack.py:21: direct symbol import historypack, mutablehistorypack from hgext.remotefilelog.historypack
   tests/test-fb-hgext-remotefilelog-histpack.py:24: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-remotefilelog-histpack.py:26: relative import of stdlib module
-  tests/test-fb-hgext-remotefilelog-histpack.py:26: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from remotefilelog.basepack
-  tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
+  tests/test-fb-hgext-remotefilelog-histpack.py:26: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
+  tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
   tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: merge < registrar
   tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: encoding < merge
-  Import cycle: hgext.fastmanifest.cachemanager -> hgext.fastmanifest.implementation -> hgext.fastmanifest.cachemanager
   [1]
