@@ -1,10 +1,12 @@
 """ This extension provides direct access
+
 It is the ability to refer and access hidden sha in commands provided that you
 know their value.
 For example hg log -r xxx where xxx is a commit has should work whether xxx is
 hidden or not as we assume that the user knows what he is doing when referring
 to xxx.
 """
+
 from mercurial import extensions
 from mercurial import repoview
 from mercurial import branchmap

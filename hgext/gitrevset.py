@@ -3,13 +3,13 @@
 # Copyright 2014 Facebook, Inc.
 """map a git hash to a Mercurial hash:
 
-  $ hg log -r 'gitnode($HASH)'
-  $ hg id -r 'gitnode($HASH)'
+    $ hg log -r "gitnode($HASH)"
+    $ hg id -r "gitnode($HASH)"
 
-shortversion:
+short version:
 
-  $ hg log -r 'g$HASH'
-  $ hg id -r 'g$HASH'
+    $ hg log -r "g$HASH"
+    $ hg id -r "g$HASH"
 
 """
 

@@ -7,6 +7,7 @@
 """show changesets in detail with full log message, patches etc
 
 For example, 'hg show' prints something like
+::
 
   $ hg show
   changeset:   1:b73358b94785
@@ -40,6 +41,7 @@ and 'hg show --stat' prints something like:
 
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
+
 """
 
 from mercurial.i18n import _

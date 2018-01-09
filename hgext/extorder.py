@@ -9,6 +9,7 @@ loading order for extensions.
 
 In the extorder section of your hgrc you can define order of extension loading.
 For example:
+
   [extorder]
   extension1 = extension3, extension4
   extension2 = extension1

@@ -3,9 +3,13 @@
 Storage format is simple. There are a few files (at most 256).
 Each file contains header and entries:
 Header:
+
   <1 byte version><4 bytes number of entries that were sorted><19 bytes unused>
+
 Entry:
+
   <20-byte node hash><4 byte encoded rev>
+
 Name of the file is the first two letters of the hex node hash. Nodes with the
 same first two letters go to the same file. Nodes may be partially sorted:
 first entries are sorted others don't. Header stores info about how many entries

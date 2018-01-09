@@ -810,7 +810,7 @@ def sparse(ui, repo, *pats, **opts):
     ('-') before the name.
 
     --list-profiles lists all available profiles, indicating which ones are
-    currently active. Activated profiles are marked with a *, profiles
+    currently active. Activated profiles are marked with a `*`, profiles
     included transitively are marked with a ~.
 
     The following config option defines whether sparse treats supplied

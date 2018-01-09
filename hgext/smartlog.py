@@ -535,7 +535,7 @@ def smartlogrevset(repo, subset, x):
 
 @command('^smartlog|slog', [
     ('', 'template', '', _('display with template'), _('TEMPLATE')),
-    ('', 'master', '', _('master bookmark'), ''),
+    ('', 'master', '', _('master bookmark'), _('BOOKMARK')),
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
     ('', 'all', False, _('don\'t hide old local changesets'), ''),
     ('', 'commit-info', False, _('show changes in current changeset'), ''),
@@ -552,8 +552,7 @@ Includes:
 Excludes:
 
 - All changesets under @/master/tip that aren't related to your changesets.
-- Your local heads that are older than 2 weeks.
-    '''
+- Your local heads that are older than 2 weeks.'''
     if ui.configbool('smartlog', 'useancestorcache'):
         with ancestorcache(repo.vfs.join('cache/smartlog-ancestor')):
             return _smartlog(ui, repo, *pats, **opts)

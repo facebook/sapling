@@ -23,11 +23,24 @@ checks = [
     '''warning: please use " instead of ' for hg ... "..."'''),
 ]
 
+# The below needed because of how we try to figure out the hg 'arg' pattern. If
+# there exists a message like "word hg word d'aide word word d'aide", this
+# checker will break. The proper fix would be to identify command line examples
+# better, but it is hard to do.
+# ("d'aide" is present a lot in a generated docs since it's a part of
+# "pas d'aide disponible", French for "no help available")
+exception_words = ["d'aide"]
+
 def check(line):
     messages = []
     for match, msg in checks:
-        if re.search(match, line):
-            messages.append(msg)
+        m = re.search(match, line)
+        if m:
+            for ew in exception_words:
+                if ew in m.group():
+                    break
+            else:
+                messages.append(msg)
     if messages:
         print(line)
         for msg in messages:

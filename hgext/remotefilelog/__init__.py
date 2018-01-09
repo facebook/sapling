@@ -13,44 +13,44 @@ Configs:
     ``packs.maxchainlen`` specifies the maximum delta chain length in pack files
     ``packs.maxpacksize`` specifies the maximum pack file size
     ``packs.maxpackfilecount`` specifies the maximum number of packs in the
-      shared cache (trees only for now)
+    shared cache (trees only for now)
     ``remotefilelog.backgroundprefetch`` runs prefetch in background when True
     ``remotefilelog.bgprefetchrevs`` specifies revisions to fetch on commit and
-      update, and on other commands that use them. Different from pullprefetch.
+    update, and on other commands that use them. Different from pullprefetch.
     ``remotefilelog.gcrepack`` does garbage collection during repack when True
     ``remotefilelog.nodettl`` specifies maximum TTL of a node in seconds before
-      it is garbage collected
+    it is garbage collected
     ``remotefilelog.repackonhggc`` runs repack on hg gc when True
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
-      days after which it is no longer prefetched.
+    days after which it is no longer prefetched.
     ``remotefilelog.prefetchdelay`` specifies delay between background
-      prefetches in seconds after operations that change the working copy parent
+    prefetches in seconds after operations that change the working copy parent
     ``remotefilelog.data.gencountlimit`` constraints the minimum number of data
-      pack files required to be considered part of a generation. In particular,
-      minimum number of packs files > gencountlimit.
+    pack files required to be considered part of a generation. In particular,
+    minimum number of packs files > gencountlimit.
     ``remotefilelog.data.generations`` list for specifying the lower bound of
-      each generation of the data pack files. For example, list ['100MB','1MB']
-      or ['1MB', '100MB'] will lead to three generations: [0, 1MB), [
-      1MB, 100MB) and [100MB, infinity).
+    each generation of the data pack files. For example, list ['100MB','1MB']
+    or ['1MB', '100MB'] will lead to three generations: [0, 1MB), [
+    1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.data.maxrepackpacks`` the maximum number of pack files to
-      include in an incremental data repack.
+    include in an incremental data repack.
     ``remotefilelog.data.repackmaxpacksize`` the maximum size of a pack file for
-      it to be considered for an incremental data repack.
+    it to be considered for an incremental data repack.
     ``remotefilelog.data.repacksizelimit`` the maximum total size of pack files
-      to include in an incremental data repack.
+    to include in an incremental data repack.
     ``remotefilelog.history.gencountlimit`` constraints the minimum number of
-      history pack files required to be considered part of a generation. In
-      particular, minimum number of packs files > gencountlimit.
+    history pack files required to be considered part of a generation. In
+    particular, minimum number of packs files > gencountlimit.
     ``remotefilelog.history.generations`` list for specifying the lower bound of
-      each generation of the history pack files. For example, list [
-      '100MB', '1MB'] or ['1MB', '100MB'] will lead to three generations: [
-      0, 1MB), [1MB, 100MB) and [100MB, infinity).
+    each generation of the history pack files. For example, list [
+    '100MB', '1MB'] or ['1MB', '100MB'] will lead to three generations: [
+    0, 1MB), [1MB, 100MB) and [100MB, infinity).
     ``remotefilelog.history.maxrepackpacks`` the maximum number of pack files to
-      include in an incremental history repack.
+    include in an incremental history repack.
     ``remotefilelog.history.repackmaxpacksize`` the maximum size of a pack file
-      for it to be considered for an incremental history repack.
+    for it to be considered for an incremental history repack.
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
-      files to include in an incremental history repack.
+    files to include in an incremental history repack.
 """
 from __future__ import absolute_import
 

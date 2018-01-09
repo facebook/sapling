@@ -7,15 +7,15 @@
 
 """configurable error messages for accessing hidden changesets
 
-   Set the following configuration options to customize the error message
-   seen when the user attempts to access a hidden changeset::
+Set the following configuration options to customize the error message
+seen when the user attempts to access a hidden changeset::
 
    [hiddenerror]
    message = my custom message
    hint = my custom hint
 
-   The message and hint can contain an optional `{0}` which will be substituted
-   with the hash of the hidden changeset.
+The message and hint can contain an optional `{0}` which will be substituted
+with the hash of the hidden changeset.
 """
 from __future__ import absolute_import
 

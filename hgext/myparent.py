@@ -23,6 +23,8 @@ The extension adds five new keywords:
 
 After enabling the extension, change the default commit template:
 
+::
+
     [committemplate]
     emptymsg={myparenttitleprefix}
       Summary: {myparentdiff}
