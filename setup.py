@@ -1011,7 +1011,7 @@ extmodules = [
         ],
         extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
     ),
-    Extension('cfastmanifest',
+    Extension('hgext.extlib.cfastmanifest',
         sources=['hgext/extlib/cfastmanifest.c',
                  'hgext/extlib/cfastmanifest/bsearch.c',
                  'lib/clib/buffer.c',
