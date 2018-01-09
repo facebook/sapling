@@ -1,7 +1,9 @@
 # git2hg.py - convert Git repositories and commits to Mercurial ones
 
-import urllib
 from dulwich.objects import Commit, Tag
+from mercurial import (
+    util,
+)
 
 def find_incoming(git_object_store, git_map, refs):
     '''find what commits need to be imported
@@ -16,7 +18,7 @@ def find_incoming(git_object_store, git_map, refs):
     # sort by commit date
     def commitdate(sha):
         obj = git_object_store[sha]
-        return obj.commit_time-obj.commit_timezone
+        return obj.commit_time - obj.commit_timezone
 
     # get a list of all the head shas
     def get_heads(refs):
@@ -90,8 +92,8 @@ def extract_hg_metadata(message, git_extra):
     # - Commits exported by hg-git versions past 0.7.0 always store at least one
     #   hg-git field.
     # - For commits exported by hg-git versions before 0.7.0, this becomes a
-    #   heuristic: if the commit has any extra hg fields, it definitely originated
-    #   in Mercurial. If the commit doesn't, we aren't really sure.
+    #   heuristic: if the commit has any extra hg fields, it definitely
+    #   originated in Mercurial. If the commit doesn't, we aren't really sure.
     # If we think the commit originated in Mercurial, we set renames to a
     # dict. If we don't, we set renames to None. Callers can then determine
     # whether to infer rename information.
@@ -117,7 +119,7 @@ def extract_hg_metadata(message, git_extra):
                 branch = data
             if command == 'extra':
                 k, v = data.split(" : ", 1)
-                extra[k] = urllib.unquote(v)
+                extra[k] = util.urlreq.unquote(v)
 
     git_fn = 0
     for field, data in git_extra:
@@ -127,16 +129,17 @@ def extract_hg_metadata(message, git_extra):
             command = field[3:]
             if command == 'rename':
                 before, after = data.split(':', 1)
-                renames[urllib.unquote(after)] = urllib.unquote(before)
+                renames[util.urlreq.unquote(after)] = (
+                        util.urlreq.unquote(before))
             elif command == 'extra':
                 k, v = data.split(':', 1)
-                extra[urllib.unquote(k)] = urllib.unquote(v)
+                extra[util.urlreq.unquote(k)] = util.urlreq.unquote(v)
         else:
             # preserve ordering in Git by using an incrementing integer for
             # each field. Note that extra metadata in Git is an ordered list
             # of pairs.
             hg_field = 'GIT%d-%s' % (git_fn, field)
             git_fn += 1
-            extra[urllib.quote(hg_field)] = urllib.quote(data)
+            extra[util.urlreq.quote(hg_field)] = util.urlreq.quote(data)
 
     return (message, renames, branch, extra)

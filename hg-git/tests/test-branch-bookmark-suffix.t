@@ -2,7 +2,7 @@ bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
+  $ echo "hggit=$TESTDIR/../hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
   $ echo "[git]" >> $HGRCPATH
   $ echo "branch_bookmark_suffix=_bookmark" >> $HGRCPATH
@@ -82,9 +82,10 @@ bail if the user does not have dulwich
   Cloning into 'gitrepo2'...
   done.
   $ cd gitrepo2
-  $ git checkout branch1 2>&1 | grep -v 'up-to-date'
+  $ git checkout branch1
   Already on 'branch1'
   Your branch is up to date with 'origin/branch1'. (?)
+  Your branch is up-to-date with 'origin/branch1'.
   $ echo g1 >> f1
   $ git add f1
   $ commit -m "append f1"

@@ -1,7 +1,6 @@
 """Compatibility functions for old Mercurial versions and other utility
 functions."""
 import re
-import urllib
 
 try:
     from collections import OrderedDict
@@ -133,7 +132,7 @@ def checksafessh(host):
 
     Raises an error.Abort when the url is unsafe.
     """
-    host = urllib.unquote(host)
+    host = hgutil.urlreq.unquote(host)
     if host.startswith('-'):
         raise error.Abort(_('potentially unsafe hostname: %r') %
                           (host,))

@@ -1,7 +1,7 @@
 Hg-Git Plugin Design Notes
 ==========================
 
-This plugin is designed to allow you to push to a Git server over the Git protocol and to pull from a Git based project.  All data is stored in Hg native format with a mapping table.  People collaborating in Git should not  even be able to tell that you're using Hg to collaborate on their project (except for the '--HG--' section added to commit message). 
+This plugin is designed to allow you to push to a Git server over the Git protocol and to pull from a Git based project.  All data is stored in Hg native format with a mapping table.  People collaborating in Git should not  even be able to tell that you're using Hg to collaborate on their project (except for the '--HG--' section added to commit message).
 
 Nothing should need to be kept in the Git format - you should be able to run 'hg gclear' at any time to wipe out the Git directory and everything can be rebuilt losslessly from the existing Hg data - it is a cache only.
 

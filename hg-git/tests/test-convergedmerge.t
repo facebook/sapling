@@ -4,7 +4,7 @@ Load commonly used test logic
   $ hg init hgrepo1
   $ cd hgrepo1
   $ echo A > afile
-  $ hg add afile 
+  $ hg add afile
   $ hg ci -m "origin"
 
   $ echo B > afile
@@ -24,8 +24,8 @@ Load commonly used test logic
   (branch merge, don't forget to commit)
   $ hg ci -m "merge"
 
-  $ hg log --graph --style compact | sed 's/\[.*\]//g'
-  @    4:3,2   eaa21d002113   1970-01-01 00:00 +0000   test
+  $ hg log --graph --style compact
+  @    4[tip]:3,2   eaa21d002113   1970-01-01 00:00 +0000   test
   |\     merge
   | |
   | o  3:0   ea82b67264a1   1970-01-01 00:00 +0000   test
@@ -59,8 +59,8 @@ Load commonly used test logic
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
-  $ hg -R hgrepo2 log --graph --style compact | sed 's/\[.*\]//g'
-  @    4:1,3   eaa21d002113   1970-01-01 00:00 +0000   test
+  $ hg -R hgrepo2 log --graph --style compact
+  @    4[default/master,tip][master]:1,3   eaa21d002113   1970-01-01 00:00 +0000   test
   |\     merge
   | |
   | o  3   0dbe4ac1a758   1970-01-01 00:00 +0000   test

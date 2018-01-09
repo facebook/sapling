@@ -14,8 +14,16 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X lib/third-party \
   > -X mercurial/thirdparty \
   > -X fb-hgext \
-  > -X hg-git \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
+  hg-git/tests/test-git-submodules.t:61:
+   >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new
+   don't use grep's context flags
+  hg-git/tests/test-gitignore.t:124:
+   >   $ echo 'foo.*$(?<!bar)' >> .hgignore
+   don't use $(expr), use `expr`
+  hg-git/tests/test-renames.t:79:
+   >   $ grep 'submodule "gitsubmodule"' -A2 .gitmodules > .gitmodules-new
+   don't use grep's context flags
   Skipping hgext/extlib/cstore/datapackstore.cpp it has no-che?k-code (glob)
   Skipping hgext/extlib/cstore/datapackstore.h it has no-che?k-code (glob)
   Skipping hgext/extlib/cstore/datastore.h it has no-che?k-code (glob)

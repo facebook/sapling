@@ -16,17 +16,19 @@ Load commonly used test logic
   $ hg ci -m "A->C"
   created new head
 
-  $ hg merge -r1 2>&1 | sed 's/-C ./-C/' | egrep -v '^merging afile' | sed 's/incomplete.*/failed!/'
+  $ hg merge -r1
+  merging afile
   warning: conflicts.* (re)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 resolve using second parent
   $ echo B > afile
   $ hg resolve -m afile | egrep -v 'no more unresolved files' || true
   $ hg ci -m "merge to B"
 
-  $ hg log --graph --style compact | sed 's/\[.*\]//g'
-  @    3:2,1   120385945d08   1970-01-01 00:00 +0000   test
+  $ hg log --graph --style compact
+  @    3[tip]:2,1   120385945d08   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
   | o  2:0   ea82b67264a1   1970-01-01 00:00 +0000   test
@@ -57,8 +59,8 @@ resolve using second parent
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
-  $ hg -R hgrepo2 log --graph --style compact | sed 's/\[.*\]//g'
-  @    3:1,2   120385945d08   1970-01-01 00:00 +0000   test
+  $ hg -R hgrepo2 log --graph --style compact
+  @    3[default/master,tip][master]:1,2   120385945d08   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
   | o  2:0   7205e83b5a3f   1970-01-01 00:00 +0000   test

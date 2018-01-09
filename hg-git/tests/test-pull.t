@@ -271,7 +271,7 @@ and not the author date
   > GIT_COMMITTER_DATE="2009-01-01 00:00:00 +0000" \
   > git commit -m oldcommit > /dev/null || echo "git commit error"
 also add an annotated tag
-  $ git checkout -q master^
+  $ git checkout -q 'master^'
   $ echo oldtag > oldtag
   $ git add oldtag
   $ GIT_AUTHOR_DATE="2014-03-01 00:00:00 +0000" \
@@ -365,9 +365,11 @@ test for ssh vulnerability
   $ hg pull 'git+ssh://-oProxyCommand=rm%20nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
   [255]
-  $ hg pull 'git+ssh://fakehost|shellcommand/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  $ hg pull 'git+ssh://fakehost|shellcommand/path' 2>&1 >/dev/null
   ssh: * fakehost%7cshellcommand* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
-  $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  [255]
+  $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' 2>&1 >/dev/null
   ssh: * fakehost%7cshellcommand* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
+  [255]

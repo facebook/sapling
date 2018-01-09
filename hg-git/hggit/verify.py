@@ -62,7 +62,7 @@ def verify(ui, repo, hgctx):
         if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate' or
             gitfile.path == '.hgsub'):
             continue
-        ui.progress('verify', i, total=len(hgfiles))
+        ui.progress(_('verify'), i, total=len(hgfiles))
         i += 1
         gitfiles.add(gitfile.path)
 
@@ -82,7 +82,7 @@ def verify(ui, repo, hgctx):
             ui.write(_('difference in: %s\n') % gitfile.path)
             failed = True
 
-    ui.progress('verify', None, total=len(hgfiles))
+    ui.progress(_('verify'), None, total=len(hgfiles))
 
     if hgfiles != gitfiles:
         failed = True

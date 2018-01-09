@@ -8,50 +8,50 @@ Load commonly used test logic
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
 
-  $ git checkout -b branch1 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "branch1"
+  $ git checkout -b branch1
+  Switched to a new branch 'branch1'
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'
 
-  $ git checkout -b branch2 master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "branch2"
+  $ git checkout -b branch2 master
+  Switched to a new branch 'branch2'
   $ echo gamma > gamma
   $ git add gamma
   $ fn_git_commit -m 'add gamma'
 
-  $ git checkout -b branch3 master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "branch3"
+  $ git checkout -b branch3 master
+  Switched to a new branch 'branch3'
   $ echo epsilon > epsilon
   $ git add epsilon
   $ fn_git_commit -m 'add epsilon'
 
-  $ git checkout -b branch4 master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "branch4"
+  $ git checkout -b branch4 master
+  Switched to a new branch 'branch4'
   $ echo zeta > zeta
   $ git add zeta
   $ fn_git_commit -m 'add zeta'
 
-  $ git checkout master 2>&1 | sed s/\'/\"/g
-  Switched to branch "master"
+  $ git checkout master
+  Switched to branch 'master'
   $ echo delta > delta
   $ git add delta
   $ fn_git_commit -m 'add delta'
 
-  $ git merge branch1 branch2 | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*octopus.*$/Merge successful/;s/, 0 deletions.*//'  | sed 's/|  */| /'
+  $ git merge branch1 branch2
   Trying simple merge with branch1
   Trying simple merge with branch2
-  Merge successful
+  Merge made by the 'octopus' strategy.
    beta  | 1 +
    gamma | 1 +
    2 files changed, 2 insertions(+)
    create mode 100644 beta
    create mode 100644 gamma
 
-  $ git merge branch3 branch4 | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*octopus.*$/Merge successful/;s/, 0 deletions.*//'  | sed 's/|  */| /'
+  $ git merge branch3 branch4
   Trying simple merge with branch3
   Trying simple merge with branch4
-  Merge successful
+  Merge made by the 'octopus' strategy.
    epsilon | 1 +
    zeta    | 1 +
    2 files changed, 2 insertions(+)
@@ -66,8 +66,8 @@ Load commonly used test logic
   importing git objects into hg
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
-  $ hg log --graph --style compact | sed 's/\[.*\]//g'
-  @    9:7,8   307506d6ae8a   2007-01-01 00:00 +0000   test
+  $ hg log --graph --style compact
+  @    9[default/master,tip][master]:7,8   307506d6ae8a   2007-01-01 00:00 +0000   test
   |\     Merge branches 'branch3' and 'branch4'
   | |
   | o    8:3,4   2b07220e422e   2007-01-01 00:00 +0000   test
@@ -82,16 +82,16 @@ Load commonly used test logic
   o | | | |  5:0   e459c0629ca4   2007-01-01 00:00 +0000   test
   | | | | |    add delta
   | | | | |
-  +-------o  4:0   e857c9a04474   2007-01-01 00:00 +0000   test
+  +-------o  4[default/branch4][branch4]:0   e857c9a04474   2007-01-01 00:00 +0000   test
   | | | |      add zeta
   | | | |
-  +-----o  3:0   0071dec0de0e   2007-01-01 00:00 +0000   test
+  +-----o  3[default/branch3][branch3]:0   0071dec0de0e   2007-01-01 00:00 +0000   test
   | | |      add epsilon
   | | |
-  +---o  2:0   205a004356ef   2007-01-01 00:00 +0000   test
+  +---o  2[default/branch2][branch2]:0   205a004356ef   2007-01-01 00:00 +0000   test
   | |      add gamma
   | |
-  | o  1   7fe02317c63d   2007-01-01 00:00 +0000   test
+  | o  1[default/branch1][branch1]   7fe02317c63d   2007-01-01 00:00 +0000   test
   |/     add beta
   |
   o  0   ff7a2f2d8d70   2007-01-01 00:00 +0000   test
@@ -113,7 +113,7 @@ Load commonly used test logic
   added 8 commits with 8 trees and 6 blobs
   $ cd ..
 
-  $ git --git-dir=gitrepo2 log --pretty=medium | sed s/\\.\\.\\.//g
+  $ git --git-dir=gitrepo2 log --pretty=medium
   commit b32ff845df61df998206b630e4370a44f9b36845
   Merge: 9ac68f9 7e9cd9f e695849
   Author: test <test@example.org>

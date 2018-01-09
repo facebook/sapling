@@ -1,5 +1,8 @@
 from util import isgitsshuri
-from mercurial import util
+from mercurial import (
+    error,
+    util,
+)
 from mercurial.error import RepoError
 
 peerapi = False
@@ -12,7 +15,7 @@ except ImportError:
 class gitrepo(peerrepository):
     def __init__(self, ui, path, create):
         if create:  # pragma: no cover
-            raise util.Abort('Cannot create a git repository.')
+            raise error.Abort('Cannot create a git repository.')
         self._ui = ui
         self.path = path
         self.localrepo = None

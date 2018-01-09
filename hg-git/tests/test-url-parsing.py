@@ -28,7 +28,7 @@ class TestUrlParsing(object):
         shutil.rmtree(self.tmpdir)
 
     def assertEquals(self, l, r):
-        print '%% expect %r' % (r, )
+        print '%% expect %r' % (r,)
         print l
         assert l == r
 

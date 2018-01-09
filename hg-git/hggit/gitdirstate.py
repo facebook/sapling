@@ -5,6 +5,7 @@ import errno
 
 from mercurial import (
     dirstate,
+    error,
     match as matchmod,
     util,
 )
@@ -73,21 +74,21 @@ def gignore(root, files, warn, extrapatterns=None):
         return util.never
     try:
         ignorefunc = matchmod.match(root, '', [], allpats)
-    except util.Abort:
+    except error.Abort:
         for f, patlist in pats:
             try:
                 matchmod.match(root, '', [], patlist)
-            except util.Abort, inst:
+            except error.Abort as inst:
                 if not ignoremod:
                     # in this case, patlist is ['include: FILE'], and
                     # inst[0] should already include FILE
                     raise
-                raise util.Abort('%s: %s' % (f, inst[0]))
+                raise error.Abort('%s: %s' % (f, inst[0]))
         if extrapatterns:
             try:
                 matchmod.match(root, '', [], extrapatterns)
-            except util.Abort, inst:
-                raise util.Abort('%s: %s' % ('extra patterns', inst[0]))
+            except error.Abort as inst:
+                raise error.Abort('%s: %s' % ('extra patterns', inst[0]))
     return ignorefunc
 
 class gitdirstate(dirstate.dirstate):
@@ -102,7 +103,7 @@ class gitdirstate(dirstate.dirstate):
         try:
             fp = open(files[0])
             fp.close()
-        except:
+        except Exception:
             fns = self._finddotgitignores()
             for fn in fns:
                 d = os.path.dirname(fn)
@@ -192,7 +193,7 @@ class gitdirstate(dirstate.dirstate):
                 skip = '.hg'
             try:
                 entries = listdir(join(nd), stat=True, skip=skip)
-            except OSError, inst:
+            except OSError as inst:
                 if inst.errno in (errno.EACCES, errno.ENOENT):
                     fwarn(nd, inst.strerror)
                     continue

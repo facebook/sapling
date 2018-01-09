@@ -49,16 +49,16 @@ class overlaymanifest(object):
         self._flags = {}
 
         def hgflag(gitflag):
-            if gitflag & 0100:
+            if gitflag & 0o100:
                 return 'x'
-            elif gitflag & 020000:
+            elif gitflag & 0o20000:
                 return 'l'
             else:
                 return ''
 
         def addtree(tree, dirname):
             for entry in tree.iteritems():
-                if entry.mode & 040000:
+                if entry.mode & 0o40000:
                     # expand directory
                     subtree = self.repo.handler.git.get_object(entry.sha)
                     addtree(subtree, dirname + entry.path + '/')

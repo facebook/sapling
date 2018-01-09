@@ -6,6 +6,7 @@ import os
 import stat
 
 import dulwich.objects as dulobjs
+from mercurial.i18n import _
 from mercurial import (
     util as hgutil,
 )
@@ -34,12 +35,12 @@ def audit_git_path(ui, path):
     ...         print s
     >>> u = fakeui()
     >>> audit_git_path(u, 'foo/git~100/wat')
-    warning: path 'foo/git~100/wat' contains a potentially dangerous path component.
+    warning: path 'foo/git~100/wat' contains a dangerous path component.
     It may not be legal to check out in Git.
     It may also be rejected by some git server configurations.
     <BLANKLINE>
     >>> audit_git_path(u, u'foo/.gi\u200ct'.encode('utf-8'))
-    warning: path 'foo/.gi\xe2\x80\x8ct' contains a potentially dangerous path component.
+    warning: path 'foo/.gi\xe2\x80\x8ct' contains a dangerous path component.
     It may not be legal to check out in Git.
     It may also be rejected by some git server configurations.
     <BLANKLINE>
@@ -58,13 +59,12 @@ def audit_git_path(ui, path):
     if dangerous:
         if compat.config(ui, 'bool', 'git', 'blockdotgit'):
             raise hgutil.Abort(
-                ('Refusing to export likely-dangerous path %r' % path),
-                hint=("If you need to continue, read about CVE-2014-9390 and "
+                _('Refusing to export likely-dangerous path %r') % path,
+                hint=_("If you need to continue, read about CVE-2014-9390 and "
                       "then set '[git] blockdotgit = false' in your hgrc."))
-        ui.warn('warning: path %r contains a potentially dangerous path '
-                'component.\n'
+        ui.warn(_('warning: path %r contains a dangerous path component.\n'
                 'It may not be legal to check out in Git.\n'
-                'It may also be rejected by some git server configurations.\n'
+                'It may also be rejected by some git server configurations.\n')
                 % path)
 
 
@@ -424,11 +424,11 @@ class IncrementalChangesetExporter(object):
         flags = fctx.flags()
 
         if 'l' in flags:
-            mode = 0120000
+            mode = 0o120000
         elif 'x' in flags:
-            mode = 0100755
+            mode = 0o100755
         else:
-            mode = 0100644
+            mode = 0o100644
 
         return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode,
                                   blob_id), blob)

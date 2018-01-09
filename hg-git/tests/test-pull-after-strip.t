@@ -10,8 +10,8 @@ Load commonly used test logic
 
   $ git tag alpha
 
-  $ git checkout -b beta 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "beta"
+  $ git checkout -b beta
+  Switched to a new branch 'beta'
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'

@@ -433,7 +433,8 @@ def revset_gitnode(repo, subset, x):
     raise LookupError(rev, git.map_file, _('ambiguous identifier'))
 
 def gitnodekw(**args):
-    """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""
+    """:gitnode: String.  The Git changeset identification hash, as a 40 char
+    hexadecimal digit string."""
     node = args['ctx']
     repo = args['repo']
     gitnode = repo.githandler.map_git_get(node.hex())

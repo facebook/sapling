@@ -20,20 +20,15 @@ Load commonly used test logic
   $ mkdir gitrepo2
   $ cd gitrepo2
 
-  $ rmpwd="import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-different versions of git spell the dir differently. Older versions
-use the full path to the directory all the time, whereas newer
-version spell it sanely as it was given (eg . in a newer version,
-while older git will use the full normalized path for .)
-  $ clonefilt='s/Cloning into/Initialized empty Git repository in/;s/in .*/in .../'
+  $ git clone ../gitrepo1 .
+  Cloning into '.'...
+  done.
 
-  $ git clone ../gitrepo1 . 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
-  $ git submodule add ../gitsubrepo subrepo 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
-  $ git commit -m 'add subrepo' | sed 's/, 0 deletions(-)//'
+  $ git submodule add ../gitsubrepo subrepo
+  Cloning into '$TESTTMP/gitrepo2/subrepo'...
+  done.
+
+  $ git commit -m 'add subrepo'
   [master e42b08b] add subrepo
    2 files changed, 4 insertions(+)
    create mode 100644 .gitmodules
@@ -48,10 +43,11 @@ while older git will use the full normalized path for .)
   [master a000567] change subrepo commit
    1 file changed, 1 insertion(+), 1 deletion(-)
 
-  $ git submodule add ../gitsubrepo subrepo2 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
-  $ git commit -m 'add another subrepo' | sed 's/, 0 deletions(-)//'
+  $ git submodule add ../gitsubrepo subrepo2
+  Cloning into '$TESTTMP/gitrepo2/subrepo2'...
+  done.
+
+  $ git commit -m 'add another subrepo'
   [master 6e21952] add another subrepo
    2 files changed, 4 insertions(+)
    create mode 160000 subrepo2
@@ -69,7 +65,7 @@ like +2 -- so use grep with the stuff we want to keep
   $ rm -rf subrepo
   $ echo subrepo > subrepo
   $ git add subrepo
-  $ git commit -m 'replace subrepo with file' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
+  $ git commit -m 'replace subrepo with file'
   [master f6436a4] replace subrepo with file
    2 files changed, 1 insertion(+), 4 deletions(-)
    mode change 160000 => 100644 subrepo
@@ -79,10 +75,10 @@ same name has existed at any point historically, so use alpha instead of subrepo
 
   $ git rm alpha
   rm 'alpha'
-  $ git submodule add ../gitsubrepo alpha 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
-  $ git commit -m 'replace file with subrepo' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
+  $ git submodule add ../gitsubrepo alpha
+  Cloning into '$TESTTMP/gitrepo2/alpha'...
+  done.
+  $ git commit -m 'replace file with subrepo'
   [master 8817116] replace file with subrepo
    2 files changed, 4 insertions(+), 1 deletion(-)
    mode change 100644 => 160000 alpha
@@ -98,10 +94,10 @@ replace symlink with subrepo
 
   $ git rm foolink
   rm 'foolink'
-  $ git submodule add ../gitsubrepo foolink 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
-  $ git commit -m 'replace symlink with subrepo' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
+  $ git submodule add ../gitsubrepo foolink
+  Cloning into '$TESTTMP/gitrepo2/foolink'...
+  done.
+  $ git commit -m 'replace symlink with subrepo'
   [master e3288fa] replace symlink with subrepo
    2 files changed, 4 insertions(+), 1 deletion(-)
    mode change 120000 => 160000 foolink
@@ -122,7 +118,7 @@ replace subrepo with symlink
   $ rm -rf foolink
   $ ln -s foo foolink
   $ git add foolink
-  $ git commit -m 'replace subrepo with symlink' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
+  $ git commit -m 'replace subrepo with symlink'
   [master d283640] replace subrepo with symlink
    2 files changed, 1 insertion(+), 4 deletions(-)
    mode change 160000 => 120000 foolink
@@ -149,14 +145,14 @@ replace subrepo with symlink
   index 6e4ad8d..0000000
   --- a/foolink
   +++ /dev/null
-  @@ -1 +0,0 @@
+  @@ -1* +0,0 @@ (glob)
   -Subproject commit 6e4ad8da50204560c00fa25e4987eb2e239029ba
   diff --git a/foolink b/foolink
   new file mode 120000
   index 0000000..1910281
   --- /dev/null
   +++ b/foolink
-  @@ -0,0 +1 @@
+  @@ -0,0 +1* @@ (glob)
   +foo
   \ No newline at end of file
 
@@ -166,7 +162,7 @@ replace subrepo with symlink
   rm 'alpha'
   $ git rm .gitmodules
   rm '.gitmodules'
-  $ git commit -m 'remove all subrepos' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
+  $ git commit -m 'remove all subrepos'
   [master 15ba949] remove all subrepos
    3 files changed, 8 deletions(-)
    delete mode 100644 .gitmodules

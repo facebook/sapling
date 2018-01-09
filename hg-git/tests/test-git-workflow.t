@@ -37,8 +37,8 @@ configure for use from git
 
 do some work
   $ git config core.bare false
-  $ git checkout master 2>&1 | sed s/\'/\"/g
-  Already on "master"
+  $ git checkout master
+  Already on 'master'
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'

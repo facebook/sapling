@@ -79,8 +79,8 @@ Check state of refs after outgoing
   7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/alpha
   7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/master
 
-  $ git checkout master 2>&1 | sed s/\'/\"/g
-  Already on "master"
+  $ git checkout master
+  Already on 'master'
   $ echo delta > delta
   $ git add delta
   $ fn_git_commit -m "add delta"

@@ -8,21 +8,21 @@ Load commonly used test logic
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
 
-  $ git checkout -b beta 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "beta"
+  $ git checkout -b beta
+  Switched to a new branch 'beta'
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'
 
-  $ git checkout master 2>&1 | sed s/\'/\"/g
-  Switched to branch "master"
+  $ git checkout master
+  Switched to branch 'master'
   $ echo gamma > gamma
   $ git add gamma
   $ fn_git_commit -m 'add gamma'
 
 clean merge
-  $ git merge beta | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*recursive.*$/Merge successful/' | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//' | sed 's/|  */| /'
-  Merge successful
+  $ git merge beta
+  Merge made by the 'recursive' strategy.
    beta | 1 +
    1 file changed, 1 insertion(+)
    create mode 100644 beta
@@ -47,7 +47,7 @@ clear the cache to be sure it is regenerated correctly
 
   $ cd ..
 git log in repo pushed from hg
-  $ git --git-dir=gitrepo2 log --pretty=medium master | sed 's/\.\.\.//g'
+  $ git --git-dir=gitrepo2 log --pretty=medium master
   commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
   Merge: e5023f9 9497a4e
   Author: test <test@example.org>
@@ -72,7 +72,7 @@ git log in repo pushed from hg
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-  $ git --git-dir=gitrepo2 log --pretty=medium beta | sed 's/\.\.\.//g'
+  $ git --git-dir=gitrepo2 log --pretty=medium beta
   commit 9497a4ee62e16ee641860d7677cdb2589ea15554
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000

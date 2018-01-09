@@ -42,7 +42,7 @@ Load commonly used test logic
   
 
   $ cd gitrepo
-  $ git checkout -b b1 HEAD^
+  $ git checkout -b b1 'HEAD^'
   Switched to a new branch 'b1'
   $ mkdir d
   $ echo gamma > d/gamma

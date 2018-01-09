@@ -41,7 +41,7 @@ Load commonly used test logic
   [255]
 We can override if needed:
   $ hg --config git.blockdotgit=false gexport
-  warning: path 'nested/.git/hooks/post-update' contains a potentially dangerous path component.
+  warning: path 'nested/.git/hooks/post-update' contains a dangerous path component.
   It may not be legal to check out in Git.
   It may also be rejected by some git server configurations.
   $ cd ..

@@ -31,7 +31,7 @@ equivalent to 'echo -n foo > linkf', but that doesn't work on OS X
   $ git clone --mirror ../gitrepo .hg/git
   Cloning into bare repository '.hg/git'...
   done.
-  $ echo "$(cd ../gitrepo && git rev-parse HEAD) $(hg log -r . --template '{node}')" >> .hg/git-mapfile
+  $ echo "`cd ../gitrepo && git rev-parse HEAD` `hg log -r . --template '{node}'`" >> .hg/git-mapfile
   $ hg gverify
   verifying rev 3f1601c3cf54 against git commit 039c1cd9fdda382c9d1e8ec85de6b5b59518ca80
   difference in: differentf
@@ -50,7 +50,7 @@ equivalent to 'echo -n foo > linkf', but that doesn't work on OS X
   [255]
 
 invalid git SHA
-  $ echo "ffffffffffffffffffffffffffffffffffffffff $(hg log -r . --template '{node}')" >> .hg/git-mapfile
+  $ echo "ffffffffffffffffffffffffffffffffffffffff `hg log -r . --template '{node}'`" >> .hg/git-mapfile
   $ hg gverify
   abort: git equivalent ffffffffffffffffffffffffffffffffffffffff for rev 4e582b4eb862 not found!
   [255]
@@ -59,7 +59,7 @@ git SHA is not a commit
   $ echo new2 >> newf
   $ fn_hg_commit -m 'new hg commit 2'
 this gets the tree pointed to by the commit at HEAD
-  $ echo "$(cd ../gitrepo && git show --format=%T HEAD | head -n 1) $(hg log -r . --template '{node}')" >> .hg/git-mapfile
+  $ echo "`cd ../gitrepo && git show --format=%T HEAD | head -n 1` `hg log -r . --template '{node}'`" >> .hg/git-mapfile
   $ hg gverify
   abort: git equivalent f477b00e4a9907617f346a529cc0fe9ba5d6f6d3 for rev 5c2eb98af3e2 is not a commit!
   [255]

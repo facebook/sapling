@@ -36,12 +36,9 @@ Add a submodule (gitlink) and move it to a different spot:
   $ fn_git_commit -msubalpha
   $ cd ../gitrepo
 
-  $ rmpwd="import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  $ clonefilt='s/Cloning into/Initialized empty Git repository in/;s/in .*/in .../'
-
-  $ git submodule add ../gitsubmodule 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
+  $ git submodule add ../gitsubmodule
+  Cloning into '$TESTTMP/gitrepo/gitsubmodule'...
+  done.
   $ fn_git_commit -m 'add submodule'
   $ sed -e 's/path = gitsubmodule/path = gitsubmodule2/' .gitmodules > .gitmodules-new
   $ mv .gitmodules-new .gitmodules
@@ -72,9 +69,9 @@ Rename the file back:
 Rename a file elsewhere and replace it with a submodule:
 
   $ git mv gamma gamma-new
-  $ git submodule add ../gitsubmodule gamma 2>&1 | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-  Initialized empty Git repository in ...
-  
+  $ git submodule add ../gitsubmodule gamma 2>&1
+  Cloning into '$TESTTMP/gitrepo/gamma'...
+  done.
   $ fn_git_commit -m 'rename and add submodule'
 
 Remove the submodule and rename the file back:
@@ -88,8 +85,8 @@ Remove the submodule and rename the file back:
   $ git mv gamma-new gamma
   $ fn_git_commit -m 'remove submodule and rename back'
 
-  $ git checkout -f -b not-master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "not-master"
+  $ git checkout -f -b not-master 2>&1
+  Switched to a new branch 'not-master'
 
   $ cd ..
   $ hg clone -q gitrepo hgrepo
@@ -387,7 +384,7 @@ Make a new commit with a copy and a rename in Mercurial
   938bb65bb322eb4a3558bec4cdc8a680c4d1794c alpha
 
 Make sure the right metadata is stored
-  $ git cat-file commit master^
+  $ git cat-file commit "master^"
   tree 0adbde18545845f3b42ad1a18939ed60a9dec7a8
   parent 50d116676a308b7c22935137d944e725d2296f2a
   author test <none@none> 0 +0000

@@ -7,8 +7,8 @@ across from hg to git
   $ touch a
   $ git add a
   $ fn_git_commit -ma
-  $ git checkout -b not-master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "not-master"
+  $ git checkout -b not-master
+  Switched to a new branch 'not-master'
 
   $ cd ..
   $ hg clone -q gitrepo hgrepo
@@ -122,8 +122,8 @@ Test some nutty filenames
   $ cd ../gitrepo
   $ git checkout b1
   Switched to branch 'b1'
-  $ commit_sha=$(git rev-parse HEAD)
-  $ tree_sha=$(git rev-parse HEAD^{tree})
+  $ commit_sha=`git rev-parse HEAD`
+  $ tree_sha=`git rev-parse 'HEAD^{tree}'`
 
 There's no way to create a Git repo with extra metadata via the CLI. Dulwich
 lets you do that, though.

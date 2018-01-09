@@ -4,7 +4,8 @@ Load commonly used test logic
   $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
   $ cd gitrepo
-  $ git commit --allow-empty -m empty >/dev/null 2>/dev/null || echo "git commit error"
+  $ git commit --allow-empty -m empty
+  [master (root-commit) 6782568] empty
 
   $ cd ..
   $ git init --bare gitrepo2

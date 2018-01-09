@@ -7,8 +7,8 @@ Load commonly used test logic
   $ echo alpha > alpha
   $ git add alpha
   $ fn_git_commit -m "add alpha"
-  $ git checkout -b not-master 2>&1 | sed s/\'/\"/g
-  Switched to a new branch "not-master"
+  $ git checkout -b not-master
+  Switched to a new branch 'not-master'
 
   $ cd ..
   $ hg clone gitrepo hgrepo | grep -v '^updating'
@@ -44,13 +44,13 @@ should have two different branches
   * not-master 7eeab2e add alpha
 
 some more work on master from git
-  $ git checkout master 2>&1 | sed s/\'/\"/g
-  Switched to branch "master"
+  $ git checkout master
+  Switched to branch 'master'
   $ echo delta > delta
   $ git add delta
   $ fn_git_commit -m "add delta"
-  $ git checkout not-master 2>&1 | sed s/\'/\"/g
-  Switched to branch "not-master"
+  $ git checkout not-master
+  Switched to branch 'not-master'
 
   $ cd ..
 
@@ -210,9 +210,11 @@ test for ssh vulnerability
   $ hg push 'git+ssh://-oProxyCommand=rm%20nonexistent/path' 2>&1 >/dev/null
   abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
   [255]
-  $ hg push 'git+ssh://fakehost|rm%20nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  $ hg push 'git+ssh://fakehost|rm%20nonexistent/path' 2>&1 >/dev/null
   ssh: * fakehost%7crm%20nonexistent* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
-  $ hg push 'git+ssh://fakehost%7Crm%20nonexistent/path' 2>&1 >/dev/null | grep -v ^devel-warn:
+  [255]
+  $ hg push 'git+ssh://fakehost%7Crm%20nonexistent/path' 2>&1 >/dev/null
   ssh: * fakehost%7crm%20nonexistent* (glob)
   abort: git remote error: The remote server unexpectedly closed the connection.
+  [255]

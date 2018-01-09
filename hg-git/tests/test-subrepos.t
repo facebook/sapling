@@ -78,7 +78,7 @@ hg status shall NOT report .hgsub and .hgsubstate as untracked - either ignored 
   $ cd ..
   $ cd gitrepo1
 there shall be two gitlink entries, with values matching that in .hgsubstate
-  $ git ls-tree -r HEAD^{tree} | grep 'commit'
+  $ git ls-tree -r "HEAD^{tree}" | grep 'commit'
   160000 commit 56f0304c5250308f14cfbafdc27bd12d40154d17	subrepo1
   160000 commit aabf7cd015089aff0b84596e69aa37b24a3d090a	xyz/subrepo2
 bring working copy to HEAD state (it's not bare repo)
@@ -93,7 +93,7 @@ bring working copy to HEAD state (it's not bare repo)
   $ hg add delta
   $ fn_hg_commit -m "add delta"
   $ echo "`hg tip --template '{node}'` hgsub" > ../gitrepo1/.hgsubstate
-  $ echo "hgsub = $(pwd)" > ../gitrepo1/.hgsub
+  $ echo "hgsub = `pwd`" > ../gitrepo1/.hgsub
   $ cd ../gitrepo1
   $ git add .hgsubstate .hgsub
   $ fn_git_commit -m "Test3. Prepare .hgsub and .hgsubstate sources"
