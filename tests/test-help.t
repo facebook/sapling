@@ -359,7 +359,6 @@ Test extension help:
        remotenames   mercurial extension for improving client/server workflows
        reset         reset the active bookmark and working copy to a desired
                      revision
-       rust          (no help text available)
        sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
