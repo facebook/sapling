@@ -7,7 +7,7 @@ from mercurial import (
 )
 
 ignore = {b'highlight', b'win32text', b'factotum', b'remotenames',
-          b'lz4revlog', b'hgsql'}
+          b'lz4revlog', b'hgsql', b'shelve', b'fbconduit', b''}
 
 if os.name != 'nt':
     ignore.add(b'win32mbcs')
@@ -23,7 +23,13 @@ for ext in disabled:
 hgrc.close()
 
 u = uimod.ui.load()
+
+# Some extensions may print useful warning messages when they are loaded without
+# the necessary config options. Let's capture that output since it does not
+# matter for this test.
+u.pushbuffer(error=True)
 extensions.loadall(u)
+u.popbuffer()
 
 globalshort = set()
 globallong = set()
