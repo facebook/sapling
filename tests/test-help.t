@@ -290,6 +290,7 @@ Test extension help:
        factotum      http authentication with factotum
        fastannotate  yet another annotate implementation that might be faster
        fastlog
+       fastmanifest
        fastpartialmatch
                      extension that makes node prefix lookup faster
        fastverify

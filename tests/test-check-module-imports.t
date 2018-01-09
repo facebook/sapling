@@ -47,16 +47,6 @@ outputs, which should be fixed later.
   fb-hgext/contrib/git-sl:15: relative import of stdlib module
   fb-hgext/contrib/git-sl:15: direct symbol import time from time
   fb-hgext/contrib/git-sl:16: imports not lexically sorted: argparse < subprocess
-  fb-hgext/distutils_rust/__init__.py:6: relative import of stdlib module
-  fb-hgext/distutils_rust/__init__.py:6: direct symbol import Command from distutils.core
-  fb-hgext/distutils_rust/__init__.py:7: relative import of stdlib module
-  fb-hgext/distutils_rust/__init__.py:7: direct symbol import Distribution from distutils.dist
-  fb-hgext/distutils_rust/__init__.py:8: relative import of stdlib module
-  fb-hgext/distutils_rust/__init__.py:8: direct symbol import CompileError from distutils.errors
-  fb-hgext/distutils_rust/__init__.py:9: relative import of stdlib module
-  fb-hgext/distutils_rust/__init__.py:9: direct symbol import log from distutils
-  fb-hgext/distutils_rust/__init__.py:10: relative import of stdlib module
-  fb-hgext/distutils_rust/__init__.py:10: direct symbol import build from distutils.command.build
   fb-hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from fb-hgext.infinitepush.bundleparts
   fb-hgext/infinitepush/__init__.py:108: imports from fb-hgext.infinitepush not lexically sorted: common < infinitepushcommands
   fb-hgext/infinitepush/__init__.py:113: relative import of stdlib module
