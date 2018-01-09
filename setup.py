@@ -161,26 +161,25 @@ from distutils_rust import (
 )
 import distutils
 
-if 'USERUST' in os.environ:
-    USERUST = int(os.environ['USERUST'])
+haverust = False
+try:
+    cargo_version = subprocess.check_output(
+            ['cargo', '--version']).split()[1]
+except Exception:
+    sys.stderr.write(
+            "not compiling Rust extensions: cargo is not available\n")
 else:
-    USERUST = False
-    try:
-        cargo_version = subprocess.check_output(
-                ['cargo', '--version']).split()[1]
-    except Exception:
-        sys.stderr.write(
-                "not compiling Rust extensions: cargo is not available\n")
+    required_cargo_version = '0.21'
+    if (LooseVersion(cargo_version) >= LooseVersion(required_cargo_version)):
+        haverust = True
     else:
-        required_cargo_version = '0.21'
-        if (LooseVersion(cargo_version) >=
-                LooseVersion(required_cargo_version)):
-            USERUST = True
-        else:
-            sys.stderr.write(
-                    "not compiling Rust extensions: cargo is too old " +
-                    "(found %s, need %s or higher)\n"
-                    % (cargo_version, required_cargo_version))
+        sys.stderr.write(
+                "not compiling Rust extensions: cargo is too old " +
+                "(found %s, need %s or higher)\n"
+                % (cargo_version, required_cargo_version))
+
+if not haverust:
+    raise RuntimeError('Rust (and cargo >= 0.21) is required')
 
 iswindows = os.name == 'nt'
 NOOPTIMIZATION = "/Od" if iswindows else "-O0"
