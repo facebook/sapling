@@ -15,15 +15,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X mercurial/thirdparty \
   > -X fb-hgext \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  hg-git/tests/test-git-submodules.t:61:
-   >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new
-   don't use grep's context flags
-  hg-git/tests/test-gitignore.t:124:
-   >   $ echo 'foo.*$(?<!bar)' >> .hgignore
-   don't use $(expr), use `expr`
-  hg-git/tests/test-renames.t:79:
-   >   $ grep 'submodule "gitsubmodule"' -A2 .gitmodules > .gitmodules-new
-   don't use grep's context flags
   Skipping hgext/extlib/cstore/datapackstore.cpp it has no-che?k-code (glob)
   Skipping hgext/extlib/cstore/datapackstore.h it has no-che?k-code (glob)
   Skipping hgext/extlib/cstore/datastore.h it has no-che?k-code (glob)
@@ -158,6 +149,15 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
   tests/test-fb-hgext-smartlog.t:483:
    >   $ hg help templates | egrep -A2 '(amend|fold|histedit|rebase|singlepublic|split|undo)'successor
+   don't use grep's context flags
+  tests/test-hggit-git-submodules.t:61:
+   >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new
+   don't use grep's context flags
+  tests/test-hggit-gitignore.t:124:
+   >   $ echo 'foo.*$(?<!bar)' >> .hgignore
+   don't use $(expr), use `expr`
+  tests/test-hggit-renames.t:79:
+   >   $ grep 'submodule "gitsubmodule"' -A2 .gitmodules > .gitmodules-new
    don't use grep's context flags
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)

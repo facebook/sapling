@@ -7,6 +7,7 @@
   > -X hgdemandimport/demandimportpy2.py \
   > -X hg-git \
   > | sed 's|\\|/|g' | xargs $PYTHON contrib/check-py3-compat.py
+  contrib/hggitperf.py not using absolute_import
   contrib/python-zstandard/setup.py not using absolute_import
   contrib/python-zstandard/setup_zstd.py not using absolute_import
   contrib/python-zstandard/tests/common.py not using absolute_import
@@ -85,6 +86,18 @@
   hgext/gitlookup.py not using absolute_import
   hgext/grepdiff.py not using absolute_import
   hgext/grpcheck.py not using absolute_import
+  hgext/hggit/__init__.py not using absolute_import
+  hgext/hggit/_ssh.py not using absolute_import
+  hgext/hggit/compat.py not using absolute_import
+  hgext/hggit/git2hg.py not using absolute_import
+  hgext/hggit/git_handler.py not using absolute_import
+  hgext/hggit/gitdirstate.py not using absolute_import
+  hgext/hggit/gitrepo.py not using absolute_import
+  hgext/hggit/hg2git.py not using absolute_import
+  hgext/hggit/hgrepo.py not using absolute_import
+  hgext/hggit/overlay.py not using absolute_import
+  hgext/hggit/util.py not using absolute_import
+  hgext/hggit/verify.py not using absolute_import
   hgext/linkrevcache.py not using absolute_import
   hgext/logginghelper.py not using absolute_import
   hgext/morestatus.py not using absolute_import
@@ -185,10 +198,13 @@
   tests/conduithttp.py not using absolute_import
   tests/dummyext1.py not using absolute_import
   tests/dummyext2.py not using absolute_import
+  tests/hggit/commitextra.py not using absolute_import
   tests/test-fb-hgext-extutil.py not using absolute_import
   tests/test-fb-hgext-generic-bisect.py not using absolute_import
   tests/test-fb-hgext-patchpython.py not using absolute_import
   tests/test-fb-hgext-sshaskpass.py not using absolute_import
+  tests/test-hggit-url-parsing.py not using absolute_import
+  tests/test-hggit-url-parsing.py requires print_function
 
 #if py3exe
   $ testrepohg files 'set:(**.py) - grep(pygments)' \
