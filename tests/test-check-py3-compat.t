@@ -21,13 +21,6 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  fb-hgext/fastmanifest/__init__.py not using absolute_import
-  fb-hgext/fastmanifest/cachemanager.py not using absolute_import
-  fb-hgext/fastmanifest/concurrency.py not using absolute_import
-  fb-hgext/fastmanifest/constants.py not using absolute_import
-  fb-hgext/fastmanifest/debug.py not using absolute_import
-  fb-hgext/fastmanifest/implementation.py not using absolute_import
-  fb-hgext/fastmanifest/metrics.py not using absolute_import
   fb-hgext/infinitepush/bundleparts.py not using absolute_import
   fb-hgext/infinitepush/common.py not using absolute_import
   fb-hgext/infinitepush/fileindexapi.py not using absolute_import
@@ -75,6 +68,13 @@
   hgext/fastannotate/formatter.py not using absolute_import
   hgext/fastannotate/protocol.py not using absolute_import
   hgext/fastlog.py not using absolute_import
+  hgext/fastmanifest/__init__.py not using absolute_import
+  hgext/fastmanifest/cachemanager.py not using absolute_import
+  hgext/fastmanifest/concurrency.py not using absolute_import
+  hgext/fastmanifest/constants.py not using absolute_import
+  hgext/fastmanifest/debug.py not using absolute_import
+  hgext/fastmanifest/implementation.py not using absolute_import
+  hgext/fastmanifest/metrics.py not using absolute_import
   hgext/fastpartialmatch.py not using absolute_import
   hgext/fbconduit.py not using absolute_import
   hgext/fbhistedit.py not using absolute_import

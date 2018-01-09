@@ -350,5 +350,5 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
   tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: merge < registrar
   tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: encoding < merge
-  Import cycle: fb-hgext.fastmanifest.cachemanager -> fb-hgext.fastmanifest.implementation -> fb-hgext.fastmanifest.cachemanager
+  Import cycle: hgext.fastmanifest.cachemanager -> hgext.fastmanifest.implementation -> hgext.fastmanifest.cachemanager
   [1]
