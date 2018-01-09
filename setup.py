@@ -1050,11 +1050,11 @@ cythonopts = {
 }
 
 extmodules += cythonize([
-    Extension('mercurial.cyext.clindex',
-              sources=['mercurial/cyext/clindex.pyx'],
+    Extension('hgext.clindex',
+              sources=['hgext/clindex.pyx'],
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
-    Extension('mercurial.cyext.linelog',
-              sources=['mercurial/cyext/linelog.pyx'],
+    Extension('hgext.extlib.linelog',
+              sources=['hgext/extlib/linelog.pyx'],
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
 ], compiler_directives=cythonopts)
 

@@ -27,7 +27,7 @@ from . import (
     revmap as revmapmod,
 )
 
-import linelog as linelogmod
+from hgext.extlib import linelog as linelogmod
 
 # given path, get filelog, cached
 @util.lrucachefunc

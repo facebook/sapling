@@ -52,7 +52,6 @@ patches
 mercurial/__modulepolicy__.py
 mercurial/__version__.py
 mercurial/hgpythonlib.h
-mercurial/cyext/*.c
 mercurial.egg-info
 .DS_Store
 tags
@@ -62,6 +61,8 @@ cscope.*
 i18n/hg.pot
 locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
+hgext/clindex.c
+hgext/extlib/linelog.c
 
 # Rust libraries and extensions
 lib/*/Cargo.lock

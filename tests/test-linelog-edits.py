@@ -3,7 +3,8 @@ from __future__ import absolute_import
 
 import random
 import sys
-from mercurial.cyext import linelog
+
+from hgext.extlib import linelog
 
 randint = random.randint
 
