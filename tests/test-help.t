@@ -252,36 +252,131 @@ Test extension help:
   
        absorb        apply working directory changes to changesets
        acl           hooks for controlling repository access
+       age
+       arcdiff       (no help text available)
+       backups       display recently made backups to recover stripped
+                     changesets
        blackbox      log repository events to a blackbox for debugging
        bugzilla      hooks for integrating with the Bugzilla bug tracker
+       bundle2hooks  (no help text available)
+       catnotate     (no help text available)
        censor        erase file content at a given revision
+       checkmessagehook
+                     (no help text available)
+       chistedit
        churn         command to display statistics about repository history
+       cleanobsstore
        clonebundles  advertise pre-generated bundles to seed clones
+       configwarn    warn unsupported user configs
+       conflictinfo
        convert       import revisions from foreign VCS repositories into
                      Mercurial
+       copytrace     extension that does copytracing fast
+       crdump        (no help text available)
+       debugcommitmessage
+                     (no help text available)
+       debuginhibit  (no help text available)
+       dialect       replace terms with more widely used equivalents
+       directaccess  This extension provides direct access
+       dirsync
+       drop          drop specified changeset from the stack
+       edrecord      (no help text available)
        eol           automatically manage newlines in repository files
+       errorredirect
+                     redirect error message
        extdiff       command to allow external programs to compare revisions
+       extorder
+       extutil       (no help text available)
        factotum      http authentication with factotum
+       fastannotate  yet another annotate implementation that might be faster
+       fastlog
+       fastpartialmatch
+                     extension that makes node prefix lookup faster
+       fastverify
+       fbamend       extends the existing commit amend functionality
+       fbconduit     (no help text available)
+       fbhistedit    extends the existing histedit functionality
+       fbshow        show changesets in detail with full log message, patches
+                     etc
+       fbsparse      allow sparse checkouts of the working directory
+       fixcorrupt    (no help text available)
+       generic_bisect
+                     (no help text available)
+       githelp       try mapping git commands to Mercurial commands
+       gitlookup     extension that will look up hashes from an hg-git map file
+                     over the wire.
+       gitrevset     map a git hash to a Mercurial hash:
        gpg           commands to sign and verify changesets
+       grepdiff      (no help text available)
+       grpcheck      check if the user is in specified groups
        hgk           browse the repository in a graphical way
        hgsql         (no help text available)
+       hiddenerror   configurable error messages for accessing hidden changesets
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
+       inhibit       redefine obsolete(), bumped(), divergent() revsets
+       inhibitwarn   (no help text available)
+       interactiveui
+                     (no help text available)
        keyword       expand keywords in tracked files
        largefiles    track large binary files
+       linkrevcache  a simple caching layer to speed up _adjustlinkrev
+       logginghelper
+                     this extension logs different pieces of information that
+                     will be used
        lz4revlog     store revlog deltas using lz4 compression
+       mergedriver   custom merge drivers for autoresolved files
+       morecolors    make more output colorful
+       morestatus    make status give a bit more context
        mq            manage a stack of patches
+       myparent
+       nointerrupt   warns but doesn't exit when the user first hits Ctrl+C
        notify        hooks for sending email push notifications
+       obsshelve     save and restore changes to the working directory
+       ownercheck    prevent operations on repos not owned by the current user
+       p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
        patchbomb     command to send changesets as (a series of) patch emails
+       patchpython   patch python libraries
+       perftweaks    extension for tweaking Mercurial features to improve
+                     performance.
+       phabdiff      (no help text available)
+       phabstatus    (no help text available)
+       phrevset      provides support for Phabricator revsets
+       progressfile  allows users to have JSON progress bar information written
+                     to a path
+       pullcreatemarkers
+                     (no help text available)
        purge         command to delete untracked files from the working
                      directory
+       pushrebase    rebases commits during push
+       rage          upload useful diagnostics and give instructions for asking
+                     for help
        relink        recreates hardlinks between repository clones
+       remotefilelog
+       remoteid      (no help text available)
        remotenames
+       reset         reset the active bookmark and working copy to a desired
+                     revision
+       rust          (no help text available)
+       sampling      (no help text available)
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
+       shareutil     (no help text available)
        shelve        save and restore changes to the working directory
+       sigtrace      sigtrace - dump stack traces on signal
+       simplecache
+       smartlog      command to display a relevant subgraph
+       sshaskpass    ssh-askpass implementation that works with chg
+       stat          (no help text available)
        strip         strip changesets and their descendants from history
        transplant    command to transplant changesets from another branch
+       treedirstate  tree-based dirstate implementation
+       tweakdefaults
+                     user friendly defaults
+       undo          (no help text available)
+       upgradegeneraldelta
+                     upgrade manifests to generaldelta in-place
+       whereami      (no help text available)
        win32mbcs     allow the use of MBCS paths with problematic encodings
        zeroconf      discover and advertise repositories on the local network
 
@@ -1442,10 +1537,14 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
+   debugcommitmessage  (no help text available)
+   debuginhibit        (no help text available)
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
+   debugcommitmessage  (no help text available)
+   debuginhibit        (no help text available)
   Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
