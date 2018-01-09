@@ -36,7 +36,10 @@ import gc
 cdef extern from "extlib/traceprofimpl.cpp":
     void enable()
     void disable()
-    void report(FILE *)
+    IF UNAME_SYSNAME == "Windows":
+        void report()
+    ELSE:
+        void report(FILE *)
     void settimethreshold(double)
     void setcountthreshold(size_t)
     void setdedup(int)
@@ -63,5 +66,10 @@ def profile(ui, fp):
         yield
     finally:
         disable()
-        report(PyFile_AsFile(<PyObject *>fp))
+        IF UNAME_SYSNAME == "Windows":
+            # On Windows, "FILE*" could be incompatible between Python.exe and
+            # traceimpl.exp. Use stderr from traceimpl.exp conservatively.
+            report()
+        ELSE:
+            report(PyFile_AsFile(<PyObject *>fp))
         clear()
