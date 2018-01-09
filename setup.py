@@ -5,7 +5,6 @@
 # 'python setup.py --help' for more options
 
 from distutils.version import LooseVersion
-import itertools
 import os
 
 supportedpy = '~= 2.7'
