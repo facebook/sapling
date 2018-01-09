@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "clib/buffer.h"
+#include "lib/clib/buffer.h"
 
 bool buffer_append(
     char **buffer, size_t *buffer_idx, size_t *buffer_sz,
