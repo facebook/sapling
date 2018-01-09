@@ -43,7 +43,7 @@ rev numbers for nodes should be correct too.
 
 from collections import defaultdict
 from functools import partial
-from hgext3rd.generic_bisect import bisect
+from hgext.generic_bisect import bisect
 
 from mercurial import (
     changelog,

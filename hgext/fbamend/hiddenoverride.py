@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from hgext3rd import extutil
+from hgext import extutil
 
 from mercurial.node import short
 from mercurial import (

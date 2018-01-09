@@ -20,7 +20,7 @@ from mercurial import (
 )
 from mercurial import pycompat, scmutil
 from hgext import blackbox
-from hgext3rd import (
+from hgext import (
     shareutil,
     smartlog,
     fbsparse as sparse,

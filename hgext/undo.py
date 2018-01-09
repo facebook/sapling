@@ -42,7 +42,7 @@ from mercurial.node import (
     nullid,
 )
 
-from hgext3rd import (
+from hgext import (
     interactiveui,
 )
 

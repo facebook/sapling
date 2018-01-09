@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-from hgext3rd.extutil import runshellcommand
+from hgext.extutil import runshellcommand
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
 from mercurial import encoding, error, localrepo, util, match, scmutil

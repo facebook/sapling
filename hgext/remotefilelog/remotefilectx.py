@@ -22,7 +22,7 @@ def createconduit(ui):
         conduit = extensions.find("fbconduit")
     except KeyError:
         try:
-            from hgext3rd import fbconduit as conduit
+            from hgext import fbconduit as conduit
         except ImportError:
             ui.log('linkrevfixup',
                    _('unable to find fbconduit extension\n'))

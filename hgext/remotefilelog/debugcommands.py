@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from mercurial import error, filelog, revlog
 from mercurial.node import bin, hex, nullid, short
 from mercurial.i18n import _
-from hgext3rd import extutil
+from hgext import extutil
 from . import (
     constants,
     datapack,

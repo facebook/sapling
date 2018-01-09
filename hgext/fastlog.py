@@ -44,7 +44,7 @@ def extsetup(ui):
     try:
         conduit = extensions.find("fbconduit")
     except KeyError:
-        from hgext3rd import fbconduit as conduit
+        from hgext import fbconduit as conduit
     except ImportError:
         ui.warn(_('Unable to find fbconduit extension\n'))
         return
