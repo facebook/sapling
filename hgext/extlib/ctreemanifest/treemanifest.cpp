@@ -7,7 +7,7 @@
 // treemanifest.cpp - c++ implementation of a tree manifest
 // no-check-code
 
-#include "ctreemanifest/treemanifest.h"
+#include "hgext/extlib/ctreemanifest/treemanifest.h"
 
 #include <cassert>
 

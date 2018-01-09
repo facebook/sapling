@@ -7,11 +7,11 @@
 // manifest_entry.cpp - c++ implementation of a single manifest entry
 // no-check-code
 
-#include "ctreemanifest/manifest_entry.h"
+#include "hgext/extlib/ctreemanifest/manifest_entry.h"
 
 #include <cassert>
 
-#include "ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
 
 ManifestEntry::ManifestEntry()
     : filename(NULL), filenamelen(0), node(NULL), flag(NULL),

@@ -7,13 +7,13 @@
 // uniondatapackstore.cpp - implementation of a union datapack store
 // no-check-code
 
-#include "cstore/uniondatapackstore.h"
+#include "hgext/extlib/cstore/uniondatapackstore.h"
 
 #include <algorithm>
 #include <memory>
 
 extern "C" {
-#include "cstore/mpatch.h"
+#include "hgext/extlib/cstore/mpatch.h"
 }
 
 UnionDatapackStore::UnionDatapackStore(std::vector<DataStore*> stores) :

@@ -7,7 +7,7 @@
 // deltachain.cpp - c++ implementation of deltachain and related classes
 // no-check-code
 
-#include "cstore/deltachain.h"
+#include "hgext/extlib/cstore/deltachain.h"
 
 DeltaChainLink DeltaChainIterator::next() {
   std::shared_ptr<DeltaChain> chain = _chains.back();

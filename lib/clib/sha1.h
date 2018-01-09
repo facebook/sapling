@@ -16,7 +16,7 @@ extern "C" {
 
 #ifdef SHA1_USE_SHA1DC
 #include <stdlib.h>
-#include <sha1dc/sha1.h>
+#include <lib/third-party/sha1dc/sha1.h>
 
 typedef SHA1_CTX fbhg_sha1_ctx_t;
 

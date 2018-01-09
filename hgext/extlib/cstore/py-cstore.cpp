@@ -13,9 +13,9 @@
 
 #include <Python.h>
 
-#include "cstore/py-cdatapack.h"
-#include "cstore/py-datapackstore.h"
-#include "cstore/py-treemanifest.h"
+#include "hgext/extlib/cstore/py-cdatapack.h"
+#include "hgext/extlib/cstore/py-datapackstore.h"
+#include "hgext/extlib/cstore/py-treemanifest.h"
 
 static PyMethodDef mod_methods[] = {
   {NULL, NULL}

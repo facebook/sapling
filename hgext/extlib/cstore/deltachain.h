@@ -11,13 +11,13 @@
 #define FBHGEXT_DELTACHAIN_H
 
 extern "C" {
-#include "../lib/cdatapack/cdatapack.h"
+#include "lib/cdatapack/cdatapack.h"
 }
 
 #include <memory>
 #include <vector>
 
-#include "cstore/key.h"
+#include "hgext/extlib/cstore/key.h"
 
 /*
  * Wrapper around delta chain link, both C and Python

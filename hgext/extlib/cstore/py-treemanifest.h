@@ -17,12 +17,12 @@
 #include <memory>
 #include <string>
 
-#include "clib/convert.h"
-#include "cstore/py-structs.h"
-#include "cstore/pythonutil.h"
-#include "cstore/uniondatapackstore.h"
-#include "ctreemanifest/manifest.h"
-#include "ctreemanifest/treemanifest.h"
+#include "lib/clib/convert.h"
+#include "hgext/extlib/cstore/py-structs.h"
+#include "hgext/extlib/cstore/pythonutil.h"
+#include "hgext/extlib/cstore/uniondatapackstore.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/treemanifest.h"
 
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1

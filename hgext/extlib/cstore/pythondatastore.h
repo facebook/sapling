@@ -17,9 +17,9 @@
 #include <Python.h>
 #include <memory>
 
-#include "cstore/datastore.h"
-#include "cstore/key.h"
-#include "cstore/pythonutil.h"
+#include "hgext/extlib/cstore/datastore.h"
+#include "hgext/extlib/cstore/key.h"
+#include "hgext/extlib/cstore/pythonutil.h"
 
 /*
  * Wrapper around python delta chain

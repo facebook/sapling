@@ -14,10 +14,10 @@
 #include <list>
 #include <stdexcept>
 
-#include "clib/convert.h"
-#include "cstore/store.h"
-#include "ctreemanifest/manifest_entry.h"
-#include "ctreemanifest/manifest_ptr.h"
+#include "lib/clib/convert.h"
+#include "hgext/extlib/cstore/store.h"
+#include "hgext/extlib/ctreemanifest/manifest_entry.h"
+#include "hgext/extlib/ctreemanifest/manifest_ptr.h"
 
 class ManifestIterator;
 class SortedManifestIterator;

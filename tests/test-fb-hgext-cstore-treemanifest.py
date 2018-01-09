@@ -6,20 +6,20 @@ import random
 import sys
 import unittest
 
-import silenttestrunner
-
 # Add the repo root to the path so we can find the built ctreemanifest
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 import pythonpath
 pythonpath.setcstorepath()
 
-import cstore
+import silenttestrunner
 
+from hgext.extlib import cstore
+
+from mercurial.node import hex, nullid
 from mercurial import (
     manifest,
     match as matchmod
 )
-from mercurial.node import hex, nullid
 
 class FakeDataStore(object):
     def __init__(self):

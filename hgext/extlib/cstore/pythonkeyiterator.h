@@ -10,7 +10,7 @@
 #ifndef FBHGEXT_PYTHONKEYITERATOR_H
 #define FBHGEXT_PYTHONKEYITERATOR_H
 
-#include "cstore/pythonutil.h"
+#include "hgext/extlib/cstore/pythonutil.h"
 
 class PythonKeyIterator : public KeyIterator {
   private:

@@ -14,10 +14,10 @@
 #include <string>
 #include <vector>
 
-#include "cstore/match.h"
-#include "ctreemanifest/manifest.h"
-#include "ctreemanifest/manifest_entry.h"
-#include "ctreemanifest/manifest_fetcher.h"
+#include "hgext/extlib/cstore/match.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/manifest_entry.h"
+#include "hgext/extlib/ctreemanifest/manifest_fetcher.h"
 
 enum FindResult {
   FIND_PATH_OK,

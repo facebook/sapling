@@ -13,7 +13,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "cstore/key.h"
+#include "hgext/extlib/cstore/key.h"
 
 class ConstantStringRef {
   private:

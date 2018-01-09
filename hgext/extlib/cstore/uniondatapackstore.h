@@ -15,12 +15,12 @@
 #include <vector>
 
 extern "C" {
-#include "../lib/cdatapack/cdatapack.h"
+#include "lib/cdatapack/cdatapack.h"
 }
 
-#include "cstore/key.h"
-#include "cstore/datapackstore.h"
-#include "cstore/store.h"
+#include "hgext/extlib/cstore/key.h"
+#include "hgext/extlib/cstore/datapackstore.h"
+#include "hgext/extlib/cstore/store.h"
 
 class UnionDatapackStore;
 class UnionDatapackStoreKeyIterator : public KeyIterator {

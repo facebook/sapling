@@ -20,10 +20,10 @@
 // Py_BuildValue treats NULL as NONE, so we have to have a non-null pointer.
 #define MAGIC_EMPTY_STRING ""
 
-#include "cstore/key.h"
-#include "cstore/match.h"
-#include "cstore/store.h"
-#include "ctreemanifest/treemanifest.h"
+#include "hgext/extlib/cstore/key.h"
+#include "hgext/extlib/cstore/match.h"
+#include "hgext/extlib/cstore/store.h"
+#include "hgext/extlib/ctreemanifest/treemanifest.h"
 
 /**
  * C++ exception that represents an issue at the python C api level.

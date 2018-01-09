@@ -7,9 +7,9 @@
 // manifest_fetcher.cpp - c++ implementation of a fetcher for manifests
 // no-check-code
 
-#include "ctreemanifest/manifest_fetcher.h"
+#include "hgext/extlib/ctreemanifest/manifest_fetcher.h"
 
-#include "ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
 
 ManifestFetcher::ManifestFetcher(std::shared_ptr<Store> store) :
   _store(store) {

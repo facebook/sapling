@@ -12,8 +12,8 @@
 
 #include <memory>
 
-#include "cstore/deltachain.h"
-#include "cstore/key.h"
+#include "hgext/extlib/cstore/deltachain.h"
+#include "hgext/extlib/cstore/key.h"
 
 class DataStore {
   protected:

@@ -18,17 +18,17 @@
 #include <string>
 
 extern "C" {
-#include "../lib/cdatapack/cdatapack.h"
+#include "lib/cdatapack/cdatapack.h"
 }
 
-#include "cstore/datapackstore.h"
-#include "cstore/datastore.h"
-#include "cstore/key.h"
-#include "cstore/py-structs.h"
-#include "cstore/pythondatastore.h"
-#include "cstore/pythonkeyiterator.h"
-#include "cstore/pythonutil.h"
-#include "cstore/uniondatapackstore.h"
+#include "hgext/extlib/cstore/datapackstore.h"
+#include "hgext/extlib/cstore/datastore.h"
+#include "hgext/extlib/cstore/key.h"
+#include "hgext/extlib/cstore/py-structs.h"
+#include "hgext/extlib/cstore/pythondatastore.h"
+#include "hgext/extlib/cstore/pythonkeyiterator.h"
+#include "hgext/extlib/cstore/pythonutil.h"
+#include "hgext/extlib/cstore/uniondatapackstore.h"
 
 // --------- DatapackStore Implementation ---------
 

@@ -6,12 +6,12 @@
 
 // no-check-code
 
-#include "ctreemanifest/manifest_ptr.h"
+#include "hgext/extlib/ctreemanifest/manifest_ptr.h"
 
 #include <cstddef>
 #include <stdexcept>
 
-#include "ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
 
 ManifestPtr::ManifestPtr() :
   manifest(NULL) {

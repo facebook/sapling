@@ -7,8 +7,8 @@
 //
 // no-check-code
 
-#include "cstore/pythondatastore.h"
-#include "cstore/pythonkeyiterator.h"
+#include "hgext/extlib/cstore/pythondatastore.h"
+#include "hgext/extlib/cstore/pythonkeyiterator.h"
 
 PythonDataStore::PythonDataStore(PythonObj store) : _store(store) {}
 

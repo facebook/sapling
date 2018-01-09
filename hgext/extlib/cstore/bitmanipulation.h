@@ -1,7 +1,7 @@
 #ifndef _HG_BITMANIPULATION_H_
 #define _HG_BITMANIPULATION_H_
 
-#include "cstore/compat.h"
+#include "hgext/extlib/cstore/compat.h"
 
 static inline uint32_t getbe32(const char *c)
 {

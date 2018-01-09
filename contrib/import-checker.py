@@ -23,6 +23,7 @@ allowsymbolimports = (
     '__future__',
     'bzrlib',
     'hgclient',
+    'hgext.extlib',
     'mercurial',
     'mercurial.hgweb.common',
     'mercurial.hgweb.request',

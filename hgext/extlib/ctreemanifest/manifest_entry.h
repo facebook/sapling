@@ -14,9 +14,9 @@
 #include <cstring>
 #include <string>
 
-#include "clib/convert.h"
-#include "ctreemanifest/manifest_fetcher.h"
-#include "ctreemanifest/manifest_ptr.h"
+#include "lib/clib/convert.h"
+#include "hgext/extlib/ctreemanifest/manifest_fetcher.h"
+#include "hgext/extlib/ctreemanifest/manifest_ptr.h"
 
 #define MANIFEST_DIRECTORY_FLAG 't'
 #define MANIFEST_DIRECTORY_FLAGPTR (&"t"[0])

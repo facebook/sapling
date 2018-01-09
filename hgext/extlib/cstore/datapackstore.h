@@ -11,7 +11,7 @@
 #define FBHGEXT_DATAPACKSTORE_H
 
 extern "C" {
-#include "../lib/cdatapack/cdatapack.h"
+#include "lib/cdatapack/cdatapack.h"
 }
 
 #include <ctime>
@@ -20,9 +20,9 @@ extern "C" {
 #include <unordered_set>
 #include <vector>
 
-#include "cstore/datastore.h"
-#include "cstore/key.h"
-#include "clib/portability/portability.h"
+#include "hgext/extlib/cstore/datastore.h"
+#include "hgext/extlib/cstore/key.h"
+#include "lib/clib/portability/portability.h"
 
 const clock_t PACK_REFRESH_RATE = 0.1 * CLOCKS_PER_SEC;
 

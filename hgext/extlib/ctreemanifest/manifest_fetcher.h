@@ -13,8 +13,8 @@
 #include <memory>
 #include <string>
 
-#include "cstore/store.h"
-#include "ctreemanifest/manifest_ptr.h"
+#include "hgext/extlib/cstore/store.h"
+#include "hgext/extlib/ctreemanifest/manifest_ptr.h"
 
 /**
  * Class used to obtain Manifests, given a path and node.

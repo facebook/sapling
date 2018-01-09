@@ -159,6 +159,7 @@ from distutils_rust import (
     RustExtension,
     BuildRustExt,
 )
+import distutils
 
 if 'USERUST' in os.environ:
     USERUST = int(os.environ['USERUST'])
@@ -187,6 +188,7 @@ PRODUCEDEBUGSYMBOLS = "/DEBUG:FULL" if iswindows else "-g"
 SHA1_LIBRARY = "sha1detectcoll"
 SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
 STDC99 = "" if iswindows else "-std=c99"
+STDCPP0X = "" if iswindows else "-std=c++0x"
 WALL = "/Wall" if iswindows else "-Wall"
 WERROR = "/WX" if iswindows else "-Werror"
 WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
@@ -877,6 +879,13 @@ def filter_existing_dirs(dirs):
     '''Filters the given list and keeps only existing directory names.'''
     return [d for d in dirs if os.path.isdir(d)]
 
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version}"
+    return f.format(dirname=dname,
+                    platform=distutils.util.get_platform(),
+                    version=sys.version[:3])
+
 # Historical default values.
 # We should perhaps clean these up in the future after verifying that it
 # doesn't break the build on any platforms.
@@ -896,6 +905,18 @@ if include_dirs is None:
             '/opt/local/include',
             '/opt/homebrew/include/',
         ])
+
+library_dirs = get_env_path_list('LIBRARY_DIRS')
+if library_dirs is None:
+    if iswindows:
+        library_dirs = []
+    else:
+        library_dirs = filter_existing_dirs([
+            '/usr/local/lib',
+            '/opt/local/lib',
+            '/opt/homebrew/lib/',
+        ])
+    library_dirs.append('build/' + distutils_dir_name('lib'))
 
 osutil_cflags = []
 osutil_ldflags = []
@@ -953,7 +974,35 @@ extmodules = [
               depends=common_depends),
     Extension('hgext.fsmonitor.pywatchman.bser',
               ['hgext/fsmonitor/pywatchman/bser.c']),
-    ]
+    Extension('hgext.extlib.cstore',
+        sources=[
+            'hgext/extlib/cstore/datapackstore.cpp',
+            'hgext/extlib/cstore/deltachain.cpp',
+            'hgext/extlib/cstore/py-cstore.cpp',
+            'hgext/extlib/cstore/pythonutil.cpp',
+            'hgext/extlib/cstore/pythondatastore.cpp',
+            'hgext/extlib/cstore/uniondatapackstore.cpp',
+            'hgext/extlib/ctreemanifest/manifest.cpp',
+            'hgext/extlib/ctreemanifest/manifest_entry.cpp',
+            'hgext/extlib/ctreemanifest/manifest_fetcher.cpp',
+            'hgext/extlib/ctreemanifest/manifest_ptr.cpp',
+            'hgext/extlib/ctreemanifest/treemanifest.cpp',
+        ],
+        include_dirs=[
+            '.',
+        ] + include_dirs,
+        library_dirs=[
+            'build/' + distutils_dir_name('lib'),
+        ] + library_dirs,
+        libraries=[
+            'datapack',
+            'lz4',
+            'mpatch',
+            SHA1_LIBRARY,
+        ],
+        extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
+    ),
+]
 
 # Cython modules
 # see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
@@ -968,12 +1017,16 @@ extmodules += cythonize(Extension('mercurial.cyext.linelog',
                         compiler_directives=cythonopts)
 
 libraries = [
-    ("cdatapack", {
+    ("datapack", {
         "sources" : ["lib/cdatapack/cdatapack.c"],
         "include_dirs" : ["."] + include_dirs,
         "libraries" : ["lz4", SHA1_LIBRARY],
         "extra_args" : filter(None,
             [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+    }),
+    ('mpatch', {
+        "sources": ["hgext/extlib/cstore/mpatch.c"],
+        "include_dirs" : ["."] + include_dirs,
     }),
     ("sha1detectcoll", {
         "sources" : [

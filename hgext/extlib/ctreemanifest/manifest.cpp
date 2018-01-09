@@ -7,9 +7,9 @@
 // manifest.cpp - c++ implementation of a single manifest
 // no-check-code
 
-#include "ctreemanifest/manifest.h"
+#include "hgext/extlib/ctreemanifest/manifest.h"
 
-#include "clib/sha1.h"
+#include "lib/clib/sha1.h"
 
 Manifest::Manifest(ConstantStringRef &rawobj, const char *node) :
     _rawobj(rawobj),
