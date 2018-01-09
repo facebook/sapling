@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 from hgext3rd.extutil import runshellcommand, flock
 from mercurial import (
+    encoding,
     error,
     extensions,
     mdiff,
@@ -42,7 +43,7 @@ def backgroundrepack(repo, incremental=True, packsonly=False):
     cmd = ' '.join(map(util.shellquote, cmd))
 
     repo.ui.warn(msg)
-    runshellcommand(cmd, os.environ)
+    runshellcommand(cmd, encoding.environ)
 
 def fullrepack(repo, options=None):
     """If ``packsonly`` is True, stores creating only loose objects are skipped.

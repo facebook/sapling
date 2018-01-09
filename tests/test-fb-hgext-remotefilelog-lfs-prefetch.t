@@ -10,7 +10,7 @@
   $ cd master
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs
+  > lfs=
   > [lfs]
   > url=file://$LFSPATH
   > EOF

@@ -5,7 +5,7 @@
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs/
+  > lfs=
   > [lfs]
   > threshold=10B
   > url=file:$TESTTMP/dummy-remote/

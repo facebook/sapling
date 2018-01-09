@@ -30,7 +30,7 @@
   > includepattern=foo
   > reponame = master
   > [extensions]
-  > remotefilelog=$TESTDIR/../remotefilelog
+  > remotefilelog=
   > EOF
   $ ls shallow/.hg/store/data
   bar.i

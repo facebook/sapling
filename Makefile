@@ -49,6 +49,7 @@ local:
 	  build_py -c -d . \
 	  build_clib $(COMPILERFLAG) \
 	  build_ext $(COMPILERFLAG) -i \
+	  build_rust_ext -i \
 	  build_hgexe $(COMPILERFLAG) -i \
 	  build_mo
 	env HGRCPATH= $(PYTHON) hg version

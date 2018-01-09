@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import hashlib, struct
 from mercurial import util
 from mercurial.node import hex, nullid

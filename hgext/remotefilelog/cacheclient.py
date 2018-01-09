@@ -10,6 +10,7 @@
 # file revision requests. This is an example implementation that uses
 # the python-memcached library: https://pypi.python.org/pypi/python-memcached/
 # A better implementation would make all of the requests non-blocking.
+from __future__ import absolute_import
 
 import os, sys
 import memcache

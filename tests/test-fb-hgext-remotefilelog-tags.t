@@ -30,7 +30,7 @@
   > reponame = master
   > excludepattern=.hgtags
   > [extensions]
-  > remotefilelog=$TESTDIR/../remotefilelog
+  > remotefilelog=
   > EOF
 
   $ cd shallow

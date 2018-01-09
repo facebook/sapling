@@ -4,11 +4,12 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 from hgext3rd.extutil import runshellcommand
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
-from mercurial import error, localrepo, util, match, scmutil
+from mercurial import encoding, error, localrepo, util, match, scmutil
 from . import (
     connectionpool,
     fileserverclient,
@@ -189,7 +190,7 @@ def wraprepo(repo):
                 cmd += ['-r', revs]
             cmd = ' '.join(map(util.shellquote, cmd))
 
-            runshellcommand(cmd, os.environ)
+            runshellcommand(cmd, encoding.environ)
 
         def prefetch(self, revs, base=None, pats=None, opts=None):
             """Prefetches all the necessary file revisions for the given revs

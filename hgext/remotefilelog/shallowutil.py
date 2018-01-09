@@ -9,12 +9,12 @@ from __future__ import absolute_import
 import errno, hashlib, os, stat, struct, tempfile
 
 from collections import defaultdict
-from mercurial import filelog, revlog, util, error
+from mercurial import filelog, revlog, util, error, pycompat
 from mercurial.i18n import _
 
 from . import constants
 
-if os.name != 'nt':
+if not pycompat.iswindows:
     import grp
 
 def interposeclass(container, classname):
@@ -311,7 +311,7 @@ def readfile(path):
 
 
 def unlinkfile(filepath):
-    if os.name == 'nt':
+    if pycompat.iswindows:
         # On Windows, os.unlink cannnot delete readonly files
         os.chmod(filepath, stat.S_IWUSR)
 
@@ -319,7 +319,7 @@ def unlinkfile(filepath):
 
 
 def renamefile(source, destination):
-    if os.name == 'nt':
+    if pycompat.iswindows:
         # On Windows, os.rename cannot rename readonly files
         # and cannot overwrite destination if it exists
         os.chmod(source, stat.S_IWUSR)

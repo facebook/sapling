@@ -110,6 +110,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping mercurial/statprof.py it has no-che?k-code (glob)
   Skipping tests/badserverext.py it has no-che?k-code (glob)
+  Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
 

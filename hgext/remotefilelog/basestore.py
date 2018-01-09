@@ -9,6 +9,7 @@ from . import (
 
 from mercurial import (
     error,
+    pycompat,
     util,
 )
 from mercurial.i18n import _
@@ -30,7 +31,7 @@ class basestore(object):
         self._path = path
         self._reponame = reponame
         self._shared = shared
-        self._uid = os.getuid() if os.name != 'nt' else None
+        self._uid = os.getuid() if not pycompat.iswindows else None
 
         self._validatecachelog = self.ui.config("remotefilelog",
                                                 "validatecachelog")

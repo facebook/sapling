@@ -88,18 +88,6 @@
   fb-hgext/phabricator/graphql.py not using absolute_import
   fb-hgext/phabricator/phabricator_graphql_client_requests.py not using absolute_import
   fb-hgext/phabricator/phabricator_graphql_client_urllib.py not using absolute_import
-  fb-hgext/remotefilelog/__init__.py not using absolute_import
-  fb-hgext/remotefilelog/cacheclient.py not using absolute_import
-  fb-hgext/remotefilelog/constants.py not using absolute_import
-  fb-hgext/remotefilelog/historypack.py not using absolute_import
-  fb-hgext/remotefilelog/lz4wrapper.py not using absolute_import
-  fb-hgext/remotefilelog/metadatastore.py not using absolute_import
-  fb-hgext/remotefilelog/remotefilectx.py not using absolute_import
-  fb-hgext/remotefilelog/shallowbundle.py not using absolute_import
-  fb-hgext/remotefilelog/shallowrepo.py not using absolute_import
-  fb-hgext/remotefilelog/shallowstore.py not using absolute_import
-  fb-hgext/remotefilelog/shallowverifier.py not using absolute_import
-  fb-hgext/remotefilelog/wirepack.py not using absolute_import
   fb-hgext/scripts/lint.py not using absolute_import
   fb-hgext/scripts/lint.py requires print_function
   fb-hgext/scripts/unit.py not using absolute_import
