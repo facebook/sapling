@@ -722,7 +722,7 @@ static int treemanifest_init(py_treemanifest *self, PyObject *args) {
   Py_INCREF(pystore);
   PythonObj storeObj = PythonObj(pystore);
 
-  PythonObj cstoreModule = PyImport_ImportModule("cstore");
+  PythonObj cstoreModule = PyImport_ImportModule("hgext.extlib.cstore");
   PythonObj unionStoreType = cstoreModule.getattr("uniondatapackstore");
 
   // If it's a cstore, we'll use it directly instead of through python.
@@ -1040,7 +1040,7 @@ static PyObject *treemanifest_flags(py_treemanifest *self, PyObject *args, PyObj
 }
 
 static PyObject *treemanifest_copy(py_treemanifest *self) {
-  PythonObj module = PyImport_ImportModule("cstore");
+  PythonObj module = PyImport_ImportModule("hgext.extlib.cstore");
   PythonObj treetype = module.getattr("treemanifest");
   py_treemanifest *copy = PyObject_New(py_treemanifest, (PyTypeObject*)(PyObject*)treetype);
   PythonObj copyObj((PyObject*)copy);
