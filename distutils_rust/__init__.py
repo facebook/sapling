@@ -115,6 +115,10 @@ class BuildRustExt(distutils.core.Command):
 
         src = os.path.join(self.get_temp_path(ext), self.get_temp_output(ext))
         dest = self.get_output_filename(ext)
+        try:
+            os.makedirs(os.path.dirname(dest))
+        except OSError:
+            pass
         shutil.copyfile(src, dest)
         shutil.copymode(src, dest)
 
