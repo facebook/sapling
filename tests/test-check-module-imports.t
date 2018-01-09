@@ -178,17 +178,17 @@ outputs, which should be fixed later.
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
   hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
   hgext/pushrebase.py:53: relative import of stdlib module
-  hgext/remotefilelog/__init__.py:57: imports from hgext.remotefilelog not lexically sorted: remotefilectx < remotefilelog
-  hgext/remotefilelog/__init__.py:58: multiple imported names: shallowbundle, debugcommands, remotefilelogserver, shallowverifier
-  hgext/remotefilelog/__init__.py:59: multiple imported names: shallowutil, shallowrepo
-  hgext/remotefilelog/__init__.py:60: imports not lexically sorted: repack < shallowutil
-  hgext/remotefilelog/__init__.py:61: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/__init__.py:62: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:63: direct symbol import wrapfunction from mercurial.extensions
-  hgext/remotefilelog/__init__.py:63: symbol import follows non-symbol import: mercurial.extensions
-  hgext/remotefilelog/__init__.py:93: stdlib import "os" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:94: stdlib import "time" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:95: stdlib import "traceback" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:58: imports from hgext.remotefilelog not lexically sorted: remotefilectx < remotefilelog
+  hgext/remotefilelog/__init__.py:59: multiple imported names: shallowbundle, debugcommands, remotefilelogserver, shallowverifier
+  hgext/remotefilelog/__init__.py:60: multiple imported names: shallowutil, shallowrepo
+  hgext/remotefilelog/__init__.py:61: imports not lexically sorted: repack < shallowutil
+  hgext/remotefilelog/__init__.py:62: symbol import follows non-symbol import: mercurial.node
+  hgext/remotefilelog/__init__.py:63: symbol import follows non-symbol import: mercurial.i18n
+  hgext/remotefilelog/__init__.py:64: direct symbol import wrapfunction from mercurial.extensions
+  hgext/remotefilelog/__init__.py:64: symbol import follows non-symbol import: mercurial.extensions
+  hgext/remotefilelog/__init__.py:94: stdlib import "os" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:95: stdlib import "time" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:96: stdlib import "traceback" follows local import: mercurial
   hgext/remotefilelog/basepack.py:3: multiple imported names: errno, hashlib, mmap, os, struct, time
   hgext/remotefilelog/basepack.py:5: relative import of stdlib module
   hgext/remotefilelog/basepack.py:5: direct symbol import defaultdict from collections

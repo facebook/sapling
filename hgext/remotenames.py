@@ -1,5 +1,4 @@
-"""
-remotenames: a mercurial extension for improving client/server workflows
+"""mercurial extension for improving client/server workflows
 
 The remotenames extension provides additional information to clients that is
 particularly useful when pushing and pulling to peer repositories.

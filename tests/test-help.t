@@ -353,8 +353,9 @@ Test extension help:
                      for help
        relink        recreates hardlinks between repository clones
        remotefilelog
+                     minimize and speed up large repositories
        remoteid      (no help text available)
-       remotenames
+       remotenames   mercurial extension for improving client/server workflows
        reset         reset the active bookmark and working copy to a desired
                      revision
        rust          (no help text available)
