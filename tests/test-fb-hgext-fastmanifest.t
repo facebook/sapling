@@ -20,7 +20,7 @@ Check diagnosis, debugging information
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > [fastmanifest]
   > cachecutoffdays=-1
   > randomorder=False
@@ -351,7 +351,7 @@ Amend a changeset which probably requires readdelta to be implemented
   $ cd  amendtest
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > EOF
   $ mkcommit a
   $ hg commit --amend -m amend -q
@@ -378,7 +378,7 @@ Test committing large commits (fastdelta code path)
   $ cd largecommit
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > fastmanifest=
   > EOF
   $ echo a > first
   $ hg commit -Aqm 'first commit'
