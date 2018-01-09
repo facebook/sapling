@@ -8,13 +8,13 @@ from __future__ import absolute_import
 
 from mercurial.i18n import _
 from mercurial.node import nullid
-import constants
+from . import constants
 import struct
 from StringIO import StringIO
 from collections import defaultdict
 
-from shallowutil import readexactly, readunpack, mkstickygroupdir, readpath
-import datapack, historypack, shallowutil
+from .shallowutil import readexactly, readunpack, mkstickygroupdir, readpath
+from . import datapack, historypack, shallowutil
 
 def sendpackpart(filename, history, data):
     """A wirepack is formatted as follows:

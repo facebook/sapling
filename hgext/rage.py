@@ -27,7 +27,7 @@ from hgext import (
 )
 import os, socket, re, tempfile, time, traceback
 
-from remotefilelog import (
+from hgext.remotefilelog import (
     constants,
     shallowutil
 )

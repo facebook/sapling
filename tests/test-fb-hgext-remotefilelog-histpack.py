@@ -18,12 +18,12 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 import pythonpath
 pythonpath.setcstorepath()
 
-from remotefilelog.historypack import historypack, mutablehistorypack
+from hgext.remotefilelog.historypack import historypack, mutablehistorypack
 
 from mercurial.node import nullid
 import mercurial.ui
 
-from remotefilelog.basepack import (
+from hgext.remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
     LARGEFANOUTPREFIX,
 )

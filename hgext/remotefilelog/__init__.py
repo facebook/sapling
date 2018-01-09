@@ -55,10 +55,19 @@ Configs:
 """
 from __future__ import absolute_import
 
-from . import fileserverclient, remotefilelog, remotefilectx, shallowstore
-import shallowbundle, debugcommands, remotefilelogserver, shallowverifier
-import shallowutil, shallowrepo
-import repack as repackmod
+from . import (
+    debugcommands,
+    fileserverclient,
+    remotefilectx,
+    remotefilelog,
+    remotefilelogserver,
+    repack as repackmod,
+    shallowbundle,
+    shallowrepo,
+    shallowstore,
+    shallowutil,
+    shallowverifier,
+)
 from mercurial.node import hex
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction

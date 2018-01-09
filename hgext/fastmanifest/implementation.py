@@ -17,18 +17,18 @@ from mercurial import (
     revlog,
     util,
 )
-import cachemanager
-import cfastmanifest
-from metrics import metricscollector
-from constants import (
+from . import cachemanager
+from hgext.extlib import cfastmanifest
+from .metrics import metricscollector
+from .constants import (
     CACHE_SUBDIR,
     DEFAULT_MAX_MEMORY_ENTRIES,
 )
 
 try:
-    import cstore
-    import treemanifest
-    from remotefilelog import datapack, historypack, shallowutil
+    from hgext.extlib import cstore
+    from hgext import treemanifest
+    from hgext.remotefilelog import datapack, historypack, shallowutil
     supportsctree = True
 except ImportError:
     supportsctree = False

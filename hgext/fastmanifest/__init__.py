@@ -101,10 +101,10 @@ from mercurial import localrepo, manifest, registrar
 from mercurial import revset as revsetmod
 from mercurial.i18n import _
 
-import cachemanager
-from metrics import metricscollector
-import debug
-from implementation import manifestfactory, fastmanifestcache
+from . import cachemanager
+from .metrics import metricscollector
+from . import debug
+from .implementation import manifestfactory, fastmanifestcache
 
 cmdtable = {}
 command = registrar.command(cmdtable)

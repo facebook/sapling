@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import basestore, shallowutil
+from . import basestore, shallowutil
 from mercurial.node import hex, nullid
 
 class unionmetadatastore(object):

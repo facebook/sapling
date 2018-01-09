@@ -17,11 +17,11 @@ from mercurial import (
     util,
 )
 
-import cfastmanifest
-import concurrency
-import constants
-from metrics import metricscollector
-from implementation import fastmanifestcache, CacheFullException
+from . import cfastmanifest
+from . import concurrency
+from . import constants
+from .metrics import metricscollector
+from .implementation import fastmanifestcache, CacheFullException
 
 def _relevantremonamesrevs(repo):
     revs = set()

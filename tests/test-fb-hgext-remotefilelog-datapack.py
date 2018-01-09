@@ -19,18 +19,18 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 import pythonpath
 pythonpath.setcstorepath()
 
-from remotefilelog.datapack import (
+from hgext.remotefilelog.datapack import (
     datapack,
     datapackstore,
     fastdatapack,
     mutabledatapack,
 )
-from remotefilelog.basepack import (
+from hgext.remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
     SMALLFANOUTPREFIX,
     LARGEFANOUTPREFIX,
 )
-from remotefilelog import constants
+from hgext.remotefilelog import constants
 
 from mercurial.node import nullid
 import mercurial.ui

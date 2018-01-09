@@ -12,17 +12,18 @@ from mercurial.node import hex, nullid, nullrev
 from mercurial import encoding, error, localrepo, util, match, scmutil
 from . import (
     connectionpool,
+    constants,
     fileserverclient,
-    remotefilelog,
     remotefilectx,
+    remotefilelog,
+    shallowutil,
 )
-import constants, shallowutil
-from contentstore import remotefilelogcontentstore, unioncontentstore
-from contentstore import remotecontentstore
-from metadatastore import remotefilelogmetadatastore, unionmetadatastore
-from metadatastore import remotemetadatastore
-from datapack import datapackstore
-from historypack import historypackstore
+from .contentstore import remotefilelogcontentstore, unioncontentstore
+from .contentstore import remotecontentstore
+from .metadatastore import remotefilelogmetadatastore, unionmetadatastore
+from .metadatastore import remotemetadatastore
+from .datapack import datapackstore
+from .historypack import historypackstore
 
 import os
 
