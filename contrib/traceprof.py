@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function
 
-from hgext3rd import traceprof
+from hgext import traceprof
 from mercurial import ui
 
 import os

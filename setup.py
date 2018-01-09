@@ -5,6 +5,7 @@
 # 'python setup.py --help' for more options
 
 from distutils.version import LooseVersion
+import itertools
 import os
 
 supportedpy = '~= 2.7'
@@ -189,6 +190,7 @@ SHA1_LIBRARY = "sha1detectcoll"
 SHA1LIB_DEFINE = "/DSHA1_USE_SHA1DC" if iswindows else "-DSHA1_USE_SHA1DC"
 STDC99 = "" if iswindows else "-std=c99"
 STDCPP0X = "" if iswindows else "-std=c++0x"
+STDCPP11 = "" if iswindows else "-std=c++11"
 WALL = "/Wall" if iswindows else "-Wall"
 WERROR = "/WX" if iswindows else "-Werror"
 WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
@@ -1053,6 +1055,10 @@ extmodules += cythonize([
     Extension('hgext.clindex',
               sources=['hgext/clindex.pyx'],
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
+    Extension('hgext.traceprof',
+              sources=['hgext/traceprof.pyx'],
+              include_dirs=['hgext'],
+              extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS])),
     Extension('hgext.extlib.linelog',
               sources=['hgext/extlib/linelog.pyx'],
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),

@@ -33,7 +33,7 @@ from cpython.object cimport PyObject
 import contextlib
 import gc
 
-cdef extern from "traceprofimpl.cpp":
+cdef extern from "extlib/traceprofimpl.cpp":
     void enable()
     void disable()
     void report(FILE *)

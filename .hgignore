@@ -63,6 +63,7 @@ locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
 hgext/clindex.c
 hgext/extlib/linelog.c
+hgext/traceprof.cpp
 
 # Rust libraries and extensions
 lib/*/Cargo.lock
