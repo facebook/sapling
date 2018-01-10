@@ -983,64 +983,67 @@ extmodules = [
               depends=common_depends),
     Extension('hgext.fsmonitor.pywatchman.bser',
               ['hgext/fsmonitor/pywatchman/bser.c']),
-    Extension('hgext.extlib.cstore',
-        sources=[
-            'hgext/extlib/cstore/datapackstore.cpp',
-            'hgext/extlib/cstore/deltachain.cpp',
-            'hgext/extlib/cstore/py-cstore.cpp',
-            'hgext/extlib/cstore/pythonutil.cpp',
-            'hgext/extlib/cstore/pythondatastore.cpp',
-            'hgext/extlib/cstore/uniondatapackstore.cpp',
-            'hgext/extlib/ctreemanifest/manifest.cpp',
-            'hgext/extlib/ctreemanifest/manifest_entry.cpp',
-            'hgext/extlib/ctreemanifest/manifest_fetcher.cpp',
-            'hgext/extlib/ctreemanifest/manifest_ptr.cpp',
-            'hgext/extlib/ctreemanifest/treemanifest.cpp',
-        ],
-        include_dirs=[
-            '.',
-        ] + include_dirs,
-        library_dirs=[
-            'build/' + distutils_dir_name('lib'),
-        ] + library_dirs,
-        libraries=[
-            'datapack',
-            'lz4',
-            'mpatch',
-            SHA1_LIBRARY,
-        ],
-        extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
-    ),
-    Extension('hgext.extlib.cfastmanifest',
-        sources=['hgext/extlib/cfastmanifest.c',
-                 'hgext/extlib/cfastmanifest/bsearch.c',
-                 'lib/clib/buffer.c',
-                 'hgext/extlib/cfastmanifest/checksum.c',
-                 'hgext/extlib/cfastmanifest/node.c',
-                 'hgext/extlib/cfastmanifest/tree.c',
-                 'hgext/extlib/cfastmanifest/tree_arena.c',
-                 'hgext/extlib/cfastmanifest/tree_convert.c',
-                 'hgext/extlib/cfastmanifest/tree_copy.c',
-                 'hgext/extlib/cfastmanifest/tree_diff.c',
-                 'hgext/extlib/cfastmanifest/tree_disk.c',
-                 'hgext/extlib/cfastmanifest/tree_iterator.c',
-                 'hgext/extlib/cfastmanifest/tree_path.c',
-        ],
-        include_dirs=[
-            '.',
-            'hgext/extlib/cfastmanifest',
-            'lib/clib',
-            'lib/third-party',
-        ] + include_dirs,
-        library_dirs=library_dirs,
-        libraries=[SHA1_LIBRARY],
-        extra_compile_args=filter(None, [
-            STDC99,
-            WALL,
-            WSTRICTPROTOTYPES,
-        ] + cflags),
-    ),
 ]
+if not iswindows:
+    extmodules += [
+        Extension('hgext.extlib.cstore',
+            sources=[
+                'hgext/extlib/cstore/datapackstore.cpp',
+                'hgext/extlib/cstore/deltachain.cpp',
+                'hgext/extlib/cstore/py-cstore.cpp',
+                'hgext/extlib/cstore/pythonutil.cpp',
+                'hgext/extlib/cstore/pythondatastore.cpp',
+                'hgext/extlib/cstore/uniondatapackstore.cpp',
+                'hgext/extlib/ctreemanifest/manifest.cpp',
+                'hgext/extlib/ctreemanifest/manifest_entry.cpp',
+                'hgext/extlib/ctreemanifest/manifest_fetcher.cpp',
+                'hgext/extlib/ctreemanifest/manifest_ptr.cpp',
+                'hgext/extlib/ctreemanifest/treemanifest.cpp',
+            ],
+            include_dirs=[
+                '.',
+            ] + include_dirs,
+            library_dirs=[
+                'build/' + distutils_dir_name('lib'),
+            ] + library_dirs,
+            libraries=[
+                'datapack',
+                'lz4',
+                'mpatch',
+                SHA1_LIBRARY,
+            ],
+            extra_compile_args=filter(None, [STDCPP0X, WALL] + cflags),
+        ),
+        Extension('hgext.extlib.cfastmanifest',
+            sources=['hgext/extlib/cfastmanifest.c',
+                     'hgext/extlib/cfastmanifest/bsearch.c',
+                     'lib/clib/buffer.c',
+                     'hgext/extlib/cfastmanifest/checksum.c',
+                     'hgext/extlib/cfastmanifest/node.c',
+                     'hgext/extlib/cfastmanifest/tree.c',
+                     'hgext/extlib/cfastmanifest/tree_arena.c',
+                     'hgext/extlib/cfastmanifest/tree_convert.c',
+                     'hgext/extlib/cfastmanifest/tree_copy.c',
+                     'hgext/extlib/cfastmanifest/tree_diff.c',
+                     'hgext/extlib/cfastmanifest/tree_disk.c',
+                     'hgext/extlib/cfastmanifest/tree_iterator.c',
+                     'hgext/extlib/cfastmanifest/tree_path.c',
+            ],
+            include_dirs=[
+                '.',
+                'hgext/extlib/cfastmanifest',
+                'lib/clib',
+                'lib/third-party',
+            ] + include_dirs,
+            library_dirs=library_dirs,
+            libraries=[SHA1_LIBRARY],
+            extra_compile_args=filter(None, [
+                STDC99,
+                WALL,
+                WSTRICTPROTOTYPES,
+            ] + cflags),
+        ),
+    ]
 
 # Cython modules
 # see http://cython.readthedocs.io/en/latest/src/reference/compilation.html
@@ -1065,28 +1068,31 @@ extmodules += cythonize([
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
 ], compiler_directives=cythonopts)
 
-libraries = [
-    ("datapack", {
-        "sources" : ["lib/cdatapack/cdatapack.c"],
-        "include_dirs" : ["."] + include_dirs,
-        "libraries" : ["lz4", SHA1_LIBRARY],
-        "extra_args" : filter(None,
-            [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
-    }),
-    ('mpatch', {
-        "sources": ["hgext/extlib/cstore/mpatch.c"],
-        "include_dirs" : ["."] + include_dirs,
-    }),
-    ("sha1detectcoll", {
-        "sources" : [
-            "lib/third-party/sha1dc/sha1.c",
-            "lib/third-party/sha1dc/ubc_check.c",
-        ],
-        "include_dirs" : ["lib/third-party"] + include_dirs,
-        "extra_args" : filter(None,
-            [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
-    }),
-]
+if iswindows:
+    libraries = []
+else:
+    libraries = [
+        ("datapack", {
+            "sources" : ["lib/cdatapack/cdatapack.c"],
+            "include_dirs" : ["."] + include_dirs,
+            "libraries" : ["lz4", SHA1_LIBRARY],
+            "extra_args" : filter(None,
+                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+        }),
+        ('mpatch', {
+            "sources": ["hgext/extlib/cstore/mpatch.c"],
+            "include_dirs" : ["."] + include_dirs,
+        }),
+        ("sha1detectcoll", {
+            "sources" : [
+                "lib/third-party/sha1dc/sha1.c",
+                "lib/third-party/sha1dc/ubc_check.c",
+            ],
+            "include_dirs" : ["lib/third-party"] + include_dirs,
+            "extra_args" : filter(None,
+                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+        }),
+    ]
 
 sys.path.insert(0, 'contrib/python-zstandard')
 import setup_zstd
