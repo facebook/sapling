@@ -166,6 +166,29 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   }
 }
 
+void PrivHelperServer::processTakeoverStartupMsg(PrivHelperConn::Message* msg) {
+  string mountPath;
+  std::vector<string> bindMounts;
+
+  conn_.parseTakeoverStartupRequest(msg, mountPath, bindMounts);
+
+  try {
+    mountPoints_.insert(mountPath);
+    for (auto& bindMount : bindMounts) {
+      bindMountPoints_.insert({mountPath, bindMount});
+    }
+    conn_.serializeEmptyResponse(msg);
+  } catch (const std::exception& ex) {
+    // Note that we re-use the request message buffer for the response data
+    conn_.serializeErrorResponse(msg, ex);
+    conn_.sendMsg(msg);
+    return;
+  }
+
+  // Note that we re-use the request message buffer for the response data
+  conn_.sendMsg(msg);
+}
+
 void PrivHelperServer::processMountMsg(PrivHelperConn::Message* msg) {
   string mountPath;
   conn_.parseMountRequest(msg, mountPath);
@@ -205,6 +228,34 @@ void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
     bindMountPoints_.erase(range.first, range.second);
 
     fuseUnmount(mountPath.c_str());
+    mountPoints_.erase(mountPath);
+    conn_.serializeEmptyResponse(msg);
+  } catch (const std::exception& ex) {
+    // Note that we re-use the request message buffer for the response data
+    conn_.serializeErrorResponse(msg, ex);
+    conn_.sendMsg(msg);
+    return;
+  }
+
+  // Note that we re-use the request message buffer for the response data
+  conn_.sendMsg(msg);
+}
+
+void PrivHelperServer::processTakeoverShutdownMsg(
+    PrivHelperConn::Message* msg) {
+  string mountPath;
+  conn_.parseTakeoverShutdownRequest(msg, mountPath);
+
+  try {
+    auto it = mountPoints_.find(mountPath);
+    if (it == mountPoints_.end()) {
+      throw std::domain_error(
+          folly::to<string>("No FUSE mount found for ", mountPath));
+    }
+
+    auto range = bindMountPoints_.equal_range(mountPath);
+    bindMountPoints_.erase(range.first, range.second);
+
     mountPoints_.erase(mountPath);
     conn_.serializeEmptyResponse(msg);
   } catch (const std::exception& ex) {
@@ -264,6 +315,10 @@ void PrivHelperServer::messageLoop() {
       processBindMountMsg(&msg);
     } else if (msgType == PrivHelperConn::REQ_UNMOUNT_FUSE) {
       processUnmountMsg(&msg);
+    } else if (msgType == PrivHelperConn::REQ_TAKEOVER_SHUTDOWN) {
+      processTakeoverShutdownMsg(&msg);
+    } else if (msgType == PrivHelperConn::REQ_TAKEOVER_STARTUP) {
+      processTakeoverStartupMsg(&msg);
     } else {
       // This shouldn't ever happen unless we have a bug.
       // Crash if it does occur.  (We could send back an error message and

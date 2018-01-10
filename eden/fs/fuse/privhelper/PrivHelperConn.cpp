@@ -312,6 +312,52 @@ void PrivHelperConn::parseUnmountRequest(Message* msg, string& mountPoint) {
   deserializeMessage(msg, parseBody);
 }
 
+void PrivHelperConn::serializeTakeoverShutdownRequest(
+    Message* msg,
+    StringPiece mountPoint) {
+  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  serializeMessage(msg, REQ_TAKEOVER_SHUTDOWN, serializeBody);
+}
+
+void PrivHelperConn::parseTakeoverShutdownRequest(
+    Message* msg,
+    string& mountPoint) {
+  CHECK_EQ(msg->msgType, REQ_TAKEOVER_SHUTDOWN);
+  auto parseBody = [&](Cursor& cursor) {
+    mountPoint = deserializeString(cursor);
+  };
+  deserializeMessage(msg, parseBody);
+}
+
+void PrivHelperConn::serializeTakeoverStartupRequest(
+    Message* msg,
+    folly::StringPiece mountPoint,
+    const std::vector<std::string>& bindMounts) {
+  auto serializeBody = [&](Appender& a) {
+    serializeString(a, mountPoint);
+    a.writeBE<uint32_t>(bindMounts.size());
+    for (const auto& path : bindMounts) {
+      serializeString(a, path);
+    }
+  };
+  serializeMessage(msg, REQ_TAKEOVER_STARTUP, serializeBody);
+}
+
+void PrivHelperConn::parseTakeoverStartupRequest(
+    Message* msg,
+    std::string& mountPoint,
+    std::vector<std::string>& bindMounts) {
+  CHECK_EQ(msg->msgType, REQ_TAKEOVER_STARTUP);
+  auto parseBody = [&](Cursor& cursor) {
+    mountPoint = deserializeString(cursor);
+    auto n = cursor.readBE<uint32_t>();
+    while (n-- != 0) {
+      bindMounts.push_back(deserializeString(cursor));
+    }
+  };
+  deserializeMessage(msg, parseBody);
+}
+
 void PrivHelperConn::serializeEmptyResponse(Message* msg) {
   msg->msgType = RESP_EMPTY;
   msg->dataSize = 0;

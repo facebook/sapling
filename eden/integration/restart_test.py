@@ -22,7 +22,7 @@ class RestartTest:
         self.repo.commit('Initial commit.')
 
     def edenfs_logging_settings(self):
-        return {'eden.strace': 'DBG7'}
+        return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
     def test_restart(self):
         hello = os.path.join(self.mount, 'hello')

@@ -21,7 +21,9 @@
 #include <folly/io/IOBuf.h>
 #include <gtest/gtest.h>
 #include <sys/socket.h>
+#include <vector>
 
+using namespace folly::string_piece_literals;
 using namespace facebook::eden::fusell;
 using facebook::eden::UserInfo;
 using folly::ByteRange;
@@ -32,6 +34,7 @@ using folly::checkUnixError;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
 using std::string;
+using std::vector;
 
 void createTestConns(PrivHelperConn& sender, PrivHelperConn& receiver) {
   // Use the default createConnPair() function
@@ -197,6 +200,45 @@ TEST(PrivHelper, SerializeMount) {
   testSerializeMount("foobar");
   testSerializeMount("");
   testSerializeMount(StringPiece("foo\0\0\0bar", 9));
+}
+
+void testSerializeTakeoverStartupRequest(
+    StringPiece mountPath,
+    const vector<string>& bindMounts) {
+  PrivHelperConn::Message msg;
+  msg.xid = 1;
+  PrivHelperConn::serializeTakeoverStartupRequest(&msg, mountPath, bindMounts);
+
+  string readMountPath;
+  vector<string> readBindMounts;
+  PrivHelperConn::parseTakeoverStartupRequest(
+      &msg, readMountPath, readBindMounts);
+  EXPECT_EQ(mountPath.str(), readMountPath);
+  EXPECT_EQ(bindMounts, readBindMounts);
+}
+
+TEST(PrivHelper, SerializeTakeoverStartupRequest) {
+  testSerializeTakeoverStartupRequest("/path/to/mount/point", vector<string>{});
+  testSerializeTakeoverStartupRequest("foo", vector<string>{"a", "b"});
+  testSerializeTakeoverStartupRequest(
+      "foo\0\0\0bar"_sp, vector<string>{"a", "b"});
+}
+
+void testSerializeTakeoverShutdown(StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  msg.xid = 1;
+  PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
+
+  string readMountPath;
+  PrivHelperConn::parseTakeoverShutdownRequest(&msg, readMountPath);
+  EXPECT_EQ(mountPath.str(), readMountPath);
+}
+
+TEST(PrivHelper, SerializeTakeoverShutdownRequest) {
+  testSerializeTakeoverShutdown("/path/to/mount/point");
+  testSerializeTakeoverShutdown("foobar");
+  testSerializeTakeoverShutdown("");
+  testSerializeTakeoverShutdown("foo\0\0\0bar"_sp);
 }
 
 TEST(PrivHelper, SerializeError) {

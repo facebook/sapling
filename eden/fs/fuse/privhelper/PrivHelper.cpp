@@ -211,6 +211,24 @@ void privilegedFuseUnmount(folly::StringPiece mountPath) {
   PrivHelperConn::parseEmptyResponse(&msg);
 }
 
+void privilegedFuseTakeoverShutdown(folly::StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
+
+  gPrivHelper->sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
+void privilegedFuseTakeoverStartup(
+    folly::StringPiece mountPath,
+    const std::vector<std::string>& bindMounts) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeTakeoverStartupRequest(&msg, mountPath, bindMounts);
+
+  gPrivHelper->sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
 void privilegedBindMount(
     folly::StringPiece clientPath,
     folly::StringPiece mountPath) {

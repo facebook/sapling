@@ -405,10 +405,10 @@ void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
 
 SerializedInodeMap InodeMap::save() {
   auto data = data_.wlock();
-  if (!data->loadedInodes_.empty()) {
+  if (data->loadedInodes_.size() != 1) {
     EDEN_BUG() << "InodeMap::save() called with " << data->loadedInodes_.size()
-               << " inodes still loaded; they must all have been unloaded "
-               << "for this to succeed!";
+               << " inodes still loaded; they must all (except the root) "
+               << "have been unloaded for this to succeed!";
   }
 
   SerializedInodeMap result;
@@ -432,9 +432,8 @@ SerializedInodeMap InodeMap::save() {
 
 void InodeMap::load(const SerializedInodeMap& takeover) {
   auto data = data_.wlock();
-  CHECK(data->loadedInodes_.empty() && data->unloadedInodes_.empty())
+  CHECK(data->unloadedInodes_.empty())
       << "cannot load InodeMap data over a populated instance";
-
   data->nextInodeNumber_ = takeover.nextInodeNumber;
   for (const auto& entry : takeover.unloadedInodes) {
     auto unloadedEntry = UnloadedInode(

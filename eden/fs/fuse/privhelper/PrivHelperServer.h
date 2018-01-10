@@ -51,6 +51,8 @@ class PrivHelperServer {
   void processMountMsg(PrivHelperConn::Message* msg);
   void processUnmountMsg(PrivHelperConn::Message* msg);
   void processBindMountMsg(PrivHelperConn::Message* msg);
+  void processTakeoverShutdownMsg(PrivHelperConn::Message* msg);
+  void processTakeoverStartupMsg(PrivHelperConn::Message* msg);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);

@@ -54,6 +54,7 @@ using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
+using facebook::eden::fusell::FuseChannelData;
 
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
@@ -658,8 +659,13 @@ folly::Future<fusell::FuseChannelData> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
-  return folly::makeFutureWith([this, eventBase, threadPool] {
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+    folly::Optional<FuseChannelData> takeoverData) {
+  return folly::makeFutureWith([this,
+                                eventBase,
+                                threadPool,
+                                takeoverData =
+                                    std::move(takeoverData)]() mutable {
     if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
       throw std::runtime_error("mount point has already been started");
     }
@@ -667,13 +673,25 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     eventBase_ = eventBase;
     threadPool_ = threadPool;
 
-    auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
-    channel_ = std::make_unique<fusell::FuseChannel>(
-        std::move(fuseDevice),
-        path_,
-        eventBase_,
-        FLAGS_fuseNumThreads,
-        dispatcher_.get());
+    if (takeoverData.hasValue()) {
+      auto& channelData = takeoverData.value();
+      channel_ = std::make_unique<fusell::FuseChannel>(
+          std::move(channelData.fd),
+          path_,
+          eventBase_,
+          FLAGS_fuseNumThreads,
+          dispatcher_.get(),
+          channelData.connInfo);
+    } else {
+      auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
+      channel_ = std::make_unique<fusell::FuseChannel>(
+          std::move(fuseDevice),
+          path_,
+          eventBase_,
+          FLAGS_fuseNumThreads,
+          dispatcher_.get(),
+          fuse_init_out{});
+    }
 
     // we'll use this shortly to wait until the mount is started successfully.
     auto initFuture = initFusePromise_.getFuture();
@@ -699,6 +717,12 @@ folly::Future<folly::Unit> EdenMount::startFuse(
 
       fuseCompletionPromise_.setValue(std::move(channelData));
     });
+
+    if (takeoverData.hasValue()) {
+      // When doing takeover, we are immediately ready.
+      doStateTransition(State::STARTING, State::RUNNING);
+      initFusePromise_.setValue();
+    }
 
     // wait for init to complete or error; this will throw an exception
     // if the init procedure failed.

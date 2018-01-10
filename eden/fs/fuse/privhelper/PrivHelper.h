@@ -81,6 +81,11 @@ folly::File privilegedFuseMount(folly::StringPiece mountPath);
  */
 void privilegedFuseUnmount(folly::StringPiece mountPath);
 
+void privilegedFuseTakeoverShutdown(folly::StringPiece mountPath);
+void privilegedFuseTakeoverStartup(
+    folly::StringPiece mountPath,
+    const std::vector<std::string>& bindMounts);
+
 /*
  * @param clientPath Absolute path (that should be under
  *     .eden/clients/<client-name>/bind-mounts/) where the "real" storage is.

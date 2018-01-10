@@ -303,16 +303,24 @@ FuseChannel::FuseChannel(
     AbsolutePathPiece mountPath,
     folly::EventBase* eventBase,
     size_t numThreads,
-    Dispatcher* const dispatcher)
+    Dispatcher* const dispatcher,
+    fuse_init_out connInfo)
     : dispatcher_(dispatcher),
       fuseDevice_(std::move(fuseDevice)),
       eventBase_(eventBase),
+      connInfo_{connInfo},
       numThreads_(numThreads),
       mountPath_(mountPath) {
   workerThreads_.reserve(numThreads);
   for (auto i = 0; i < numThreads; ++i) {
     workerThreads_.emplace_back(
         std::thread([this, i] { fuseWorkerThread(i); }));
+  }
+
+  if (connInfo_.major == FUSE_KERNEL_VERSION) {
+    XLOG(INFO) << "Takeover using max_write=" << connInfo_.max_write
+               << ", max_readahead=" << connInfo_.max_readahead
+               << ", want=" << flagsToLabel(capsLabels, connInfo_.flags);
   }
 }
 

@@ -12,6 +12,7 @@
 #include <folly/Range.h>
 #include <cinttypes>
 #include <stdexcept>
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 class File;
@@ -43,6 +44,8 @@ class PrivHelperConn {
     REQ_MOUNT_FUSE = 3,
     REQ_MOUNT_BIND = 4,
     REQ_UNMOUNT_FUSE = 5,
+    REQ_TAKEOVER_SHUTDOWN = 6,
+    REQ_TAKEOVER_STARTUP = 7,
   };
 
   struct Message {
@@ -142,6 +145,22 @@ class PrivHelperConn {
       Message* msg,
       std::string& clientPath,
       std::string& mountPath);
+
+  static void serializeTakeoverShutdownRequest(
+      Message* msg,
+      folly::StringPiece mountPoint);
+  static void parseTakeoverShutdownRequest(
+      Message* msg,
+      std::string& mountPoint);
+
+  static void serializeTakeoverStartupRequest(
+      Message* msg,
+      folly::StringPiece mountPoint,
+      const std::vector<std::string>& bindMounts);
+  static void parseTakeoverStartupRequest(
+      Message* msg,
+      std::string& mountPoint,
+      std::vector<std::string>& bindMounts);
 
   static void serializeEmptyResponse(Message* msg);
 

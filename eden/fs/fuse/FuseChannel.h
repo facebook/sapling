@@ -47,7 +47,8 @@ class FuseChannel {
       AbsolutePathPiece mountPath,
       folly::EventBase* eventBase,
       size_t numThreads,
-      Dispatcher* const dispatcher);
+      Dispatcher* const dispatcher,
+      fuse_init_out connInfo);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;

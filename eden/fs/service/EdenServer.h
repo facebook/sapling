@@ -26,6 +26,7 @@
 #include <vector>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
@@ -115,6 +116,12 @@ class EdenServer : private TakeoverHandler {
    */
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
       const MountInfo& info);
+
+  /**
+   * Takeover a mount from another eden instance
+   */
+  FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> takeoverMount(
+      TakeoverData::MountInfo&& takeover);
 
   /**
    * Unmount an EdenMount.

@@ -403,7 +403,8 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
       folly::EventBase* eventBase,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+      folly::Optional<fusell::FuseChannelData> takeoverData);
 
   /**
    * Obtains a future that will complete once the state transitions to
