@@ -107,12 +107,12 @@ Check error message when the remote missed a blob:
   $ rm -rf .hg/store/lfs
   $ rm -rf `hg config lfs.usercache`
   $ hg update -C '.^'
-  abort: LFS server claims required objects do not exist:
-  8e6ea5f6c066b44a0efa43bcce86aea73f17e6e23f0663df0251e7524e140a13!
+  abort: LFS server error. Remote object for file data/b.i not found: * (glob)
   [255]
 
 Check error message when object does not exist:
 
+  $ cd $TESTTMP
   $ hg init test && cd test
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "lfs=" >> .hg/hgrc
@@ -130,7 +130,22 @@ Check error message when object does not exist:
   x-is-binary 0
   $ cd ..
   $ rm -rf `hg config lfs.usercache`
-  $ hg --config 'lfs.url=https://dewey-lfs.vip.facebook.com/lfs' clone test test2
+
+(Restart the server in a different location so it no longer has the content)
+
+  $ $PYTHON $RUNTESTDIR/killdaemons.py $DAEMON_PIDS
+  $ rm $DAEMON_PIDS
+  $ mkdir $TESTTMP/lfs-server2
+  $ cd $TESTTMP/lfs-server2
+#if no-windows
+  $ lfs-test-server &> lfs-server.log &
+  $ echo $! >> $DAEMON_PIDS
+#else
+  $ $PYTHON $TESTTMP/spawn.py >> $DAEMON_PIDS
+#endif
+
+  $ cd $TESTTMP
+  $ hg clone test test2
   updating to branch default
   abort: LFS server error. Remote object for file data/a.i not found:(.*)! (re)
   [255]

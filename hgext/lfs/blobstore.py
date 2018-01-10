@@ -166,20 +166,27 @@ class _gitlfsremote(object):
                                  % rawjson)
         return response
 
-    def _checkforservererror(self, pointers, responses):
+    def _checkforservererror(self, pointers, responses, action):
         """Scans errors from objects
 
-        Returns LfsRemoteError if any objects has an error"""
+        Returns LfsRemoteError if any object has an error
+        """
         for response in responses:
-            error = response.get('error')
-            if error:
+            # The server should return 404 when objects cannot be found. Some
+            # server implementation (ex. lfs-test-server)  does not set "error"
+            # but just removes "download" from "actions". Treat that case
+            # as the same as 404 error.
+            notfound = (response.get('error', {}).get('code') == 404
+                        or (action == 'download'
+                            and action not in response.get('actions', [])))
+            if notfound:
                 ptrmap = {p.oid(): p for p in pointers}
                 p = ptrmap.get(response['oid'], None)
-                if error['code'] == 404 and p:
-                    filename = getattr(p, 'filename', 'unknown')
-                    raise LfsRemoteError(
-                        _(('LFS server error. Remote object '
-                          'for file %s not found: %r')) % (filename, response))
+                filename = getattr(p, 'filename', 'unknown')
+                raise LfsRemoteError(
+                    _(('LFS server error. Remote object '
+                      'for file %s not found: %r')) % (filename, response))
+            if 'error' in response:
                 raise LfsRemoteError(_('LFS server error: %r') % response)
 
     def _extractobjects(self, response, pointers, action):
@@ -191,21 +198,11 @@ class _gitlfsremote(object):
         """
         # Scan errors from objects - fail early
         objects = response.get('objects', [])
-        self._checkforservererror(pointers, objects)
+        self._checkforservererror(pointers, objects, action)
 
         # Filter objects with given action. Practically, this skips uploading
         # objects which exist in the server.
         filteredobjects = [o for o in objects if action in o.get('actions', [])]
-        # But for downloading, we want all objects. Therefore missing objects
-        # should be considered an error.
-        if action == 'download':
-            if len(filteredobjects) < len(objects):
-                missing = [o.get('oid', '?')
-                           for o in objects
-                           if action not in o.get('actions', [])]
-                raise LfsRemoteError(
-                    _('LFS server claims required objects do not exist:\n%s')
-                    % '\n'.join(missing))
 
         return filteredobjects
 
