@@ -157,6 +157,7 @@ from distutils.version import (
 )
 from distutils_rust import (
     RustExtension,
+    RustVendoredCrates,
     BuildRustExt,
 )
 import distutils
@@ -1247,6 +1248,10 @@ def build_libraries(self, libraries):
                                         debug=self.debug)
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
+rustvendoredcrates = [
+    RustVendoredCrates('hg-vendored-crates', project='fbsource', dest='build'),
+]
+
 rustextmodules = [
     RustExtension('indexes',
         package='hgext.extlib',
@@ -1294,6 +1299,7 @@ setup(name='mercurial',
       packages=packages,
       ext_modules=extmodules,
       libraries=libraries,
+      rust_vendored_crates=rustvendoredcrates,
       rust_ext_modules=rustextmodules,
       data_files=datafiles,
       package_data=packagedata,

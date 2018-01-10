@@ -11,6 +11,7 @@ import distutils.util
 import os
 import shutil
 import subprocess
+import tarfile
 
 class RustExtension(object):
     """Data for a Rust extension.
@@ -29,6 +30,27 @@ class RustExtension(object):
         self.name = name
         self.package = package
         self.manifest = manifest or 'Cargo.toml'
+
+class RustVendoredCrates(object):
+    """Data for Rust vendored crates stored in Dewey.
+
+    'name' is the name of the vendoring set, and is also the Dewey tag.
+
+    'project' is the Dewey project the vendored crates are stored in.
+
+    'hashfile' is the filename that stores the Dewey hash that should be
+    downloaded.
+
+    'path' is the path in Dewey of the file to download.
+
+    'dest' is the directory into which the archive should be extracted.
+    """
+    def __init__(self, name, project=None, hashfile=None, path=None, dest=None):
+        self.name = name
+        self.project = project
+        self.hashfile = hashfile or '.' + name
+        self.path = path or name + '.tar.gz'
+        self.dest = dest or '.'
 
 class BuildRustExt(distutils.core.Command):
 
@@ -62,6 +84,11 @@ class BuildRustExt(distutils.core.Command):
                                    )
 
     def run(self):
+        # Download vendored crates
+        for ven in self.distribution.rust_vendored_crates:
+            self.download_vendored_crates(ven)
+
+        # Build Rust extensions
         for ext in self.distribution.rust_ext_modules:
             self.build_ext(ext)
 
@@ -98,6 +125,42 @@ class BuildRustExt(distutils.core.Command):
             name = ext.name + '.so'
         return os.path.join(package_dir, name)
 
+    def download_vendored_crates(self, ven):
+        commit = open(ven.hashfile).read()
+        desttarfile = os.path.join(ven.dest, ven.path)
+        desthashfile = desttarfile + ".hash"
+        if (os.path.exists(ven.dest) and
+                os.path.exists(desthashfile) and
+                commit == open(desthashfile).read()):
+            # Already downloaded, nothing to do.
+            return
+
+        try:
+            os.makedirs(ven.dest)
+        except OSError:
+            pass
+
+        distutils.log.info("downloading vendored crates '%s'", ven.name)
+        cmd = ["dewey", "cat"]
+        if ven.project is not None:
+            cmd += ["--project", ven.project]
+        cmd += [
+            "--commit", commit,
+            "--tag", ven.name,
+            "--path", ven.path,
+            "--dest", desttarfile]
+
+        rc = subprocess.call(cmd)
+        if rc:
+            raise distutils.errors.CompileError(
+                "download of Rust vendored crates '%s' failed" % ven.name)
+
+        with tarfile.open(desttarfile, 'r:gz') as tar:
+            tar.extractall(ven.dest)
+        os.remove(desttarfile)
+        with open(desthashfile, 'w') as f:
+            f.write(commit)
+
     def build_ext(self, ext):
         distutils.log.info("building '%s' extension", ext.name)
 
@@ -124,5 +187,6 @@ class BuildRustExt(distutils.core.Command):
         shutil.move(desttmp, dest)
 
 distutils.dist.Distribution.rust_ext_modules = ()
+distutils.dist.Distribution.rust_vendored_crates = ()
 distutils.command.build.build.sub_commands.append(
     ('build_rust_ext', lambda self: bool(self.distribution.rust_ext_modules)))

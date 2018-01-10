@@ -16,12 +16,12 @@ error-chain = "*"
 vlqencoding = { version = "*", path = "../../../lib/vlqencoding" }
 
 [dev-dependencies]
-itertools = "0.7.2"
+itertools = "*"
 quickcheck = "*"
 tempdir = "*"
 
 [dependencies.cpython]
-version = "0.1"
+version = "*"
 default-features = false
 features = ["python27-sys", "extension-module-2-7"]
-git = "https://github.com/dgrunwald/rust-cpython.git"
+path = "../../../build/hg-vendored-crates/cpython"

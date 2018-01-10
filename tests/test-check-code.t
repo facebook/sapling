@@ -221,6 +221,7 @@ Prevent adding new files in the root directory accidentally.
   .arcconfig
   .clang-format
   .editorconfig
+  .hg-vendored-crates
   .hgignore
   .hgsigs
   .hgtags
@@ -234,3 +235,4 @@ Prevent adding new files in the root directory accidentally.
   hgeditor
   hgweb.cgi
   setup.py
+  vendorcrates.py

@@ -14,9 +14,9 @@ radixbuf = { path = "../../../lib/radixbuf" }
 error-chain = "0.11"
 
 [dependencies.cpython]
-git = "https://github.com/dgrunwald/rust-cpython.git"
+path = "../../../build/hg-vendored-crates/cpython"
 default-features = false
 features = ["extension-module-2-7"]
 
 [dependencies.python27-sys]
-git = "https://github.com/dgrunwald/rust-cpython.git" # subdir: python27-sys
+path = "../../../build/hg-vendored-crates/cpython/python27-sys"
