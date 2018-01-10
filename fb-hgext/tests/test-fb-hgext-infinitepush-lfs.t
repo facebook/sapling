@@ -62,3 +62,33 @@ Setup another client
   'scratch/lfscommit' found remotely
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark scratch/lfscommit)
+
+Make pushbackup that contains bundle with 2 heads
+  $ cd ../client
+  $ hg up -q tip
+  $ mkcommit newcommit
+  $ hg up -q 0
+  $ mkcommit newcommit2
+  created new head
+  $ hg pushbackup
+  starting backup * (glob)
+  searching for changes
+  remote: pushing 3 commits:
+  remote:     0da81a72db1a  commit
+  remote:     5f9d85f9e1c6  newcommit
+  remote:     eca66fbd9785  newcommit2
+  finished in * seconds (glob)
+  $ hg isbackedup -r .
+  eca66fbd9785d8e82fb4043a2ed9beed8bdbce5b backed up
+
+Pull just one head to trigger rebundle
+  $ cd ../client2
+  $ hg pull -r eca66fbd9785d8e82fb4043a2ed9beed8bdbce5b
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets eca66fbd9785
+  (run 'hg heads' to see heads, 'hg merge' to merge)

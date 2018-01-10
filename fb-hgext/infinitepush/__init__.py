@@ -481,7 +481,7 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
 
     return newcaps
 
-def _rebundle(bundlerepo, bundleroots, unknownhead):
+def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
     '''
     Bundle may include more revision then user requested. For example,
     if user asks for revision but bundle also consists its descendants.
@@ -489,13 +489,12 @@ def _rebundle(bundlerepo, bundleroots, unknownhead):
     '''
     parts = []
 
-    version = '02'
     outgoing = discovery.outgoing(bundlerepo, commonheads=bundleroots,
                                   missingheads=[unknownhead])
-    cgstream = changegroup.makestream(bundlerepo, outgoing, version, 'pull')
+    cgstream = changegroup.makestream(bundlerepo, outgoing, cgversion, 'pull')
     cgstream = util.chunkbuffer(cgstream).read()
     cgpart = bundle2.bundlepart('changegroup', data=cgstream)
-    cgpart.addparam('version', version)
+    cgpart.addparam('version', cgversion)
     parts.append(cgpart)
 
     try:
@@ -528,7 +527,29 @@ def _needsrebundling(head, bundlerepo):
     return not (len(bundleheads) == 1 and
                 bundlerepo[bundleheads[0]].node() == head)
 
-def _generateoutputparts(head, bundlerepo, bundleroots, bundlefile):
+# TODO(stash): remove copy-paste from upstream hg
+def _decodebundle2caps(bundlecaps):
+    b2caps = {}
+    for bcaps in bundlecaps:
+        if bcaps.startswith('bundle2='):
+            blob = util.urlreq.unquote(bcaps[len('bundle2='):])
+            b2caps.update(bundle2.decodecaps(blob))
+    return b2caps
+
+def _getsupportedcgversion(repo, bundlecaps):
+    b2caps = _decodebundle2caps(bundlecaps)
+
+    cgversion = '01'
+    cgversions = b2caps.get('changegroup')
+    if cgversions:  # 3.1 and 3.2 ship with an empty value
+        cgversions = [v for v in cgversions
+                      if v in changegroup.supportedoutgoingversions(repo)]
+        if not cgversions:
+            raise ValueError(_('no common changegroup version'))
+        cgversion = max(cgversions)
+    return cgversion
+
+def _generateoutputparts(head, cgversion, bundlerepo, bundleroots, bundlefile):
     '''generates bundle that will be send to the user
 
     returns tuple with raw bundle string and bundle type
@@ -560,7 +581,7 @@ def _generateoutputparts(head, bundlerepo, bundleroots, bundlefile):
             else:
                 raise error.Abort('unknown bundle type')
     else:
-        parts = _rebundle(bundlerepo, bundleroots, head)
+        parts = _rebundle(bundlerepo, bundleroots, head, cgversion)
 
     return parts
 
@@ -573,6 +594,8 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
     scratchheads = []
     nodestobundle = {}
     allbundlestocleanup = []
+
+    cgversion = _getsupportedcgversion(repo, bundlecaps or [])
     try:
         for head in heads:
             if head not in repo.changelog.nodemap:
@@ -594,7 +617,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                                                newbundlefile)
 
                 scratchbundles.append(
-                    _generateoutputparts(head, *nodestobundle[head]))
+                    _generateoutputparts(head, cgversion, *nodestobundle[head]))
                 newheads.extend(bundleroots)
                 scratchheads.append(head)
     finally:
