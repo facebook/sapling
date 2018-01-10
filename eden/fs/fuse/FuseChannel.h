@@ -72,7 +72,7 @@ class FuseChannel {
    * Note that this method does not prevent the worker threads
    * from continuing to use the fuse session.
    */
-  folly::File stealFuseDevice();
+  FuseChannelData stealFuseDevice();
 
   /**
    * Notify to invalidate cache for an inode

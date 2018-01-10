@@ -166,7 +166,8 @@ TEST(Takeover, simple) {
   serverData.mountPoints.emplace_back(
       mount1Path,
       std::vector<AbsolutePath>{},
-      folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT});
+      folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+      fuse_init_out{});
 
   auto mount2Path = tmpDirPath + PathComponentPiece{"mount2"};
   auto mount2FusePath = tmpDirPath + PathComponentPiece{"fuse2"};
@@ -178,7 +179,8 @@ TEST(Takeover, simple) {
   serverData.mountPoints.emplace_back(
       mount2Path,
       mount2BindMounts,
-      folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT});
+      folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
+      fuse_init_out{});
 
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
@@ -271,7 +273,8 @@ TEST(Takeover, manyMounts) {
     serverData.mountPoints.emplace_back(
         mountPath,
         bindMounts,
-        folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT});
+        folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
+        fuse_init_out{});
   }
 
   // Perform the takeover

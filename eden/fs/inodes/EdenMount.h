@@ -409,7 +409,8 @@ class EdenMount {
    * Obtains a future that will complete once the state transitions to
    * FUSE_DONE and the thread pool has been joined.
    */
-  FOLLY_NODISCARD folly::Future<folly::File> getFuseCompletionFuture();
+  FOLLY_NODISCARD folly::Future<fusell::FuseChannelData>
+  getFuseCompletionFuture();
 
   uid_t getUid() const {
     return uid_;
@@ -656,7 +657,7 @@ class EdenMount {
    * so that the subsequent privilegedFuseUnmount() call won't block
    * waiting on us for a response.
    */
-  folly::Promise<folly::File> fuseCompletionPromise_;
+  folly::Promise<fusell::FuseChannelData> fuseCompletionPromise_;
 
   AbsolutePath const path_; // the path where this MountPoint is mounted
 

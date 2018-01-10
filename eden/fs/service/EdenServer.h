@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "folly/experimental/FunctionScheduler.h"
@@ -127,6 +128,13 @@ class EdenServer : private TakeoverHandler {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> unmountAll();
 
+  /**
+   * Request that the fuse sessions associate with each of the mount points
+   * shut down such that no further fuse requests will be processed, and
+   * collect TakeoverData that can then be passed to the successor process.
+   */
+  FOLLY_NODISCARD folly::Future<TakeoverData> takeoverAll();
+
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
     return handler_;
   }
@@ -208,6 +216,7 @@ class EdenServer : private TakeoverHandler {
   struct EdenMountInfo {
     std::shared_ptr<EdenMount> edenMount;
     folly::SharedPromise<folly::Unit> unmountPromise;
+    folly::Optional<folly::Promise<fusell::FuseChannelData>> takeoverPromise;
 
     explicit EdenMountInfo(const std::shared_ptr<EdenMount>& mount)
         : edenMount(mount),
@@ -258,7 +267,9 @@ class EdenServer : private TakeoverHandler {
   void prepareThriftAddress();
 
   // Called when a mount has been unmounted and has stopped.
-  void mountFinished(EdenMount* mountPoint);
+  void mountFinished(
+      EdenMount* mountPoint,
+      fusell::FuseChannelData channelData);
 
   folly::Future<folly::Unit> performNormalShutdown();
   folly::Future<folly::Unit> performTakeoverShutdown(folly::File thriftSocket);

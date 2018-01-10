@@ -28,6 +28,7 @@ IOBuf TakeoverData::serialize() {
     for (const auto& bindMount : mount.bindMounts) {
       bodyLength += sizeof(uint32_t) + bindMount.stringPiece().size();
     }
+    bodyLength += sizeof(fuse_init_out);
   }
 
   // Build a buffer with all of the mount paths
@@ -53,6 +54,13 @@ IOBuf TakeoverData::serialize() {
       app.writeBE<uint32_t>(bindMount.stringPiece().size());
       app(bindMount.stringPiece());
     }
+
+    // Stuffing the fuse connection information in as a binary
+    // blob because we know that the endianness of the target
+    // machine must match the current system for a graceful
+    // takeover.
+    app.push(folly::StringPiece{reinterpret_cast<const char*>(&mount.connInfo),
+                                sizeof(mount.connInfo)});
   }
 
   return buf;
@@ -120,8 +128,11 @@ TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
       bindMounts.emplace_back(AbsolutePathPiece{bindPath});
     }
 
+    fuse_init_out connInfo;
+    cursor.pull(&connInfo, sizeof(connInfo));
+
     data.mountPoints.emplace_back(
-        AbsolutePath{path}, std::move(bindMounts), folly::File{});
+        AbsolutePath{path}, std::move(bindMounts), folly::File{}, connInfo);
   }
 
   return data;

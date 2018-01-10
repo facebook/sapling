@@ -321,12 +321,14 @@ FuseChannel::~FuseChannel() {
       << "we MUST have joined all of the threads";
 }
 
-folly::File FuseChannel::stealFuseDevice() {
-  // Claim the fd
-  folly::File fd;
-  std::swap(fd, fuseDevice_);
+FuseChannelData FuseChannel::stealFuseDevice() {
+  FuseChannelData data;
 
-  return fd;
+  data.connInfo = connInfo_;
+  // Claim the fd
+  std::swap(data.fd, fuseDevice_);
+
+  return data;
 }
 
 void FuseChannel::invalidateInode(

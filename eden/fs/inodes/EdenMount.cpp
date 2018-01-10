@@ -652,7 +652,7 @@ std::string EdenMount::getCounterName(CounterName name) {
   folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
 }
 
-folly::Future<folly::File> EdenMount::getFuseCompletionFuture() {
+folly::Future<fusell::FuseChannelData> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
@@ -694,10 +694,10 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     channel_->getSessionCompleteFuture().then([this] {
       // In case we are performing a graceful restart,
       // extract the fuse device now.
-      folly::File fuseDev = channel_->stealFuseDevice();
+      auto channelData = channel_->stealFuseDevice();
       channel_.reset();
 
-      fuseCompletionPromise_.setValue(std::move(fuseDev));
+      fuseCompletionPromise_.setValue(std::move(channelData));
     });
 
     // wait for init to complete or error; this will throw an exception
