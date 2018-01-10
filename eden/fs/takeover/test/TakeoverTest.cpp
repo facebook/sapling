@@ -162,14 +162,17 @@ TEST(Takeover, simple) {
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   auto mount1Path = tmpDirPath + PathComponentPiece{"mount1"};
+  auto client1Path = tmpDirPath + PathComponentPiece{"client1"};
   auto mount1FusePath = tmpDirPath + PathComponentPiece{"fuse1"};
   serverData.mountPoints.emplace_back(
       mount1Path,
+      client1Path,
       std::vector<AbsolutePath>{},
       folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
       fuse_init_out{});
 
   auto mount2Path = tmpDirPath + PathComponentPiece{"mount2"};
+  auto client2Path = tmpDirPath + PathComponentPiece{"client2"};
   auto mount2FusePath = tmpDirPath + PathComponentPiece{"fuse2"};
   std::vector<AbsolutePath> mount2BindMounts = {
       mount2Path + RelativePathPiece{"test/test2"},
@@ -178,6 +181,7 @@ TEST(Takeover, simple) {
   };
   serverData.mountPoints.emplace_back(
       mount2Path,
+      client2Path,
       mount2BindMounts,
       folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
       fuse_init_out{});
@@ -197,11 +201,13 @@ TEST(Takeover, simple) {
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
-  EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).path);
+  EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
+  EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
   EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
   checkExpectedFile(clientData.mountPoints.at(0).fuseFD.fd(), mount1FusePath);
 
-  EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).path);
+  EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).mountPath);
+  EXPECT_EQ(client2Path, clientData.mountPoints.at(1).stateDirectory);
   EXPECT_THAT(
       clientData.mountPoints.at(1).bindMounts,
       ElementsAreArray(mount2BindMounts));
@@ -262,6 +268,8 @@ TEST(Takeover, manyMounts) {
   for (size_t n = 0; n < numMounts; ++n) {
     auto mountPath =
         tmpDirPath + RelativePathPiece{folly::to<string>("mounts/foo/test", n)};
+    auto stateDirectory =
+        tmpDirPath + RelativePathPiece{folly::to<string>("client", n)};
     // Define 0 to 9 bind mounts
     std::vector<AbsolutePath> bindMounts;
     for (size_t b = 0; b < n % 10; ++b) {
@@ -272,6 +280,7 @@ TEST(Takeover, manyMounts) {
         tmpDirPath + PathComponentPiece{folly::to<string>("fuse", n)};
     serverData.mountPoints.emplace_back(
         mountPath,
+        stateDirectory,
         bindMounts,
         folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
         fuse_init_out{});
@@ -295,7 +304,11 @@ TEST(Takeover, manyMounts) {
     const auto& mountInfo = clientData.mountPoints[n];
     auto expectedMountPath =
         tmpDirPath + RelativePathPiece{folly::to<string>("mounts/foo/test", n)};
-    EXPECT_EQ(expectedMountPath, mountInfo.path);
+    EXPECT_EQ(expectedMountPath, mountInfo.mountPath);
+
+    auto expectedClientPath =
+        tmpDirPath + RelativePathPiece{folly::to<string>("client", n)};
+    EXPECT_EQ(expectedClientPath, mountInfo.stateDirectory);
 
     std::vector<AbsolutePath> expectedBindMounts;
     for (size_t b = 0; b < n % 10; ++b) {

@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
   auto data = facebook::eden::takeoverMounts(takeoverSocketPath);
   for (const auto& mount : data.mountPoints) {
-    XLOG(INFO) << "mount " << mount.path << ": fd=" << mount.fuseFD.fd();
+    XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mount.fuseFD.fd();
     for (const auto& bindMount : mount.bindMounts) {
       XLOG(INFO) << "  bind mount " << bindMount;
     }

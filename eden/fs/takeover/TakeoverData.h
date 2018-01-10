@@ -33,16 +33,19 @@ class TakeoverData {
  public:
   struct MountInfo {
     MountInfo(
-        AbsolutePathPiece p,
+        AbsolutePathPiece mountPath,
+        AbsolutePathPiece stateDirectory,
         const std::vector<AbsolutePath>& bindMountPaths,
         folly::File fd,
         fuse_init_out connInfo)
-        : path{p},
+        : mountPath{mountPath},
+          stateDirectory{stateDirectory},
           bindMounts{bindMountPaths},
           fuseFD{std::move(fd)},
           connInfo{connInfo} {}
 
-    AbsolutePath path;
+    AbsolutePath mountPath;
+    AbsolutePath stateDirectory;
     std::vector<AbsolutePath> bindMounts;
     folly::File fuseFD;
     fuse_init_out connInfo;

@@ -161,6 +161,7 @@ folly::Future<TakeoverData> EdenServer::takeoverAll() {
               }
               return TakeoverData::MountInfo(
                   edenMount->getPath(),
+                  edenMount->getConfig()->getClientDirectory(),
                   bindMounts,
                   std::move(channelData.fd),
                   channelData.connInfo);
@@ -393,9 +394,6 @@ Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
   // stop processing new FUSE requests for the mounts,
   return takeoverAll().then(
       [this, socket = std::move(thriftSocket)](TakeoverData data) mutable {
-
-        // TODO: We will also need to add a field to TakeoverData::MountInfo
-        // indicating the client config directory for each mount point.
 
         // Destroy the local store and backing stores.
         // We shouldn't access the local store any more after giving up our

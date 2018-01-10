@@ -23,7 +23,8 @@ IOBuf TakeoverData::serialize() {
   // Compute the body data length
   uint64_t bodyLength = sizeof(uint32_t);
   for (const auto& mount : mountPoints) {
-    bodyLength += sizeof(uint32_t) + mount.path.stringPiece().size();
+    bodyLength += sizeof(uint32_t) + mount.mountPath.stringPiece().size();
+    bodyLength += sizeof(uint32_t) + mount.stateDirectory.stringPiece().size();
     bodyLength += sizeof(uint32_t);
     for (const auto& bindMount : mount.bindMounts) {
       bodyLength += sizeof(uint32_t) + bindMount.stringPiece().size();
@@ -45,9 +46,15 @@ IOBuf TakeoverData::serialize() {
   // Serialize each mount point
   for (const auto& mount : mountPoints) {
     // The mount path
-    const auto& pathStr = mount.path.stringPiece();
+    const auto& pathStr = mount.mountPath.stringPiece();
     app.writeBE<uint32_t>(pathStr.size());
     app(pathStr);
+
+    // The client configuration dir
+    const auto& clientStr = mount.stateDirectory.stringPiece();
+    app.writeBE<uint32_t>(clientStr.size());
+    app(clientStr);
+
     // Number of bind mounts, followed by the bind mount paths
     app.writeBE<uint32_t>(mount.bindMounts.size());
     for (const auto& bindMount : mount.bindMounts) {
@@ -117,7 +124,11 @@ TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
   auto numMounts = cursor.readBE<uint32_t>();
   for (uint32_t mountIdx = 0; mountIdx < numMounts; ++mountIdx) {
     auto pathLength = cursor.readBE<uint32_t>();
-    auto path = cursor.readFixedString(pathLength);
+    auto mountPath = cursor.readFixedString(pathLength);
+
+    auto clientPathLength = cursor.readBE<uint32_t>();
+    auto stateDirectory = cursor.readFixedString(clientPathLength);
+
     auto numBindMounts = cursor.readBE<uint32_t>();
 
     std::vector<AbsolutePath> bindMounts;
@@ -132,7 +143,11 @@ TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
     cursor.pull(&connInfo, sizeof(connInfo));
 
     data.mountPoints.emplace_back(
-        AbsolutePath{path}, std::move(bindMounts), folly::File{}, connInfo);
+        AbsolutePath{mountPath},
+        AbsolutePath{stateDirectory},
+        std::move(bindMounts),
+        folly::File{},
+        connInfo);
   }
 
   return data;
