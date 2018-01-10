@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import argparse
 import re
 import subprocess
+import time
 
 seconds_in_a_day = 60.0 * 60.0 * 24.0
 
@@ -140,7 +141,8 @@ class GitRevision(object):
             if rev.father == rev:
                 cls.root = rev
         for rev in cls.revisionmap.values():
-            key=lambda x: time.time() if "master" in x.ref else x.newest_timestamp()
+            key=(lambda x: time.time() if "master" in x.ref else
+                           x.newest_timestamp())
             rev.children = sorted(
                 rev.children,
                 key = key
