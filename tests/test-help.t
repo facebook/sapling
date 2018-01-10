@@ -316,6 +316,7 @@ Test extension help:
        hiddenerror   configurable error messages for accessing hidden changesets
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
+       infinitepush
        inhibit       redefine obsolete(), bumped(), divergent() revsets
        inhibitwarn   (no help text available)
        interactiveui

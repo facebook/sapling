@@ -42,42 +42,6 @@ outputs, which should be fixed later.
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
   > | sed 's-\\-/-g' | $PYTHON "$import_checker" -
-  fb-hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from fb-hgext.infinitepush.bundleparts
-  fb-hgext/infinitepush/__init__.py:108: imports from fb-hgext.infinitepush not lexically sorted: common < infinitepushcommands
-  fb-hgext/infinitepush/__init__.py:113: relative import of stdlib module
-  fb-hgext/infinitepush/__init__.py:113: direct symbol import defaultdict from collections
-  fb-hgext/infinitepush/__init__.py:113: symbol import follows non-symbol import: collections
-  fb-hgext/infinitepush/__init__.py:114: relative import of stdlib module
-  fb-hgext/infinitepush/__init__.py:114: direct symbol import partial from functools
-  fb-hgext/infinitepush/__init__.py:114: symbol import follows non-symbol import: functools
-  fb-hgext/infinitepush/__init__.py:132: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
-  fb-hgext/infinitepush/__init__.py:132: symbol import follows non-symbol import: mercurial.extensions
-  fb-hgext/infinitepush/__init__.py:132: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
-  fb-hgext/infinitepush/__init__.py:133: direct symbol import repository from mercurial.hg
-  fb-hgext/infinitepush/__init__.py:133: symbol import follows non-symbol import: mercurial.hg
-  fb-hgext/infinitepush/__init__.py:134: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/infinitepush/__init__.py:135: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/infinitepush/__init__.py:136: direct symbol import batchable, future from mercurial.peer
-  fb-hgext/infinitepush/__init__.py:136: symbol import follows non-symbol import: mercurial.peer
-  fb-hgext/infinitepush/__init__.py:137: direct symbol import encodelist, decodelist from mercurial.wireproto
-  fb-hgext/infinitepush/__init__.py:137: symbol import follows non-symbol import: mercurial.wireproto
-  fb-hgext/infinitepush/__init__.py:137: imports from mercurial.wireproto not lexically sorted: decodelist < encodelist
-  fb-hgext/infinitepush/backupcommands.py:52: direct symbol import getscratchbookmarkspart, getscratchbranchparts from fb-hgext.infinitepush.bundleparts
-  fb-hgext/infinitepush/backupcommands.py:74: relative import of stdlib module
-  fb-hgext/infinitepush/backupcommands.py:74: direct symbol import defaultdict, namedtuple from collections
-  fb-hgext/infinitepush/backupcommands.py:74: symbol import follows non-symbol import: collections
-  fb-hgext/infinitepush/backupcommands.py:76: direct symbol import wrapfunction, unwrapfunction from mercurial.extensions
-  fb-hgext/infinitepush/backupcommands.py:76: symbol import follows non-symbol import: mercurial.extensions
-  fb-hgext/infinitepush/backupcommands.py:76: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
-  fb-hgext/infinitepush/backupcommands.py:77: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/infinitepush/backupcommands.py:78: symbol import follows non-symbol import: mercurial.i18n
-  fb-hgext/infinitepush/backupcommands.py:80: direct symbol import shareutil from hgext3rd
-  fb-hgext/infinitepush/backupcommands.py:80: symbol import follows non-symbol import: hgext3rd
-  fb-hgext/infinitepush/infinitepushcommands.py:18: direct symbol import cmdtable from fb-hgext.infinitepush.backupcommands
-  fb-hgext/infinitepush/infinitepushcommands.py:31: direct symbol import downloadbundle from fb-hgext.infinitepush.common
-  fb-hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: fb-hgext.infinitepush.common
-  fb-hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
-  fb-hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   fb-hgext/tests/check-ext.py:4: relative import of stdlib module
   fb-hgext/tests/check-ext.py:4: direct symbol import glob from glob
   hgext/age.py:21: imports not lexically sorted: re < time
@@ -143,6 +107,42 @@ outputs, which should be fixed later.
   hgext/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
   hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
   hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
+  hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from hgext.infinitepush.bundleparts
+  hgext/infinitepush/__init__.py:108: imports from hgext.infinitepush not lexically sorted: common < infinitepushcommands
+  hgext/infinitepush/__init__.py:113: relative import of stdlib module
+  hgext/infinitepush/__init__.py:113: direct symbol import defaultdict from collections
+  hgext/infinitepush/__init__.py:113: symbol import follows non-symbol import: collections
+  hgext/infinitepush/__init__.py:114: relative import of stdlib module
+  hgext/infinitepush/__init__.py:114: direct symbol import partial from functools
+  hgext/infinitepush/__init__.py:114: symbol import follows non-symbol import: functools
+  hgext/infinitepush/__init__.py:132: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
+  hgext/infinitepush/__init__.py:132: symbol import follows non-symbol import: mercurial.extensions
+  hgext/infinitepush/__init__.py:132: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
+  hgext/infinitepush/__init__.py:133: direct symbol import repository from mercurial.hg
+  hgext/infinitepush/__init__.py:133: symbol import follows non-symbol import: mercurial.hg
+  hgext/infinitepush/__init__.py:134: symbol import follows non-symbol import: mercurial.node
+  hgext/infinitepush/__init__.py:135: symbol import follows non-symbol import: mercurial.i18n
+  hgext/infinitepush/__init__.py:136: direct symbol import batchable, future from mercurial.peer
+  hgext/infinitepush/__init__.py:136: symbol import follows non-symbol import: mercurial.peer
+  hgext/infinitepush/__init__.py:137: direct symbol import encodelist, decodelist from mercurial.wireproto
+  hgext/infinitepush/__init__.py:137: symbol import follows non-symbol import: mercurial.wireproto
+  hgext/infinitepush/__init__.py:137: imports from mercurial.wireproto not lexically sorted: decodelist < encodelist
+  hgext/infinitepush/backupcommands.py:52: direct symbol import getscratchbookmarkspart, getscratchbranchparts from hgext.infinitepush.bundleparts
+  hgext/infinitepush/backupcommands.py:74: relative import of stdlib module
+  hgext/infinitepush/backupcommands.py:74: direct symbol import defaultdict, namedtuple from collections
+  hgext/infinitepush/backupcommands.py:74: symbol import follows non-symbol import: collections
+  hgext/infinitepush/backupcommands.py:76: direct symbol import wrapfunction, unwrapfunction from mercurial.extensions
+  hgext/infinitepush/backupcommands.py:76: symbol import follows non-symbol import: mercurial.extensions
+  hgext/infinitepush/backupcommands.py:76: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
+  hgext/infinitepush/backupcommands.py:77: symbol import follows non-symbol import: mercurial.node
+  hgext/infinitepush/backupcommands.py:78: symbol import follows non-symbol import: mercurial.i18n
+  hgext/infinitepush/backupcommands.py:80: direct symbol import shareutil from hgext3rd
+  hgext/infinitepush/backupcommands.py:80: symbol import follows non-symbol import: hgext3rd
+  hgext/infinitepush/infinitepushcommands.py:18: direct symbol import cmdtable from hgext.infinitepush.backupcommands
+  hgext/infinitepush/infinitepushcommands.py:31: direct symbol import downloadbundle from hgext.infinitepush.common
+  hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: hgext.infinitepush.common
+  hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
+  hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   hgext/obsshelve.py:56: import should be relative: hgext
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: importer < p4
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: filetransaction < importer
@@ -165,7 +165,7 @@ outputs, which should be fixed later.
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
   hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
   hgext/pushrebase.py:53: import should be relative: hgext.remotefilelog
-  hgext/pushrebase.py:628: import should be relative: hgext.extlib
+  hgext/pushrebase.py:626: import should be relative: hgext.extlib
   hgext/remotefilelog/__init__.py:71: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/__init__.py:73: direct symbol import wrapfunction from mercurial.extensions

@@ -21,12 +21,6 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  fb-hgext/infinitepush/bundleparts.py not using absolute_import
-  fb-hgext/infinitepush/common.py not using absolute_import
-  fb-hgext/infinitepush/fileindexapi.py not using absolute_import
-  fb-hgext/infinitepush/indexapi.py not using absolute_import
-  fb-hgext/infinitepush/sqlindexapi.py not using absolute_import
-  fb-hgext/infinitepush/store.py not using absolute_import
   fb-hgext/phabricator/arcconfig.py not using absolute_import
   fb-hgext/phabricator/diffprops.py not using absolute_import
   fb-hgext/phabricator/graphql.py not using absolute_import
@@ -84,6 +78,12 @@
   hgext/hggit/overlay.py not using absolute_import
   hgext/hggit/util.py not using absolute_import
   hgext/hggit/verify.py not using absolute_import
+  hgext/infinitepush/bundleparts.py not using absolute_import
+  hgext/infinitepush/common.py not using absolute_import
+  hgext/infinitepush/fileindexapi.py not using absolute_import
+  hgext/infinitepush/indexapi.py not using absolute_import
+  hgext/infinitepush/sqlindexapi.py not using absolute_import
+  hgext/infinitepush/store.py not using absolute_import
   hgext/linkrevcache.py not using absolute_import
   hgext/logginghelper.py not using absolute_import
   hgext/morestatus.py not using absolute_import
