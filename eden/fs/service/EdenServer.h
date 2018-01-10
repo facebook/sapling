@@ -132,15 +132,13 @@ class EdenServer : private TakeoverHandler {
   /**
    * Unmount all mount points maintained by this server, and wait for them to
    * be completely unmounted.
+   * If doTakeover is true, rather than asking the kernel to unmount,
+   * requests that the fuse sessions associated with each of the mount
+   * points shut down such that no further fuse requests will be processed,
+   * and collect TakeoverData that can then be passed to the successor process.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> unmountAll();
-
-  /**
-   * Request that the fuse sessions associate with each of the mount points
-   * shut down such that no further fuse requests will be processed, and
-   * collect TakeoverData that can then be passed to the successor process.
-   */
-  FOLLY_NODISCARD folly::Future<TakeoverData> takeoverAll();
+  FOLLY_NODISCARD folly::Future<folly::Optional<TakeoverData>> unmountAll(
+      bool doTakeover);
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
     return handler_;
