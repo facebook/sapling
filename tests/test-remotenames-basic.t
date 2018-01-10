@@ -299,47 +299,46 @@ Test clone --mirror
      baz                       2:95cb4ab9fe1d
      foo                       2:95cb4ab9fe1d
 
-# FIXME: Uncomment this block after hggit is guaranteed available
-# Test loading with hggit
-#
-#   $ echo "[extensions]" >> $HGRCPATH
-#   $ echo "hggit=" >> $HGRCPATH
-#   $ echo "[devel]" >> $HGRCPATH
-#   $ echo "all-warnings=no" >> $HGRCPATH
-#   $ hg help bookmarks  | grep -A 3 -- '--track'
-#    -t --track BOOKMARK track this bookmark or remote name
-#    -u --untrack        remove tracking for this bookmark
-#    -a --all            show both remote and local bookmarks
-#       --remote         show only remote bookmarks
-#
-# Test branches marked as closed are not loaded
-#   $ cd ../alpha
-#   $ hg branch
-#   stable
-#   $ hg commit --close-branch -m 'close this branch'
-#
-#   $ cd ../beta
-#   $ hg branches --remote
-#   default/stable                 2:95cb4ab9fe1d
-#   default/default                1:7c3bad9141dc
-#   $ hg pull -q
-#   $ hg branches --remote
-#   default/default                1:7c3bad9141dc
-#
-# Test json formatted bookmarks with tracking data
-#   $ cd ..
-#   $ hg init delta
-#   $ cd delta
-#   $ hg book mimimi -t lalala
-#   $ hg book -v -T json
-#   [
-#    {
-#     "active": true,
-#     "bookmark": "mimimi",
-#     "node": "0000000000000000000000000000000000000000",
-#     "rev": -1,
-#     "tracking": "lalala"
-#    }
-#   ]
-#   $ hg book -v
-#    * mimimi                    -1:000000000000           [lalala]
+Test loading with hggit
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "hggit=" >> $HGRCPATH
+  $ echo "[devel]" >> $HGRCPATH
+  $ echo "all-warnings=no" >> $HGRCPATH
+  $ hg help bookmarks  | grep -A 3 -- '--track'
+   -t --track BOOKMARK track this bookmark or remote name
+   -u --untrack        remove tracking for this bookmark
+   -a --all            show both remote and local bookmarks
+      --remote         show only remote bookmarks
+
+Test branches marked as closed are not loaded
+  $ cd ../alpha
+  $ hg branch
+  stable
+  $ hg commit --close-branch -m 'close this branch'
+
+  $ cd ../beta
+  $ hg branches --remote
+  default/stable                 2:95cb4ab9fe1d
+  default/default                1:7c3bad9141dc
+  $ hg pull -q
+  $ hg branches --remote
+  default/default                1:7c3bad9141dc
+
+Test json formatted bookmarks with tracking data
+  $ cd ..
+  $ hg init delta
+  $ cd delta
+  $ hg book mimimi -t lalala
+  $ hg book -v -T json
+  [
+   {
+    "active": true,
+    "bookmark": "mimimi",
+    "node": "0000000000000000000000000000000000000000",
+    "rev": -1,
+    "tracking": "lalala"
+   }
+  ]
+  $ hg book -v
+   * mimimi                    -1:000000000000           [lalala]

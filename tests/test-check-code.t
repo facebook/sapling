@@ -197,6 +197,9 @@ New errors are not allowed. Warnings are strongly discouraged.
    don't use grep's context flags
   Skipping tests/test-hgsql-encoding.t it has no-che?k-code (glob)
   Skipping tests/test-hgsql-race-conditions.t it has no-che?k-code (glob)
+  tests/test-remotenames-basic.t:308:
+   >   $ hg help bookmarks  | grep -A 3 -- '--track'
+   don't use grep's context flags
   [1]
 
 @commands in debugcommands.py should be in alphabetical order.
