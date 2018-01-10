@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -236,7 +237,7 @@ class InodeMap {
   void decFuseRefcount(fusell::InodeNumber number, uint32_t count = 1);
 
   /**
-   * Persist the inode number state to disk.
+   * Persist the inode number state to an instance of InodeMap::TakeoverData.
    *
    * This API supports gracefully restarting the eden server without unmounting
    * the mount point.
@@ -244,7 +245,8 @@ class InodeMap {
    * This persists sufficient data to reconstruct all inode state into the
    * unloadedInodes_ map.
    */
-  void save();
+  SerializedInodeMap save();
+  void load(const SerializedInodeMap& takeover);
 
   /**
    * Shutdown the InodeMap.

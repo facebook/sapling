@@ -22,6 +22,7 @@ cpp_library(
         ":serialization-cpp2-types",
         "//eden/fs/config:config",
         "//eden/fs/fuse:fusell",
+        "//eden/fs/fuse:handlemap-cpp2-types",
         "//eden/fs/fuse/privhelper:privhelper",
         "//eden/fs/journal:journal",
         "//eden/fs/model:model",

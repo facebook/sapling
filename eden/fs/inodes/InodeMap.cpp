@@ -403,8 +403,63 @@ void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
   }
 }
 
-void InodeMap::save() {
-  // TODO
+SerializedInodeMap InodeMap::save() {
+  auto data = data_.wlock();
+  if (!data->loadedInodes_.empty()) {
+    EDEN_BUG() << "InodeMap::save() called with " << data->loadedInodes_.size()
+               << " inodes still loaded; they must all have been unloaded "
+               << "for this to succeed!";
+  }
+
+  SerializedInodeMap result;
+  result.nextInodeNumber = data->nextInodeNumber_;
+  result.unloadedInodes.reserve(data->unloadedInodes_.size());
+  for (const auto& it : data->unloadedInodes_) {
+    const auto& entry = it.second;
+    SerializedInodeMapEntry serializedEntry;
+
+    serializedEntry.inodeNumber = entry.number;
+    serializedEntry.parentInode = entry.parent;
+    serializedEntry.name = entry.name.stringPiece().str();
+    serializedEntry.isUnlinked = entry.isUnlinked;
+    serializedEntry.numFuseReferences = entry.numFuseReferences;
+
+    result.unloadedInodes.emplace_back(std::move(serializedEntry));
+  }
+
+  return result;
+}
+
+void InodeMap::load(const SerializedInodeMap& takeover) {
+  auto data = data_.wlock();
+  CHECK(data->loadedInodes_.empty() && data->unloadedInodes_.empty())
+      << "cannot load InodeMap data over a populated instance";
+
+  data->nextInodeNumber_ = takeover.nextInodeNumber;
+  for (const auto& entry : takeover.unloadedInodes) {
+    auto unloadedEntry = UnloadedInode(
+        entry.inodeNumber, entry.parentInode, PathComponentPiece{entry.name});
+    unloadedEntry.numFuseReferences = entry.numFuseReferences;
+    if (entry.numFuseReferences < 0) {
+      auto message = folly::to<std::string>(
+          "inode number ",
+          entry.inodeNumber,
+          " has a negative numFuseReferences number");
+      XLOG(ERR) << message;
+      throw std::runtime_error(message);
+    }
+    unloadedEntry.isUnlinked = entry.isUnlinked;
+    auto result = data->unloadedInodes_.emplace(
+        entry.inodeNumber, std::move(unloadedEntry));
+    if (!result.second) {
+      auto message = folly::to<std::string>(
+          "failed to emplace inode number ",
+          entry.inodeNumber,
+          "; is it already present in the InodeMap?");
+      XLOG(ERR) << message;
+      throw std::runtime_error(message);
+    }
+  }
 }
 
 Future<Unit> InodeMap::shutdown() {

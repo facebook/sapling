@@ -39,6 +39,10 @@ IOBuf TakeoverData::serialize() {
     auto serializedFileHandleMap =
         CompactSerializer::serialize<std::string>(mount.fileHandleMap);
     bodyLength += sizeof(uint32_t) + serializedFileHandleMap.size();
+
+    auto serializedInodeMap =
+        CompactSerializer::serialize<std::string>(mount.inodeMap);
+    bodyLength += sizeof(uint32_t) + serializedInodeMap.size();
   }
 
   // Build a buffer with all of the mount paths
@@ -82,6 +86,11 @@ IOBuf TakeoverData::serialize() {
         CompactSerializer::serialize<std::string>(mount.fileHandleMap);
     app.writeBE<uint32_t>(serializedFileHandleMap.size());
     app.push(folly::StringPiece{serializedFileHandleMap});
+
+    auto serializedInodeMap =
+        CompactSerializer::serialize<std::string>(mount.inodeMap);
+    app.writeBE<uint32_t>(serializedInodeMap.size());
+    app.push(folly::StringPiece{serializedInodeMap});
   }
 
   return buf;
@@ -162,13 +171,19 @@ TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
         CompactSerializer::deserialize<SerializedFileHandleMap>(
             fileHandleMapBuffer);
 
+    auto inodeMapLength = cursor.readBE<uint32_t>();
+    auto inodeMapBuffer = cursor.readFixedString(inodeMapLength);
+    auto inodeMap =
+        CompactSerializer::deserialize<SerializedInodeMap>(inodeMapBuffer);
+
     data.mountPoints.emplace_back(
         AbsolutePath{mountPath},
         AbsolutePath{stateDirectory},
         std::move(bindMounts),
         folly::File{},
         connInfo,
-        std::move(fileHandleMap));
+        std::move(fileHandleMap),
+        std::move(inodeMap));
   }
 
   return data;
