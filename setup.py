@@ -191,7 +191,6 @@ STDC99 = "" if iswindows else "-std=c99"
 STDCPP0X = "" if iswindows else "-std=c++0x"
 STDCPP11 = "" if iswindows else "-std=c++11"
 WALL = "/Wall" if iswindows else "-Wall"
-WERROR = "/WX" if iswindows else "-Werror"
 WSTRICTPROTOTYPES = None if iswindows else "-Werror=strict-prototypes"
 
 cflags = [SHA1LIB_DEFINE]
@@ -201,8 +200,6 @@ cflags = [SHA1LIB_DEFINE]
 # therefore, if you already have build products, they won't be rebuilt!
 if os.getenv('FB_HGEXT_CDEBUG') is not None:
     cflags.extend([NOOPTIMIZATION, PRODUCEDEBUGSYMBOLS])
-else:
-    cflags.append(WERROR)
 
 def write_if_changed(path, content):
     """Write content to a file iff the content hasn't changed."""
@@ -1082,7 +1079,7 @@ else:
             "include_dirs" : ["."] + include_dirs,
             "libraries" : ["lz4", SHA1_LIBRARY],
             "extra_args" : filter(None,
-                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+                [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
         }),
         ('mpatch', {
             "sources": ["hgext/extlib/cstore/mpatch.c"],
@@ -1095,7 +1092,7 @@ else:
             ],
             "include_dirs" : ["lib/third-party"] + include_dirs,
             "extra_args" : filter(None,
-                [STDC99, WALL, WERROR, WSTRICTPROTOTYPES] + cflags),
+                [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
         }),
     ]
 
