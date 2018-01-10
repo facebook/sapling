@@ -1,5 +1,5 @@
   $ . "$TESTDIR/library.sh"
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
 
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH

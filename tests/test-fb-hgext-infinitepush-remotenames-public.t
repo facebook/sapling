@@ -4,7 +4,7 @@ test covers the issue.
 
   $ . $TESTDIR/require-ext.sh remotenames
   $ . $TESTDIR/library.sh
-  $ . $TESTDIR/library-infinitepush.sh
+  $ . $TESTDIR/infinitepush/library.sh
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > infinitepush=

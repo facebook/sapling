@@ -1,6 +1,6 @@
 
   $ . "$TESTDIR/library.sh"
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
 
 Setup infinitepush and remotefilelog server

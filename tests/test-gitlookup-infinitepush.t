@@ -5,7 +5,7 @@
   $ echo "extorder= " >> $HGRCPATH
   $ echo '[ui]' >> $HGRCPATH
   $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
 
 Set up infinitepush and make sure it's loaded before gitrevset
   $ setupcommon

@@ -4,7 +4,7 @@
   >    hg add "$1"
   >    hg ci -d "0 0" -m "$1"
   > }
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
 
 With no configuration it should abort

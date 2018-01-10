@@ -1,7 +1,7 @@
 
 Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ setupcommon
   $ hg init repo

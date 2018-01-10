@@ -1,5 +1,5 @@
   $ . "$TESTDIR/library.sh"
-  $ . "$TESTDIR/library-infinitepush.sh"
+  $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
   $ hg init repo
   $ cd repo
