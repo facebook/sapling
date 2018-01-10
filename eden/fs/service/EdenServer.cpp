@@ -164,7 +164,8 @@ folly::Future<TakeoverData> EdenServer::takeoverAll() {
                   edenMount->getConfig()->getClientDirectory(),
                   bindMounts,
                   std::move(channelData.fd),
-                  channelData.connInfo);
+                  channelData.connInfo,
+                  edenMount->getDispatcher()->getFileHandles().serializeMap());
             }));
       } catch (const std::exception& ex) {
         const auto& mountPath = entry.first;

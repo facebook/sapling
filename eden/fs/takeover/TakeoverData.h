@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -24,6 +25,8 @@ class exception_wrapper;
 
 namespace facebook {
 namespace eden {
+
+class SerializedFileHandleMap;
 
 /**
  * TakeoverData contains the data exchanged between processes during
@@ -37,18 +40,21 @@ class TakeoverData {
         AbsolutePathPiece stateDirectory,
         const std::vector<AbsolutePath>& bindMountPaths,
         folly::File fd,
-        fuse_init_out connInfo)
+        fuse_init_out connInfo,
+        SerializedFileHandleMap&& fileHandleMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
           bindMounts{bindMountPaths},
           fuseFD{std::move(fd)},
-          connInfo{connInfo} {}
+          connInfo{connInfo},
+          fileHandleMap{std::move(fileHandleMap)} {}
 
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;
     std::vector<AbsolutePath> bindMounts;
     folly::File fuseFD;
     fuse_init_out connInfo;
+    SerializedFileHandleMap fileHandleMap;
   };
 
   /**

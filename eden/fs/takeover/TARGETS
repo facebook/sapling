@@ -6,6 +6,7 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "//eden/fs/fuse:fusell",
+        "//eden/fs/fuse:handlemap-cpp2-types",
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
         "//folly:file",
@@ -18,5 +19,6 @@ cpp_library(
         "//folly/io:iobuf",
         "//folly/io/async:async",
         "//folly/io/async:server_socket",
+        "//thrift/lib/cpp2/protocol:protocol",
     ],
 )

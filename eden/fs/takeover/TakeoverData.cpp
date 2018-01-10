@@ -12,9 +12,11 @@
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <thrift/lib/cpp2/protocol/Serializer.h>
 
 using folly::IOBuf;
 using std::string;
+using apache::thrift::CompactSerializer;
 
 namespace facebook {
 namespace eden {
@@ -30,6 +32,13 @@ IOBuf TakeoverData::serialize() {
       bodyLength += sizeof(uint32_t) + bindMount.stringPiece().size();
     }
     bodyLength += sizeof(fuse_init_out);
+
+    // TODO: remove this redundant serialization.  We're doing this here
+    // solely to compute the size of the data.  We plan to refactor this
+    // whole thing to use a single thrift struct; T25009883
+    auto serializedFileHandleMap =
+        CompactSerializer::serialize<std::string>(mount.fileHandleMap);
+    bodyLength += sizeof(uint32_t) + serializedFileHandleMap.size();
   }
 
   // Build a buffer with all of the mount paths
@@ -68,6 +77,11 @@ IOBuf TakeoverData::serialize() {
     // takeover.
     app.push(folly::StringPiece{reinterpret_cast<const char*>(&mount.connInfo),
                                 sizeof(mount.connInfo)});
+
+    auto serializedFileHandleMap =
+        CompactSerializer::serialize<std::string>(mount.fileHandleMap);
+    app.writeBE<uint32_t>(serializedFileHandleMap.size());
+    app.push(folly::StringPiece{serializedFileHandleMap});
   }
 
   return buf;
@@ -142,12 +156,19 @@ TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
     fuse_init_out connInfo;
     cursor.pull(&connInfo, sizeof(connInfo));
 
+    auto fileHandleMapLength = cursor.readBE<uint32_t>();
+    auto fileHandleMapBuffer = cursor.readFixedString(fileHandleMapLength);
+    auto fileHandleMap =
+        CompactSerializer::deserialize<SerializedFileHandleMap>(
+            fileHandleMapBuffer);
+
     data.mountPoints.emplace_back(
         AbsolutePath{mountPath},
         AbsolutePath{stateDirectory},
         std::move(bindMounts),
         folly::File{},
-        connInfo);
+        connInfo,
+        std::move(fileHandleMap));
   }
 
   return data;
