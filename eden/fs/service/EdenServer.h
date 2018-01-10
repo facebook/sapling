@@ -115,7 +115,9 @@ class EdenServer : private TakeoverHandler {
    * Mount and return an EdenMount.
    */
   FOLLY_NODISCARD folly::Future<std::shared_ptr<EdenMount>> mount(
-      const MountInfo& info);
+      std::unique_ptr<ClientConfig> initialConfig,
+      folly::Optional<TakeoverData::MountInfo>&& optionalTakeover =
+          folly::none);
 
   /**
    * Takeover a mount from another eden instance
@@ -276,9 +278,22 @@ class EdenServer : private TakeoverHandler {
       EdenMount* mountPoint,
       folly::Optional<TakeoverData::MountInfo> takeover);
 
-  folly::Future<folly::Unit> performNormalShutdown();
-  folly::Future<folly::Unit> performTakeoverShutdown(folly::File thriftSocket);
+  FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
+  FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverShutdown(
+      folly::File thriftSocket);
   void shutdownPrivhelper();
+
+  // Starts up a new fuse mount for edenMount, starting up the thread
+  // pool and initializing the fuse session
+  FOLLY_NODISCARD folly::Future<folly::Unit> performFreshFuseStart(
+      std::shared_ptr<EdenMount> edenMount);
+
+  // Performs a takeover initialization for the provided fuse mount,
+  // loading the state from the old incarnation and starting up the
+  // thread pool.
+  FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverFuseStart(
+      std::shared_ptr<EdenMount> edenMount,
+      TakeoverData::MountInfo&& takeover);
 
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already.

@@ -313,7 +313,10 @@ void EdenServer::prepare() {
     for (auto& info : takeoverData.mountPoints) {
       auto stateDirectory = info.stateDirectory;
       try {
-        takeoverMount(std::move(info)).get();
+        auto initialConfig = ClientConfig::loadFromClientDirectory(
+            AbsolutePathPiece{info.mountPath},
+            AbsolutePathPiece{info.stateDirectory});
+        mount(std::move(initialConfig), std::move(info)).get();
       } catch (const std::exception& ex) {
         XLOG(ERR) << "Failed to perform takeover for " << stateDirectory << ": "
                   << ex.what();
@@ -334,7 +337,10 @@ void EdenServer::prepare() {
           PathComponent(client.second.c_str());
       mountInfo.edenClientPath = edenClientPath.stringPiece().str();
       try {
-        mount(mountInfo).get();
+        auto initialConfig = ClientConfig::loadFromClientDirectory(
+            AbsolutePathPiece{mountInfo.mountPoint},
+            AbsolutePathPiece{mountInfo.edenClientPath});
+        mount(std::move(initialConfig)).get();
       } catch (const std::exception& ex) {
         XLOG(ERR) << "Failed to perform remount for " << client.first.c_str()
                   << ": " << ex.what();
@@ -474,145 +480,69 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::UNLOADED));
 }
 
-folly::Future<std::shared_ptr<EdenMount>> EdenServer::takeoverMount(
+folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
+    std::shared_ptr<EdenMount> edenMount) {
+  // Start up the fuse workers.
+  return edenMount->startFuse(getMainEventBase(), threadPool_, folly::none);
+}
+
+folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
+    std::shared_ptr<EdenMount> edenMount,
     TakeoverData::MountInfo&& info) {
-  auto config = ClientConfig::loadFromClientDirectory(
-      info.mountPath, info.stateDirectory);
+  std::vector<std::string> bindMounts;
+  for (const auto& bindMount : info.bindMounts) {
+    bindMounts.emplace_back(bindMount.value());
+  }
+  fusell::privilegedFuseTakeoverStartup(
+      info.mountPath.stringPiece(), bindMounts);
 
-  auto repoType = config->getRepoType();
-  auto backingStore = getBackingStore(repoType, config->getRepoSource());
-  auto objectStore =
-      std::make_unique<ObjectStore>(getLocalStore(), backingStore);
+  // (re)open file handles for each entry in info.fileHandleMap
+  std::vector<folly::Future<folly::Unit>> futures;
+  auto dispatcher = edenMount->getDispatcher();
 
-  return EdenMount::create(
-             std::move(config),
-             std::move(objectStore),
-             getSocketPath(),
-             getStats(),
-             std::make_shared<UnixClock>())
-      .then([this, info = std::move(info)](
-                std::shared_ptr<EdenMount> edenMount) mutable {
-        // Load InodeBase objects for any materialized files in this mount point
-        // before we start mounting.
-        auto rootInode = edenMount->getRootInode();
+  for (const auto& handleEntry : info.fileHandleMap.entries) {
+    if (handleEntry.isDir) {
+      futures.emplace_back(
+          // TODO: we should record the opendir() flags in the
+          // SerializedFileHandleMap so that we can restore
+          // the correct flags here.
+          dispatcher->opendir(handleEntry.inodeNumber, 0)
+              .then([dispatcher, number = handleEntry.handleId](
+                        std::shared_ptr<fusell::DirHandle> handle) {
+                dispatcher->getFileHandles().recordHandle(
+                    std::static_pointer_cast<fusell::FileHandleBase>(handle),
+                    number);
+              }));
+    } else {
+      futures.emplace_back(
+          // TODO: we should record the open() flags in the
+          // SerializedFileHandleMap so that we can restore
+          // the correct flags here.
+          dispatcher->open(handleEntry.inodeNumber, O_RDWR)
+              .then([dispatcher, number = handleEntry.handleId](
+                        std::shared_ptr<fusell::FileHandle> handle) {
+                dispatcher->getFileHandles().recordHandle(
+                    std::static_pointer_cast<fusell::FileHandleBase>(handle),
+                    number);
+              }));
+    }
+  }
 
-        edenMount->getInodeMap()->load(info.inodeMap);
+  FuseChannelData channelData;
+  channelData.fd = std::move(info.fuseFD);
+  channelData.connInfo = info.connInfo;
 
-        return rootInode->loadMaterializedChildren()
-            .then([this, edenMount, info = std::move(info)](
-                      folly::Try<folly::Unit> t) mutable {
-              (void)t; // We're explicitly ignoring possible failure in
-                       // loadMaterializedChildren, but only because we were
-                       // previously using .wait() on the future.  We could
-                       // just let potential errors propagate.
-
-              addToMountPoints(edenMount);
-              std::vector<std::string> bindMounts;
-              for (const auto& bindMount : info.bindMounts) {
-                bindMounts.emplace_back(bindMount.value());
-              }
-              fusell::privilegedFuseTakeoverStartup(
-                  info.mountPath.stringPiece(), bindMounts);
-
-              // (re)open file handles for each entry in info.fileHandleMap
-              std::vector<folly::Future<folly::Unit>> futures;
-              auto dispatcher = edenMount->getDispatcher();
-
-              for (const auto& handleEntry : info.fileHandleMap.entries) {
-                if (handleEntry.isDir) {
-                  futures.emplace_back(
-                      // TODO: we should record the opendir() flags in the
-                      // SerializedFileHandleMap so that we can restore
-                      // the correct flags here.
-                      dispatcher->opendir(handleEntry.inodeNumber, 0)
-                          .then([dispatcher, number = handleEntry.handleId](
-                                    std::shared_ptr<fusell::DirHandle> handle) {
-                            dispatcher->getFileHandles().recordHandle(
-                                std::static_pointer_cast<
-                                    fusell::FileHandleBase>(handle),
-                                number);
-                          }));
-                } else {
-                  futures.emplace_back(
-                      // TODO: we should record the open() flags in the
-                      // SerializedFileHandleMap so that we can restore
-                      // the correct flags here.
-                      dispatcher->open(handleEntry.inodeNumber, O_RDWR)
-                          .then(
-                              [dispatcher, number = handleEntry.handleId](
-                                  std::shared_ptr<fusell::FileHandle> handle) {
-                                dispatcher->getFileHandles().recordHandle(
-                                    std::static_pointer_cast<
-                                        fusell::FileHandleBase>(handle),
-                                    number);
-                              }));
-                }
-              }
-
-              FuseChannelData channelData;
-              channelData.fd = std::move(info.fuseFD);
-              channelData.connInfo = info.connInfo;
-
-              // Start up the fuse workers.
-              return folly::collectAll(futures).then(
-                  [this,
-                   edenMount,
-                   channelData = std::move(channelData)]() mutable {
-                    return edenMount->startFuse(
-                        getMainEventBase(),
-                        threadPool_,
-                        std::move(channelData));
-                  });
-            })
-            // If an error occurs we want to call mountFinished and throw the
-            // error here.  Once the pool is up and running, the finishFuture
-            // will ensure that this happens.
-            .onError([this, edenMount](folly::exception_wrapper ew) {
-              XLOG(ERR) << "failed to takeover " << ew;
-              mountFinished(edenMount.get(), folly::none);
-              return makeFuture<folly::Unit>(ew);
-            })
-            // Explicitly move the remainder of processing to a utility
-            // thread; we're likely to reach this point in the context of
-            // a fuse mount thread prior to it responding to the mount
-            // initiation request from the kernel, so if we were to block
-            // here, that would lead to deadlock.  In addition, if we were
-            // to run this via mainEventBase_ we could also deadlock
-            // during started when remounting configured mounts.
-            .via(threadPool_.get())
-            .then([edenMount, this] {
-              // Now that we've started the workers, arrange to call
-              // mountFinished once the pool is torn down.
-              XLOG(ERR) << "this bit";
-              auto finishFuture = edenMount->getFuseCompletionFuture().then(
-                  [this,
-                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                    folly::Optional<TakeoverData::MountInfo> optionalTakeover;
-                    if (takeover.hasValue()) {
-                      optionalTakeover = std::move(takeover.value());
-                    }
-                    mountFinished(edenMount.get(), std::move(optionalTakeover));
-                  });
-              // We're deliberately discarding the future here; we don't
-              // need to wait for it to finish.
-              (void)finishFuture;
-
-              registerStats(edenMount);
-
-              // The bind mounts were performed in mount() in our ancestor,
-              // so we don't need to do that here now.
-
-              return edenMount;
-            });
+  // Start up the fuse workers.
+  return folly::collectAll(futures).then(
+      [this, edenMount, channelData = std::move(channelData)]() mutable {
+        return edenMount->startFuse(
+            getMainEventBase(), threadPool_, std::move(channelData));
       });
 }
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
-    const MountInfo& info) {
-  auto initialConfig = ClientConfig::loadFromClientDirectory(
-      AbsolutePathPiece{info.mountPoint},
-      AbsolutePathPiece{info.edenClientPath});
-
+    std::unique_ptr<ClientConfig> initialConfig,
+    Optional<TakeoverData::MountInfo>&& optionalTakeover) {
   auto repoType = initialConfig->getRepoType();
   auto backingStore = getBackingStore(repoType, initialConfig->getRepoSource());
   auto objectStore =
@@ -624,12 +554,22 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
              getSocketPath(),
              getStats(),
              std::make_shared<UnixClock>())
-      .then([this](std::shared_ptr<EdenMount> edenMount) {
+      .then([this, optionalTakeover = std::move(optionalTakeover)](
+                std::shared_ptr<EdenMount> edenMount) mutable {
         // Load InodeBase objects for any materialized files in this mount point
         // before we start mounting.
         auto rootInode = edenMount->getRootInode();
+        bool doTakeover = optionalTakeover.hasValue();
+
+        if (optionalTakeover) {
+          edenMount->getInodeMap()->load(optionalTakeover->inodeMap);
+        }
+
         return rootInode->loadMaterializedChildren()
-            .then([this, edenMount](folly::Try<folly::Unit> t) {
+            .then([this,
+                   edenMount,
+                   optionalTakeover = std::move(optionalTakeover)](
+                      folly::Try<folly::Unit> t) mutable {
               (void)t; // We're explicitly ignoring possible failure in
                        // loadMaterializedChildren, but only because we were
                        // previously using .wait() on the future.  We could
@@ -637,9 +577,10 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
               addToMountPoints(edenMount);
 
-              // Start up the fuse workers.
-              return edenMount->startFuse(
-                  getMainEventBase(), threadPool_, folly::none);
+              return optionalTakeover
+                  ? performTakeoverFuseStart(
+                        edenMount, std::move(*optionalTakeover))
+                  : performFreshFuseStart(edenMount);
             })
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture
@@ -656,17 +597,17 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
             // to run this via mainEventBase_ we could also deadlock
             // during started when remounting configured mounts.
             .via(threadPool_.get())
-            .then([edenMount, this] {
+            .then([edenMount, doTakeover, this] {
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture = edenMount->getFuseCompletionFuture().then(
                   [this,
                    edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
-                    folly::Optional<TakeoverData::MountInfo> optionalTakeover;
+                    folly::Optional<TakeoverData::MountInfo> optTakeover;
                     if (takeover.hasValue()) {
-                      optionalTakeover = std::move(takeover.value());
+                      optTakeover = std::move(takeover.value());
                     }
-                    mountFinished(edenMount.get(), std::move(optionalTakeover));
+                    mountFinished(edenMount.get(), std::move(optTakeover));
                   });
               // We're deliberately discarding the future here; we don't
               // need to wait for it to finish.
@@ -674,9 +615,12 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
 
               registerStats(edenMount);
 
-              // Perform all of the bind mounts associated with the
-              // client.
-              edenMount->performBindMounts();
+              if (!doTakeover) {
+                // Perform all of the bind mounts associated with the
+                // client.  We don't need to do this for the takeover
+                // case as they are already mounted.
+                edenMount->performBindMounts();
+              }
               return edenMount;
             });
       });

@@ -111,7 +111,10 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   INSTRUMENT_THRIFT_CALL(INFO, info->get_mountPoint());
   try {
-    server_->mount(*info).get();
+    auto initialConfig = ClientConfig::loadFromClientDirectory(
+        AbsolutePathPiece{info->mountPoint},
+        AbsolutePathPiece{info->edenClientPath});
+    server_->mount(std::move(initialConfig)).get();
   } catch (const EdenError& ex) {
     throw;
   } catch (const std::exception& ex) {
