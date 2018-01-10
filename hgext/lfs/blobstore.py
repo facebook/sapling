@@ -363,19 +363,6 @@ def remote(repo):
     """remotestore factory. return a store in _storemap depending on config"""
     defaulturl = ''
 
-    # convert deprecated configs to the new url. TODO: remove this if other
-    # places are migrated to the new url config.
-    # deprecated config: lfs.remotestore
-    deprecatedstore = repo.ui.config('lfs', 'remotestore')
-    if deprecatedstore == 'dummy':
-        # deprecated config: lfs.remotepath
-        defaulturl = 'file://' + repo.ui.config('lfs', 'remotepath')
-    elif deprecatedstore == 'git-lfs':
-        # deprecated config: lfs.remoteurl
-        defaulturl = repo.ui.config('lfs', 'remoteurl')
-    elif deprecatedstore == 'null':
-        defaulturl = 'null://'
-
     url = util.url(repo.ui.config('lfs', 'url', defaulturl))
     scheme = url.scheme
     if scheme not in _storemap:
