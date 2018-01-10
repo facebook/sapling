@@ -2,6 +2,7 @@
 
 """ Convert mercurial check-code errors into a format
 that plays nicely with arc lint """
+from __future__ import absolute_import, print_function
 
 import errno
 import os
@@ -28,11 +29,11 @@ try:
                                stderr=subprocess.PIPE)
 except OSError as ex:
     if ex.errno == errno.ENOENT:
-        print 'lint.py:1: ERROR:ENVIRON: Please either set ' + \
+        print('lint.py:1: ERROR:ENVIRON: Please either set ' + \
               'MERCURIALRUNTEST var to the full path to run-tests.py, ' + \
-              'or add the containing directory to your $PATH'
+              'or add the containing directory to your $PATH')
     else:
-        print 'lint.py:1: ERROR:OSError: %r' % ex
+        print('lint.py:1: ERROR:OSError: %r' % ex)
     sys.exit(0)
 
 output, error = proc.communicate()
@@ -50,7 +51,7 @@ while lines:
     if m:
         filename, location, why = m.groups()
         if filename in wanted:
-            print '%s:%s: ERROR:Pyflakes: %s' % (filename, location, why)
+            print('%s:%s: ERROR:Pyflakes: %s' % (filename, location, why))
         continue
 
     # test-check-code-hg style output
@@ -62,8 +63,8 @@ while lines:
     if m:
         filename = m.group(2)
         if filename in wanted:
-            print '%s:0: ERROR:CheckCode: Update %s to add %s' % (
-                filename, context_file, m.group(1))
+            print('%s:0: ERROR:CheckCode: Update %s to add %s' % (
+                filename, context_file, m.group(1)))
         continue
 
     if not re.match('^\+ +[a-zA-Z0-9_./-]+:\d+:$', line):
@@ -86,5 +87,5 @@ while lines:
 
     why = why[1:].strip()
 
-    print '%s: ERROR:CheckCode: %s' % (location, why)
+    print('%s: ERROR:CheckCode: %s' % (location, why))
 

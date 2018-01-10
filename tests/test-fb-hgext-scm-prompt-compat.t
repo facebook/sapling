@@ -1,5 +1,5 @@
 Initialize scm prompt compatibility layer
-  $ . $TESTDIR/../scripts/scm-prompt.sh
+  $ . $TESTDIR/../contrib/scm-prompt.sh
 
   $ cmd() {
   >   "$@"

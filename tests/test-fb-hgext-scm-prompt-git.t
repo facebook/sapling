@@ -1,5 +1,5 @@
 Initialize scm prompt
-  $ . $TESTDIR/../scripts/scm-prompt.sh
+  $ . $TESTDIR/../contrib/scm-prompt.sh
 
   $ cmd() {
   >   "$@"

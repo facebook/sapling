@@ -5,6 +5,7 @@
 Optionally write result using JSON format. The JSON format can be parsed
 by MercurialTestEngine.php
 """
+from __future__ import absolute_import
 
 import json
 import optparse
