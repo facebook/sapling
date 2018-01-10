@@ -16,7 +16,7 @@ from mercurial import commands
 from mercurial import obsolete
 from mercurial import phases
 from mercurial import extensions
-from phabricator import diffprops
+from hgext.extlib.phabricator import diffprops
 
 def getdiff(rev):
     phabrev = diffprops.parserevfromcommitmsg(rev.description())

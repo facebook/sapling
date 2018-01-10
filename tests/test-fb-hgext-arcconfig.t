@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > arcconfig=$TESTDIR/../phabricator/arcconfig.py
+  > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py
   > EOF
 
 Sanity check expectations when there is no arcconfig

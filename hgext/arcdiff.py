@@ -11,7 +11,7 @@ import os
 from mercurial import commands, error, extensions
 from mercurial.i18n import _
 
-from phabricator import (
+from hgext.extlib.phabricator import (
     arcconfig,
     graphql,
     diffprops,

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import re
 
 diffrevisionregex = re.compile('^Differential Revision:.*/D(\d+)', re.M)

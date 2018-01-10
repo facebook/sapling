@@ -7,7 +7,7 @@
 
 from mercurial import registrar, templatekw
 from mercurial.node import hex
-from phabricator import diffprops
+from hgext.extlib.phabricator import diffprops
 import re
 
 templatekeyword = registrar.templatekeyword()

@@ -2,11 +2,16 @@
 #
 # Locate and load arcanist configuration for a project
 
+from __future__ import absolute_import
+
 import errno
 import json
 import os
+
 from mercurial import (
+    encoding,
     error,
+    pycompat,
     registrar,
 )
 
@@ -27,11 +32,11 @@ def _loadfile(filename):
 
 def loadforpath(path):
     # location where `arc install-certificate` writes .arcrc
-    if os.name == 'nt':
+    if pycompat.iswindows:
         envvar = 'APPDATA'
     else:
         envvar = 'HOME'
-    homedir = os.getenv(envvar)
+    homedir = encoding.environ.get(envvar)
     if not homedir:
         raise ArcConfigError('$%s environment variable not found' % envvar)
 

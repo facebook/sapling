@@ -4,8 +4,8 @@ Load extensions
   $ export PYTHONPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > arcconfig=$TESTDIR/../phabricator/arcconfig.py
-  > arcdiff=$TESTDIR/../hgext3rd/arcdiff.py
+  > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py
+  > arcdiff=
   > EOF
 
 Diff with no revision

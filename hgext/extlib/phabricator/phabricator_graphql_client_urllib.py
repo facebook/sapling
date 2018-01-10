@@ -1,6 +1,8 @@
-from mercurial.util import httplib
-from mercurial import util
+from __future__ import absolute_import
+
 import json
+
+from mercurial import util
 
 urlreq = util.urlreq
 
@@ -20,10 +22,10 @@ class PhabricatorGraphQLClientRequests(object):
         urlparts = urlreq.urlparse(request_url)
         if self._connection is None:
             if urlparts.scheme == 'http':
-                self._connection = httplib.HTTPConnection(
+                self._connection = util.httplib.HTTPConnection(
                     urlparts.netloc, timeout=timeout)
             elif urlparts.scheme == 'https':
-                self._connection = httplib.HTTPSConnection(
+                self._connection = util.httplib.HTTPSConnection(
                     urlparts.netloc, timeout=timeout, cert_file=ca_bundle)
             else:
                 raise PhabricatorClientError('Unknown host scheme: %s',

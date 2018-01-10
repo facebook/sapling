@@ -21,11 +21,6 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  fb-hgext/phabricator/arcconfig.py not using absolute_import
-  fb-hgext/phabricator/diffprops.py not using absolute_import
-  fb-hgext/phabricator/graphql.py not using absolute_import
-  fb-hgext/phabricator/phabricator_graphql_client_requests.py not using absolute_import
-  fb-hgext/phabricator/phabricator_graphql_client_urllib.py not using absolute_import
   fb-hgext/setup.py not using absolute_import
   fb-hgext/tests/get-with-headers.py not using absolute_import
   fb-hgext/tests/get-with-headers.py requires print_function

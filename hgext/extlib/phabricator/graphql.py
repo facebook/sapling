@@ -3,11 +3,18 @@
 # A library function to call a phabricator graphql RPC.
 # This replaces the Conduit methods
 
+from __future__ import absolute_import
+
 import json
-import os
-from mercurial import util
-import arcconfig
-from operator import itemgetter
+import operator
+
+from mercurial import (
+    encoding,
+    pycompat,
+    util
+)
+
+from . import arcconfig
 import phabricator_graphql_client
 import phabricator_graphql_client_urllib
 
@@ -19,10 +26,12 @@ class ClientError(Exception):
         self.code = code
 
 class Client(object):
-    def __init__(self, repodir=os.getcwd(), ca_bundle=None, repo=None):
-        self._mock = 'HG_ARC_CONDUIT_MOCK' in os.environ
+    def __init__(self, repodir=None, ca_bundle=None, repo=None):
+        if not repodir:
+            repodir=pycompat.getcwd()
+        self._mock = 'HG_ARC_CONDUIT_MOCK' in encoding.environ
         if self._mock:
-            with open(os.environ['HG_ARC_CONDUIT_MOCK'], 'r') as f:
+            with open(encoding.environ['HG_ARC_CONDUIT_MOCK'], 'r') as f:
                 self._mocked_responses = json.load(f)
 
         self._host = None
@@ -42,8 +51,8 @@ class Client(object):
 
     def _applyarcconfig(self, config):
         self._host = config.get('graphql_uri', self._host)
-        if 'OVERRIDE_GRAPHQL_URI' in os.environ:
-            self._host = os.environ['OVERRIDE_GRAPHQL_URI']
+        if 'OVERRIDE_GRAPHQL_URI' in encoding.environ:
+            self._host = encoding.environ['OVERRIDE_GRAPHQL_URI']
         try:
             hostconfig = config['hosts'][self._host]
             self._user = hostconfig['user']
@@ -149,7 +158,8 @@ class Client(object):
                     localcommits = json.loads(localcommitnode[0][
                                                             'property_value'])
                     localcommits = sorted(localcommits.values(),
-                                          key=itemgetter('time'), reverse=True)
+                                          key=operator.itemgetter('time'),
+                                          reverse=True)
                     info['hash'] = localcommits[0].get('commit', None)
             infos[str(revision)] = info
         return infos
