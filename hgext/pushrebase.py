@@ -89,10 +89,8 @@ def uisetup(ui):
 
 def extsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
-    try:
-        # Don't add the 'to' arg if it already exists
-        extensions.find('remotenames')
-    except KeyError:
+    # Don't add the 'to' arg if it already exists
+    if not any(a for a in entry[1] if a[1] == 'to'):
         entry[1].append(('', 'to', '', _('server revision to rebase onto')))
 
     partorder = exchange.b2partsgenorder
