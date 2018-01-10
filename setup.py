@@ -5,6 +5,7 @@
 # 'python setup.py --help' for more options
 
 from distutils.version import LooseVersion
+import glob
 import os
 
 supportedpy = '~= 2.7'
@@ -508,6 +509,18 @@ class hgbuildext(build_ext):
 
 class hgbuildscripts(build_scripts):
     def run(self):
+        # Build chg on non-Windows platform
+        if not iswindows:
+            cc = new_compiler()
+            chgcflags = ['-std=c99', '-D_GNU_SOURCE']
+            if hgname != 'hg':
+                chgcflags.append('-DHGPATH="%s"' % hgname)
+            objs = cc.compile(glob.glob('contrib/chg/*.c'), debug=True,
+                              extra_preargs=chgcflags)
+            dest = os.path.join(self.build_dir, 'chg')
+            cc.link_executable(objs, dest)
+
+        # Potentially build hg.bat/exe
         if os.name != 'nt' or self.distribution.pure:
             return build_scripts.run(self)
 
