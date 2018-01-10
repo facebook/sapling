@@ -21,6 +21,15 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
+  fb/facebook-hg-rpms/fb_build_deb.py not using absolute_import
+  fb/facebook-hg-rpms/fb_build_nupkg.py not using absolute_import
+  fb/facebook-hg-rpms/fb_build_nupkg.py requires print_function
+  fb/facebook-hg-rpms/fb_build_rpm.py not using absolute_import
+  fb/facebook-hg-rpms/moreversion/setup.py not using absolute_import
+  fb/facebook-hg-rpms/nupkg_templates.py not using absolute_import
+  fb/facebook-hg-rpms/sctrigger.py not using absolute_import
+  fb/facebook-hg-rpms/tests/sqldirstate_benchmark.py not using absolute_import
+  fb/facebook-hg-rpms/tests/sqldirstate_benchmark.py requires print_function
   hgext/arcdiff.py not using absolute_import
   hgext/backups.py not using absolute_import
   hgext/catnotate.py not using absolute_import

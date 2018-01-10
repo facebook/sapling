@@ -14,6 +14,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X lib/third-party \
   > -X mercurial/thirdparty \
   > -X fb-hgext \
+  > -X fb/facebook-hg-rpms \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
