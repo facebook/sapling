@@ -310,8 +310,7 @@ class _dummyremote(object):
     """Dummy store storing blobs to temp directory."""
 
     def __init__(self, repo, url):
-        fullpath = repo.vfs.join('lfs', url.path)
-        self.vfs = lfsvfs(fullpath)
+        self.vfs = lfsvfs(url.path)
 
     def writebatch(self, pointers, fromstore):
         for p in pointers:
