@@ -305,6 +305,10 @@ class EdenServer : private TakeoverHandler {
   void registerStats(std::shared_ptr<EdenMount> edenMount);
   void unregisterStats(EdenMount* edenMount);
 
+  // Cancel all subscribers on all mounts so that we can tear
+  // down the thrift server without blocking
+  void shutdownSubscribers() const;
+
   /*
    * Member variables.
    *

@@ -808,6 +808,7 @@ void EdenServer::prepareThriftAddress() {
 }
 
 void EdenServer::stop() const {
+  shutdownSubscribers();
   server_->stop();
 }
 
@@ -847,9 +848,23 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         folly::File{takeoverThriftSocket, /* ownsFd */ true};
   }
 
+  shutdownSubscribers();
+
   // Stop the thrift server.  We will fulfill takeoverPromise_ once it stops.
   server_->stop();
   return takeoverPromise_.getFuture();
+}
+
+void EdenServer::shutdownSubscribers() const {
+  // If we have any subscription sessions from watchman, we want to shut
+  // those down now, otherwise they will block the server_->stop() call
+  // below
+  XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
+  auto mountPoints = mountPoints_.wlock();
+  for (auto& entry : *mountPoints) {
+    auto& info = entry.second;
+    info.edenMount->getJournal().cancelAllSubscribers();
+  }
 }
 
 void EdenServer::flushStatsNow() const {
