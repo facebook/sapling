@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > linkrevcache=$TESTDIR/../hgext3rd/linkrevcache.py
+  > linkrevcache=
   > EOF
 
   $ hg init repo

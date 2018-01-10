@@ -10,7 +10,7 @@ if not sys.platform.startswith('linux'):
     sys.stderr.write('skipped: linux required\n')
     sys.exit(80)
 
-from hgext3rd import patchrmdir
+from hgext import patchrmdir
 from mercurial import util
 
 patchrmdir.uisetup(None)

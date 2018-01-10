@@ -80,7 +80,6 @@ outputs, which should be fixed later.
   fb-hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   fb-hgext/tests/check-ext.py:4: relative import of stdlib module
   fb-hgext/tests/check-ext.py:4: direct symbol import glob from glob
-  fb-hgext/tests/test-fb-hgext-patchrmdir.py:13: direct symbol import patchrmdir from hgext3rd
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
   hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge

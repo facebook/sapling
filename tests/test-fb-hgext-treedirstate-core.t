@@ -4,7 +4,7 @@ Copy of test-dirstate.t for treedirstate
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > treedirstate=$TESTDIR/../hgext3rd/treedirstate.py
+  > treedirstate=
   > [treedirstate]
   > useinnewrepos=True
   > EOF

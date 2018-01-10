@@ -7,7 +7,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > EOF
 
   $ cd master
@@ -26,7 +26,7 @@
 
 Clone with shallowtrees not set (False)
 
-  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate --config extensions.fastmanifest=$TESTDIR/../fastmanifest
+  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate --config extensions.fastmanifest=
   streaming all changes
   3 files to transfer, 347 bytes of data
   transferred 347 bytes in * seconds (*/sec) (glob)
@@ -44,7 +44,7 @@ Clone with shallowtrees=True
   > shallowtrees=True
   > EOF
 
-  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate --config extensions.fastmanifest=$TESTDIR/../fastmanifest
+  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate --config extensions.fastmanifest=
   streaming all changes
   2 files to transfer, 236 bytes of data
   transferred 236 bytes in * seconds (*/sec) (glob)
