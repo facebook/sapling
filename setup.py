@@ -214,6 +214,12 @@ def write_if_changed(path, content):
             fh.write(content)
 
 scripts = ['hg']
+
+# Rename hg to $HGNAME. Useful when "hg" is a wrapper calling $HGNAME (or chg).
+hgname = os.environ.get('HGNAME', 'hg')
+if not re.match('\Ahg[.0-9a-z-]*\Z', hgname):
+    raise RuntimeError('Illegal HGNAME: %s' % hgname)
+
 if os.name == 'nt':
     # We remove hg.bat if we are able to build hg.exe.
     scripts.append('contrib/win32/hg.bat')
@@ -524,6 +530,14 @@ class hgbuildscripts(build_scripts):
             self.scripts.remove('contrib/win32/hg.bat')
 
         return build_scripts.run(self)
+
+    def copy_scripts(self):
+        build_scripts.copy_scripts(self)
+        # Rename hg to hgname
+        if hgname != 'hg':
+            oldpath = os.path.join(self.build_dir, 'hg')
+            newpath = os.path.join(self.build_dir, hgname)
+            os.rename(oldpath, newpath)
 
 class hgbuildpy(build_py):
     def finalize_options(self):
