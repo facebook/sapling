@@ -432,7 +432,9 @@ SerializedInodeMap InodeMap::save() {
 
 void InodeMap::load(const SerializedInodeMap& takeover) {
   auto data = data_.wlock();
-  CHECK(data->unloadedInodes_.empty())
+  CHECK_EQ(data->loadedInodes_.size(), 0)
+      << "cannot load InodeMap data over a populated instance";
+  CHECK_EQ(data->unloadedInodes_.size(), 0)
       << "cannot load InodeMap data over a populated instance";
   data->nextInodeNumber_ = takeover.nextInodeNumber;
   for (const auto& entry : takeover.unloadedInodes) {

@@ -91,15 +91,23 @@ class EdenMount {
   /**
    * Create a shared_ptr to an EdenMount.
    *
-   * Create an EdenMount instance and asynchronously initialize it. We use
-   * an EdenMountDeleter.
+   * Create an EdenMount instance Using an EdenMountDeleter.
+   * The caller must call initialize() after creating the EdenMount
+   * instance.  This is not done implicitly because the graceful
+   * restart code needs to take the opportunity to update the InodeMap
+   * prior to the logic in initialize() running.
    */
-  static folly::Future<std::shared_ptr<EdenMount>> create(
+  static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
       AbsolutePathPiece socketPath,
       fusell::ThreadLocalEdenStats* globalStats,
       std::shared_ptr<Clock> clock);
+
+  /**
+   * Asynchronous EdenMount initialization - post instantiation.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> initialize();
 
   /**
    * Destroy the EdenMount.
@@ -545,11 +553,6 @@ class EdenMount {
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
   EdenMount& operator=(EdenMount const&) = delete;
-
-  /**
-   * Asynchronous EdenMount initialization - post instantiation.
-   */
-  folly::Future<folly::Unit> initialize();
 
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);

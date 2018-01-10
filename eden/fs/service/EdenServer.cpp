@@ -547,41 +547,30 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto backingStore = getBackingStore(repoType, initialConfig->getRepoSource());
   auto objectStore =
       std::make_unique<ObjectStore>(getLocalStore(), backingStore);
+  bool doTakeover = optionalTakeover.hasValue();
 
-  return EdenMount::create(
-             std::move(initialConfig),
-             std::move(objectStore),
-             getSocketPath(),
-             getStats(),
-             std::make_shared<UnixClock>())
-      .then([this, optionalTakeover = std::move(optionalTakeover)](
-                std::shared_ptr<EdenMount> edenMount) mutable {
-        // Load InodeBase objects for any materialized files in this mount point
-        // before we start mounting.
-        auto rootInode = edenMount->getRootInode();
-        bool doTakeover = optionalTakeover.hasValue();
+  auto edenMount = EdenMount::create(
+      std::move(initialConfig),
+      std::move(objectStore),
+      getSocketPath(),
+      getStats(),
+      std::make_shared<UnixClock>());
 
-        if (optionalTakeover) {
-          edenMount->getInodeMap()->load(optionalTakeover->inodeMap);
-        }
+  if (optionalTakeover) {
+    edenMount->getInodeMap()->load(optionalTakeover->inodeMap);
+  }
 
-        return rootInode->loadMaterializedChildren()
-            .then([this,
-                   edenMount,
-                   optionalTakeover = std::move(optionalTakeover)](
-                      folly::Try<folly::Unit> t) mutable {
-              (void)t; // We're explicitly ignoring possible failure in
-                       // loadMaterializedChildren, but only because we were
-                       // previously using .wait() on the future.  We could
-                       // just let potential errors propagate.
+  return edenMount->initialize().then(
+      [this,
+       doTakeover,
+       edenMount,
+       optionalTakeover = std::move(optionalTakeover)]() mutable {
 
-              addToMountPoints(edenMount);
+        addToMountPoints(edenMount);
 
-              return optionalTakeover
-                  ? performTakeoverFuseStart(
-                        edenMount, std::move(*optionalTakeover))
-                  : performFreshFuseStart(edenMount);
-            })
+        return (optionalTakeover ? performTakeoverFuseStart(
+                                       edenMount, std::move(*optionalTakeover))
+                                 : performFreshFuseStart(edenMount))
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture
             // will ensure that this happens.

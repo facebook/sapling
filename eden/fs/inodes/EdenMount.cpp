@@ -156,19 +156,18 @@ static const uint64_t globalProcessGeneration =
 // for a given mount instance.
 static std::atomic<uint16_t> mountGeneration{0};
 
-folly::Future<std::shared_ptr<EdenMount>> EdenMount::create(
+std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
     AbsolutePathPiece socketPath,
     fusell::ThreadLocalEdenStats* globalStats,
     std::shared_ptr<Clock> clock) {
-  auto mount = std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
-                                                        std::move(objectStore),
-                                                        socketPath,
-                                                        globalStats,
-                                                        clock},
-                                          EdenMountDeleter{}};
-  return mount->initialize().then([mount] { return mount; });
+  return std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
+                                                  std::move(objectStore),
+                                                  socketPath,
+                                                  globalStats,
+                                                  clock},
+                                    EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
