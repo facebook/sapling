@@ -42,11 +42,6 @@ outputs, which should be fixed later.
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
   > | sed 's-\\-/-g' | $PYTHON "$import_checker" -
-  fb-hgext/contrib/git-sl:13: relative import of stdlib module
-  fb-hgext/contrib/git-sl:13: direct symbol import Popen from subprocess
-  fb-hgext/contrib/git-sl:15: relative import of stdlib module
-  fb-hgext/contrib/git-sl:15: direct symbol import time from time
-  fb-hgext/contrib/git-sl:16: imports not lexically sorted: argparse < subprocess
   fb-hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from fb-hgext.infinitepush.bundleparts
   fb-hgext/infinitepush/__init__.py:108: imports from fb-hgext.infinitepush not lexically sorted: common < infinitepushcommands
   fb-hgext/infinitepush/__init__.py:113: relative import of stdlib module

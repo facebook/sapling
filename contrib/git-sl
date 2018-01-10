@@ -4,17 +4,14 @@
 #
 # Emulate the output of smartlog.py atop git, instead of Mercurial.
 #
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import re
-from subprocess import Popen
-import subprocess
-from time import time
-import argparse
 
+import argparse
+import re
+import subprocess
 
 seconds_in_a_day = 60.0 * 60.0 * 24.0
 
@@ -105,7 +102,7 @@ class GitRevision(object):
                     rev.small_hash,
                     rev.author,
                     ", ".join(rev.ref),
-                    (time() - rev.commit_timestamp) / seconds_in_a_day,
+                    (time.time() - rev.commit_timestamp) / seconds_in_a_day,
                     rev.longref)
                 )
         cls.revisionmap = new_revisionmap
@@ -143,7 +140,7 @@ class GitRevision(object):
             if rev.father == rev:
                 cls.root = rev
         for rev in cls.revisionmap.values():
-            key=lambda x: time() if "master" in x.ref else x.newest_timestamp()
+            key=lambda x: time.time() if "master" in x.ref else x.newest_timestamp()
             rev.children = sorted(
                 rev.children,
                 key = key
@@ -291,7 +288,7 @@ class GitRevision(object):
         self.small_hash = small_hash
 
 def run_cmd(cmd, swallow_error=False):
-    p = Popen(["git"] + cmd,
+    p = subprocess.Popen(["git"] + cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
     out, err = p.communicate()
@@ -345,7 +342,7 @@ if __name__ == "__main__":
             default=str(14), help='time in days to look for features.')
     gitsl_args = parser.parse_args()
     GitRevision.show_all = gitsl_args.all
-    GitRevision.origin_timestamp_threshold = (time() -
+    GitRevision.origin_timestamp_threshold = (time.time() -
             float(gitsl_args.time) * seconds_in_a_day)
     GitRevision.build_revmap(git_branch_names() + ["HEAD"])
     GitRevision.prepare()

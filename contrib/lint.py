@@ -6,8 +6,8 @@ from __future__ import absolute_import, print_function
 
 import errno
 import os
-import subprocess
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
