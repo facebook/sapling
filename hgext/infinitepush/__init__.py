@@ -4,7 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""
+''' back up commits in the cloud
     [infinitepush]
     # Server-side and client-side option. Pattern of the infinitepush bookmark
     branchpattern = PATTERN
@@ -32,7 +32,7 @@
     # Formatted cmd line will be passed to it (see `put_args`)
     put_binary = put
 
-    # Serser-side option. Used only if storetype=external.
+    # Server-side option. Used only if storetype=external.
     # Format cmd-line string for put binary. Placeholder: {filename}
     put_args = {filename}
 
@@ -41,7 +41,7 @@
     # Formatted cmd line will be passed to it (see `get_args`)
     get_binary = get
 
-    # Serser-side option. Used only if storetype=external.
+    # Server-side option. Used only if storetype=external.
     # Format cmd-line string for get binary. Placeholders: {filename} {handle}
     get_args = {filename} {handle}
 
@@ -82,7 +82,7 @@
     # This option should be set only if remotenames extension is enabled.
     # Whether remote bookmarks are tracked by remotenames extension.
     bookmarks = True
-"""
+'''
 
 from __future__ import absolute_import
 import contextlib
