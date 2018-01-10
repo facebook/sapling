@@ -13,7 +13,7 @@ scratchbookmarks() {
 setupcommon() {
   cat >> $HGRCPATH << EOF
 [extensions]
-infinitepush=$TESTDIR/../infinitepush
+infinitepush=
 [ui]
 ssh = python "$TESTDIR/dummyssh"
 [infinitepush]
@@ -36,7 +36,7 @@ cat << EOF > .hg/hgrc
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [extensions]
-infinitepush=$TESTDIR/../infinitepush
+infinitepush=
 [infinitepush]
 branchpattern=re:scratch/.+
 server=False
@@ -50,7 +50,7 @@ cat << EOF > .hg/hgrc
 [ui]
 ssh=python "$TESTDIR/dummyssh"
 [extensions]
-infinitepush=$TESTDIR/../infinitepush
+infinitepush=
 [infinitepush]
 branchpattern=re:scratch/.+
 server=True
@@ -67,13 +67,22 @@ DROP TABLE IF EXISTS nodestobundle;
 DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
 DROP TABLE IF EXISTS nodesmetadata;
-$(cat $TESTDIR/../infinitepush/schema.sql)
+$(cat $TESTDIR/infinitepush/schema.sql)
 EOF
 }
 
 setupdb() {
-[[ -e $TESTDIR/getdb.sh ]] || { echo 'skipped: missing getdb.sh'; exit 80; }
-source $TESTDIR/getdb.sh >/dev/null
+if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
+  echo "skipped: mysql-connector-python missing"
+  exit 80
+fi
+
+if [[ ! -f "$TESTDIR/infinitepush/getdb.sh" ]]; then
+  echo "skipped: infinitepush/getdb.sh missing"
+  exit 80
+fi
+
+source $TESTDIR/infinitepush/getdb.sh >/dev/null
 
 if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
     # Assuming they are set using the legacy way: $DBHOSTPORT
