@@ -1,4 +1,3 @@
-subinclude:remotenames/.hgignore
 subinclude:hgsubversion/.hgignore
 
 syntax: glob

@@ -161,7 +161,6 @@
   hgsubversion/tests/test_util.py not using absolute_import
   hgsubversion/tests/test_util.py requires print_function
   hgsubversion/tests/test_utility_commands.py not using absolute_import
-  remotenames/setup.py not using absolute_import
   setup.py not using absolute_import
   tests/bundlerepologger.py not using absolute_import
   tests/conduithttp.py not using absolute_import
