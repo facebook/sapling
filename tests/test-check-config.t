@@ -45,12 +45,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ testrepohg files "set:(**.py or **.txt) - tests/**" | sed 's|\\|/|g' |
   >   $PYTHON contrib/check-config.py
-      if ui.configbool('remotefilelog', 'fastdatapack', True):
-  conflict on remotefilelog.fastdatapack: ('bool', 'True') != ('bool', '')
-  at fb-hgext/tests/perftest.py:342:
-              usecdatapack=ui.configbool('remotefilelog', 'fastdatapack'))
-  conflict on remotefilelog.fastdatapack: ('bool', '') != ('bool', 'True')
-  at fb-hgext/tests/treemanifest_correctness.py:36:
   undocumented: extensions.treemanifest (str)
   undocumented: fastlog.debug (str)
   undocumented: fastlog.enabled (bool)

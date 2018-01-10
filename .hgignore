@@ -1,5 +1,4 @@
 subinclude:remotenames/.hgignore
-subinclude:fb-hgext/.hgignore
 subinclude:hg-git/.hgignore
 subinclude:hgsubversion/.hgignore
 

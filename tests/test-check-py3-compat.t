@@ -21,18 +21,6 @@
   contrib/python-zstandard/tests/test_estimate_sizes.py not using absolute_import
   contrib/python-zstandard/tests/test_module_attributes.py not using absolute_import
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
-  fb-hgext/setup.py not using absolute_import
-  fb-hgext/tests/get-with-headers.py not using absolute_import
-  fb-hgext/tests/get-with-headers.py requires print_function
-  fb-hgext/tests/getflogheads.py not using absolute_import
-  fb-hgext/tests/heredoctest.py not using absolute_import
-  fb-hgext/tests/heredoctest.py requires print_function
-  fb-hgext/tests/killdaemons.py not using absolute_import
-  fb-hgext/tests/ls-l.py not using absolute_import
-  fb-hgext/tests/ls-l.py requires print_function
-  fb-hgext/tests/perftest.py not using absolute_import
-  fb-hgext/tests/perftest.py requires print_function
-  fb-hgext/tests/treemanifest_correctness.py not using absolute_import
   hgext/arcdiff.py not using absolute_import
   hgext/backups.py not using absolute_import
   hgext/catnotate.py not using absolute_import

@@ -1,8 +1,0 @@
-# On OS X targets, configure the linker to perform dynamic lookup of undefined
-# symbols.  This allows the library to be used as a Python extension.
-
-[target.i686-apple-darwin]
-rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
-
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup"]
