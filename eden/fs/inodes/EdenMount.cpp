@@ -290,7 +290,7 @@ void EdenMount::destroy() {
         delete this;
       } else {
         // Call shutdownImpl() to destroy all loaded inodes.
-        shutdownImpl().then([this] { delete this; });
+        shutdownImpl(/*doTakeover=*/false).then([this] { delete this; });
       }
       return;
     }
@@ -300,7 +300,7 @@ void EdenMount::destroy() {
     case State::FUSE_DONE: {
       // Call shutdownImpl() to destroy all loaded inodes,
       // and delete ourselves when it completes.
-      shutdownImpl().then([this] { delete this; });
+      shutdownImpl(/*doTakeover=*/false).then([this] { delete this; });
       return;
     }
     case State::SHUTTING_DOWN:
@@ -320,7 +320,7 @@ void EdenMount::destroy() {
               << " in unexpected state " << static_cast<uint32_t>(oldState);
 }
 
-Future<Unit> EdenMount::shutdown() {
+Future<SerializedFileHandleMap> EdenMount::shutdown(bool doTakeover) {
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
@@ -331,16 +331,26 @@ Future<Unit> EdenMount::shutdown() {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
                << "state was " << static_cast<uint32_t>(state_.load());
   }
-  return shutdownImpl();
+  return shutdownImpl(doTakeover);
 }
 
-Future<Unit> EdenMount::shutdownImpl() {
+Future<SerializedFileHandleMap> EdenMount::shutdownImpl(bool doTakeover) {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
-  return inodeMap_->shutdown().then([this] {
-    XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
-    state_.store(State::SHUT_DOWN);
-  });
+
+  // We need to wind down the file handle map prior to shutting down
+  // the inodeMap, otherwise the outstanding file handles will effectively
+  // block its shutdown forever
+  auto fileHandleMap = doTakeover
+      ? getDispatcher()->getFileHandles().serializeMap()
+      : SerializedFileHandleMap{};
+
+  return inodeMap_->shutdown().then(
+      [this, fileHandleMap = std::move(fileHandleMap)] {
+        XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
+        state_.store(State::SHUT_DOWN);
+        return fileHandleMap;
+      });
 }
 
 fusell::FuseChannel* EdenMount::getFuseChannel() const {
@@ -653,7 +663,7 @@ std::string EdenMount::getCounterName(CounterName name) {
   folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
 }
 
-folly::Future<fusell::FuseChannelData> EdenMount::getFuseCompletionFuture() {
+folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
@@ -715,7 +725,20 @@ folly::Future<folly::Unit> EdenMount::startFuse(
       auto channelData = channel_->stealFuseDevice();
       channel_.reset();
 
-      fuseCompletionPromise_.setValue(std::move(channelData));
+      std::vector<AbsolutePath> bindMounts;
+      for (const auto& entry : bindMounts_) {
+        bindMounts.push_back(entry.pathInMountDir);
+      }
+
+      fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
+          path_,
+          config_->getClientDirectory(),
+          bindMounts,
+          std::move(channelData.fd),
+          channelData.connInfo,
+          SerializedFileHandleMap{}, // placeholder
+          SerializedInodeMap{} // placeholder
+          ));
     });
 
     if (takeoverData.hasValue()) {

@@ -70,23 +70,13 @@ class FileHandleMap {
    * On success, returns the instance. */
   std::shared_ptr<FileHandleBase> forgetGenericHandle(uint64_t fh);
 
-  /** Serializes the current file handle mapping to a file with
-   * the specified path.  This mapping can be used to re-establish
-   * file handle objects when we perform a graceful restart. */
-  void saveFileHandleMap(folly::StringPiece fileName) const;
-
   /** Serializes the current file handle mapping to its corresponding
-   * thrift data structure representation.  This method is primarily
-   * present to enable testing.  You probably want to call saveFileHandleMap()
-   * rather than calling this method directly */
-  SerializedFileHandleMap serializeMap() const;
-
-  /** Load a file that was previously written by saveFileHandleMap()
-   * and return the deserialized representation.  This method doesn't
-   * construct an instance of FileHandleMap because that requires
-   * coordination with the dispatcher machinery that we don't have
-   * access to here. */
-  static SerializedFileHandleMap loadFileHandleMap(folly::StringPiece fileName);
+   * thrift data structure representation.  This method is destructive;
+   * it will clear the contents of the FileHandleMap, decrementing the
+   * reference counts on the FileHandle objects, allowing them to
+   * be destroyed even though they have not been closed through FUSE
+   * APIs. */
+  SerializedFileHandleMap serializeMap();
 
  private:
   folly::Synchronized<

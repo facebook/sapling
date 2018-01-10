@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import resource
 import sys
 
 from .lib import testcase
@@ -16,9 +17,10 @@ from .lib import testcase
 @testcase.eden_repo_test
 class RestartTest:
     def populate_repo(self):
-        self.repo.write_file('hello', 'hola\n')
-        self.repo.write_file('adir/file', 'foo!\n')
-        self.repo.symlink('slink', 'hello')
+        self.pagesize = resource.getpagesize()
+        self.page1 = "1" * self.pagesize
+        self.page2 = "2" * self.pagesize
+        self.repo.write_file('hello', self.page1 + self.page2)
         self.repo.commit('Initial commit.')
 
     def edenfs_logging_settings(self):
@@ -27,13 +29,27 @@ class RestartTest:
     def test_restart(self):
         hello = os.path.join(self.mount, 'hello')
         with open(hello, 'r') as f:
-            self.assertEqual('hola\n', f.read())
+            # Read the first page only (rather than the whole file)
+            # before we restart the process.
+            # This is so that we can check that the kernel really
+            # does call in to us for the second page and that we're
+            # really servicing the read for the second page and that
+            # it isn't just getting served from the kernel buffer cache
+            self.assertEqual(self.page1, f.read(self.pagesize))
 
-        # TODO: Once we fully support mount takeover, confirm that open file
-        # handles work across restart.
-        print('=== beginning restart ===', file=sys.stderr)
-        self.eden.graceful_restart()
-        print('=== restart complete ===', file=sys.stderr)
+            print('=== beginning restart ===', file=sys.stderr)
+            self.eden.graceful_restart()
+            print('=== restart complete ===', file=sys.stderr)
 
+            # Ensure that our file handle is still live across
+            # the restart boundary
+            f.seek(0)
+            self.assertEqual(self.page1, f.read(self.pagesize))
+            self.assertEqual(self.page2, f.read(self.pagesize))
+
+        # Let's also testing opening the same file up again,
+        # just to make sure that that is still working after
+        # the graceful restart.
         with open(hello, 'r') as f:
-            self.assertEqual('hola\n', f.read())
+            self.assertEqual(self.page1, f.read(self.pagesize))
+            self.assertEqual(self.page2, f.read(self.pagesize))

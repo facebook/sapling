@@ -115,25 +115,11 @@ TEST(FileHandleMap, Serialization) {
 
   EXPECT_EQ(expected, serialized.entries);
 
-  TemporaryFile mapFile("file-handles");
-  fmap.saveFileHandleMap(mapFile.path().c_str());
-
-  auto loaded = FileHandleMap::loadFileHandleMap(mapFile.path().c_str());
-
-  std::sort(
-      loaded.entries.begin(),
-      loaded.entries.end(),
-      [](const FileHandleMapEntry& a, const FileHandleMapEntry& b) {
-        return a.inodeNumber < b.inodeNumber;
-      });
-
-  EXPECT_EQ(expected, loaded.entries);
-
   FileHandleMap newMap;
   newMap.recordHandle(fileHandle, fileHandleNo);
   newMap.recordHandle(dirHandle, dirHandleNo);
 
-  auto newSerialized = fmap.serializeMap();
+  auto newSerialized = newMap.serializeMap();
 
   std::sort(
       newSerialized.entries.begin(),

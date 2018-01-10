@@ -20,6 +20,9 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/DirHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
+#include "eden/fs/fuse/FileHandleBase.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
@@ -154,21 +157,11 @@ folly::Future<TakeoverData> EdenServer::takeoverAll() {
         auto future = info.takeoverPromise->getFuture();
         info.edenMount->getFuseChannel()->requestSessionExit();
         futures.emplace_back(future.then(
-            [edenMount = info.edenMount](FuseChannelData channelData) {
-              std::vector<AbsolutePath> bindMounts;
-              for (auto& entry : edenMount->getBindMounts()) {
-                bindMounts.push_back(entry.pathInMountDir);
-              }
+            [edenMount = info.edenMount](TakeoverData::MountInfo takeover) {
               fusell::privilegedFuseTakeoverShutdown(
                   edenMount->getPath().stringPiece());
-              return TakeoverData::MountInfo(
-                  edenMount->getPath(),
-                  edenMount->getConfig()->getClientDirectory(),
-                  bindMounts,
-                  std::move(channelData.fd),
-                  channelData.connInfo,
-                  edenMount->getDispatcher()->getFileHandles().serializeMap(),
-                  edenMount->getInodeMap()->save());
+              takeover.inodeMap = edenMount->getInodeMap()->save();
+              return takeover;
             }));
       } catch (const std::exception& ex) {
         const auto& mountPath = entry.first;
@@ -519,7 +512,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::takeoverMount(
         auto rootInode = edenMount->getRootInode();
 
         edenMount->getInodeMap()->load(info.inodeMap);
-        // TODO: open file handles for each entry in info.fileHandleMap
 
         return rootInode->loadMaterializedChildren()
             .then([this, edenMount, info = std::move(info)](
@@ -529,9 +521,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::takeoverMount(
                        // previously using .wait() on the future.  We could
                        // just let potential errors propagate.
 
-              XLOG(ERR) << "addToMountPoints";
               addToMountPoints(edenMount);
-              XLOG(ERR) << "privilegedFuseTakeoverStartup";
               std::vector<std::string> bindMounts;
               for (const auto& bindMount : info.bindMounts) {
                 bindMounts.emplace_back(bindMount.value());
@@ -539,22 +529,62 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::takeoverMount(
               fusell::privilegedFuseTakeoverStartup(
                   info.mountPath.stringPiece(), bindMounts);
 
-              XLOG(ERR) << "takeoverFuse";
+              // (re)open file handles for each entry in info.fileHandleMap
+              std::vector<folly::Future<folly::Unit>> futures;
+              auto dispatcher = edenMount->getDispatcher();
+
+              for (const auto& handleEntry : info.fileHandleMap.entries) {
+                if (handleEntry.isDir) {
+                  futures.emplace_back(
+                      // TODO: we should record the opendir() flags in the
+                      // SerializedFileHandleMap so that we can restore
+                      // the correct flags here.
+                      dispatcher->opendir(handleEntry.inodeNumber, 0)
+                          .then([dispatcher, number = handleEntry.handleId](
+                                    std::shared_ptr<fusell::DirHandle> handle) {
+                            dispatcher->getFileHandles().recordHandle(
+                                std::static_pointer_cast<
+                                    fusell::FileHandleBase>(handle),
+                                number);
+                          }));
+                } else {
+                  futures.emplace_back(
+                      // TODO: we should record the open() flags in the
+                      // SerializedFileHandleMap so that we can restore
+                      // the correct flags here.
+                      dispatcher->open(handleEntry.inodeNumber, O_RDWR)
+                          .then(
+                              [dispatcher, number = handleEntry.handleId](
+                                  std::shared_ptr<fusell::FileHandle> handle) {
+                                dispatcher->getFileHandles().recordHandle(
+                                    std::static_pointer_cast<
+                                        fusell::FileHandleBase>(handle),
+                                    number);
+                              }));
+                }
+              }
 
               FuseChannelData channelData;
               channelData.fd = std::move(info.fuseFD);
               channelData.connInfo = info.connInfo;
 
               // Start up the fuse workers.
-              return edenMount->startFuse(
-                  getMainEventBase(), threadPool_, std::move(channelData));
+              return folly::collectAll(futures).then(
+                  [this,
+                   edenMount,
+                   channelData = std::move(channelData)]() mutable {
+                    return edenMount->startFuse(
+                        getMainEventBase(),
+                        threadPool_,
+                        std::move(channelData));
+                  });
             })
             // If an error occurs we want to call mountFinished and throw the
             // error here.  Once the pool is up and running, the finishFuture
             // will ensure that this happens.
             .onError([this, edenMount](folly::exception_wrapper ew) {
               XLOG(ERR) << "failed to takeover " << ew;
-              mountFinished(edenMount.get(), FuseChannelData{});
+              mountFinished(edenMount.get(), folly::none);
               return makeFuture<folly::Unit>(ew);
             })
             // Explicitly move the remainder of processing to a utility
@@ -570,11 +600,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::takeoverMount(
               // mountFinished once the pool is torn down.
               XLOG(ERR) << "this bit";
               auto finishFuture = edenMount->getFuseCompletionFuture().then(
-                  [this, edenMount](folly::Try<FuseChannelData>&& fuseFd) {
-                    mountFinished(
-                        edenMount.get(),
-                        fuseFd.hasValue() ? std::move(fuseFd).value()
-                                          : FuseChannelData{});
+                  [this,
+                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
+                    folly::Optional<TakeoverData::MountInfo> optionalTakeover;
+                    if (takeover.hasValue()) {
+                      optionalTakeover = std::move(takeover.value());
+                    }
+                    mountFinished(edenMount.get(), std::move(optionalTakeover));
                   });
               // We're deliberately discarding the future here; we don't
               // need to wait for it to finish.
@@ -628,7 +660,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
             // error here.  Once the pool is up and running, the finishFuture
             // will ensure that this happens.
             .onError([this, edenMount](folly::exception_wrapper ew) {
-              mountFinished(edenMount.get(), FuseChannelData{});
+              mountFinished(edenMount.get(), folly::none);
               return makeFuture<folly::Unit>(ew);
             })
             // Explicitly move the remainder of processing to a utility
@@ -643,11 +675,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture = edenMount->getFuseCompletionFuture().then(
-                  [this, edenMount](folly::Try<FuseChannelData>&& fuseFd) {
-                    mountFinished(
-                        edenMount.get(),
-                        fuseFd.hasValue() ? std::move(fuseFd).value()
-                                          : FuseChannelData{});
+                  [this,
+                   edenMount](folly::Try<TakeoverData::MountInfo>&& takeover) {
+                    folly::Optional<TakeoverData::MountInfo> optionalTakeover;
+                    if (takeover.hasValue()) {
+                      optionalTakeover = std::move(takeover.value());
+                    }
+                    mountFinished(edenMount.get(), std::move(optionalTakeover));
                   });
               // We're deliberately discarding the future here; we don't
               // need to wait for it to finish.
@@ -688,14 +722,14 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 
 void EdenServer::mountFinished(
     EdenMount* edenMount,
-    FuseChannelData channelData) {
+    folly::Optional<TakeoverData::MountInfo> takeover) {
   auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
   // Erase the EdenMount from our mountPoints_ map
   folly::SharedPromise<Unit> unmountPromise;
-  folly::Optional<folly::Promise<FuseChannelData>> takeoverPromise;
+  folly::Optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   {
     auto mountPoints = mountPoints_.wlock();
     auto it = mountPoints->find(mountPath);
@@ -705,17 +739,27 @@ void EdenServer::mountFinished(
     mountPoints->erase(it);
   }
 
+  bool doTakeover = takeoverPromise.hasValue();
+
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
-  edenMount->shutdown().then([unmountPromise = std::move(unmountPromise),
-                              takeoverPromise = std::move(takeoverPromise),
-                              channelData = std::move(channelData)](
-                                 folly::Try<folly::Unit> result) mutable {
-    if (takeoverPromise) {
-      takeoverPromise.value().setValue(std::move(channelData));
-    }
-    unmountPromise.setTry(std::move(result));
-  });
+  edenMount->shutdown(doTakeover)
+      .then([unmountPromise = std::move(unmountPromise),
+             takeoverPromise = std::move(takeoverPromise),
+             takeoverData = std::move(takeover)](
+                folly::Try<SerializedFileHandleMap>&& result) mutable {
+        if (takeoverPromise) {
+          takeoverPromise.value().setWith([&]() mutable {
+            takeoverData.value().fileHandleMap = std::move(result.value());
+            return std::move(takeoverData.value());
+          });
+        }
+        unmountPromise.setTry(
+            folly::makeTryWith([result = std::move(result)]() {
+              result.throwIfFailed();
+              return Unit{};
+            }));
+      });
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {

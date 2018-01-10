@@ -26,6 +26,7 @@
 #include <vector>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -49,7 +50,6 @@ namespace eden {
 class BackingStore;
 class Dirstate;
 class EdenCPUThreadPool;
-class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
@@ -223,7 +223,7 @@ class EdenServer : private TakeoverHandler {
   struct EdenMountInfo {
     std::shared_ptr<EdenMount> edenMount;
     folly::SharedPromise<folly::Unit> unmountPromise;
-    folly::Optional<folly::Promise<fusell::FuseChannelData>> takeoverPromise;
+    folly::Optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
 
     explicit EdenMountInfo(const std::shared_ptr<EdenMount>& mount)
         : edenMount(mount),
@@ -276,7 +276,7 @@ class EdenServer : private TakeoverHandler {
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(
       EdenMount* mountPoint,
-      fusell::FuseChannelData channelData);
+      folly::Optional<TakeoverData::MountInfo> takeover);
 
   folly::Future<folly::Unit> performNormalShutdown();
   folly::Future<folly::Unit> performTakeoverShutdown(folly::File thriftSocket);

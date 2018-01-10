@@ -124,10 +124,10 @@ std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
   return result;
 }
 
-SerializedFileHandleMap FileHandleMap::serializeMap() const {
+SerializedFileHandleMap FileHandleMap::serializeMap() {
   SerializedFileHandleMap result;
 
-  auto handles = handles_.rlock();
+  auto handles = handles_.wlock();
   for (auto& it : *handles) {
     FileHandleMapEntry entry;
 
@@ -138,28 +138,13 @@ SerializedFileHandleMap FileHandleMap::serializeMap() const {
     result.entries.push_back(std::move(entry));
   }
 
+  // Release all of the file handle instances that we've been maintaining;
+  // this unblocks tearing down the InodeMap that will happen shortly
+  // during graceful restart.
+  handles->clear();
   return result;
 }
 
-void FileHandleMap::saveFileHandleMap(folly::StringPiece fileName) const {
-  auto serializedData =
-      CompactSerializer::serialize<std::string>(serializeMap());
-
-  // And update the file on disk
-  folly::writeFileAtomic(fileName, serializedData);
-}
-
-SerializedFileHandleMap FileHandleMap::loadFileHandleMap(
-    folly::StringPiece fileName) {
-  auto path = fileName.str();
-  std::string serializedData;
-  if (!folly::readFile(path.c_str(), serializedData)) {
-    folly::throwSystemError("failed to read FileHandleMap from ", path);
-  }
-
-  return CompactSerializer::deserialize<SerializedFileHandleMap>(
-      serializedData);
-}
 } // namespace fusell
 } // namespace eden
 } // namespace facebook
