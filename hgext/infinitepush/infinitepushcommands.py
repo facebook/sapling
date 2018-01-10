@@ -2,14 +2,14 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""
+'''
 Config::
 
     [infinitepush]
     # limit number of files in the node metadata. This is to make sure we don't
     # waste too much space on huge codemod commits.
     metadatafilelimit = 100
-"""
+'''
 
 from __future__ import absolute_import
 

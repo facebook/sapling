@@ -88,12 +88,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >     cwd = util.normpath(os.getcwd())
    use pycompat.getcwd instead (py3)
   Skipping hgext/hgsql.py it has no-che?k-code (glob)
-  hgext/infinitepush/backupcommands.py:387:
-   >     if 'CHGINTERNALMARK' in os.environ:
-   use encoding.environ instead (py3)
-  hgext/infinitepush/infinitepushcommands.py:5:
-   > """
-   don't capitalize docstring title
   hgext/morestatus.py:49:
    >                 os.getcwd()) for path in unresolvedlist])
    use pycompat.getcwd instead (py3)

@@ -384,7 +384,7 @@ def _autobackupruncommandwrapper(orig, lui, repo, cmd, fullargs, *args):
     '''
 
     # For chg, do not wrap the "serve" runcommand call
-    if 'CHGINTERNALMARK' in os.environ:
+    if 'CHGINTERNALMARK' in encoding.environ:
         return orig(lui, repo, cmd, fullargs, *args)
 
     try:
