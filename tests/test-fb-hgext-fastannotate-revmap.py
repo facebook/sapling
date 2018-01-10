@@ -7,7 +7,7 @@ import tempfile
 # make it runnable using python directly without run-tests.py
 sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
-from hgext3rd.fastannotate import error, revmap
+from hgext.fastannotate import error, revmap
 
 def genhsh(i):
     return chr(i) + b'\0' * 19

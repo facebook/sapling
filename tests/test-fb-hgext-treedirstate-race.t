@@ -1,5 +1,3 @@
-  $ . $TESTDIR/require-ext.sh hgext3rd.rust.treedirstate
-
 Copy of core Mercurial test-dirstate-race, for treedirstate.
 
   $ cat >> $HGRCPATH <<EOF

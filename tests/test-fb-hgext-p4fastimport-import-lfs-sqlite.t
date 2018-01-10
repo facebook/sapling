@@ -3,7 +3,7 @@
   $ . $TESTDIR/p4setup.sh
   $ cat >> $HGRCPATH<<EOF
   > [extensions]
-  > lfs=$TESTDIR/../hgext3rd/lfs
+  > lfs=
   > [p4fastimport]
   > lfspointeronly=True
   > lfsmetadata=lfs.sql

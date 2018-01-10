@@ -1,5 +1,3 @@
-  $ . $TESTDIR/require-ext.sh hgext3rd.rust.treedirstate
-
 Copy of test-dirstate.t for treedirstate
 
   $ cat >> $HGRCPATH <<EOF

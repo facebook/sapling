@@ -1,5 +1,3 @@
-  $ . $TESTDIR/require-ext.sh hgext3rd.rust.treedirstate
-
 Setup
 
   $ cat >> $HGRCPATH <<EOF

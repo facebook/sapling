@@ -330,8 +330,6 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-cstore-uniondatapackstore.py:24: direct symbol import datapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-cstore-uniondatapackstore.py:30: symbol import follows non-symbol import: mercurial.node
   tests/test-fb-hgext-cstore-uniondatapackstore.py:31: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-fastannotate-revmap.py:10: relative import of stdlib module
-  tests/test-fb-hgext-fastannotate-revmap.py:10: direct symbol import error, revmap from hgext3rd.fastannotate
   tests/test-fb-hgext-remotefilelog-datapack.py:19: imports not lexically sorted: pythonpath < silenttestrunner
   tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-remotefilelog-datapack.py:28: direct symbol import SMALLFANOUTCUTOFF, SMALLFANOUTPREFIX, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack

@@ -1,5 +1,3 @@
-  $ $PYTHON -c 'import hgext3rd.pushrebase' || exit 80
-
   $ . "$TESTDIR/hgsql/library.sh"
 
   $ cat >> $HGRCPATH <<EOF
