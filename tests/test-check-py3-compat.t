@@ -27,7 +27,6 @@
   fb-hgext/phabricator/phabricator_graphql_client_requests.py not using absolute_import
   fb-hgext/phabricator/phabricator_graphql_client_urllib.py not using absolute_import
   fb-hgext/setup.py not using absolute_import
-  fb-hgext/tests/bundlerepologger.py not using absolute_import
   fb-hgext/tests/get-with-headers.py not using absolute_import
   fb-hgext/tests/get-with-headers.py requires print_function
   fb-hgext/tests/getflogheads.py not using absolute_import
@@ -181,6 +180,7 @@
   hgsubversion/tests/test_utility_commands.py not using absolute_import
   remotenames/setup.py not using absolute_import
   setup.py not using absolute_import
+  tests/bundlerepologger.py not using absolute_import
   tests/conduithttp.py not using absolute_import
   tests/dummyext1.py not using absolute_import
   tests/dummyext2.py not using absolute_import

@@ -71,7 +71,7 @@ Make upload to bundlestore fail
   remote:     7e6a6fd9c7c8  commit
   remote:     bba29d9d577a  failpushcommit
   remote: infinitepush: bundlestore \(bundlesize=1067, eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: bundlestore \(bundlesize=1067, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] Not a directory: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: abort: Not a directory: '/dev/null/\d+' (re)
+  remote: infinitepush: bundlestore \(bundlesize=1067, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: abort: \$ENOTDIR\$: '/dev/null/\d+' (re)
   [255]

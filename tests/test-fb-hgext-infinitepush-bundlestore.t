@@ -214,8 +214,8 @@ Test with pushrebase
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > infinitepush=$TESTDIR/../infinitepush
+  > pushrebase=
+  > infinitepush=
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]
@@ -245,8 +245,8 @@ Change the order of pushrebase and infinitepush
   $ cp $TESTTMP/defaulthgrc $HGRCPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
+  > infinitepush=
+  > pushrebase=
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]
@@ -419,8 +419,8 @@ Push to svn server should fail
 Scratch pull of pruned commits
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
+  > fbamend=
+  > inhibit=
   > [experimental]
   > evolution=createmarkers
   > EOF

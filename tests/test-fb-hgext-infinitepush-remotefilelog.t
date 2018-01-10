@@ -11,7 +11,7 @@ Create server
   $ cd master
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
+  > infinitepush=
   > [remotefilelog]
   > server=True
   > [infinitepush]
@@ -33,7 +33,7 @@ Create first client
   $ cd shallow1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
+  > infinitepush=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+
@@ -45,7 +45,7 @@ Create second client
   $ cd shallow2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
+  > infinitepush=
   > [infinitepush]
   > server=False
   > branchpattern=re:scratch/.+

@@ -7,7 +7,7 @@ test covers the issue.
   $ . $TESTDIR/library-infinitepush.sh
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
+  > infinitepush=
   > [infinitepush]
   > branchpattern=re:scratch/.+
   > [ui]

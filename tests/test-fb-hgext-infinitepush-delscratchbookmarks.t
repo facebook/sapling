@@ -1,7 +1,7 @@
   $ . $TESTDIR/require-ext.sh remotenames
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > infinitepush=$TESTDIR/../infinitepush
+  > infinitepush=
   > remotenames=
   > [infinitepush]
   > branchpattern=re:scratch/.+

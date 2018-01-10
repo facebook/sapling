@@ -1,8 +1,8 @@
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup = $TESTDIR/../hgext3rd/gitlookup.py" >> $HGRCPATH
-  $ echo "gitrevset = $TESTDIR/../hgext3rd/gitrevset.py" >> $HGRCPATH
-  $ echo "extorder = $TESTDIR/../hgext3rd/extorder.py" >> $HGRCPATH
+  $ echo "gitlookup= " >> $HGRCPATH
+  $ echo "gitrevset= " >> $HGRCPATH
+  $ echo "extorder= " >> $HGRCPATH
   $ echo '[ui]' >> $HGRCPATH
   $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
   $ . "$TESTDIR/library-infinitepush.sh"

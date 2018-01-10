@@ -2,9 +2,9 @@
   $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
-  > inhibit=$TESTDIR/../hgext3rd/inhibit.py
-  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
+  > fbamend=
+  > inhibit=
+  > smartlog=
   > [infinitepushbackup]
   > enablestatus = True
   > [experimental]

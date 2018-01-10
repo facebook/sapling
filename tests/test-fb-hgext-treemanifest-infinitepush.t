@@ -10,8 +10,8 @@
   $ setupserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase=$TESTDIR/../hgext3rd/pushrebase.py
-  > treemanifest=$TESTDIR/../treemanifest
+  > pushrebase=
+  > treemanifest=
   > [remotefilelog]
   > server=True
   > [treemanifest]
@@ -31,8 +31,8 @@ Push a non-tree scratch branch from one client
   $ hg commit -qAm 'add bar/car'
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=
+  > fastmanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
@@ -51,14 +51,14 @@ Push a non-tree scratch branch from one client
   $ cd ..
 
 Push a tree-only scratch branch from another client
-  $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest=$TESTDIR/../treemanifest --config treemanifest.treeonly=True
+  $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
   1 trees fetched over * (glob)
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
@@ -83,8 +83,8 @@ Pull a non-tree scratch branch into a normal client
   $ cd normal-client2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
-  > fastmanifest=$TESTDIR/../fastmanifest
+  > treemanifest=
+  > fastmanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True
@@ -147,11 +147,11 @@ Pull a treeonly scratch branch into a normal client
 
 Pull a treeonly scratch branch into a treeonly client
 
-  $ hgcloneshallow ssh://user@dummy/master client2 -q --config extensions.treemanifest=$TESTDIR/../treemanifest --config treemanifest.treeonly=True
+  $ hgcloneshallow ssh://user@dummy/master client2 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
   $ cd client2
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > treemanifest=$TESTDIR/../treemanifest
+  > treemanifest=
   > 
   > [remotefilelog]
   > usefastdatapack=True

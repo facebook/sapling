@@ -7,7 +7,7 @@
   $ setup() {
   > cat << EOF >> .hg/hgrc
   > [extensions]
-  > fbamend=$TESTDIR/../hgext3rd/fbamend
+  > fbamend=
   > [experimental]
   > evolution=createmarkers
   > EOF
