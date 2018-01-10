@@ -214,6 +214,9 @@ class ProgrammingError(Hint, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
     __bytes__ = _tobytes
 
+class ForeignImportError(ProgrammingError):
+    """Raised if an extension imports a foreign mercurial extension"""
+
 class WdirUnsupported(Exception):
     """An exception which is raised when 'wdir()' is not supported"""
     __bytes__ = _tobytes

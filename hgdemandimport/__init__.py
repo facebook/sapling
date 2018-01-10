@@ -13,6 +13,7 @@
 
 from __future__ import absolute_import
 
+import contextlib
 import os
 import sys
 
@@ -77,3 +78,14 @@ def enable():
     if ('CHGINTERNALMARK' not in os.environ
         and os.environ.get('HGDEMANDIMPORT') != 'disable'):
         demandimport.enable()
+
+@contextlib.contextmanager
+def disabled():
+    if isenabled():
+        disable()
+        try:
+            yield
+        finally:
+            enable()
+    else:
+        yield

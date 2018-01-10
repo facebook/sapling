@@ -43,6 +43,10 @@ _blacklist = {
     'extlib',
 }
 
+# root of the directory, or installed distribution
+_hgroot = os.path.abspath(os.path.join(__file__, '../../'))
+_sysroot = os.path.abspath(os.path.join(os.__file__, '../'))
+
 def extensions(ui=None):
     if ui:
         def enabled(name):
@@ -89,32 +93,82 @@ def loadpath(path, module_name):
                 exc.filename = path # python does not fill this
             raise
 
+def loaddefault(name, reportfunc=None):
+    """load extensions without a specified path"""
+    try:
+        mod = _importh("hgext.%s" % name)
+    except ImportError as err:
+        if reportfunc:
+            reportfunc(err, "hgext.%s" % name, "hgext3rd.%s" % name)
+        try:
+            mod = _importh("hgext3rd.%s" % name)
+        except ImportError as err:
+            if reportfunc:
+                reportfunc(err, "hgext3rd.%s" % name, name)
+            mod = _importh(name)
+    return mod
+
+_collectedimports = [] # [(name, path)]
+
+def _collectimport(orig, name, *args, **kwargs):
+    """collect imports to _collectedimports"""
+    mod = orig(name, *args, **kwargs)
+    try:
+        path = inspect.getabsfile(_resolvenestedmodules(mod, name))
+        if path:
+            _collectedimports.append((name, path))
+    except Exception:
+        pass
+    return mod
+
+# When path has "/mercurial/" or "/hgext/" consider it as an hg module.
+# Used by _checkforeignmodules.
+_hgmodpathre = util.re.compile('/(?:mercurial|hgext)/')
+
+def _checkforeignmodules():
+    """check _collectedimports and complain about importing foreign modules
+
+    Only call this when the extension is imported without an explict path.
+    """
+    for name, path in _collectedimports:
+        # an hg module should live in the hg (repo) root
+        if _hgmodpathre.search(path) and not path.startswith(_hgroot):
+            raise error.ForeignImportError('%s: %s lives outside %s'
+                                           % (name, path, _hgroot))
+
 def _importh(name):
     """import and return the <name> module"""
     mod = __import__(pycompat.sysstr(name))
+    return _resolvenestedmodules(mod, name)
+
+def _resolvenestedmodules(mod, name):
+    """resolve nested modules
+
+    __import__('x.y.z') returns module x. This function resolves it and return
+    the module "z".
+    """
     components = name.split('.')
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
 
-def _importext(name, path=None, reportfunc=None):
+def _importext(name, path=None, reportfunc=None, strict=False):
     if path:
         # the module will be loaded in sys.modules
         # choose an unique name so that it doesn't
         # conflicts with other modules
         mod = loadpath(path, 'hgext.%s' % name)
     else:
-        try:
-            mod = _importh("hgext.%s" % name)
-        except ImportError as err:
-            if reportfunc:
-                reportfunc(err, "hgext.%s" % name, "hgext3rd.%s" % name)
-            try:
-                mod = _importh("hgext3rd.%s" % name)
-            except ImportError as err:
-                if reportfunc:
-                    reportfunc(err, "hgext3rd.%s" % name, name)
-                mod = _importh(name)
+        if strict:
+            import __builtin__ as builtins
+            import hgdemandimport
+            _collectedimports[:] = []
+            with hgdemandimport.disabled():
+                with wrappedfunction(builtins, '__import__', _collectimport):
+                    mod = loaddefault(name, reportfunc)
+            _checkforeignmodules()
+        else:
+            mod = loaddefault(name, reportfunc)
     return mod
 
 def _reportimporterror(ui, err, failed, next):
@@ -160,7 +214,9 @@ def load(ui, name, path):
     if shortname in _extensions:
         return _extensions[shortname]
     _extensions[shortname] = None
-    mod = _importext(name, path, bind(_reportimporterror, ui))
+    strict = (util.safehasattr(ui, 'configbool')
+              and ui.configbool('devel', 'all-warnings'))
+    mod = _importext(name, path, bind(_reportimporterror, ui), strict)
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their
@@ -224,6 +280,8 @@ def loadall(ui, whitelist=None):
                 continue
         try:
             load(ui, name, path)
+        except error.ForeignImportError:
+            raise
         except Exception as inst:
             msg = util.forcebytestr(inst)
             if path:
