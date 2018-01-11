@@ -112,7 +112,9 @@ def generate_repo_class(ui, repo):
         if hgutil.safehasattr(localrepo.localrepository, 'pull'):
             # Mercurial < 3.2
             @remotesvn
-            def pull(self, remote, heads=[], force=False):
+            def pull(self, remote, heads=None, force=False):
+                if heads is None:
+                    heads = []
                 return wrappers.pull(self, remote, heads, force)
 
         @remotesvn

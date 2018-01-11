@@ -402,9 +402,11 @@ def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
         return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks,
                     **kwargs)
 
-def pull(repo, source, heads=[], force=False, meta=None):
+def pull(repo, source, heads=None, force=False, meta=None):
     """pull new revisions from Subversion"""
     assert source.capable('subversion')
+    if heads is None:
+        heads = []
     svn_url = source.svnurl
 
     # Split off #rev

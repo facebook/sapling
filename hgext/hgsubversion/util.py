@@ -222,7 +222,9 @@ def load(file_path, default=None, resave=True):
             dump(data, file_path)
     return data
 
-def parseurl(url, heads=[]):
+def parseurl(url, heads=None):
+    if heads is None:
+        heads = []
     checkout = None
     svn_url, (_junk, heads) = hg.parseurl(url, heads)
     if heads:
