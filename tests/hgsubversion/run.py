@@ -37,7 +37,9 @@ if __name__ == '__main__':
     else:
         testargs = {'descriptions': 2}
 
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    hgrootdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.insert(0, os.path.join(hgrootdir, 'hgext'))
+    sys.path.insert(0, hgrootdir)
 
     if options.demandimport:
         from mercurial import demandimport

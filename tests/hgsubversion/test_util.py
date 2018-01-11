@@ -12,7 +12,7 @@ import tarfile
 import tempfile
 import unittest
 
-_rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_rootdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _rootdir)
 
 from mercurial import cmdutil
