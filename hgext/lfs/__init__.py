@@ -114,7 +114,7 @@ def reposetup(ui, repo):
 
     repo.svfs.options['lfsthreshold'] = threshold
     repo.svfs.lfslocalblobstore = blobstore.local(repo)
-    repo.svfs.lfsremoteblobstore = blobstore.remote(repo)
+    repo.svfs.lfsremoteblobstore = blobstore.remote(repo.ui)
 
     # Push hook
     repo.prepushoutgoinghooks.add('lfs', wrapper.prepush)

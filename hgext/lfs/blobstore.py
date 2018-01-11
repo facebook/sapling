@@ -120,12 +120,11 @@ class local(object):
 
 class _gitlfsremote(object):
 
-    def __init__(self, repo, url):
-        ui = repo.ui
+    def __init__(self, ui, url):
         self.ui = ui
         baseurl, authinfo = url.authinfo()
         self.baseurl = baseurl.rstrip('/')
-        useragent = repo.ui.config('experimental', 'lfs.user-agent')
+        useragent = ui.config('experimental', 'lfs.user-agent')
         if not useragent:
             useragent = 'mercurial/%s git/2.15.1' % util.version()
         self.urlopener = urlmod.opener(ui, authinfo, useragent)
@@ -309,7 +308,7 @@ class _gitlfsremote(object):
 class _dummyremote(object):
     """Dummy store storing blobs to temp directory."""
 
-    def __init__(self, repo, url):
+    def __init__(self, ui, url):
         self.vfs = lfsvfs(url.path)
 
     def writebatch(self, pointers, fromstore):
@@ -326,7 +325,7 @@ class _dummyremote(object):
 class _nullremote(object):
     """Null store storing blobs to /dev/null."""
 
-    def __init__(self, repo, url):
+    def __init__(self, ui, url):
         pass
 
     def writebatch(self, pointers, fromstore):
@@ -338,7 +337,7 @@ class _nullremote(object):
 class _promptremote(object):
     """Prompt user to set lfs.url when accessed."""
 
-    def __init__(self, repo, url):
+    def __init__(self, ui, url):
         pass
 
     def writebatch(self, pointers, fromstore, ui=None):
@@ -358,15 +357,15 @@ _storemap = {
     None: _promptremote,
 }
 
-def remote(repo):
+def remote(ui):
     """remotestore factory. return a store in _storemap depending on config"""
     defaulturl = ''
 
-    url = util.url(repo.ui.config('lfs', 'url', defaulturl))
+    url = util.url(ui.config('lfs', 'url', defaulturl))
     scheme = url.scheme
     if scheme not in _storemap:
         raise error.Abort(_('lfs: unknown url scheme: %s') % scheme)
-    return _storemap[scheme](repo, url)
+    return _storemap[scheme](ui, url)
 
 class LfsRemoteError(error.RevlogError):
     pass
