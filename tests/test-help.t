@@ -313,6 +313,7 @@ Test extension help:
        hggit         push and pull from a Git server
        hgk           browse the repository in a graphical way
        hgsql         (no help text available)
+       hgsubversion  integration with Subversion repositories
        hiddenerror   configurable error messages for accessing hidden changesets
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
