@@ -16,6 +16,15 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X fb-hgext \
   > -X fb/facebook-hg-rpms \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
+  fb/tests/sqldirstate_benchmark.py:95:
+   >             hg.next()
+   don't use .next(), use next(...)
+  fb/tests/test-hg-rsh.t:2:
+   >   $ HGRSH=$TESTDIR/../fb/staticfiles/bin/hg-rsh
+   don't use explicit paths for tools
+  fb/tests/test-hg-rsh.t:32:
+   >   > %include /bin/../etc/mercurial/repo-specific/common.rc
+   don't use explicit paths for tools
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.h it has no-che?k-code (glob)
