@@ -2,6 +2,11 @@
 
   $ . "$TESTDIR/helpers-testrepo.sh"
 
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > hgsubversion=
+  > EOF
+
   $ cat <<'EOF' > scanhelptopics.py
   > from __future__ import absolute_import, print_function
   > import re

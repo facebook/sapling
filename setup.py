@@ -1149,7 +1149,8 @@ packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
                              'help/*.txt',
                              'help/internals/*.txt',
                              'default.d/*.rc',
-                             'dummycert.pem']}
+                             'dummycert.pem'],
+               'hgext': ['hgsubversion/help/*.rst']}
 
 def ordinarypath(p):
     return p and p[0] != '.' and p[-1] != '~'
