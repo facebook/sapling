@@ -20,7 +20,7 @@ New errors are not allowed. Warnings are strongly discouraged.
    >             hg.next()
    don't use .next(), use next(...)
   fb/tests/test-hg-rsh.t:2:
-   >   $ HGRSH=$TESTDIR/../fb/staticfiles/bin/hg-rsh
+   >   $ HGRSH=$TESTDIR/../staticfiles/bin/hg-rsh
    don't use explicit paths for tools
   fb/tests/test-hg-rsh.t:32:
    >   > %include /bin/../etc/mercurial/repo-specific/common.rc
