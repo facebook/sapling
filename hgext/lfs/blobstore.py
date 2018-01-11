@@ -22,7 +22,7 @@ from mercurial import (
     worker,
 )
 
-from ..largefiles import lfutil
+from . import lfutil
 
 # 64 bytes for SHA256
 _lfsre = re.compile(r'\A[a-f0-9]{64}\Z')

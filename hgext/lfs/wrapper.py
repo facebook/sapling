@@ -19,10 +19,9 @@ from mercurial import (
     util,
 )
 
-from ..largefiles import lfutil
-
 from . import (
     blobstore,
+    lfutil,
     pointer,
 )
 
