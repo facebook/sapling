@@ -864,6 +864,10 @@ packages = ['mercurial',
             'hgext.fbamend',
             'hgext.fsmonitor',
             'hgext.hggit',
+            'hgext.hgsubversion',
+            'hgext.hgsubversion.hooks',
+            'hgext.hgsubversion.layouts',
+            'hgext.hgsubversion.svnwrap',
             'hgext.infinitepush',
             'hgext.p4fastimport',
             'hgext.remotefilelog',
@@ -1277,6 +1281,13 @@ with open(os.path.join(reporoot, 'hgext', 'moreversion.pyt'), 'r') as src:
         release = os.environ.get('RELEASE', 'UNKNOWN-RELEASE')
         dest.write(src.read().replace('@RELEASE@', release))
 
+# If the Subversion SWIG bindings aren't present, require Subvertpy
+requires = []
+try:
+    from hgext.hgsubversion.svnwrap import svn_swig_wrapper
+except ImportError:
+    requires.append('subvertpy>=0.7.4')
+
 setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
@@ -1319,6 +1330,7 @@ setup(name='mercurial',
       package_data=packagedata,
       cmdclass=cmdclass,
       distclass=hgdist,
+      install_requires=requires,
       options={'py2exe': {'packages': ['hgdemandimport', 'hgext', 'email',
                                        # implicitly imported per module policy
                                        # (cffi wouldn't be used as a frozen exe)
