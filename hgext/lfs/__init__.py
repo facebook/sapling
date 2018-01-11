@@ -32,12 +32,15 @@ Configs::
 
 from __future__ import absolute_import
 
+import hashlib
+
 from mercurial.i18n import _
 
 from mercurial import (
     bundle2,
     changegroup,
     context,
+    error,
     exchange,
     extensions,
     filelog,
@@ -47,11 +50,13 @@ from mercurial import (
     revlog,
     scmutil,
     upgrade,
+    util,
     vfs as vfsmod,
 )
 
 from . import (
     blobstore,
+    pointer,
     wrapper,
 )
 
@@ -203,3 +208,41 @@ def debuglfsupload(ui, repo, **opts):
     revs = opts.get('rev', [])
     pointers = wrapper.extractpointers(repo, scmutil.revrange(repo, revs))
     wrapper.uploadblobs(repo, pointers)
+
+# Ad-hoc commands to upload / download blobs without requiring an hg repo
+
+def _adhocstores(ui, url):
+    """return local and remote stores for ad-hoc (outside repo) uses"""
+    if url is not None:
+        ui.setconfig('lfs', 'url', url)
+    return blobstore.memlocal(), blobstore.remote(ui)
+
+@command('debuglfssend', [], _('hg debuglfssend [URL]'), norepo=True)
+def debuglfssend(ui, url=None):
+    """read from stdin, send it as a single file to LFS server
+
+    Print oid and size.
+    """
+    local, remote = _adhocstores(ui, url)
+
+    data = ui.fin.read()
+    oid = hashlib.sha256(data).hexdigest()
+    longoid = 'sha256:%s' % oid
+    size = len(data)
+    pointers = [pointer.gitlfspointer(oid=longoid, size=str(size))]
+
+    local.write(oid, data)
+    remote.writebatch(pointers, local)
+    ui.write(('%s %s\n') % (oid, size))
+
+@command('debuglfsreceive|debuglfsrecv', [],
+         _('hg debuglfsreceive URL OID SIZE'), norepo=True)
+def debuglfsreceive(ui, oid, size, url=None):
+    """receive a single object from LFS server, write it to stdout"""
+    local, remote = _adhocstores(ui, url)
+
+    longoid = 'sha256:%s' % oid
+    pointers = [pointer.gitlfspointer(oid=longoid, size=size)]
+    remote.readbatch(pointers, local)
+
+    ui.write((local.read(oid)))

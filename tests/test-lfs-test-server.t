@@ -150,4 +150,16 @@ Check error message when object does not exist:
   abort: LFS server error. Remote object for file data/a.i not found:(.*)! (re)
   [255]
 
+Adhoc upload and download:
+
+  $ mkdir $TESTTMP/adhoc
+  $ cd $TESTTMP/adhoc
+  $ echo FOOBAR | hg debuglfssend
+  091321a885bbb5bc4c711cfefdeb7697002f83f953e211a87d4e26c6bfcc1825 7
+
+  $ hg debuglfsrecv 091321a885bbb5bc4c711cfefdeb7697002f83f953e211a87d4e26c6bfcc1825 7
+  FOOBAR
+
+Clean up:
+
   $ $PYTHON $RUNTESTDIR/killdaemons.py $DAEMON_PIDS
