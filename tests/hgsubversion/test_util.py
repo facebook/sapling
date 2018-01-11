@@ -19,6 +19,7 @@ from mercurial import cmdutil
 from mercurial import commands
 from mercurial import context
 from mercurial import dispatch as dispatchmod
+from mercurial import encoding
 from mercurial import hg
 from mercurial import i18n
 from mercurial import node
@@ -299,6 +300,7 @@ class _testui(ui.ui):
                                *args, **kwargs)
 
 def testui(stupid=False, layout='auto', startrev=0):
+    encoding.environ['HGPLAIN'] = 'True'
     u = _testui()
     bools = {True: 'true', False: 'false'}
     u.setconfig('ui', 'quiet', bools[True])
@@ -340,7 +342,7 @@ def _verify_our_modules():
     '''
 
     for modname, module in sys.modules.iteritems():
-        if not module or not modname.startswith('hgsubversion.'):
+        if not module or 'hgsubversion' not in modname:
             continue
 
         modloc = module.__file__
