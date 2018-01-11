@@ -331,6 +331,7 @@ Test extension help:
        mergedriver   custom merge drivers for autoresolved files
        morecolors    make more output colorful
        morestatus    make status give a bit more context
+       moreversion   (no help text available)
        mq            manage a stack of patches
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C

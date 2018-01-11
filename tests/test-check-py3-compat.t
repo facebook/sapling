@@ -25,7 +25,6 @@
   fb/facebook-hg-rpms/fb_build_nupkg.py not using absolute_import
   fb/facebook-hg-rpms/fb_build_nupkg.py requires print_function
   fb/facebook-hg-rpms/fb_build_rpm.py not using absolute_import
-  fb/facebook-hg-rpms/moreversion/setup.py not using absolute_import
   fb/facebook-hg-rpms/nupkg_templates.py not using absolute_import
   fb/facebook-hg-rpms/sctrigger.py not using absolute_import
   fb/facebook-hg-rpms/tests/sqldirstate_benchmark.py not using absolute_import
