@@ -40,7 +40,6 @@ from mercurial import (
     bundle2,
     changegroup,
     context,
-    error,
     exchange,
     extensions,
     filelog,
@@ -50,7 +49,6 @@ from mercurial import (
     revlog,
     scmutil,
     upgrade,
-    util,
     vfs as vfsmod,
 )
 
