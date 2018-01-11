@@ -15,6 +15,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X mercurial/thirdparty \
   > -X fb-hgext \
   > -X fb/facebook-hg-rpms \
+  > -X fb/packaging \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
   fb/tests/sqldirstate_benchmark.py:95:
    >             hg.next()
