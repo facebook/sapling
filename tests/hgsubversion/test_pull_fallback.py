@@ -2,7 +2,7 @@ import test_util
 
 import mercurial
 from mercurial import commands
-from hgsubversion import stupid
+from hgext.hgsubversion import stupid
 
 class TestPullFallback(test_util.TestBase):
     def setUp(self):

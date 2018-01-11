@@ -3,7 +3,7 @@ import test_util
 from mercurial import node
 from mercurial import util as hgutil
 from mercurial import commands
-from hgsubversion import verify
+from hgext.hgsubversion import verify
 
 class TestPull(test_util.TestBase):
     def setUp(self):

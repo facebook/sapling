@@ -15,7 +15,7 @@ except (ImportError, AttributeError), e:
     print >> sys.stderr, 'test_externals: skipping .hgsub tests'
     subrepo = None
 
-from hgsubversion import svnexternals
+from hgext.hgsubversion import svnexternals
 
 class TestFetchExternals(test_util.TestBase):
     stupid_mode_tests = True

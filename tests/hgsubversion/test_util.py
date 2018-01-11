@@ -27,9 +27,9 @@ from mercurial import ui
 from mercurial import util as hgutil
 from mercurial import extensions
 
-from hgsubversion import compathacks
-from hgsubversion import svnrepo
-from hgsubversion import svnwrap
+from hgext.hgsubversion import compathacks
+from hgext.hgsubversion import svnrepo
+from hgext.hgsubversion import svnwrap
 
 try:
     from mercurial import obsolete
@@ -45,9 +45,9 @@ except AttributeError:
     else:
         SkipTest = None
 
-from hgsubversion import svnwrap
-from hgsubversion import util
-from hgsubversion import svnwrap
+from hgext.hgsubversion import svnwrap
+from hgext.hgsubversion import util
+from hgext.hgsubversion import svnwrap
 
 # Documentation for Subprocess.Popen() says:
 #   "Note that on Windows, you cannot set close_fds to true and
@@ -291,7 +291,7 @@ def fileurl(path):
 
 class _testui(ui.ui):
     def develwarn(self, msg, stacklevel=1, *args, **kwargs):
-        from hgsubversion import util
+        from hgext.hgsubversion import util
         if util.smartset is not None:
             config = args[0] if args else kwargs['config']
             raise Exception('flunked develwarn: %r (%r)' % (msg, config))

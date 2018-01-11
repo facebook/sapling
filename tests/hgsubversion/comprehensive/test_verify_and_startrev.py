@@ -11,7 +11,7 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     import test_util
 
-from hgsubversion import verify
+from hgext.hgsubversion import verify
 
 # these fixtures contain no files at HEAD and would result in empty clones
 _skipshallow = set([

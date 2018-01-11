@@ -28,7 +28,7 @@ except ImportError:
 import test_rebuildmeta
 import test_updatemeta
 
-from hgsubversion import svnmeta, maps
+from hgext.hgsubversion import svnmeta, maps
 
 
 class SqliteRevMapMixIn(object):

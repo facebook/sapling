@@ -9,7 +9,7 @@ from mercurial import context
 from mercurial import hg
 from mercurial import node
 
-from hgsubversion import compathacks
+from hgext.hgsubversion import compathacks
 
 class TestSingleDirPush(test_util.TestBase):
     stupid_mode_tests = True

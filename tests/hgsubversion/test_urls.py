@@ -4,8 +4,8 @@ import test_util
 
 import urllib
 
-from hgsubversion.svnwrap import parse_url
-from hgsubversion import svnrepo
+from hgext.hgsubversion.svnwrap import parse_url
+from hgext.hgsubversion import svnrepo
 
 class TestSubversionUrls(test_util.TestBase):
     def test_standard_url(self):

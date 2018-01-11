@@ -13,7 +13,7 @@ except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
     import test_util
 
-from hgsubversion import svnwrap
+from hgext.hgsubversion import svnwrap
 
 
 def _do_case(self, name, stupid):

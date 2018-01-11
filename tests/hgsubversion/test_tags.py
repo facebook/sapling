@@ -7,8 +7,8 @@ import os, cStringIO, difflib
 from mercurial import commands
 from mercurial import error
 
-from hgsubversion import compathacks
-from hgsubversion import svncommands
+from hgext.hgsubversion import compathacks
+from hgext.hgsubversion import svncommands
 
 class TestTags(test_util.TestBase):
     stupid_mode_tests = True

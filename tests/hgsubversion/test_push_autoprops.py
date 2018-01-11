@@ -2,7 +2,7 @@ import os
 
 import test_util
 
-from hgsubversion import svnwrap
+from hgext.hgsubversion import svnwrap
 
 class PushAutoPropsTests(test_util.TestBase):
     obsolete_mode_tests = True

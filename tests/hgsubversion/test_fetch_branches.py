@@ -7,7 +7,7 @@ import unittest
 from mercurial import error
 from mercurial import hg
 
-from hgsubversion import compathacks
+from hgext.hgsubversion import compathacks
 
 class TestFetchBranches(test_util.TestBase):
     stupid_mode_tests = True

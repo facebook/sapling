@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from hgsubversion import svnwrap
+from hgext.hgsubversion import svnwrap
 
 class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):

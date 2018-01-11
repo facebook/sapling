@@ -4,7 +4,7 @@ import test_util
 
 import shutil
 
-from hgsubversion import compathacks
+from hgext.hgsubversion import compathacks
 
 class TestSingleDirClone(test_util.TestBase):
     stupid_mode_tests = True

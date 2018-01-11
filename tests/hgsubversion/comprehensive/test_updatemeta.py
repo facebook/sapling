@@ -16,7 +16,7 @@ import test_rebuildmeta
 from mercurial import context
 from mercurial import extensions
 
-from hgsubversion import svncommands
+from hgext.hgsubversion import svncommands
 
 
 

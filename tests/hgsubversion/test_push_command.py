@@ -17,8 +17,8 @@ from mercurial import node
 from mercurial import revlog
 from mercurial import util as hgutil
 
-from hgsubversion import util
-from hgsubversion import compathacks
+from hgext.hgsubversion import util
+from hgext.hgsubversion import compathacks
 
 import time
 
@@ -401,7 +401,7 @@ class PushTests(test_util.TestBase):
                             ],
                            parent='default',
                            message='commit to default')
-        from hgsubversion import svncommands
+        from hgext.hgsubversion import svncommands
         svncommands.rebuildmeta(u,
                                 self.repo,
                                 args=[test_util.fileurl(self.repo_path)])

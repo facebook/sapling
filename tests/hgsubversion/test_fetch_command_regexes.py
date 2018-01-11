@@ -2,7 +2,7 @@
 
 import unittest
 
-from hgsubversion import stupid
+from hgext.hgsubversion import stupid
 
 
 two_empties = """Index: __init__.py

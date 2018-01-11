@@ -12,11 +12,11 @@ from mercurial import node
 from mercurial import commands
 from mercurial import util as hgutil
 
-from hgsubversion import util
-from hgsubversion import svncommands
-from hgsubversion import verify
-from hgsubversion import wrappers
-from hgsubversion import compathacks
+from hgext.hgsubversion import util
+from hgext.hgsubversion import svncommands
+from hgext.hgsubversion import verify
+from hgext.hgsubversion import wrappers
+from hgext.hgsubversion import compathacks
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
 Repository Root: %(repourl)s

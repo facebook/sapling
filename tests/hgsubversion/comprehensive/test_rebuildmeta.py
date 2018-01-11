@@ -17,9 +17,9 @@ from mercurial import hg
 from mercurial import localrepo
 from mercurial import util as hgutil
 
-from hgsubversion import svncommands
-from hgsubversion import svnmeta
-from hgsubversion import util
+from hgext.hgsubversion import svncommands
+from hgext.hgsubversion import svnmeta
+from hgext.hgsubversion import util
 
 # These test repositories have harmless skew in rebuildmeta for the
 # last-pulled-rev because the last rev in svn causes absolutely no

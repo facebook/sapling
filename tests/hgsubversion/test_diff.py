@@ -1,6 +1,6 @@
 import test_util
 
-from hgsubversion import wrappers
+from hgext.hgsubversion import wrappers
 
 expected_diff_output = '''Index: alpha
 ===================================================================

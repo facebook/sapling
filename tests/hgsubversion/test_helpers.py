@@ -3,7 +3,7 @@ import os, sys, unittest
 _rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _rootdir)
 
-from hgsubversion import editor
+from hgext.hgsubversion import editor
 
 class TestHelpers(unittest.TestCase):
     def test_filestore(self):

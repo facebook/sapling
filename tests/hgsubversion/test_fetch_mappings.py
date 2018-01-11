@@ -9,9 +9,9 @@ import os
 from mercurial import commands
 from mercurial import node
 
-from hgsubversion import maps
-from hgsubversion import svncommands
-from hgsubversion import verify
+from hgext.hgsubversion import maps
+from hgext.hgsubversion import svncommands
+from hgext.hgsubversion import verify
 
 class MapTests(test_util.TestBase):
     stupid_mode_tests = True
