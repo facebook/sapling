@@ -14,9 +14,11 @@ from mercurial import (
     util
 )
 
-from . import arcconfig
-import phabricator_graphql_client
-import phabricator_graphql_client_urllib
+from . import (
+    arcconfig,
+    phabricator_graphql_client,
+    phabricator_graphql_client_urllib
+)
 
 urlreq = util.urlreq
 

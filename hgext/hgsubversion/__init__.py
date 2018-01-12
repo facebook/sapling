@@ -29,7 +29,10 @@ try:
 except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
-from mercurial import base85
+
+from mercurial import policy
+
+base85 = policy.importmod(r'base85')
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg

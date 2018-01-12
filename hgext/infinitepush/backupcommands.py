@@ -77,7 +77,7 @@ from mercurial.extensions import wrapfunction, unwrapfunction
 from mercurial.node import bin, hex, nullrev, short
 from mercurial.i18n import _
 
-from hgext3rd import shareutil
+from .. import shareutil
 
 osutil = policy.importmod(r'osutil')
 
