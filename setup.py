@@ -1285,7 +1285,7 @@ def build_libraries(self, libraries):
 distutils.command.build_clib.build_clib.build_libraries = build_libraries
 
 rustvendoredcrates = [
-    RustVendoredCrates('hg-vendored-crates', project='fbsource', dest='build'),
+    RustVendoredCrates('hg-vendored-crates', dest='build'),
 ]
 
 rustextmodules = [
