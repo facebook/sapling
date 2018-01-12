@@ -3,11 +3,11 @@ lib
 
 Any native code (C/C++/Rust) that Mercurial (either core or extensions)
 depends on should go here. Python code, or native code that depends on
-Python code (e.g. `#import <Python.h>`) is disallowed.
+Python code (e.g. `#include <Python.h>` or `use cpython`) is disallowed.
 
-As we start to convert more of Mercurial into Rust, we'll want to limit the
-scope of our dependency on Python and allow end-to-end Rust code, which is why
-this barrier exists.
+As we start to convert more of Mercurial into Rust, and write new paths
+entrirely in native code, we'll want to limit our dependency on Python, which is
+why this barrier exists.
 
 See also `hgext/extlib/README.md`, `mercurial/cext/README.mb`.
 

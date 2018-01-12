@@ -2,7 +2,7 @@ extlib
 ======
 
 Code that extensions depend on, but aren't themselves extensions, should go here.
-Both native (C/C++/Rust) and Python code is allowed. Code that depends on Python
+Both native (C/C++/Cython/Rust) and Python code is allowed. Code that depends on Python
 is also allowed.
 
 In theory, this code should slowly disappear as extension code gets folded into
