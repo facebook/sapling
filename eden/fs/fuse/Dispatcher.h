@@ -261,7 +261,7 @@ class Dispatcher {
    *
    * @param ino the inode number, zero means "undefined"
    */
-  virtual folly::Future<struct statvfs> statfs(fusell::InodeNumber ino);
+  virtual folly::Future<struct fuse_kstatfs> statfs(fusell::InodeNumber ino);
 
   /**
    * Set an extended attribute

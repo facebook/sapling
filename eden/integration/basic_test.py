@@ -238,3 +238,22 @@ class BasicTest:
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)
+
+    def test_statvfs(self):
+        hello_path = os.path.join(self.mount, 'hello')
+        fs_info = os.statvfs(hello_path)
+        self.assertGreaterEqual(fs_info.f_namemax, 255)
+        self.assertGreaterEqual(fs_info.f_frsize, 4096)
+        self.assertGreaterEqual(fs_info.f_bsize, 4096)
+
+        self.assertGreaterEqual(os.pathconf(hello_path, 'PC_NAME_MAX'), 255)
+        self.assertGreaterEqual(os.pathconf(hello_path, 'PC_PATH_MAX'), 4096)
+        self.assertGreaterEqual(
+            os.pathconf(hello_path, 'PC_REC_XFER_ALIGN'), 4096
+        )
+        self.assertGreaterEqual(
+            os.pathconf(hello_path, 'PC_ALLOC_SIZE_MIN'), 4096
+        )
+        self.assertGreaterEqual(
+            os.pathconf(hello_path, 'PC_REC_MIN_XFER_SIZE'), 4096
+        )

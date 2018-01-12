@@ -956,19 +956,13 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
     const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_STATFS";
-  return dispatcher_->statfs(header->nodeid).then([](struct statvfs&& info) {
-    fuse_statfs_out out;
-    memset(&out, 0, sizeof(out));
-    out.st.blocks = info.f_blocks;
-    out.st.bfree = info.f_bfree;
-    out.st.bavail = info.f_bavail;
-    out.st.files = info.f_files;
-    out.st.ffree = info.f_ffree;
-    out.st.bsize = info.f_bsize;
-    out.st.namelen = info.f_namemax;
-    out.st.frsize = info.f_frsize;
-    RequestData::get().sendReply(out);
-  });
+  return dispatcher_->statfs(header->nodeid)
+      .then([](struct fuse_kstatfs&& info) {
+        fuse_statfs_out out;
+        memset(&out, 0, sizeof(out));
+        out.st = info;
+        RequestData::get().sendReply(out);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRelease(

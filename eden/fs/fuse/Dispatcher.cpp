@@ -167,12 +167,32 @@ folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<struct statvfs> Dispatcher::statfs(fusell::InodeNumber /*ino*/) {
-  struct statvfs info;
+folly::Future<struct fuse_kstatfs> Dispatcher::statfs(
+    fusell::InodeNumber /*ino*/) {
+  struct fuse_kstatfs info;
   memset(&info, 0, sizeof(info));
 
+  info.blocks = 0;
+  info.bfree = 0;
+  info.bavail = 0;
+  info.files = 0;
+  info.ffree = 0;
+
   // Suggest a large blocksize to software that looks at that kind of thing
-  info.f_bsize = getConnInfo().max_readahead;
+  // bsize will be returned to applications that call pathconf() with
+  // _PC_REC_MIN_XFER_SIZE
+  info.bsize = getConnInfo().max_readahead;
+
+  // The fragment size is returned as the _PC_REC_XFER_ALIGN and
+  // _PC_ALLOC_SIZE_MIN pathconf() settings.
+  // 4096 is commonly used by many filesystem types.
+  info.frsize = 4096;
+
+  // Ensure that namelen is set to a non-zero value.
+  // The value we return here will be visible to programs that call pathconf()
+  // with _PC_NAME_MAX.  Returning 0 will confuse programs that try to honor
+  // this value.
+  info.namelen = 255;
 
   return info;
 }
