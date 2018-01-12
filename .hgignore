@@ -30,7 +30,6 @@ tests/exceptions
 tests/*.err
 tests/htmlcov
 tests/hgsql/getdb.sh
-build
 contrib/chg/chg
 contrib/hgsh/hgsh
 contrib/vagrant/.vagrant
@@ -63,6 +62,10 @@ hgext/extlib/linelog.c
 hgext/moreversion.py
 hgext/patchrmdir.c
 hgext/traceprof.cpp
+
+# Build output
+build/
+rpmbuild/
 
 # Rust libraries and extensions
 lib/*/Cargo.lock
