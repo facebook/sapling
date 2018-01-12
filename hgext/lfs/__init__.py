@@ -234,7 +234,7 @@ def debuglfssend(ui, url=None):
     ui.write(('%s %s\n') % (oid, size))
 
 @command('debuglfsreceive|debuglfsrecv', [],
-         _('hg debuglfsreceive URL OID SIZE'), norepo=True)
+         _('hg debuglfsreceive OID SIZE [URL]'), norepo=True)
 def debuglfsreceive(ui, oid, size, url=None):
     """receive a single object from LFS server, write it to stdout"""
     local, remote = _adhocstores(ui, url)
