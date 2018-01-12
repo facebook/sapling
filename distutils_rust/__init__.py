@@ -148,7 +148,7 @@ class BuildRustExt(distutils.core.Command):
                     "download of Rust vendored crates '%s' failed" % ven.name)
 
             with tarfile.open(ven.filename, 'r:gz') as tar:
-                tar.extractall(ven.dest)
+                tar.extractall()
 
     def build_ext(self, ext):
         distutils.log.info("building '%s' extension", ext.name)
