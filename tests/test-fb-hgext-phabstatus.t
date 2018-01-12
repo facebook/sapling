@@ -84,3 +84,13 @@ so it tries to parse the (empty) arc config files.
   arcconfig configuration problem. No diff information can be provided.
   Error info: arcrc is missing user credentials for host None.  use "arc install-certificate" to fix.
   Error
+
+Make sure we get an error message if .arcrc is not proper JSON (for example
+due to trailing commas). We do not use HG_ARC_CONDUIT_MOCK for this test,
+in order for it to parse the badly formatted arc config file.
+
+  $ echo '{,}' > ../.arcrc
+  $ hg log -T '{phabstatus}\n' -r .
+  arcconfig configuration problem. No diff information can be provided.
+  Error info: Configuration file $TESTTMP/.arcrc is not a proper JSON file.
+  Error

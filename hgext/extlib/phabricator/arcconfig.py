@@ -29,6 +29,13 @@ def _loadfile(filename):
         if ex.errno == errno.ENOENT:
             return None
         raise
+    except ValueError as ex:
+        # if the json file is badly formatted
+        if 'Expecting property name' in str(ex):
+            raise ArcConfigError(
+                'Configuration file %s '
+                'is not a proper JSON file.' % filename)
+        raise
 
 def loadforpath(path):
     # location where `arc install-certificate` writes .arcrc
