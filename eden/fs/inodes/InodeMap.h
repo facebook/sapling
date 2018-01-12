@@ -18,6 +18,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -446,6 +447,18 @@ class InodeMap {
      */
     bool isUnlinked{false};
 
+    /** The complete st_mode value for this entry */
+    mode_t mode{0};
+
+    /**
+     * If the entry is not materialized, this contains the hash
+     * identifying the source control Tree (if this is a directory) or Blob
+     * (if this is a file) that contains the entry contents.
+     *
+     * If the entry is materialized, this field is not set.
+     */
+    folly::Optional<Hash> hash;
+
     /**
      * A list of promises waiting on this inode to be loaded.
      *
@@ -507,12 +520,16 @@ class InodeMap {
       folly::Promise<InodePtr>& promise,
       PathComponentPiece childName,
       bool isUnlinked,
-      fusell::InodeNumber childInodeNumber);
+      fusell::InodeNumber childInodeNumber,
+      folly::Optional<Hash> hash,
+      mode_t mode);
   void startChildLookup(
       const InodePtr& parent,
       PathComponentPiece childName,
       bool isUnlinked,
-      fusell::InodeNumber childInodeNumber);
+      fusell::InodeNumber childInodeNumber,
+      folly::Optional<Hash> hash,
+      mode_t mode);
 
   /**
    * Extract the list of promises waiting on the specified inode number to be

@@ -18,6 +18,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/utils/Bug.h"
 
 using folly::Future;
@@ -126,11 +127,18 @@ Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
       InodePtr firstLoadedParent = InodePtr::newPtrLocked(loadedIter->second);
       PathComponent requiredChildName = unloadedData->name;
       bool isUnlinked = unloadedData->isUnlinked;
+      auto optionalHash = unloadedData->hash;
+      auto mode = unloadedData->mode;
       // Unlock the data before starting the child lookup
       data.unlock();
       // Trigger the lookup, then return to our caller.
       startChildLookup(
-          firstLoadedParent, requiredChildName, isUnlinked, childInodeNumber);
+          firstLoadedParent,
+          requiredChildName,
+          isUnlinked,
+          childInodeNumber,
+          optionalHash,
+          mode);
       return result;
     }
 
@@ -158,7 +166,9 @@ Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
         parentData->promises.back(),
         unloadedData->name,
         unloadedData->isUnlinked,
-        childInodeNumber);
+        childInodeNumber,
+        unloadedData->hash,
+        unloadedData->mode);
 
     if (alreadyLoading) {
       // This parent is already being loaded.
@@ -176,13 +186,18 @@ void InodeMap::setupParentLookupPromise(
     Promise<InodePtr>& promise,
     PathComponentPiece childName,
     bool isUnlinked,
-    fusell::InodeNumber childInodeNumber) {
+    fusell::InodeNumber childInodeNumber,
+    folly::Optional<Hash> hash,
+    mode_t mode) {
   promise.getFuture()
-      .then(
-          [name = PathComponent(childName), this, isUnlinked, childInodeNumber](
-              const InodePtr& inode) {
-            startChildLookup(inode, name, isUnlinked, childInodeNumber);
-          })
+      .then([name = PathComponent(childName),
+             this,
+             isUnlinked,
+             childInodeNumber,
+             hash,
+             mode](const InodePtr& inode) {
+        startChildLookup(inode, name, isUnlinked, childInodeNumber, hash, mode);
+      })
       .onError([this, childInodeNumber](const folly::exception_wrapper& ex) {
         // Fail all pending lookups on the child
         inodeLoadFailed(childInodeNumber, ex);
@@ -193,7 +208,9 @@ void InodeMap::startChildLookup(
     const InodePtr& parent,
     PathComponentPiece childName,
     bool isUnlinked,
-    fusell::InodeNumber childInodeNumber) {
+    fusell::InodeNumber childInodeNumber,
+    folly::Optional<Hash> hash,
+    mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {
     auto bug = EDEN_BUG() << "parent inode " << parent->getNodeId() << " of ("
@@ -208,9 +225,8 @@ void InodeMap::startChildLookup(
   }
 
   if (isUnlinked) {
-    // FIXME: The UnloadedData object needs to have enough data to recreate
-    // this object, or we need to be able to load the info from the overlay.
-    XLOG(FATAL) << "reloading unlinked inodes not implemented yet";
+    treeInode->loadUnlinkedChildInode(childName, childInodeNumber, hash, mode);
+    return;
   }
 
   // Ask the TreeInode to load this child inode.
@@ -423,6 +439,8 @@ SerializedInodeMap InodeMap::save() {
     serializedEntry.name = entry.name.stringPiece().str();
     serializedEntry.isUnlinked = entry.isUnlinked;
     serializedEntry.numFuseReferences = entry.numFuseReferences;
+    serializedEntry.hash = thriftHash(entry.hash);
+    serializedEntry.mode = entry.mode;
 
     result.unloadedInodes.emplace_back(std::move(serializedEntry));
   }
@@ -450,6 +468,11 @@ void InodeMap::load(const SerializedInodeMap& takeover) {
       throw std::runtime_error(message);
     }
     unloadedEntry.isUnlinked = entry.isUnlinked;
+    if (!entry.hash.empty()) {
+      unloadedEntry.hash = hashFromThrift(entry.hash);
+    }
+    unloadedEntry.mode = entry.mode;
+
     auto result = data->unloadedInodes_.emplace(
         entry.inodeNumber, std::move(unloadedEntry));
     if (!result.second) {
@@ -645,6 +668,21 @@ void InodeMap::unloadInode(
         UnloadedInode(inode->getNodeId(), parent->getNodeId(), name);
     unloadedEntry.numFuseReferences = fuseCount;
     unloadedEntry.isUnlinked = isUnlinked;
+
+    auto* asTree = dynamic_cast<const TreeInode*>(inode);
+    auto* asFile = dynamic_cast<const FileInode*>(inode);
+    if (asTree) {
+      unloadedEntry.hash = asTree->getContents()->treeHash;
+      // There is no asTree->getMode() we can call,
+      // however, directories are always represented with
+      // this specific mode bit pattern in eden so we can
+      // force the value down here.
+      unloadedEntry.mode = S_IFDIR | 0755;
+    } else {
+      unloadedEntry.hash = asFile->getBlobHash();
+      unloadedEntry.mode = asFile->getMode();
+    }
+
     auto reverseInsertKey =
         std::make_pair(unloadedEntry.parent, unloadedEntry.name.piece());
     XLOG(DBG7) << "reverse unload emplace " << reverseInsertKey.first << ":"

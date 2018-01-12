@@ -336,6 +336,65 @@ fusell::InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   return inodeNumber;
 }
 
+void TreeInode::loadUnlinkedChildInode(
+    PathComponentPiece name,
+    fusell::InodeNumber number,
+    folly::Optional<Hash> hash,
+    mode_t mode) {
+  try {
+    InodeMap::PromiseVector promises;
+    InodePtr inodePtr;
+
+    if (!S_ISDIR(mode)) {
+      auto file = std::make_unique<FileInode>(
+          number, inodePtrFromThis(), name, mode, hash);
+      promises = getInodeMap()->inodeLoadComplete(file.get());
+      inodePtr = InodePtr::newPtrLocked(file.release());
+    } else {
+      Dir dir;
+
+      if (hash) {
+        // Copy in the hash but we leave dir.entries empty
+        // because a directory can only be unlinked if it
+        // is empty.
+        dir.treeHash = hash;
+      } else {
+        // Note that the .value() call will throw if we couldn't
+        // load the dir data; we'll catch and propagate that in
+        // the containing try/catch block.
+        dir = getOverlay()->loadOverlayDir(number).value();
+
+        if (!dir.entries.empty()) {
+          // Should be impossible, but worth checking for
+          // defensive purposes!
+          throw new std::runtime_error(
+              "unlinked dir inode should have no children");
+        }
+      }
+
+      auto tree = std::make_unique<TreeInode>(
+          number, inodePtrFromThis(), name, std::move(dir));
+      promises = getInodeMap()->inodeLoadComplete(tree.get());
+      inodePtr = InodePtr::newPtrLocked(tree.release());
+    }
+
+    inodePtr->markUnlinkedAfterLoad();
+
+    // Alert any waiters that the load is complete
+    for (auto& promise : promises) {
+      promise.setValue(inodePtr);
+    }
+
+  } catch (const std::exception& exc) {
+    auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
+                          << "(" << name << " in " << getLogPath()
+                          << "), which has been unlinked, and we hit this "
+                          << "error while trying to load it from the overlay: "
+                          << exc.what();
+    getInodeMap()->inodeLoadFailed(number, bug.toException());
+  }
+}
+
 void TreeInode::loadChildInode(
     PathComponentPiece name,
     fusell::InodeNumber number) {

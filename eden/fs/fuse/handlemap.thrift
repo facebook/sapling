@@ -16,6 +16,8 @@ struct SerializedInodeMapEntry {
   3: string name,
   4: bool isUnlinked,
   5: i64 numFuseReferences,
+  6: string hash,
+  7: i32 mode,
 }
 
 struct SerializedInodeMap {

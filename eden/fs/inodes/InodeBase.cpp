@@ -191,6 +191,12 @@ std::string InodeBase::getLogPath() const {
   return std::move(path).value();
 }
 
+void InodeBase::markUnlinkedAfterLoad() {
+  auto loc = location_.wlock();
+  DCHECK(!loc->unlinked);
+  loc->unlinked = true;
+}
+
 std::unique_ptr<InodeBase> InodeBase::markUnlinked(
     TreeInode* parent,
     PathComponentPiece name,

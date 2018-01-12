@@ -205,6 +205,14 @@ class InodeBase {
       const RenameLock& renameLock);
 
   /**
+   * This method should only be called by TreeInode::loadUnlinkedChildInode().
+   * Its purpose is to set the unlinked flag to true for inodes that have
+   * been unlinked and passed over to the current process as part of a
+   * graceful restart procedure.
+   */
+  void markUnlinkedAfterLoad();
+
+  /**
    * updateLocation() should only be invoked by TreeInode.
    *
    * This is called when an inode is renamed to a new location.

@@ -476,6 +476,21 @@ class TreeInode : public InodeBase {
   void loadChildInode(PathComponentPiece name, fusell::InodeNumber number);
 
   /**
+   * Internal API only for use by InodeMap.
+   *
+   * InodeMap will this API when a child inode that has been unlinked
+   * needs to be loaded.
+   *
+   * The TreeInode will call InodeMap::inodeLoadComplete() or
+   * InodeMap::inodeLoadFailed() when the load finishes.
+   */
+  void loadUnlinkedChildInode(
+      PathComponentPiece name,
+      fusell::InodeNumber number,
+      folly::Optional<Hash> hash,
+      mode_t mode);
+
+  /**
    * Unload all unreferenced children under this tree (recursively).
    *
    * This walks the children underneath this tree, unloading any inodes that
