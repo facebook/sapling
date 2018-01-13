@@ -47,6 +47,14 @@ _blacklist = {
 _hgroot = os.path.abspath(os.path.join(__file__, '../../'))
 _sysroot = os.path.abspath(os.path.join(os.__file__, '../'))
 
+# List of extensions to always enable by default, unless overwritten by config.
+#
+# This allows us to integrate extensions into the codebase while leaving them in
+# hgext/ -- useful for extensions that need cleaning up, or significant
+# integration work, to be brought into mercurial/.
+DEFAULT_EXTENSIONS = [
+]
+
 def extensions(ui=None):
     if ui:
         def enabled(name):
@@ -270,6 +278,13 @@ def _runextsetup(name, ui):
 
 def loadall(ui, whitelist=None):
     result = ui.configitems("extensions")
+    resultkeys = set([name for name, loc in result])
+
+    # Add all extensions in `DEFAULT_EXTENSIONS` that were not defined by
+    # extensions.
+    result += [(name, '') for name in DEFAULT_EXTENSIONS
+               if name not in resultkeys]
+
     if whitelist is not None:
         result = [(k, v) for (k, v) in result if k in whitelist]
     newindex = len(_order)
