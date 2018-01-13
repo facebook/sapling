@@ -1,8 +1,3 @@
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > githelp=
-  > EOF
-
   $ hg init repo
   $ cd repo
   $ echo foo > test_file
