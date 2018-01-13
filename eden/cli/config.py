@@ -58,6 +58,19 @@ SNAPSHOT_MAGIC = b'eden\x00\x00\x00\x01'
 # by the local sudo configuration.
 SUDO_HELPER = '/var/www/scripts/testinfra/run_eden.sh'
 
+DEFAULT_REVISION = {  # supported repo name -> default bookmark
+    'git': 'refs/heads/master',
+    'hg': '.',
+}
+
+SUPPORTED_REPOS = DEFAULT_REVISION.keys()
+
+REPO_FOR_EXTENSION = {
+    '.git': 'git',
+    '.hg': 'hg',
+}
+
+assert sorted(REPO_FOR_EXTENSION.values()) == sorted(SUPPORTED_REPOS)
 
 class EdenStartError(Exception):
     pass
@@ -78,13 +91,18 @@ class ClientConfig:
       files are actually stored and values are the relative pathnames in the
       EdenFS mount that maps to them.
     '''
-    __slots__ = ['path', 'scm_type', 'hooks_path', 'bind_mounts']
+    __slots__ = ('path', 'scm_type', 'hooks_path', 'bind_mounts',
+                 'default_revision')
 
-    def __init__(self, path, scm_type, hooks_path, bind_mounts):
+    def __init__(self, path, scm_type, hooks_path, bind_mounts, default_revision):
         self.path = path
         self.scm_type = scm_type
         self.hooks_path = hooks_path
         self.bind_mounts = bind_mounts
+        self.default_revision = default_revision
+
+    def __str__(self):
+        return str(dict([(m, getattr(self, m)) for m in self.__slots__]))
 
 
 class Config:
@@ -170,15 +188,26 @@ class Config:
 
         if 'type' not in repo_data:
             raise Exception(f'repository "{alias}" missing key "type".')
-        elif 'path' not in repo_data:
+        scm_type = repo_data['type']
+        if scm_type not in SUPPORTED_REPOS:
+            raise Exception(f'repository "{alias}" has unsupported type.')
+
+        if 'path' not in repo_data:
             raise Exception(f'repository "{alias}" missing key "path".')
 
-        hooks_path = repo_data.get('hooks')
-        if hooks_path is None:
-            hooks_path = self.get_default_hooks_path()
+        default_revision = (
+            repo_data.get('default-revision') or
+            (parser['clone']['default-revision'] if 'clone' in parser else None) or
+            DEFAULT_REVISION[scm_type]
+        )
 
-        return ClientConfig(repo_data['path'], repo_data['type'], hooks_path,
-                            bind_mounts)
+        return ClientConfig(
+            path=repo_data['path'],
+            scm_type=scm_type,
+            hooks_path=repo_data.get('hooks') or self.get_default_hooks_path(),
+            bind_mounts=bind_mounts,
+            default_revision=default_revision
+        )
 
     def get_default_hooks_path(self) -> str:
         return os.path.join(self._etc_eden_dir, 'hooks')
@@ -730,9 +759,10 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                                 '[repository]')
             return value
 
-        path = get_field('path')
         scm_type = get_field('type')
-        hooks_path = get_field('hooks')
+        if scm_type not in SUPPORTED_REPOS:
+            raise Exception(f'repository "{config_toml}" has unsupported type '
+                            f'"{scm_type}"')
 
         bind_mounts = {}
         bind_mounts_dict = config.get('bind-mounts')
@@ -747,7 +777,14 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                                     '(string expected)')
                 bind_mounts[key] = value
 
-        return ClientConfig(path, scm_type, hooks_path, bind_mounts)
+        return ClientConfig(
+            path=get_field('path'),
+            scm_type=scm_type,
+            hooks_path=get_field('hooks'),
+            bind_mounts=bind_mounts,
+            default_revision=(repository.get('default-revision') or
+                              DEFAULT_REVISION[scm_type])
+        )
 
     def get_client_config_for_path(self, path: str) -> Optional[ClientConfig]:
         directory_map = self._get_directory_map()

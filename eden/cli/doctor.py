@@ -34,6 +34,9 @@ class CheckResult:
         self.result_type = result_type
         self.message = message
 
+    def __str__(self):
+        return str(dict([(m, getattr(self, m)) for m in self.__slots__]))
+
 
 class Check:
     def do_check(self, dry_run: bool) -> CheckResult:

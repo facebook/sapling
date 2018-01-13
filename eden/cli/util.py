@@ -97,8 +97,11 @@ def get_git_dir(path: str) -> Optional[str]:
     return None
 
 
-def get_git_commit(git_dir: str) -> str:
-    cmd = ['git', 'rev-parse', 'HEAD']
+def get_git_commit(git_dir: str, bookmark: str) -> str:
+    '''
+    returns git commit SHA for label (e.g., 'HEAD', 'master', etc.)
+    '''
+    cmd = ['git', 'rev-parse', bookmark]
     out = typing.cast(bytes, subprocess.check_output(cmd, cwd=git_dir))
     return out.strip().decode('utf-8', errors='surrogateescape')
 
@@ -131,10 +134,10 @@ def get_hg_repo(path: str) -> Optional[str]:
     return repo_path
 
 
-def get_hg_commit(repo: str) -> str:
+def get_hg_commit(repo: str, bookmark: str) -> str:
     env = os.environ.copy()
     env['HGPLAIN'] = '1'
-    cmd = ['hg', '--cwd', repo, 'log', '-T{node}', '-r.']
+    cmd = ['hg', '--cwd', repo, 'log', '-r', bookmark, '-T{node}']
     out = typing.cast(bytes, subprocess.check_output(cmd, env=env))
     return out.decode('utf-8', errors='strict')
 
@@ -159,3 +162,22 @@ def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:
     if args or kwargs:
         message = message.format(*args, **kwargs)
     print(message, file=sys.stderr)
+
+
+def stack_trace():
+    import traceback
+    return ''.join(traceback.format_stack())
+
+
+def is_valid_sha1(sha1: str):
+    '''True iff sha1 is a valid 40-character SHA1 hex string.'''
+    if sha1 is None or len(sha1) != 40:
+        return False
+    import string
+    return set(sha1).issubset(string.hexdigits)
+
+
+def read_all(path):
+    '''One-liner to read the contents of a file and properly close the fd.'''
+    with open(path, 'r') as f:
+        return f.read()

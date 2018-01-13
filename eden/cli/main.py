@@ -25,7 +25,7 @@ from . import util
 from .cmd_util import create_config
 from .util import print_stderr
 from facebook.eden import EdenService
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 
 def infer_client_from_cwd(config, clientname):
@@ -132,6 +132,7 @@ def do_list(args):
 
 
 def do_clone(args) -> int:
+    NULL_REVISION = '0' * 40
     config = create_config(args)
     try:
         client_config = config.find_config_for_alias(args.repo)
@@ -144,18 +145,31 @@ def do_clone(args) -> int:
         # see if the argument corresponds to a local path that contains a
         # repository.
         client_config = try_create_config_from_repo(args.repo, config)
+        assert client_config is not None
 
     args.path = normalize_path_arg(args.path)
-    snapshot_id = args.snapshot
-    if not snapshot_id:
+    try:
+        bm = args.snapshot or client_config.default_revision
         if client_config.scm_type == 'git':
-            snapshot_id = util.get_git_commit(client_config.path)
+            snapshot_id = util.get_git_commit(
+                git_dir=client_config.path, bookmark=bm)
         elif client_config.scm_type == 'hg':
-            snapshot_id = util.get_hg_commit(client_config.path)
+            snapshot_id = util.get_hg_commit(
+                repo=client_config.path, bookmark=bm)
         else:
             print_stderr(
                 '%s does not look like a git or hg repository' % client_config.path)
             return 1
+    except Exception as e:
+        print_stderr('error: {}', e)
+        snapshot_id = NULL_REVISION  # this is just to trigger error clause below
+    if ((not util.is_valid_sha1(snapshot_id)) or
+            (snapshot_id == NULL_REVISION and not args.allow_empty_repo)):
+        print_stderr('Obtained commit for repo is invalid: %s' % snapshot_id)
+        print_stderr(' %s repository may still be cloning.' % client_config.path)
+        print_stderr('Please make sure cloning completes before running `eden clone`.')
+        print_stderr('If null revision is valid, add --allow-empty-repo .')
+        return 1
 
     # Attempt to start the daemon if it is not already running.
     health_info = config.check_health()
@@ -196,17 +210,18 @@ def try_create_config_from_repo(
     # TODO(mbolin): Check whether there is a config alias whose path matches
     # path_to_repo.
 
-    if os.path.isdir(os.path.join(path_to_repo, '.hg')):
-        scm_type = 'hg'
-    elif os.path.isdir(os.path.join(path_to_repo, '.git')):
-        scm_type = 'git'
+    for extension, _scm_type in config_mod.REPO_FOR_EXTENSION.items():
+        if os.path.isdir(os.path.join(path_to_repo, extension)):
+            break
     else:
         raise Exception(f'Could not determine repo type for: {path_to_repo}')
 
-    hooks_path = config.get_default_hooks_path()
-    bind_mounts: Dict[bytes, Any] = {}
-    return config_mod.ClientConfig(path_to_repo, scm_type, hooks_path,
-                                   bind_mounts)
+    return config_mod.ClientConfig(
+        path=path_to_repo,
+        scm_type=_scm_type,
+        hooks_path=config.get_default_hooks_path(),
+        bind_mounts={},
+        default_revision=config_mod.DEFAULT_REVISION[_scm_type])
 
 
 def do_config(args):
@@ -478,6 +493,9 @@ def create_parser():
         'path', help='Path where the client should be mounted')
     clone_parser.add_argument(
         '--snapshot', '-s', type=str, help='Snapshot id of revision')
+    clone_parser.add_argument(
+        '--allow-empty-repo', '-e', action='store_true',
+        help='Allow repo with null revision (no revisions)')
     clone_parser.set_defaults(func=do_clone)
 
     config_parser = subparsers.add_parser(

@@ -315,7 +315,7 @@ class EdenFS(object):
 
         return results
 
-    def clone(self, repo: str, path: str) -> None:
+    def clone(self, repo: str, path: str, allow_empty: bool = False) -> None:
         '''
         Run "eden clone"
         '''
@@ -323,7 +323,10 @@ class EdenFS(object):
         if not os.path.isdir(path):
             os.mkdir(path)
 
-        self.run_cmd('clone', repo, path)
+        params = ['clone', repo, path]
+        if allow_empty:
+            params.append('--allow-empty-repo')
+        self.run_cmd(*params)
 
     def unmount(self, path: str) -> None:
         '''

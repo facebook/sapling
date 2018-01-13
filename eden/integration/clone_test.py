@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+from eden.cli import util
 from .lib import edenclient, testcase
 from textwrap import dedent
 import errno
@@ -83,6 +84,22 @@ class CloneTest:
                         msg='clone should inherit its config from eden_clone1, '
                             'which should include the bind mounts.')
 
+    def test_clone_with_valid_revision_cmd_line_arg_works(self):
+        tmp = self._new_tmp_dir()
+        target = os.path.join(tmp, 'foo/bar/baz')
+        self.eden.run_cmd('clone', '--snapshot', self.repo.get_head_hash(),
+                          repo_name, target)
+        self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
+                        msg='clone should succeed with --snapshop arg.')
+
+    def test_clone_with_short_revision_cmd_line_arg_works(self):
+        tmp = self._new_tmp_dir()
+        target = os.path.join(tmp, 'foo/bar/baz')
+        short = self.repo.get_head_hash()[:6]
+        self.eden.run_cmd('clone', '--snapshot', short, repo_name, target)
+        self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
+                        msg='clone should succeed with short --snapshop arg.')
+
     def test_clone_to_non_empty_directory_fails(self):
         tmp = self._new_tmp_dir()
         non_empty_dir = os.path.join(tmp, 'foo/bar/baz')
@@ -95,6 +112,17 @@ class CloneTest:
         stderr = context.exception.stderr.decode('utf-8')
         self.assertIn(os.strerror(errno.ENOTEMPTY), stderr,
                       msg='clone into non-empty dir should raise ENOTEMPTY')
+
+    def test_clone_with_invalid_revision_cmd_line_arg_fails(self):
+        tmp = self._new_tmp_dir()
+        empty_dir = os.path.join(tmp, 'foo/bar/baz')
+        os.makedirs(empty_dir)
+
+        with self.assertRaises(subprocess.CalledProcessError) as context:
+            self.eden.run_cmd('clone', repo_name, empty_dir, '--snapshot', 'X')
+        stderr = context.exception.stderr.decode('utf-8')
+        self.assertIn('Obtained commit for repo is invalid', stderr,
+                      msg='passing invalid commit on cmd line should fail')
 
     def test_clone_to_file_fails(self):
         tmp = self._new_tmp_dir()
@@ -154,16 +182,16 @@ echo -n "$1" >> "{scratch_file}"
         os.chmod(hg_post_clone_hook, stat.S_IRWXU)
 
         # Verify that the hook gets run as part of `eden clone`.
-        self.assertEqual('ok', _read_all(scratch_file))
+        self.assertEqual('ok', util.read_all(scratch_file))
         tmp = self._new_tmp_dir()
         self.eden.clone(repo_name, tmp)
         new_contents = 'ok' + self.repo.get_type()
-        self.assertEqual(new_contents, _read_all(scratch_file))
+        self.assertEqual(new_contents, util.read_all(scratch_file))
 
         # Restart Eden and verify that post-clone is NOT run again.
         self.eden.shutdown()
         self.eden.start()
-        self.assertEqual(new_contents, _read_all(scratch_file))
+        self.assertEqual(new_contents, util.read_all(scratch_file))
 
     def test_attempt_clone_invalid_repo_name(self):
         tmp = self._new_tmp_dir()
@@ -196,13 +224,7 @@ echo -n "$1" >> "{scratch_file}"
         }
         self.assertEqual(mount_points, self.eden.list_cmd(),
                          msg='Eden should have two mounts.')
-        self.assertEqual('hola\n', _read_all(os.path.join(tmp, 'hello')))
+        self.assertEqual('hola\n', util.read_all(os.path.join(tmp, 'hello')))
 
     def _new_tmp_dir(self):
         return tempfile.mkdtemp(dir=self.tmp_dir)
-
-
-def _read_all(path):
-    '''One-liner to read the contents of a file and properly close the fd.'''
-    with open(path, 'r') as f:
-        return f.read()
