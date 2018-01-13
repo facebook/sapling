@@ -1040,7 +1040,7 @@ def runrebase(op, revs, oldonto, onto):
     # Seed the mapping with oldonto->onto
     mapping[oldonto.node()] = onto.node()
 
-    lastdestnode = None
+    lastdestnode = onto.node()
     for rev in revs:
         newrev = _graft(op, rev, mapping, lastdestnode)
 
@@ -1054,7 +1054,7 @@ def runrebase(op, revs, oldonto, onto):
         # Track which commit contains the original rebase destination
         # contents, so we can preserve the appropriate side's content during
         # merges.
-        if not lastdestnode or oldnode == lastdestnode:
+        if lastdestnode == new.p1().node():
             lastdestnode = newnode
 
     return added, replacements

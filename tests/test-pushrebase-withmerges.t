@@ -101,13 +101,13 @@ Push in from the client.
   3 new obsolescence markers
   updating bookmark @
   obsoleted 3 changesets
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
-  @    merge alpha and beta [public:9:2ab54dd114a6]
+  @    merge alpha and beta [public:9:8c1abab9fd04]
   |\
   | o    merge beta [public:8:f71e1c3a925c]
   | |\
-  o---+  merge alpha [public:7:1b013a99a33f]
+  o---+  merge alpha [public:7:a9138cc95bb3]
   | | |
   | | o  other [public:6:7fd651906bb3]
   | | |
@@ -118,4 +118,3 @@ Push in from the client.
   o  base [public:0:d20a80d4def3]
   
   $ test -f other
-  [1]
