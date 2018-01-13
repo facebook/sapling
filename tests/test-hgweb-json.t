@@ -1722,6 +1722,10 @@ help/ shows help topics
         "topic": "forget"
       },
       {
+        "summary": "suggests the Mercurial equivalent of the given git command",
+        "topic": "githelp"
+      },
+      {
         "summary": "create a new repository in the given directory",
         "topic": "init"
       },

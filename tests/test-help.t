@@ -12,6 +12,7 @@ Short help:
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
    forget        forget the specified files on the next commit
+   githelp       suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge another revision into working directory
@@ -33,6 +34,7 @@ Short help:
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
    forget        forget the specified files on the next commit
+   githelp       suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge another revision into working directory
@@ -99,6 +101,10 @@ Short help:
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
+  
+  enabled extensions:
+  
+   githelp       try mapping git commands to Mercurial commands
   
   additional help topics:
   
@@ -179,6 +185,10 @@ Short help:
    verify        verify the integrity of the repository
    version       output version and copyright information
   
+  enabled extensions:
+  
+   githelp       try mapping git commands to Mercurial commands
+  
   additional help topics:
   
    bundlespec    Bundle File Formats
@@ -246,6 +256,7 @@ Test extension help:
       enabled extensions:
   
        children      command to display child changesets (DEPRECATED)
+       githelp       try mapping git commands to Mercurial commands
        rebase        command to move sets of revisions to a different ancestor
   
       disabled extensions:
@@ -303,7 +314,6 @@ Test extension help:
        fixcorrupt    (no help text available)
        generic_bisect
                      (no help text available)
-       githelp       try mapping git commands to Mercurial commands
        gitlookup     extension that will look up hashes from an hg-git map file
                      over the wire.
        gitrevset     map a git hash to a Mercurial hash:
@@ -405,6 +415,7 @@ Test short command list with verbose option
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
    forget        forget the specified files on the next commit
+   githelp, git  suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
    log, history  show revision history of entire repository or files
    merge         merge another revision into working directory
@@ -754,6 +765,7 @@ Test command without options
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
    forget        forget the specified files on the next commit
+   githelp       suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge another revision into working directory
@@ -960,6 +972,7 @@ Test that default list of commands omits extension commands
   
   enabled extensions:
   
+   githelp       try mapping git commands to Mercurial commands
    helpext       (no help text available)
   
   additional help topics:
@@ -2284,6 +2297,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   forget the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/githelp">
+  githelp
+  </a>
+  </td><td>
+  suggests the Mercurial equivalent of the given git command
   </td></tr>
   <tr><td>
   <a href="/help/init">

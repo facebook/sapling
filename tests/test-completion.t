@@ -19,6 +19,7 @@ Show all commands except debug commands
   export
   files
   forget
+  githelp
   graft
   grep
   heads
@@ -227,6 +228,7 @@ Show all commands + options
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, include, exclude, subrepos
   export: output, switch-parent, rev, text, git, binary, nodates
   forget: include, exclude
+  githelp: 
   init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   merge: force, rev, preview, tool

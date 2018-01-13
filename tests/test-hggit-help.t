@@ -4,6 +4,7 @@ Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
   $ hg help | grep 'git'
+   githelp       try mapping git commands to Mercurial commands
    hggit         push and pull from a Git server
    git           Working with Git Repositories
 

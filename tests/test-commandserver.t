@@ -69,6 +69,7 @@ typical client does not want echo-back messages, so test without it:
    diff          diff repository (or selected files)
    export        dump the header and diffs for one or more changesets
    forget        forget the specified files on the next commit
+   githelp       suggests the Mercurial equivalent of the given git command
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge another revision into working directory

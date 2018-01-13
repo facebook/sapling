@@ -345,6 +345,10 @@ Testing -h/--help:
    verify        verify the integrity of the repository
    version       output version and copyright information
   
+  enabled extensions:
+  
+   githelp       try mapping git commands to Mercurial commands
+  
   additional help topics:
   
    bundlespec    Bundle File Formats
@@ -429,6 +433,10 @@ Testing -h/--help:
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
    version       output version and copyright information
+  
+  enabled extensions:
+  
+   githelp       try mapping git commands to Mercurial commands
   
   additional help topics:
   
