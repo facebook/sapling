@@ -972,11 +972,10 @@ def _exceptionwarning(ui):
         if not isinstance(testedwith, (bytes, str)):
             testedwith = '.'.join([str(c) for c in testedwith])
         warning = (_('** Unknown exception encountered with '
-                     'possibly-broken third-party extension %s\n'
-                     '** which supports versions %s of Mercurial.\n'
+                     'possibly-broken third-party extension %s.\n'
                      '** Please disable %s and try your action again.\n'
                      '** If that fixes the bug please report it to %s\n')
-                   % (name, testedwith, name, report))
+                   % (name, name, report))
     else:
         bugtracker = ui.config('ui', 'supportcontact')
         if bugtracker is None:
