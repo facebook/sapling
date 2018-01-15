@@ -10,9 +10,7 @@ except ImportError:
 import os, tempfile, shutil
 from mercurial import ui, hg, commands
 
-sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
-
-from hggit.git_handler import GitHandler
+from hgext.hggit.git_handler import GitHandler
 
 
 class TestUrlParsing(object):
