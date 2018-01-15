@@ -80,11 +80,9 @@ where
 
     #[inline]
     fn drain_str(&mut self, len: usize) -> Result<String> {
-        Ok(
-            str::from_utf8(self.split_to(len).as_ref())
-                .context("invalid UTF-8")?
-                .into(),
-        )
+        Ok(str::from_utf8(self.split_to(len).as_ref())
+            .context("invalid UTF-8")?
+            .into())
     }
 
     #[inline]
@@ -129,25 +127,26 @@ pub fn is_mandatory_param(s: &str) -> Result<bool> {
     }
 }
 
-pub fn get_decompressor_type(compression: Option<&str>) -> Result<DecompressorType> {
+pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<DecompressorType>> {
     match compression {
-        Some("BZ") => Ok(DecompressorType::Bzip2),
-        Some("GZ") => Ok(DecompressorType::Gzip),
-        Some("ZS") => Ok(DecompressorType::Zstd),
-        Some("UN") => Ok(DecompressorType::Uncompressed),
-        Some(s) => bail_err!(ErrorKind::Bundle2Decode(
-            format!("unknown compression '{}'", s),
-        )),
-        None => Ok(DecompressorType::Uncompressed),
+        Some("BZ") => Ok(Some(DecompressorType::Bzip2)),
+        Some("GZ") => Ok(Some(DecompressorType::Gzip)),
+        Some("ZS") => Ok(Some(DecompressorType::Zstd)),
+        Some("UN") => Ok(None),
+        Some(s) => bail_err!(ErrorKind::Bundle2Decode(format!(
+            "unknown compression '{}'",
+            s
+        ),)),
+        None => Ok(None),
     }
 }
 
-pub fn get_compression_param(ct: &CompressorType) -> &'static str {
+pub fn get_compression_param(ct: &Option<CompressorType>) -> &'static str {
     match ct {
-        &CompressorType::Bzip2(_) => "BZ",
-        &CompressorType::Gzip => "GZ",
-        &CompressorType::Zstd { .. } => "ZS",
-        &CompressorType::Uncompressed => "UN",
+        &Some(CompressorType::Bzip2(_)) => "BZ",
+        &Some(CompressorType::Gzip) => "GZ",
+        &Some(CompressorType::Zstd { .. }) => "ZS",
+        &None => "UN",
     }
 }
 

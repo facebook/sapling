@@ -80,22 +80,22 @@ fn test_parse_unknown_compression() {
 
 #[test]
 fn test_empty_bundle_roundtrip_zstd() {
-    empty_bundle_roundtrip(CompressorType::Zstd {
+    empty_bundle_roundtrip(Some(CompressorType::Zstd {
         level: ZSTD_DEFAULT_LEVEL,
-    });
+    }));
 }
 
 #[test]
 fn test_empty_bundle_roundtrip_bzip() {
-    empty_bundle_roundtrip(CompressorType::Bzip2(Bzip2Compression::Default));
+    empty_bundle_roundtrip(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
 }
 
 #[test]
 fn test_empty_bundle_roundtrip_uncompressed() {
-    empty_bundle_roundtrip(CompressorType::Uncompressed);
+    empty_bundle_roundtrip(None);
 }
 
-fn empty_bundle_roundtrip(ct: CompressorType) {
+fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     // Encode an empty bundle.
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
@@ -135,22 +135,22 @@ fn empty_bundle_roundtrip(ct: CompressorType) {
 
 #[test]
 fn test_unknown_part_zstd() {
-    unknown_part(CompressorType::Zstd {
+    unknown_part(Some(CompressorType::Zstd {
         level: ZSTD_DEFAULT_LEVEL,
-    });
+    }));
 }
 
 #[test]
 fn test_unknown_part_bzip() {
-    unknown_part(CompressorType::Bzip2(Bzip2Compression::Default));
+    unknown_part(Some(CompressorType::Bzip2(Bzip2Compression::Default)));
 }
 
 #[test]
 fn test_unknown_part_uncompressed() {
-    unknown_part(CompressorType::Uncompressed);
+    unknown_part(None);
 }
 
-fn unknown_part(ct: CompressorType) {
+fn unknown_part(ct: Option<CompressorType>) {
     let cursor = Cursor::new(Vec::with_capacity(32 * 1024));
     let mut builder = Bundle2EncodeBuilder::new(cursor);
 

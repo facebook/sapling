@@ -24,7 +24,6 @@ mod compressor;
 mod decompressor;
 pub mod membuf;
 pub mod metered;
-mod noop;
 mod raw;
 mod retry;
 

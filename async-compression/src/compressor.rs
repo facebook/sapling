@@ -6,8 +6,8 @@
 
 //! Non-blocking, buffered compression.
 
-use std::io::{self, Write};
 use std::fmt::{self, Debug, Formatter};
+use std::io::{self, Write};
 use std::result;
 
 use bzip2;
@@ -16,7 +16,6 @@ use futures::Poll;
 use tokio_io::AsyncWrite;
 
 use decompressor::DecompressorType;
-use noop::NoopEncoder;
 use raw::{AsyncZstdEncoder, RawEncoder};
 use retry::retry_write;
 
@@ -25,7 +24,6 @@ pub enum CompressorType {
     Bzip2(bzip2::Compression),
     Gzip,
     Zstd { level: i32 },
-    Uncompressed,
 }
 
 impl CompressorType {
@@ -34,7 +32,6 @@ impl CompressorType {
             &CompressorType::Bzip2(_) => DecompressorType::Bzip2,
             &CompressorType::Gzip => DecompressorType::Gzip,
             &CompressorType::Zstd { .. } => DecompressorType::Zstd,
-            &CompressorType::Uncompressed => DecompressorType::Uncompressed,
         }
     }
 }
@@ -61,7 +58,6 @@ where
                 // fixed
                 CompressorType::Gzip => unimplemented!(),
                 CompressorType::Zstd { level } => Box::new(AsyncZstdEncoder::new(w, level)),
-                CompressorType::Uncompressed => Box::new(NoopEncoder::new(w)),
             },
         }
     }
@@ -69,15 +65,13 @@ where
     pub fn try_finish(self) -> result::Result<W, (Self, io::Error)> {
         match self.inner.try_finish() {
             Ok(writer) => Ok(writer),
-            Err((encoder, e)) => {
-                Err((
-                    Compressor {
-                        c_type: self.c_type,
-                        inner: encoder,
-                    },
-                    e,
-                ))
-            }
+            Err((encoder, e)) => Err((
+                Compressor {
+                    c_type: self.c_type,
+                    inner: encoder,
+                },
+                e,
+            )),
         }
     }
 }
@@ -123,6 +117,6 @@ fn _assert_send() {
 
     _assert(Compressor::new(
         Cursor::new(Vec::new()),
-        CompressorType::Uncompressed,
+        CompressorType::Bzip2(bzip2::Compression::Default),
     ));
 }

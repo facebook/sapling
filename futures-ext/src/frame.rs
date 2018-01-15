@@ -140,6 +140,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct ReadLeadingBuffer<T> {
     inner: T,
     buf: BytesMut,

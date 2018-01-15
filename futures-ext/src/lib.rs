@@ -34,6 +34,8 @@ pub mod decode;
 pub mod encode;
 
 pub use frame::{FramedStream, ReadLeadingBuffer};
+pub mod io;
+
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
 pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 

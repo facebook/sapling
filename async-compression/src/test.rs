@@ -7,27 +7,23 @@
 use std::io::{self, Cursor, Write};
 
 use bzip2;
-use quickcheck::TestResult;
 use futures::{Async, Poll};
+use quickcheck::TestResult;
 use tokio_core::reactor::Core;
 use tokio_io::AsyncWrite;
 use tokio_io::io::read_to_end;
 
 use retry::retry_write;
 
-use membuf::MemBuf;
-use metered::{MeteredRead, MeteredWrite};
+use ZSTD_DEFAULT_LEVEL;
 use compressor::{Compressor, CompressorType};
 use decompressor::Decompressor;
-use ZSTD_DEFAULT_LEVEL;
+use membuf::MemBuf;
+use metered::{MeteredRead, MeteredWrite};
 
 quickcheck! {
     fn test_bzip2_roundtrip(input: Vec<u8>) -> TestResult {
         roundtrip(CompressorType::Bzip2(bzip2::Compression::Default), &input)
-    }
-
-    fn test_noop_roundtrip(input: Vec<u8>) -> TestResult {
-        roundtrip(CompressorType::Uncompressed, &input)
     }
 
     fn test_zstd_roundtrip(input: Vec<u8>) -> TestResult {

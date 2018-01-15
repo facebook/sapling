@@ -19,7 +19,6 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 
 use slog::Logger;
 
-use async_compression::CompressorType;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_types::{percent_encode, Changeset, NodeHash, Parents, NULL_HASH};
 use metaconfig::repoconfig::RepoType;
@@ -162,7 +161,7 @@ impl RepoClient {
         // Mercurial currently hangs while trying to read compressed bundles over the wire:
         // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
         // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(CompressorType::Uncompressed);
+        bundle.set_compressor_type(None);
 
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)

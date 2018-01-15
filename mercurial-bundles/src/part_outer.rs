@@ -14,6 +14,7 @@ use ascii::AsciiString;
 use async_compression::Decompressor;
 use bytes::{Bytes, BytesMut};
 use futures_ext::{AsyncReadExt, FramedStream};
+use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use slog;
 use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
@@ -35,13 +36,15 @@ pub fn outer_stream<'a, R: AsyncRead>(
             .get("compression")
             .map(String::as_ref),
     )?;
-    Ok(
-        Decompressor::new(r, decompressor_type)
-            .framed_stream(OuterDecoder::new(logger.new(o!("stream" => "outer")))),
-    )
+
+    let input = match decompressor_type {
+        None => UncompressedRead(r),
+        Some(decompressor_type) => CompressedRead(Decompressor::new(r, decompressor_type)),
+    };
+    Ok(input.framed_stream(OuterDecoder::new(logger.new(o!("stream" => "outer")))))
 }
 
-pub type OuterStream<'a, R> = FramedStream<Decompressor<'a, R>, OuterDecoder>;
+pub type OuterStream<'a, R> = FramedStream<Either<R, Decompressor<'a, R>>, OuterDecoder>;
 
 #[derive(Debug)]
 enum OuterState {

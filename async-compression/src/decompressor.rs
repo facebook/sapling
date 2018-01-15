@@ -4,17 +4,15 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-//! Non-blocking, buffered compression and decompression for bzip2
+//! Non-blocking, buffered compression and decompression
 
 use std::fmt::{self, Debug, Formatter};
-use std::io;
-use std::io::Read;
+use std::io::{self, Read};
 
 use bzip2::read::BzDecoder;
 use tokio_io::AsyncRead;
 use zstd::Decoder as ZstdDecoder;
 
-use noop::NoopDecoder;
 use raw::RawDecoder;
 
 pub struct Decompressor<'a, R>
@@ -30,7 +28,6 @@ pub enum DecompressorType {
     Bzip2,
     Gzip,
     Zstd,
-    Uncompressed,
 }
 
 impl<'a, R> Decompressor<'a, R>
@@ -48,7 +45,6 @@ where
                 DecompressorType::Gzip => unimplemented!(),
                 // ZstdDecoder::new() should only fail on OOM, so just call unwrap here.
                 DecompressorType::Zstd => Box::new(ZstdDecoder::new(r).unwrap()),
-                DecompressorType::Uncompressed => Box::new(NoopDecoder::new(r)),
             },
         }
     }
