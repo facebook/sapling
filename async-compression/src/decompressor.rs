@@ -17,10 +17,10 @@ use raw::RawDecoder;
 
 pub struct Decompressor<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     d_type: DecompressorType,
-    inner: Box<RawDecoder<R> + 'a>,
+    inner: Box<RawDecoder<R> + 'a + Send>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -32,7 +32,7 @@ pub enum DecompressorType {
 
 impl<'a, R> Decompressor<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     pub fn new(r: R, dt: DecompressorType) -> Self {
         Decompressor {
@@ -63,16 +63,16 @@ where
     }
 }
 
-impl<'a, R: AsyncRead + BufRead + 'a> Read for Decompressor<'a, R> {
+impl<'a, R: AsyncRead + BufRead + 'a + Send> Read for Decompressor<'a, R> {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buf)
     }
 }
 
-impl<'a, R: AsyncRead + BufRead + 'a> AsyncRead for Decompressor<'a, R> {}
+impl<'a, R: AsyncRead + BufRead + 'a + Send> AsyncRead for Decompressor<'a, R> {}
 
-impl<'a, R: AsyncRead + BufRead + 'a> Debug for Decompressor<'a, R> {
+impl<'a, R: AsyncRead + BufRead + 'a + Send> Debug for Decompressor<'a, R> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct("Decompressor")
             .field("decoder_type", &self.d_type)

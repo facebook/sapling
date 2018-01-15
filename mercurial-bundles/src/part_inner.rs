@@ -55,18 +55,19 @@ type WrappedStream<'a, T> = Map<
 pub trait InnerStream<'a, T>
     : Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>
 where
-    T: AsyncRead + BufRead + 'a,
+    T: AsyncRead + BufRead + 'a + Send,
 {
 }
 
 impl<'a, T, U> InnerStream<'a, T> for U
 where
     U: Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>,
-    T: AsyncRead + BufRead + 'a,
+    T: AsyncRead + BufRead + 'a + Send,
 {
 }
 
-pub type BoxInnerStream<'a, T> = Box<InnerStream<'a, T, Item = InnerPart, Error = Error> + 'a>;
+pub type BoxInnerStream<'a, T> =
+    Box<InnerStream<'a, T, Item = InnerPart, Error = Error> + 'a + Send>;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InnerPart {
@@ -127,7 +128,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
-pub fn inner_stream<'a, R: AsyncRead + BufRead + 'a>(
+pub fn inner_stream<'a, R: AsyncRead + BufRead + 'a + Send>(
     header: &PartHeader,
     stream: OuterStream<'a, R>,
     logger: &slog::Logger,

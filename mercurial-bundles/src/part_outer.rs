@@ -25,7 +25,7 @@ use part_inner::validate_header;
 use types::StreamHeader;
 use utils::{get_decompressor_type, BytesExt};
 
-pub fn outer_stream<'a, R: AsyncRead + BufRead>(
+pub fn outer_stream<'a, R: AsyncRead + BufRead + Send>(
     stream_header: &StreamHeader,
     r: R,
     logger: &slog::Logger,

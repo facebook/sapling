@@ -54,7 +54,7 @@ pub type Remainder<R> = (BytesMut, R);
 #[derive(Debug)]
 pub struct Bundle2Stream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     inner: Bundle2StreamInner,
     current_stream: CurrentStream<'a, R>,
@@ -68,7 +68,7 @@ struct Bundle2StreamInner {
 
 enum CurrentStream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     Start(Framed<R, StartDecoder>),
     Outer(OuterStream<'a, Chain<Cursor<BytesMut>, R>>),
@@ -79,7 +79,7 @@ where
 
 impl<'a, R> CurrentStream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     pub fn take(&mut self) -> Self {
         mem::replace(self, CurrentStream::Invalid)
@@ -88,7 +88,7 @@ where
 
 impl<'a, R> Display for CurrentStream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         use self::CurrentStream::*;
@@ -106,7 +106,7 @@ where
 
 impl<'a, R> Debug for CurrentStream<'a, R>
 where
-    R: AsyncRead + BufRead + Debug + 'a,
+    R: AsyncRead + BufRead + Debug + 'a + Send,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
@@ -123,7 +123,7 @@ where
 
 impl<'a, R> Bundle2Stream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     pub fn new(read: R, logger: slog::Logger) -> Bundle2Stream<'a, R> {
         Bundle2Stream {
@@ -149,7 +149,7 @@ where
 
 impl<'a, R> Stream for Bundle2Stream<'a, R>
 where
-    R: AsyncRead + BufRead + 'a,
+    R: AsyncRead + BufRead + 'a + Send,
 {
     type Item = StreamEvent<Bundle2Item, Remainder<R>>;
     type Error = Error;
@@ -172,7 +172,7 @@ impl Bundle2StreamInner {
         CurrentStream<'a, R>,
     )
     where
-        R: AsyncRead + BufRead + 'a,
+        R: AsyncRead + BufRead + 'a + Send,
     {
         match current_stream {
             CurrentStream::Start(mut stream) => {

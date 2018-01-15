@@ -235,7 +235,7 @@ fn parse_bundle(
     assert!(res.is_none());
 }
 
-fn verify_cg2<'a, R: AsyncRead + BufRead + 'a>(
+fn verify_cg2<'a, R: AsyncRead + BufRead + 'a + Send>(
     core: &mut Core,
     stream: Bundle2Stream<'a, R>,
 ) -> Bundle2Stream<'a, R> {
@@ -470,7 +470,7 @@ fn path(bytes: &[u8]) -> MPath {
     MPath::new(bytes).unwrap()
 }
 
-fn parse_stream_start<'a, R: AsyncRead + BufRead + 'a>(
+fn parse_stream_start<'a, R: AsyncRead + BufRead + 'a + Send>(
     core: &mut Core,
     reader: R,
     compression: Option<&str>,
@@ -503,7 +503,7 @@ fn make_root_logger() -> Logger {
     Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
 }
 
-fn next_cg2_part<'a, R: AsyncRead + BufRead + 'a>(
+fn next_cg2_part<'a, R: AsyncRead + BufRead + 'a + Send>(
     core: &mut Core,
     stream: Bundle2Stream<'a, R>,
 ) -> (changegroup::Part, Bundle2Stream<'a, R>) {
