@@ -22,6 +22,7 @@ use bytes::Bytes;
 use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
 use tokio_io::codec::{Decoder, Encoder};
 
+mod bytes_stream;
 mod futures_ordered;
 mod streamfork;
 mod stream_wrappers;
@@ -31,6 +32,7 @@ pub mod encode;
 
 pub mod io;
 
+pub use bytes_stream::{BytesStream, BytesStreamFuture};
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
 pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 
