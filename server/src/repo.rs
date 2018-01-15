@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug};
-use std::io::Cursor;
+use std::io::{BufRead, Cursor};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,10 +16,12 @@ use std::sync::Arc;
 use bytes::Bytes;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use tokio_io::AsyncRead;
 
 use slog::Logger;
 
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
+use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_types::{percent_encode, Changeset, NodeHash, Parents, NULL_HASH};
 use metaconfig::repoconfig::RepoType;
 
@@ -190,12 +192,10 @@ impl RepoClient {
 
         let encode_fut = bundle.build();
 
-        Ok(
-            encode_fut
-                .map(|cursor| Bytes::from(cursor.into_inner()))
-                .from_err()
-                .boxify(),
-        )
+        Ok(encode_fut
+            .map(|cursor| Bytes::from(cursor.into_inner()))
+            .from_err()
+            .boxify())
     }
 }
 
@@ -257,11 +257,13 @@ impl HgCommands for RepoClient {
                 let mut f = 1;
                 ParentStream::new(&repo, top, bottom)
                     .enumerate()
-                    .filter(move |&(i, _)| if i == f {
-                        f *= 2;
-                        true
-                    } else {
-                        false
+                    .filter(move |&(i, _)| {
+                        if i == f {
+                            f *= 2;
+                            true
+                        } else {
+                            false
+                        }
                     })
                     .map(|(_, v)| v)
                     .collect()
@@ -381,8 +383,23 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle(&self, heads: Vec<String>, _stream: Bytes) -> HgCommandRes<()> {
+    fn unbundle<R>(
+        &self,
+        heads: Vec<String>,
+        stream: Bundle2Stream<'static, R>,
+    ) -> HgCommandRes<bundle2::Remainder<R>>
+    where
+        R: AsyncRead + BufRead + 'static + Send,
+    {
         info!(self.logger, "unbundle heads {:?}", heads);
-        future::ok(()).boxify()
+        stream
+            .filter_map(|event| match event {
+                StreamEvent::Done(remainder) => Some(remainder),
+                StreamEvent::Next(_) => None,
+            })
+            .into_future()
+            .map(|(remainder, _)| remainder.expect("No remainder left"))
+            .map_err(|(err, _)| err)
+            .boxify()
     }
 }

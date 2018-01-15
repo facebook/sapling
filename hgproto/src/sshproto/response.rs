@@ -8,9 +8,11 @@ use std::fmt::Display;
 use std::io::{self, Write};
 
 use bytes::{BufMut, Bytes, BytesMut};
+use futures::stream;
+use futures_ext::StreamExt;
 
-use {Response, SingleResponse};
-use batch;
+use {batch, Response, SingleResponse};
+use handler::OutputStream;
 
 fn separated<I, W>(write: &mut W, iter: I, sep: &str) -> io::Result<()>
 where
@@ -33,9 +35,10 @@ where
     Ok(())
 }
 
-pub fn encode(response: &Response, out: &mut BytesMut) {
+pub fn encode(response: Response) -> OutputStream {
+    let mut out = BytesMut::new();
     match response {
-        &Response::Batch(ref resps) => {
+        Response::Batch(ref resps) => {
             let escaped_results: Vec<_> = resps
                 .iter()
                 .map(|resp| batch::escape(&encode_cmd(resp)))
@@ -45,8 +48,9 @@ pub fn encode(response: &Response, out: &mut BytesMut) {
             out.put_slice(format!("{}\n", escaped_results.len()).as_bytes());
             out.put(escaped_results)
         }
-        &Response::Single(ref resp) => encode_single(resp, out),
+        Response::Single(ref resp) => encode_single(resp, &mut out),
     }
+    stream::once(Ok(out.freeze())).boxify()
 }
 
 fn encode_single(response: &SingleResponse, out: &mut BytesMut) {

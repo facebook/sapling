@@ -72,12 +72,18 @@ pub enum Request {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum SingleRequest {
-    Between { pairs: Vec<(NodeHash, NodeHash)> },
+    Between {
+        pairs: Vec<(NodeHash, NodeHash)>,
+    },
     Branchmap,
-    Branches { nodes: Vec<NodeHash> },
+    Branches {
+        nodes: Vec<NodeHash>,
+    },
     Clonebundles,
     Capabilities,
-    Changegroup { roots: Vec<NodeHash> },
+    Changegroup {
+        roots: Vec<NodeHash>,
+    },
     Changegroupsubset {
         bases: Vec<NodeHash>,
         heads: Vec<NodeHash>,
@@ -90,9 +96,15 @@ pub enum SingleRequest {
     Getbundle(GetbundleArgs),
     Heads,
     Hello,
-    Listkeys { namespace: String },
-    Lookup { key: String },
-    Known { nodes: Vec<NodeHash> },
+    Listkeys {
+        namespace: String,
+    },
+    Lookup {
+        key: String,
+    },
+    Known {
+        nodes: Vec<NodeHash>,
+    },
     Pushkey {
         namespace: String,
         key: String,
@@ -100,7 +112,9 @@ pub enum SingleRequest {
         new: NodeHash,
     },
     Streamout,
-    Unbundle { heads: Vec<String>, stream: Bytes },
+    Unbundle {
+        heads: Vec<String>,
+    },
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for

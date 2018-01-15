@@ -9,16 +9,21 @@
 //! To implement a Mercurial service, implement `HgCommands` and then use it to handle incominng
 //! connections.
 use std::collections::{HashMap, HashSet};
+use std::io::{self, BufRead};
 
 use slog::Logger;
 
 use bytes::Bytes;
 use futures::future::{self, Future};
+use futures::stream::Stream;
 
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt};
+use mercurial_bundles::bundle2::{self, Bundle2Stream};
 use mercurial_types::NodeHash;
+use tokio_io::AsyncRead;
 
 use {BranchRes, GetbundleArgs, SingleRequest, SingleResponse};
+
 use errors::*;
 
 pub struct HgCommandHandler<H> {
@@ -26,14 +31,18 @@ pub struct HgCommandHandler<H> {
     logger: Logger,
 }
 
-impl<H: HgCommands> HgCommandHandler<H> {
+impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
     pub fn new(commands: H, logger: Logger) -> Self {
         HgCommandHandler { commands, logger }
     }
 
-    pub fn handle(&self, req: SingleRequest) -> BoxFuture<SingleResponse, Error>
+    pub fn handle<S>(
+        &self,
+        req: SingleRequest,
+        instream: BytesStream<S>,
+    ) -> BoxFuture<(SingleResponse, BytesStream<S>), Error>
     where
-        H: HgCommands,
+        S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     {
         debug!(self.logger, "Got request: {:?}", req);
         let hgcmds = &self.commands;
@@ -43,72 +52,86 @@ impl<H: HgCommands> HgCommandHandler<H> {
                 .between(pairs)
                 .map(SingleResponse::Between)
                 .map_err(self::Error::into)
-                .boxify(),
-            SingleRequest::Branchmap => hgcmds
-                .branchmap()
-                .map(SingleResponse::Branchmap)
-                .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Branches { nodes } => hgcmds
                 .branches(nodes)
                 .map(SingleResponse::Branches)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
+                .boxify(),
+            SingleRequest::Branchmap => hgcmds
+                .branchmap()
+                .map(SingleResponse::Branchmap)
+                .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Clonebundles => hgcmds
                 .clonebundles()
                 .map(SingleResponse::Clonebundles)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Capabilities => hgcmds
                 .capabilities()
                 .map(SingleResponse::Capabilities)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Changegroup { roots } => hgcmds
                 .changegroup(roots)
                 .map(|_| SingleResponse::Changegroup)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Changegroupsubset { bases, heads } => hgcmds
                 .changegroupsubset(bases, heads)
                 .map(|_| SingleResponse::Changegroupsubset)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Debugwireargs { one, two, all_args } => {
                 self.debugwireargs(one, two, all_args)
                     .map(SingleResponse::Debugwireargs)
                     .map_err(self::Error::into)
+                    .map(|res| (res, instream))
                     .boxify()
             }
             SingleRequest::Getbundle(args) => hgcmds
                 .getbundle(args)
                 .map(SingleResponse::Getbundle)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Heads => hgcmds
                 .heads()
                 .map(SingleResponse::Heads)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Hello => hgcmds
                 .hello()
                 .map(SingleResponse::Hello)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Listkeys { namespace } => hgcmds
                 .listkeys(namespace)
                 .map(SingleResponse::Listkeys)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Lookup { key } => hgcmds
                 .lookup(key)
                 .map(SingleResponse::Lookup)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Known { nodes } => hgcmds
                 .known(nodes)
                 .map(SingleResponse::Known)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Pushkey {
                 namespace,
@@ -119,17 +142,22 @@ impl<H: HgCommands> HgCommandHandler<H> {
                 .pushkey(namespace, key, old, new)
                 .map(|_| SingleResponse::Pushkey)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
             SingleRequest::Streamout => hgcmds
                 .stream_out()
                 .map(|_| SingleResponse::Streamout)
                 .map_err(self::Error::into)
+                .map(|res| (res, instream))
                 .boxify(),
-            SingleRequest::Unbundle { heads, stream } => hgcmds
-                .unbundle(heads, stream)
-                .map(|_| SingleResponse::Unbundle)
-                .map_err(self::Error::into)
-                .boxify(), //_ => unimplemented!()
+            SingleRequest::Unbundle { heads } => hgcmds
+                .unbundle(heads, Bundle2Stream::new(instream, self.logger.new(o!())))
+                .map(|rest| {
+                    let (bytes, mut remainder) = rest;
+                    remainder.prepend_bytes(bytes.freeze());
+                    (SingleResponse::Unbundle, remainder)
+                })
+                .boxify(),
         }
     }
 
@@ -274,7 +302,14 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle(&self, _heads: Vec<String>, _stream: Bytes) -> HgCommandRes<()> {
+    fn unbundle<R>(
+        &self,
+        _heads: Vec<String>,
+        _stream: Bundle2Stream<'static, R>,
+    ) -> HgCommandRes<bundle2::Remainder<R>>
+    where
+        R: AsyncRead + BufRead + 'static + Send,
+    {
         unimplemented("unbundle")
     }
 }
@@ -282,8 +317,8 @@ pub trait HgCommands {
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::future;
 
+    use futures::{future, stream};
     use slog::Discard;
 
     struct Dummy;
@@ -301,13 +336,15 @@ mod test {
         let logger = Logger::root(Discard, o!());
         let handler = HgCommandHandler::new(Dummy, logger);
 
-        let r = handler.handle(SingleRequest::Hello).wait();
+        let r = handler
+            .handle(SingleRequest::Hello, BytesStream::new(stream::empty()))
+            .wait();
         println!("hello r = {:?}", r);
         let mut res: HashMap<String, Vec<String>> = HashMap::new();
         res.insert("capabilities".into(), vec!["something".into()]);
 
         match r {
-            Ok(SingleResponse::Hello(ref r)) if r == &res => (),
+            Ok((SingleResponse::Hello(ref r), _)) if r == &res => (),
             bad => panic!("Bad result {:?}", bad),
         }
     }
@@ -317,7 +354,9 @@ mod test {
         let logger = Logger::root(Discard, o!());
         let handler = HgCommandHandler::new(Dummy, logger);
 
-        let r = handler.handle(SingleRequest::Heads).wait();
+        let r = handler
+            .handle(SingleRequest::Heads, BytesStream::new(stream::empty()))
+            .wait();
         println!("heads r = {:?}", r);
 
         match r {

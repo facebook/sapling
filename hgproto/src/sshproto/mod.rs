@@ -33,9 +33,11 @@
 //! Each command has its own encoding of the response.
 
 use bytes::BytesMut;
-use tokio_io::codec::{Decoder, Encoder};
+use tokio_io::codec::Decoder;
 
 use {Request, Response};
+use handler::{OutputStream, ResponseEncoder};
+
 use errors::*;
 
 pub mod request;
@@ -46,13 +48,9 @@ pub struct HgSshCommandEncode;
 #[derive(Clone)]
 pub struct HgSshCommandDecode;
 
-impl Encoder for HgSshCommandEncode {
-    type Item = Response;
-    type Error = Error;
-
-    fn encode(&mut self, v: Response, out: &mut BytesMut) -> Result<()> {
-        response::encode(&v, out);
-        Ok(())
+impl ResponseEncoder for HgSshCommandEncode {
+    fn encode(&self, response: Response) -> OutputStream {
+        response::encode(response)
     }
 }
 

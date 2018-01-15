@@ -5,17 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::io::{self, BufReader, Cursor, Read};
 use std::iter;
 use std::str::{self, FromStr};
 
 use bytes::{Bytes, BytesMut};
-use futures::{Async, Stream};
 use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
-use slog;
-use tokio_io::AsyncRead;
 
-use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use mercurial_types::NodeHash;
 
 use {GetbundleArgs, Request, SingleRequest};
@@ -270,55 +265,6 @@ where
     }
 }
 
-// This is pretty awful. We need to consume the input until we have an entire stream,
-// but only so we can count the underlying bytes. Once we have that we take the raw bytes
-// and throw away all the result of parsing.
-fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
-    // Reaching the end of the buffer just means we need more input, not that there is no
-    // more input. So remap EOF to WouldBlock.
-    #[derive(Debug)]
-    struct EofCursor<T>(Cursor<T>, bool);
-    impl<T: AsRef<[u8]>> Read for EofCursor<T> {
-        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-            if self.1 {
-                self.0.read(buf)
-            } else {
-                match self.0.read(buf) {
-                    Ok(0) => Err(io::Error::from(io::ErrorKind::WouldBlock)),
-                    Ok(v) => Ok(v),
-                    Err(err) => Err(err),
-                }
-            }
-        }
-    }
-    impl<T: AsRef<[u8]>> AsyncRead for EofCursor<T> {}
-
-    let (bytes, mut read) = {
-        let logger = slog::Logger::root(slog::Discard, o!());
-        let mut b2 = Bundle2Stream::new(BufReader::new(EofCursor(Cursor::new(inp), false)), logger);
-
-        loop {
-            match b2.poll() {
-                Ok(Async::Ready(Some(StreamEvent::Done(rest)))) => break rest,
-                Ok(Async::Ready(Some(StreamEvent::Next(_)))) => (),
-                Ok(Async::NotReady) => {
-                    return IResult::Incomplete(Needed::Unknown);
-                }
-                Ok(Async::Ready(None)) | Err(_) => {
-                    return IResult::Error(ErrorKind::Custom(0xbad));
-                }
-            }
-        }
-    };
-
-    read.get_mut().1 = true;
-    let mut rest = Vec::new();
-    read.read_to_end(&mut rest).unwrap();
-
-    let (stream, rest) = inp.split_at(inp.len() - rest.len() - bytes.len());
-    IResult::Done(rest, Bytes::from(stream))
-}
-
 /// Parse a command, given some input, a command name (used as a tag), a param parser
 /// function (which generalizes over batched and non-batched parameter syntaxes),
 /// number of args (since each command has a fixed number of expected parameters,
@@ -457,33 +403,6 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
     }))
 }
 
-/// Parse an unbundle command. This is unusual because it's a normal command talking
-/// the "heads" parameter, but then it consumes the rest of the stream as a bundle2
-/// stream until that finishes, then resumes normal command processing. Ideally this
-/// should be implemented in a streaming way, but it isn't yet. We process the unbundle
-/// command almost as usual, then follow it by capturing the bundle2 stream as Bytes and
-/// return them as a SingleRequest::Unbundle object for later processing.
-fn unbundle(
-    inp: &[u8],
-    parse_params: fn(&[u8], usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
-) -> IResult<&[u8], SingleRequest> {
-    // Use this as a syntactic proxy for SingleRequest::Unbundle, which works because
-    // SingleRequest's values are struct-like enums, and this is a struct, so the command macro is
-    // happy to fill it out.
-    struct UnbundleCmd {
-        heads: Vec<String>,
-    }
-    do_parse!(
-        inp,
-        unbundle: command!("unbundle", UnbundleCmd, parse_params, {
-                heads => stringlist,
-            }) >> stream: bundle2stream >> (SingleRequest::Unbundle {
-            heads: unbundle.heads,
-            stream: stream,
-        })
-    )
-}
-
 /// Common parser, generalized over how to parse parameters (either unbatched or
 /// batched syntax.)
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -547,7 +466,9 @@ fn parse_with_params(
               new => nodehash,
           })
         | command!("streamout", Streamout, parse_params, {})
-        | call!(unbundle, parse_params)
+        | command!("unbundle", Unbundle, parse_params, {
+              heads => stringlist,
+          })
     )
 }
 
@@ -1034,6 +955,13 @@ mod test_parse {
     /// - complete inputs return the expected result, and leave any remainder in
     ///    the input buffer.
     fn test_parse<I: AsRef<[u8]> + Debug>(inp: I, exp: Request) {
+        test_parse_with_extra(inp, exp, b"extra")
+    }
+
+    fn test_parse_with_extra<I>(inp: I, exp: Request, extra: &[u8])
+    where
+        I: AsRef<[u8]> + Debug,
+    {
         let inbytes = inp.as_ref();
 
         // check for short inputs
@@ -1059,7 +987,6 @@ mod test_parse {
         }
 
         // check for exact and extra
-        let extra = b"extra";
         for l in 0..extra.len() {
             let mut buf = BytesMut::from(inbytes.to_vec());
             buf.extend_from_slice(&extra[0..l]);
@@ -1332,18 +1259,16 @@ mod test_parse {
     }
 
     fn test_parse_unbundle_with(bundle: &[u8]) {
-        let mut inp = b"unbundle\n\
-                       heads 10\n\
-                       666f726365" // "force" hex encoded
-            .to_vec();
-        inp.extend_from_slice(bundle);
+        let inp = b"unbundle\n\
+                    heads 10\n\
+                    666f726365"; // "force" hex encoded
 
-        test_parse(
+        test_parse_with_extra(
             inp,
             Request::Single(SingleRequest::Unbundle {
                 heads: vec![String::from("666f726365")], // "force" in hex-encoding
-                stream: Bytes::from(bundle),
             }),
+            bundle,
         );
     }
 

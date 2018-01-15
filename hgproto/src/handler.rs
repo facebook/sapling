@@ -7,11 +7,11 @@
 use std::io;
 use std::sync::Arc;
 
-use futures::{Future, Poll, Stream};
+use futures::{stream, Future, IntoFuture, Poll, Stream};
 use futures::future::Either;
-use futures::stream::futures_ordered;
-use futures_ext::{BoxStream, StreamExt, StreamLayeredExt};
-use tokio_io::codec::{Decoder, Encoder};
+use futures::sync::oneshot;
+use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
+use tokio_io::codec::Decoder;
 
 use bytes::Bytes;
 use slog::{self, Logger};
@@ -21,10 +21,14 @@ use commands::HgCommandHandler;
 
 use errors::*;
 
-type BytesStream = BoxStream<Bytes, io::Error>;
+pub type OutputStream = BoxStream<Bytes, Error>;
+
+pub trait ResponseEncoder {
+    fn encode(&self, response: Response) -> OutputStream;
+}
 
 pub struct HgProtoHandler {
-    outstream: BoxStream<Bytes, Error>,
+    outstream: OutputStream,
 }
 
 struct HgProtoHandlerInner<H, Dec, Enc> {
@@ -35,20 +39,21 @@ struct HgProtoHandlerInner<H, Dec, Enc> {
 }
 
 impl HgProtoHandler {
-    pub fn new<'a, H, Dec, Enc, L: Into<Option<&'a Logger>>>(
-        instream: BytesStream,
+    pub fn new<'a, In, H, Dec, Enc, L>(
+        input: In,
         commands: H,
         reqdec: Dec,
         respenc: Enc,
         logger: L,
     ) -> Self
     where
+        In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
         H: HgCommands + Send + Sync + 'static,
         Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
         Dec::Error: From<io::Error> + Send + 'static,
-        Enc: Encoder<Item = Response> + Clone + Send + Sync + 'static,
-        Enc::Error: From<Error> + Send + 'static,
-        Error: From<Dec::Error> + From<Enc::Error>,
+        Enc: ResponseEncoder + Clone + Send + Sync + 'static,
+        Error: From<Dec::Error>,
+        L: Into<Option<&'a Logger>>,
     {
         let logger = match logger.into() {
             None => Logger::root(slog::Discard, o!()),
@@ -63,7 +68,7 @@ impl HgProtoHandler {
         });
 
         HgProtoHandler {
-            outstream: handle(instream, inner),
+            outstream: handle(input, inner),
         }
     }
 }
@@ -77,37 +82,97 @@ impl Stream for HgProtoHandler {
     }
 }
 
-fn handle<H, Dec, Enc>(
-    instream: BytesStream,
+fn handle<In, H, Dec, Enc>(
+    input: In,
     handler: Arc<HgProtoHandlerInner<H, Dec, Enc>>,
-) -> BoxStream<Bytes, Error>
+) -> OutputStream
 where
+    In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     H: HgCommands + Send + Sync + 'static,
     Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
     Dec::Error: From<io::Error> + Send + 'static,
-    Enc: Encoder<Item = Response> + Clone + Send + Sync + 'static,
-    Enc::Error: From<Error> + Send + 'static,
-    Error: From<Dec::Error> + From<Enc::Error>,
+    Enc: ResponseEncoder + Clone + Send + Sync + 'static,
+    Error: From<Dec::Error>,
 {
-    instream
-        .decode(handler.reqdec.clone())
-        .from_err()
-        .and_then({
-            let handler = handler.clone();
-            move |req| match req {
-                Request::Batch(reqs) => Either::A(
-                    futures_ordered(
-                        reqs.into_iter()
-                            .map(|req| handler.commands_handler.handle(req)),
-                    ).collect()
-                        .map(Response::Batch),
-                ),
-                Request::Single(req) => {
-                    Either::B(handler.commands_handler.handle(req).map(Response::Single))
+    let input = BytesStream::new(input);
+
+    stream::unfold(input, move |input| {
+        if input.is_empty() {
+            return None;
+        }
+
+        let future = input
+            .into_future_decode(handler.reqdec.clone())
+            .map_err(|(err, _)| -> Error { err.into() })
+            .and_then({
+                let handler = handler.clone();
+                move |(req, remainder)| match req {
+                    None => Either::A(if remainder.is_empty() {
+                        Ok((stream::empty().boxify(), remainder)).into_future()
+                    } else {
+                        let (bytes, _) = remainder.into_parts();
+                        Err(ErrorKind::UnconsumedData(
+                            String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                        ).into())
+                            .into_future()
+                    }),
+                    Some(req) => {
+                        Either::B(handle_request(req, remainder, handler.clone()).map(
+                            move |(resp, remainder)| (handler.respenc.encode(resp), remainder),
+                        ))
+                    }
                 }
-            }
-        })
-        .encode(handler.respenc.clone())
-        .from_err()
+            });
+
+        Some(future)
+    }).flatten()
         .boxify()
+}
+
+fn handle_request<In, H, Dec, Enc>(
+    req: Request,
+    input: BytesStream<In>,
+    handler: Arc<HgProtoHandlerInner<H, Dec, Enc>>,
+) -> BoxFuture<(Response, BytesStream<In>), Error>
+where
+    In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+    H: HgCommands + Send + Sync + 'static,
+    Dec: Decoder<Item = Request> + Clone + Send + Sync + 'static,
+    Dec::Error: From<io::Error> + Send + 'static,
+    Enc: ResponseEncoder + Clone + Send + Sync + 'static,
+    Error: From<Dec::Error>,
+{
+    let future = match req {
+        Request::Batch(reqs) => {
+            let (send, recv) = oneshot::channel();
+            Either::A(
+                stream::unfold(
+                    (reqs.into_iter(), input, send),
+                    move |(mut reqs, input, send)| match reqs.next() {
+                        None => {
+                            let _ = send.send(input);
+                            None
+                        }
+                        Some(req) => Some(
+                            handler
+                                .commands_handler
+                                .handle(req, input)
+                                .map(|(res, remainder)| (res, (reqs, remainder, send))),
+                        ),
+                    },
+                ).collect()
+                    .and_then(|resps| {
+                        recv.from_err()
+                            .map(|remainder| (Response::Batch(resps), remainder))
+                    }),
+            )
+        }
+        Request::Single(req) => Either::B(
+            handler
+                .commands_handler
+                .handle(req, input)
+                .map(|(res, remainder)| (Response::Single(res), remainder)),
+        ),
+    };
+    future.boxify()
 }
