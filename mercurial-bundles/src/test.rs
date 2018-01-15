@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::fmt::Debug;
 use std::io::{self, BufRead, BufReader, Cursor};
+use std::iter::Iterator;
 use std::str::FromStr;
 
 use futures::stream::Stream;
@@ -25,7 +26,7 @@ use quickcheck::{QuickCheck, StdGen};
 use rand;
 
 use Bundle2Item;
-use bundle2::Bundle2Stream;
+use bundle2::{self, Bundle2Stream, StreamEvent};
 use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
 use errors::*;
@@ -125,7 +126,13 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
         a_stream_params: aparams,
     };
 
-    assert_eq!(item, Some(Bundle2Item::Start(expected_header)));
+    assert_matches!(
+        item,
+        Some(StreamEvent::Next(Bundle2Item::Start(ref header))) if header == &expected_header
+    );
+
+    let (item, stream) = core.run(stream.into_future()).unwrap();
+    assert_matches!(item, Some(StreamEvent::Done(_)));
 
     let (item, _stream) = core.run(stream.into_future()).unwrap();
     assert!(item.is_none());
@@ -177,7 +184,14 @@ fn unknown_part(ct: Option<CompressorType>) {
         m_stream_params: m_stream_params,
         a_stream_params: HashMap::new(),
     };
-    assert_eq!(parts, vec![Bundle2Item::Start(expected)]);
+
+    let mut parts = parts.into_iter();
+    assert_eq!(
+        parts.next().unwrap().into_next().unwrap(),
+        Bundle2Item::Start(expected)
+    );
+    assert_matches!(parts.next(), Some(StreamEvent::Done(_)));
+    assert!(parts.next().is_none());
 
     // Make sure the error was accumulated.
     let stream = stream.into_inner();
@@ -206,9 +220,12 @@ fn parse_bundle(
     header.add_mparam("version", "02").unwrap();
     header.add_aparam("nbchanges", "2").unwrap();
     let header = header.build(0);
-    assert_eq!(res, Bundle2Item::Header(header));
+    assert_eq!(res.into_next().unwrap(), Bundle2Item::Header(header));
 
     let stream = verify_cg2(&mut core, stream);
+
+    let (res, stream) = core.next_stream(stream);
+    assert_matches!(res, Some(StreamEvent::Done(_)));
 
     let (res, stream) = core.next_stream(stream);
     assert!(res.is_none());
@@ -353,7 +370,11 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
 
     // The bundle has a changegroup as well, which we skip over.
     let mut parts = parts.into_iter().skip_while(|part| match *part {
-        Bundle2Item::Header(ref header) if header.part_type() == "B2X:TREEGROUP2" => false,
+        StreamEvent::Next(Bundle2Item::Header(ref header))
+            if header.part_type() == "B2X:TREEGROUP2" =>
+        {
+            false
+        }
         _ => true,
     });
 
@@ -364,7 +385,10 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     header.add_mparam("category", "manifests").unwrap();
     let header = header.build(1);
 
-    assert_eq!(parts.next().unwrap(), Bundle2Item::Header(header));
+    assert_eq!(
+        parts.next().unwrap().into_next().unwrap(),
+        Bundle2Item::Header(header)
+    );
 
     // These are a few identifiers present in the bundle.
     let baz_dir = RepoPath::dir("baz").unwrap();
@@ -372,43 +396,36 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let root_hash = NodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
     let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
 
+    fn unwrap_wirepack<It, R>(parts: &mut It) -> wirepack::Part
+    where
+        It: Iterator<Item = StreamEvent<Bundle2Item, bundle2::Remainder<R>>>,
+    {
+        parts
+            .next()
+            .unwrap()
+            .into_next()
+            .unwrap()
+            .unwrap_inner()
+            .unwrap_wirepack()
+    };
+
     // First entries received are for the directory "baz".
-    let (path, entry_count) = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_history_meta();
+    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_history_meta();
     assert_eq!(path, baz_dir);
     assert_eq!(entry_count, 1);
 
-    let history_entry = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_history();
+    let history_entry = unwrap_wirepack(&mut parts).unwrap_history();
     assert_eq!(history_entry.node, baz_hash);
     assert_eq!(history_entry.p1, NULL_HASH);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, entry_count) = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_data_meta();
+    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_data_meta();
     assert_eq!(path, baz_dir);
     assert_eq!(entry_count, 1);
 
-    let data_entry = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_data();
+    let data_entry = unwrap_wirepack(&mut parts).unwrap_data();
     assert_eq!(path, baz_dir);
     assert_eq!(data_entry.node, baz_hash);
     assert_eq!(data_entry.delta_base, NULL_HASH);
@@ -419,42 +436,22 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(fragments[0].content.len(), 46);
 
     // Next entries received are for the root manifest.
-    let (path, entry_count) = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_history_meta();
+    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_history_meta();
     assert_eq!(path, RepoPath::root());
     assert_eq!(entry_count, 1);
 
-    let history_entry = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_history();
+    let history_entry = unwrap_wirepack(&mut parts).unwrap_history();
     assert_eq!(history_entry.node, root_hash);
     assert_eq!(history_entry.p1, root_p1);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, entry_count) = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_data_meta();
+    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_data_meta();
     assert_eq!(path, RepoPath::root());
     assert_eq!(entry_count, 1);
 
-    let data_entry = parts
-        .next()
-        .unwrap()
-        .unwrap_inner()
-        .unwrap_wirepack()
-        .unwrap_data();
+    let data_entry = unwrap_wirepack(&mut parts).unwrap_data();
     assert_eq!(data_entry.node, root_hash);
     assert_eq!(data_entry.delta_base, NULL_HASH);
     let fragments = data_entry.delta.fragments();
@@ -464,11 +461,9 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(fragments[0].content.len(), 136);
 
     // Finally the end.
-    assert_eq!(
-        parts.next().unwrap().unwrap_inner().unwrap_wirepack(),
-        wirepack::Part::End
-    );
-    assert_eq!(parts.next(), None);
+    assert_eq!(unwrap_wirepack(&mut parts), wirepack::Part::End);
+    assert_matches!(parts.next(), Some(StreamEvent::Done(_)));
+    assert!(parts.next().is_none());
 }
 
 fn path(bytes: &[u8]) -> MPath {
@@ -496,7 +491,7 @@ fn parse_stream_start<'a, R: AsyncRead + BufRead + 'a>(
     match core.run(stream.into_future()) {
         Ok((item, stream)) => {
             let stream_start = item.unwrap();
-            assert_eq!(stream_start.unwrap_start(), expected);
+            assert_eq!(stream_start.into_next().unwrap().unwrap_start(), expected);
             Ok(stream)
         }
         Err((e, _)) => Err(e),
@@ -513,7 +508,14 @@ fn next_cg2_part<'a, R: AsyncRead + BufRead + 'a>(
     stream: Bundle2Stream<'a, R>,
 ) -> (changegroup::Part, Bundle2Stream<'a, R>) {
     let (res, stream) = core.next_stream(stream);
-    (res.unwrap().unwrap_inner().unwrap_cg2(), stream)
+    (
+        res.unwrap()
+            .into_next()
+            .unwrap()
+            .unwrap_inner()
+            .unwrap_cg2(),
+        stream,
+    )
 }
 
 trait CoreExt {

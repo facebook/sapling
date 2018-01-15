@@ -25,6 +25,32 @@ use part_inner::{inner_stream, BoxInnerStream};
 use part_outer::{outer_stream, OuterFrame, OuterStream};
 use stream_start::StartDecoder;
 
+pub enum StreamEvent<I, S> {
+    Next(I),
+    Done(S),
+}
+
+impl<I, S> StreamEvent<I, S> {
+    pub fn into_next(self) -> ::std::result::Result<I, Self> {
+        if let StreamEvent::Next(v) = self {
+            Ok(v)
+        } else {
+            Err(self)
+        }
+    }
+}
+
+impl<I, S> Debug for StreamEvent<I, S> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            &StreamEvent::Next(_) => write!(f, "Next(...)"),
+            &StreamEvent::Done(_) => write!(f, "Done(...)"),
+        }
+    }
+}
+
+pub type Remainder<R> = (BytesMut, R);
+
 #[derive(Debug)]
 pub struct Bundle2Stream<'a, R>
 where
@@ -48,7 +74,7 @@ where
     Outer(OuterStream<'a, Chain<Cursor<BytesMut>, R>>),
     Inner(BoxInnerStream<'a, Chain<Cursor<BytesMut>, R>>),
     Invalid,
-    End((BytesMut, R)),
+    End,
 }
 
 impl<'a, R> CurrentStream<'a, R>
@@ -72,7 +98,7 @@ where
             &Outer(_) => "outer",
             &Inner(_) => "inner",
             &Invalid => "invalid",
-            &End(_) => "end",
+            &End => "end",
         };
         write!(fmt, "{}", s)
     }
@@ -90,7 +116,7 @@ where
             // part_inner::BoolFuture doesn't implement Debug.
             &CurrentStream::Inner(_) => write!(f, "Inner(inner_stream)"),
             &CurrentStream::Invalid => write!(f, "Invalid"),
-            &CurrentStream::End(_) => write!(f, "End"),
+            &CurrentStream::End => write!(f, "End"),
         }
     }
 }
@@ -119,20 +145,13 @@ where
     pub fn app_errors(&self) -> &[ErrorKind] {
         &self.inner.app_errors
     }
-
-    pub fn into_end(self) -> Option<(BytesMut, R)> {
-        match self.current_stream {
-            CurrentStream::End(ret) => Some(ret),
-            _ => None,
-        }
-    }
 }
 
 impl<'a, R> Stream for Bundle2Stream<'a, R>
 where
     R: AsyncRead + BufRead + 'a,
 {
-    type Item = Bundle2Item;
+    type Item = StreamEvent<Bundle2Item, Remainder<R>>;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -148,7 +167,10 @@ impl Bundle2StreamInner {
     fn poll_next<'a, R>(
         &mut self,
         current_stream: CurrentStream<'a, R>,
-    ) -> (Poll<Option<Bundle2Item>, Error>, CurrentStream<'a, R>)
+    ) -> (
+        Poll<Option<StreamEvent<Bundle2Item, Remainder<R>>>, Error>,
+        CurrentStream<'a, R>,
+    )
     where
         R: AsyncRead + BufRead + 'a,
     {
@@ -180,7 +202,12 @@ impl Bundle2StreamInner {
                             }
                             Ok(v) => {
                                 let outer = CurrentStream::Outer(v);
-                                (Ok(Async::Ready(Some(Bundle2Item::Start(start)))), outer)
+                                (
+                                    Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Start(
+                                        start,
+                                    ))))),
+                                    outer,
+                                )
                             }
                         }
                     }
@@ -205,7 +232,9 @@ impl Bundle2StreamInner {
                         let inner_stream =
                             CurrentStream::Inner(inner_stream(&header, stream, &self.logger));
                         (
-                            Ok(Async::Ready(Some(Bundle2Item::Header(header)))),
+                            Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Header(
+                                header,
+                            ))))),
                             inner_stream,
                         )
                     }
@@ -233,7 +262,10 @@ impl Bundle2StreamInner {
                         readbuf
                             .extend_from_slice(&cursor.get_ref()[(cursor.position() as usize)..]);
 
-                        (Ok(Async::Ready(None)), CurrentStream::End((readbuf, inner)))
+                        (
+                            Ok(Async::Ready(Some(StreamEvent::Done((readbuf, inner))))),
+                            CurrentStream::End,
+                        )
                     }
                     _ => panic!("Expected a header or StreamEnd!"),
                 }
@@ -243,7 +275,7 @@ impl Bundle2StreamInner {
                     Err(e) => (Err(e), CurrentStream::Inner(stream)),
                     Ok(Async::NotReady) => (Ok(Async::NotReady), CurrentStream::Inner(stream)),
                     Ok(Async::Ready(Some(v))) => (
-                        Ok(Async::Ready(Some(Bundle2Item::Inner(v)))),
+                        Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Inner(v))))),
                         CurrentStream::Inner(stream),
                     ),
                     Ok(Async::Ready(None)) => {
@@ -258,7 +290,7 @@ impl Bundle2StreamInner {
                 Err(ErrorKind::Bundle2Decode("corrupt byte stream".into()).into()),
                 CurrentStream::Invalid,
             ),
-            CurrentStream::End(s) => (Ok(Async::Ready(None)), CurrentStream::End(s)),
+            CurrentStream::End => (Ok(Async::Ready(None)), CurrentStream::End),
         }
     }
 }

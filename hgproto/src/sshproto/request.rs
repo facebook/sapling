@@ -15,7 +15,7 @@ use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, 
 use slog;
 use tokio_io::AsyncRead;
 
-use mercurial_bundles::bundle2::Bundle2Stream;
+use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use mercurial_types::NodeHash;
 
 use {GetbundleArgs, Request, SingleRequest};
@@ -299,19 +299,16 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
 
         loop {
             match b2.poll() {
-                Ok(Async::Ready(Some(_item))) => (),
-                Ok(Async::Ready(None)) => {
-                    break;
-                }
+                Ok(Async::Ready(Some(StreamEvent::Done(rest)))) => break rest,
+                Ok(Async::Ready(Some(StreamEvent::Next(_)))) => (),
                 Ok(Async::NotReady) => {
                     return IResult::Incomplete(Needed::Unknown);
                 }
-                Err(_err) => {
+                Ok(Async::Ready(None)) | Err(_) => {
                     return IResult::Error(ErrorKind::Custom(0xbad));
                 }
             }
         }
-        b2.into_end().unwrap()
     };
 
     read.get_mut().1 = true;
