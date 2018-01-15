@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use std::collections::{HashMap, HashSet};
+use std::io::BufRead;
 use std::str;
 
 use futures::{future, Stream};
@@ -54,14 +55,14 @@ type WrappedStream<'a, T> = Map<
 pub trait InnerStream<'a, T>
     : Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>
 where
-    T: AsyncRead + 'a,
+    T: AsyncRead + BufRead + 'a,
 {
 }
 
 impl<'a, T, U> InnerStream<'a, T> for U
 where
     U: Stream<Item = InnerPart, Error = Error> + BoxStreamWrapper<WrappedStream<'a, T>>,
-    T: AsyncRead + 'a,
+    T: AsyncRead + BufRead + 'a,
 {
 }
 
@@ -126,7 +127,7 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
 }
 
 /// Convert an OuterStream into an InnerStream using the part header.
-pub fn inner_stream<'a, R: AsyncRead + 'a>(
+pub fn inner_stream<'a, R: AsyncRead + BufRead + 'a>(
     header: &PartHeader,
     stream: OuterStream<'a, R>,
     logger: &slog::Logger,

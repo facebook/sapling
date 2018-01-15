@@ -6,23 +6,23 @@
 
 //! Raw upstream decoders, plus a uniform interface for accessing them.
 
-use std::io::{self, Read, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::result;
 
 use futures::Poll;
 use tokio_io::AsyncWrite;
 
-use bzip2::read::BzDecoder;
+use bzip2::bufread::BzDecoder;
 use bzip2::write::BzEncoder;
-use zstd::{Decoder as ZstdDecoder, Encoder as ZstdEncoder};
+use zstd::Encoder as ZstdEncoder;
 
-pub trait RawDecoder<R: Read>: Read {
+pub trait RawDecoder<R: BufRead>: Read {
     fn get_ref(&self) -> &R;
     fn get_mut(&mut self) -> &mut R;
     fn into_inner(self: Box<Self>) -> R;
 }
 
-impl<R: Read> RawDecoder<R> for BzDecoder<R> {
+impl<R: BufRead> RawDecoder<R> for BzDecoder<R> {
     #[inline]
     fn get_ref(&self) -> &R {
         BzDecoder::get_ref(self)
@@ -36,23 +36,6 @@ impl<R: Read> RawDecoder<R> for BzDecoder<R> {
     #[inline]
     fn into_inner(self: Box<Self>) -> R {
         BzDecoder::into_inner(*self)
-    }
-}
-
-impl<R: Read> RawDecoder<R> for ZstdDecoder<R> {
-    #[inline]
-    fn get_ref(&self) -> &R {
-        ZstdDecoder::get_ref(self)
-    }
-
-    #[inline]
-    fn get_mut(&mut self) -> &mut R {
-        ZstdDecoder::get_mut(self)
-    }
-
-    #[inline]
-    fn into_inner(self: Box<Self>) -> R {
-        ZstdDecoder::finish(*self)
     }
 }
 

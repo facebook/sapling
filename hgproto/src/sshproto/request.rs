@@ -5,12 +5,13 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
-use std::io::{self, Cursor, Read};
+use std::io::{self, BufReader, Cursor, Read};
 use std::iter;
 use std::str::{self, FromStr};
 
 use bytes::{Bytes, BytesMut};
 use futures::{Async, Stream};
+use futures_ext::io::Either;
 use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
 use slog;
 use tokio_io::AsyncRead;
@@ -22,7 +23,6 @@ use {GetbundleArgs, Request, SingleRequest};
 use batch;
 use errors;
 use errors::*;
-
 
 /// Parse an unsigned decimal integer. If it reaches the end of input, it returns Incomplete,
 /// as there may be more digits following
@@ -78,12 +78,7 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
 /// but I don't know if that ever happens in practice.)
 named!(
     param_star<HashMap<Vec<u8>, Vec<u8>>>,
-    do_parse!(
-        tag!(b"* ") >>
-        count: integer >> tag!(b"\n") >>
-        res: apply!(params, count) >>
-        (res)
-    )
+    do_parse!(tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: apply!(params, count) >> (res))
 );
 
 /// A named parameter is a name followed by a decimal integer of the number of
@@ -93,10 +88,8 @@ named!(
 named!(
     param_kv<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(
-        key: ident >> tag!(b" ") >>
-        len: integer >> tag!(b"\n") >>
-        val: take!(len) >>
-        (iter::once((key.to_vec(), val.to_vec())).collect())
+        key: ident >> tag!(b" ") >> len: integer >> tag!(b"\n") >> val: take!(len)
+            >> (iter::once((key.to_vec(), val.to_vec())).collect())
     )
 );
 
@@ -142,11 +135,7 @@ fn notcomma(b: u8) -> bool {
 named!(
     batch_param_escaped<(Vec<u8>, Vec<u8>)>,
     map_res!(
-        do_parse!(
-            key: take_until_and_consume1!("=") >>
-            val: take_while!(notcomma) >>
-            ((key, val))
-        ),
+        do_parse!(key: take_until_and_consume1!("=") >> val: take_while!(notcomma) >> ((key, val))),
         |(k, v)| Ok::<_, Error>((batch::unescape(k)?, batch::unescape(v)?))
     )
 );
@@ -224,9 +213,8 @@ fn notsemi(b: u8) -> bool {
 named!(
     cmd<(Vec<u8>, Vec<u8>)>,
     do_parse!(
-        cmd: take_until_and_consume1!(" ") >>
-        args: take_while!(notsemi) >>
-        ((cmd.to_vec(), args.to_vec()))
+        cmd: take_until_and_consume1!(" ") >> args: take_while!(notsemi)
+            >> ((cmd.to_vec(), args.to_vec()))
     )
 );
 
@@ -290,22 +278,25 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
     // Reaching the end of the buffer just means we need more input, not that there is no
     // more input. So remap EOF to WouldBlock.
     #[derive(Debug)]
-    struct EofCursor<T>(Cursor<T>);
+    struct EofCursor<T>(Cursor<T>, bool);
     impl<T: AsRef<[u8]>> Read for EofCursor<T> {
         fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-            match self.0.read(buf) {
-                Ok(0) => Err(io::Error::from(io::ErrorKind::WouldBlock)),
-                Ok(v) => Ok(v),
-                Err(err) => Err(err),
+            if self.1 {
+                self.0.read(buf)
+            } else {
+                match self.0.read(buf) {
+                    Ok(0) => Err(io::Error::from(io::ErrorKind::WouldBlock)),
+                    Ok(v) => Ok(v),
+                    Err(err) => Err(err),
+                }
             }
         }
     }
     impl<T: AsRef<[u8]>> AsyncRead for EofCursor<T> {}
 
-    let mut cur = EofCursor(Cursor::new(inp));
-    {
+    let mut cur = {
         let logger = slog::Logger::root(slog::Discard, o!());
-        let mut b2 = Bundle2Stream::new(&mut cur, logger);
+        let mut b2 = Bundle2Stream::new(BufReader::new(EofCursor(Cursor::new(inp), false)), logger);
 
         loop {
             match b2.poll() {
@@ -321,9 +312,18 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
                 }
             }
         }
+        b2.into_end().unwrap()
     };
 
-    let (stream, rest) = inp.split_at(cur.0.position() as usize);
+    match cur.get_mut() {
+        &mut Either::A(ref mut r) => r.get_mut().get_mut().get_mut().1 = true,
+        &mut Either::B(ref mut r) => r.get_mut().get_mut().get_mut().get_mut().1 = true,
+    }
+
+    let mut x = Vec::new();
+    cur.read_to_end(&mut x).unwrap();
+    let x = inp.len() - x.len();
+    let (stream, rest) = inp.split_at(x);
     IResult::Done(rest, Bytes::from(stream))
 }
 
@@ -334,8 +334,7 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
 fn parse_command<'a, C, F, T>(
     inp: &'a [u8],
     cmd: C,
-    parse_params: fn(&[u8], usize)
-        -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
+    parse_params: fn(&[u8], usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
     nargs: usize,
     func: F,
 ) -> IResult<&'a [u8], T>
@@ -344,9 +343,10 @@ where
     C: AsRef<[u8]>,
 {
     let cmd = cmd.as_ref();
-    let res = do_parse!(inp,
-        tag!(cmd) >> tag!("\n") >>
-        p: call!(parse_params, nargs) >> (p));
+    let res = do_parse!(
+        inp,
+        tag!(cmd) >> tag!("\n") >> p: call!(parse_params, nargs) >> (p)
+    );
 
     match res {
         IResult::Done(rest, v) => {
@@ -473,8 +473,7 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
 /// return them as a SingleRequest::Unbundle object for later processing.
 fn unbundle(
     inp: &[u8],
-    parse_params: fn(&[u8], usize)
-        -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
+    parse_params: fn(&[u8], usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>,
 ) -> IResult<&[u8], SingleRequest> {
     // Use this as a syntactic proxy for SingleRequest::Unbundle, which works because
     // SingleRequest's values are struct-like enums, and this is a struct, so the command macro is
@@ -482,15 +481,14 @@ fn unbundle(
     struct UnbundleCmd {
         heads: Vec<String>,
     }
-    do_parse!(inp,
+    do_parse!(
+        inp,
         unbundle: command!("unbundle", UnbundleCmd, parse_params, {
                 heads => stringlist,
-            }) >>
-        stream: bundle2stream >>
-            (SingleRequest::Unbundle {
-                heads: unbundle.heads,
-                stream: stream
-            })
+            }) >> stream: bundle2stream >> (SingleRequest::Unbundle {
+            heads: unbundle.heads,
+            stream: stream,
+        })
     )
 }
 
@@ -885,7 +883,8 @@ mod test {
 
     #[test]
     fn test_pair() {
-        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
+        let p =
+            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pair(p),
             IResult::Done(&b""[..], (nodehash::NULL_HASH, nodehash::NULL_HASH))
@@ -900,7 +899,8 @@ mod test {
 
     #[test]
     fn test_pairlist() {
-        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
+        let p =
+            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000 \
               0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
@@ -913,7 +913,8 @@ mod test {
             )
         );
 
-        let p = b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
+        let p =
+            b"0000000000000000000000000000000000000000-0000000000000000000000000000000000000000";
         assert_eq!(
             pairlist(p),
             IResult::Done(&b""[..], vec![(nodehash::NULL_HASH, nodehash::NULL_HASH)])
@@ -922,7 +923,8 @@ mod test {
 
     #[test]
     fn test_hashlist() {
-        let p = b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
+        let p =
+            b"0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 \
               0000000000000000000000000000000000000000 0000000000000000000000000000000000000000";
         assert_eq!(
             hashlist(p),
@@ -1104,10 +1106,11 @@ mod test_parse {
 
     #[test]
     fn test_parse_between() {
-        let inp = "between\n\
-                   pairs 163\n\
-                   1111111111111111111111111111111111111111-2222222222222222222222222222222222222222 \
-                   3333333333333333333333333333333333333333-4444444444444444444444444444444444444444";
+        let inp =
+            "between\n\
+             pairs 163\n\
+             1111111111111111111111111111111111111111-2222222222222222222222222222222222222222 \
+             3333333333333333333333333333333333333333-4444444444444444444444444444444444444444";
         test_parse(
             inp,
             Request::Single(SingleRequest::Between {
@@ -1125,10 +1128,11 @@ mod test_parse {
 
     #[test]
     fn test_parse_branches() {
-        let inp = "branches\n\
-                   nodes 163\n\
-                   1111111111111111111111111111111111111111 2222222222222222222222222222222222222222 \
-                   3333333333333333333333333333333333333333 4444444444444444444444444444444444444444";
+        let inp =
+            "branches\n\
+             nodes 163\n\
+             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222 \
+             3333333333333333333333333333333333333333 4444444444444444444444444444444444444444";
         test_parse(
             inp,
             Request::Single(SingleRequest::Branches {
@@ -1153,9 +1157,10 @@ mod test_parse {
 
     #[test]
     fn test_parse_changegroup() {
-        let inp = "changegroup\n\
-                   roots 81\n\
-                   1111111111111111111111111111111111111111 2222222222222222222222222222222222222222";
+        let inp =
+            "changegroup\n\
+             roots 81\n\
+             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222";
 
         test_parse(
             inp,
@@ -1167,11 +1172,12 @@ mod test_parse {
 
     #[test]
     fn test_parse_changegroupsubset() {
-        let inp = "changegroupsubset\n\
-                   heads 40\n\
-                   1111111111111111111111111111111111111111\
-                   bases 81\n\
-                   2222222222222222222222222222222222222222 3333333333333333333333333333333333333333";
+        let inp =
+            "changegroupsubset\n\
+             heads 40\n\
+             1111111111111111111111111111111111111111\
+             bases 81\n\
+             2222222222222222222222222222222222222222 3333333333333333333333333333333333333333";
 
         test_parse(
             inp,
@@ -1222,18 +1228,19 @@ mod test_parse {
         );
 
         // with arguments
-        let inp = "getbundle\n\
-                   * 5\n\
-                   heads 40\n\
-                   1111111111111111111111111111111111111111\
-                   common 81\n\
-                   2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\
-                   bundlecaps 14\n\
-                   cap1,CAP2,cap3\
-                   listkeys 9\n\
-                   key1,key2\
-                   extra 5\n\
-                   extra";
+        let inp =
+            "getbundle\n\
+             * 5\n\
+             heads 40\n\
+             1111111111111111111111111111111111111111\
+             common 81\n\
+             2222222222222222222222222222222222222222 3333333333333333333333333333333333333333\
+             bundlecaps 14\n\
+             cap1,CAP2,cap3\
+             listkeys 9\n\
+             key1,key2\
+             extra 5\n\
+             extra";
         test_parse(
             inp,
             Request::Single(SingleRequest::Getbundle(GetbundleArgs {

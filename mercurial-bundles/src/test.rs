@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::convert::From;
 use std::fmt::Debug;
-use std::io::{self, Cursor};
+use std::io::{self, BufRead, BufReader, Cursor};
 use std::str::FromStr;
 
 use futures::stream::Stream;
@@ -16,7 +16,7 @@ use slog_term;
 use tokio_core::reactor::Core;
 use tokio_io::AsyncRead;
 
-use async_compression::{Bzip2Compression, CompressorType, ZSTD_DEFAULT_LEVEL};
+use async_compression::{Bzip2Compression, CompressorType};
 use async_compression::membuf::MemBuf;
 use futures_ext::StreamExt;
 use mercurial_types::{MPath, NodeHash, RepoPath, NULL_HASH};
@@ -72,17 +72,10 @@ fn parse_uncompressed(read_ops: PartialWithErrors<GenWouldBlock>) {
 #[test]
 fn test_parse_unknown_compression() {
     let mut core = Core::new().unwrap();
-    let bundle2_buf = MemBuf::from(Vec::from(UNKNOWN_COMPRESSION_BUNDLE2));
+    let bundle2_buf = BufReader::new(MemBuf::from(Vec::from(UNKNOWN_COMPRESSION_BUNDLE2)));
     let outer_stream_err = parse_stream_start(&mut core, bundle2_buf, Some("IL")).unwrap_err();
     assert_matches!(outer_stream_err.downcast::<ErrorKind>().unwrap(),
                     ErrorKind::Bundle2Decode(ref msg) if msg == "unknown compression 'IL'");
-}
-
-#[test]
-fn test_empty_bundle_roundtrip_zstd() {
-    empty_bundle_roundtrip(Some(CompressorType::Zstd {
-        level: ZSTD_DEFAULT_LEVEL,
-    }));
 }
 
 #[test]
@@ -131,13 +124,6 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
 
     let (item, _stream) = core.run(stream.into_future()).unwrap();
     assert!(item.is_none());
-}
-
-#[test]
-fn test_unknown_part_zstd() {
-    unknown_part(Some(CompressorType::Zstd {
-        level: ZSTD_DEFAULT_LEVEL,
-    }));
 }
 
 #[test]
@@ -200,7 +186,7 @@ fn parse_bundle(
     let mut core = Core::new().unwrap();
 
     let bundle2_buf = MemBuf::from(Vec::from(input));
-    let partial_read = PartialAsyncRead::new(bundle2_buf, read_ops);
+    let partial_read = BufReader::new(PartialAsyncRead::new(bundle2_buf, read_ops));
     let stream = parse_stream_start(&mut core, partial_read, compression).unwrap();
 
     let (res, stream) = core.next_stream(stream);
@@ -222,7 +208,7 @@ fn parse_bundle(
     assert!(res.is_none());
 }
 
-fn verify_cg2<'a, R: AsyncRead + 'a>(
+fn verify_cg2<'a, R: AsyncRead + BufRead + 'a>(
     core: &mut Core,
     stream: Bundle2Stream<'a, R>,
 ) -> Bundle2Stream<'a, R> {
@@ -347,7 +333,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let mut core = Core::new().unwrap();
 
     let cursor = Cursor::new(WIREPACK_BUNDLE2);
-    let partial_read = PartialAsyncRead::new(cursor, read_ops);
+    let partial_read = BufReader::new(PartialAsyncRead::new(cursor, read_ops));
 
     let stream = parse_stream_start(&mut core, partial_read, None).unwrap();
     let collect_fut = stream.collect_no_consume();
@@ -479,7 +465,7 @@ fn path(bytes: &[u8]) -> MPath {
     MPath::new(bytes).unwrap()
 }
 
-fn parse_stream_start<'a, R: AsyncRead + 'a>(
+fn parse_stream_start<'a, R: AsyncRead + BufRead + 'a>(
     core: &mut Core,
     reader: R,
     compression: Option<&str>,
@@ -512,7 +498,7 @@ fn make_root_logger() -> Logger {
     Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
 }
 
-fn next_cg2_part<'a, R: AsyncRead + 'a>(
+fn next_cg2_part<'a, R: AsyncRead + BufRead + 'a>(
     core: &mut Core,
     stream: Bundle2Stream<'a, R>,
 ) -> (changegroup::Part, Bundle2Stream<'a, R>) {

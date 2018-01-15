@@ -8,6 +8,7 @@
 //! stream-level parameters (see `stream_start` for those). This parses bundle2
 //! part headers and puts together chunks for inner codecs to parse.
 
+use std::io::BufRead;
 use std::mem;
 
 use ascii::AsciiString;
@@ -25,7 +26,7 @@ use part_inner::validate_header;
 use types::StreamHeader;
 use utils::{get_decompressor_type, BytesExt};
 
-pub fn outer_stream<'a, R: AsyncRead>(
+pub fn outer_stream<'a, R: AsyncRead + BufRead>(
     stream_header: &StreamHeader,
     r: R,
     logger: &slog::Logger,
@@ -139,12 +140,12 @@ impl OuterDecoder {
                     return (Ok(None), OuterState::Header);
                 }
 
+                let _ = buf.split_to(4);
                 if header_len == 0 {
                     // A zero-length header indicates that the stream has ended.
                     return (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd);
                 }
 
-                let _ = buf.split_to(4);
                 let part_header = Self::decode_header(buf.split_to(header_len).freeze());
                 if let Err(e) = part_header {
                     let next = match e.downcast::<ErrorKind>() {

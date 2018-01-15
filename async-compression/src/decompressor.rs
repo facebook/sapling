@@ -7,17 +7,16 @@
 //! Non-blocking, buffered compression and decompression
 
 use std::fmt::{self, Debug, Formatter};
-use std::io::{self, Read};
+use std::io::{self, BufRead, Read};
 
-use bzip2::read::BzDecoder;
+use bzip2::bufread::BzDecoder;
 use tokio_io::AsyncRead;
-use zstd::Decoder as ZstdDecoder;
 
 use raw::RawDecoder;
 
 pub struct Decompressor<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     d_type: DecompressorType,
     inner: Box<RawDecoder<R> + 'a>,
@@ -32,7 +31,7 @@ pub enum DecompressorType {
 
 impl<'a, R> Decompressor<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     pub fn new(r: R, dt: DecompressorType) -> Self {
         Decompressor {
@@ -43,8 +42,9 @@ where
                 // https://github.com/alexcrichton/flate2-rs/issues/62 to be
                 // fixed
                 DecompressorType::Gzip => unimplemented!(),
-                // ZstdDecoder::new() should only fail on OOM, so just call unwrap here.
-                DecompressorType::Zstd => Box::new(ZstdDecoder::new(r).unwrap()),
+                // TODO: The zstd crate is not safe for decompressing Read input, because it is
+                // overconsuming it
+                DecompressorType::Zstd => unimplemented!(),
             },
         }
     }
@@ -65,16 +65,16 @@ where
     }
 }
 
-impl<'a, R: AsyncRead + 'a> Read for Decompressor<'a, R> {
+impl<'a, R: AsyncRead + BufRead + 'a> Read for Decompressor<'a, R> {
     #[inline]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buf)
     }
 }
 
-impl<'a, R: AsyncRead + 'a> AsyncRead for Decompressor<'a, R> {}
+impl<'a, R: AsyncRead + BufRead + 'a> AsyncRead for Decompressor<'a, R> {}
 
-impl<'a, R: AsyncRead + 'a> Debug for Decompressor<'a, R> {
+impl<'a, R: AsyncRead + BufRead + 'a> Debug for Decompressor<'a, R> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct("Decompressor")
             .field("decoder_type", &self.d_type)

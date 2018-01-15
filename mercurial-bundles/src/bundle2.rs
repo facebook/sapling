@@ -7,12 +7,15 @@
 //! Overall coordinator for parsing bundle2 streams.
 
 use std::fmt::{self, Debug, Display, Formatter};
+use std::io::{BufRead, BufReader};
 use std::mem;
 
 use futures::{Async, Poll, Stream};
 use slog;
 
+use async_compression::Decompressor;
 use futures_ext::{AsyncReadExt, FramedStream, ReadLeadingBuffer, StreamWrapper};
+use futures_ext::io::Either;
 use tokio_io::AsyncRead;
 
 use Bundle2Item;
@@ -24,7 +27,7 @@ use stream_start::StartDecoder;
 #[derive(Debug)]
 pub struct Bundle2Stream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     inner: Bundle2StreamInner,
     current_stream: CurrentStream<'a, R>,
@@ -38,18 +41,20 @@ struct Bundle2StreamInner {
 
 enum CurrentStream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     Start(FramedStream<R, StartDecoder>),
-    Outer(OuterStream<'a, ReadLeadingBuffer<R>>),
-    Inner(BoxInnerStream<'a, ReadLeadingBuffer<R>>),
+    Outer(OuterStream<'a, BufReader<ReadLeadingBuffer<R>>>),
+    Inner(BoxInnerStream<'a, BufReader<ReadLeadingBuffer<R>>>),
     Invalid,
-    End,
+    End(ReadLeadingBuffer<
+        Either<BufReader<ReadLeadingBuffer<R>>, Decompressor<'a, BufReader<ReadLeadingBuffer<R>>>>,
+    >),
 }
 
 impl<'a, R> CurrentStream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     pub fn take(&mut self) -> Self {
         mem::replace(self, CurrentStream::Invalid)
@@ -58,7 +63,7 @@ where
 
 impl<'a, R> Display for CurrentStream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         use self::CurrentStream::*;
@@ -68,7 +73,7 @@ where
             &Outer(_) => "outer",
             &Inner(_) => "inner",
             &Invalid => "invalid",
-            &End => "end",
+            &End(_) => "end",
         };
         write!(fmt, "{}", s)
     }
@@ -76,7 +81,7 @@ where
 
 impl<'a, R> Debug for CurrentStream<'a, R>
 where
-    R: AsyncRead + Debug + 'a,
+    R: AsyncRead + BufRead + Debug + 'a,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
@@ -86,14 +91,14 @@ where
             // part_inner::BoolFuture doesn't implement Debug.
             &CurrentStream::Inner(_) => write!(f, "Inner(inner_stream)"),
             &CurrentStream::Invalid => write!(f, "Invalid"),
-            &CurrentStream::End => write!(f, "End"),
+            &CurrentStream::End(_) => write!(f, "End"),
         }
     }
 }
 
 impl<'a, R> Bundle2Stream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     pub fn new(read: R, logger: slog::Logger) -> Bundle2Stream<'a, R> {
         Bundle2Stream {
@@ -108,11 +113,27 @@ where
     pub fn app_errors(&self) -> &[ErrorKind] {
         &self.inner.app_errors
     }
+
+    pub fn into_end(
+        self,
+    ) -> Option<
+        ReadLeadingBuffer<
+            Either<
+                BufReader<ReadLeadingBuffer<R>>,
+                Decompressor<'a, BufReader<ReadLeadingBuffer<R>>>,
+            >,
+        >,
+    > {
+        match self.current_stream {
+            CurrentStream::End(ret) => Some(ret),
+            _ => None,
+        }
+    }
 }
 
 impl<'a, R> Stream for Bundle2Stream<'a, R>
 where
-    R: AsyncRead + 'a,
+    R: AsyncRead + BufRead + 'a,
 {
     type Item = Bundle2Item;
     type Error = Error;
@@ -132,7 +153,7 @@ impl Bundle2StreamInner {
         current_stream: CurrentStream<'a, R>,
     ) -> (Poll<Option<Bundle2Item>, Error>, CurrentStream<'a, R>)
     where
-        R: AsyncRead + 'a,
+        R: AsyncRead + BufRead + 'a,
     {
         match current_stream {
             CurrentStream::Start(mut stream) => {
@@ -143,7 +164,11 @@ impl Bundle2StreamInner {
                         (Ok(Async::Ready(None)), CurrentStream::Start(stream))
                     }
                     Ok(Async::Ready(Some(start))) => {
-                        match outer_stream(&start, stream.into_inner_leading(), &self.logger) {
+                        match outer_stream(
+                            &start,
+                            BufReader::new(stream.into_inner_leading()),
+                            &self.logger,
+                        ) {
                             Err(e) => {
                                 // Can't do much if reading stream level params
                                 // failed -- go to the invalid state.
@@ -185,7 +210,10 @@ impl Bundle2StreamInner {
                     }
                     Ok(Async::Ready(Some(OuterFrame::StreamEnd))) => {
                         // No more parts to go.
-                        (Ok(Async::Ready(None)), CurrentStream::End)
+                        (
+                            Ok(Async::Ready(None)),
+                            CurrentStream::End(stream.into_inner_leading()),
+                        )
                     }
                     _ => panic!("Expected a header or StreamEnd!"),
                 }
@@ -210,7 +238,7 @@ impl Bundle2StreamInner {
                 Err(ErrorKind::Bundle2Decode("corrupt byte stream".into()).into()),
                 CurrentStream::Invalid,
             ),
-            CurrentStream::End => (Ok(Async::Ready(None)), CurrentStream::End),
+            CurrentStream::End(s) => (Ok(Async::Ready(None)), CurrentStream::End(s)),
         }
     }
 }

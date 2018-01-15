@@ -33,5 +33,4 @@ mod test;
 pub use compressor::{Compressor, CompressorType};
 pub use decompressor::{Decompressor, DecompressorType};
 
-pub const ZSTD_DEFAULT_LEVEL: i32 = 1;
 pub use bzip2::Compression as Bzip2Compression;
