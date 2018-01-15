@@ -8,7 +8,6 @@
 #![feature(never_type)]
 
 #[cfg(test)]
-#[macro_use]
 extern crate assert_matches;
 extern crate bytes;
 #[macro_use]
@@ -16,16 +15,13 @@ extern crate futures;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
-#[macro_use]
 extern crate tokio_core;
 extern crate tokio_io;
 
 use bytes::Bytes;
 use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
-use tokio_io::AsyncRead;
 use tokio_io::codec::{Decoder, Encoder};
 
-mod frame;
 mod futures_ordered;
 mod streamfork;
 mod stream_wrappers;
@@ -33,7 +29,6 @@ mod stream_wrappers;
 pub mod decode;
 pub mod encode;
 
-pub use frame::{FramedStream, ReadLeadingBuffer};
 pub mod io;
 
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
@@ -188,21 +183,6 @@ pub trait StreamExt: Stream {
 impl<T> StreamExt for T
 where
     T: Stream,
-{
-}
-
-pub trait AsyncReadExt: AsyncRead + Sized {
-    fn framed_stream<C>(self, codec: C) -> FramedStream<Self, C>
-    where
-        C: Decoder,
-    {
-        frame::framed_stream(self, codec)
-    }
-}
-
-impl<T> AsyncReadExt for T
-where
-    T: AsyncRead,
 {
 }
 

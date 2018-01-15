@@ -11,7 +11,6 @@ use std::str::{self, FromStr};
 
 use bytes::{Bytes, BytesMut};
 use futures::{Async, Stream};
-use futures_ext::io::Either;
 use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, Slice};
 use slog;
 use tokio_io::AsyncRead;
@@ -294,7 +293,7 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
     }
     impl<T: AsRef<[u8]>> AsyncRead for EofCursor<T> {}
 
-    let mut cur = {
+    let (bytes, mut read) = {
         let logger = slog::Logger::root(slog::Discard, o!());
         let mut b2 = Bundle2Stream::new(BufReader::new(EofCursor(Cursor::new(inp), false)), logger);
 
@@ -315,15 +314,11 @@ fn bundle2stream(inp: &[u8]) -> IResult<&[u8], Bytes> {
         b2.into_end().unwrap()
     };
 
-    match cur.get_mut() {
-        &mut Either::A(ref mut r) => r.get_mut().get_mut().get_mut().1 = true,
-        &mut Either::B(ref mut r) => r.get_mut().get_mut().get_mut().get_mut().1 = true,
-    }
+    read.get_mut().1 = true;
+    let mut rest = Vec::new();
+    read.read_to_end(&mut rest).unwrap();
 
-    let mut x = Vec::new();
-    cur.read_to_end(&mut x).unwrap();
-    let x = inp.len() - x.len();
-    let (stream, rest) = inp.split_at(x);
+    let (stream, rest) = inp.split_at(inp.len() - rest.len() - bytes.len());
     IResult::Done(rest, Bytes::from(stream))
 }
 

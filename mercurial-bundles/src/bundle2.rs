@@ -7,16 +7,17 @@
 //! Overall coordinator for parsing bundle2 streams.
 
 use std::fmt::{self, Debug, Display, Formatter};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, Chain, Cursor, Read};
 use std::mem;
 
+use bytes::BytesMut;
 use futures::{Async, Poll, Stream};
 use slog;
 
-use async_compression::Decompressor;
-use futures_ext::{AsyncReadExt, FramedStream, ReadLeadingBuffer, StreamWrapper};
+use futures_ext::StreamWrapper;
 use futures_ext::io::Either;
 use tokio_io::AsyncRead;
+use tokio_io::codec::{Framed, FramedParts};
 
 use Bundle2Item;
 use errors::*;
@@ -43,13 +44,11 @@ enum CurrentStream<'a, R>
 where
     R: AsyncRead + BufRead + 'a,
 {
-    Start(FramedStream<R, StartDecoder>),
-    Outer(OuterStream<'a, BufReader<ReadLeadingBuffer<R>>>),
-    Inner(BoxInnerStream<'a, BufReader<ReadLeadingBuffer<R>>>),
+    Start(Framed<R, StartDecoder>),
+    Outer(OuterStream<'a, Chain<Cursor<BytesMut>, R>>),
+    Inner(BoxInnerStream<'a, Chain<Cursor<BytesMut>, R>>),
     Invalid,
-    End(ReadLeadingBuffer<
-        Either<BufReader<ReadLeadingBuffer<R>>, Decompressor<'a, BufReader<ReadLeadingBuffer<R>>>>,
-    >),
+    End((BytesMut, R)),
 }
 
 impl<'a, R> CurrentStream<'a, R>
@@ -106,7 +105,14 @@ where
                 logger: logger,
                 app_errors: Vec::new(),
             },
-            current_stream: CurrentStream::Start(read.framed_stream(StartDecoder)),
+            current_stream: CurrentStream::Start(Framed::from_parts(
+                FramedParts {
+                    inner: read,
+                    readbuf: BytesMut::new(),
+                    writebuf: BytesMut::new(),
+                },
+                StartDecoder,
+            )),
         }
     }
 
@@ -114,16 +120,7 @@ where
         &self.inner.app_errors
     }
 
-    pub fn into_end(
-        self,
-    ) -> Option<
-        ReadLeadingBuffer<
-            Either<
-                BufReader<ReadLeadingBuffer<R>>,
-                Decompressor<'a, BufReader<ReadLeadingBuffer<R>>>,
-            >,
-        >,
-    > {
+    pub fn into_end(self) -> Option<(BytesMut, R)> {
         match self.current_stream {
             CurrentStream::End(ret) => Some(ret),
             _ => None,
@@ -164,11 +161,18 @@ impl Bundle2StreamInner {
                         (Ok(Async::Ready(None)), CurrentStream::Start(stream))
                     }
                     Ok(Async::Ready(Some(start))) => {
-                        match outer_stream(
-                            &start,
-                            BufReader::new(stream.into_inner_leading()),
-                            &self.logger,
-                        ) {
+                        let FramedParts {
+                            inner,
+                            readbuf,
+                            writebuf,
+                        } = stream.into_parts();
+                        assert!(
+                            writebuf.is_empty(),
+                            "writebuf must be empty, since inner is not AsyncWrite"
+                        );
+
+                        match outer_stream(&start, Cursor::new(readbuf).chain(inner), &self.logger)
+                        {
                             Err(e) => {
                                 // Can't do much if reading stream level params
                                 // failed -- go to the invalid state.
@@ -210,10 +214,26 @@ impl Bundle2StreamInner {
                     }
                     Ok(Async::Ready(Some(OuterFrame::StreamEnd))) => {
                         // No more parts to go.
-                        (
-                            Ok(Async::Ready(None)),
-                            CurrentStream::End(stream.into_inner_leading()),
-                        )
+                        let FramedParts {
+                            inner,
+                            mut readbuf,
+                            writebuf,
+                        } = stream.into_parts();
+                        assert!(
+                            writebuf.is_empty(),
+                            "writebuf must be empty, since inner is not AsyncWrite"
+                        );
+
+                        let inner = match inner {
+                            Either::A(inner) => inner,
+                            Either::B(decompressor) => decompressor.into_inner(),
+                        };
+
+                        let (cursor, inner) = inner.into_inner();
+                        readbuf
+                            .extend_from_slice(&cursor.get_ref()[(cursor.position() as usize)..]);
+
+                        (Ok(Async::Ready(None)), CurrentStream::End((readbuf, inner)))
                     }
                     _ => panic!("Expected a header or StreamEnd!"),
                 }

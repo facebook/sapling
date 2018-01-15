@@ -14,11 +14,10 @@ use std::mem;
 use ascii::AsciiString;
 use async_compression::Decompressor;
 use bytes::{Bytes, BytesMut};
-use futures_ext::{AsyncReadExt, FramedStream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use slog;
 use tokio_io::AsyncRead;
-use tokio_io::codec::Decoder;
+use tokio_io::codec::{Decoder, Framed, FramedParts};
 
 use errors::*;
 use part_header::{self, PartHeader};
@@ -38,14 +37,20 @@ pub fn outer_stream<'a, R: AsyncRead + BufRead>(
             .map(String::as_ref),
     )?;
 
-    let input = match decompressor_type {
-        None => UncompressedRead(r),
-        Some(decompressor_type) => CompressedRead(Decompressor::new(r, decompressor_type)),
-    };
-    Ok(input.framed_stream(OuterDecoder::new(logger.new(o!("stream" => "outer")))))
+    Ok(Framed::from_parts(
+        FramedParts {
+            inner: match decompressor_type {
+                None => UncompressedRead(r),
+                Some(decompressor_type) => CompressedRead(Decompressor::new(r, decompressor_type)),
+            },
+            readbuf: BytesMut::new(),
+            writebuf: BytesMut::new(),
+        },
+        OuterDecoder::new(logger.new(o!("stream" => "outer"))),
+    ))
 }
 
-pub type OuterStream<'a, R> = FramedStream<Either<R, Decompressor<'a, R>>, OuterDecoder>;
+pub type OuterStream<'a, R> = Framed<Either<R, Decompressor<'a, R>>, OuterDecoder>;
 
 #[derive(Debug)]
 enum OuterState {

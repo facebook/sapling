@@ -156,7 +156,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     let parts = Vec::new();
 
     let decode_fut = stream
-        .map_err(|e| -> () { panic!("unexpected error: {}", e) })
+        .map_err(|e| -> () { panic!("unexpected error: {:?}", e) })
         .forward(parts);
     let (stream, parts) = core.run(decode_fut).unwrap();
 
