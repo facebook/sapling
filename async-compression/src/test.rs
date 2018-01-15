@@ -7,6 +7,7 @@
 use std::io::{self, BufReader, Cursor, Read, Write};
 
 use bzip2;
+use flate2;
 use futures::{Async, Poll};
 use quickcheck::{Arbitrary, Gen, TestResult};
 use tokio_core::reactor::Core;
@@ -25,6 +26,10 @@ quickcheck! {
         roundtrip(CompressorType::Bzip2(cmprs.0), &input)
     }
 
+    fn test_gzip_roundtrip(cmprs: GzipCompression, input: Vec<u8>) -> TestResult {
+        roundtrip(CompressorType::Gzip(cmprs.0), &input)
+    }
+
     fn test_bzip_overreading(
         cmprs: BzipCompression,
         compressable_input: Vec<u8>,
@@ -32,6 +37,18 @@ quickcheck! {
     ) -> TestResult {
         check_overreading(
             CompressorType::Bzip2(cmprs.0),
+            compressable_input.as_slice(),
+            extra_input.as_slice(),
+        )
+    }
+
+    fn test_gzip_overreading(
+        cmprs: GzipCompression,
+        compressable_input: Vec<u8>,
+        extra_input: Vec<u8>
+    ) -> TestResult {
+        check_overreading(
+            CompressorType::Gzip(cmprs.0),
             compressable_input.as_slice(),
             extra_input.as_slice(),
         )
@@ -47,6 +64,21 @@ impl Arbitrary for BzipCompression {
                 bzip2::Compression::Fastest,
                 bzip2::Compression::Best,
                 bzip2::Compression::Default,
+            ]).unwrap()
+                .clone(),
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+struct GzipCompression(flate2::Compression);
+impl Arbitrary for GzipCompression {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        GzipCompression(
+            g.choose(&[
+                flate2::Compression::none(),
+                flate2::Compression::fast(),
+                flate2::Compression::best(),
             ]).unwrap()
                 .clone(),
         )

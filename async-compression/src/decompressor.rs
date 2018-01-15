@@ -10,6 +10,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::io::{self, BufRead, Read};
 
 use bzip2::bufread::BzDecoder;
+use flate2::bufread::GzDecoder;
 use tokio_io::AsyncRead;
 
 use raw::RawDecoder;
@@ -38,10 +39,7 @@ where
             d_type: dt,
             inner: match dt {
                 DecompressorType::Bzip2 => Box::new(BzDecoder::new(r)),
-                // TODO: need
-                // https://github.com/alexcrichton/flate2-rs/issues/62 to be
-                // fixed
-                DecompressorType::Gzip => unimplemented!(),
+                DecompressorType::Gzip => Box::new(GzDecoder::new(r)),
                 // TODO: The zstd crate is not safe for decompressing Read input, because it is
                 // overconsuming it
                 DecompressorType::Zstd => unimplemented!(),

@@ -144,7 +144,7 @@ pub fn get_decompressor_type(compression: Option<&str>) -> Result<Option<Decompr
 pub fn get_compression_param(ct: &Option<CompressorType>) -> &'static str {
     match ct {
         &Some(CompressorType::Bzip2(_)) => "BZ",
-        &Some(CompressorType::Gzip) => "GZ",
+        &Some(CompressorType::Gzip(_)) => "GZ",
         &Some(CompressorType::Zstd { .. }) => "ZS",
         &None => "UN",
     }

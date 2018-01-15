@@ -10,6 +10,7 @@
 extern crate assert_matches;
 extern crate bytes;
 extern crate bzip2;
+extern crate flate2;
 #[macro_use]
 extern crate futures;
 #[macro_use]
@@ -34,3 +35,4 @@ pub use compressor::{Compressor, CompressorType};
 pub use decompressor::{Decompressor, DecompressorType};
 
 pub use bzip2::Compression as Bzip2Compression;
+pub use flate2::Compression as FlateCompression;

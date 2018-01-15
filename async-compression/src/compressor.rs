@@ -12,6 +12,8 @@ use std::result;
 
 use bzip2;
 use bzip2::write::BzEncoder;
+use flate2;
+use flate2::write::GzEncoder;
 use futures::Poll;
 use tokio_io::AsyncWrite;
 
@@ -22,7 +24,7 @@ use retry::retry_write;
 #[derive(Clone, Copy, Debug)]
 pub enum CompressorType {
     Bzip2(bzip2::Compression),
-    Gzip,
+    Gzip(flate2::Compression),
     Zstd { level: i32 },
 }
 
@@ -30,7 +32,7 @@ impl CompressorType {
     pub fn decompressor_type(&self) -> DecompressorType {
         match self {
             &CompressorType::Bzip2(_) => DecompressorType::Bzip2,
-            &CompressorType::Gzip => DecompressorType::Gzip,
+            &CompressorType::Gzip(_) => DecompressorType::Gzip,
             &CompressorType::Zstd { .. } => DecompressorType::Zstd,
         }
     }
@@ -53,10 +55,7 @@ where
             c_type: ct,
             inner: match ct {
                 CompressorType::Bzip2(level) => Box::new(BzEncoder::new(w, level)),
-                // TODO: need
-                // https://github.com/alexcrichton/flate2-rs/issues/62 to be
-                // fixed
-                CompressorType::Gzip => unimplemented!(),
+                CompressorType::Gzip(level) => Box::new(GzEncoder::new(w, level)),
                 CompressorType::Zstd { level } => Box::new(AsyncZstdEncoder::new(w, level)),
             },
         }

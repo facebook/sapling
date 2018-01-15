@@ -14,6 +14,8 @@ use tokio_io::AsyncWrite;
 
 use bzip2::bufread::BzDecoder;
 use bzip2::write::BzEncoder;
+use flate2::bufread::GzDecoder;
+use flate2::write::GzEncoder;
 use zstd::Encoder as ZstdEncoder;
 
 pub trait RawDecoder<R: BufRead>: Read {
@@ -39,6 +41,23 @@ impl<R: BufRead> RawDecoder<R> for BzDecoder<R> {
     }
 }
 
+impl<R: BufRead> RawDecoder<R> for GzDecoder<R> {
+    #[inline]
+    fn get_ref(&self) -> &R {
+        GzDecoder::get_ref(self)
+    }
+
+    #[inline]
+    fn get_mut(&mut self) -> &mut R {
+        GzDecoder::get_mut(self)
+    }
+
+    #[inline]
+    fn into_inner(self: Box<Self>) -> R {
+        GzDecoder::into_inner(*self)
+    }
+}
+
 pub trait RawEncoder<W>: AsyncWrite
 where
     W: AsyncWrite + Send,
@@ -56,6 +75,21 @@ where
     ) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)> {
         match BzEncoder::try_finish(&mut self) {
             Ok(()) => Ok(BzEncoder::finish(*self).unwrap()),
+            Err(e) => Err((self, e)),
+        }
+    }
+}
+
+impl<W> RawEncoder<W> for GzEncoder<W>
+where
+    W: AsyncWrite + Send + 'static,
+{
+    #[inline]
+    fn try_finish(
+        mut self: Box<Self>,
+    ) -> result::Result<W, (Box<RawEncoder<W> + Send>, io::Error)> {
+        match GzEncoder::try_finish(&mut self) {
+            Ok(()) => Ok(GzEncoder::finish(*self).unwrap()),
             Err(e) => Err((self, e)),
         }
     }
