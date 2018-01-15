@@ -49,7 +49,7 @@ mod listener;
 
 use std::io;
 use std::panic;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -68,13 +68,13 @@ use slog_logview::LogViewDrain;
 
 use bytes::Bytes;
 use hgproto::{sshproto, HgProtoHandler};
+use mercurial::RevlogRepo;
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoType;
 
 use errors::*;
 
 use listener::{ssh_server_mux, Stdio};
-use repo::OpenableRepoType;
 
 struct SenderBytesWrite {
     chan: Wait<mpsc::Sender<Bytes>>,
@@ -188,7 +188,10 @@ fn start_thrift_service<'a>(
 }
 
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    let config_repo = RepoType::Revlog(matches.value_of("crpath").unwrap().into()).open()?;
+    // TODO: This needs to cope with blob repos, too
+    let mut crpath = PathBuf::from(matches.value_of("crpath").unwrap());
+    crpath.push(".hg");
+    let config_repo = RevlogRepo::open(crpath)?;
 
     let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
         config_repo
@@ -202,11 +205,10 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
     info!(
         logger,
-        "Config repository will be read from commit: {}",
-        node_hash
+        "Config repository will be read from commit: {}", node_hash
     );
 
-    RepoConfigs::read_config_repo(config_repo, node_hash)
+    RepoConfigs::read_revlog_config_repo(config_repo, node_hash)
         .from_err()
         .wait()
 }

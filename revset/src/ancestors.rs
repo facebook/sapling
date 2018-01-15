@@ -16,27 +16,25 @@ use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{iter_ok, Stream};
 
-use mercurial_types::{Changeset, NodeHash, Repo};
+use blobrepo::BlobRepo;
+use mercurial_types::{Changeset, NodeHash};
 use repoinfo::{Generation, RepoGenCache};
 
 use IntersectNodeStream;
 use NodeStream;
 use errors::*;
 
-pub struct AncestorsNodeStream<R>
-where
-    R: Repo,
-{
-    repo: Arc<R>,
-    repo_generation: RepoGenCache<R>,
+pub struct AncestorsNodeStream {
+    repo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     next_generation: BTreeMap<Generation, HashSet<NodeHash>>,
     pending_changesets: Box<Stream<Item = (NodeHash, Generation), Error = Error> + Send>,
     drain: IntoIter<NodeHash>,
 }
 
-fn make_pending<R: Repo>(
-    repo: Arc<R>,
-    repo_generation: RepoGenCache<R>,
+fn make_pending(
+    repo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     hashes: IntoIter<NodeHash>,
 ) -> Box<Stream<Item = (NodeHash, Generation), Error = Error> + Send> {
     let size = hashes.size_hint().0;
@@ -62,11 +60,8 @@ fn make_pending<R: Repo>(
     )
 }
 
-impl<R> AncestorsNodeStream<R>
-where
-    R: Repo,
-{
-    pub fn new(repo: &Arc<R>, repo_generation: RepoGenCache<R>, hash: NodeHash) -> Self {
+impl AncestorsNodeStream {
+    pub fn new(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, hash: NodeHash) -> Self {
         let node_set: HashSet<NodeHash> = hashset!{hash};
         AncestorsNodeStream {
             repo: repo.clone(),
@@ -86,10 +81,7 @@ where
     }
 }
 
-impl<R> Stream for AncestorsNodeStream<R>
-where
-    R: Repo,
-{
+impl Stream for AncestorsNodeStream {
     type Item = NodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -132,22 +124,19 @@ where
             current_generation.clone().into_iter(),
         );
         self.drain = current_generation.into_iter();
-        Ok(Async::Ready(Some(
-            self.drain
-                .next()
-                .expect("Cannot create a generation without at least one node hash"),
-        )))
+        Ok(Async::Ready(Some(self.drain.next().expect(
+            "Cannot create a generation without at least one node hash",
+        ))))
     }
 }
 
-pub fn common_ancestors<I, R>(
-    repo: &Arc<R>,
-    repo_generation: RepoGenCache<R>,
+pub fn common_ancestors<I>(
+    repo: &Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     nodes: I,
 ) -> Box<NodeStream>
 where
     I: IntoIterator<Item = NodeHash>,
-    R: Repo,
 {
     let nodes_iter = nodes.into_iter().map({
         let repo_generation = repo_generation.clone();
@@ -156,14 +145,13 @@ where
     IntersectNodeStream::new(repo, repo_generation, nodes_iter).boxed()
 }
 
-pub fn greatest_common_ancestor<I, R>(
-    repo: &Arc<R>,
-    repo_generation: RepoGenCache<R>,
+pub fn greatest_common_ancestor<I>(
+    repo: &Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     nodes: I,
 ) -> Box<NodeStream>
 where
     I: IntoIterator<Item = NodeHash>,
-    R: Repo,
 {
     Box::new(common_ancestors(repo, repo_generation, nodes).take(1))
 }

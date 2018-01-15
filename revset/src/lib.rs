@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 extern crate asyncmemo;
+extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -46,8 +47,6 @@ pub use range::RangeNodeStream;
 
 #[cfg(test)]
 extern crate ascii;
-#[cfg(test)]
-extern crate blobrepo;
 #[cfg(test)]
 extern crate branch_even;
 #[cfg(test)]

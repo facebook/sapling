@@ -10,7 +10,6 @@
 //! changeset and memoized for efficiency.
 
 use std::cmp;
-use std::marker::PhantomData;
 use std::sync::Arc;
 use std::usize;
 
@@ -19,7 +18,8 @@ use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
 use asyncmemo::{Asyncmemo, Filler};
-use mercurial_types::{NodeHash, Repo};
+use blobrepo::BlobRepo;
+use mercurial_types::NodeHash;
 
 use nodehashkey::Key;
 
@@ -33,17 +33,11 @@ pub struct Generation(u64);
 /// Cache of generation numbers
 ///
 /// Allows generation numbers for a changeset to be computed lazily and cached.
-pub struct RepoGenCache<R>
-where
-    R: Repo,
-{
-    cache: Asyncmemo<GenFiller<R>>,
+pub struct RepoGenCache {
+    cache: Asyncmemo<GenFiller>,
 }
 
-impl<R> Clone for RepoGenCache<R>
-where
-    R: Repo,
-{
+impl Clone for RepoGenCache {
     fn clone(&self) -> Self {
         Self {
             cache: self.cache.clone(),
@@ -51,10 +45,7 @@ where
     }
 }
 
-impl<R> RepoGenCache<R>
-where
-    R: Repo,
-{
+impl RepoGenCache {
     /// Construct a new `RepoGenCache`, bounded to `sizelimit` bytes.
     pub fn new(sizelimit: usize) -> Self {
         RepoGenCache {
@@ -65,30 +56,23 @@ where
     /// Get a `Future` for a `Generation` number for a given changeset in a repo.
     pub fn get(
         &self,
-        repo: &Arc<R>,
+        repo: &Arc<BlobRepo>,
         nodeid: NodeHash,
     ) -> impl Future<Item = Generation, Error = Error> + Send {
         self.cache.get((repo, nodeid))
     }
 }
 
-pub struct GenFiller<R> {
-    _phantom: PhantomData<R>,
-}
+pub struct GenFiller {}
 
-impl<R> GenFiller<R> {
+impl GenFiller {
     fn new() -> Self {
-        GenFiller {
-            _phantom: PhantomData,
-        }
+        GenFiller {}
     }
 }
 
-impl<R> Filler for GenFiller<R>
-where
-    R: Repo,
-{
-    type Key = Key<R>;
+impl Filler for GenFiller {
+    type Key = Key<BlobRepo>;
     type Value = Box<Future<Item = Generation, Error = Error> + Send>;
 
     fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {

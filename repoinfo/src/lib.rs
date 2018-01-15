@@ -19,6 +19,7 @@ extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
 
+extern crate blobrepo;
 extern crate futures_ext;
 extern crate mercurial_types;
 

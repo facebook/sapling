@@ -4,9 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use blobrepo::BlobRepo;
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::sync::Arc;
@@ -18,14 +19,11 @@ use futures::{Async, Poll};
 
 pub type InputStream = Box<Stream<Item = (NodeHash, Generation), Error = Error> + 'static + Send>;
 
-pub fn add_generations<R>(
+pub fn add_generations(
     stream: Box<NodeStream>,
-    repo_generation: RepoGenCache<R>,
-    repo: Arc<R>,
-) -> InputStream
-where
-    R: Repo,
-{
+    repo_generation: RepoGenCache,
+    repo: Arc<BlobRepo>,
+) -> InputStream {
     let stream = stream.and_then(move |node_hash| {
         repo_generation
             .get(&repo, node_hash)

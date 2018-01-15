@@ -21,10 +21,7 @@ pub struct RawNodeBlob {
     pub blob: BlobHash,
 }
 
-pub fn get_node<B>(blobstore: &B, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error>
-where
-    B: Blobstore,
-{
+pub fn get_node(blobstore: &Blobstore, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error> {
     let key = format!("node-{}.bincode", nodeid);
 
     blobstore

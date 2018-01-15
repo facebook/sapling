@@ -14,7 +14,9 @@ use std::str::from_utf8;
 
 use futures::{future, Future, IntoFuture};
 
-use mercurial_types::{MPath, Manifest, NodeHash, Repo};
+use blobrepo::BlobRepo;
+use mercurial::RevlogRepo;
+use mercurial_types::{Changeset, MPath, Manifest, NodeHash};
 use mercurial_types::manifest::Content;
 use mercurial_types::path::MPathElement;
 use toml;
@@ -60,7 +62,20 @@ pub struct RepoConfigs {
 impl RepoConfigs {
     /// Read the config repo and generate RepoConfigs based on it
     pub fn read_config_repo(
-        repo: Box<Repo + Send>,
+        repo: BlobRepo,
+        changeset_hash: NodeHash,
+    ) -> Box<Future<Item = Self, Error = Error> + Send> {
+        Box::new(
+            repo.get_changeset_by_nodeid(&changeset_hash)
+                .and_then(move |changeset| repo.get_manifest_by_nodeid(changeset.manifestid()))
+                .map_err(|err| err.context("failed to get manifest from changeset").into())
+                .and_then(|manifest| Self::read_manifest(&manifest)),
+        )
+    }
+
+    /// Read the config repo and generate RepoConfigs based on it
+    pub fn read_revlog_config_repo(
+        repo: RevlogRepo,
         changeset_hash: NodeHash,
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(

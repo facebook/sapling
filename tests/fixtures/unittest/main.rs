@@ -17,7 +17,6 @@ use futures::executor::spawn;
 use mercurial_types::manifest::{Content, Type};
 use mercurial_types::nodehash::NodeHash;
 use mercurial_types::path::MPath;
-use mercurial_types::repo::Repo;
 
 #[test]
 fn check_heads() {
@@ -28,8 +27,8 @@ fn check_heads() {
 
     assert!(
         if let Some(Ok(hash)) = heads.wait_stream() {
-            hash ==
-                NodeHash::from_ascii_str(&AsciiString::from_ascii(
+            hash
+                == NodeHash::from_ascii_str(&AsciiString::from_ascii(
                     "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
                 ).expect(
                     "Can't turn string to AsciiString",

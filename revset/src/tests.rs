@@ -6,10 +6,10 @@
 
 use NodeStream;
 use ascii::AsciiString;
+use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
 use mercurial_types::NodeHash;
-use mercurial_types::Repo;
 use repoinfo::RepoGenCache;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -22,14 +22,13 @@ pub fn string_to_nodehash(hash: &'static str) -> NodeHash {
 
 /// Accounting for reordering within generations, ensure that a NodeStream gives the expected
 /// NodeHashes for testing.
-pub fn assert_node_sequence<I, R>(
-    repo_generation: RepoGenCache<R>,
-    repo: &Arc<R>,
+pub fn assert_node_sequence<I>(
+    repo_generation: RepoGenCache,
+    repo: &Arc<BlobRepo>,
     hashes: I,
     stream: Box<NodeStream>,
 ) where
     I: IntoIterator<Item = NodeHash>,
-    R: Repo,
 {
     let mut nodestream = spawn(stream);
     let mut received_hashes = HashSet::new();

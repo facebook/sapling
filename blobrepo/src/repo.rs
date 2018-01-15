@@ -6,115 +6,190 @@
 
 use std::collections::HashSet;
 use std::mem;
+use std::path::Path;
 use std::sync::Arc;
 
+use failure::ResultExt;
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
+use blobstore::Blobstore;
 use bookmarks::Bookmarks;
+use fileblob::Fileblob;
+use filebookmarks::FileBookmarks;
+use fileheads::FileHeads;
+use filelinknodes::FileLinknodes;
 use heads::Heads;
-use mercurial_types::{Changeset, Manifest, NodeHash, Repo};
+use linknodes::Linknodes;
+use manifoldblob::ManifoldBlob;
+use memblob::Memblob;
+use membookmarks::MemBookmarks;
+use memheads::MemHeads;
+use memlinknodes::MemLinknodes;
+use mercurial_types::{Changeset, Manifest, NodeHash};
+use rocksblob::Rocksblob;
 use storage_types::Version;
+use tokio_core::reactor::Remote;
 
 use BlobChangeset;
 use BlobManifest;
-use BlobState;
 use errors::*;
 use file::fetch_blob_from_blobstore;
 
-pub struct BlobRepo<State> {
-    inner: Arc<State>,
+pub struct BlobRepo {
+    blobstore: Arc<Blobstore>,
+    bookmarks: Arc<Bookmarks>,
+    heads: Arc<Heads>,
+    linknodes: Arc<Linknodes>,
 }
 
-impl<State> BlobRepo<State> {
-    pub fn new(state: State) -> Self {
-        Self {
-            inner: Arc::new(state),
+impl BlobRepo {
+    pub fn new(
+        heads: Arc<Heads>,
+        bookmarks: Arc<Bookmarks>,
+        blobstore: Arc<Blobstore>,
+        linknodes: Arc<Linknodes>,
+    ) -> Self {
+        BlobRepo {
+            heads,
+            bookmarks,
+            blobstore,
+            linknodes,
         }
     }
-}
 
-impl<State> BlobRepo<State>
-where
-    State: BlobState,
-{
-    pub fn get_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
-        fetch_blob_from_blobstore(self.inner.blobstore().clone(), *key)
+    pub fn new_files(path: &Path) -> Result<Self> {
+        let heads = FileHeads::open(path.join("heads"))
+            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
+        let bookmarks = Arc::new(FileBookmarks::open(path.join("books"))
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?);
+        let blobstore = Fileblob::open(path.join("blobs"))
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+        let linknodes = Arc::new(FileLinknodes::open(path.join("linknodes"))
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?);
+
+        Ok(Self::new(
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+        ))
     }
-}
 
-impl<State> Repo for BlobRepo<State>
-where
-    State: BlobState,
-{
-    fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
+    pub fn new_rocksdb(path: &Path) -> Result<Self> {
+        let heads = FileHeads::open(path.join("heads"))
+            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
+        let bookmarks = FileBookmarks::open(path.join("books"))
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+        let blobstore = Rocksblob::open(path.join("blobs"))
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+        let linknodes = FileLinknodes::open(path.join("linknodes"))
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+
+        Ok(Self::new(
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+        ))
+    }
+
+    pub fn new_memblob(
+        heads: MemHeads,
+        bookmarks: MemBookmarks,
+        blobstore: Memblob,
+        linknodes: MemLinknodes,
+    ) -> Self {
+        Self::new(
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+        )
+    }
+
+    pub fn new_test_manifold<T: ToString>(bucket: T, remote: &Remote) -> Result<Self> {
+        let heads = MemHeads::new();
+        let bookmarks = MemBookmarks::new();
+        let blobstore = ManifoldBlob::new_may_panic(bucket.to_string(), remote);
+        let linknodes = MemLinknodes::new();
+        Ok(Self::new(
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+        ))
+    }
+
+    pub fn get_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
+        fetch_blob_from_blobstore(&self.blobstore, *key)
+    }
+
+    pub fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
         BlobChangesetStream {
-            repo: BlobRepo {
-                inner: self.inner.clone(),
-            },
-            heads: self.inner.heads().heads().boxify(),
+            repo: self.clone(),
+            heads: self.heads.heads().boxify(),
             state: BCState::Idle,
             seen: HashSet::new(),
         }.boxify()
     }
 
-    fn get_heads(&self) -> BoxStream<NodeHash, Error> {
-        self.inner.heads().heads().boxify()
+    pub fn get_heads(&self) -> BoxStream<NodeHash, Error> {
+        self.heads.heads().boxify()
     }
 
-    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
-        BlobChangeset::load(self.inner.blobstore(), nodeid)
+    pub fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
+        BlobChangeset::load(&self.blobstore, nodeid)
             .map(|cs| cs.is_some())
             .boxify()
     }
 
-    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
+    pub fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
         let nodeid = *nodeid;
-        BlobChangeset::load(self.inner.blobstore(), &nodeid)
-            .and_then(move |cs| {
-                cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into())
-            })
+        BlobChangeset::load(&self.blobstore, &nodeid)
+            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into()))
             .map(|cs| cs.boxed())
             .boxify()
     }
 
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Manifest + Sync>, Error> {
+    pub fn get_manifest_by_nodeid(
+        &self,
+        nodeid: &NodeHash,
+    ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
-        BlobManifest::load(self.inner.blobstore(), &nodeid)
-            .and_then(move |mf| {
-                mf.ok_or(ErrorKind::ManifestMissing(nodeid).into())
-            })
+        BlobManifest::load(&self.blobstore, &nodeid)
+            .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()
     }
 
-    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
-        self.inner.bookmarks().keys().boxify()
+    pub fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
+        self.bookmarks.keys().boxify()
     }
 
-    fn get_bookmark_value(
+    pub fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
     ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
-        self.inner.bookmarks().get(key).boxify()
+        self.bookmarks.get(key).boxify()
     }
 }
 
-impl<State> Clone for BlobRepo<State> {
+impl Clone for BlobRepo {
     fn clone(&self) -> Self {
         Self {
-            inner: self.inner.clone(),
+            heads: self.heads.clone(),
+            bookmarks: self.bookmarks.clone(),
+            blobstore: self.blobstore.clone(),
+            linknodes: self.linknodes.clone(),
         }
     }
 }
 
-pub struct BlobChangesetStream<State>
-where
-    State: BlobState,
-{
-    repo: BlobRepo<State>,
+pub struct BlobChangesetStream {
+    repo: BlobRepo,
     seen: HashSet<NodeHash>,
     heads: BoxStream<NodeHash, Error>,
     state: BCState,
@@ -125,10 +200,7 @@ enum BCState {
     WaitCS(NodeHash, BoxFuture<Box<Changeset>, Error>),
 }
 
-impl<State> Stream for BlobChangesetStream<State>
-where
-    State: BlobState,
-{
+impl Stream for BlobChangesetStream {
     type Item = NodeHash;
     type Error = Error;
 

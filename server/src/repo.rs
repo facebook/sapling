@@ -20,14 +20,13 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use slog::Logger;
 
 use async_compression::CompressorType;
-use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
-use mercurial_types::{percent_encode, BoxRepo, Changeset, NodeHash, Parents, Repo, NULL_HASH};
+use mercurial_types::{percent_encode, Changeset, NodeHash, Parents, NULL_HASH};
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
 
-use blobrepo::{BlobRepo, FilesBlobState, RocksBlobState};
+use blobrepo::BlobRepo;
 
 use errors::*;
 
@@ -51,20 +50,20 @@ pub fn init_repo(
     Ok((sock, repo))
 }
 
-
 pub trait OpenableRepoType {
-    fn open(&self) -> Result<Box<Repo + Sync + Send>>;
+    fn open(&self) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self) -> Result<Box<Repo + Sync + Send>> {
+    fn open(&self) -> Result<BlobRepo> {
+        use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
         let ret = match *self {
-            Revlog(ref path) => BoxRepo::new(mercurial::RevlogRepo::open(path.join(".hg"))?),
-            BlobFiles(ref path) => BoxRepo::new(BlobRepo::new(FilesBlobState::new(&path)?)),
-            BlobRocks(ref path) => BoxRepo::new(BlobRepo::new(RocksBlobState::new(&path)?)),
+            Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
+            BlobFiles(ref path) => BlobRepo::new_files(&path)?,
+            BlobRocks(ref path) => BlobRepo::new_rocksdb(&path)?,
         };
 
         Ok(ret)
@@ -81,8 +80,8 @@ impl OpenableRepoType for RepoType {
 
 pub struct HgRepo {
     path: String,
-    hgrepo: Arc<Box<Repo + Send + Sync>>,
-    repo_generation: RepoGenCache<Box<Repo + Send + Sync>>,
+    hgrepo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     _logger: Logger,
 }
 

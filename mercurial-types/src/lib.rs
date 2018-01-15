@@ -48,7 +48,6 @@ pub mod hash;
 pub mod nodehash;
 pub mod path;
 pub mod utils;
-pub mod repo;
 pub mod manifest;
 pub mod blob;
 pub mod blobnode;
@@ -63,7 +62,6 @@ pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{NodeHash, NULL_HASH};
 pub use path::{fncache_fsencode, simple_fsencode, MPath, MPathElement, RepoPath};
-pub use repo::{BoxRepo, Repo};
 pub use utils::percent_encode;
 
 pub use errors::{Error, ErrorKind};

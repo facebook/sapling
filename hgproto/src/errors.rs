@@ -13,4 +13,5 @@ pub enum ErrorKind {
     #[fail(display = "malformed batch with command '{}'", _0)] BatchInvalid(String),
     #[fail(display = "unknown escape character in batch command '{}'", _0)] BatchEscape(u8),
     #[fail(display = "Repo error")] RepoError,
+    #[fail(display = "cannot serve revlog repos")] CantServeRevlogRepo,
 }

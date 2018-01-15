@@ -4,9 +4,10 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use blobrepo::BlobRepo;
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashSet;
@@ -28,15 +29,12 @@ pub struct SetDifferenceNodeStream {
 }
 
 impl SetDifferenceNodeStream {
-    pub fn new<R>(
-        repo: &Arc<R>,
-        repo_generation: RepoGenCache<R>,
+    pub fn new(
+        repo: &Arc<BlobRepo>,
+        repo_generation: RepoGenCache,
         keep_input: Box<NodeStream>,
         remove_input: Box<NodeStream>,
-    ) -> SetDifferenceNodeStream
-    where
-        R: Repo,
-    {
+    ) -> SetDifferenceNodeStream {
         SetDifferenceNodeStream {
             keep_input: add_generations(keep_input, repo_generation.clone(), repo.clone()),
             next_keep: Async::NotReady,

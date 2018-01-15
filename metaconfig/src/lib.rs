@@ -10,6 +10,7 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
+extern crate blobrepo;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;

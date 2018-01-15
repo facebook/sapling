@@ -4,11 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-
+use blobrepo::BlobRepo;
 use futures::Async;
 use futures::Poll;
 use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 use repoinfo::{Generation, RepoGenCache};
 use std::boxed::Box;
 use std::collections::HashMap;
@@ -29,10 +29,9 @@ pub struct IntersectNodeStream {
 }
 
 impl IntersectNodeStream {
-    pub fn new<I, R>(repo: &Arc<R>, repo_generation: RepoGenCache<R>, inputs: I) -> Self
+    pub fn new<I>(repo: &Arc<BlobRepo>, repo_generation: RepoGenCache, inputs: I) -> Self
     where
         I: IntoIterator<Item = Box<NodeStream>>,
-        R: Repo,
     {
         let hash_and_gen = inputs.into_iter().map({
             move |i| {

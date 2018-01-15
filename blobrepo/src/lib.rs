@@ -45,7 +45,6 @@ extern crate storage_types;
 mod repo;
 mod changeset;
 mod manifest;
-mod state;
 mod file;
 mod errors;
 mod utils;
@@ -55,7 +54,6 @@ pub use errors::*;
 pub use changeset::BlobChangeset;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
-pub use state::{BlobState, FilesBlobState, MemBlobState, RocksBlobState, TestManifoldBlobState};
 //
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 

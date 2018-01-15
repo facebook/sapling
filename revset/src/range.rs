@@ -14,7 +14,8 @@ use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 
-use mercurial_types::{NodeHash, Repo};
+use blobrepo::BlobRepo;
+use mercurial_types::NodeHash;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -32,12 +33,9 @@ struct ParentChild {
     child: HashGen,
 }
 
-pub struct RangeNodeStream<R>
-where
-    R: Repo,
-{
-    repo: Arc<R>,
-    repo_generation: RepoGenCache<R>,
+pub struct RangeNodeStream {
+    repo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     start_node: NodeHash,
     start_generation: Box<Stream<Item = Generation, Error = Error> + Send>,
     children: HashMap<HashGen, HashSet<HashGen>>,
@@ -47,9 +45,9 @@ where
     drain: Option<IntoIter<NodeHash>>,
 }
 
-fn make_pending<R: Repo>(
-    repo: Arc<R>,
-    repo_generation: RepoGenCache<R>,
+fn make_pending(
+    repo: Arc<BlobRepo>,
+    repo_generation: RepoGenCache,
     child: HashGen,
 ) -> Box<Stream<Item = ParentChild, Error = Error> + Send> {
     Box::new(
@@ -58,34 +56,27 @@ fn make_pending<R: Repo>(
             repo.get_changeset_by_nodeid(&child.hash)
                 .map(move |cs| (child, cs.parents().clone()))
                 .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
-        }.map(|(child, parents)| {
-            iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter()))
-        })
+        }.map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
             .flatten_stream()
             .and_then(move |(child, parent_hash)| {
                 repo_generation
                     .get(&repo, parent_hash)
-                    .map(move |gen_id| {
-                        ParentChild {
-                            child,
-                            parent: HashGen {
-                                hash: parent_hash,
-                                generation: gen_id,
-                            },
-                        }
+                    .map(move |gen_id| ParentChild {
+                        child,
+                        parent: HashGen {
+                            hash: parent_hash,
+                            generation: gen_id,
+                        },
                     })
                     .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
             }),
     )
 }
 
-impl<R> RangeNodeStream<R>
-where
-    R: Repo,
-{
+impl RangeNodeStream {
     pub fn new(
-        repo: &Arc<R>,
-        repo_generation: RepoGenCache<R>,
+        repo: &Arc<BlobRepo>,
+        repo_generation: RepoGenCache,
         start_node: NodeHash,
         end_node: NodeHash,
     ) -> Self {
@@ -164,10 +155,7 @@ where
     }
 }
 
-impl<R> Stream for RangeNodeStream<R>
-where
-    R: Repo,
-{
+impl Stream for RangeNodeStream {
     type Item = NodeHash;
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

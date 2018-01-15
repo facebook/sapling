@@ -7,10 +7,11 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use blobrepo::BlobRepo;
 use failure::Error;
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 use repoinfo::{Generation, RepoGenCache};
 
 use NodeStream;
@@ -27,14 +28,11 @@ pub struct ValidateNodeStream {
 }
 
 impl ValidateNodeStream {
-    pub fn new<R>(
+    pub fn new(
         wrapped: Box<NodeStream>,
-        repo: &Arc<R>,
-        repo_generation: RepoGenCache<R>,
-    ) -> ValidateNodeStream
-    where
-        R: Repo,
-    {
+        repo: &Arc<BlobRepo>,
+        repo_generation: RepoGenCache,
+    ) -> ValidateNodeStream {
         ValidateNodeStream {
             wrapped: add_generations(wrapped, repo_generation, repo.clone()),
             last_generation: None,

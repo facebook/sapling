@@ -57,13 +57,13 @@ use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use blobrepo::{BlobRepo, MemBlobState};
+use blobrepo::BlobRepo;
 use ascii::AsciiString;
 use blobstore::Blobstore;
 use heads::Heads;
 use futures::future::Future;
 
-pub fn getrepo() -> BlobRepo<MemBlobState> {
+pub fn getrepo() -> BlobRepo {
     let bookmarks: MemBookmarks = MemBookmarks::new();
     let heads: MemHeads = MemHeads::new();
     let blobs = Memblob::new();
@@ -98,7 +98,7 @@ pub fn getrepo() -> BlobRepo<MemBlobState> {
                 )
         rs.writelines(
             """
-    BlobRepo::new(MemBlobState::new(heads, bookmarks, blobs, linknodes))
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes)
 }
 """
         )

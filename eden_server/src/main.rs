@@ -55,7 +55,7 @@ use std::sync::Arc;
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobRepo, BlobState, RocksBlobState, TestManifoldBlobState};
+use blobrepo::BlobRepo;
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
@@ -64,7 +64,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
 use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
@@ -75,7 +75,7 @@ use tokio_tls::TlsAcceptorExt;
 
 pub use failure::{DisplayChain, Error, Result, ResultExt};
 
-type NameToRepo<State> = HashMap<String, Arc<BlobRepo<State>>>;
+type NameToRepo = HashMap<String, Arc<BlobRepo>>;
 type UrlParseFunc = fn(Captures) -> Result<ParsedUrl>;
 
 struct Route(Regex, UrlParseFunc);
@@ -161,7 +161,6 @@ lazy_static! {
     };
 }
 
-
 #[derive(Serialize)]
 struct TreeMetadata {
     hash: NodeHash,
@@ -200,23 +199,18 @@ struct TreeMetadataOptions {
     fetch_size: bool,
 }
 
-struct EdenServer<State> {
-    name_to_repo: NameToRepo<State>,
+struct EdenServer {
+    name_to_repo: NameToRepo,
     cpupool: Arc<CpuPool>,
     logger: Logger,
     scuba: Arc<ScubaClient>,
 }
 
-impl<State> EdenServer<State>
+impl EdenServer
 where
-    EdenServer<State>: Service,
-    State: BlobState,
+    EdenServer: Service,
 {
-    fn new(
-        name_to_repo: NameToRepo<State>,
-        cpupool: Arc<CpuPool>,
-        logger: Logger,
-    ) -> EdenServer<State> {
+    fn new(name_to_repo: NameToRepo, cpupool: Arc<CpuPool>, logger: Logger) -> EdenServer {
         EdenServer {
             name_to_repo,
             cpupool,
@@ -308,10 +302,7 @@ fn add_common_stats(sample: &mut ScubaSample, stats: &Stats) {
     sample.add(SCUBA_COL_POLL_COUNT, stats.poll_count);
 }
 
-impl<State> Service for EdenServer<State>
-where
-    State: BlobState,
-{
+impl Service for EdenServer {
     type Request = Request;
     type Response = Response;
     type Error = hyper::Error;
@@ -387,7 +378,6 @@ where
     }
 }
 
-
 // Builds an acceptor that has `accept_async()` method that handles tls handshake
 // and returns decrypted stream.
 fn build_tls_acceptor(ssl: Ssl) -> Result<TlsAcceptor> {
@@ -413,13 +403,9 @@ fn build_tls_acceptor(ssl: Ssl) -> Result<TlsAcceptor> {
     tlsacceptor_builder.build().map_err(Error::from)
 }
 
-fn start_server<State>(addr: &str, reponame: String, state: State, logger: Logger, ssl: Ssl)
-where
-    State: BlobState,
-{
+fn start_server(addr: &str, reponame: String, repo: BlobRepo, logger: Logger, ssl: Ssl) {
     let addr = addr.parse().expect("Failed to parse address");
     let mut map = HashMap::new();
-    let repo = BlobRepo::new(state);
     map.insert(reponame, Arc::new(repo));
 
     let tlsacceptor = build_tls_acceptor(ssl);
@@ -462,6 +448,7 @@ where
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
+    #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:manifold")] BlobManifold,
 }
@@ -516,10 +503,18 @@ fn main() {
     };
 
     match config.repotype {
+        RawRepoType::BlobFiles => start_server(
+            &config.addr,
+            config.reponame,
+            BlobRepo::new_files(&config.path.expect("Please specify a path to the blobrepo"))
+                .expect("couldn't open blob state"),
+            root_logger.clone(),
+            config.ssl,
+        ),
         RawRepoType::BlobRocks => start_server(
             &config.addr,
             config.reponame,
-            RocksBlobState::new(&config.path.expect("Please specify a path to the blobrepo"))
+            BlobRepo::new_rocksdb(&config.path.expect("Please specify a path to the blobrepo"))
                 .expect("couldn't open blob state"),
             root_logger.clone(),
             config.ssl,
@@ -544,7 +539,7 @@ fn main() {
             start_server(
                 &config.addr,
                 config.reponame,
-                TestManifoldBlobState::new(
+                BlobRepo::new_test_manifold(
                     config
                         .manifold_bucket
                         .expect("manifold bucket is not specified"),

@@ -6,14 +6,14 @@
 
 use std::boxed::Box;
 
+use blobrepo::BlobRepo;
 use failure::Error;
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::Stream;
-use mercurial_types::{NodeHash, Repo};
+use mercurial_types::NodeHash;
 
 use NodeStream;
-use errors::*;
 
 pub struct SingleNodeHash {
     nodehash: Option<NodeHash>,
@@ -21,12 +21,8 @@ pub struct SingleNodeHash {
 }
 
 impl SingleNodeHash {
-    pub fn new<R: Repo>(nodehash: NodeHash, repo: &R) -> Self {
-        let exists = Box::new(
-            repo.changeset_exists(&nodehash)
-                .map_err(move |e| e.context(ErrorKind::RepoError(nodehash)))
-                .from_err(),
-        );
+    pub fn new(nodehash: NodeHash, repo: &BlobRepo) -> Self {
+        let exists = Box::new(repo.changeset_exists(&nodehash));
         let nodehash = Some(nodehash);
         SingleNodeHash { nodehash, exists }
     }
@@ -59,7 +55,6 @@ impl Stream for SingleNodeHash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo::{BlobRepo, MemBlobState};
     use linear;
     use repoinfo::RepoGenCache;
     use std::sync::Arc;
@@ -74,7 +69,7 @@ mod test {
             &repo,
         );
 
-        let repo_generation: RepoGenCache<BlobRepo<MemBlobState>> = RepoGenCache::new(10);
+        let repo_generation = RepoGenCache::new(10);
 
         assert_node_sequence(
             repo_generation,
@@ -91,7 +86,7 @@ mod test {
         let repo = Arc::new(linear::getrepo());
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
         let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
-        let repo_generation: RepoGenCache<BlobRepo<MemBlobState>> = RepoGenCache::new(10);
+        let repo_generation = RepoGenCache::new(10);
 
         assert_node_sequence(repo_generation, &repo, vec![].into_iter(), nodestream);
     }

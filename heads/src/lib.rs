@@ -17,7 +17,7 @@ use mercurial_types::NodeHash;
 
 /// Trait representing the interface to a heads store, which more generally is just
 /// a set of commit identifiers.
-pub trait Heads: Send + 'static {
+pub trait Heads: Send + Sync + 'static {
     // Heads are not guaranteed to be returned in any particular order. Heads that exist for
     // the entire duration of the traversal are guaranteed to appear at least once.
 

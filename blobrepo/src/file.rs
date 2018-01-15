@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 //! Plain files, symlinks
+use std::sync::Arc;
 
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -28,11 +29,11 @@ pub struct BlobEntry<B> {
     ty: Type,
 }
 
-pub fn fetch_blob_from_blobstore<B>(blobstore: B, nodeid: NodeHash) -> BoxFuture<Vec<u8>, Error>
-where
-    B: Blobstore + Clone,
-{
-    get_node(&blobstore, nodeid)
+pub fn fetch_blob_from_blobstore(
+    blobstore: &Arc<Blobstore>,
+    nodeid: NodeHash,
+) -> BoxFuture<Vec<u8>, Error> {
+    get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
             move |node| {

@@ -20,8 +20,8 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
-use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, Changeset, MPath, MPathElement,
-                      Manifest, NodeHash, Repo, RepoPath, NULL_HASH};
+use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, MPath, MPathElement, NodeHash,
+                      RepoPath, NULL_HASH};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -124,7 +124,6 @@ pub struct RevlogRepo {
                                      // Note: there can be 2 * inmemory_logs_capacity revlogs in
                                      // memory in total: half for filelogs and half for revlogs.
 }
-
 
 pub struct RevlogRepoOptions {
     pub inmemory_logs_capacity: usize,
@@ -384,6 +383,16 @@ impl RevlogRepo {
         Ok(StockBookmarks::read(self.basepath.clone())?)
     }
 
+    pub fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+        match self.bookmarks() {
+            Ok(b) => b.get(key).boxify(),
+            Err(e) => future::err(e).boxify(),
+        }
+    }
+
     pub fn changesets(&self) -> ChangesetStream {
         ChangesetStream::new(&self.changelog)
     }
@@ -444,48 +453,5 @@ impl Stream for ChangesetStream {
             Some((_, e)) => Ok(Async::Ready(Some(e.nodeid))),
             None => Ok(Async::Ready(None)),
         }
-    }
-}
-
-impl Repo for RevlogRepo {
-    fn get_heads(&self) -> BoxStream<NodeHash, Error> {
-        self.get_heads().boxify()
-    }
-
-    fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
-        match self.bookmarks() {
-            Ok(bms) => bms.keys().from_err().boxify(),
-            Err(e) => stream::once(Err(e.into())).boxify(),
-        }
-    }
-
-    fn get_bookmark_value(
-        &self,
-        key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
-        match self.bookmarks() {
-            Ok(bms) => bms.get(key).from_err().boxify(),
-            Err(e) => future::err(e.into()).boxify(),
-        }
-    }
-
-    fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
-        self.changesets().boxify()
-    }
-
-    fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
-        RevlogRepo::changeset_exists(self, nodeid).boxify()
-    }
-
-    fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
-        RevlogRepo::get_changeset_by_nodeid(self, nodeid)
-            .map(|cs| cs.boxed())
-            .boxify()
-    }
-
-    fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Manifest + Sync>, Error> {
-        RevlogRepo::get_manifest_by_nodeid(self, nodeid)
-            .map(|m| m.boxed())
-            .boxify()
     }
 }

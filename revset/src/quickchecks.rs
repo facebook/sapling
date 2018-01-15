@@ -13,7 +13,8 @@ use rand::thread_rng;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use mercurial_types::{NodeHash, Repo};
+use blobrepo::BlobRepo;
+use mercurial_types::NodeHash;
 use repoinfo::RepoGenCache;
 
 use branch_even;
@@ -46,9 +47,8 @@ pub struct RevsetSpec {
 }
 
 impl RevsetSpec {
-    pub fn add_hashes<R, G>(&mut self, repo: &R, random: &mut G)
+    pub fn add_hashes<G>(&mut self, repo: &BlobRepo, random: &mut G)
     where
-        R: Repo,
         G: Rng,
     {
         let mut all_changesets_executor = spawn(repo.get_changesets());
@@ -106,10 +106,7 @@ impl RevsetSpec {
         output.pop().expect("No revisions").into_iter().collect()
     }
 
-    pub fn as_revset<R>(&self, repo: Arc<R>, repo_generation: RepoGenCache<R>) -> Box<NodeStream>
-    where
-        R: Repo,
-    {
+    pub fn as_revset(&self, repo: Arc<BlobRepo>, repo_generation: RepoGenCache) -> Box<NodeStream> {
         let mut output: Vec<Box<NodeStream>> = Vec::with_capacity(self.rp_entries.len());
         for entry in self.rp_entries.iter() {
             let next_node = ValidateNodeStream::new(
@@ -212,10 +209,7 @@ impl Arbitrary for RevsetSpec {
     // is a SetDifference by pure chance.
 }
 
-fn match_hashset_to_revset<R>(repo: Arc<R>, mut set: RevsetSpec) -> bool
-where
-    R: Repo,
-{
+fn match_hashset_to_revset(repo: Arc<BlobRepo>, mut set: RevsetSpec) -> bool {
     let repo_generation = RepoGenCache::new(10);
 
     set.add_hashes(&*repo, &mut thread_rng());
