@@ -172,7 +172,7 @@ struct TreeMetadata {
 impl TreeMetadata {
     fn new(size: Option<usize>, entry: Box<mercurial_types::Entry>) -> TreeMetadata {
         TreeMetadata {
-            hash: entry.get_hash().clone(),
+            hash: entry.get_hash().into_nodehash().clone(),
             path: PathBuf::from(OsString::from_vec(entry.get_mpath().to_vec())),
             ty: entry.get_type(),
             size,

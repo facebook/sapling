@@ -13,7 +13,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::{Blob, Entry, MPath, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
-use mercurial_types::nodehash::NodeHash;
+use mercurial_types::nodehash::EntryId;
 
 type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
@@ -104,7 +104,7 @@ impl Entry for MockEntry {
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         unimplemented!();
     }
-    fn get_hash(&self) -> &NodeHash {
+    fn get_hash(&self) -> &EntryId {
         unimplemented!();
     }
     fn get_path(&self) -> &RepoPath {

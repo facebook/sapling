@@ -13,7 +13,7 @@ use futures::stream::Stream;
 use blob::Blob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use nodehash::NodeHash;
+use nodehash::EntryId;
 use path::{MPath, RepoPath};
 
 /// Interface for a manifest
@@ -94,7 +94,7 @@ pub trait Entry: Send + 'static {
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error>;
     fn get_content(&self) -> BoxFuture<Content, Error>;
     fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
-    fn get_hash(&self) -> &NodeHash;
+    fn get_hash(&self) -> &EntryId;
     fn get_path(&self) -> &RepoPath;
     fn get_mpath(&self) -> &MPath;
 
@@ -146,7 +146,7 @@ where
         self.entry.get_size().boxify()
     }
 
-    fn get_hash(&self) -> &NodeHash {
+    fn get_hash(&self) -> &EntryId {
         self.entry.get_hash()
     }
 
@@ -180,7 +180,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_size()
     }
 
-    fn get_hash(&self) -> &NodeHash {
+    fn get_hash(&self) -> &EntryId {
         (**self).get_hash()
     }
 

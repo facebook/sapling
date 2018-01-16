@@ -20,6 +20,7 @@ use nom::IResult;
 use mercurial_types::{Blob, BlobNode, NodeHash};
 pub use mercurial_types::bdiff::{self, Delta};
 pub use mercurial_types::delta;
+use mercurial_types::nodehash::EntryId;
 
 // Submodules
 mod parser;
@@ -212,8 +213,9 @@ impl Revlog {
     }
 
     /// Return the ordinal index of an entry with the given nodeid.
-    pub fn get_entry_by_nodeid(&self, nodeid: &NodeHash) -> Result<Entry> {
-        self.inner.get_entry_by_nodeid(nodeid)
+    pub fn get_entry_by_id(&self, entryid: &EntryId) -> Result<Entry> {
+        let nodeid = entryid.clone().into_nodehash();
+        self.inner.get_entry_by_nodeid(&nodeid)
     }
 
     /// Return a `Chunk` for a revision at `RevIdx`.

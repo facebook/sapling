@@ -22,7 +22,7 @@ use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
 use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, MPath, MPathElement, NodeHash,
                       RepoPath, NULL_HASH};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::{ChangesetId, EntryId};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -218,11 +218,11 @@ impl RevlogRepo {
             .boxify()
     }
 
-    pub fn get_changelog_revlog_entry_by_nodeid(
+    pub fn get_changelog_revlog_entry_by_id(
         &self,
-        nodeid: &NodeHash,
+        entryid: &EntryId,
     ) -> FutureResult<revlog::Entry> {
-        self.changelog.get_entry_by_nodeid(nodeid).into_future()
+        self.changelog.get_entry_by_id(&entryid).into_future()
     }
 
     pub fn get_manifest_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {

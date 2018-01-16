@@ -20,6 +20,7 @@ use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
+use mercurial_types::nodehash::EntryId;
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -138,14 +139,21 @@ where
             })
     };
 
+    let entryid = EntryId::new(csid);
     let manifest = revlog_repo
         .get_changeset_by_nodeid(&csid)
-        .join(revlog_repo.get_changelog_revlog_entry_by_nodeid(&csid))
+        .join(revlog_repo.get_changelog_revlog_entry_by_id(&entryid))
         .from_err()
         .and_then(move |(cs, entry)| {
             let mfid = *cs.manifestid();
             let linkrev = entry.linkrev;
-            put_blobs(revlog_repo, sender, linknodes_store, mfid.clone().into_nodehash(), linkrev)
+            put_blobs(
+                revlog_repo,
+                sender,
+                linknodes_store,
+                mfid.clone().into_nodehash(),
+                linkrev,
+            )
         })
         .map_err(move |err| {
             err.context(format_err!("Can't copy manifest for cs {}", csid))
@@ -189,9 +197,7 @@ where
 
             // Get the listing of entries and fetch each of those
             let files = RevlogManifest::new(revlog_repo.clone(), blob)
-                .map_err(|err| {
-                    Error::from(err.context("Parsing manifest to get list"))
-                })
+                .map_err(|err| Error::from(err.context("Parsing manifest to get list")))
                 .map(|mf| mf.list().map_err(Error::from))
                 .map(|entry_stream| {
                     entry_stream
@@ -210,7 +216,7 @@ where
                             // All entries share the same linknode to the changelog.
                             let linknode_future = linknodes_store.add(
                                 entry.get_path().clone(),
-                                entry.get_hash(),
+                                &entry.get_hash().into_nodehash(),
                                 &linknode,
                             );
                             let copy_future = manifest::copy_entry(entry, sender.clone());

@@ -13,6 +13,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use mercurial::file;
 use mercurial_types::{Blob, MPath, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
+use mercurial_types::nodehash::EntryId;
 
 use blobstore::Blobstore;
 
@@ -25,7 +26,7 @@ use utils::{get_node, RawNodeBlob};
 pub struct BlobEntry<B> {
     blobstore: B,
     path: RepoPath,
-    nodeid: NodeHash,
+    id: EntryId,
     ty: Type,
 }
 
@@ -63,17 +64,17 @@ where
         Ok(Self {
             blobstore,
             path,
-            nodeid,
+            id: EntryId::new(nodeid),
             ty,
         })
     }
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
-        get_node(&self.blobstore, self.nodeid)
+        get_node(&self.blobstore, self.id.into_nodehash())
     }
 
     fn get_raw_content_inner(&self) -> BoxFuture<Vec<u8>, Error> {
-        let nodeid = self.nodeid;
+        let nodeid = self.id.into_nodehash();
         let blobstore = self.blobstore.clone();
 
         self.get_node()
@@ -150,8 +151,8 @@ where
             .boxify()
     }
 
-    fn get_hash(&self) -> &NodeHash {
-        &self.nodeid
+    fn get_hash(&self) -> &EntryId {
+        &self.id
     }
 
     fn get_path(&self) -> &RepoPath {

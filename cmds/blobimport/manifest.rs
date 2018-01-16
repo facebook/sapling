@@ -44,9 +44,10 @@ where
         let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
             .expect("bincode serialize failed");
 
-        let res1 = sender.send(BlobstoreEntry::ManifestEntry(
-            (nodekey, Bytes::from(nodeblob)),
-        ));
+        let res1 = sender.send(BlobstoreEntry::ManifestEntry((
+            nodekey,
+            Bytes::from(nodeblob),
+        )));
         let res2 = sender.send(BlobstoreEntry::ManifestEntry((blobkey, bytes)));
 
         res1.and(res2).map_err(Error::from)
@@ -59,15 +60,13 @@ pub(crate) fn copy_entry(
     entry: Box<Entry>,
     sender: SyncSender<BlobstoreEntry>,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-    let hash = *entry.get_hash();
+    let hash = (*entry).get_hash().into_nodehash();
 
     let blobfuture = entry.get_raw_content().map_err(Error::from);
 
     blobfuture
         .join(entry.get_parents().map_err(Error::from))
-        .and_then(move |(blob, parents)| {
-            put_entry(sender, hash, blob, parents)
-        })
+        .and_then(move |(blob, parents)| put_entry(sender, hash, blob, parents))
 }
 
 pub(crate) fn get_entry_stream(
@@ -78,13 +77,13 @@ pub(crate) fn get_entry_stream(
     let revlog = revlog_repo.get_path_revlog(entry.get_path());
 
     let linkrev = revlog
-        .and_then(|file_revlog| {
-            file_revlog.get_entry_by_nodeid(entry.get_hash())
-        })
+        .and_then(|file_revlog| file_revlog.get_entry_by_id(&entry.get_hash()))
         .map(|e| e.linkrev)
         .map_err(|e| {
-            e.context(format_err!("cannot get linkrev of {}", entry.get_hash()))
-                .into()
+            e.context(format_err!(
+                "cannot get linkrev of {}",
+                entry.get_hash().into_nodehash()
+            )).into()
         });
 
     match linkrev {

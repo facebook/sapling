@@ -19,12 +19,13 @@ use failure;
 use file;
 use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
+use mercurial_types::nodehash::EntryId;
 
 use RevlogRepo;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Details {
-    nodeid: NodeHash,
+    entryid: EntryId,
     flag: Type,
 }
 
@@ -137,7 +138,7 @@ impl Details {
             Err(_) => bail_msg!("malformed hash"),
             Ok(hs) => hs,
         };
-        let nodeid = hash.parse::<NodeHash>().context("malformed hash")?;
+        let entryid = EntryId::new(hash.parse::<NodeHash>().context("malformed hash")?);
 
         if flags.len() > 1 {
             bail_msg!("More than 1 flag");
@@ -155,17 +156,17 @@ impl Details {
         };
 
         Ok(Details {
-            nodeid: nodeid,
+            entryid: entryid,
             flag: flag,
         })
     }
 
     fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        write!(out, "{}{}", self.nodeid, self.flag)
+        write!(out, "{}{}", self.entryid.into_nodehash(), self.flag)
     }
 
-    pub fn nodeid(&self) -> &NodeHash {
-        &self.nodeid
+    pub fn entryid(&self) -> &EntryId {
+        &self.entryid
     }
 
     pub fn flag(&self) -> Type {
@@ -209,9 +210,9 @@ impl Stream for RevlogListStream {
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Error> {
-        let v = self.0.next().map(|(path, details)| {
-            RevlogEntry::new(self.1.clone(), path, details)
-        });
+        let v = self.0
+            .next()
+            .map(|(path, details)| RevlogEntry::new(self.1.clone(), path, details));
         match v {
             Some(v) => v.map(|x| Async::Ready(Some(x))),
             None => Ok(Async::Ready(None)),
@@ -267,8 +268,9 @@ impl Entry for RevlogEntry {
 
     fn get_parents(&self) -> BoxFuture<Parents, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
+        let nodeid = self.get_hash().into_nodehash();
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
             .map(|node| *node.parents())
             .into_future()
             .boxify()
@@ -276,14 +278,15 @@ impl Entry for RevlogEntry {
 
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
+        let nodeid = self.get_hash().into_nodehash();
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
             .map(|node| node.as_blob().clone())
             .map_err(|err| {
                 err.context(format_err!(
                     "Can't get content for {} node {}",
                     self.get_path(),
-                    self.get_hash()
+                    nodeid
                 ))
             })
             .map_err(Error::from)
@@ -293,9 +296,10 @@ impl Entry for RevlogEntry {
 
     fn get_content(&self) -> BoxFuture<Content, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
+        let nodeid = self.get_hash().into_nodehash();
 
         revlog
-            .and_then(|revlog| revlog.get_rev_by_nodeid(self.get_hash()))
+            .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
             .map(|node| node.as_blob().clone())
             .and_then(|data| match self.get_type() {
                 // Mercurial file blob can have metadata, but tree manifest can't
@@ -325,7 +329,7 @@ impl Entry for RevlogEntry {
                 err.context(format_err!(
                     "Can't get content for {} node {}",
                     self.get_path(),
-                    self.get_hash()
+                    nodeid
                 ))
             })
             .map_err(Error::from)
@@ -343,8 +347,8 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_hash(&self) -> &NodeHash {
-        self.details.nodeid()
+    fn get_hash(&self) -> &EntryId {
+        &self.details.entryid
     }
 
     fn get_path(&self) -> &RepoPath {
@@ -426,7 +430,8 @@ mod test {
                     (
                         MPath::new(b"hello123").unwrap(),
                         Details {
-                            nodeid: "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
+                            entryid : EntryId::new(
+                                "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap()),
                             flag: Type::Symlink,
                         },
                     ),
