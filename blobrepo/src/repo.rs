@@ -29,6 +29,7 @@ use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{Changeset, Manifest, NodeHash};
+use mercurial_types::nodehash::ChangesetId;
 use rocksblob::Rocksblob;
 use storage_types::Version;
 use tokio_core::reactor::Remote;
@@ -140,15 +141,16 @@ impl BlobRepo {
         self.heads.heads().boxify()
     }
 
-    pub fn changeset_exists(&self, nodeid: &NodeHash) -> BoxFuture<bool, Error> {
-        BlobChangeset::load(&self.blobstore, nodeid)
+    pub fn changeset_exists(&self, changesetid: &ChangesetId) -> BoxFuture<bool, Error> {
+        BlobChangeset::load(&self.blobstore, &changesetid)
             .map(|cs| cs.is_some())
             .boxify()
     }
 
     pub fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
+        let changesetid = ChangesetId::new(*nodeid);
         let nodeid = *nodeid;
-        BlobChangeset::load(&self.blobstore, &nodeid)
+        BlobChangeset::load(&self.blobstore, &changesetid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into()))
             .map(|cs| cs.boxed())
             .boxify()

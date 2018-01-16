@@ -15,6 +15,7 @@ use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{Blob, BlobNode, Changeset, MPath, NodeHash, Parents, Time};
+use mercurial_types::nodehash::ChangesetId;
 
 use errors::*;
 
@@ -50,12 +51,12 @@ impl BlobChangeset {
 
     pub fn load<B>(
         blobstore: &B,
-        nodeid: &NodeHash,
+        changesetid: &ChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static
     where
         B: Blobstore,
     {
-        let nodeid = *nodeid;
+        let nodeid = changesetid.clone().into_nodehash();
         let key = cskey(&nodeid);
 
         blobstore.get(key).and_then(move |got| match got {

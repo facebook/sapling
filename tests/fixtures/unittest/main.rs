@@ -15,7 +15,7 @@ extern crate mercurial_types;
 use ascii::AsciiString;
 use futures::executor::spawn;
 use mercurial_types::manifest::{Content, Type};
-use mercurial_types::nodehash::NodeHash;
+use mercurial_types::nodehash::{ChangesetId, NodeHash};
 use mercurial_types::path::MPath;
 
 #[test]
@@ -30,9 +30,10 @@ fn check_heads() {
             hash
                 == NodeHash::from_ascii_str(&AsciiString::from_ascii(
                     "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                ).expect(
-                    "Can't turn string to AsciiString",
-                )).expect("Can't turn AsciiString to NodeHash")
+                ).expect("Can't turn string to AsciiString"))
+                    .expect(
+                    "Can't turn AsciiString to NodeHash",
+                )
         } else {
             false
         },
@@ -53,10 +54,13 @@ fn check_heads() {
 fn check_head_exists() {
     let repo = linear::getrepo();
 
-    let exists_future = repo.changeset_exists(&NodeHash::from_ascii_str(&AsciiString::from_ascii(
-        "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-    ).expect("Can't turn string to AsciiString"))
-        .expect("Can't turn AsciiString to NodeHash"));
+    let nodehash =
+        NodeHash::from_ascii_str(&AsciiString::from_ascii(
+            "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+        ).expect("Can't turn string to AsciiString"))
+            .expect("Can't turn AsciiString to NodeHash");
+
+    let exists_future = repo.changeset_exists(&ChangesetId::new(nodehash));
 
     let exists = spawn(exists_future)
         .wait_future()
