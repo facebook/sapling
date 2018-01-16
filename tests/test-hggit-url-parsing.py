@@ -7,7 +7,7 @@ except ImportError:
     print "skipped: missing feature: dulwich"
     sys.exit(80)
 
-import os, tempfile, shutil
+import tempfile, shutil
 from mercurial import ui, hg, commands
 
 from hgext.hggit.git_handler import GitHandler
