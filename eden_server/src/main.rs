@@ -231,7 +231,13 @@ where
             }
         };
         repo.get_changeset_by_nodeid(&hash)
-            .map(|cs| cs.manifestid().to_string().into_bytes())
+            .map(|cs| {
+                cs.manifestid()
+                    .clone()
+                    .into_nodehash()
+                    .to_string()
+                    .into_bytes()
+            })
             .from_err()
             .boxify()
     }

@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use quickcheck::{QuickCheck, TestResult};
 
 use mercurial_types::{Blob, BlobNode, MPath, NodeHash};
+use mercurial_types::nodehash::ManifestId;
 
 use changeset::{escape, unescape, Extra, RevlogChangeset, Time};
 
@@ -28,7 +29,8 @@ fn test_parse() {
         cset,
         RevlogChangeset {
             parents: *node.parents(),
-            manifestid: "497522ef3706a1665bf4140497c65b467454e962".parse().unwrap(),
+            manifestid: ManifestId::new(
+                "497522ef3706a1665bf4140497c65b467454e962".parse().unwrap()),
             user: "Mads Kiilerich <madski@unity3d.com>".into(),
             time: Time {
                 time: 1383910550,

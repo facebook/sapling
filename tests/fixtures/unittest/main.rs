@@ -81,7 +81,8 @@ fn check_head_has_file() {
         .wait_future()
         .expect("Can't get changeset");
 
-    let manifest_future = repo.get_manifest_by_nodeid(changeset.manifestid());
+    let manifest_future =
+        repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash());
     let manifest = spawn(manifest_future)
         .wait_future()
         .expect("Can't get manifest");

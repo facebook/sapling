@@ -67,7 +67,8 @@ impl RepoConfigs {
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
             repo.get_changeset_by_nodeid(&changeset_hash)
-                .and_then(move |changeset| repo.get_manifest_by_nodeid(changeset.manifestid()))
+                .and_then(move |changeset| repo.get_manifest_by_nodeid(
+                    &changeset.manifestid().clone().into_nodehash()))
                 .map_err(|err| err.context("failed to get manifest from changeset").into())
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
@@ -81,7 +82,7 @@ impl RepoConfigs {
         Box::new(
             repo.get_changeset_by_nodeid(&changeset_hash)
                 .and_then(move |changeset| {
-                    repo.get_manifest_by_nodeid(changeset.manifestid())
+                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
                 })
                 .map_err(|err| {
                     err.context("failed to get manifest from changeset").into()

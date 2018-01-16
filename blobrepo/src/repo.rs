@@ -29,7 +29,7 @@ use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{Changeset, Manifest, NodeHash};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::{ChangesetId, ManifestId};
 use rocksblob::Rocksblob;
 use storage_types::Version;
 use tokio_core::reactor::Remote;
@@ -161,7 +161,8 @@ impl BlobRepo {
         nodeid: &NodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
-        BlobManifest::load(&self.blobstore, &nodeid)
+        let manifestid = ManifestId::new(nodeid);
+        BlobManifest::load(&self.blobstore, &manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()

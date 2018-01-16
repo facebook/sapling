@@ -7,11 +7,11 @@
 use std::collections::BTreeMap;
 
 use blobnode::Parents;
-use nodehash::NodeHash;
+use nodehash::ManifestId;
 use path::MPath;
 
 pub trait Changeset: Send + 'static {
-    fn manifestid(&self) -> &NodeHash;
+    fn manifestid(&self) -> &ManifestId;
     fn user(&self) -> &[u8];
     fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>>;
     fn comments(&self) -> &[u8];
@@ -28,7 +28,7 @@ pub trait Changeset: Send + 'static {
 }
 
 impl Changeset for Box<Changeset> {
-    fn manifestid(&self) -> &NodeHash {
+    fn manifestid(&self) -> &ManifestId {
         (**self).manifestid()
     }
 

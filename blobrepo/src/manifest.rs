@@ -13,7 +13,8 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::{self, Details};
-use mercurial_types::{Entry, MPath, Manifest, NodeHash};
+use mercurial_types::{Entry, MPath, Manifest};
+use mercurial_types::nodehash::ManifestId;
 
 use blobstore::Blobstore;
 
@@ -30,8 +31,9 @@ impl<B> BlobManifest<B>
 where
     B: Blobstore + Clone,
 {
-    pub fn load(blobstore: &B, manifestid: &NodeHash) -> BoxFuture<Option<Self>, Error> {
-        get_node(blobstore, manifestid.clone())
+    pub fn load(blobstore: &B, manifestid: &ManifestId) -> BoxFuture<Option<Self>, Error> {
+        let nodehash = manifestid.clone().into_nodehash();
+        get_node(blobstore, nodehash)
             .and_then({
                 let blobstore = blobstore.clone();
                 move |nodeblob| {

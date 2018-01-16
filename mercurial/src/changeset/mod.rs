@@ -12,6 +12,7 @@ use errors::*;
 use failure;
 use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
 use mercurial_types::changeset::{Changeset, Time};
+use mercurial_types::nodehash::ManifestId;
 
 #[cfg(test)]
 mod test;
@@ -23,7 +24,7 @@ mod test;
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RevlogChangeset {
     parents: Parents,
-    manifestid: NodeHash,
+    manifestid: ManifestId,
     user: Vec<u8>,
     time: Time,
     extra: Extra,
@@ -193,7 +194,7 @@ impl RevlogChangeset {
         // partially initialized RevlogChangeset then fill it in as we go.
         let mut ret = Self {
             parents: *node.parents(),
-            manifestid: NULL_HASH,
+            manifestid: ManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: Time { time: 0, tz: 0 },
             extra: Extra(BTreeMap::new()),
@@ -207,8 +208,9 @@ impl RevlogChangeset {
                 .ok_or(failure::err_msg("node has no data"))?;
             let mut lines = data.split(|b| *b == b'\n');
 
-            ret.manifestid = parseline(&mut lines, |l| NodeHash::from_str(str::from_utf8(l)?))
+            let nodehash = parseline(&mut lines, |l| NodeHash::from_str(str::from_utf8(l)?))
                 .context("can't get hash")?;
+            ret.manifestid = ManifestId::new(nodehash);
             ret.user =
                 parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec())).context("can't get user")?;
             let (time, extra) =
@@ -249,7 +251,7 @@ impl RevlogChangeset {
     /// Generate a serialized changeset. This is the counterpart to parse, and generates
     /// in the same format as Mercurial. It should be bit-for-bit identical in fact.
     pub fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
-        write!(out, "{}\n", self.manifestid)?;
+        write!(out, "{}\n", self.manifestid.into_nodehash())?;
         out.write_all(&self.user)?;
         out.write_all(b"\n")?;
         write!(out, "{} {} ", self.time.time, self.time.tz)?;
@@ -274,7 +276,7 @@ impl RevlogChangeset {
 }
 
 impl Changeset for RevlogChangeset {
-    fn manifestid(&self) -> &NodeHash {
+    fn manifestid(&self) -> &ManifestId {
         &self.manifestid
     }
 

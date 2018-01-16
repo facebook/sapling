@@ -15,7 +15,7 @@ use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{Blob, BlobNode, Changeset, MPath, NodeHash, Parents, Time};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::{ChangesetId, ManifestId};
 
 use errors::*;
 
@@ -100,7 +100,7 @@ impl BlobChangeset {
 }
 
 impl Changeset for BlobChangeset {
-    fn manifestid(&self) -> &NodeHash {
+    fn manifestid(&self) -> &ManifestId {
         self.revlogcs.manifestid()
     }
 

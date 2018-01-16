@@ -145,7 +145,7 @@ where
         .and_then(move |(cs, entry)| {
             let mfid = *cs.manifestid();
             let linkrev = entry.linkrev;
-            put_blobs(revlog_repo, sender, linknodes_store, mfid, linkrev)
+            put_blobs(revlog_repo, sender, linknodes_store, mfid.clone().into_nodehash(), linkrev)
         })
         .map_err(move |err| {
             err.context(format_err!("Can't copy manifest for cs {}", csid))
