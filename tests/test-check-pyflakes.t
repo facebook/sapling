@@ -21,5 +21,5 @@ run pyflakes on all tracked files ending in .py or without a file ending
   > -X fb/packaging \
   > 2>/dev/null \
   > | xargs pyflakes 2>/dev/null | "$TESTDIR/filterpyflakes.py"
-  setup.py:*: 'svn_swig_wrapper' imported but unused (glob)
+  setup.py:*: '*svn_swig_wrapper' imported but unused (glob)
   
