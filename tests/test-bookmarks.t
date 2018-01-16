@@ -288,6 +288,10 @@ delete nonexistent bookmark
   abort: bookmark 'A' does not exist
   [255]
 
+ensure bookmark names are deduplicated before deleting
+  $ hg book delete-me
+  $ hg book -d delete-me delete-me
+
 bookmark name with spaces should be stripped
 
   $ hg bookmark ' x  y '

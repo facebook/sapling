@@ -971,7 +971,7 @@ def bookmark(ui, repo, *names, **opts):
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
             if delete:
-                names = pycompat.maplist(repo._bookmarks.expandname, names)
+                names = pycompat.maplist(repo._bookmarks.expandname, set(names))
                 bookmarks.delete(repo, tr, names)
             elif rename:
                 if not names:
