@@ -135,3 +135,45 @@ impl Arbitrary for NodeHash {
         single_shrinker(NULL_HASH)
     }
 }
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf)]
+pub struct ChangesetId(NodeHash);
+
+impl ChangesetId {
+    pub fn new(hash: NodeHash) -> Self {
+        ChangesetId(hash)
+    }
+
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf)]
+pub struct ManifestId(NodeHash);
+
+impl ManifestId {
+    pub fn new(hash: NodeHash) -> Self {
+        ManifestId(hash)
+    }
+
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf)]
+pub struct EntryId(NodeHash);
+
+impl EntryId {
+    pub fn new(hash: NodeHash) -> Self {
+        EntryId(hash)
+    }
+
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+}
