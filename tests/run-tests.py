@@ -1178,6 +1178,36 @@ class PythonTest(Test):
     def refpath(self):
         return os.path.join(self._testdir, b'%s.out' % self.bname)
 
+    def _processoutput(self, output):
+        if os.path.exists(self.refpath):
+            expected = open(self.refpath, 'r').readlines()
+        else:
+            return output
+
+        processed = ['' for i in output]
+        i = 0
+        while i < len(expected) and i < len(output):
+            line = expected[i].strip()
+
+            # by default, processed output is the same as received output
+            processed[i] = output[i]
+            if line.endswith(' (re)'):
+                # pattern, should try to match
+                pattern = line[:-5]
+                if not pattern.endswith('$'):
+                    pattern += '$'
+                if re.match(pattern, output[i].strip()):
+                    processed[i] = expected[i]
+            i = i + 1
+
+        # output is longer than expected, we don't need to process
+        # the tail
+        while i < len(output):
+            processed[i] = output[i]
+            i = i + 1
+
+        return processed
+
     def _run(self, env):
         py3kswitch = self._py3kwarnings and b' -3' or b''
         cmd = b'%s%s "%s"' % (PYTHON, py3kswitch, self.path)
@@ -1188,7 +1218,7 @@ class PythonTest(Test):
         if self._aborted:
             raise KeyboardInterrupt()
 
-        return result
+        return result[0], self._processoutput(result[1])
 
 # Some glob patterns apply only in some circumstances, so the script
 # might want to remove (glob) annotations that otherwise should be
