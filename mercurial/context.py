@@ -2007,7 +2007,7 @@ class overlayworkingctx(committablectx):
     def data(self, path):
         if self.isdirty(path):
             if self._cache[path]['exists']:
-                if self._cache[path]['data']:
+                if self._cache[path]['data'] is not None:
                     return self._cache[path]['data']
                 else:
                     # Must fallback here, too, because we only set flags.
