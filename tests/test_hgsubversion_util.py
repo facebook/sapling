@@ -2,6 +2,7 @@
 
 import difflib
 import errno
+import imp
 import gettext
 import os
 import shutil
@@ -816,3 +817,18 @@ files:     {files}
 
     def draw(self, repo):
         sys.stdout.write(self.getgraph(repo))
+
+def import_test(name):
+    components = name.split('_')
+    components.insert(1, 'hgsubversion')
+    testname = '-'.join(components) + '.py'
+    dot = os.path.dirname(os.path.abspath(__file__))
+    candidates = [os.path.join(dot, testname),
+                  os.path.join(dot, 'comprehensive', testname)]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return imp.load_source(name, candidate)
+
+    raise ImportError('Could not import module %s from files like %s' %
+                      (name, testname))
+

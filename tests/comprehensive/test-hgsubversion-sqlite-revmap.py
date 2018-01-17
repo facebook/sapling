@@ -3,30 +3,18 @@
 import os
 import sys
 
-# wrapped in a try/except because of weirdness in how
-# run.py works as compared to nose.
-try:
-    import test_hgsubversion_util
-except ImportError:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_hgsubversion_util
+import test_hgsubversion_util
 
 # interesting and fast tests
-import test_fetch_mappings
-import test_fetch_renames
-import test_pull
-import test_template_keywords
-import test_hgsubversion_utility_commands
+test_fetch_mappings = test_hgsubversion_util.import_test('test_fetch_mappings')
+test_fetch_renames = test_hgsubversion_util.import_test('test_fetch_renames')
+test_pull = test_hgsubversion_util.import_test('test_pull')
+test_template_keywords = test_hgsubversion_util.import_test('test_template_keywords')
+test_utility_commands = test_hgsubversion_util.import_test('test_utility_commands')
+test_custom_layout = test_hgsubversion_util.import_test('test_custom_layout')
+test_rebuildmeta = test_hgsubversion_util.import_test('test_rebuildmeta')
+test_updatemeta = test_hgsubversion_util.import_test('test_updatemeta')
 
-# comprehensive tests
-try:
-    import test_custom_layout
-except ImportError:
-    sys.path.insert(0, os.path.dirname(__file__))
-    import test_custom_layout
-
-import test_rebuildmeta
-import test_updatemeta
 
 from hgext.hgsubversion import svnmeta, maps
 
@@ -72,7 +60,7 @@ buildtestclass(test_fetch_mappings.MapTests)
 buildtestclass(test_fetch_renames.TestFetchRenames)
 buildtestclass(test_pull.TestPull)
 buildtestclass(test_template_keywords.TestLogKeywords)
-buildtestclass(test_hgsubversion_utility_commands.UtilityTests)
+buildtestclass(test_utility_commands.UtilityTests)
 
 buildtestclass(test_rebuildmeta.RebuildMetaTests, svndumpselector)
 buildtestclass(test_updatemeta.UpdateMetaTests, svndumpselector)

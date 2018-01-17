@@ -3,15 +3,9 @@
 import os
 import sys
 
-# wrapped in a try/except because of weirdness in how
-# run.py works as compared to nose.
-try:
-    import test_hgsubversion_util
-except ImportError:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_hgsubversion_util
+import test_hgsubversion_util
 
-import test_rebuildmeta
+test_rebuildmeta = test_hgsubversion_util.import_test('test_rebuildmeta')
 
 from mercurial import context
 from mercurial import extensions

@@ -4,15 +4,7 @@ import os
 import sys
 
 from mercurial import hg
-
-# wrapped in a try/except because of weirdness in how
-# run.py works as compared to nose.
-try:
-    import test_hgsubversion_util
-except ImportError:
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_hgsubversion_util
-
+import test_hgsubversion_util
 from hgext.hgsubversion import svnwrap
 
 
@@ -35,7 +27,8 @@ def _do_case(self, name, layout):
         checkout_path += '/' + subdir
     u.setconfig('hgsubversion', 'stupid', '1')
     u.setconfig('hgsubversion', 'layout', layout)
-    test_hgsubversion_util.hgclone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
+    cp = test_hgsubversion_util.fileurl(checkout_path)
+    test_hgsubversion_util.hgclone(u, cp, wc2_path, update=False)
     if layout == 'single':
         self.assertEqual(len(self.repo.heads()), 1)
     self.repo2 = hg.repository(test_hgsubversion_util.testui(), wc2_path)
