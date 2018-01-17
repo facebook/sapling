@@ -125,56 +125,19 @@
   hgsubversion/setup.py not using absolute_import
   setup.py not using absolute_import
   tests/bundlerepologger.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-custom-layout.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-obsstore-on.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-rebuildmeta.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-sqlite-revmap.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-stupid-pull.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-updatemeta.py not using absolute_import
+  tests/comprehensive/test-hgsubversion-verify-and-startrev.py not using absolute_import
   tests/conduithttp.py not using absolute_import
   tests/dummyext1.py not using absolute_import
   tests/dummyext2.py not using absolute_import
+  tests/fixtures/rsvn.py not using absolute_import
+  tests/fixtures/rsvn.py requires print_function
   tests/hggit/commitextra.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_custom_layout.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_obsstore_on.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_rebuildmeta.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_sqlite_revmap.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_stupid_pull.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_updatemeta.py not using absolute_import
-  tests/hgsubversion/comprehensive/test_verify_and_startrev.py not using absolute_import
-  tests/hgsubversion/fixtures/rsvn.py not using absolute_import
-  tests/hgsubversion/fixtures/rsvn.py requires print_function
-  tests/hgsubversion/run.py not using absolute_import
-  tests/hgsubversion/test_binaryfiles.py not using absolute_import
-  tests/hgsubversion/test_diff.py not using absolute_import
-  tests/hgsubversion/test_externals.py not using absolute_import
-  tests/hgsubversion/test_externals.py requires print_function
-  tests/hgsubversion/test_fetch_branches.py not using absolute_import
-  tests/hgsubversion/test_fetch_command.py not using absolute_import
-  tests/hgsubversion/test_fetch_command_regexes.py not using absolute_import
-  tests/hgsubversion/test_fetch_dir_removal.py not using absolute_import
-  tests/hgsubversion/test_fetch_exec.py not using absolute_import
-  tests/hgsubversion/test_fetch_mappings.py not using absolute_import
-  tests/hgsubversion/test_fetch_renames.py not using absolute_import
-  tests/hgsubversion/test_fetch_symlinks.py not using absolute_import
-  tests/hgsubversion/test_fetch_truncated.py not using absolute_import
-  tests/hgsubversion/test_helpers.py not using absolute_import
-  tests/hgsubversion/test_hooks.py not using absolute_import
-  tests/hgsubversion/test_pull.py not using absolute_import
-  tests/hgsubversion/test_pull_fallback.py not using absolute_import
-  tests/hgsubversion/test_push_autoprops.py not using absolute_import
-  tests/hgsubversion/test_push_command.py not using absolute_import
-  tests/hgsubversion/test_push_dirs.py not using absolute_import
-  tests/hgsubversion/test_push_eol.py not using absolute_import
-  tests/hgsubversion/test_push_renames.py not using absolute_import
-  tests/hgsubversion/test_revmap_migrate.py not using absolute_import
-  tests/hgsubversion/test_single_dir_clone.py not using absolute_import
-  tests/hgsubversion/test_single_dir_clone.py requires print_function
-  tests/hgsubversion/test_single_dir_push.py not using absolute_import
-  tests/hgsubversion/test_svn_pre_commit_hooks.py not using absolute_import
-  tests/hgsubversion/test_svnwrap.py not using absolute_import
-  tests/hgsubversion/test_tags.py not using absolute_import
-  tests/hgsubversion/test_template_keywords.py not using absolute_import
-  tests/hgsubversion/test_template_keywords.py requires print_function
-  tests/hgsubversion/test_unaffected_core.py not using absolute_import
-  tests/hgsubversion/test_urls.py not using absolute_import
-  tests/hgsubversion/test_util.py not using absolute_import
-  tests/hgsubversion/test_util.py requires print_function
-  tests/hgsubversion/test_utility_commands.py not using absolute_import
   tests/test-fb-hgext-extutil.py not using absolute_import
   tests/test-fb-hgext-fastmanifest.py not using absolute_import
   tests/test-fb-hgext-generic-bisect.py not using absolute_import
@@ -182,6 +145,42 @@
   tests/test-fb-hgext-sshaskpass.py not using absolute_import
   tests/test-hggit-url-parsing.py not using absolute_import
   tests/test-hggit-url-parsing.py requires print_function
+  tests/test-hgsubversion-binaryfiles.py not using absolute_import
+  tests/test-hgsubversion-diff.py not using absolute_import
+  tests/test-hgsubversion-externals.py not using absolute_import
+  tests/test-hgsubversion-externals.py requires print_function
+  tests/test-hgsubversion-fetch-branches.py not using absolute_import
+  tests/test-hgsubversion-fetch-command-regexes.py not using absolute_import
+  tests/test-hgsubversion-fetch-command.py not using absolute_import
+  tests/test-hgsubversion-fetch-dir-removal.py not using absolute_import
+  tests/test-hgsubversion-fetch-exec.py not using absolute_import
+  tests/test-hgsubversion-fetch-mappings.py not using absolute_import
+  tests/test-hgsubversion-fetch-renames.py not using absolute_import
+  tests/test-hgsubversion-fetch-symlinks.py not using absolute_import
+  tests/test-hgsubversion-fetch-truncated.py not using absolute_import
+  tests/test-hgsubversion-helpers.py not using absolute_import
+  tests/test-hgsubversion-hooks.py not using absolute_import
+  tests/test-hgsubversion-pull-fallback.py not using absolute_import
+  tests/test-hgsubversion-pull.py not using absolute_import
+  tests/test-hgsubversion-push-autoprops.py not using absolute_import
+  tests/test-hgsubversion-push-command.py not using absolute_import
+  tests/test-hgsubversion-push-dirs.py not using absolute_import
+  tests/test-hgsubversion-push-eol.py not using absolute_import
+  tests/test-hgsubversion-push-renames.py not using absolute_import
+  tests/test-hgsubversion-revmap-migrate.py not using absolute_import
+  tests/test-hgsubversion-single-dir-clone.py not using absolute_import
+  tests/test-hgsubversion-single-dir-clone.py requires print_function
+  tests/test-hgsubversion-single-dir-push.py not using absolute_import
+  tests/test-hgsubversion-svn-pre-commit-hooks.py not using absolute_import
+  tests/test-hgsubversion-svnwrap.py not using absolute_import
+  tests/test-hgsubversion-tags.py not using absolute_import
+  tests/test-hgsubversion-template-keywords.py not using absolute_import
+  tests/test-hgsubversion-template-keywords.py requires print_function
+  tests/test-hgsubversion-unaffected-core.py not using absolute_import
+  tests/test-hgsubversion-urls.py not using absolute_import
+  tests/test-hgsubversion-utility-commands.py not using absolute_import
+  tests/test_hgsubversion_util.py not using absolute_import
+  tests/test_hgsubversion_util.py requires print_function
   tests/waitforfile.py not using absolute_import
 
 #if py3exe
