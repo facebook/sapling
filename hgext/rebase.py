@@ -835,6 +835,13 @@ def rebase(ui, repo, **opts):
             ui.log("rebase", "", rebase_imm_restart=True)
             _origrebase(ui, repo, **{'abort': True})
             return _origrebase(ui, repo, inmemory=False, **opts)
+        except Exception as e:
+            ui.warn(('hit error; re-running rebase without in-memory merge '
+                     '(%s)\n' % e))
+            ui.log("rebase", "", rebase_imm_restart=True,
+                rebase_imm_exception=str(e))
+            _origrebase(ui, repo, **{'abort': True})
+            return _origrebase(ui, repo, inmemory=False, **opts)
     else:
         return _origrebase(ui, repo, **opts)
 
