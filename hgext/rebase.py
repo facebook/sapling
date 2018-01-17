@@ -778,6 +778,12 @@ def rebase(ui, repo, **opts):
       [rebase]
       experimental.inmemorydisallowedpaths = Types.php|build.jar
 
+    By default, it will not run if a mergedriver is configured, unless you set
+    the following config to False::
+
+      [rebase]
+      experimental.inmemory.nomergedriver = True
+
     Return Values:
 
     Returns 0 on success, 1 if nothing to rebase or there are
@@ -798,6 +804,20 @@ def rebase(ui, repo, **opts):
         # since the restarting logic will fail the entire transaction.
         elif repo.currenttransaction() is not None:
             whynotimm = "rebase run inside a transaction"
+
+        # in-memory rebase can be configured not to run if a mergedriver is
+        # configured; this should be used only if the driver's preprocess()
+        # scripts might use the working copy.
+        #
+        # (Note: Even without this config, IMM will still abort if any files are
+        # marked by preprocess() to be driver-resolved; however, sometimes the
+        # preprocess() function itself can't be trusted.)
+        #
+        # TODO(phillco): Replace with decorators on the scripts themselves
+        elif (ui.config('experimental', 'mergedriver') and
+              ui.configbool('rebase',
+                  'experimental.inmemory.nomergedriver', True)):
+            whynotimm = 'mergedriver enabled'
 
         if whynotimm:
             ui.log("rebase", "disabling IMM because: %s" % whynotimm,
