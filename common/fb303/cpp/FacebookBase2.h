@@ -9,17 +9,30 @@
  */
 #pragma once
 
+#include <time.h>
+
+#include <common/fb303/if/gen-cpp2/FacebookService.h>
+
 namespace folly {
 class EventBaseManager;
 }
 
 namespace facebook { namespace fb303 {
 
-class FacebookBase2 {
+class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
+  time_t startTime;
 public:
-  explicit FacebookBase2(const char*) {}
+  explicit FacebookBase2(const char*) {
+    startTime = time(NULL);
+  }
 
   void setEventBaseManager(folly::EventBaseManager*) {}
+
+  int64_t aliveSince() override {
+    // crude implementation because QsfpCache depends on it
+    time_t now = time(NULL);
+    return (uint64_t) (now - startTime);
+  }
 };
 
 }}
