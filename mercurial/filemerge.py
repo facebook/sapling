@@ -619,6 +619,9 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
     (if any), the backup is used to undo certain premerges, confirm whether a
     merge changed anything, and determine what line endings the new file should
     have.
+
+    Backups only need to be written once (right before the premerge) since their
+    content doesn't change afterwards.
     """
     if fcd.isabsent():
         return None
@@ -629,7 +632,6 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
     back = scmutil.origpath(ui, repo, a)
     inworkingdir = (back.startswith(repo.wvfs.base) and not
         back.startswith(repo.vfs.base))
-
     if isinstance(fcd, context.overlayworkingfilectx) and inworkingdir:
         # If the backup file is to be in the working directory, and we're
         # merging in-memory, we must redirect the backup to the memory context
@@ -639,12 +641,17 @@ def _makebackup(repo, ui, wctx, fcd, premerge):
             wctx[relpath].write(fcd.data(), fcd.flags())
         return wctx[relpath]
     else:
-        # Otherwise, write to wherever the user specified the backups should go.
-        #
+        if premerge:
+            # Otherwise, write to wherever path the user specified the backups
+            # should go. We still need to switch based on whether the source is
+            # in-memory so we can use the fast path of ``util.copy`` if both are
+            # on disk.
+            if isinstance(fcd, context.overlayworkingfilectx):
+                util.writefile(back, fcd.data())
+            else:
+                util.copyfile(a, back)
         # A arbitraryfilectx is returned, so we can run the same functions on
         # the backup context regardless of where it lives.
-        if premerge:
-            util.copyfile(a, back)
         return context.arbitraryfilectx(back, repo=repo)
 
 def _maketempfiles(repo, fco, fca):
