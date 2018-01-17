@@ -333,7 +333,6 @@ Test extension help:
        interactiveui
                      (no help text available)
        keyword       expand keywords in tracked files
-       largefiles    track large binary files
        linkrevcache  a simple caching layer to speed up _adjustlinkrev
        logginghelper
                      this extension logs different pieces of information that

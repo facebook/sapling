@@ -716,11 +716,7 @@ make sure --traceback works on hook import failure
   HookLoadError: precommit.importfail hook is invalid: import of "importfail" failed
   abort: precommit.importfail hook is invalid: import of "importfail" failed
 
-Issue1827: Hooks Update & Commit not completely post operation
-
-commit and update hooks should run after command completion.  The largefiles
-use demonstrates a recursive wlock, showing the hook doesn't run until the
-final release (and dirstate flush).
+commit and update hooks should run after command completion.
 
   $ echo '[hooks]' > .hg/hgrc
   $ echo 'commit = hg id' >> .hg/hgrc
@@ -728,8 +724,7 @@ final release (and dirstate flush).
   $ echo bb > a
   $ hg ci -ma
   223eafe2750c tip
-  $ hg up 0 --config extensions.largefiles=
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+  $ hg up 0
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

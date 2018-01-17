@@ -498,8 +498,7 @@ into the hook command.
 
   $ echo "foo" > amended.txt
   $ hg add amended.txt
-  $ hg ci -q --config extensions.largefiles= --amend -I amended.txt
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+  $ hg ci -q --amend -I amended.txt
 
 Test that folding multiple changes in a row doesn't show multiple
 editors.

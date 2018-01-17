@@ -1101,9 +1101,6 @@ class Test(unittest.TestCase):
             hgrc.write(b'[devel]\n')
             hgrc.write(b'all-warnings = true\n')
             hgrc.write(b'default-date = 0 0\n')
-            hgrc.write(b'[largefiles]\n')
-            hgrc.write(b'usercache = %s\n' %
-                       (os.path.join(self._testtmp, b'.cache/largefiles')))
             hgrc.write(b'[lfs]\n')
             hgrc.write(b'usercache = %s\n' %
                        (os.path.join(self._testtmp, b'.cache/lfs')))
@@ -2380,7 +2377,6 @@ class TestRunner(object):
             slow = {b'svn': 10,
                     b'cvs': 10,
                     b'hghave': 10,
-                    b'largefiles-update': 10,
                     b'run-tests': 10,
                     b'corruption': 10,
                     b'race': 10,

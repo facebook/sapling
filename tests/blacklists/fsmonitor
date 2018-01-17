@@ -14,16 +14,6 @@ test-eol-update.t
 test-eol.t
 test-eolfilename.t
 
-#### mainly testing largefiles extension
-test-issue3084.t
-test-largefiles-cache.t
-test-largefiles-misc.t
-test-largefiles-small-disk.t
-test-largefiles-update.t
-test-largefiles-wireproto.t
-test-largefiles.t
-test-lfconvert.t
-
 #### mainly testing nested repositories
 test-nested-repo.t
 test-push-warn.t

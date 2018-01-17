@@ -4,7 +4,6 @@ Create a repository:
   devel.all-warnings=true
   devel.default-date=0 0
   extensions.fsmonitor= (fsmonitor !)
-  largefiles.usercache=$TESTTMP/.cache/largefiles
   lfs.usercache=$TESTTMP/.cache/lfs
   ui.slash=True
   ui.interactive=False

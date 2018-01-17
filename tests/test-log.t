@@ -47,10 +47,7 @@ changeset graph
   $ hg mv dir/b e
   $ hg ci -me -d '5 0'
 
-Make sure largefiles doesn't interfere with logging a regular file
-  $ hg --debug log a -T '{rev}: {desc}\n' --config extensions.largefiles=
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
-  updated patterns: .hglf/a, a
+  $ hg --debug log a -T '{rev}: {desc}\n'
   0: a
   $ hg log a
   changeset:   0:9161b9aeaf16
@@ -69,9 +66,7 @@ Make sure largefiles doesn't interfere with logging a regular file
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
-  $ hg --debug log glob:a* -T '{rev}: {desc}\n' --config extensions.largefiles=
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
-  updated patterns: glob:.hglf/a*, glob:a*
+  $ hg --debug log glob:a* -T '{rev}: {desc}\n'
   3: d
   0: a
 
@@ -2183,9 +2178,7 @@ hg log -f dir across branches
   |
   o  a
   
-Ensure that largefiles doesn't interfere with following a normal file
-  $ hg  --config extensions.largefiles= log -f d -T '{desc}' -G
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+  $ hg  log -f d -T '{desc}' -G
   @  c
   |
   o  a

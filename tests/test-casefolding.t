@@ -119,47 +119,6 @@ no clobbering of untracked files with wrong casing
   gold
   $ rm a
 
-test that normal file in different case on target context is not
-unlinked by largefiles extension.
-
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > largefiles=
-  > EOF
-  $ hg update -q -C 1
-  $ hg status -A
-  $ echo 'A as largefiles' > A
-  $ hg add --large A
-  $ hg commit -m '#3'
-  created new head
-  $ hg manifest -r 3
-  .hglf/A
-  $ hg manifest -r 0
-  a
-  $ hg update -q -C 0
-  $ hg status -A
-  C a
-  $ hg update -q -C 3
-  $ hg update -q 0
-
-  $ hg up -C -r 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg mv A a
-  $ hg diff -g > rename.diff
-  $ hg ci -m 'A -> a'
-  $ hg up -q '.^'
-  $ hg import rename.diff -m "import rename A -> a"
-  applying rename.diff
-  $ hg st
-  ? rename.diff
-  $ hg files
-  a
-  $ find * | sort
-  a
-  rename.diff
-
-  $ rm rename.diff
-
   $ cd ..
 
 issue 3342: file in nested directory causes unexpected abort

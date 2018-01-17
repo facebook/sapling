@@ -77,7 +77,6 @@ Test if `hg config` works:
   $ $PYTHON3 $HGBIN config
   devel.all-warnings=true
   devel.default-date=0 0
-  largefiles.usercache=$TESTTMP/.cache/largefiles
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed

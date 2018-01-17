@@ -133,17 +133,14 @@ clone to remote1
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
 
-The largefiles extension doesn't crash
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remotelf --config extensions.largefiles=
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
+init to existing repo
+
+  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" local ssh://user@dummy/remotelf
   searching for changes
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-
-init to existing repo
 
   $ hg init -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote1
   abort: repository remote1 already exists!

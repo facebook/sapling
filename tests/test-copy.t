@@ -189,13 +189,6 @@ should show copy
   M bar
     foo
 
-XXX: filtering lfilesrepo.status() in 3.3-rc causes the copy source to not be
-displayed.
-  $ hg st -C --config extensions.largefiles=
-  The fsmonitor extension is incompatible with the largefiles extension and has been disabled. (fsmonitor !)
-  M bar
-    foo
-
   $ hg commit -m3
 
 should show no parents for tip
