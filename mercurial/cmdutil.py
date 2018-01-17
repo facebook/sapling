@@ -40,7 +40,6 @@ from . import (
     pycompat,
     registrar,
     revlog,
-    revset,
     scmutil,
     smartset,
     templatekw,
@@ -2523,14 +2522,21 @@ def getgraphlogrevs(repo, pats, opts):
     if not revs:
         return smartset.baseset(), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
+    if expr:
+        if opts.get('rev'):
+            revs = revs & repo.revs(expr)
+        else:
+            # revs is likely huge. "x & y" is more efficient if "x" is small.
+            # "x & y" respects "x"'s order. Once rewritten to "y & x", the
+            # order is decided by "y". Fortunately we know the order of "x" is
+            # always "reverse" in this case. So just do a reverse sort.
+            revs = repo.revs(expr) & revs
+            revs.sort(reverse=True)
     if opts.get('rev'):
         # User-specified revs might be unsorted, but don't sort before
         # _makelogrevset because it might depend on the order of revs
         if not (revs.isdescending() or revs.istopo()):
             revs.sort(reverse=True)
-    if expr:
-        matcher = revset.match(repo.ui, expr)
-        revs = matcher(repo, revs)
     if limit is not None:
         limitedrevs = []
         for idx, rev in enumerate(revs):
@@ -2555,8 +2561,15 @@ def getlogrevs(repo, pats, opts):
         return smartset.baseset([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        matcher = revset.match(repo.ui, expr)
-        revs = matcher(repo, revs)
+        if opts.get('rev'):
+            revs = revs & repo.revs(expr)
+        else:
+            # revs is likely huge. "x & y" is more efficient if "x" is small.
+            # "x & y" respects "x"'s order. Once rewritten to "y & x", the
+            # order is decided by "y". Fortunately we know the order of "x" is
+            # always "reverse" in this case. So just do a reverse sort.
+            revs = repo.revs(expr) & revs
+            revs.sort(reverse=True)
     if limit is not None:
         limitedrevs = []
         for idx, r in enumerate(revs):
