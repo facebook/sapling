@@ -79,7 +79,10 @@ def _setupupdates(ui):
         actions, diverge, renamedelete = orig(repo, wctx, mctx, ancestors,
                                               branchmerge, *arg, **kwargs)
 
-        if not util.safehasattr(repo, 'sparsematch'):
+        # If the working context is in memory (virtual), there's no need to
+        # apply the user's sparse rules at all (and in fact doing so would
+        # cause unexpected behavior in the real working copy).
+        if not util.safehasattr(repo, 'sparsematch') or wctx.isinmemory():
             return actions, diverge, renamedelete
 
         files = set()
