@@ -308,24 +308,33 @@ void PrivHelperServer::messageLoop() {
 
   while (1) {
     conn_.recvMsg(&msg, nullptr);
-    auto msgType = msg.msgType;
-    if (msgType == PrivHelperConn::REQ_MOUNT_FUSE) {
-      processMountMsg(&msg);
-    } else if (msgType == PrivHelperConn::REQ_MOUNT_BIND) {
-      processBindMountMsg(&msg);
-    } else if (msgType == PrivHelperConn::REQ_UNMOUNT_FUSE) {
-      processUnmountMsg(&msg);
-    } else if (msgType == PrivHelperConn::REQ_TAKEOVER_SHUTDOWN) {
-      processTakeoverShutdownMsg(&msg);
-    } else if (msgType == PrivHelperConn::REQ_TAKEOVER_STARTUP) {
-      processTakeoverStartupMsg(&msg);
-    } else {
-      // This shouldn't ever happen unless we have a bug.
-      // Crash if it does occur.  (We could send back an error message and
-      // continue, but it seems better to fail hard to make sure this bug gets
-      // noticed and debugged.)
-      XLOG(FATAL) << "unsupported privhelper message type: " << msg.msgType;
+
+    switch (msg.msgType) {
+      case PrivHelperConn::REQ_MOUNT_FUSE:
+        processMountMsg(&msg);
+        continue;
+      case PrivHelperConn::REQ_MOUNT_BIND:
+        processBindMountMsg(&msg);
+        continue;
+      case PrivHelperConn::REQ_UNMOUNT_FUSE:
+        processUnmountMsg(&msg);
+        continue;
+      case PrivHelperConn::REQ_TAKEOVER_SHUTDOWN:
+        processTakeoverShutdownMsg(&msg);
+        continue;
+      case PrivHelperConn::REQ_TAKEOVER_STARTUP:
+        processTakeoverStartupMsg(&msg);
+        continue;
+      case PrivHelperConn::MSG_TYPE_NONE:
+      case PrivHelperConn::RESP_ERROR:
+      case PrivHelperConn::RESP_EMPTY:
+        break;
     }
+    // This shouldn't ever happen unless we have a bug.
+    // Crash if it does occur.  (We could send back an error message and
+    // continue, but it seems better to fail hard to make sure this bug gets
+    // noticed and debugged.)
+    XLOG(FATAL) << "unsupported privhelper message type: " << msg.msgType;
   }
 }
 
