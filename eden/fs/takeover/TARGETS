@@ -1,12 +1,27 @@
 # @autodeps
 
+thrift_library(
+    name = "serialization",
+    languages = [
+        "cpp2",
+    ],
+    py_base_module = "facebook.eden",
+    thrift_args = ["--strict"],
+    thrift_srcs = {
+        "takeover.thrift": [],
+    },
+    deps = [
+        "//eden/fs/fuse:handlemap",
+    ],
+)
+
 cpp_library(
     name = "takeover",
     srcs = glob(["*.cpp"]),
     headers = glob(["*.h"]),
     deps = [
+        ":serialization-cpp2-types",
         "//eden/fs/fuse:fusell",
-        "//eden/fs/fuse:handlemap-cpp2-types",
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
         "//folly:file",

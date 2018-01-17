@@ -31,6 +31,7 @@ cpp_library(
         "//eden/fs/service:thrift-streaming-cpp2-types",
         "//eden/fs/service:thrift_cpp",
         "//eden/fs/store:store",
+        "//eden/fs/takeover:serialization-cpp2-types",
         "//eden/fs/takeover:takeover",
         "//eden/fs/utils:path",
         "//eden/fs/utils:utils",

@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
+#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
