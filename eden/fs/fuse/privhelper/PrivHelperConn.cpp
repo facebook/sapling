@@ -77,7 +77,7 @@ void serializeString(Appender& a, StringPiece str) {
 }
 
 std::string deserializeString(Cursor& cursor) {
-  auto length = cursor.readBE<uint32_t>();
+  const auto length = cursor.readBE<uint32_t>();
   return cursor.readFixedString(length);
 }
 
@@ -111,16 +111,18 @@ void PrivHelperConn::createConnPair(
     PrivHelperConn& client,
     PrivHelperConn& server) {
   std::array<int, 2> sockpair;
-  int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair.data());
-  checkUnixError(rc, "failed to create socket pair for privhelper");
+  checkUnixError(
+      socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair.data()),
+      "failed to create socket pair for privhelper");
   SCOPE_FAIL {
     folly::closeNoInt(sockpair[0]);
     folly::closeNoInt(sockpair[1]);
   };
 
   auto setupSock = [](int sock) {
-    int retcode = fcntl(sock, F_SETFD, FD_CLOEXEC);
-    checkUnixError(retcode, "failed to set privhelper socket as close-on-exec");
+    checkUnixError(
+        fcntl(sock, F_SETFD, FD_CLOEXEC),
+        "failed to set privhelper socket as close-on-exec");
 
     // Make sure the socket buffer is big enough to support our maximum message
     // size.
@@ -129,10 +131,10 @@ void PrivHelperConn::createConnPair(
     // However, we have to create the socket as SOCK_STREAM rather than
     // SOCK_DGRAM in order to be able to tell when the remote endpoint
     // closes the connection.
-    int bufSize = MAX_MSG_LENGTH * 2;
-    retcode =
-        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &bufSize, sizeof(bufSize));
-    checkUnixError(retcode, "failed to set privhelper socket send buffer size");
+    const int bufSize = MAX_MSG_LENGTH * 2;
+    checkUnixError(
+        setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &bufSize, sizeof(bufSize)),
+        "failed to set privhelper socket send buffer size");
   };
 
   setupSock(sockpair[0]);
@@ -143,8 +145,9 @@ void PrivHelperConn::createConnPair(
   struct timeval tv;
   tv.tv_sec = FLAGS_privhelperTimeoutSeconds;
   tv.tv_usec = 0;
-  rc = setsockopt(sockpair[0], SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  checkUnixError(rc, "failed to set receive timeout on mount helper socket");
+  checkUnixError(
+      setsockopt(sockpair[0], SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)),
+      "failed to set receive timeout on mount helper socket");
 
   client = PrivHelperConn{sockpair[0]};
   server = PrivHelperConn{sockpair[1]};
@@ -164,7 +167,7 @@ void PrivHelperConn::sendMsg(const Message* msg, int fd) {
   CHECK_LE(msg->dataSize, MAX_MSG_LENGTH);
 
   // Prepare the message iovec
-  auto msgSize = msg->getFullLength();
+  const auto msgSize = msg->getFullLength();
   std::array<struct iovec, 1> vec;
   vec[0].iov_base = const_cast<Message*>(msg);
   vec[0].iov_len = msgSize;
@@ -192,7 +195,7 @@ void PrivHelperConn::sendMsg(const Message* msg, int fd) {
 
   // Finally send the message
   while (true) {
-    auto bytesSent = sendmsg(socket_, &mh, MSG_NOSIGNAL);
+    const auto bytesSent = sendmsg(socket_, &mh, MSG_NOSIGNAL);
     if (bytesSent >= 0) {
       // Assert that we sent a full message.
       //
@@ -285,13 +288,15 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
 void PrivHelperConn::serializeMountRequest(
     Message* msg,
     StringPiece mountPoint) {
-  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  const auto serializeBody = [mountPoint](Appender& a) {
+    serializeString(a, mountPoint);
+  };
   serializeMessage(msg, REQ_MOUNT_FUSE, serializeBody);
 }
 
 void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
   CHECK_EQ(msg->msgType, REQ_MOUNT_FUSE);
-  auto parseBody = [&](Cursor& cursor) {
+  const auto parseBody = [&mountPoint](Cursor& cursor) {
     mountPoint = deserializeString(cursor);
   };
   deserializeMessage(msg, parseBody);
@@ -300,13 +305,15 @@ void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
 void PrivHelperConn::serializeUnmountRequest(
     Message* msg,
     StringPiece mountPoint) {
-  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  const auto serializeBody = [mountPoint](Appender& a) {
+    serializeString(a, mountPoint);
+  };
   serializeMessage(msg, REQ_UNMOUNT_FUSE, serializeBody);
 }
 
 void PrivHelperConn::parseUnmountRequest(Message* msg, string& mountPoint) {
   CHECK_EQ(msg->msgType, REQ_UNMOUNT_FUSE);
-  auto parseBody = [&](Cursor& cursor) {
+  const auto parseBody = [&mountPoint](Cursor& cursor) {
     mountPoint = deserializeString(cursor);
   };
   deserializeMessage(msg, parseBody);
@@ -315,7 +322,9 @@ void PrivHelperConn::parseUnmountRequest(Message* msg, string& mountPoint) {
 void PrivHelperConn::serializeTakeoverShutdownRequest(
     Message* msg,
     StringPiece mountPoint) {
-  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  const auto serializeBody = [mountPoint](Appender& a) {
+    serializeString(a, mountPoint);
+  };
   serializeMessage(msg, REQ_TAKEOVER_SHUTDOWN, serializeBody);
 }
 
@@ -323,7 +332,7 @@ void PrivHelperConn::parseTakeoverShutdownRequest(
     Message* msg,
     string& mountPoint) {
   CHECK_EQ(msg->msgType, REQ_TAKEOVER_SHUTDOWN);
-  auto parseBody = [&](Cursor& cursor) {
+  const auto parseBody = [&mountPoint](Cursor& cursor) {
     mountPoint = deserializeString(cursor);
   };
   deserializeMessage(msg, parseBody);
@@ -333,7 +342,7 @@ void PrivHelperConn::serializeTakeoverStartupRequest(
     Message* msg,
     folly::StringPiece mountPoint,
     const std::vector<std::string>& bindMounts) {
-  auto serializeBody = [&](Appender& a) {
+  const auto serializeBody = [mountPoint, &bindMounts](Appender& a) {
     serializeString(a, mountPoint);
     a.writeBE<uint32_t>(bindMounts.size());
     for (const auto& path : bindMounts) {
@@ -348,7 +357,7 @@ void PrivHelperConn::parseTakeoverStartupRequest(
     std::string& mountPoint,
     std::vector<std::string>& bindMounts) {
   CHECK_EQ(msg->msgType, REQ_TAKEOVER_STARTUP);
-  auto parseBody = [&](Cursor& cursor) {
+  const auto parseBody = [&mountPoint, &bindMounts](Cursor& cursor) {
     mountPoint = deserializeString(cursor);
     auto n = cursor.readBE<uint32_t>();
     while (n-- != 0) {
@@ -376,7 +385,7 @@ void PrivHelperConn::serializeBindMountRequest(
     Message* msg,
     folly::StringPiece clientPath,
     folly::StringPiece mountPath) {
-  auto serializeBody = [&](Appender& a) {
+  const auto serializeBody = [clientPath, mountPath](Appender& a) {
     serializeString(a, mountPath);
     serializeString(a, clientPath);
   };
@@ -388,7 +397,7 @@ void PrivHelperConn::parseBindMountRequest(
     std::string& clientPath,
     std::string& mountPath) {
   CHECK_EQ(msg->msgType, REQ_MOUNT_BIND);
-  auto parseBody = [&](Cursor& cursor) {
+  const auto parseBody = [&clientPath, &mountPath](Cursor& cursor) {
     mountPath = deserializeString(cursor);
     clientPath = deserializeString(cursor);
   };
@@ -404,7 +413,7 @@ void PrivHelperConn::serializeErrorResponse(
     errnum = sysEx->code().value();
   }
 
-  auto exceptionType = folly::demangle(typeid(ex));
+  const auto exceptionType = folly::demangle(typeid(ex));
   serializeErrorResponse(msg, ex.what(), errnum, exceptionType);
 }
 
@@ -441,11 +450,11 @@ void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
   IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
   Cursor c{&buf};
 
-  int errnum = c.readBE<uint32_t>();
+  const int errnum = c.readBE<uint32_t>();
   auto size = c.readBE<uint32_t>();
-  auto errmsg = c.readFixedString(size);
+  const auto errmsg = c.readFixedString(size);
   size = c.readBE<uint32_t>();
-  auto errtype = c.readFixedString(size);
+  const auto errtype = c.readFixedString(size);
 
   if (errnum != 0) {
     // If we have an errnum, rethrow the error as a std::system_error

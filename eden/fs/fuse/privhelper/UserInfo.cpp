@@ -46,7 +46,7 @@ UserInfo::PasswdEntry UserInfo::getPasswdUid(uid_t uid) {
 
   struct passwd* result;
   while (true) {
-    auto errnum =
+    const auto errnum =
         getpwuid_r(uid, &pwd.pwd, pwd.buf.data(), pwd.buf.size(), &result);
     if (errnum == 0) {
       break;
@@ -69,7 +69,7 @@ UserInfo::PasswdEntry UserInfo::getPasswdUid(uid_t uid) {
 bool UserInfo::initFromSudo() {
   // If SUDO_UID is not set, return false indicating we could not
   // find sudo-based identity information.
-  auto sudoUid = getenv("SUDO_UID");
+  const auto sudoUid = getenv("SUDO_UID");
   if (sudoUid == nullptr) {
     return false;
   }
@@ -78,11 +78,11 @@ bool UserInfo::initFromSudo() {
   // parse them below.  We want to fail hard if we have SUDO_UID but we can't
   // use it for some reason.  We don't want to fall back to running as root in
   // this case.
-  auto sudoGid = getenv("SUDO_GID");
+  const auto sudoGid = getenv("SUDO_GID");
   if (sudoGid == nullptr) {
     throw std::runtime_error("SUDO_UID set without SUDO_GID");
   }
-  auto sudoUser = getenv("SUDO_USER");
+  const auto sudoUser = getenv("SUDO_USER");
   if (sudoUser == nullptr) {
     throw std::runtime_error("SUDO_UID set without SUDO_USER");
   }
@@ -129,7 +129,7 @@ void UserInfo::initHomedir(PasswdEntry* pwd) {
   // generally be run before we have dropped privileges, and we do not want to
   // try traversing symlinks that the user may not actually have permissions to
   // resolve.
-  auto homeEnv = getenv("HOME");
+  const auto homeEnv = getenv("HOME");
   if (homeEnv != nullptr) {
     homeDirectory_ = canonicalPath(homeEnv);
     return;
@@ -154,7 +154,7 @@ UserInfo UserInfo::lookup() {
   UserInfo info;
   // First check the real UID.  If it is non-root, use that.
   // This happens if our binary is setuid root and invoked by a non-root user.
-  auto uid = getuid();
+  const auto uid = getuid();
   if (uid != 0) {
     info.initFromNonRoot(uid);
     return info;

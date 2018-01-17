@@ -85,20 +85,17 @@ int main(int argc, char** argv) {
     return EX_USAGE;
   }
   // We require edenDir to already exist, so use realpath() to resolve it.
-  auto edenDir = facebook::eden::realpath(FLAGS_edenDir);
+  const auto edenDir = facebook::eden::realpath(FLAGS_edenDir);
 
   // It's okay if the etcEdenDir and configPath don't exist, so use
   // normalizeBestEffort() to try resolving symlinks in these paths but don't
   // fail if they don't exist.
-  auto etcEdenDir = normalizeBestEffort(FLAGS_etcEdenDir);
+  const auto etcEdenDir = normalizeBestEffort(FLAGS_etcEdenDir);
 
-  AbsolutePath configPath;
-  std::string configPathStr = FLAGS_configPath;
-  if (configPathStr.empty()) {
-    configPath = identity.getHomeDirectory() + PathComponentPiece{".edenrc"};
-  } else {
-    configPath = normalizeBestEffort(configPathStr);
-  }
+  const std::string configPathStr = FLAGS_configPath;
+  const AbsolutePath configPath = configPathStr.empty()
+      ? identity.getHomeDirectory() + PathComponentPiece{".edenrc"}
+      : normalizeBestEffort(configPathStr);
 
   EdenServer server(edenDir, etcEdenDir, configPath);
   server.run();

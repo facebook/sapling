@@ -34,6 +34,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
  public:
   explicit EdenServiceHandler(EdenServer* server);
 
+  EdenServiceHandler(EdenServiceHandler const&) = delete;
+  EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
+
   facebook::fb303::cpp2::fb_status getStatus() override;
 
   void mount(std::unique_ptr<MountInfo> info) override;
@@ -152,10 +155,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void shutdown() override;
 
  private:
-  // Forbidden copy constructor and assignment operator
-  EdenServiceHandler(EdenServiceHandler const&) = delete;
-  EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
-
   folly::Future<Hash> getSHA1ForPath(
       folly::StringPiece mountPoint,
       folly::StringPiece path);

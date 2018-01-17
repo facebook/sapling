@@ -71,6 +71,7 @@ class EdenServer : private TakeoverHandler {
       AbsolutePathPiece edenDir,
       AbsolutePathPiece etcEdenDir,
       AbsolutePathPiece configPath);
+
   virtual ~EdenServer();
 
   /**

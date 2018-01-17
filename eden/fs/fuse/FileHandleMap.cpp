@@ -27,8 +27,8 @@ namespace fusell {
 
 std::shared_ptr<FileHandleBase> FileHandleMap::getGenericFileHandle(
     uint64_t fh) {
-  auto handles = handles_.rlock();
-  auto iter = handles->find(fh);
+  const auto handles = handles_.rlock();
+  const auto iter = handles->find(fh);
   if (iter == handles->end()) {
     folly::throwSystemErrorExplicit(
         EBADF, "file number ", fh, " is not tracked by this FileHandleMap");
@@ -37,8 +37,8 @@ std::shared_ptr<FileHandleBase> FileHandleMap::getGenericFileHandle(
 }
 
 std::shared_ptr<FileHandle> FileHandleMap::getFileHandle(uint64_t fh) {
-  auto handle = getGenericFileHandle(fh);
-  auto result = std::dynamic_pointer_cast<FileHandle>(handle);
+  const auto handle = getGenericFileHandle(fh);
+  const auto result = std::dynamic_pointer_cast<FileHandle>(handle);
   if (result) {
     return result;
   }
@@ -47,8 +47,8 @@ std::shared_ptr<FileHandle> FileHandleMap::getFileHandle(uint64_t fh) {
 }
 
 std::shared_ptr<DirHandle> FileHandleMap::getDirHandle(uint64_t fh) {
-  auto handle = getGenericFileHandle(fh);
-  auto result = std::dynamic_pointer_cast<DirHandle>(handle);
+  const auto handle = getGenericFileHandle(fh);
+  const auto result = std::dynamic_pointer_cast<DirHandle>(handle);
   if (result) {
     return result;
   }
@@ -59,10 +59,9 @@ std::shared_ptr<DirHandle> FileHandleMap::getDirHandle(uint64_t fh) {
 void FileHandleMap::recordHandle(
     std::shared_ptr<FileHandleBase> fh,
     uint64_t number) {
-  auto handles = handles_.wlock();
+  const auto handles = handles_.wlock();
 
-  auto it = handles->find(number);
-  if (it != handles->end()) {
+  if (handles->find(number) != handles->end()) {
     folly::throwSystemErrorExplicit(
         EEXIST, "file number ", number, " is already present in the map!?");
   }
@@ -113,9 +112,9 @@ uint64_t FileHandleMap::recordHandle(std::shared_ptr<FileHandleBase> fh) {
 
 std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
     uint64_t fh) {
-  auto handles = handles_.wlock();
+  const auto handles = handles_.wlock();
 
-  auto iter = handles->find(fh);
+  const auto iter = handles->find(fh);
   if (iter == handles->end()) {
     folly::throwSystemErrorExplicit(EBADF);
   }
@@ -127,8 +126,8 @@ std::shared_ptr<FileHandleBase> FileHandleMap::forgetGenericHandle(
 SerializedFileHandleMap FileHandleMap::serializeMap() {
   SerializedFileHandleMap result;
 
-  auto handles = handles_.wlock();
-  for (auto& it : *handles) {
+  const auto handles = handles_.wlock();
+  for (const auto& it : *handles) {
     FileHandleMapEntry entry;
 
     entry.handleId = (int64_t)it.first;

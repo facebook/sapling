@@ -89,9 +89,9 @@ class PrivHelper {
     // We only support a single operation at a time for now.
     // (The privhelper process only has a single thread anyway, and we don't
     // currently support processing out-of-order responses.)
-    std::lock_guard<std::mutex> guard(mutex_);
+    const std::lock_guard<std::mutex> guard(mutex_);
 
-    auto requestXid = nextXid_;
+    const auto requestXid = nextXid_;
     ++nextXid_;
     msg->xid = requestXid;
 
@@ -153,7 +153,7 @@ void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo) {
   PrivHelperConn serverConn;
   PrivHelperConn::createConnPair(clientConn, serverConn);
 
-  auto pid = fork();
+  const auto pid = fork();
   checkUnixError(pid, "failed to fork mount helper");
   if (pid > 0) {
     // Parent
@@ -183,7 +183,7 @@ int stopPrivHelper() {
     throw std::runtime_error(
         "attempted to stop the privhelper process when it was not running");
   }
-  auto result = gPrivHelper->cleanup();
+  const auto result = gPrivHelper->cleanup();
   gPrivHelper.reset();
   if (result.hasError()) {
     folly::throwSystemErrorExplicit(

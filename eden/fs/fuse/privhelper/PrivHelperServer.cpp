@@ -83,7 +83,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // We manually call open() here rather than using the folly::File()
   // constructor just so we can emit a slightly more helpful message on error.
   const char* devName = "/dev/fuse";
-  int fd = folly::openNoInt(devName, O_RDWR | O_CLOEXEC);
+  const int fd = folly::openNoInt(devName, O_RDWR | O_CLOEXEC);
   if (fd < 0) {
     if (errno == ENODEV || errno == ENOENT) {
       throwSystemError(
@@ -100,7 +100,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // We currently don't allow these to be customized by the unprivileged
   // requester.  We could add this functionality in the future if we have a
   // need for it, but we would need to validate their changes are safe.
-  int rootMode = S_IFDIR;
+  const int rootMode = S_IFDIR;
   auto mountOpts = folly::sformat(
       "allow_other,default_permissions,"
       "rootmode={:o},user_id={},group_id={},fd={}",
@@ -113,8 +113,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
   // inside our filesystem.  We currently use bind mounts to point the buck-out
   // directory to an alternate location outside of eden.
-  int mountFlags = MS_NOSUID;
-
+  const int mountFlags = MS_NOSUID;
   const char* type = "fuse";
   int rc = mount("edenfs", mountPath, type, mountFlags, mountOpts.c_str());
   checkUnixError(rc, "failed to mount");
@@ -124,8 +123,8 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
 void PrivHelperServer::bindMount(
     const char* clientPath,
     const char* mountPath) {
-  int rc = mount(
-      clientPath, mountPath, /* type */ nullptr, MS_BIND, /* data */ nullptr);
+  const int rc =
+      mount(clientPath, mountPath, /*type*/ nullptr, MS_BIND, /*data*/ nullptr);
   checkUnixError(rc, "failed to mount");
 }
 
@@ -152,10 +151,10 @@ void PrivHelperServer::fuseUnmount(const char* mountPath) {
   // However for now we always do forced unmount.  This helps ensure that
   // edenfs does not get stuck waiting on unmounts to complete when shutting
   // down.
-  int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE | MNT_DETACH;
-  auto rc = umount2(mountPath, umountFlags);
+  const int umountFlags = UMOUNT_NOFOLLOW | MNT_FORCE | MNT_DETACH;
+  const auto rc = umount2(mountPath, umountFlags);
   if (rc != 0) {
-    int errnum = errno;
+    const int errnum = errno;
     // EINVAL simply means the path is no longer mounted.
     // This can happen if it was already manually unmounted by a
     // separate process.
@@ -214,16 +213,15 @@ void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
   conn_.parseUnmountRequest(msg, mountPath);
 
   try {
-    auto it = mountPoints_.find(mountPath);
+    const auto it = mountPoints_.find(mountPath);
     if (it == mountPoints_.end()) {
       throw std::domain_error(
           folly::to<string>("No FUSE mount found for ", mountPath));
     }
 
-    auto range = bindMountPoints_.equal_range(mountPath);
+    const auto range = bindMountPoints_.equal_range(mountPath);
     for (auto it = range.first; it != range.second; ++it) {
-      auto bindMount = it->second;
-      bindUnmount(bindMount.c_str());
+      bindUnmount(it->second.c_str());
     }
     bindMountPoints_.erase(range.first, range.second);
 
@@ -247,13 +245,13 @@ void PrivHelperServer::processTakeoverShutdownMsg(
   conn_.parseTakeoverShutdownRequest(msg, mountPath);
 
   try {
-    auto it = mountPoints_.find(mountPath);
+    const auto it = mountPoints_.find(mountPath);
     if (it == mountPoints_.end()) {
       throw std::domain_error(
           folly::to<string>("No FUSE mount found for ", mountPath));
     }
 
-    auto range = bindMountPoints_.equal_range(mountPath);
+    const auto range = bindMountPoints_.equal_range(mountPath);
     bindMountPoints_.erase(range.first, range.second);
 
     mountPoints_.erase(mountPath);
@@ -306,7 +304,7 @@ void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
 void PrivHelperServer::messageLoop() {
   PrivHelperConn::Message msg;
 
-  while (1) {
+  while (true) {
     conn_.recvMsg(&msg, nullptr);
 
     switch (msg.msgType) {
@@ -347,12 +345,10 @@ void PrivHelperServer::cleanupMountPoints() {
     // exited: these are inside an eden mount, and so accessing the parent
     // directory will fail with ENOTCONN the eden has already closed the fuse
     // connection.
-    auto range = bindMountPoints_.equal_range(mountPoint);
+    const auto range = bindMountPoints_.equal_range(mountPoint);
     for (auto it = range.first; it != range.second; ++it) {
-      auto bindMount = it->second;
-      auto path = bindMount.c_str();
-      bindUnmount(bindMount.c_str());
-      numBindMountsRemoved++;
+      bindUnmount(it->second.c_str());
+      ++numBindMountsRemoved;
     }
 
     fuseUnmount(mountPoint.c_str());
@@ -368,8 +364,7 @@ namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
   struct statvfs data;
-  int rc = statvfs(path, &data);
-  if (rc != 0) {
+  if (statvfs(path, &data) != 0) {
     return folly::makeUnexpected(errno);
   }
   return folly::makeExpected<int>(data.f_fsid);
@@ -379,7 +374,7 @@ folly::Expected<unsigned long, int> getFSID(const char* path) {
 void PrivHelperServer::bindUnmount(const char* mountPath) {
   // Check the current filesystem information for this path,
   // so we can confirm that it has been unmounted afterwards.
-  auto origFSID = getFSID(mountPath);
+  const auto origFSID = getFSID(mountPath);
 
   fuseUnmount(mountPath);
 
@@ -389,9 +384,9 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
   //
   // Give up after 2 seconds even if the unmount does not appear complete.
   constexpr auto timeout = std::chrono::seconds(2);
-  auto endTime = std::chrono::steady_clock::now() + timeout;
+  const auto endTime = std::chrono::steady_clock::now() + timeout;
   while (true) {
-    auto fsid = getFSID(mountPath);
+    const auto fsid = getFSID(mountPath);
     if (!fsid.hasValue()) {
       // Assume the file system is unmounted if the statvfs() call failed.
       break;
@@ -401,8 +396,7 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
       break;
     }
 
-    auto now = std::chrono::steady_clock::now();
-    if (now > endTime) {
+    if (std::chrono::steady_clock::now() > endTime) {
       XLOG(WARNING) << "error unmounting " << mountPath
                     << ": mount did not go away after successful unmount call";
       break;
@@ -419,13 +413,11 @@ void PrivHelperServer::run() {
   // to this signal.  We don't want to exit immediately--we want to wait until
   // the parent exits and then umount all outstanding mount points before we
   // exit.)
-  auto sigret = signal(SIGINT, SIG_IGN);
-  if (sigret == SIG_ERR) {
+  if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
     XLOG(FATAL) << "error setting SIGINT handler in privhelper process"
                 << folly::errnoStr(errno);
   }
-  sigret = signal(SIGTERM, SIG_IGN);
-  if (sigret == SIG_ERR) {
+  if (signal(SIGTERM, SIG_IGN) == SIG_ERR) {
     XLOG(FATAL) << "error setting SIGTERM handler in privhelper process"
                 << folly::errnoStr(errno);
   }

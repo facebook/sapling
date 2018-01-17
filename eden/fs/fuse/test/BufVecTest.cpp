@@ -14,7 +14,7 @@
 TEST(BufVecTest, BufVec) {
   auto root = folly::IOBuf::wrapBuffer("hello", 5);
   root->appendChain(folly::IOBuf::wrapBuffer("world", 5));
-  auto bufVec = facebook::eden::fusell::BufVec{std::move(root)};
+  const auto bufVec = facebook::eden::fusell::BufVec{std::move(root)};
   EXPECT_EQ(10u, bufVec.size());
   EXPECT_EQ(10u, bufVec.copyData().size());
   EXPECT_EQ("helloworld", bufVec.copyData());

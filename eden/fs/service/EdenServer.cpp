@@ -73,6 +73,7 @@ DEFINE_int64(
     "Minimum age of the inodes to be unloaded");
 
 using apache::thrift::ThriftServer;
+using facebook::eden::fusell::FuseChannelData;
 using folly::File;
 using folly::Future;
 using folly::Optional;
@@ -83,7 +84,6 @@ using std::make_shared;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
-using facebook::eden::fusell::FuseChannelData;
 
 namespace {
 using namespace facebook::eden;
@@ -150,7 +150,7 @@ EdenServer::~EdenServer() {}
 folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
   std::vector<Future<Optional<TakeoverData::MountInfo>>> futures;
   {
-    auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
       const auto& mountPath = entry.first;
       auto& info = entry.second;
@@ -217,7 +217,7 @@ void EdenServer::scheduleFlushStats() {
 void EdenServer::unloadInodes() {
   std::vector<TreeInodePtr> roots;
   {
-    auto mountPoints = mountPoints_.wlock();
+    const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
       roots.emplace_back(entry.second.edenMount->getRootInode());
     }
@@ -284,7 +284,7 @@ void EdenServer::prepare() {
   // If we are gracefully taking over from an existing edenfs process,
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
-  auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
+  const auto takeoverPath = edenDir_ + PathComponentPiece{"takeover"};
   TakeoverData takeoverData;
   if (doingTakeover) {
     takeoverData = takeoverMounts(takeoverPath);
@@ -298,7 +298,7 @@ void EdenServer::prepare() {
   }
 
   XLOG(DBG2) << "opening local RocksDB store";
-  auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
+  const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
   localStore_ = make_shared<LocalStore>(rocksPath);
   XLOG(DBG2) << "done opening local RocksDB store";
 
@@ -311,7 +311,7 @@ void EdenServer::prepare() {
   // if doingTakeover is true, use the mounts received in TakeoverData
   if (doingTakeover) {
     for (auto& info : takeoverData.mountPoints) {
-      auto stateDirectory = info.stateDirectory;
+      const auto stateDirectory = info.stateDirectory;
       try {
         auto initialConfig = ClientConfig::loadFromClientDirectory(
             AbsolutePathPiece{info.mountPath},
@@ -330,7 +330,7 @@ void EdenServer::prepare() {
       XLOG(ERR) << "Could not parse config.json file: " << ex.what()
                 << " Skipping remount step.";
     }
-    for (auto& client : dirs.items()) {
+    for (const auto& client : dirs.items()) {
       MountInfo mountInfo;
       mountInfo.mountPoint = client.first.c_str();
       auto edenClientPath = edenDir_ + PathComponent("clients") +
@@ -357,7 +357,7 @@ void EdenServer::run() {
   prepare();
 
   // Start listening for graceful takeover requests
-  auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
+  const auto takeoverPath = edenDir_ + PathComponentPiece{kTakeoverSocketName};
   takeoverServer_.reset(
       new TakeoverServer(getMainEventBase(), takeoverPath, this));
   takeoverServer_->start();
@@ -433,7 +433,7 @@ Future<Unit> EdenServer::performNormalShutdown() {
 void EdenServer::shutdownPrivhelper() {
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
-  auto privhelperExitCode = fusell::stopPrivHelper();
+  const auto privhelperExitCode = fusell::stopPrivHelper();
   if (privhelperExitCode != 0) {
     if (privhelperExitCode > 0) {
       XLOG(ERR) << "privhelper process exited with unexpected code "
@@ -448,8 +448,8 @@ void EdenServer::shutdownPrivhelper() {
 void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   {
-    auto mountPoints = mountPoints_.wlock();
-    auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
+    const auto mountPoints = mountPoints_.wlock();
+    const auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
     if (!ret.second) {
       // This mount point already exists.
       throw EdenError(folly::to<string>(
@@ -543,11 +543,11 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<ClientConfig> initialConfig,
     Optional<TakeoverData::MountInfo>&& optionalTakeover) {
-  auto repoType = initialConfig->getRepoType();
-  auto backingStore = getBackingStore(repoType, initialConfig->getRepoSource());
+  auto backingStore = getBackingStore(
+      initialConfig->getRepoType(), initialConfig->getRepoSource());
   auto objectStore =
       std::make_unique<ObjectStore>(getLocalStore(), backingStore);
-  bool doTakeover = optionalTakeover.hasValue();
+  const bool doTakeover = optionalTakeover.hasValue();
 
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
@@ -619,8 +619,8 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
   try {
     auto future = Future<Unit>::makeEmpty();
     {
-      auto mountPoints = mountPoints_.wlock();
-      auto it = mountPoints->find(mountPath);
+      const auto mountPoints = mountPoints_.wlock();
+      const auto it = mountPoints->find(mountPath);
       if (it == mountPoints->end()) {
         return makeFuture<Unit>(
             std::out_of_range("no such mount point " + mountPath.str()));
@@ -641,7 +641,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(
     EdenMount* edenMount,
     folly::Optional<TakeoverData::MountInfo> takeover) {
-  auto mountPath = edenMount->getPath().stringPiece();
+  const auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
@@ -649,15 +649,15 @@ void EdenServer::mountFinished(
   folly::SharedPromise<Unit> unmountPromise;
   folly::Optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   {
-    auto mountPoints = mountPoints_.wlock();
-    auto it = mountPoints->find(mountPath);
+    const auto mountPoints = mountPoints_.wlock();
+    const auto it = mountPoints->find(mountPath);
     CHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
     takeoverPromise = std::move(it->second.takeoverPromise);
     mountPoints->erase(it);
   }
 
-  bool doTakeover = takeoverPromise.hasValue();
+  const bool doTakeover = takeoverPromise.hasValue();
 
   // Shutdown the EdenMount, and fulfill the unmount promise
   // when the shutdown completes
@@ -683,7 +683,7 @@ void EdenServer::mountFinished(
 EdenServer::MountList EdenServer::getMountPoints() const {
   MountList results;
   {
-    auto mountPoints = mountPoints_.rlock();
+    const auto mountPoints = mountPoints_.rlock();
     for (const auto& entry : *mountPoints) {
       results.emplace_back(entry.second.edenMount);
     }
@@ -692,7 +692,7 @@ EdenServer::MountList EdenServer::getMountPoints() const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
-  auto mount = getMountOrNull(mountPath);
+  const auto mount = getMountOrNull(mountPath);
   if (!mount) {
     throw EdenError(folly::to<string>(
         "mount point \"", mountPath, "\" is not known to this eden instance"));
@@ -701,8 +701,8 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMountOrNull(StringPiece mountPath) const {
-  auto mountPoints = mountPoints_.rlock();
-  auto it = mountPoints->find(mountPath);
+  const auto mountPoints = mountPoints_.rlock();
+  const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {
     return nullptr;
   }
@@ -714,12 +714,12 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
     StringPiece name) {
   BackingStoreKey key{type.str(), name.str()};
   SYNCHRONIZED(lockedStores, backingStores_) {
-    auto it = lockedStores.find(key);
+    const auto it = lockedStores.find(key);
     if (it != lockedStores.end()) {
       return it->second;
     }
 
-    auto store = createBackingStore(type, name);
+    const auto store = createBackingStore(type, name);
     lockedStores.emplace(key, store);
     return store;
   }
@@ -736,11 +736,11 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   if (type == "null") {
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
-    auto repoPath = realpath(name);
+    const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
         repoPath, localStore_.get(), threadPool_.get());
   } else if (type == "git") {
-    auto repoPath = realpath(name);
+    const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());
   } else {
     throw std::domain_error(
@@ -749,8 +749,6 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
 }
 
 void EdenServer::createThriftServer() {
-  auto address = getThriftAddress(FLAGS_thrift_address, edenDir_);
-
   server_ = make_shared<ThriftServer>();
   server_->setMaxRequests(FLAGS_thrift_max_requests);
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
@@ -759,14 +757,14 @@ void EdenServer::createThriftServer() {
 
   handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
-  server_->setAddress(address);
+  server_->setAddress(getThriftAddress(FLAGS_thrift_address, edenDir_));
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
 }
 
 bool EdenServer::acquireEdenLock() {
-  auto lockPath = edenDir_ + PathComponentPiece{kLockFileName};
+  const auto lockPath = edenDir_ + PathComponentPiece{kLockFileName};
   lockFile_ = folly::File(lockPath.value(), O_WRONLY | O_CREAT);
   if (!lockFile_.try_lock()) {
     lockFile_.close();
@@ -774,9 +772,9 @@ bool EdenServer::acquireEdenLock() {
   }
 
   // Write the PID (with a newline) to the lockfile.
-  int fd = lockFile_.fd();
+  const int fd = lockFile_.fd();
   folly::ftruncateNoInt(fd, /* len */ 0);
-  auto pidContents = folly::to<std::string>(getpid(), "\n");
+  const auto pidContents = folly::to<std::string>(getpid(), "\n");
   folly::writeNoInt(fd, pidContents.data(), pidContents.size());
 
   return true;
@@ -799,7 +797,7 @@ void EdenServer::prepareThriftAddress() {
   if (addr.getFamily() != AF_UNIX) {
     return;
   }
-  int rc = unlink(addr.getPath().c_str());
+  const int rc = unlink(addr.getPath().c_str());
   if (rc != 0 && errno != ENOENT) {
     // This might happen if we don't have permission to remove the file.
     folly::throwSystemError(
@@ -840,7 +838,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     // the server.  The easiest way to avoid completely closing the server
     // socket for now is simply by duplicating the socket to a new fd.
     // We will transfer this duplicated FD to the new edenfs process.
-    int takeoverThriftSocket = dup(server_->getListenSocket());
+    const int takeoverThriftSocket = dup(server_->getListenSocket());
     folly::checkUnixError(
         takeoverThriftSocket,
         "error duplicating thrift server socket during graceful takeover");
@@ -860,7 +858,7 @@ void EdenServer::shutdownSubscribers() const {
   // those down now, otherwise they will block the server_->stop() call
   // below
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
-  auto mountPoints = mountPoints_.wlock();
+  const auto mountPoints = mountPoints_.wlock();
   for (auto& entry : *mountPoints) {
     auto& info = entry.second;
     info.edenMount->getJournal().cancelAllSubscribers();
@@ -888,19 +886,18 @@ folly::SocketAddress getThriftAddress(
   // If the argument is empty, default to a Unix socket placed next
   // to the mount point
   if (argument.empty()) {
-    auto socketPath = edenDir + PathComponentPiece{kThriftSocketName};
-    addr.setFromPath(socketPath.stringPiece());
+    addr.setFromPath(
+        (edenDir + PathComponentPiece{kThriftSocketName}).stringPiece());
     return addr;
   }
 
   // Check to see if the argument looks like a port number
   uint16_t port;
-  bool validPort{false};
+  bool validPort{true};
   try {
     port = folly::to<uint16_t>(argument);
-    validPort = true;
   } catch (const std::range_error& ex) {
-    // validPort = false
+    validPort = false;
   }
   if (validPort) {
     addr.setFromLocalPort(port);

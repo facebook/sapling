@@ -48,7 +48,7 @@ bool RequestData::isFuseRequest() {
 }
 
 RequestData& RequestData::get() {
-  auto data = folly::RequestContext::get()->getContextData(kKey);
+  const auto data = folly::RequestContext::get()->getContextData(kKey);
   if (UNLIKELY(!data)) {
     XLOG(FATAL) << "boom for missing RequestData";
     throw std::runtime_error("no fuse request data set in this context!");
@@ -77,9 +77,9 @@ Future<folly::Unit> RequestData::startRequest(
 }
 
 void RequestData::finishRequest() {
-  auto now = steady_clock::now();
-  auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
-  auto diff = duration_cast<microseconds>(now - startTime_);
+  const auto now = steady_clock::now();
+  const auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
+  const auto diff = duration_cast<microseconds>(now - startTime_);
   stats_->get()->recordLatency(latencyHistogram_, diff, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
