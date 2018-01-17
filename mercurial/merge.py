@@ -1566,10 +1566,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         # experimental.inmemorydisallowedpaths. This will allow us to keep
         # inmemorydisallowedpaths up to date so in-memory rebases are not
         # restarted late in the merge.
-        # (Make sure the the default value (.^) doesn't match anything, since an
-        # empty string matches everything -- not what we want.)
         pathsconfig = repo.ui.config("rebase",
-            "experimental.inmemorydisallowedpaths", ".^")
+            "experimental.inmemorydisallowedpaths")
+        # Make sure the the default value (.^) doesn't match anything, since an
+        # empty string matches everything -- not what we want:
+        if not pathsconfig:
+            pathsconfig = ".^"
         regex = util.re.compile(pathsconfig)
         unmatched = [f for f in ms.driverresolved() if not regex.match(f)]
         repo.ui.log('imm_mergedriver', '',
