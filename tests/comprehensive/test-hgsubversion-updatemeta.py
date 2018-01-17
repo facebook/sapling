@@ -6,10 +6,10 @@ import sys
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 import test_rebuildmeta
 
@@ -21,14 +21,14 @@ from hgext.hgsubversion import svncommands
 
 
 def _do_case(self, name, layout):
-    subdir = test_util.subdir.get(name, '')
+    subdir = test_hgsubversion_util.subdir.get(name, '')
     single = layout == 'single'
-    u = test_util.testui()
+    u = test_hgsubversion_util.testui()
     config = {}
     if layout == 'custom':
         config['hgsubversion.layout'] = 'custom'
         u.setconfig('hgsubversion', 'layout', 'custom')
-        for branch, path in test_util.custom.get(name, {}).iteritems():
+        for branch, path in test_hgsubversion_util.custom.get(name, {}).iteritems():
             config['hgsubversionbranch.%s' % branch] = path
             u.setconfig('hgsubversionbranch', branch, path)
 
@@ -36,11 +36,11 @@ def _do_case(self, name, layout):
                                           subdir=subdir,
                                           layout=layout,
                                           config=config)
-    assert test_util.repolen(self.repo) > 0
+    assert test_hgsubversion_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
-    src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
-    src = test_util.getlocalpeer(src)
-    dest = test_util.getlocalpeer(dest)
+    src, dest = test_hgsubversion_util.hgclone(u, self.wc_path, wc2_path, update=False)
+    src = test_hgsubversion_util.getlocalpeer(src)
+    dest = test_hgsubversion_util.getlocalpeer(dest)
 
     # insert a wrapper that prevents calling changectx.children()
     def failfn(orig, ctx):
@@ -53,7 +53,7 @@ def _do_case(self, name, layout):
     # test updatemeta on an empty repo
     try:
         svncommands.updatemeta(u, dest,
-                                args=[test_util.fileurl(repo_path +
+                                args=[test_hgsubversion_util.fileurl(repo_path +
                                                         subdir), ])
     finally:
         # remove the wrapper
@@ -75,7 +75,7 @@ attrs = {'_do_case': _do_case,
          '_run_assertions': _run_assertions,
          'stupid_mode_tests': True,
          }
-for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
+for case in [f for f in os.listdir(test_hgsubversion_util.FIXTURES) if f.endswith('.svndump')]:
     # this fixture results in an empty repository, don't use it
     if case in skip:
         continue
@@ -84,10 +84,10 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     attrs[bname + '_single'] = test_rebuildmeta.buildmethod(case,
                                                             bname + '_single',
                                                             'single')
-    if case in test_util.custom:
+    if case in test_hgsubversion_util.custom:
         attrs[bname + '_custom'] = test_rebuildmeta.buildmethod(case,
                                                                 bname + '_custom',
                                                                 'custom')
 
 
-UpdateMetaTests = type('UpdateMetaTests', (test_util.TestBase,), attrs)
+UpdateMetaTests = type('UpdateMetaTests', (test_hgsubversion_util.TestBase,), attrs)

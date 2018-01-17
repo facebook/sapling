@@ -1,5 +1,5 @@
 # no-check-code -- see T24862348
-import test_util
+import test_hgsubversion_util
 
 import os
 import re
@@ -29,9 +29,9 @@ Last Changed Date: %(date)s
 '''
 
 def repourl(repo_path):
-    return util.normalize_url(test_util.fileurl(repo_path))
+    return util.normalize_url(test_hgsubversion_util.fileurl(repo_path))
 
-class UtilityTests(test_util.TestBase):
+class UtilityTests(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_info_output(self, custom=False):
@@ -78,7 +78,7 @@ class UtilityTests(test_util.TestBase):
                      })
         self.assertMultiLineEqual(actual, expected)
         destpath = self.wc_path + '_clone'
-        test_util.hgclone(u, self.repo, destpath)
+        test_hgsubversion_util.hgclone(u, self.repo, destpath)
         repo2 = hg.repository(u, destpath)
         repo2.ui.setconfig('paths', 'default-push',
                            self.repo.ui.config('paths', 'default'))
@@ -131,7 +131,7 @@ class UtilityTests(test_util.TestBase):
         os.remove(self.repo.vfs.join('svn/branch_info'))
         svncommands.updatemeta(self.ui(), self.repo, [])
 
-        test_util.rmtree(self.repo.vfs.join('svn'))
+        test_hgsubversion_util.rmtree(self.repo.vfs.join('svn'))
         self.assertRaises(hgutil.Abort,
                           self.repo.svnmeta)
         self.assertRaises(hgutil.Abort,
@@ -294,7 +294,7 @@ class UtilityTests(test_util.TestBase):
         u = self.ui()
         u.pushbuffer()
         svncommands.listauthors(u,
-                                     args=[test_util.fileurl(repo_path)],
+                                     args=[test_hgsubversion_util.fileurl(repo_path)],
                                      authors=None)
         actual = u.popbuffer()
         self.assertMultiLineEqual(actual, 'Augie\nevil\n')
@@ -303,7 +303,7 @@ class UtilityTests(test_util.TestBase):
         repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
         author_path = os.path.join(repo_path, 'authors')
         svncommands.listauthors(self.ui(),
-                                args=[test_util.fileurl(repo_path)],
+                                args=[test_hgsubversion_util.fileurl(repo_path)],
                                 authors=author_path)
         self.assertMultiLineEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
@@ -315,7 +315,7 @@ class UtilityTests(test_util.TestBase):
         repo_path = self.load_svndump('binaryfiles-broken.svndump')
         u = self.ui()
         u.pushbuffer()
-        ret = verify.verify(u, repo, [test_util.fileurl(repo_path)],
+        ret = verify.verify(u, repo, [test_hgsubversion_util.fileurl(repo_path)],
                             rev=1)
         output = u.popbuffer()
         self.assertEqual(1, ret)
@@ -338,7 +338,7 @@ missing file: binary3
 
         self.assertEqual(SUCCESS, verify.verify(ui, self.repo, rev='tip'))
 
-        corrupt_source = test_util.fileurl(self.load_svndump('corrupt.svndump'))
+        corrupt_source = test_hgsubversion_util.fileurl(self.load_svndump('corrupt.svndump'))
 
         repo.ui.setconfig('paths', 'default', corrupt_source)
 
@@ -364,7 +364,7 @@ missing file: binary3
 
     def test_svnrebuildmeta(self):
         otherpath = self.load_svndump('binaryfiles-broken.svndump')
-        otherurl = test_util.fileurl(otherpath)
+        otherurl = test_hgsubversion_util.fileurl(otherpath)
         self.load_and_fetch('replace_trunk_with_branch.svndump')
         # rebuildmeta with original repo
         svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[])

@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import os, sys
 
@@ -17,7 +17,7 @@ except (ImportError, AttributeError), e:
 
 from hgext.hgsubversion import svnexternals
 
-class TestFetchExternals(test_util.TestBase):
+class TestFetchExternals(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_externalsfile(self):
@@ -269,7 +269,7 @@ d2/ext = [hgsubversion] d2:^/trunk/common/ext ext
 d3/ext3 = [hgsubversion] d3:^/trunk/common/ext ext3
 """, repo['tip']['.hgsub'].data())
 
-class TestPushExternals(test_util.TestBase):
+class TestPushExternals(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
     obsolete_mode_tests = True
 
@@ -348,7 +348,7 @@ HEAD subdir2/deps/project2
 
         # Check .hgsub and .hgsubstate were not pushed
         self.assertEqual(['dir', 'subdir1', 'subdir1/a', 'subdir2',
-                          'subdir2/a'], test_util.svnls(repo_path, 'trunk'))
+                          'subdir2/a'], test_hgsubversion_util.svnls(repo_path, 'trunk'))
 
         # Remove all references from one directory, add a new one
         # to the other (test multiline entries)

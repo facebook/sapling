@@ -1,10 +1,10 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 from mercurial import node
 
-class TestFetchExec(test_util.TestBase):
+class TestFetchExec(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def assertexec(self, ctx, files, isexec=True):

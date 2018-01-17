@@ -6,17 +6,17 @@ import sys
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 # interesting and fast tests
 import test_fetch_mappings
 import test_fetch_renames
 import test_pull
 import test_template_keywords
-import test_utility_commands
+import test_hgsubversion_utility_commands
 
 # comprehensive tests
 try:
@@ -72,7 +72,7 @@ buildtestclass(test_fetch_mappings.MapTests)
 buildtestclass(test_fetch_renames.TestFetchRenames)
 buildtestclass(test_pull.TestPull)
 buildtestclass(test_template_keywords.TestLogKeywords)
-buildtestclass(test_utility_commands.UtilityTests)
+buildtestclass(test_hgsubversion_utility_commands.UtilityTests)
 
 buildtestclass(test_rebuildmeta.RebuildMetaTests, svndumpselector)
 buildtestclass(test_updatemeta.UpdateMetaTests, svndumpselector)

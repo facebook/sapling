@@ -1,10 +1,10 @@
-import test_util
+import test_hgsubversion_util
 
 import mercurial
 from mercurial import commands
 from hgext.hgsubversion import stupid
 
-class TestPullFallback(test_util.TestBase):
+class TestPullFallback(test_hgsubversion_util.TestBase):
     def setUp(self):
         super(TestPullFallback, self).setUp()
 

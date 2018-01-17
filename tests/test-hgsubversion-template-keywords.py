@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 from mercurial import commands
 from mercurial import error
@@ -27,8 +27,8 @@ class CapturingUI(ui.ui):
         self._output += msg
 
 
-class TestLogKeywords(test_util.TestBase):
-    @test_util.requiresmodule(templatekw)
+class TestLogKeywords(test_hgsubversion_util.TestBase):
+    @test_hgsubversion_util.requiresmodule(templatekw)
     def test_svn_keywords(self):
         defaults = {'date': None, 'rev': None, 'user': None, 'graph': True}
         repo = self._load_fixture_and_fetch('two_revs.svndump')
@@ -52,8 +52,8 @@ o
 o
 '''.strip())
 
-    @test_util.requiresmodule(revset)
-    @test_util.requiresmodule(templatekw)
+    @test_hgsubversion_util.requiresmodule(revset)
+    @test_hgsubversion_util.requiresmodule(templatekw)
     def test_svn_revsets(self):
         repo = self._load_fixture_and_fetch('two_revs.svndump')
 

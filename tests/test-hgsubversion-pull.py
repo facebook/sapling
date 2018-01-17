@@ -1,11 +1,11 @@
-import test_util
+import test_hgsubversion_util
 
 from mercurial import node
 from mercurial import util as hgutil
 from mercurial import commands
 from hgext.hgsubversion import verify
 
-class TestPull(test_util.TestBase):
+class TestPull(test_hgsubversion_util.TestBase):
     def setUp(self):
         super(TestPull, self).setUp()
 

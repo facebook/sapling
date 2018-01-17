@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import os
 import subprocess
@@ -14,15 +14,15 @@ class TestBasicRepoLayout(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
 
-        with open(os.path.join(test_util.FIXTURES,
+        with open(os.path.join(test_hgsubversion_util.FIXTURES,
                                'project_root_at_repo_root.svndump')) as fp:
             svnwrap.create_and_load(self.repo_path, fp)
 
-        self.repo = svnwrap.SubversionRepo(test_util.fileurl(self.repo_path))
+        self.repo = svnwrap.SubversionRepo(test_hgsubversion_util.fileurl(self.repo_path))
 
     def tearDown(self):
         del self.repo
-        test_util.rmtree(self.tmpdir)
+        test_hgsubversion_util.rmtree(self.tmpdir)
 
     def test_num_revs(self):
         revs = list(self.repo.revisions())
@@ -44,10 +44,10 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
 
-        with open(os.path.join(test_util.FIXTURES,
+        with open(os.path.join(test_hgsubversion_util.FIXTURES,
                                'project_root_not_repo_root.svndump')) as fp:
             svnwrap.create_and_load(self.repo_path, fp)
 
-        self.repo = svnwrap.SubversionRepo(test_util.fileurl(
+        self.repo = svnwrap.SubversionRepo(test_hgsubversion_util.fileurl(
             self.repo_path + '/dummyproj'
         ))

@@ -8,37 +8,37 @@ from mercurial import hg
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 from hgext.hgsubversion import svnwrap
 
 
 def _do_case(self, name, layout):
-    subdir = test_util.subdir.get(name, '')
+    subdir = test_hgsubversion_util.subdir.get(name, '')
     config = {}
-    u = test_util.testui()
-    for branch, path in test_util.custom.get(name, {}).iteritems():
+    u = test_hgsubversion_util.testui()
+    for branch, path in test_hgsubversion_util.custom.get(name, {}).iteritems():
         config['hgsubversionbranch.%s' % branch] = path
         u.setconfig('hgsubversionbranch', branch, path)
     repo, repo_path = self.load_and_fetch(name,
                                           subdir=subdir,
                                           layout=layout,
                                           config=config)
-    assert test_util.repolen(self.repo) > 0, \
-        'Repo had no changes, maybe you need to add a subdir entry in test_util?'
+    assert test_hgsubversion_util.repolen(self.repo) > 0, \
+        'Repo had no changes, maybe you need to add a subdir entry in test_hgsubversion_util?'
     wc2_path = self.wc_path + '_stupid'
     checkout_path = repo_path
     if subdir:
         checkout_path += '/' + subdir
     u.setconfig('hgsubversion', 'stupid', '1')
     u.setconfig('hgsubversion', 'layout', layout)
-    test_util.hgclone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
+    test_hgsubversion_util.hgclone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
     if layout == 'single':
         self.assertEqual(len(self.repo.heads()), 1)
-    self.repo2 = hg.repository(test_util.testui(), wc2_path)
+    self.repo2 = hg.repository(test_hgsubversion_util.testui(), wc2_path)
     self.assertEqual(self.repo.heads(), self.repo2.heads())
 
 
@@ -51,7 +51,7 @@ def buildmethod(case, name, layout):
 if svnwrap.subversion_version < (1, 9, 0):
     attrs = {'_do_case': _do_case,
              }
-    for case in (f for f in os.listdir(test_util.FIXTURES)
+    for case in (f for f in os.listdir(test_hgsubversion_util.FIXTURES)
                  if f.endswith('.svndump')):
         if case == 'corrupt.svndump':
             continue
@@ -61,7 +61,7 @@ if svnwrap.subversion_version < (1, 9, 0):
         if case != 'branchtagcollision.svndump':
             attrs[name] = buildmethod(case, name, 'auto')
         attrs[name + '_single'] = buildmethod(case, name + '_single', 'single')
-        if case in test_util.custom:
+        if case in test_hgsubversion_util.custom:
             attrs[name + '_custom'] = buildmethod(case, name + '_custom', 'custom')
 
-    StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
+    StupidPullTests = type('StupidPullTests', (test_hgsubversion_util.TestBase,), attrs)

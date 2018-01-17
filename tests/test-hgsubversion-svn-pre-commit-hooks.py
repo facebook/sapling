@@ -1,12 +1,12 @@
 # no-check-code -- see T24862348
 
 import os
-import test_util
+import test_hgsubversion_util
 
 from mercurial import util
 
 
-class TestSvnPreCommitHooks(test_util.TestBase):
+class TestSvnPreCommitHooks(test_hgsubversion_util.TestBase):
     def setUp(self):
         super(TestSvnPreCommitHooks, self).setUp()
         self.repo_path = self.load_and_fetch('single_rev.svndump')[1]

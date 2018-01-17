@@ -1,12 +1,12 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import shutil
 
 from hgext.hgsubversion import compathacks
 
-class TestSingleDirClone(test_util.TestBase):
+class TestSingleDirClone(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_clone_single_dir_simple(self):
@@ -30,7 +30,7 @@ class TestSingleDirClone(test_util.TestBase):
                                             layout='auto')
         self.assertEqual(compathacks.branchset(repo),
                          set(['default', 'branch_from_tag']))
-        oldmanifest = test_util.filtermanifest(repo['default'].manifest().keys())
+        oldmanifest = test_hgsubversion_util.filtermanifest(repo['default'].manifest().keys())
         # remove standard layout
         shutil.rmtree(self.wc_path)
         # try again with subdir to get single dir clone
@@ -44,7 +44,7 @@ class TestSingleDirClone(test_util.TestBase):
         FIXTURE = 'subdir_is_file_prefix.svndump'
         repo = self._load_fixture_and_fetch(FIXTURE,
                                             layout='single',
-                                            subdir=test_util.subdir[FIXTURE])
+                                            subdir=test_hgsubversion_util.subdir[FIXTURE])
         self.assertEqual(compathacks.branchset(repo), set(['default']))
         self.assertEqual(repo['tip'].manifest().keys(), ['flaf.txt'])
 

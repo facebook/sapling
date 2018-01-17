@@ -1,8 +1,8 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
-class TestFetchSymlinks(test_util.TestBase):
+class TestFetchSymlinks(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_symlinks(self):
@@ -49,7 +49,7 @@ class TestFetchSymlinks(test_util.TestBase):
             for f in links[rev]:
                 self.assertTrue(f in ctx)
 
-class TestMergeSpecial(test_util.TestBase):
+class TestMergeSpecial(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_special(self):

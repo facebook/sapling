@@ -1,8 +1,8 @@
-import test_util
+import test_hgsubversion_util
 
 import sys
 
-class TestFetchRenames(test_util.TestBase):
+class TestFetchRenames(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def _debug_print_copies(self, repo):

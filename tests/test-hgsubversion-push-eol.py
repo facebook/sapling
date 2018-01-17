@@ -1,11 +1,11 @@
-import test_util
+import test_hgsubversion_util
 
-class TestPushEol(test_util.TestBase):
+class TestPushEol(test_hgsubversion_util.TestBase):
     obsolete_mode_tests = True
     stupid_mode_tests = True
 
     def setUp(self):
-        test_util.TestBase.setUp(self)
+        test_hgsubversion_util.TestBase.setUp(self)
         self._load_fixture_and_fetch('emptyrepo.svndump')
 
     def test_push_dirs(self):

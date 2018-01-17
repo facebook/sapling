@@ -1,6 +1,6 @@
-import test_util
+import test_hgsubversion_util
 
-class TestFetchDirectoryRemoval(test_util.TestBase):
+class TestFetchDirectoryRemoval(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_removal(self):

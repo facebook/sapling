@@ -1,9 +1,9 @@
-import test_util
+import test_hgsubversion_util
 
 from mercurial import hg
 from mercurial import commands
 
-class TestHooks(test_util.TestBase):
+class TestHooks(test_hgsubversion_util.TestBase):
     def setUp(self):
         super(TestHooks, self).setUp()
 
@@ -21,7 +21,7 @@ class TestHooks(test_util.TestBase):
         # Clone to a new repository and add a hook
         new_wc_path = "%s-2" % self.wc_path
         commands.clone(self.repo.ui, self.wc_path, new_wc_path)
-        newrepo = hg.repository(test_util.testui(), new_wc_path)
+        newrepo = hg.repository(test_hgsubversion_util.testui(), new_wc_path)
         newrepo.ui.setconfig('hooks', 'changegroup.meta',
                 'python:hgext.hgsubversion.hooks.updatemeta.hook')
 

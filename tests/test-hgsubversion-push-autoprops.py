@@ -1,14 +1,14 @@
 import os
 
-import test_util
+import test_hgsubversion_util
 
 from hgext.hgsubversion import svnwrap
 
-class PushAutoPropsTests(test_util.TestBase):
+class PushAutoPropsTests(test_hgsubversion_util.TestBase):
     obsolete_mode_tests = True
 
     def setUp(self):
-        test_util.TestBase.setUp(self)
+        test_hgsubversion_util.TestBase.setUp(self)
         repo, self.repo_path = self.load_and_fetch('emptyrepo.svndump')
 
     def test_push_honors_svn_autoprops(self):
@@ -20,12 +20,12 @@ class PushAutoPropsTests(test_util.TestBase):
         changes = [('test.py', 'test.py', 'echo hallo')]
         self.commitchanges(changes)
         self.pushrevisions()
-        prop_val = test_util.svnpropget(
+        prop_val = test_hgsubversion_util.svnpropget(
             self.repo_path, "trunk/test.py", 'test:prop')
         self.assertEqual('success', prop_val)
 
 
-class AutoPropsConfigTest(test_util.TestBase):
+class AutoPropsConfigTest(test_hgsubversion_util.TestBase):
     def test_use_autoprops_for_matching_file_when_enabled(self):
         self.setup_svn_config(
             "[miscellany]\n"
@@ -75,7 +75,7 @@ class AutoPropsConfigTest(test_util.TestBase):
             'test:prop': 'success', 'test:prop2': 'success'}, props)
 
 
-class ParseAutoPropsTests(test_util.TestBase):
+class ParseAutoPropsTests(test_hgsubversion_util.TestBase):
     def test_property_value_is_optional(self):
         props = svnwrap.parse_autoprops("svn:executable")
         self.assertEqual({'svn:executable': ''}, props)

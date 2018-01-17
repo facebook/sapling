@@ -1,8 +1,8 @@
-import test_util
+import test_hgsubversion_util
 
 from hgext.hgsubversion import svnmeta, maps
 
-class TestRevMapMigrate(test_util.TestBase):
+class TestRevMapMigrate(test_hgsubversion_util.TestBase):
 
     def tearDown(self):
         # revert changes to defaultrevmapclass

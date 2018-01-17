@@ -6,10 +6,10 @@ import sys
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 from mercurial import context
 from mercurial import extensions
@@ -33,20 +33,20 @@ expect_youngest_skew = [('file_mixed_with_branches.svndump', False, False),
 
 
 def _do_case(self, name, layout):
-    subdir = test_util.subdir.get(name, '')
+    subdir = test_hgsubversion_util.subdir.get(name, '')
     single = layout == 'single'
-    u = test_util.testui()
+    u = test_hgsubversion_util.testui()
     config = {}
     if layout == 'custom':
-        for branch, path in test_util.custom.get(name, {}).iteritems():
+        for branch, path in test_hgsubversion_util.custom.get(name, {}).iteritems():
             config['hgsubversionbranch.%s' % branch] = path
             u.setconfig('hgsubversionbranch', branch, path)
     repo, repo_path = self.load_and_fetch(name, subdir=subdir, layout=layout)
-    assert test_util.repolen(self.repo) > 0
+    assert test_hgsubversion_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
-    src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
-    src = test_util.getlocalpeer(src)
-    dest = test_util.getlocalpeer(dest)
+    src, dest = test_hgsubversion_util.hgclone(u, self.wc_path, wc2_path, update=False)
+    src = test_hgsubversion_util.getlocalpeer(src)
+    dest = test_hgsubversion_util.getlocalpeer(dest)
 
     # insert a wrapper that prevents calling changectx.children()
     def failfn(orig, ctx):
@@ -58,7 +58,7 @@ def _do_case(self, name, layout):
 
     try:
         svncommands.rebuildmeta(u, dest,
-                                args=[test_util.fileurl(repo_path +
+                                args=[test_hgsubversion_util.fileurl(repo_path +
                                                         subdir), ])
     finally:
         # remove the wrapper
@@ -67,20 +67,20 @@ def _do_case(self, name, layout):
     self._run_assertions(name, single, src, dest, u)
 
     wc3_path = self.wc_path + '_partial'
-    src, dest = test_util.hgclone(u,
+    src, dest = test_hgsubversion_util.hgclone(u,
                                   self.wc_path,
                                   wc3_path,
                                   update=False,
                                   rev=[0])
-    srcrepo = test_util.getlocalpeer(src)
-    dest = test_util.getlocalpeer(dest)
+    srcrepo = test_hgsubversion_util.getlocalpeer(src)
+    dest = test_hgsubversion_util.getlocalpeer(dest)
 
     # insert a wrapper that prevents calling changectx.children()
     extensions.wrapfunction(context.changectx, 'children', failfn)
 
     try:
         svncommands.rebuildmeta(u, dest,
-                                args=[test_util.fileurl(repo_path +
+                                args=[test_hgsubversion_util.fileurl(repo_path +
                                                         subdir), ])
     finally:
         # remove the wrapper
@@ -97,7 +97,7 @@ def _do_case(self, name, layout):
     extensions.wrapfunction(context.changectx, 'children', failfn)
     try:
         svncommands.updatemeta(u, dest,
-                               args=[test_util.fileurl(repo_path +
+                               args=[test_hgsubversion_util.fileurl(repo_path +
                                                         subdir), ])
     finally:
         # remove the wrapper
@@ -182,16 +182,16 @@ attrs = {'_do_case': _do_case,
          '_run_assertions': _run_assertions,
          'stupid_mode_tests': True,
          }
-for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
+for case in [f for f in os.listdir(test_hgsubversion_util.FIXTURES) if f.endswith('.svndump')]:
     # this fixture results in an empty repository, don't use it
     if case in skip:
         continue
     bname = 'test_' + case[:-len('.svndump')]
     attrs[bname] = buildmethod(case, bname, 'auto')
     attrs[bname + '_single'] = buildmethod(case, bname + '_single', 'single')
-    if case in test_util.custom:
+    if case in test_hgsubversion_util.custom:
             attrs[bname + '_custom'] = buildmethod(case,
                                                    bname + '_custom',
                                                    'single')
 
-RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase,), attrs)
+RebuildMetaTests = type('RebuildMetaTests', (test_hgsubversion_util.TestBase,), attrs)

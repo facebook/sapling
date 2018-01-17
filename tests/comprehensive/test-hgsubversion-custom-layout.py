@@ -8,16 +8,16 @@ from mercurial import hg
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 from hgext.hgsubversion import svnwrap
 
 
 def _do_case(self, name, stupid):
-    subdir = test_util.subdir.get(name, '')
+    subdir = test_hgsubversion_util.subdir.get(name, '')
     config = {
         'hgsubversion.stupid': stupid and '1' or '0',
         }
@@ -25,20 +25,20 @@ def _do_case(self, name, stupid):
                                           subdir=subdir,
                                           layout='auto',
                                           config=config)
-    assert test_util.repolen(self.repo) > 0, \
-        'Repo had no changes, maybe you need to add a subdir entry in test_util?'
+    assert test_hgsubversion_util.repolen(self.repo) > 0, \
+        'Repo had no changes, maybe you need to add a subdir entry in test_hgsubversion_util?'
     wc2_path = self.wc_path + '_custom'
     checkout_path = repo_path
     if subdir:
         checkout_path += '/' + subdir
-    u = test_util.testui(stupid=stupid, layout='custom')
-    for branch, path in test_util.custom.get(name, {}).iteritems():
+    u = test_hgsubversion_util.testui(stupid=stupid, layout='custom')
+    for branch, path in test_hgsubversion_util.custom.get(name, {}).iteritems():
         u.setconfig('hgsubversionbranch', branch, path)
-    test_util.hgclone(u,
-                      test_util.fileurl(checkout_path),
+    test_hgsubversion_util.hgclone(u,
+                      test_hgsubversion_util.fileurl(checkout_path),
                       wc2_path,
                       update=False)
-    self.repo2 = hg.repository(test_util.testui(), wc2_path)
+    self.repo2 = hg.repository(test_hgsubversion_util.testui(), wc2_path)
     self.assertEqual(self.repo.heads(), self.repo2.heads())
 
 
@@ -52,11 +52,11 @@ def buildmethod(case, name, stupid):
 
 attrs = {'_do_case': _do_case,
          }
-for case in test_util.custom:
+for case in test_hgsubversion_util.custom:
     name = 'test_' + case[:-len('.svndump')].replace('-', '_')
     attrs[name] = buildmethod(case, name, stupid=False)
     if svnwrap.subversion_version < (1, 9, 0):
         name += '_stupid'
         attrs[name] = buildmethod(case, name, stupid=True)
 
-CustomPullTests = type('CustomPullTests', (test_util.TestBase,), attrs)
+CustomPullTests = type('CustomPullTests', (test_hgsubversion_util.TestBase,), attrs)

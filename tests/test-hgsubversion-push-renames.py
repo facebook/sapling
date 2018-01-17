@@ -1,15 +1,15 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import sys
 
-class TestPushRenames(test_util.TestBase):
+class TestPushRenames(test_hgsubversion_util.TestBase):
     obsolete_mode_tests = True
     stupid_mode_tests = True
 
     def setUp(self):
-        test_util.TestBase.setUp(self)
+        test_hgsubversion_util.TestBase.setUp(self)
         self.repo_path = self.load_and_fetch('pushrenames.svndump')[1]
 
     def _debug_print_copies(self, ctx):
@@ -108,7 +108,7 @@ class TestPushRenames(test_util.TestBase):
         self.commitchanges(changes)
         self.pushrevisions()
         assert reduce(lambda x, y: x and y,
-                      ('geek' not in f for f in test_util.svnls(self.repo_path, 'trunk'))), (
+                      ('geek' not in f for f in test_hgsubversion_util.svnls(self.repo_path, 'trunk'))), (
             'This failure means rename of an entire tree is broken.'
             ' There is a print on the preceding line commented out '
             'that should help you.')

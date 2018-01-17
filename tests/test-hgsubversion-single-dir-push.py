@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import errno
 
@@ -11,7 +11,7 @@ from mercurial import node
 
 from hgext.hgsubversion import compathacks
 
-class TestSingleDirPush(test_util.TestBase):
+class TestSingleDirPush(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
     obsolete_mode_tests = True
 
@@ -49,15 +49,15 @@ class TestSingleDirPush(test_util.TestBase):
         repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
-        self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
+        self.assertTrue('adding_file' in test_hgsubversion_util.svnls(repo_path, ''))
         self.assertEqual('application/octet-stream',
-                         test_util.svnpropget(repo_path, 'adding_binary',
+                         test_hgsubversion_util.svnpropget(repo_path, 'adding_binary',
                                               'svn:mime-type'))
         # Now add another commit and test mime-type being reset
         changes = [('adding_binary', 'adding_binary', 'no longer binary')]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual('', test_util.svnpropget(repo_path, 'adding_binary',
+        self.assertEqual('', test_hgsubversion_util.svnpropget(repo_path, 'adding_binary',
                                                   'svn:mime-type'))
 
     def test_push_single_dir_at_subdir(self):
@@ -120,8 +120,8 @@ class TestSingleDirPush(test_util.TestBase):
             repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions(expected_extra_back=1)
-        self.assertTrue('trunk/one' in test_util.svnls(repo_path, ''))
-        self.assertTrue('trunk/two' in test_util.svnls(repo_path, ''))
+        self.assertTrue('trunk/one' in test_hgsubversion_util.svnls(repo_path, ''))
+        self.assertTrue('trunk/two' in test_hgsubversion_util.svnls(repo_path, ''))
 
     def test_push_single_dir_branch(self):
         # Tests local branches pushing to a single dir repo. Creates a fork at
@@ -160,7 +160,7 @@ class TestSingleDirPush(test_util.TestBase):
         hg.update(repo, repo['foo'].node())
         self.pushrevisions()
         repo = self.repo # repo is outdated after the rebase happens, refresh
-        self.assertTrue('foo' in test_util.svnls(repo_path, ''))
+        self.assertTrue('foo' in test_hgsubversion_util.svnls(repo_path, ''))
         self.assertEqual(compathacks.branchset(repo), set(['default']))
         # Have to cross to another branch head, so hg.update doesn't work
         commands.update(self.ui(),
@@ -168,10 +168,10 @@ class TestSingleDirPush(test_util.TestBase):
                         self.repo.branchheads('default')[1],
                         clean=True)
         self.pushrevisions()
-        self.assertTrue('default' in test_util.svnls(repo_path, ''))
+        self.assertTrue('default' in test_hgsubversion_util.svnls(repo_path, ''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
 
-    @test_util.requiresoption('branch')
+    @test_hgsubversion_util.requiresoption('branch')
     def test_push_single_dir_renamed_branch(self):
         # Tests pulling and pushing with a renamed branch
         # Based on test_push_single_dir
@@ -179,8 +179,8 @@ class TestSingleDirPush(test_util.TestBase):
         cmd = ['clone', '--quiet', '--layout=single', '--branch=flaf']
         if self.stupid:
             cmd.append('--stupid')
-        cmd += [test_util.fileurl(repo_path), self.wc_path]
-        test_util.dispatch(cmd)
+        cmd += [test_hgsubversion_util.fileurl(repo_path), self.wc_path]
+        test_hgsubversion_util.dispatch(cmd)
 
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
@@ -204,7 +204,7 @@ class TestSingleDirPush(test_util.TestBase):
         lr.commitctx(ctx)
         hg.update(self.repo, self.repo['tip'].node())
         self.pushrevisions()
-        self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
+        self.assertTrue('adding_file' in test_hgsubversion_util.svnls(repo_path, ''))
 
         self.assertEquals(set(['flaf']),
                           set(self.repo[i].branch() for i in self.repo))

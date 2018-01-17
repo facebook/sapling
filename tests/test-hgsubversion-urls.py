@@ -1,13 +1,13 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import urllib
 
 from hgext.hgsubversion.svnwrap import parse_url
 from hgext.hgsubversion import svnrepo
 
-class TestSubversionUrls(test_util.TestBase):
+class TestSubversionUrls(test_hgsubversion_util.TestBase):
     def test_standard_url(self):
         self.check_parse_url((None, None, 'file:///var/svn/repo'),
                              ('file:///var/svn/repo', ))
@@ -51,7 +51,7 @@ class TestSubversionUrls(test_util.TestBase):
             ('https://joe:t3stpw@svn.testurl.com/repo', 'bob', '123abc', ))
 
     def test_url_rewriting(self):
-        ui = test_util.testui()
+        ui = test_hgsubversion_util.testui()
         ui.setconfig('hgsubversion', 'username', 'bob')
         repo = svnrepo.svnremoterepo(ui, 'svn+ssh://joe@foo/bar')
         self.assertEqual('svn+ssh://bob@foo/bar', repo.svnauth[0])
@@ -69,7 +69,7 @@ class TestSubversionUrls(test_util.TestBase):
         ui = self.ui()
         repo_path = self.load_svndump('non_ascii_path_1.svndump')
 
-        repo_url = test_util.fileurl(repo_path)
+        repo_url = test_hgsubversion_util.fileurl(repo_path)
         subdir = '/b\xC3\xB8b'
         quoted_subdir = urllib.quote(subdir)
 

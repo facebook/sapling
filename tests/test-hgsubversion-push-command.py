@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import errno
 import os
@@ -23,11 +23,11 @@ from hgext.hgsubversion import compathacks
 import time
 
 
-class PushTests(test_util.TestBase):
+class PushTests(test_hgsubversion_util.TestBase):
     obsolete_mode_tests = True
 
     def setUp(self):
-        test_util.TestBase.setUp(self)
+        test_hgsubversion_util.TestBase.setUp(self)
         self.repo_path = self.load_and_fetch('simple_branch.svndump')[1]
 
     def test_cant_push_empty_ctx(self):
@@ -231,7 +231,7 @@ class PushTests(test_util.TestBase):
             if sys.version_info >= (2,6):
                 svnserve.kill()
             else:
-                test_util.kill_process(svnserve)
+                test_hgsubversion_util.kill_process(svnserve)
 
     def test_push_over_svnserve(self):
         self.internal_push_over_svnserve()
@@ -384,14 +384,14 @@ class PushTests(test_util.TestBase):
         self.test_push_to_branch(push=False)
         wc2path = self.wc_path + '_clone'
         u = self.repo.ui
-        test_util.hgclone(self.repo.ui, self.wc_path, wc2path, update=False)
+        test_hgsubversion_util.hgclone(self.repo.ui, self.wc_path, wc2path, update=False)
         res = self.pushrevisions()
         self.assertEqual(0, res)
         oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'))
         hgrc = oldf.read()
         oldf.close()
         shutil.rmtree(self.wc_path)
-        test_util.hgclone(u, wc2path, self.wc_path, update=False)
+        test_hgsubversion_util.hgclone(u, wc2path, self.wc_path, update=False)
         oldf = open(os.path.join(self.wc_path, '.hg', 'hgrc'), 'w')
         oldf.write(hgrc)
         oldf.close()
@@ -404,7 +404,7 @@ class PushTests(test_util.TestBase):
         from hgext.hgsubversion import svncommands
         svncommands.rebuildmeta(u,
                                 self.repo,
-                                args=[test_util.fileurl(self.repo_path)])
+                                args=[test_hgsubversion_util.fileurl(self.repo_path)])
 
 
         hg.update(self.repo, self.repo['tip'].node())
@@ -703,7 +703,7 @@ class PushTests(test_util.TestBase):
         on top of the pushed commit.
         '''
 
-        oldlen = test_util.repolen(self.repo)
+        oldlen = test_hgsubversion_util.repolen(self.repo)
         self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
@@ -716,7 +716,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         hg.update(repo, newhash1)
         commands.push(repo.ui, repo)
-        self.assertEqual(test_util.repolen(self.repo), oldlen + 2)
+        self.assertEqual(test_hgsubversion_util.repolen(self.repo), oldlen + 2)
 
         # verify that the first commit is pushed, and the second is not
         commit2 = self.repo['tip']
@@ -734,7 +734,7 @@ class PushTests(test_util.TestBase):
         This test verifies that code path works.
         '''
 
-        oldlen = test_util.repolen(self.repo)
+        oldlen = test_hgsubversion_util.repolen(self.repo)
         self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
@@ -747,7 +747,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         hg.update(repo, newhash)
         commands.push(repo.ui, repo)
-        self.assertEqual(test_util.repolen(self.repo), oldlen + 2)
+        self.assertEqual(test_hgsubversion_util.repolen(self.repo), oldlen + 2)
 
         # verify that both commits are pushed
         commit1 = self.repo['tip']

@@ -1,4 +1,4 @@
-import test_util
+import test_hgsubversion_util
 
 import os
 
@@ -16,12 +16,12 @@ def _dispatch(ui, cmd):
     except AttributeError:
         dispatch._dispatch(ui, cmd)
 
-class TestMercurialCore(test_util.TestBase):
+class TestMercurialCore(test_hgsubversion_util.TestBase):
     '''
     Test that the core Mercurial operations aren't broken by hgsubversion.
     '''
 
-    @test_util.requiresoption('updaterev')
+    @test_hgsubversion_util.requiresoption('updaterev')
     def test_update(self):
         ''' Test 'clone --updaterev' '''
         ui = self.ui()
@@ -42,7 +42,7 @@ class TestMercurialCore(test_util.TestBase):
         f.flush()
         commands.commit(ui, repo, message="C3")
 
-        self.assertEqual(test_util.repolen(repo), 3)
+        self.assertEqual(test_hgsubversion_util.repolen(repo), 3)
 
         updaterev = 1
         _dispatch(ui, ['clone', '--quiet',
@@ -53,7 +53,7 @@ class TestMercurialCore(test_util.TestBase):
 
         self.assertEqual(str(repo[updaterev]), str(repo2['.']))
 
-    @test_util.requiresoption('branch')
+    @test_hgsubversion_util.requiresoption('branch')
     def test_branch(self):
         ''' Test 'clone --branch' '''
         ui = self.ui()
@@ -77,7 +77,7 @@ class TestMercurialCore(test_util.TestBase):
         commands.branch(ui, repo, label="B2")
         commands.commit(ui, repo, message="C3")
 
-        self.assertEqual(test_util.repolen(repo), 3)
+        self.assertEqual(test_hgsubversion_util.repolen(repo), 3)
 
         branch = 'B1'
         _dispatch(ui, [

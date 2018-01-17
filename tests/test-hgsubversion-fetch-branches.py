@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import unittest
 
@@ -9,13 +9,13 @@ from mercurial import hg
 
 from hgext.hgsubversion import compathacks
 
-class TestFetchBranches(test_util.TestBase):
+class TestFetchBranches(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
         repo_path = self.load_svndump(fixture_name)
-        source = '%s#%s' % (test_util.fileurl(repo_path), anchor)
-        test_util.hgclone(self.ui(), source, self.wc_path)
+        source = '%s#%s' % (test_hgsubversion_util.fileurl(repo_path), anchor)
+        test_hgsubversion_util.hgclone(self.ui(), source, self.wc_path)
         return hg.repository(self.ui(), self.wc_path)
 
     def branches(self, repo):
@@ -120,7 +120,7 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_replace_branch_with_branch(self):
         repo = self._load_fixture_and_fetch('replace_branch_with_branch.svndump')
-        self.assertEqual(7, test_util.repolen(repo))
+        self.assertEqual(7, test_hgsubversion_util.repolen(repo))
         # tip is former topological branch1 being closed
         ctx = repo['tip']
         self.assertEqual('1', ctx.extra().get('close', '0'))

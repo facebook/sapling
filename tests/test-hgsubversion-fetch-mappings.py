@@ -2,7 +2,7 @@
 
 """Tests for author maps and file maps.
 """
-import test_util
+import test_hgsubversion_util
 
 import os
 
@@ -13,7 +13,7 @@ from hgext.hgsubversion import maps
 from hgext.hgsubversion import svncommands
 from hgext.hgsubversion import verify
 
-class MapTests(test_util.TestBase):
+class MapTests(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     @property
@@ -40,7 +40,7 @@ class MapTests(test_util.TestBase):
         authormap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie Fackler <durin42@gmail.com>')
@@ -54,7 +54,7 @@ class MapTests(test_util.TestBase):
         authormap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie@5b65bade-98f3-4993-a01f-b7a6710da339')
@@ -66,14 +66,14 @@ class MapTests(test_util.TestBase):
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['(no author)@%s' % self.repo.svnmeta().uuid]
         self.assertEqual(sorted(users), expected_users)
-        test_util.rmtree(self.wc_path)
+        test_hgsubversion_util.rmtree(self.wc_path)
 
         authormap = open(self.authors, 'w')
         authormap.write("(no author)=Testy <test@example.com>")
         authormap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['Testy <test@example.com>']
@@ -108,7 +108,7 @@ class MapTests(test_util.TestBase):
         ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
         ui.setconfig('hgsubversion', 'caseignoreauthors', True)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         self.assertEqual(self.repo[0].user(),
                          'Augie Fackler <durin42@gmail.com>')
@@ -119,7 +119,7 @@ class MapTests(test_util.TestBase):
         repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
         ui = self.ui()
         ui.setconfig('hgsubversion', 'mapauthorscmd', 'echo "svn: %s"')
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path)
         self.assertEqual(self.repo[0].user(), 'svn: Augie')
         self.assertEqual(self.repo['tip'].user(), 'svn: evil')
@@ -134,25 +134,25 @@ class MapTests(test_util.TestBase):
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
         ui.setconfig('hgsubversion', 'failoninvalidreplayfile', 'true')
         ui.setconfig('hgsubversion', 'failonmissing', failonmissing)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, filemap=self.filemap)
         return self.repo
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map(self):
         repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
             "include alpha\n")
         self.assertEqual(node.hex(repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
         self.assertEqual(node.hex(repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_exclude(self):
         repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
             "exclude alpha\n")
         self.assertEqual(node.hex(repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
         self.assertEqual(node.hex(repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_rule_order(self):
         self._loadwithfilemap('replace_trunk_with_branch.svndump',
             "exclude alpha\ninclude .\nexclude gamma\n")
@@ -164,7 +164,7 @@ class MapTests(test_util.TestBase):
         self.assertEqual(sorted(self.repo['default'].manifest().keys()),
                          ['alpha', 'beta'])
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_copy(self):
         # Exercise excluding files copied from a non-excluded directory.
         # There will be missing files as we are copying from an excluded
@@ -173,7 +173,7 @@ class MapTests(test_util.TestBase):
                 failonmissing=False)
         self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_exclude_copy_source_and_dest(self):
         # dir3 is excluded and copied from dir2 which is also excluded.
         # dir3 files should not be marked as missing and fetched.
@@ -181,7 +181,7 @@ class MapTests(test_util.TestBase):
                 "exclude dir2\nexclude dir3\n")
         self.assertEqual(['dir/a'], list(repo[2]))
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_include_file_exclude_dir(self):
         # dir3 is excluded but we want dir3/a, which is also copied from
         # an exluded dir2. dir3/a should be fetched.
@@ -190,7 +190,7 @@ class MapTests(test_util.TestBase):
                 failonmissing=False)
         self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
 
-    @test_util.requiresreplay
+    @test_hgsubversion_util.requiresreplay
     def test_file_map_delete_dest(self):
         repo = self._loadwithfilemap('copies.svndump', 'exclude dir3\n')
         self.assertEqual(['dir/a', 'dir2/a'], list(repo[3]))
@@ -203,7 +203,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assert_('badname' not in branches)
@@ -219,7 +219,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assert_('badname' not in branches)
@@ -234,7 +234,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['art', 'closeme'])
@@ -247,7 +247,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['bob', 'default'])
@@ -261,7 +261,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['default'])
@@ -282,17 +282,17 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
 
         # clone & rebuild
         ui = self.ui()
-        src, dest = test_util.hgclone(ui, self.wc_path, self.wc_path + '_clone',
+        src, dest = test_hgsubversion_util.hgclone(ui, self.wc_path, self.wc_path + '_clone',
                                       update=False)
-        src = test_util.getlocalpeer(src)
-        dest = test_util.getlocalpeer(dest)
+        src = test_hgsubversion_util.getlocalpeer(src)
+        dest = test_hgsubversion_util.getlocalpeer(dest)
         svncommands.rebuildmeta(ui, dest,
-                                args=[test_util.fileurl(repo_path)])
+                                args=[test_hgsubversion_util.fileurl(repo_path)])
 
         # just check the keys; assume the contents are unaffected by the branch
         # map and thus properly tested by other tests
@@ -308,7 +308,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         repo = self.repo
 
@@ -327,7 +327,7 @@ class MapTests(test_util.TestBase):
         branchmap.close()
         ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['default', 'feature'])
@@ -341,7 +341,7 @@ class MapTests(test_util.TestBase):
 
         ui = self.ui()
         ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, tagmap=self.tagmap)
         tags = self.repo.tags()
         assert 'tag_r3' not in tags
@@ -358,7 +358,7 @@ class MapTests(test_util.TestBase):
 
         ui = self.ui()
         ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
-        commands.clone(ui, test_util.fileurl(repo_path),
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path),
                        self.wc_path, tagmap=self.tagmap)
         # Wat? Revisit. T24862348
         self.repo.tags()
@@ -368,10 +368,10 @@ class MapTests(test_util.TestBase):
 
         self.assertEqual(repo['tip'].description(), '')
 
-        test_util.rmtree(self.wc_path)
+        test_hgsubversion_util.rmtree(self.wc_path)
 
         ui = self.ui()
         ui.setconfig('hgsubversion', 'defaultmessage', 'blyf')
-        commands.clone(ui, test_util.fileurl(repo_path), self.wc_path)
+        commands.clone(ui, test_hgsubversion_util.fileurl(repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')

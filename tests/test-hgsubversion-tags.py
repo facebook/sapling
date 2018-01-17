@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import os, cStringIO, difflib
 
@@ -10,7 +10,7 @@ from mercurial import error
 from hgext.hgsubversion import compathacks
 from hgext.hgsubversion import svncommands
 
-class TestTags(test_util.TestBase):
+class TestTags(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_tags(self):
@@ -89,11 +89,11 @@ rename a tag
             "Note: this test failing may be because of a rebuildmeta failure.\n"
             "You should check that before assuming issues with this test.\n")
         wc2_path = self.wc_path + '2'
-        src, dest = test_util.hgclone(repo.ui, self.wc_path, wc2_path, update=False)
-        dest = test_util.getlocalpeer(dest)
+        src, dest = test_hgsubversion_util.hgclone(repo.ui, self.wc_path, wc2_path, update=False)
+        dest = test_hgsubversion_util.getlocalpeer(dest)
         svncommands.rebuildmeta(repo.ui,
                                dest,
-                               args=[test_util.fileurl(repo_path), ])
+                               args=[test_hgsubversion_util.fileurl(repo_path), ])
         commands.pull(self.repo.ui, self.repo)
         dtags, srctags = dest.tags(), self.repo.tags()
         dtags.pop('tip')

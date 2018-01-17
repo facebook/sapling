@@ -1,8 +1,8 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
-class TestPushDirectories(test_util.TestBase):
+class TestPushDirectories(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
     obsolete_mode_tests = True
 
@@ -21,7 +21,7 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'trunk'),
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'trunk'),
                           ['d1', 'd1/a', 'd2', 'd2/a', 'd2/b', 'd31',
                            'd31/d32', 'd31/d32/a', 'd31/d32/d33',
                            'd31/d32/d33/d34', 'd31/d32/d33/d34/a'])
@@ -45,7 +45,7 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'trunk'),
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'trunk'),
                          ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', ])
 
     def test_push_new_dir_project_root_not_repo_root(self):
@@ -55,7 +55,7 @@ class TestPushDirectories(test_util.TestBase):
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'foo/trunk'), ['bar',
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'foo/trunk'), ['bar',
                                                    'bar/alpha',
                                                    'bar/beta',
                                                    'bar/delta',
@@ -70,18 +70,18 @@ class TestPushDirectories(test_util.TestBase):
         changes = [('narf/a', 'narf/a', 'ohai',),
                    ]
         self.commitchanges(changes)
-        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a',
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'project/trunk'), ['a',
                                                        'narf',
                                                        ])
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a',
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'project/trunk'), ['a',
                                                        'narf',
                                                        'narf/a'])
         changes = [('narf/a', None, None,),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a'])
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'project/trunk'), ['a'])
 
     def test_push_single_dir_change_in_subdir(self):
         # Tests simple pushing from default branch to a single dir repo
@@ -95,7 +95,7 @@ class TestPushDirectories(test_util.TestBase):
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(test_util.svnls(repo_path, 'tags'),
+        self.assertEqual(test_hgsubversion_util.svnls(repo_path, 'tags'),
                          ['copied_tag',
                           'copied_tag/alpha',
                           'copied_tag/beta',

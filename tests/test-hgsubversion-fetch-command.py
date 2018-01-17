@@ -1,6 +1,6 @@
 # no-check-code -- see T24862348
 
-import test_util
+import test_hgsubversion_util
 
 import os
 import urllib
@@ -10,7 +10,7 @@ from mercurial import hg
 from mercurial import node
 from mercurial import encoding
 
-class TestBasicRepoLayout(test_util.TestBase):
+class TestBasicRepoLayout(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_no_dates(self):
@@ -93,7 +93,7 @@ class TestBasicRepoLayout(test_util.TestBase):
             'test_files_copied_from_outside_btt.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
-        self.assertEqual(test_util.repolen(repo), 2)
+        self.assertEqual(test_hgsubversion_util.repolen(repo), 2)
 
     def test_file_renamed_in_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
@@ -139,7 +139,7 @@ class TestBasicRepoLayout(test_util.TestBase):
         subdir = '/b\xC3\xB8b'
         quoted_subdir = urllib.quote(subdir)
 
-        repo_url = test_util.fileurl(repo_path)
+        repo_url = test_hgsubversion_util.fileurl(repo_path)
         wc_path = self.wc_path
         wc2_path = wc_path + '-2'
 
@@ -152,7 +152,8 @@ class TestBasicRepoLayout(test_util.TestBase):
 
         self.assertEqual(repo['tip'].extra()['convert_revision'],
                          repo2['tip'].extra()['convert_revision'])
-        self.assertEqual(test_util.repolen(repo), test_util.repolen(repo2))
+        self.assertEqual(test_hgsubversion_util.repolen(repo),
+                         test_hgsubversion_util.repolen(repo2))
 
         for r in repo:
             self.assertEqual(repo[r].hex(), repo2[r].hex())
@@ -160,8 +161,8 @@ class TestBasicRepoLayout(test_util.TestBase):
     def test_identical_fixtures(self):
         '''ensure that the non_ascii_path_N fixtures are identical'''
         fixturepaths = [
-            os.path.join(test_util.FIXTURES, 'non_ascii_path_1.svndump'),
-            os.path.join(test_util.FIXTURES, 'non_ascii_path_2.svndump'),
+            os.path.join(test_hgsubversion_util.FIXTURES, 'non_ascii_path_1.svndump'),
+            os.path.join(test_hgsubversion_util.FIXTURES, 'non_ascii_path_2.svndump'),
         ]
         self.assertMultiLineEqual(open(fixturepaths[0]).read(),
                                   open(fixturepaths[1]).read())
@@ -174,7 +175,7 @@ class TestBasicRepoLayout(test_util.TestBase):
                          u'bl\xe5b\xe6rgr\xf8d')
 
 
-class TestStupidPull(test_util.TestBase):
+class TestStupidPull(test_hgsubversion_util.TestBase):
     stupid_mode_tests = True
 
     def test_stupid(self):

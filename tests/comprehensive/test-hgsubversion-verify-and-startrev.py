@@ -6,10 +6,10 @@ import sys
 # wrapped in a try/except because of weirdness in how
 # run.py works as compared to nose.
 try:
-    import test_util
+    import test_hgsubversion_util
 except ImportError:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import test_util
+    import test_hgsubversion_util
 
 from hgext.hgsubversion import verify
 
@@ -36,15 +36,15 @@ _skipstandard = set([
 ])
 
 def _do_case(self, name, layout):
-    subdir = test_util.subdir.get(name, '')
+    subdir = test_hgsubversion_util.subdir.get(name, '')
     config = {}
-    for branch, path in test_util.custom.get(name, {}).iteritems():
+    for branch, path in test_hgsubversion_util.custom.get(name, {}).iteritems():
         config['hgsubversionbranch.%s' % branch] = path
     repo, svnpath = self.load_and_fetch(name,
                                         subdir=subdir,
                                         layout=layout,
                                         config=config)
-    assert test_util.repolen(self.repo) > 0
+    assert test_hgsubversion_util.repolen(self.repo) > 0
     for i in repo:
         ctx = repo[i]
         self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node(),
@@ -58,9 +58,9 @@ def _do_case(self, name, layout):
         shallowrepo = self.fetch(svnpath, subdir=subdir,
                                  layout='single', startrev='HEAD')
 
-        self.assertEqual(test_util.repolen(shallowrepo), 1,
+        self.assertEqual(test_hgsubversion_util.repolen(shallowrepo), 1,
                          "shallow clone should have just one revision, not %d"
-                         % test_util.repolen(shallowrepo))
+                         % test_hgsubversion_util.repolen(shallowrepo))
 
         fulltip = repo['tip']
         shallowtip = shallowrepo['tip']
@@ -73,7 +73,7 @@ def _do_case(self, name, layout):
                                           rev=shallowtip.node(),
                                           stupid=False))
 
-        stupidui = test_util.testui(stupid=True)
+        stupidui = test_hgsubversion_util.testui(stupid=True)
         self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),
                                        stupid=True), 0)
         self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),
@@ -94,7 +94,7 @@ def buildmethod(case, name, layout):
     return m
 
 attrs = {'_do_case': _do_case, 'stupid_mode_tests': True}
-fixtures = [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]
+fixtures = [f for f in os.listdir(test_hgsubversion_util.FIXTURES) if f.endswith('.svndump')]
 for case in fixtures:
     if case in _skipall:
         continue
@@ -102,7 +102,7 @@ for case in fixtures:
     if case not in _skipstandard:
         attrs[bname] = buildmethod(case, bname, 'standard')
     attrs[bname + '_single'] = buildmethod(case, bname + '_single', 'single')
-    if case in test_util.custom:
+    if case in test_hgsubversion_util.custom:
         attrs[bname + '_custom'] = buildmethod(case, bname + '_custom', 'custom')
 
-VerifyTests = type('VerifyTests', (test_util.TestBase,), attrs)
+VerifyTests = type('VerifyTests', (test_hgsubversion_util.TestBase,), attrs)
