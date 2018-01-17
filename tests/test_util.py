@@ -12,7 +12,7 @@ import tarfile
 import tempfile
 import unittest
 
-_rootdir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _rootdir)
 
 from mercurial import cmdutil
@@ -342,7 +342,7 @@ def _verify_our_modules():
     '''
 
     for modname, module in sys.modules.iteritems():
-        if not module or 'hgsubversion' not in modname:
+        if not module or 'hgext.hgsubversion' not in modname:
             continue
 
         modloc = module.__file__
