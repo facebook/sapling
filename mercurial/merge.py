@@ -1556,11 +1556,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     usemergedriver = not overwrite and mergeactions and ms.mergedriver
 
     if usemergedriver:
-        if wctx.isinmemory():
-            raise error.InMemoryMergeConflictsError("in-memory merge does not "
-                                                    "support mergedriver")
         ms.commit()
         proceed = driverpreprocess(repo, ms, wctx, labels=labels)
+        driverresolved = [f for f in ms.driverresolved()]
 
         # Note which files were marked as driver-resolved but not matched by
         # experimental.inmemorydisallowedpaths. This will allow us to keep
@@ -1573,9 +1571,18 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if not pathsconfig:
             pathsconfig = ".^"
         regex = util.re.compile(pathsconfig)
-        unmatched = [f for f in ms.driverresolved() if not regex.match(f)]
+        unmatched = [f for f in driverresolved if not regex.match(f)]
         repo.ui.log('imm_mergedriver', '',
-            driver_resolved_missed="|".join(sorted(unmatched)))
+            driver_resolved_missed="|".join(sorted(unmatched)),
+            in_memory=wctx.isinmemory())
+
+        # If preprocess() marked any files as driver-resolved and we're merging
+        # in-memory, abort on the assumption that driver scripts require the
+        # working directory.
+        if driverresolved and wctx.isinmemory():
+            errorstr = ("some of your files require mergedriver to run, which "
+                       "in-memory merge does not support")
+            raise error.InMemoryMergeConflictsError(errorstr)
 
         # the driver might leave some files unresolved
         unresolvedf = set(ms.unresolved())
