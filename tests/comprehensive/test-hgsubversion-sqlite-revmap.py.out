@@ -1,0 +1,24 @@
+verifying c4dcdb393137 against file:///[\w/]*svnwrap_test/testrepo-1/trunk@2 (re)
+verifying d4c6ea579d09 against file:///[\w/]*svnwrap_test/testrepo-1/branches/badname@3 (re)
+verifying 34bdb5088d6e against file:///[\w/]*svnwrap_test/testrepo-1/branches/feature@4 (re)
+verifying c4dcdb393137 against file:///[\w/]*svnwrap_test/testrepo-1/trunk@2 (re)
+verifying d4c6ea579d09 against file:///[\w/]*svnwrap_test/testrepo-1/branches/badname@3 (re)
+verifying 34bdb5088d6e against file:///[\w/]*svnwrap_test/testrepo-1/branches/feature@4 (re)
+  rev: 2 svnrev: svnpath: svnuuid:
+@
+|
+  rev: 1 svnrev:3 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+o
+|
+  rev: 0 svnrev:2 svnpath:/trunk svnuuid:df2126f7-00ab-4d49-b42c-7e981dde0bcf
+o
+
+
+verifying [a-f0-9]{12} against file:///[\w/]*svnwrap_test/testrepo-1/trunk@5 (re)
+difference in: alpha
+missing file: beta
+verifying e8dfd95073fd against file:///[\w/]*svnwrap_test/testrepo-1/trunk@5 (re)
+verifying 78e965230a13 against file:///[\w/]*svnwrap_test/testrepo-1@1 (re)
+verifying 78e965230a13 against file:///[\w/]*svnwrap_test/testrepo-1@1 (re)
+verifying d51f46a715a1 against file:///[\w/]*svnwrap_test/testrepo-1/trunk@3 (re)
+verifying d51f46a715a1 against file:///[\w/]*svnwrap_test/testrepo-1/trunk@3 (re)
