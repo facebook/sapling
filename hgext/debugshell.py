@@ -3,8 +3,8 @@
 
 from __future__ import absolute_import
 import code
-import mercurial
 import sys
+import mercurial
 from mercurial import (
     demandimport,
     registrar,

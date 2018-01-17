@@ -104,6 +104,7 @@ Short help:
   
   enabled extensions:
   
+   debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
   additional help topics:
@@ -187,6 +188,7 @@ Short help:
   
   enabled extensions:
   
+   debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
   additional help topics:
@@ -256,6 +258,7 @@ Test extension help:
       enabled extensions:
   
        children      command to display child changesets (DEPRECATED)
+       debugshell    a python shell with repo, changelog & manifest objects
        githelp       try mapping git commands to Mercurial commands
        rebase        command to move sets of revisions to a different ancestor
   
@@ -971,6 +974,7 @@ Test that default list of commands omits extension commands
   
   enabled extensions:
   
+   debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
    helpext       (no help text available)
   
@@ -1076,6 +1080,7 @@ Test list of internal help commands
    debugrevspec  parse and apply a revision specification
    debugsetparents
                  manually set the parents of the current working directory
+   debugshell    (no help text available)
    debugssl      test a secure connection to a server
    debugsub      (no help text available)
    debugsuccessorssets
@@ -1557,12 +1562,14 @@ Test -e / -c / -k combinations
   Extensions:
    debugcommitmessage  (no help text available)
    debuginhibit        (no help text available)
+   debugshell          a python shell with repo, changelog & manifest objects
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
    debugcommitmessage  (no help text available)
    debuginhibit        (no help text available)
+   debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
