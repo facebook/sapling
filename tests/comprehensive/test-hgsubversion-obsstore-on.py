@@ -40,3 +40,8 @@ def buildtestclass(cls):
 
 
 buildtestclass(test_push_command.PushTests)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

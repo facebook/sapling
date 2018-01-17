@@ -83,3 +83,8 @@ class TestSubversionUrls(test_hgsubversion_util.TestBase):
             repo = svnrepo.svnremoterepo(self.ui(), path=args[0])
             self.assertEqual(expected[2], repo.svnauth[0])
             self.assertEqual(expected[2], repo.svnurl)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

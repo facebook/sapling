@@ -27,3 +27,8 @@ class TestSvnPreCommitHooks(test_hgsubversion_util.TestBase):
                    ]
         self.commitchanges(changes)
         self.assertRaises(util.Abort, self.pushrevisions)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

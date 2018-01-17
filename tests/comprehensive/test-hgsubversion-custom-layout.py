@@ -60,3 +60,8 @@ for case in test_hgsubversion_util.custom:
         attrs[name] = buildmethod(case, name, stupid=True)
 
 CustomPullTests = type('CustomPullTests', (test_hgsubversion_util.TestBase,), attrs)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

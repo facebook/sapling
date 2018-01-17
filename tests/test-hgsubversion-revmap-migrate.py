@@ -68,3 +68,8 @@ class TestRevMapMigrate(test_hgsubversion_util.TestBase):
 
     def test_revmap_migrate_down(self):
         self._test_revmap_migrate(maps.SqliteRevMap, maps.RevMap)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

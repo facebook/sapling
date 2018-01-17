@@ -105,3 +105,8 @@ class TestPushDirectories(test_hgsubversion_util.TestBase):
                           'tag_r3/alpha',
                           'tag_r3/beta',
                           'tag_r3/new'])
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

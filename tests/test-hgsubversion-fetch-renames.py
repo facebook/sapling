@@ -98,3 +98,8 @@ class TestFetchRenames(test_hgsubversion_util.TestBase):
             }
         for rev in repo:
             self.assertEqual(sorted(files[rev]), sorted(repo[rev].manifest()))
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

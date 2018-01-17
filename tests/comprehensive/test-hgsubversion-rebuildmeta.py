@@ -195,3 +195,8 @@ for case in [f for f in os.listdir(test_hgsubversion_util.FIXTURES) if f.endswit
                                                    'single')
 
 RebuildMetaTests = type('RebuildMetaTests', (test_hgsubversion_util.TestBase,), attrs)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

@@ -79,3 +79,8 @@ class TestSingleDirClone(test_hgsubversion_util.TestBase):
         expect = '' # Not honestly sure what this should be...
         test = 4
         self.assertEqual(self.repo[test]['.hgsvnexternals'].data(), expect)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

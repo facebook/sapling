@@ -112,3 +112,8 @@ class TestPushRenames(test_hgsubversion_util.TestBase):
             'This failure means rename of an entire tree is broken.'
             ' There is a print on the preceding line commented out '
             'that should help you.')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

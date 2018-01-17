@@ -208,3 +208,8 @@ class TestSingleDirPush(test_hgsubversion_util.TestBase):
 
         self.assertEquals(set(['flaf']),
                           set(self.repo[i].branch() for i in self.repo))
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

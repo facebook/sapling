@@ -23,3 +23,8 @@ class TestFetchExec(test_hgsubversion_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '08e6b380bf291b361a418203a1cb9427213cd1fd')
         self.assertEqual(repo['tip']['foo'].flags(), 'x')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

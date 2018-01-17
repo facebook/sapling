@@ -83,3 +83,8 @@ class TestPull(test_hgsubversion_util.TestBase):
         tip = repo['tip'].rev()
         self.assertEqual(tip, 1)
         self.assertEquals(verify.verify(repo.ui, repo, rev=tip), 0)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

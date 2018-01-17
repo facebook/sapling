@@ -106,3 +106,8 @@ for case in fixtures:
         attrs[bname + '_custom'] = buildmethod(case, bname + '_custom', 'custom')
 
 VerifyTests = type('VerifyTests', (test_hgsubversion_util.TestBase,), attrs)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

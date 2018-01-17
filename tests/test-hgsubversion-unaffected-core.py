@@ -88,3 +88,8 @@ class TestMercurialCore(test_hgsubversion_util.TestBase):
         repo2 = hg.repository(ui, self.wc_path + '2')
 
         self.assertEqual(repo[branch].hex(), repo2['.'].hex())
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

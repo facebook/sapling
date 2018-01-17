@@ -83,3 +83,8 @@ o
         self.assertRaises(error.ParseError,
                           commands.log, self.ui(), repo,
                           template='{rev}:{svnrev} ', **defaults)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

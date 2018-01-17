@@ -12,3 +12,8 @@ class TestFetchDirectoryRemoval(test_hgsubversion_util.TestBase):
         extra = repo['tip'].extra().copy()
         extra.pop('convert_revision', None)
         self.assertEqual(extra, {'branch': 'default'})
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

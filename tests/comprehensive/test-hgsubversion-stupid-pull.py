@@ -65,3 +65,8 @@ if svnwrap.subversion_version < (1, 9, 0):
             attrs[name + '_custom'] = buildmethod(case, name + '_custom', 'custom')
 
     StupidPullTests = type('StupidPullTests', (test_hgsubversion_util.TestBase,), attrs)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

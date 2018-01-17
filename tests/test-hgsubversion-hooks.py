@@ -40,3 +40,8 @@ class TestHooks(test_hgsubversion_util.TestBase):
         commands.pull(newrepo.ui, newrepo)
         svncommands.updatemeta = oldupdatemeta
         self.assertTrue(self.called)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

@@ -28,3 +28,8 @@ class TestPushEol(test_hgsubversion_util.TestBase):
         self.commitchanges(changes)
         self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

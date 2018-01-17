@@ -237,3 +237,8 @@ Fix tag pt 2.
   test-0.1: hg=test@1:svn=branches/test@3
 """
         self._test_tags('renametagdir.svndump', expected)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

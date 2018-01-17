@@ -98,3 +98,8 @@ def _monkey_unpatch(to_patch, start=None):
 
 def _patchbackend_raise(*p, **kw):
     raise mercurial.patch.PatchError("patch failed")
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

@@ -375,3 +375,8 @@ class MapTests(test_hgsubversion_util.TestBase):
         commands.clone(ui, test_hgsubversion_util.fileurl(repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

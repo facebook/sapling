@@ -31,3 +31,8 @@ class DiffTests(test_hgsubversion_util.TestBase):
         u.pushbuffer()
         wrappers.diff(lambda x, y, z: None, u, self.repo, svn=True)
         self.assertEqual(u.popbuffer(), expected_diff_output)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

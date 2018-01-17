@@ -256,3 +256,8 @@ o  changeset: 0:02996a5980ba (r3)
 """
         self.assertMultiLineEqual(refgraph, graph)
 
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

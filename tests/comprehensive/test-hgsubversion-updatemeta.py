@@ -91,3 +91,8 @@ for case in [f for f in os.listdir(test_hgsubversion_util.FIXTURES) if f.endswit
 
 
 UpdateMetaTests = type('UpdateMetaTests', (test_hgsubversion_util.TestBase,), attrs)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

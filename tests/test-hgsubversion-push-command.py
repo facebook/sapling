@@ -823,3 +823,8 @@ class PushTests(test_hgsubversion_util.TestBase):
         self.assertNotEqual(newctx.node(), self.repo['tip'].node())
         self.assertEqual(newctx['adding_file'].data(), 'foo')
         self.assertEqual(newctx.branch(), 'the_branch')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

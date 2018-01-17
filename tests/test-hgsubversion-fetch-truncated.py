@@ -26,3 +26,8 @@ class TestFetchTruncatedHistory(test_hgsubversion_util.TestBase):
         files.sort()
         self.assertEqual(files, ['a', 'b'])
         self.assertEqual(repo['tip']['a'].data(), 'a\n')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

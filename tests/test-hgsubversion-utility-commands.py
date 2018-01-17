@@ -375,3 +375,8 @@ missing file: binary3
         # rebuildmeta --unsafe-skip-uuid-check with unrelated repo
         svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[otherurl],
                                 unsafe_skip_uuid_check=True)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

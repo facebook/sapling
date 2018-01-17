@@ -99,3 +99,8 @@ class ParseAutoPropsTests(test_hgsubversion_util.TestBase):
             'svn:eol-style': 'native',
             'svn:executable': 'true'},
             props)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

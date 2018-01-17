@@ -205,3 +205,8 @@ def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]
     return unittest.TestSuite(all_tests)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

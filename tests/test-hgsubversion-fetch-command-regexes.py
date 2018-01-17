@@ -143,3 +143,8 @@ Added: svn:executable
         changed = stupid.parsediff(data)
         self.assertEqual(['empty1', 'empty2', 'binary1', 'text1', 'binary2', 'text2'],
                          [f.name for f in changed])
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

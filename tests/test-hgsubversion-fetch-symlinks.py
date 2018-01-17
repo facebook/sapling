@@ -58,3 +58,8 @@ class TestMergeSpecial(test_hgsubversion_util.TestBase):
         ctx = repo['tip']
         self.assertEqual(ctx['fnord'].flags(), 'l')
         self.assertEqual(ctx['exe'].flags(), 'x')
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

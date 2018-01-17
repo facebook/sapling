@@ -51,3 +51,8 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         self.repo = svnwrap.SubversionRepo(test_hgsubversion_util.fileurl(
             self.repo_path + '/dummyproj'
         ))
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

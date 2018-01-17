@@ -76,3 +76,8 @@ buildtestclass(test_hgsubversion_utility_commands.UtilityTests)
 
 buildtestclass(test_rebuildmeta.RebuildMetaTests, svndumpselector)
 buildtestclass(test_updatemeta.UpdateMetaTests, svndumpselector)
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+

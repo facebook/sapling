@@ -31,3 +31,8 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual([], os.listdir(fs._tempdir))
         self.assertRaises(editor.EditingError, lambda: fs.getfile('bb'))
         fs.close()
+
+if __name__ == '__main__':
+    import silenttestrunner
+    silenttestrunner.main(__name__)
+
