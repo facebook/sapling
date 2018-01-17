@@ -57,6 +57,13 @@ int main(int argc, char** argv) {
     return EX_USAGE;
   }
 
+  // Since we are a daemon, and we don't ever want to be in a situation
+  // where we hold any open descriptors through a fuse mount that points
+  // to ourselves (which can happen during takeover), we chdir to `/`
+  // to avoid having our cwd reference ourselves if the user runs
+  // `eden daemon --takeover` from within an eden mount
+  folly::checkPosixError(chdir("/"), "failed to chdir(/)");
+
   // Set some default glog settings, to be applied unless overridden on the
   // command line
   gflags::SetCommandLineOptionWithMode(
