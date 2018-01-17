@@ -156,6 +156,12 @@ class FuseChannel {
                          sizeof(T)});
   }
 
+  /**
+   * Called by RequestData when it releases state for the current
+   * request.  It is used to update the requests map and is
+   * used to trigger the sessionCompletePromise_ if we're
+   * shutting down.
+   */
   void finishRequest(const fuse_in_header& header);
 
   folly::Future<folly::Unit> fuseRead(
