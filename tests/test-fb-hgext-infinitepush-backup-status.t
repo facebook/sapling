@@ -92,7 +92,7 @@ Check backup status of commits
   5 Backup pending changeset
 
 Check smartlog output
-  $ hg smartlog
+  $ hg smartlog --config infinitepushbackup.enablestatus=yes --config infinitepushbackup.autobackup=no
   o  changeset:   1:* (glob)
   |  user:        test
   |  date:        * (glob)
@@ -125,6 +125,9 @@ Check smartlog output
      date:        * (glob)
      summary:     Public changeset
   
+  note: infinitepush backup is currently disabled by the Source Control Team,
+  so your commits are not being backed up.
+  
   note: changeset * is not backed up. (glob)
   Run `hg pushbackup` to perform a backup.  If this fails,
   please report to the Source Control @ FB group.
@@ -150,7 +153,7 @@ Check smartlog summary with multiple unbacked up changesets
   $ commit_time=`expr $now - 11 \* 60`
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 2"
   created new head
-  $ hg smartlog -T '{rev}: {desc}\n'
+  $ hg smartlog -T '{rev}: {desc}\n' --config infinitepushbackup.enablestatus=yes  --config infinitepushbackup.autobackup=yes
   o  1: Public changeset 2
   |
   | @  6: Not backed up changeset 2
@@ -188,4 +191,77 @@ Test template keyword for when a backup is in progress
   $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
   Yes
   $ rm -f .hg/infinitepushbackup.lock
+
+Test for infinitepushbackup disable
+  $ echo "[infinitepushbackup]" >> .hg/hgrc
+  $ echo "autobackup = True"  >> .hg/hgrc
+  $ hg enablebackup
+  infinitepush backup is already enabled
+  $ hg disablebackup
+  infinitepush backup is now disabled until * (glob)
+  $ hg disablebackup
+  note: infinitepush backup was already disabled
+  infinitepush backup is now disabled until * (glob)
+  $ hg disablebackup --hours ggg
+  note: infinitepush backup was already disabled
+  abort: error: argument 'hours': invalid int value: 'ggg'
+  
+  [255]
+
+Test for correct add include file in .hg/hgrc
+  $ printf '\n' >> .hg/hgrc
+  $ echo '[otherconfig]' >> .hg/hgrc
+  $ hg disablebackup
+  note: infinitepush backup was already disabled
+  infinitepush backup is now disabled until * (glob)
+  $ grep '%include' .hg/hgrc | wc -l | xargs printf && printf '\n'
+  1
+
+Test sl when infinitepushbackup is disabled but disabling has been expired / not expired
+  $ hg sl -T '{rev} {desc}\n'
+  @  7 Not backed up changeset 3
+  |
+  o  1 Public changeset 2
+  |
+  | o  6 Not backed up changeset 2
+  | |
+  | | o  5 Backup pending changeset
+  | | |
+  | | o  4 Not backed up changeset
+  | | |
+  | | o  3 Backed up changeset 2
+  | |/
+  | o  2 Backed up changeset
+  |/
+  o  0 Public changeset
+  
+  note: infinitepush backup is currently disabled until * (glob)
+  so your commits are not being backed up.
+  Run `hg enablebackup` to turn backups back on.
+  
+  note: 3 changesets are not backed up.
+  Run `hg pushbackup` to perform a backup.  If this fails,
+  please report to the Source Control @ FB group.
+
+# Shift time back to make disable expired
+  $ hg sl --config infinitepushbackup.disableduntil=`date -v-1S +%s`  -T '{rev} {desc}\n'
+  @  7 Not backed up changeset 3
+  |
+  o  1 Public changeset 2
+  |
+  | o  6 Not backed up changeset 2
+  | |
+  | | o  5 Backup pending changeset
+  | | |
+  | | o  4 Not backed up changeset
+  | | |
+  | | o  3 Backed up changeset 2
+  | |/
+  | o  2 Backed up changeset
+  |/
+  o  0 Public changeset
+  
+  note: 3 changesets are not backed up.
+  Run `hg pushbackup` to perform a backup.  If this fails,
+  please report to the Source Control @ FB group.
 

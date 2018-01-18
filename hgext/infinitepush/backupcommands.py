@@ -79,12 +79,16 @@ from mercurial.i18n import _
 
 from .. import shareutil
 
+from ConfigParser import ConfigParser
+
 osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
 command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
+localoverridesfile = 'generated.infinitepushbackups.rc'
+secondsinhour = 60 * 60
 
 backupbookmarktuple = namedtuple('backupbookmarktuple',
                                  ['hostname', 'reporoot', 'localbookmark'])
@@ -109,12 +113,108 @@ restoreoptions = [
 
 _backuplockname = 'infinitepushbackup.lock'
 
+# Check if backup is enabled
+def autobackupenabled(ui):
+    # Backup is possibly disabled by user
+    # but the disabling might have expired
+    if ui.config('infinitepushbackup', 'disableduntil', None) is not None:
+        try:
+            timestamp = int(ui.config('infinitepushbackup', 'disableduntil'))
+            if time.time() <= timestamp:
+                return False
+        except ValueError:
+            # should never happen
+            raise error.Abort(_("error: config file is broken, " +
+                              "can't parse infinitepushbackup.disableduntil\n"))
+    # Backup may be unconditionally disabled by the Source Control Team
+    return ui.configbool('infinitepushbackup', 'autobackup')
+
+# Wraps commands with backup if enabled
 def extsetup(ui):
-    if ui.configbool('infinitepushbackup', 'autobackup', False):
+    if autobackupenabled(ui):
         extensions.wrapfunction(dispatch, 'runcommand',
                                 _autobackupruncommandwrapper)
         extensions.wrapfunction(localrepo.localrepository, 'transaction',
                                 _transaction)
+
+def converttimestamptolocaltime(timestamp):
+    _timeformat = '%Y-%m-%d %H:%M:%S %Z'
+    return time.strftime(_timeformat, time.localtime(timestamp))
+
+def checkinsertgeneratedconfig(localconfig, generatedconfig):
+    includeline = '%include {generatedconfig}'.format(
+        generatedconfig = generatedconfig
+    )
+
+    # This split doesn't include '\n'
+    if includeline in open(localconfig).read().splitlines():
+        pass
+    else:
+        with open(localconfig, 'a') as configfile:
+            configfile.write("\n# include local overrides\n")
+            configfile.write(includeline)
+            configfile.write('\n')
+
+@command('enablebackup')
+def enablebackup(ui, repo, **opts):
+    """
+    Enable infinitepush backup
+
+    Enables backups that have been disabled by `hg disablebackup`.
+    """
+
+    if autobackupenabled(ui):
+        ui.write(_("infinitepush backup is already enabled\n"))
+        return 0
+
+    localconfig = repo.vfs.join('hgrc')
+    generatedconfig = repo.vfs.join(localoverridesfile)
+    checkinsertgeneratedconfig(localconfig, generatedconfig)
+    with open(generatedconfig, "w") as file:
+        file.write('')
+
+    ui.write(_("infinitepush backup is enabled\n"))
+    return 0
+
+@command('disablebackup',
+         [('', 'hours', '1', 'disable backup for the specified duration')])
+def disablebackup(ui, repo, **opts):
+    """
+    Disable infinitepush backup
+
+    Sets the infinitepushbackup.disableduntil config option,
+    which disables infinitepush backups for the specified duration.
+    """
+
+    if not autobackupenabled(ui):
+        ui.write(_("note: infinitepush backup was already disabled\n"))
+
+    localconfig = repo.vfs.join('hgrc')
+    generatedconfig = repo.vfs.join(localoverridesfile)
+    checkinsertgeneratedconfig(localconfig, generatedconfig)
+
+    try:
+        duration = secondsinhour * int(opts.get('hours', 1))
+    except ValueError:
+        raise error.Abort(
+            _("error: argument 'hours': invalid int value: '{value}'\n"
+            .format(value=opts.get('hours'))
+        ))
+
+    timestamp = int(time.time()) + duration
+
+    config = ConfigParser()
+    config.add_section('infinitepushbackup')
+    config.set('infinitepushbackup', 'disableduntil', timestamp)
+
+    with open(generatedconfig, 'w') as configfile:
+        configfile.write("# disable infinitepush background backup\n")
+        config.write(configfile)
+
+    ui.write(_("infinitepush backup is now disabled until {localtime}\n"
+        .format(localtime=converttimestamptolocaltime(timestamp))
+    ))
+    return 0
 
 @command('pushbackup',
          [('', 'background', None, 'run backup in background')])
@@ -349,6 +449,20 @@ def smartlogsummary(ui, repo):
     if not ui.configbool('infinitepushbackup', 'enablestatus'):
         return
 
+    # Output backup status if enablestatus is on
+    autobackupenabledstatus = autobackupenabled(ui)
+    if not autobackupenabledstatus:
+        timestamp = ui.config('infinitepushbackup', 'disableduntil', None)
+        if timestamp:
+            ui.write(_('note: infinitepush backup is currently disabled until '
+                + converttimestamptolocaltime(int(timestamp)) + '\n'))
+            ui.write(_('so your commits are not being backed up.\n'))
+            ui.write(_('Run `hg enablebackup` to turn backups back on.\n'))
+        else:
+            ui.write(_('note: infinitepush backup is currently disabled ' +
+                       'by the Source Control Team,\n'))
+            ui.write(_('so your commits are not being backed up.\n'))
+
     # Don't output the summary if a backup is currently in progress.
     srcrepo = shareutil.getsrcrepo(repo)
     if srcrepo.vfs.lexists(_backuplockname):
@@ -366,6 +480,8 @@ def smartlogsummary(ui, repo):
             singleunbackeduprev = rev
             count += 1
     if count > 0:
+        if not autobackupenabledstatus:
+            ui.write('\n')
         if count > 1:
             ui.warn(_('note: %d changesets are not backed up.\n') % count)
         else:
