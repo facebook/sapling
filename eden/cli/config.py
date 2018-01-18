@@ -28,7 +28,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -521,7 +521,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             # PID from the Thrift server, we read it from the lockfile and try
             # to deduce the current status of Eden.
             return self._check_health_using_lockfile()
-        except thrift.Thrift.TException as ex:
+        # TODO: thrift.Thrift.TException stopped typechecking in D6738525.
+        # When possible, remove this cast.
+        except cast(Any, thrift).Thrift.TException as ex:
             detail = 'error talking to edenfs: ' + str(ex)
             return HealthStatus(status, pid, detail)
 
