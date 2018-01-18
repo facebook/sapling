@@ -405,16 +405,16 @@ All is well.
         finally:
             shutil.rmtree(mount_path)
 
-    @patch('eden.cli.doctor._call_rpm_q')
-    def test_edenfs_when_installed_and_running_match(self, mock_rpm_q):
+    @patch('eden.cli.version.get_installed_eden_rpm_version')
+    def test_edenfs_when_installed_and_running_match(self, mock_gierv):
         self._test_edenfs_version(
-            mock_rpm_q, '20171213-165642', CheckResultType.NO_ISSUE, ''
+            mock_gierv, '20171213-165642', CheckResultType.NO_ISSUE, ''
         )
 
-    @patch('eden.cli.doctor._call_rpm_q')
-    def test_edenfs_when_installed_and_running_differ(self, mock_rpm_q):
+    @patch('eden.cli.version.get_installed_eden_rpm_version')
+    def test_edenfs_when_installed_and_running_differ(self, mock_gierv):
         self._test_edenfs_version(
-            mock_rpm_q, '20171120-246561', CheckResultType.FAILED_TO_FIX,
+            mock_gierv, '20171120-246561', CheckResultType.FAILED_TO_FIX,
             dedent(
                 '''\
                 The version of Eden that is installed on your machine is:

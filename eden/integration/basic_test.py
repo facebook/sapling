@@ -36,6 +36,16 @@ class BasicTest:
             '.eden', 'adir', 'bdir', 'hello', 'slink'
         ])
 
+    def test_version(self):
+        output = self.eden.run_cmd('version', cwd=self.mount)
+        first_line = output.split('\n')[0]
+        self.assertTrue(first_line.startswith('Installed: '))
+        parts = first_line[11:].split('-')
+        self.assertEqual(len(parts[0]), 8)
+        self.assertEqual(len(parts[1]), 6)
+        self.assertTrue(parts[0].isdigit())
+        self.assertTrue(parts[1].isdigit())
+
     def test_fileList(self):
         entries = set(os.listdir(self.mount))
         self.assertEqual(self.expected_mount_entries, entries)

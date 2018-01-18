@@ -23,6 +23,7 @@ python_library(
         "stats.py",
         "stats_print.py",
         "util.py",
+        "version.py",
     ],
     check_types = True,
     deps = [

@@ -101,9 +101,6 @@ class ClientConfig:
         self.bind_mounts = bind_mounts
         self.default_revision = default_revision
 
-    def __str__(self):
-        return str(dict([(m, getattr(self, m)) for m in self.__slots__]))
-
 
 class Config:
     def __init__(self, config_dir, etc_eden_dir, home_dir):
@@ -113,6 +110,7 @@ class Config:
             self._etc_eden_dir = DEFAULT_ETC_EDEN_DIR
         self._user_config_path = os.path.join(home_dir, USER_CONFIG)
         self._home_dir = home_dir
+
 
     def _loadConfig(self) -> configparser.ConfigParser:
         ''' to facilitate templatizing a centrally deployed config, we

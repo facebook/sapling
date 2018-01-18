@@ -21,6 +21,7 @@ from . import debug as debug_mod
 from . import doctor as doctor_mod
 from . import rage as rage_mod
 from . import stats as stats_mod
+from . import version as version_mod
 from . import util
 from .cmd_util import create_config
 from .util import print_stderr
@@ -46,6 +47,21 @@ def infer_client_from_cwd(config, clientname):
     print_stderr(
         'cwd is not an eden mount point, and no client name was specified.')
     sys.exit(2)
+
+
+def do_version(args):
+    config = create_config(args)
+    print('Installed: %s' %
+            version_mod.get_installed_eden_rpm_version())
+    import eden
+    try:
+        rv = version_mod.get_running_eden_version(config)
+        print('Running:   %s' % rv)
+        if rv.startswith('-') or rv.endswith('-'):
+            print('(Dev version of eden seems to be running)')
+    except eden.thrift.client.EdenNotRunningError:
+        print('Running:   Unknown (edenfs does not appear to be running)')
+    return 0
 
 
 def do_help(args, parser, subparsers):
@@ -472,7 +488,13 @@ def create_parser():
     parser.add_argument(
         '--home-dir',
         help='Path to directory where .edenrc config file is stored.')
+    parser.add_argument('--version', '-v', action='store_true',
+                        help='Print eden version.')
     subparsers = parser.add_subparsers(dest='subparser_name')
+
+    version_parser = subparsers.add_parser(
+        'version', help='Print Eden version.')
+    version_parser.set_defaults(func=do_version)
 
     # Please add the subparsers in alphabetical order because that is the order
     # in which they are displayed when the user runs --help.
@@ -628,11 +650,11 @@ def create_parser():
 def main():
     parser, subparsers = create_parser()
     args = parser.parse_args()
+    if args.version:
+        return do_version(args)
     if args.subparser_name == 'help' or getattr(args, 'func', None) is None:
-        retcode = do_help(args, parser, subparsers)
-    else:
-        retcode = args.func(args)
-    return retcode
+        return do_help(args, parser, subparsers)
+    return args.func(args)
 
 
 def normalize_path_arg(path_arg, may_need_tilde_expansion=False):

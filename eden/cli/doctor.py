@@ -17,6 +17,7 @@ from enum import Enum, auto
 from textwrap import dedent
 from typing import Dict, List, Set, TextIO, Union
 from . import config as config_mod
+from . import version
 
 
 class CheckResultType(Enum):
@@ -33,9 +34,6 @@ class CheckResult:
     def __init__(self, result_type: CheckResultType, message: str) -> None:
         self.result_type = result_type
         self.message = message
-
-    def __str__(self):
-        return str(dict([(m, getattr(self, m)) for m in self.__slots__]))
 
 
 class Check:
@@ -302,16 +300,16 @@ class EdenfsIsLatest(Check):
         self._config = config
 
     def do_check(self, dry_run: bool) -> CheckResult:
-        build_info = self._config.get_server_build_info()
-        version = build_info.get('build_package_version')
-        release = build_info.get('build_package_release')
-        if not version or not release:
-            # This could be a dev build that returns the empty string for both
-            # of these values.
+        rver, release = \
+            version.get_running_eden_version_parts(self._config)
+        if not rver or not release:
+            # This could be a dev build that returns the empty
+            # string for both of these values.
             return CheckResult(CheckResultType.NO_ISSUE, '')
 
-        running_version = f'{version}-{release}'
-        installed_version = _call_rpm_q()
+        running_version = version.format_running_eden_version(
+            (rver, release))
+        installed_version = version.get_installed_eden_rpm_version()
         if running_version == installed_version:
             return CheckResult(CheckResultType.NO_ISSUE, '')
         else:
@@ -351,9 +349,3 @@ def _call_watchman(args: List[str]) -> Dict:
             f' failed with: {str(e) if e.strerror is None else e.strerror}\n'
         )
         return {'error': str(e)}
-
-
-def _call_rpm_q() -> str:
-    return subprocess.check_output(
-        ['rpm', '-q', 'fb-eden', '--queryformat', '%{version}-%{release}']
-    ).decode('utf-8')
