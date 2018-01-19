@@ -94,15 +94,15 @@ fn size_limit() {
 
     let v3 = c.get("world").wait().unwrap();
     assert_eq!(v3, "WORLD", "c={:#?}", c);
-    assert_eq!(c.len(), 2, "c={:#?}", c);
+    assert_eq!(c.len(), 3, "c={:#?}", c);
 
     let v4 = c.get("ungulate").wait().unwrap();
     assert_eq!(v4, "UNGULATE", "c={:#?}", c);
-    assert_eq!(c.len(), 2, "c={:#?}", c);
+    assert_eq!(c.len(), 3, "c={:#?}", c);
 }
 
 #[test]
-fn weight_limit() {
+fn weight_limit_simple() {
     let count = AtomicUsize::new(0);
     let c = Asyncmemo::with_limits(Upperer(&count), 3, 100);
 
@@ -114,6 +114,26 @@ fn weight_limit() {
     // Note - this test can fail if "hello" and "HELLO" were allocated differently
     // inside asyncmemo or in the test. If that the case, then fix the test or disable it.
     let expected_weight = String::from("hello").get_weight() + String::from("HELLO").get_weight();
+    assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
+}
+
+#[test]
+fn weight_limit_eviction() {
+    let count = AtomicUsize::new(0);
+    let c = Asyncmemo::with_limits(Upperer(&count), 1, usize::MAX);
+
+    assert_eq!(c.len(), 0);
+
+    let v1 = c.get("hello").wait().unwrap();
+    assert_eq!(v1, "HELLO", "c={:#?}", c);
+    assert_eq!(c.len(), 1, "c={:#?}", c);
+    let expected_weight = String::from("hello").get_weight() + String::from("HELLO").get_weight();
+    assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
+
+    let v1 = c.get("hell").wait().unwrap();
+    assert_eq!(v1, "HELL", "c={:#?}", c);
+    assert_eq!(c.len(), 1, "c={:#?}", c);
+    let expected_weight = String::from("hell").get_weight() + String::from("HELL").get_weight();
     assert_eq!(c.total_weight(), expected_weight, "c={:#?}", c);
 }
 

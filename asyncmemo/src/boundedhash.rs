@@ -126,6 +126,13 @@ where
     ///
     /// Insert fails if there isn't capacity for the new entry, returning the key and value.
     pub fn insert(&mut self, k: K, v: V) -> Result<Option<V>, (K, V)> {
+        // Remove the key if it's already in the hash
+        let oldv = self.hash.remove(&k);
+        if let Some(ref removed) = oldv {
+            self.keysizes -= k.get_weight();
+            self.entrysizes -= removed.get_weight();
+        }
+
         if !self.trim_entries(1) {
             // seems unlikely, but anyway
             return Err((k, v));
@@ -141,14 +148,7 @@ where
         self.keysizes += kw;
         self.entrysizes += vw;
 
-        let oldv = self.hash.insert(k, v);
-        if let Some(oldv) = oldv.as_ref() {
-            // There already was an entry, and we've added the same key size twice.
-            // Remove it
-            self.keysizes -= kw;
-            self.entrysizes -= oldv.get_weight();
-        }
-
+        self.hash.insert(k, v);
         Ok(oldv)
     }
 
