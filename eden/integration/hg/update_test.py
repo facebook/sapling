@@ -299,9 +299,7 @@ class UpdateTest(EdenHgTestCase):
             msg='Even though we have a merge conflict, '
             'we should still be at the new commit.'
         )
-        self.assert_dirstate({
-            'some_new_file.txt': ('n', 0, 'MERGE_BOTH'),
-        })
+        self.assert_dirstate_empty()
         self.assert_status({
             'some_new_file.txt': 'M',
         })

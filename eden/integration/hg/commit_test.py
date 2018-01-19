@@ -78,3 +78,38 @@ class CommitTest(EdenHgTestCase):
         self.assertEqual('test version 2\n', self.read_file('foo/bar.txt'))
         self.assertEqual('new and improved\n', self.read_file('foo/new.txt'))
         self.assertEqual([commit2], self.repo.log())
+
+    def test_commit_interactive_with_new_file(self):
+        self.assert_status_empty()
+        self.assert_dirstate_empty()
+
+        self.write_file('foo/bar.txt', 'test v2\n')
+        self.write_file('foo/new.txt', 'new and improved\n')
+        self.hg('add', 'foo/new.txt')
+        self.write_file('hello.txt', 'ohai')
+        self.assert_status({
+            'foo/bar.txt': 'M',
+            'foo/new.txt': 'A',
+            'hello.txt': 'M',
+        })
+
+        commit_commands = (
+            'y\n'  # examine foo/bar.txt
+            'y\n'  # record changes from foo/bar.txt
+            'y\n'  # examine foo/new.txt
+            'y\n'  # record changes from foo/new.txt
+            'n\n'  # examine hello.txt
+        )
+        self.hg('commit', '-i', '-m', 'test commit with a new file',
+                '--config', 'ui.interactive=true',
+                '--config', 'ui.interface=text',
+                input=commit_commands, stdout=None, stderr=None)
+
+        self.assert_status({
+            'hello.txt': 'M',
+        })
+        self.assert_dirstate_empty()
+
+        self.hg('commit', '-m', 'commit changes to hello.txt')
+        self.assert_status_empty()
+        self.assert_dirstate_empty()
