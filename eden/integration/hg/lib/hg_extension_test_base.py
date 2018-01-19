@@ -159,7 +159,7 @@ class EdenHgTestCase(testcase.EdenTestCase):
     def hg(
         self,
         *args: str,
-        stdout_charset: str = 'utf-8',
+        encoding: str = 'utf-8',
         stdout: Any = subprocess.PIPE,
         stderr: Any = subprocess.PIPE,
         input: Optional[str] = None,
@@ -173,10 +173,12 @@ class EdenHgTestCase(testcase.EdenTestCase):
         environment variable when the hg command is run. See
         self.create_editor_that_writes_commit_messages().
 
-        Returns the stdout decoded as a utf8 string. To use a different charset,
-        specify the `stdout_charset` as a keyword argument.
+        Returns the process stdout, as a string.
+
+        The `encoding` parameter controls how stdout is decoded, and how the
+        `input` parameter, if present, is encoded.
         '''
-        return self.repo.hg(*args, stdout_charset=stdout_charset, cwd=cwd,
+        return self.repo.hg(*args, encoding=encoding, cwd=cwd,
                             stdout=stdout, stderr=stderr, input=input,
                             hgeditor=hgeditor, check=check)
 

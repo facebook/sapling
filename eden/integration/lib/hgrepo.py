@@ -69,7 +69,7 @@ class HgRepository(repobase.Repository):
     def hg(
         self,
         *args: str,
-        stdout_charset: str = 'utf-8',
+        encoding: str = 'utf-8',
         stdout: Any = subprocess.PIPE,
         stderr: Any = subprocess.PIPE,
         input: Optional[str] = None,
@@ -84,7 +84,7 @@ class HgRepository(repobase.Repository):
             env['HGEDITOR'] = hgeditor
 
         if input is not None:
-            input = input.encode(stdout_charset)
+            input = input.encode(encoding)
 
         if cwd is None:
             cwd = self.path
@@ -97,7 +97,7 @@ class HgRepository(repobase.Repository):
         except subprocess.CalledProcessError as ex:
             raise HgError(ex) from ex
         if completed_process.stdout is not None:
-            return completed_process.stdout.decode(stdout_charset)
+            return completed_process.stdout.decode(encoding)
         else:
             return None
 

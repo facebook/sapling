@@ -22,7 +22,7 @@ class GitRepository(repobase.Repository):
         self.git_bin = distutils.spawn.find_executable(
             'git.real') or distutils.spawn.find_executable('git')
 
-    def git(self, *args, stdout_charset='utf-8', **kwargs):
+    def git(self, *args, encoding='utf-8', **kwargs):
         '''
         Invoke a git command inside the repository.
 
@@ -54,7 +54,7 @@ class GitRepository(repobase.Repository):
                                            stderr=subprocess.PIPE,
                                            check=True, cwd=self.path,
                                            env=env)
-        return completed_process.stdout.decode(stdout_charset)
+        return completed_process.stdout.decode(encoding)
 
     def init(self):
         self.git('init')
