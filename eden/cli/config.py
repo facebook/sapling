@@ -424,27 +424,6 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with open(config_path, 'w') as f:
             toml.dump(config_data, f)
 
-    # TODO(mbolin): Delete this code in December 2017: Let's just assume
-    # everyone has been migrated by then.
-    def migrate_internal_edenrc_files_to_config_toml_files(self):
-        '''If a client has a legacy edenrc file under ~/local/.eden/clients/*/,
-        migrate it to a config.toml file.'''
-        clients_dir = self._get_clients_dir()
-        if not os.path.isdir(clients_dir):
-            return
-        for entry in os.listdir(clients_dir):
-            edenrc = os.path.join(clients_dir, entry, 'edenrc')
-            if not os.path.isfile(edenrc):
-                continue
-
-            parser = configparser.ConfigParser()
-            parser.read(edenrc)
-            repo_name = parser.get('repository', 'name')
-            client_config = self.find_config_for_alias(repo_name)
-            config_path = os.path.join(clients_dir, entry, MOUNT_CONFIG)
-            self._save_client_config(client_config, config_path)
-            os.remove(edenrc)
-
     def mount(self, path):
         # Load the config info for this client, to make sure we
         # know about the client.

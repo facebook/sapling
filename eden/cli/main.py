@@ -329,8 +329,6 @@ def start_daemon(
     # we want to avoid creating ~/.eden as root.
     _ensure_dot_eden_folder_exists(config)
 
-    config.migrate_internal_edenrc_files_to_config_toml_files()
-
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
     else:
