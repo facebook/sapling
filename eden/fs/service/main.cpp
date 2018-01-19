@@ -106,5 +106,6 @@ int main(int argc, char** argv) {
 
   EdenServer server(edenDir, etcEdenDir, configPath);
   server.run();
+  XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;
 }
