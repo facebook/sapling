@@ -14,13 +14,15 @@ import tempfile
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 from unittest.mock import call, patch
 import eden.cli.doctor as doctor
 import eden.cli.config as config_mod
 from eden.cli.doctor import CheckResultType
+from eden.cli import mtab
 from fb303.ttypes import fb_status
 import eden.dirstate
+import facebook.eden.ttypes as eden_ttypes
 
 
 class DoctorTest(unittest.TestCase):
@@ -85,6 +87,10 @@ class DoctorTest(unittest.TestCase):
                 'client-dir': '/I_DO_NOT_EXIST2'
             }
             config = FakeConfig(mount_paths, is_healthy=True)
+            config.get_thrift_client()._mounts = [
+                eden_ttypes.MountInfo(mountPoint=edenfs_path1),
+                eden_ttypes.MountInfo(mountPoint=edenfs_path2),
+            ]
 
             os.mkdir(edenfs_path1)
             hg_dir = os.path.join(edenfs_path1, '.hg')
@@ -95,7 +101,8 @@ class DoctorTest(unittest.TestCase):
             with open(dirstate, 'wb') as f:
                 eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
-            exit_code = doctor.cure_what_ails_you(config, dry_run, out)
+            exit_code = doctor.cure_what_ails_you(
+                config, dry_run, out, FakeMountTable())
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -152,7 +159,12 @@ Number of issues that could not be fixed: 2.
             'client-dir': '/I_DO_NOT_EXIST'
         }
         config = FakeConfig(mount_paths, is_healthy=True)
-        exit_code = doctor.cure_what_ails_you(config, dry_run, out)
+        config.get_thrift_client()._mounts = [
+            eden_ttypes.MountInfo(mountPoint=edenfs_path),
+            eden_ttypes.MountInfo(mountPoint=edenfs_path_not_watched),
+        ]
+        exit_code = doctor.cure_what_ails_you(
+            config, dry_run, out, FakeMountTable())
 
         self.assertEqual(
             'Performing 2 checks for /path/to/eden-mount.\n'
@@ -184,7 +196,8 @@ Number of issues that could not be fixed: 2.
             }
         }
         config = FakeConfig(mount_paths, is_healthy=False)
-        exit_code = doctor.cure_what_ails_you(config, dry_run, out)
+        exit_code = doctor.cure_what_ails_you(
+            config, dry_run, out, FakeMountTable())
 
         self.assertEqual(
             dedent(
@@ -195,23 +208,12 @@ To start Eden, run:
     eden daemon
 
 Cannot check if running latest edenfs because the daemon is not running.
-Performing 3 checks for /path/to/eden-mount.
 All is well.
 '''
             ), out.getvalue()
         )
         mock_watchman.assert_has_calls(calls)
         self.assertEqual(0, exit_code)
-
-    def test_fails_if_no_mount_points(self):
-        out = io.StringIO()
-        dry_run = False
-        mount_paths = {}
-        config = FakeConfig(mount_paths, is_healthy=False)
-
-        exit_code = doctor.cure_what_ails_you(config, dry_run, out)
-        self.assertEqual('No mounts points to assess.\n', out.getvalue())
-        self.assertEqual(1, exit_code)
 
     @patch('eden.cli.doctor._call_watchman')
     def test_no_issue_when_watchman_using_eden_watcher(self, mock_watchman):
@@ -457,6 +459,99 @@ All is well.
         mock_rpm_q.assert_has_calls(calls)
 
 
+class StaleMountsCheckTest(unittest.TestCase):
+    maxDiff = None
+
+    def setUp(self):
+        self.active_mounts: List[bytes] = [b'/mnt/active1', b'/mnt/active2']
+        self.mount_table = FakeMountTable()
+        self.check = doctor.StaleMountsCheck(
+            active_mount_points=self.active_mounts,
+            mount_table=self.mount_table)
+
+    def test_does_not_unmount_active_mounts(self):
+        self.mount_table.set_eden_mounts(self.active_mounts)
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    def test_stale_nonactive_mount_is_unmounted(self):
+        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assertEqual(dedent('''\
+            Unmounted 1 stale edenfs mount point:
+              /mnt/stale1
+        '''), result.message)
+        self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    def test_force_unmounts_if_lazy_fails(self):
+        self.mount_table.set_eden_mounts(
+            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
+        self.mount_table.fail_unmount_lazy(b'/mnt/stale1')
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assertEqual(dedent('''\
+            Unmounted 2 stale edenfs mount points:
+              /mnt/stale1
+              /mnt/stale2
+        '''), result.message)
+        self.assertEqual(
+            [b'/mnt/stale1', b'/mnt/stale2'],
+            self.mount_table.unmount_lazy_calls)
+        self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_force_calls)
+
+    def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
+        self.mount_table.set_eden_mounts(
+            self.active_mounts + [b'/mnt/stale2', b'/mnt/stale1'])
+        result = self.check.do_check(dry_run=True)
+        self.assertEqual(
+            doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
+            result.result_type)
+        self.assertEqual(dedent('''\
+            Found 2 stale edenfs mount points:
+              /mnt/stale1
+              /mnt/stale2
+            Not unmounting because dry run.
+        '''), result.message)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    def test_fails_if_unmount_fails(self):
+        self.mount_table.set_eden_mounts(
+            self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
+        self.mount_table.fail_unmount_lazy(b'/mnt/stale1', b'/mnt/stale2')
+        self.mount_table.fail_unmount_force(b'/mnt/stale1')
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(dedent('''\
+            Successfully unmounted 1 mount point:
+              /mnt/stale2
+            Failed to unmount 1 mount point:
+              /mnt/stale1
+        '''), result.message)
+        self.assertEqual(
+            [b'/mnt/stale1', b'/mnt/stale2'],
+            self.mount_table.unmount_lazy_calls)
+        self.assertEqual(
+            [b'/mnt/stale1', b'/mnt/stale2'],
+            self.mount_table.unmount_force_calls)
+
+    def test_ignores_noneden_mounts(self):
+        self.mount_table.set_mounts([
+            mtab.MountInfo(device=b'/dev/sda1', mount_point=b'/', vfstype=b'ext4'),
+        ])
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        self.assertEqual('', result.message)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+
 def _create_watchman_subscription(
     filewatcher_subscription: Optional[str] = None,
     include_primary_subscription: bool = True,
@@ -494,6 +589,20 @@ def _create_watchman_subscription(
     }
 
 
+class FakeClient:
+    def __init__(self):
+        self._mounts = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        pass
+
+    def listMounts(self):
+        return self._mounts
+
+
 class FakeConfig:
     def __init__(
         self,
@@ -504,6 +613,7 @@ class FakeConfig:
         self._mount_paths = mount_paths
         self._is_healthy = is_healthy
         self._build_info = build_info if build_info else {}
+        self._fake_client = FakeClient()
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._mount_paths.keys()
@@ -517,3 +627,56 @@ class FakeConfig:
 
     def get_server_build_info(self) -> Dict[str, str]:
         return dict(self._build_info)
+
+    def get_thrift_client(self) -> FakeClient:
+        return self._fake_client
+
+
+class FakeMountTable(mtab.MountTable):
+    def __init__(self):
+        self.mounts: List[mtab.MountInfo] = []
+        self.unmount_lazy_calls: List[bytes] = []
+        self.unmount_force_calls: List[bytes] = []
+        self.unmount_lazy_fails: Set[bytes] = set()
+        self.unmount_force_fails: Set[bytes] = set()
+
+    def set_eden_mounts(self, mounts: List[bytes]):
+        self.set_mounts([
+            mtab.MountInfo(
+                device=b'edenfs',
+                mount_point=mp,
+                vfstype=b'fuse')
+            for mp in mounts])
+
+    def set_mounts(self, mounts: List[mtab.MountInfo]):
+        self.mounts[:] = mounts
+
+    def fail_unmount_lazy(self, *mounts: bytes):
+        self.unmount_lazy_fails |= set(mounts)
+
+    def fail_unmount_force(self, *mounts: bytes):
+        self.unmount_force_fails |= set(mounts)
+
+    def read(self) -> List[mtab.MountInfo]:
+        return self.mounts
+
+    def unmount_lazy(self, mount_point: bytes) -> bool:
+        self.unmount_lazy_calls.append(mount_point)
+
+        if mount_point in self.unmount_lazy_fails:
+            return False
+        self._remove_mount(mount_point)
+        return True
+
+    def unmount_force(self, mount_point: bytes) -> bool:
+        self.unmount_force_calls.append(mount_point)
+
+        if mount_point in self.unmount_force_fails:
+            return False
+        self._remove_mount(mount_point)
+        return True
+
+    def _remove_mount(self, mount_point: bytes):
+        self.mounts[:] = [
+            mount_info for mount_info in self.mounts
+            if mount_info.mount_point != mount_point]

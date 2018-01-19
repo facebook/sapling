@@ -19,6 +19,7 @@ import sys
 from . import config as config_mod
 from . import debug as debug_mod
 from . import doctor as doctor_mod
+from . import mtab
 from . import rage as rage_mod
 from . import stats as stats_mod
 from . import version as version_mod
@@ -256,7 +257,8 @@ def do_config(args):
 
 def do_doctor(args) -> int:
     config = create_config(args)
-    return doctor_mod.cure_what_ails_you(config, args.dry_run, out=sys.stdout)
+    return doctor_mod.cure_what_ails_you(config, args.dry_run, out=sys.stdout,
+                                         mount_table=mtab.LinuxMountTable())
 
 
 def do_mount(args):

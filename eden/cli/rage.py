@@ -14,6 +14,7 @@ import subprocess
 
 from . import debug as debug_mod
 from . import doctor as doctor_mod
+from . import mtab
 from . import stats as stats_mod
 from typing import IO
 
@@ -66,7 +67,9 @@ def print_rpm_version(out: IO[bytes]):
 def print_eden_doctor_report(config, out: IO[bytes]):
     dry_run = True
     doctor_output = io.StringIO()
-    doctor_rc = doctor_mod.cure_what_ails_you(config, dry_run, doctor_output)
+    doctor_rc = doctor_mod.cure_what_ails_you(
+        config, dry_run, doctor_output,
+        mount_table=mtab.LinuxMountTable())
     out.write(
         b'\neden doctor --dry-run (exit code %d):\n%s\n' %
         (doctor_rc, doctor_output.getvalue().encode())

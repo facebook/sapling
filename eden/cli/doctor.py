@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import abc
 import binascii
 import json
 import os
@@ -18,6 +19,7 @@ from textwrap import dedent
 from typing import Dict, List, Set, TextIO, Union
 from . import config as config_mod
 from . import version
+from . import mtab
 
 
 class CheckResultType(Enum):
@@ -36,19 +38,18 @@ class CheckResult:
         self.message = message
 
 
-class Check:
+class Check(abc.ABC):
+    @abc.abstractmethod
     def do_check(self, dry_run: bool) -> CheckResult:
         pass
 
 
 def cure_what_ails_you(
-    config: config_mod.Config, dry_run: bool, out: TextIO
+    config: config_mod.Config,
+    dry_run: bool,
+    out: TextIO,
+    mount_table: mtab.MountTable,
 ) -> int:
-    mount_paths = config.get_mount_paths()
-    if len(mount_paths) == 0:
-        out.write('No mounts points to assess.\n')
-        return 1
-
     is_healthy = config.check_health().is_healthy()
     if not is_healthy:
         out.write(
@@ -62,9 +63,16 @@ def cure_what_ails_you(
         '''
             )
         )
+        active_mount_points: List[str] = []
+    else:
+        with config.get_thrift_client() as client:
+            active_mount_points = [
+                mount.mountPoint for mount in client.listMounts()]
 
     # This list is a mix of messages to print to stdout and checks to perform.
-    checks_and_messages: List[Union[str, Check]] = []
+    checks_and_messages: List[Union[str, Check]] = [
+        StaleMountsCheck(active_mount_points, mount_table),
+    ]
     if is_healthy:
         checks_and_messages.append(EdenfsIsLatest(config))
     else:
@@ -74,7 +82,7 @@ def cure_what_ails_you(
         )
 
     watchman_roots = _get_watch_roots_for_watchman()
-    for mount_path in mount_paths:
+    for mount_path in active_mount_points:
         # For now, we assume that each mount_path is actively mounted. We should
         # update the listMounts() Thrift API to return information that notes
         # whether a mount point is active and use it here.
@@ -141,6 +149,76 @@ def cure_what_ails_you(
         return 1
     else:
         return 0
+
+
+def printable_bytes(b: bytes) -> str:
+    return b.decode('utf-8', 'backslashreplace')
+
+
+class StaleMountsCheck(Check):
+    def __init__(self, active_mount_points: List[str],
+                 mount_table: mtab.MountTable) -> None:
+        self._active_mount_points = active_mount_points
+        self._mount_table = mount_table
+
+    def do_check(self, dry_run: bool) -> CheckResult:
+        stale_mounts = self.get_all_stale_eden_mount_points()
+        if not stale_mounts:
+            return CheckResult(CheckResultType.NO_ISSUE, '')
+
+        if dry_run:
+            message = f'Found {len(stale_mounts)} stale edenfs mount point{"s" if len(stale_mounts) != 1 else ""}:\n'
+            for mp in sorted(stale_mounts):
+                message += f'  {printable_bytes(mp)}\n'
+            message += 'Not unmounting because dry run.\n'
+
+            return CheckResult(
+                CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
+                message)
+
+        unmounted = []
+        failed_to_unmount = []
+
+        # Attempt to lazy unmount all of them first. For some reason,
+        # lazy unmount can sometimes release any bind mounts inside.
+        for mp in stale_mounts:
+            if self._mount_table.unmount_lazy(mp):
+                unmounted.append(mp)
+
+        # Use a refreshed list -- it's possible MNT_DETACH succeeded on some of
+        # the points.
+        for mp in self.get_all_stale_eden_mount_points():
+            if self._mount_table.unmount_force(mp):
+                unmounted.append(mp)
+            else:
+                failed_to_unmount.append(mp)
+
+        if failed_to_unmount:
+            message = ''
+            if len(unmounted):
+                message += f'Successfully unmounted {len(unmounted)} mount point{"s" if len(unmounted) != 1 else ""}:\n'
+                for mp in sorted(unmounted):
+                    message += f'  {printable_bytes(mp)}\n'
+            message += f'Failed to unmount {len(failed_to_unmount)} mount point{"s" if len(failed_to_unmount) != 1 else ""}:\n'
+            for mp in sorted(failed_to_unmount):
+                message += f'  {printable_bytes(mp)}\n'
+            return CheckResult(CheckResultType.FAILED_TO_FIX, message)
+        else:
+            message = f'Unmounted {len(stale_mounts)} stale edenfs mount point{"s" if len(stale_mounts) != 1 else ""}:\n'
+            for mp in sorted(unmounted):
+                message += f'  {printable_bytes(mp)}\n'
+            return CheckResult(CheckResultType.FIXED, message)
+
+    def get_all_stale_eden_mount_points(self) -> List[bytes]:
+        all_eden_mount_points = self.get_all_eden_mount_points()
+        return sorted(all_eden_mount_points - set(self._active_mount_points))
+
+    def get_all_eden_mount_points(self) -> Set[bytes]:
+        all_system_mounts = self._mount_table.read()
+        return set(
+            mount.mount_point
+            for mount in all_system_mounts
+            if mount.device == b'edenfs' and mount.vfstype == b'fuse')
 
 
 class WatchmanUsingEdenSubscriptionCheck(Check):

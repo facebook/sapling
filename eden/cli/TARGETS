@@ -19,6 +19,7 @@ python_library(
         "config.py",
         "configinterpolator.py",
         "doctor.py",
+        "mtab.py",
         "rage.py",
         "stats.py",
         "stats_print.py",
