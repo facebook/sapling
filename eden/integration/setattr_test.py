@@ -107,6 +107,21 @@ class SetAttrTest:
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
 
+    def test_umask(self):
+        original_umask = os.umask(0o177)
+        try:
+            filename = os.path.join(self.mount, 'test1')
+            with open(filename, 'w') as f:
+                f.write('garbage')
+            self.assertEqual(os.stat(filename).st_mode & 0o777, 0o600)
+            filename = os.path.join(self.mount, 'test2')
+            os.umask(0o777)
+            with open(filename, 'w') as f:
+                f.write('garbage')
+            self.assertEqual(os.stat(filename).st_mode & 0o777, 0o000)
+        finally:
+            os.umask(original_umask)
+
     def test_dir_addfile(self):
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')
