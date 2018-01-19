@@ -6,6 +6,7 @@
 
 use super::*;
 use futures::executor::{spawn, Notify, NotifyHandle};
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::usize;
 
@@ -162,7 +163,7 @@ impl<V> Future for Delay<V> {
 }
 
 #[derive(Debug)]
-struct Delayed<'a>(&'a AtomicUsize);
+struct Delayed<'a>(&'a AtomicUsize, usize);
 
 impl<'a> Filler for Delayed<'a> {
     type Key = String;
@@ -171,7 +172,7 @@ impl<'a> Filler for Delayed<'a> {
     fn fill(&self, _cache: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
         self.0.fetch_add(1, Ordering::Relaxed);
         Delay {
-            remains: 5,
+            remains: self.1,
             v: Some(Ok(key.to_uppercase())),
         }
     }
@@ -186,7 +187,7 @@ impl Notify for DummyNotify {
 #[test]
 fn delayed() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Delayed(&count));
+    let c = Asyncmemo::new_unbounded(Delayed(&count, 5));
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -275,11 +276,9 @@ impl<'a> Filler for Fib<'a> {
             };
             Box::new(f) as Box<Future<Item = u32, Error = ()> + 'a>
         } else {
-            let f = cache.get(key - 1).and_then(move |f| {
-                Delay {
-                    remains: 1,
-                    v: Some(Ok(key + f)),
-                }
+            let f = cache.get(key - 1).and_then(move |f| Delay {
+                remains: 1,
+                v: Some(Ok(key + f)),
             });
             Box::new(f) as Box<Future<Item = u32, Error = ()> + 'a>
         }
@@ -456,7 +455,7 @@ fn failing() {
 #[test]
 fn multiwait() {
     let count = AtomicUsize::new(0);
-    let c = Asyncmemo::new_unbounded(Delayed(&count));
+    let c = Asyncmemo::new_unbounded(Delayed(&count, 5));
 
     let notify_handle = NotifyHandle::from(Arc::new(DummyNotify {}));
     let dummy_id = 0;
@@ -526,4 +525,52 @@ fn multiwait() {
         v1
     );
     assert_eq!(count.load(Ordering::Relaxed), 1);
+}
+
+struct SimpleNotify {
+    pub was_notified: Mutex<bool>,
+}
+
+impl SimpleNotify {
+    fn new() -> Self {
+        SimpleNotify {
+            was_notified: Mutex::new(false),
+        }
+    }
+}
+
+impl Notify for SimpleNotify {
+    fn notify(&self, _id: usize) {
+        *self.was_notified.lock().unwrap() = true;
+    }
+}
+
+#[test]
+fn timer_multiwait() {
+    let count = AtomicUsize::new(0);
+    let c = Asyncmemo::new_unbounded(Delayed(&count, 2));
+    let mut v1 = spawn(c.get("foo"));
+    let mut v2 = spawn(c.get("foo"));
+
+    let simple_notify_1 = Arc::new(SimpleNotify::new());
+    let notify_handle_1 = NotifyHandle::from(simple_notify_1.clone());
+    let dummy_id = 0;
+    assert_eq!(
+        v1.poll_future_notify(&notify_handle_1, dummy_id),
+        Ok(Async::NotReady)
+    );
+
+    let simple_notify_2 = Arc::new(SimpleNotify::new());
+    let notify_handle_2 = NotifyHandle::from(simple_notify_2.clone());
+    assert_eq!(
+        v2.poll_future_notify(&notify_handle_2, dummy_id),
+        Ok(Async::NotReady)
+    );
+
+    assert_eq!(
+        v2.poll_future_notify(&notify_handle_2, dummy_id),
+        Ok(Async::Ready(String::from("FOO")))
+    );
+
+    assert!(*simple_notify_1.was_notified.lock().unwrap());
 }

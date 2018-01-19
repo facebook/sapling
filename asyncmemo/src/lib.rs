@@ -128,9 +128,9 @@ enum Slot<F>
 where
     F: Future,
 {
-    Waiting(F),         // waiting for entry to become available
-    Polling(Vec<Task>), // Future currently being polled, with waiting Tasks
-    Complete(F::Item),  // got value
+    Waiting(F, Vec<Task>), // waiting for entry to become available
+    Polling(Vec<Task>),    // Future currently being polled, with waiting Tasks
+    Complete(F::Item),     // got value
 }
 
 impl<F> Slot<F>
@@ -139,7 +139,7 @@ where
 {
     fn is_waiting(&self) -> bool {
         match self {
-            &Slot::Waiting(_) => true,
+            &Slot::Waiting(..) => true,
             _ => false,
         }
     }
@@ -152,7 +152,7 @@ where
 {
     fn get_weight(&self) -> usize {
         match self {
-            &Slot::Polling(_) | &Slot::Waiting(_) => 0,
+            &Slot::Polling(_) | &Slot::Waiting(..) => 0,
             &Slot::Complete(ref v) => v.get_weight(),
         }
     }
@@ -264,17 +264,20 @@ where
             None => (), // nothing there for this key
             Some(Slot::Complete(v)) => return Ok(Async::Ready(v)),
             Some(Slot::Polling(_)) => return Ok(Async::NotReady),
-            Some(Slot::Waiting(mut fut)) => match fut.poll() {
+            Some(Slot::Waiting(mut fut, mut tasks)) => match fut.poll() {
                 Err(err) => {
                     self.slot_remove();
+                    wake_tasks(tasks);
                     return Err(err);
                 }
                 Ok(Async::NotReady) => {
-                    self.slot_insert(Slot::Waiting(fut));
+                    tasks.push(task::current());
+                    self.slot_insert(Slot::Waiting(fut, tasks));
                     return Ok(Async::NotReady);
                 }
                 Ok(Async::Ready(val)) => {
                     self.slot_insert(Slot::Complete(val.clone()));
+                    wake_tasks(tasks);
                     return Ok(Async::Ready(val));
                 }
             },
@@ -296,7 +299,7 @@ where
                 return Err(err);
             }
             Ok(Async::NotReady) => {
-                self.slot_insert(Slot::Waiting(filler));
+                self.slot_insert(Slot::Waiting(filler, vec![task::current()]));
                 return Ok(Async::NotReady);
             }
             Ok(Async::Ready(val)) => {
