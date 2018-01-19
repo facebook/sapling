@@ -139,7 +139,7 @@ named!(
 /// and there's no notion of star params.
 named_args!(batch_params(_count: usize)<HashMap<Vec<u8>, Vec<u8>>>,
     map!(
-        separated_list!(complete!(tag!(",")), complete!(batch_param_escaped)),
+        separated_list_complete!(tag!(","), batch_param_escaped),
         |v: Vec<_>| v.into_iter().collect()
     )
 );
@@ -159,13 +159,13 @@ named!(
 /// A space-separated list of pairs.
 named!(
     pairlist<Vec<(NodeHash, NodeHash)>>,
-    separated_list!(complete!(tag!(" ")), pair)
+    separated_list_complete!(tag!(" "), pair)
 );
 
 /// A space-separated list of node hashes
 named!(
     hashlist<Vec<NodeHash>>,
-    separated_list!(complete!(tag!(" ")), nodehash)
+    separated_list_complete!(tag!(" "), nodehash)
 );
 
 /// A space-separated list of strings
@@ -746,6 +746,13 @@ mod test {
         let p = b"";
 
         assert_eq!(batch_params(p, 0), IResult::Done(&b""[..], hashmap!{}));
+
+        let p = b"foo=";
+
+        assert_eq!(
+            batch_params(p, 0),
+            IResult::Done(&b""[..], hashmap!{b"foo".to_vec() => b"".to_vec()})
+        );
     }
 
     #[test]
@@ -832,6 +839,18 @@ mod test {
             pairlist(p),
             IResult::Done(&b""[..], vec![(nodehash::NULL_HASH, nodehash::NULL_HASH)])
         );
+
+        let p = b"";
+        assert_eq!(pairlist(p), IResult::Done(&b""[..], vec![]));
+
+        let p = b"0000000000000000000000000000000000000000-00000000000000";
+        assert_eq!(
+            pairlist(p),
+            IResult::Done(
+                &b"0000000000000000000000000000000000000000-00000000000000"[..],
+                vec![]
+            )
+        );
     }
 
     #[test]
@@ -856,6 +875,16 @@ mod test {
         assert_eq!(
             hashlist(p),
             IResult::Done(&b""[..], vec![nodehash::NULL_HASH])
+        );
+
+        let p = b"";
+        assert_eq!(hashlist(p), IResult::Done(&b""[..], vec![]));
+
+        // incomplete should leave bytes on the wire
+        let p = b"00000000000000000000000000000";
+        assert_eq!(
+            hashlist(p),
+            IResult::Done(&b"00000000000000000000000000000"[..], vec![])
         );
     }
 
@@ -1014,13 +1043,42 @@ mod test_parse {
     }
 
     #[test]
-    fn test_parse_batch() {
+    fn test_parse_batch_1() {
         let inp = "batch\n\
                    * 0\n\
                    cmds 6\n\
                    hello ";
 
         test_parse(inp, Request::Batch(vec![SingleRequest::Hello]))
+    }
+
+    #[test]
+    fn test_parse_batch_2() {
+        let inp = "batch\n\
+                   * 0\n\
+                   cmds 12\n\
+                   known nodes=";
+
+        test_parse(
+            inp,
+            Request::Batch(vec![SingleRequest::Known { nodes: vec![] }]),
+        )
+    }
+
+    #[test]
+    fn test_parse_batch_3() {
+        let inp = "batch\n\
+                   * 0\n\
+                   cmds 19\n\
+                   hello ;known nodes=";
+
+        test_parse(
+            inp,
+            Request::Batch(vec![
+                SingleRequest::Hello,
+                SingleRequest::Known { nodes: vec![] },
+            ]),
+        )
     }
 
     #[test]
@@ -1214,7 +1272,7 @@ mod test_parse {
     }
 
     #[test]
-    fn test_parse_known() {
+    fn test_parse_known_1() {
         let inp = "known\n\
                    * 0\n\
                    nodes 40\n\
@@ -1226,6 +1284,15 @@ mod test_parse {
                 nodes: vec![hash_ones()],
             }),
         );
+    }
+
+    #[test]
+    fn test_parse_known_2() {
+        let inp = "known\n\
+                   * 0\n\
+                   nodes 0\n";
+
+        test_parse(inp, Request::Single(SingleRequest::Known { nodes: vec![] }));
     }
 
     #[test]
