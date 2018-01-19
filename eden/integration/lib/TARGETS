@@ -5,6 +5,8 @@ python_library(
         "//eden/cli:lib",
         "//eden/fs/service:py-client",
         "//eden/fs/service:thrift-py",
+        "//libfb/py:pathutils",
+        "//scm/telemetry/hg:hg",
     ],
     external_deps = [
         "py-hypothesis",

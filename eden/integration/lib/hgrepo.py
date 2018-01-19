@@ -63,8 +63,7 @@ class HgRepository(repobase.Repository):
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         self.hg_environment['HGRCPATH'] = ''
-        self.hg_bin = distutils.spawn.find_executable(
-            'hg.real') or distutils.spawn.find_executable('hg')
+        self.hg_bin = find_hg_bin()
 
     def hg(
         self,
@@ -215,3 +214,35 @@ class HgRepository(repobase.Repository):
         else:
             args = ['reset', rev]
         self.hg(*args, stdout=None, stderr=None)
+
+
+_hg_bin = None
+
+
+def find_hg_bin() -> str:
+    global _hg_bin
+    if _hg_bin:
+        return _hg_bin
+
+    try:
+        from libfb.py import pathutils
+        _hg_bin = pathutils.get_build_rule_output_path(
+            '@/scm/telemetry/hg:hg',
+            pathutils.BuildRuleTypes.RUST_BINARY,
+            start_path=__file__
+        )
+        if _hg_bin:
+            return _hg_bin
+    except ImportError:
+        # Code to load the custom Hg wrapper was not available.
+        pass
+
+    _hg_bin = distutils.spawn.find_executable('hg.real')
+    if _hg_bin:
+        return _hg_bin
+
+    _hg_bin = distutils.spawn.find_executable('hg')
+    if _hg_bin:
+        return _hg_bin
+
+    raise Exception('No hg binary found!')
