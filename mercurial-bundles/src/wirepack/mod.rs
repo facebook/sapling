@@ -17,6 +17,7 @@ use delta;
 use errors::*;
 use utils::BytesExt;
 
+pub mod packer;
 #[cfg(test)]
 mod quickcheck_types;
 pub mod unpacker;
@@ -79,6 +80,8 @@ impl Part {
         }
     }
 }
+
+const WIREPACK_END: &[u8] = b"\0\0\0\0\0\0\0\0\0\0";
 
 // See the history header definition in this file for the breakdown.
 const HISTORY_COPY_FROM_OFFSET: usize = 20 + 20 + 20 + 20;

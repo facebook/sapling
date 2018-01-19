@@ -15,7 +15,7 @@ use tokio_io::codec::Decoder;
 
 use mercurial_types::RepoPath;
 
-use super::{DataEntry, HistoryEntry, Kind, Part};
+use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
 use errors::*;
 use part_inner::InnerPart;
 use utils::BytesExt;
@@ -74,8 +74,6 @@ impl Decoder for WirePackUnpacker {
         }
     }
 }
-
-const WIREPACK_END: &[u8] = b"\0\0\0\0\0\0\0\0\0\0";
 
 pub fn new(logger: slog::Logger, kind: Kind) -> WirePackUnpacker {
     WirePackUnpacker {
