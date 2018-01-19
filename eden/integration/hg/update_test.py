@@ -313,10 +313,24 @@ class UpdateTest(EdenHgTestCase):
         '''
         )
         self.assertEqual(merge_contents, self.read_file('some_new_file.txt'))
+        self.assert_unresolved(['some_new_file.txt'])
 
         # Verify the previous version of the file was backed up as expected.
         self.assertTrue(os.path.isfile(expected_backup_file))
         self.assertEqual(modified_contents, self.read_file(path_to_backup))
+
+        # Resolve the merge conflict and complete the update
+        resolved_contents = 'Merged contents.\n'
+        self.write_file('some_new_file.txt', resolved_contents)
+        self.hg('resolve', '--mark', 'some_new_file.txt')
+        self.assert_dirstate_empty()
+        self.assert_status({
+            'some_new_file.txt': 'M',
+        })
+        self.repo.commit('Resolved file changes.')
+        self.assert_dirstate_empty()
+        self.assert_status_empty()
+        self.assertEqual(resolved_contents, self.read_file('some_new_file.txt'))
 
     def test_update_modified_file_to_removed_file_taking_other(self) -> None:
         self.write_file('some_new_file.txt', 'I am new!\n')
