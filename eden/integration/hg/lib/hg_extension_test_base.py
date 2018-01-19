@@ -8,11 +8,12 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from textwrap import dedent
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from eden.integration.lib import find_executables, hgrepo, testcase
 import configparser
 import json
 import os
+import subprocess
 
 
 def _find_post_clone() -> str:
@@ -159,9 +160,11 @@ class EdenHgTestCase(testcase.EdenTestCase):
         self,
         *args: str,
         stdout_charset: str = 'utf-8',
-        cwd: Optional[str] = None,
-        shell: bool = False,
+        stdout: Any = subprocess.PIPE,
+        stderr: Any = subprocess.PIPE,
+        input: Optional[str] = None,
         hgeditor: Optional[str] = None,
+        cwd: Optional[str] = None,
         check: bool = True
     ) -> str:
         '''Runs `hg.real` with the specified args in the Eden mount.
@@ -174,7 +177,8 @@ class EdenHgTestCase(testcase.EdenTestCase):
         specify the `stdout_charset` as a keyword argument.
         '''
         return self.repo.hg(*args, stdout_charset=stdout_charset, cwd=cwd,
-                            shell=shell, hgeditor=hgeditor, check=check)
+                            stdout=stdout, stderr=stderr, input=input,
+                            hgeditor=hgeditor, check=check)
 
     def create_editor_that_writes_commit_messages(self,
                                                   messages: List[str]) -> str:

@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from textwrap import dedent
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from ..lib import hgrepo
 
@@ -34,24 +33,18 @@ class SplitTest(EdenHgTestCase):
         )
 
         # The responses are for the following questions:
-        # y  examine changes to 'letters'?
-        # y  record change 1/2 to 'letters'?
-        # y  examine changes to 'numbers'?
-        # n  record change 2/2 to 'numbers'?
-        # y  Done splitting?
+        split_commands = (
+            'y\n'  # examine changes to 'letters'?
+            'y\n'  # record change 1/2 to 'letters'?
+            'y\n'  # examine changes to 'numbers'?
+            'n\n'  # record change 2/2 to 'numbers'?
+            'y\n'  # Done splitting?
+        )
         self.hg(
-            dedent(
-                '''\
-        split --config ui.interactive=true --config ui.interface=text << EOF
-        y
-        y
-        y
-        n
-        y
-        EOF
-        '''
-            ),
-            shell=True,
+            'split',
+            '--config', 'ui.interactive=true',
+            '--config', 'ui.interface=text',
+            input=split_commands,
             hgeditor=editor
         )
 
@@ -76,26 +69,20 @@ class SplitTest(EdenHgTestCase):
             ]
         )
 
+        # The responses are for the following questions:
+        split_commands = (
+            'y\n'  # examine changes to 'letters'?
+            'y\n'  # record change 1/2 to 'letters'?
+            'n\n'  # examine changes to 'd.txt'?
+            'n\n'  # Done splitting?
+            'q\n'  # examine changes to 'd.txt'?
+        )
         with self.assertRaises(hgrepo.HgError) as context:
-            # The responses are for the following questions:
-            # y  examine changes to 'letters'?
-            # y  record change 1/2 to 'letters'?
-            # n  examine changes to 'd.txt'?
-            # n  Done splitting?
-            # q  examine changes to 'd.txt'?
             self.hg(
-                dedent(
-                    '''\
-            split --config ui.interactive=true --config ui.interface=text << EOF
-            y
-            y
-            n
-            n
-            q
-            EOF
-            '''
-                ),
-                shell=True,
+                'split',
+                '--config', 'ui.interactive=true',
+                '--config', 'ui.interface=text',
+                input=split_commands,
                 hgeditor=editor
             )
         self.assert_status_empty()
