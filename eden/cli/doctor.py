@@ -399,7 +399,9 @@ class EdenfsIsLatest(Check):
                         fb-eden-{installed_version}.x86_64
                     but the version of Eden that is currently running is:
                         fb-eden-{running_version}.x86_64
-                    Consider running `eden shutdown` followed by `eden daemon`
+                    Consider running `eden daemon --takeover` to migrate
+                    to the newer version.  If that doesn't work out, you
+                    may wish to run `eden shutdown` followed by `eden daemon`
                     to restart with the installed version, which may have
                     important bug fixes or performance improvements.
                     '''
