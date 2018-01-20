@@ -71,7 +71,9 @@ def cure_what_ails_you(
 
     # This list is a mix of messages to print to stdout and checks to perform.
     checks_and_messages: List[Union[str, Check]] = [
-        StaleMountsCheck(active_mount_points, mount_table),
+        # Temporarily disabled while @chadaustin figures out why it unmounts
+        # active mounts too.
+        # StaleMountsCheck(active_mount_points, mount_table),
     ]
     if is_healthy:
         checks_and_messages.append(EdenfsIsLatest(config))
