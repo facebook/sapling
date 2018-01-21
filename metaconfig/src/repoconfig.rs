@@ -67,8 +67,9 @@ impl RepoConfigs {
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
             repo.get_changeset_by_nodeid(&changeset_hash)
-                .and_then(move |changeset| repo.get_manifest_by_nodeid(
-                    &changeset.manifestid().clone().into_nodehash()))
+                .and_then(move |changeset| {
+                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
+                })
                 .map_err(|err| err.context("failed to get manifest from changeset").into())
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
@@ -84,9 +85,7 @@ impl RepoConfigs {
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
                 })
-                .map_err(|err| {
-                    err.context("failed to get manifest from changeset").into()
-                })
+                .map_err(|err| err.context("failed to get manifest from changeset").into())
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
     }
@@ -111,15 +110,15 @@ impl RepoConfigs {
                 .and_then(|repos_dir| {
                     let repopaths: Vec<_> = repos_dir.read().into_iter().cloned().collect();
                     let repos_node = repos_dir.into_node();
-                    future::join_all(repopaths.into_iter().map(move |repopath| {
-                        Self::read_repo(repos_node.clone(), repopath)
-                    }))
+                    future::join_all(
+                        repopaths
+                            .into_iter()
+                            .map(move |repopath| Self::read_repo(repos_node.clone(), repopath)),
+                    )
                 })
-                .map(|repos| {
-                    RepoConfigs {
-                        metaconfig: MetaConfig {},
-                        repos: repos.into_iter().collect(),
-                    }
+                .map(|repos| RepoConfigs {
+                    metaconfig: MetaConfig {},
+                    repos: repos.into_iter().collect(),
                 }),
         )
     }
@@ -141,9 +140,8 @@ impl RepoConfigs {
                             .from_err()
                             .and_then(|node| match node {
                                 VfsNode::File(file) => Ok(file),
-                                _ => Err(
-                                    ErrorKind::InvalidFileStructure("expected file".into()).into(),
-                                ),
+                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into())
+                                    .into()),
                             })
                             .and_then(|file| {
                                 file.read().map_err(|err| {
@@ -152,14 +150,14 @@ impl RepoConfigs {
                             })
                             .and_then(|content| match content {
                                 Content::File(blob) => Ok(blob),
-                                _ => Err(
-                                    ErrorKind::InvalidFileStructure("expected file".into()).into(),
-                                ),
+                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into())
+                                    .into()),
                             })
                             .and_then(|blob| {
-                                let bytes = blob.as_slice().ok_or(ErrorKind::InvalidFileStructure(
-                                    "expected content of the blob".into(),
-                                ))?;
+                                let bytes =
+                                    blob.as_slice().ok_or(ErrorKind::InvalidFileStructure(
+                                        "expected content of the blob".into(),
+                                    ))?;
                                 Ok((
                                     reponame,
                                     toml::from_slice::<RawRepoConfig>(bytes)?.try_into()?,
