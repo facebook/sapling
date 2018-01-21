@@ -46,7 +46,7 @@ where
     }
 }
 
-#[allow(dead_code)] // XXX TODO
+#[allow(dead_code)]
 fn escape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
     let mut ret = Vec::new();
 
@@ -115,21 +115,6 @@ impl Extra {
         }
 
         Ok(Extra(ret))
-    }
-
-    pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        // assume BTreeMap is sorted enough
-        let kv: Vec<_> = self.0
-            .iter()
-            .map(|(k, v)| {
-                let mut vec = Vec::new();
-                vec.extend_from_slice(k);
-                vec.push(b':');
-                vec.extend_from_slice(v);
-                escape(&vec)
-            })
-            .collect();
-        out.write_all(kv.join(&b'\0').as_slice())
     }
 }
 
@@ -251,19 +236,7 @@ impl RevlogChangeset {
     /// Generate a serialized changeset. This is the counterpart to parse, and generates
     /// in the same format as Mercurial. It should be bit-for-bit identical in fact.
     pub fn generate<W: Write>(&self, out: &mut W) -> Result<()> {
-        write!(out, "{}\n", self.manifestid.into_nodehash())?;
-        out.write_all(&self.user)?;
-        out.write_all(b"\n")?;
-        write!(out, "{} {} ", self.time.time, self.time.tz)?;
-        self.extra.generate(out)?;
-        write!(out, "\n")?;
-        for f in &self.files {
-            write!(out, "{}\n", f)?;
-        }
-        write!(out, "\n")?;
-        out.write_all(&self.comments)?;
-
-        Ok(())
+        serialize_cs(self, out)
     }
 
     pub fn get_node(&self) -> Result<BlobNode<Vec<u8>>> {
@@ -303,4 +276,37 @@ impl Changeset for RevlogChangeset {
     fn parents(&self) -> &Parents {
         &self.parents
     }
+}
+
+/// Generate a serialized changeset. This is the counterpart to parse, and generates
+/// in the same format as Mercurial. It should be bit-for-bit identical in fact.
+pub fn serialize_cs<W: Write>(cs: &Changeset, out: &mut W) -> Result<()> {
+    write!(out, "{}\n", cs.manifestid().into_nodehash())?;
+    out.write_all(cs.user())?;
+    out.write_all(b"\n")?;
+    write!(out, "{} {} ", cs.time().time, cs.time().tz)?;
+    serialize_extras(cs.extra(), out)?;
+    write!(out, "\n")?;
+    for f in cs.files() {
+        write!(out, "{}\n", f)?;
+    }
+    write!(out, "\n")?;
+    out.write_all(&cs.comments())?;
+
+    Ok(())
+}
+
+fn serialize_extras<W: Write>(extras: &BTreeMap<Vec<u8>, Vec<u8>>, out: &mut W) -> io::Result<()> {
+    // assume BTreeMap is sorted enough
+    let kv: Vec<_> = extras
+        .iter()
+        .map(|(k, v)| {
+            let mut vec = Vec::new();
+            vec.extend_from_slice(k);
+            vec.push(b':');
+            vec.extend_from_slice(v);
+            escape(&vec)
+        })
+        .collect();
+    out.write_all(kv.join(&b'\0').as_slice())
 }
