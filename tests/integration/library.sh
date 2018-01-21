@@ -29,3 +29,19 @@ function edenserver {
 function hgmn {
   hg --config ui.ssh="$DUMMYSSH" --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
 }
+
+hgcloneshallow() {
+  local dest
+  orig=$1
+  shift
+  dest=$1
+  shift
+  hg clone --shallow --config remotefilelog.reponame=master "$orig" "$dest" "$@"
+  cat >> "$dest"/.hg/hgrc <<EOF
+[remotefilelog]
+reponame=master
+datapackversion=1
+[phases]
+publish=False
+EOF
+}

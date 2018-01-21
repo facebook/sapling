@@ -20,9 +20,10 @@ use tokio_io::AsyncRead;
 
 use slog::Logger;
 
+use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
-use mercurial_types::{percent_encode, Changeset, NodeHash, Parents, NULL_HASH};
+use mercurial_types::{percent_encode, BlobNode, Changeset, NodeHash, Parents, NULL_HASH};
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
@@ -32,7 +33,8 @@ use blobrepo::BlobRepo;
 use errors::*;
 
 use repoinfo::RepoGenCache;
-use revset::{AncestorsNodeStream, IntersectNodeStream, SingleNodeHash, UnionNodeStream};
+use revset::{AncestorsNodeStream, IntersectNodeStream, NodeStream, SetDifferenceNodeStream,
+             SingleNodeHash, UnionNodeStream};
 
 pub fn init_repo(
     parent_logger: &Logger,
@@ -165,6 +167,44 @@ impl RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
+        let repo_generation = &self.repo.repo_generation;
+        let hgrepo = &self.repo.hgrepo;
+
+        let ancestors_stream = |nodes: &Vec<NodeHash>| -> Box<NodeStream> {
+            let heads_ancestors = nodes.iter().map(|head| {
+                AncestorsNodeStream::new(&hgrepo, repo_generation.clone(), *head).boxed()
+            });
+            Box::new(UnionNodeStream::new(
+                &hgrepo,
+                repo_generation.clone(),
+                heads_ancestors,
+            ))
+        };
+
+        let heads_ancestors = ancestors_stream(&args.heads);
+        let common_ancestors = ancestors_stream(&args.common);
+
+        let nodestosend = Box::new(SetDifferenceNodeStream::new(
+            hgrepo,
+            repo_generation.clone(),
+            heads_ancestors,
+            common_ancestors,
+        ));
+
+        let changelogentries = nodestosend
+            .and_then({
+                let hgrepo = hgrepo.clone();
+                move |node| hgrepo.get_changeset_by_nodeid(&node)
+            })
+            .and_then(|cs| {
+                let mut v = Vec::new();
+                mercurial::changeset::serialize_cs(&cs, &mut v)?;
+                let parents = cs.parents().get_nodes();
+                Ok(BlobNode::new(v, parents.0, parents.1))
+            });
+
+        bundle.add_part(parts::changegroup_part(changelogentries)?);
+
         // TODO: generalize this to other listkey types
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
@@ -189,6 +229,7 @@ impl RepoClient {
             });
             bundle.add_part(parts::listkey_part("bookmarks", items)?);
         }
+        // TODO(stash): handle includepattern= and excludepattern=
 
         let encode_fut = bundle.build();
 
