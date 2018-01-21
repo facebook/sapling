@@ -14,7 +14,9 @@ use mercurial_types::nodehash::ManifestId;
 use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset, Time};
 
 const CHANGESET: &[u8] = include_bytes!("cset.bin");
+const CHANGESET_NOEXTRA: &[u8] = include_bytes!("cset_noextra.bin");
 const CHANGESETBLOB: Blob<&[u8]> = Blob::Dirty(CHANGESET);
+const CHANGESETBLOB_NOEXTRA: Blob<&[u8]> = Blob::Dirty(CHANGESET_NOEXTRA);
 
 #[test]
 fn test_parse() {
@@ -50,22 +52,57 @@ checking out on Windows ... and if it didn't fail it would probably not do what
 the user expected."#.into(),
         }
     );
-}
 
-#[test]
-fn test_generate() {
-    let csid: NodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
-    let p1: NodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
-    let node = BlobNode::new(CHANGESETBLOB, Some(&p1), None);
+    let csid: NodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
+    let p1: NodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
+    let node = BlobNode::new(CHANGESETBLOB_NOEXTRA, Some(&p1), None);
     let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
 
     assert_eq!(node.nodeid().expect("no nodeid"), csid);
 
-    let mut new = Vec::new();
+    assert_eq!(
+        cset,
+        RevlogChangeset {
+            parents: *node.parents(),
+            manifestid: ManifestId::new(
+                "6c0d10b92d045127f9a3846b59480451fe3bbac9".parse().unwrap()
+            ),
+            user: "jake@edge2.net".into(),
+            time: Time {
+                time: 1116031690,
+                tz: 25200,
+            },
+            extra: Extra(vec![].into_iter().collect()),
+            files: vec![MPath::new(b"hgweb.py").unwrap()],
+            comments: r#"reorganize code into classes
+clean up html code for w3c validation
+"#.into(),
+        }
+    );
+}
 
-    cset.generate(&mut new).expect("generate failed");
+#[test]
+fn test_generate() {
+    fn test(csid: NodeHash, p1: Option<&NodeHash>, blob: Blob<&[u8]>, cs: &[u8]) {
+        let node = BlobNode::new(blob, p1, None);
+        let cset = RevlogChangeset::parse(node.clone()).expect("parsed");
 
-    assert_eq!(new, CHANGESET);
+        assert_eq!(node.nodeid().expect("no nodeid"), csid);
+
+        let mut new = Vec::new();
+
+        cset.generate(&mut new).expect("generate failed");
+
+        assert_eq!(new, cs);
+    }
+
+    let csid: NodeHash = "0849d280663e46b3e247857f4a68fabd2ba503c3".parse().unwrap();
+    let p1: NodeHash = "169cb9e47f8e86079ee9fd79972092f78fbf68b1".parse().unwrap();
+    test(csid, Some(&p1), CHANGESETBLOB, CHANGESET);
+
+    let csid: NodeHash = "526722d24ee5b3b860d4060e008219e083488356".parse().unwrap();
+    let p1: NodeHash = "db5eb6a86179ce819db03da9ef2090b32f8e3fc4".parse().unwrap();
+    test(csid, Some(&p1), CHANGESETBLOB_NOEXTRA, CHANGESET_NOEXTRA);
 }
 
 quickcheck! {
@@ -102,7 +139,7 @@ fn extras_roundtrip() {
 #[test]
 #[ignore]
 fn extras_roundtrip_long() {
-    QuickCheck::new().tests(1000).quickcheck(
-        extras_roundtrip_prop as fn(BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult,
-    );
+    QuickCheck::new()
+        .tests(1000)
+        .quickcheck(extras_roundtrip_prop as fn(BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult);
 }

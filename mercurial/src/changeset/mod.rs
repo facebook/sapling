@@ -284,8 +284,13 @@ pub fn serialize_cs<W: Write>(cs: &Changeset, out: &mut W) -> Result<()> {
     write!(out, "{}\n", cs.manifestid().into_nodehash())?;
     out.write_all(cs.user())?;
     out.write_all(b"\n")?;
-    write!(out, "{} {} ", cs.time().time, cs.time().tz)?;
-    serialize_extras(cs.extra(), out)?;
+    write!(out, "{} {}", cs.time().time, cs.time().tz)?;
+
+    if !cs.extra().is_empty() {
+        write!(out, " ")?;
+        serialize_extras(cs.extra(), out)?;
+    }
+
     write!(out, "\n")?;
     for f in cs.files() {
         write!(out, "{}\n", f)?;
