@@ -43,7 +43,10 @@ pub enum RepoType {
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database
     BlobRocks(PathBuf),
-    // BlobManifold...
+    /// Blob repository with path pointing to the directory where a server socket is going to be.
+    /// Blobs are stored in Manifold, first parameter is Manifold bucket.
+    /// Bookmarks and heads are stored in memory
+    TestBlobManifold(String, PathBuf),
 }
 
 /// Configuration of a metaconfig repository
@@ -178,6 +181,7 @@ struct RawRepoConfig {
     path: PathBuf,
     repotype: RawRepoType,
     generation_cache_size: Option<usize>,
+    manifold_bucket: Option<String>,
 }
 
 /// Types of repositories supported
@@ -186,6 +190,7 @@ enum RawRepoType {
     #[serde(rename = "revlog")] Revlog,
     #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
+    #[serde(rename = "blob:testmanifold")] TestBlobManifold,
 }
 
 impl TryFrom<RawRepoConfig> for RepoConfig {
@@ -198,6 +203,12 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
             Revlog => RepoType::Revlog(this.path),
             BlobFiles => RepoType::BlobFiles(this.path),
             BlobRocks => RepoType::BlobRocks(this.path),
+            TestBlobManifold => {
+                let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
+                    "manifold bucket must be specified".into(),
+                ))?;
+                RepoType::TestBlobManifold(manifold_bucket, this.path)
+            }
         };
 
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);

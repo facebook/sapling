@@ -16,6 +16,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use tokio_core::reactor::Remote;
 use tokio_io::AsyncRead;
 
 use slog::Logger;
@@ -40,12 +41,13 @@ pub fn init_repo(
     parent_logger: &Logger,
     repotype: &RepoType,
     cache_size: usize,
+    remote: &Remote,
 ) -> Result<(PathBuf, HgRepo)> {
     let repopath = repotype.path();
 
     let mut sock = repopath.join(".hg");
 
-    let repo = HgRepo::new(parent_logger, repotype, cache_size)
+    let repo = HgRepo::new(parent_logger, repotype, cache_size, remote)
         .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
@@ -54,12 +56,12 @@ pub fn init_repo(
 }
 
 pub trait OpenableRepoType {
-    fn open(&self) -> Result<BlobRepo>;
+    fn open(&self, remote: &Remote) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self) -> Result<BlobRepo> {
+    fn open(&self, remote: &Remote) -> Result<BlobRepo> {
         use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
@@ -67,6 +69,7 @@ impl OpenableRepoType for RepoType {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
             BlobFiles(ref path) => BlobRepo::new_files(&path)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(&path)?,
+            TestBlobManifold(ref bucket, _) => BlobRepo::new_test_manifold(bucket, remote)?,
         };
 
         Ok(ret)
@@ -77,6 +80,7 @@ impl OpenableRepoType for RepoType {
 
         match *self {
             Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
+            TestBlobManifold(_, ref path) => path.as_ref(),
         }
     }
 }
@@ -119,12 +123,17 @@ fn bundle2caps() -> String {
 }
 
 impl HgRepo {
-    pub fn new(parent_logger: &Logger, repo: &RepoType, cache_size: usize) -> Result<Self> {
+    pub fn new(
+        parent_logger: &Logger,
+        repo: &RepoType,
+        cache_size: usize,
+        remote: &Remote,
+    ) -> Result<Self> {
         let path = repo.path().to_owned();
 
         Ok(HgRepo {
             path: format!("{}", path.display()),
-            hgrepo: Arc::new(repo.open()?),
+            hgrepo: Arc::new(repo.open(remote)?),
             repo_generation: RepoGenCache::new(cache_size),
             _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
         })

@@ -49,7 +49,7 @@ mod listener;
 
 use std::io;
 use std::panic;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -218,35 +218,21 @@ where
     I: IntoIterator<Item = (RepoType, usize)>,
 {
     // Given the list of paths to repos:
-    // - initialize the repo
     // - create a thread for it
+    // - initialize the repo
     // - wait for connections in that thread
-    let repos: Vec<_> = repos
-        .into_iter()
-        .map(|(repotype, cache_size)| {
-            repo::init_repo(root_log, &repotype, cache_size)
-        })
-        .collect();
-
-    if repos.iter().any(Result::is_err) {
-        for err in repos.into_iter().filter_map(Result::err) {
-            crit!(root_log, "Failed to initialize repo"; SlogKVError(err));
-        }
-        bail_err!(ErrorKind::Initialization(
-            "at least one of the repos failed to be initialized",
-        ));
-    }
 
     let handles: Vec<_> = repos
         .into_iter()
-        .filter_map(Result::ok)
-        .map(move |(sockname, repo)| {
-            let listen_log = root_log.new(o!("repo" => repo.path().clone()));
+        .map(move |(repotype, cache_size)| {
             // start a thread for each repo to own the reactor and start listening for
             // connections and detach it
             thread::Builder::new()
-                .name(format!("listener_{}", repo.path()))
-                .spawn(move || repo_listen(sockname, repo, listen_log))
+                .name(format!("listener_{:?}", repotype))
+                .spawn({
+                    let root_log = root_log.clone();
+                    move || repo_listen(repotype, cache_size, root_log.clone())
+                })
                 .map_err(Error::from)
         })
         .collect();
@@ -264,11 +250,13 @@ where
 }
 
 // Listener thread for a specific repo
-fn repo_listen<P>(sockname: P, repo: repo::HgRepo, listen_log: Logger) -> !
-where
-    P: AsRef<Path>,
-{
+fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
+    let (sockname, repo) = repo::init_repo(&root_log, &repotype, cache_size, &core.remote())
+        .expect("failed to initialize repo");
+
+    let listen_log = root_log.new(o!("repo" => repo.path().clone()));
+
     let handle = core.handle();
     let repo = Arc::new(repo);
 

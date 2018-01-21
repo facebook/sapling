@@ -17,4 +17,7 @@ pub enum ErrorKind {
     /// The structure of metaconfig repo is invalid
     #[fail(display = "invalid file structure: {}", _0)]
     InvalidFileStructure(String),
+    /// Config is invalid
+    #[fail(display = "invalid config options: {}", _0)]
+    InvalidConfig(String),
 }
