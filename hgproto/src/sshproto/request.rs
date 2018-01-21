@@ -18,6 +18,8 @@ use batch;
 use errors;
 use errors::*;
 
+const BAD_UTF8_ERR_CODE: u32 = 111;
+
 /// Parse an unsigned decimal integer. If it reaches the end of input, it returns Incomplete,
 /// as there may be more digits following
 fn digit<F: Fn(u8) -> bool>(input: &[u8], isdigit: F) -> IResult<&[u8], &[u8]> {
@@ -307,6 +309,14 @@ fn ident_string(inp: &[u8]) -> IResult<&[u8], String> {
     }
 }
 
+/// Parse utf8 string, assumes that input is complete
+fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
+    match String::from_utf8(Vec::from(inp)) {
+        Ok(s) => IResult::Done(b"", s),
+        Err(_) => IResult::Error(ErrorKind::Custom(BAD_UTF8_ERR_CODE)),
+    }
+}
+
 macro_rules! replace_expr {
     ($_t:tt $sub:expr) => {$sub};
 }
@@ -454,7 +464,7 @@ fn parse_with_params(
               namespace => ident_string,
           })
         | command!("lookup", Lookup, parse_params, {
-              key => ident_string,
+              key => utf8_string_complete,
           })
         | command_star!("known", Known, parse_params, {
               nodes => hashlist,
@@ -1272,6 +1282,21 @@ mod test_parse {
     }
 
     #[test]
+    fn test_parse_lookup2() {
+        let inp = "lookup\n\
+                   key 4\n\
+                   5c79";
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Lookup {
+                key: "5c79".to_string(),
+            }),
+        );
+    }
+
+
+    #[test]
     fn test_parse_known_1() {
         let inp = "known\n\
                    * 0\n\
@@ -1367,8 +1392,9 @@ mod test_parse {
     fn test_parse_batch_heads() {
         let inp = "batch\n\
                    * 0\n\
-                   cmds 100\n\
+                   cmds 116\n\
                    heads ;\
+                   lookup key=1234;\
                    known nodes=1111111111111111111111111111111111111111 \
                    2222222222222222222222222222222222222222";
 
@@ -1376,6 +1402,9 @@ mod test_parse {
             inp,
             Request::Batch(vec![
                 SingleRequest::Heads {},
+                SingleRequest::Lookup {
+                    key: "1234".to_string(),
+                },
                 SingleRequest::Known {
                     nodes: vec![hash_ones(), hash_twos()],
                 },
