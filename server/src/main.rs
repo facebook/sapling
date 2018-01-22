@@ -193,22 +193,23 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
     crpath.push(".hg");
     let config_repo = RevlogRepo::open(crpath)?;
 
-    let node_hash = if let Some(bookmark) = matches.value_of("crbookmark") {
+    let changesetid = if let Some(bookmark) = matches.value_of("crbookmark") {
         config_repo
             .get_bookmark_value(&bookmark)
             .wait()?
             .ok_or_else(|| failure::err_msg("bookmark for config repo not found"))?
             .0
     } else {
-        mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())?
+        let nodehash = mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())?;
+        mercurial_types::nodehash::ChangesetId::new(nodehash)
     };
 
     info!(
         logger,
-        "Config repository will be read from commit: {}", node_hash
+        "Config repository will be read from commit: {}", changesetid
     );
 
-    RepoConfigs::read_revlog_config_repo(config_repo, node_hash)
+    RepoConfigs::read_revlog_config_repo(config_repo, changesetid.into_nodehash())
         .from_err()
         .wait()
 }

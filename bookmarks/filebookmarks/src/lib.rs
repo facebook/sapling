@@ -30,7 +30,7 @@ use percent_encoding::{percent_decode, percent_encode, DEFAULT_ENCODE_SET};
 use bookmarks::{Bookmarks, BookmarksMut};
 use filekv::FileKV;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial_types::NodeHash;
+use mercurial_types::nodehash::ChangesetId;
 use storage_types::Version;
 
 static PREFIX: &'static str = "bookmark:";
@@ -41,7 +41,7 @@ static PREFIX: &'static str = "bookmark:";
 /// to a thread pool to avoid blocking the main thread. File accesses between these threads
 /// are synchronized by a global map of per-path locks.
 pub struct FileBookmarks {
-    kv: FileKV<NodeHash>,
+    kv: FileKV<ChangesetId>,
 }
 
 impl FileBookmarks {
@@ -81,7 +81,7 @@ fn encode_key(key: &AsRef<[u8]>) -> String {
 
 impl Bookmarks for FileBookmarks {
     #[inline]
-    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
         self.kv
             .get(encode_key(name))
             .map_err(|e| e.context("FileBookmarks get failed").into())
@@ -102,7 +102,7 @@ impl BookmarksMut for FileBookmarks {
     fn set(
         &self,
         key: &AsRef<[u8]>,
-        value: &NodeHash,
+        value: &ChangesetId,
         version: &Version,
     ) -> BoxFuture<Option<Version>, Error> {
         self.kv

@@ -36,7 +36,7 @@ use tokio_core::reactor::Remote;
 use bookmarks::{Bookmarks, BookmarksMut};
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, BoxFutureNonSend, BoxStream, FutureExt, StreamExt};
-use mercurial_types::NodeHash;
+use mercurial_types::nodehash::ChangesetId;
 use sendwrapper::SendWrapper;
 use storage_types::Version;
 
@@ -56,7 +56,7 @@ impl DbBookmarks {
 }
 
 impl Bookmarks for DbBookmarks {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
         let key = key.as_ref().to_vec();
         self.wrapper
             .with_inner(move |pool| get_bookmark(pool, key))
@@ -77,7 +77,7 @@ impl BookmarksMut for DbBookmarks {
     fn set(
         &self,
         key: &AsRef<[u8]>,
-        value: &NodeHash,
+        value: &ChangesetId,
         version: &Version,
     ) -> BoxFuture<Option<Version>, Error> {
         let key = key.as_ref().to_vec();
@@ -113,7 +113,7 @@ fn list_keys(pool: Rc<Pool>) -> BoxFutureNonSend<BoxStream<Vec<u8>, Error>, Erro
 fn get_bookmark(
     pool: Rc<Pool>,
     key: Vec<u8>,
-) -> BoxFutureNonSend<Option<(NodeHash, Version)>, Error> {
+) -> BoxFutureNonSend<Option<(ChangesetId, Version)>, Error> {
     pool.get_conn()
         .and_then(|conn| {
             conn.prep_exec(
@@ -125,7 +125,7 @@ fn get_bookmark(
         .map_err(|e| SyncFailure::new(e).into())
         .and_then(|(_, mut rows)| if let Some((value, version)) = rows.pop() {
             let value = AsciiStr::from_ascii(&value)?;
-            let value = NodeHash::from_ascii_str(&value)?;
+            let value = ChangesetId::from_ascii_str(&value)?;
             Ok(Some((value, Version::from(version))))
         } else {
             Ok(None)
@@ -136,7 +136,7 @@ fn get_bookmark(
 fn set_bookmark(
     pool: Rc<Pool>,
     key: Vec<u8>,
-    value: NodeHash,
+    value: ChangesetId,
     version: Version,
 ) -> BoxFutureNonSend<Option<Version>, Error> {
     pool.get_conn()

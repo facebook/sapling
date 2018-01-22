@@ -388,7 +388,7 @@ impl RevlogRepo {
     pub fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+    ) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
         match self.bookmarks() {
             Ok(b) => b.get(key).boxify(),
             Err(e) => future::err(e).boxify(),

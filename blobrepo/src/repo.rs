@@ -175,7 +175,7 @@ impl BlobRepo {
     pub fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(NodeHash, Version)>, Error> {
+    ) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
         self.bookmarks.get(key).boxify()
     }
 }

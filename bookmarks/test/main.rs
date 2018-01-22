@@ -32,6 +32,7 @@ use bookmarks::BookmarksMut;
 use dbbookmarks::DbBookmarks;
 use filebookmarks::FileBookmarks;
 use membookmarks::MemBookmarks;
+use mercurial_types::nodehash::ChangesetId;
 use mercurial_types_mocks::nodehash;
 use storage_types::Version;
 
@@ -40,9 +41,9 @@ where
     B: BookmarksMut,
 {
     let foo = b"foo";
-    let one = nodehash::ONES_HASH;
-    let two = nodehash::TWOS_HASH;
-    let three = nodehash::THREES_HASH;
+    let one = ChangesetId::new(nodehash::ONES_HASH);
+    let two = ChangesetId::new(nodehash::TWOS_HASH);
+    let three = ChangesetId::new(nodehash::THREES_HASH);
 
     assert_eq!(core.run(bookmarks.get(&foo)).unwrap(), None);
 
@@ -88,7 +89,7 @@ where
     let one = b"1";
     let two = b"2";
     let three = b"3";
-    let hash = nodehash::ONES_HASH;
+    let hash = ChangesetId::new(nodehash::ONES_HASH);
 
     let _ = core.run(bookmarks.create(&one, &hash)).unwrap().unwrap();
     let _ = core.run(bookmarks.create(&two, &hash)).unwrap().unwrap();
@@ -107,7 +108,7 @@ where
     B: BookmarksMut,
 {
     let foo = b"foo";
-    let bar = nodehash::ONES_HASH;
+    let bar = ChangesetId::new(nodehash::ONES_HASH);
 
     let version = {
         let bookmarks = new_bookmarks();

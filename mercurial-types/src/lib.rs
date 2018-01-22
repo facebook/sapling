@@ -60,7 +60,7 @@ pub use changeset::{Changeset, Time};
 pub use delta::Delta;
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
-pub use nodehash::{NodeHash, NULL_HASH};
+pub use nodehash::{ChangesetId, EntryId, ManifestId, NodeHash, NULL_HASH};
 pub use path::{fncache_fsencode, simple_fsencode, MPath, MPathElement, RepoPath};
 pub use utils::percent_encode;
 

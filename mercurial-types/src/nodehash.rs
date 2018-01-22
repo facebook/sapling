@@ -141,12 +141,58 @@ impl Arbitrary for NodeHash {
 pub struct ChangesetId(NodeHash);
 
 impl ChangesetId {
-    pub fn new(hash: NodeHash) -> Self {
-        ChangesetId(hash)
+    #[inline]
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<ChangesetId> {
+        NodeHash::from_ascii_str(s).map(ChangesetId)
     }
 
     pub fn into_nodehash(self) -> NodeHash {
         self.0
+    }
+
+    pub fn new(hash: NodeHash) -> Self {
+        ChangesetId(hash)
+    }
+
+    #[inline]
+    pub fn to_hex(&self) -> AsciiString {
+        self.0.to_hex()
+    }
+}
+
+impl FromStr for ChangesetId {
+    type Err = <NodeHash as FromStr>::Err;
+
+    fn from_str(s: &str) -> result::Result<ChangesetId, Self::Err> {
+        NodeHash::from_str(s).map(ChangesetId)
+    }
+}
+
+impl Display for ChangesetId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+impl serde::ser::Serialize for ChangesetId {
+    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for ChangesetId {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<ChangesetId, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let hex = deserializer.deserialize_string(StringVisitor)?;
+        match NodeHash::from_str(hex.as_str()) {
+            Ok(hash) => Ok(ChangesetId::new(hash)),
+            Err(error) => Err(serde::de::Error::custom(error)),
+        }
     }
 }
 
@@ -155,12 +201,18 @@ impl ChangesetId {
 pub struct ManifestId(NodeHash);
 
 impl ManifestId {
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+
     pub fn new(hash: NodeHash) -> Self {
         ManifestId(hash)
     }
+}
 
-    pub fn into_nodehash(self) -> NodeHash {
-        self.0
+impl Display for ManifestId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
     }
 }
 
@@ -169,11 +221,17 @@ impl ManifestId {
 pub struct EntryId(NodeHash);
 
 impl EntryId {
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+
     pub fn new(hash: NodeHash) -> Self {
         EntryId(hash)
     }
+}
 
-    pub fn into_nodehash(self) -> NodeHash {
-        self.0
+impl Display for EntryId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
     }
 }
