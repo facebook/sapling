@@ -7,6 +7,7 @@
 //! Root manifest, tree nodes
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use futures::future::{Future, IntoFuture};
 use futures::stream::{self, Stream};
@@ -22,16 +23,16 @@ use errors::*;
 use file::BlobEntry;
 use utils::get_node;
 
-pub struct BlobManifest<B> {
-    blobstore: B,
+pub struct BlobManifest {
+    blobstore: Arc<Blobstore>,
     files: BTreeMap<MPath, Details>,
 }
 
-impl<B> BlobManifest<B>
-where
-    B: Blobstore + Clone,
-{
-    pub fn load(blobstore: &B, manifestid: &ManifestId) -> BoxFuture<Option<Self>, Error> {
+impl BlobManifest {
+    pub fn load(
+        blobstore: &Arc<Blobstore>,
+        manifestid: &ManifestId,
+    ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
         get_node(blobstore, nodehash)
             .and_then({
@@ -51,7 +52,7 @@ where
             .boxify()
     }
 
-    pub fn parse<D: AsRef<[u8]>>(blobstore: B, data: D) -> Result<Self> {
+    pub fn parse<D: AsRef<[u8]>>(blobstore: Arc<Blobstore>, data: D) -> Result<Self> {
         Ok(BlobManifest {
             blobstore: blobstore,
             files: revlog::parse(data.as_ref())?,
@@ -59,14 +60,17 @@ where
     }
 }
 
-impl<B> Manifest for BlobManifest<B>
-where
-    B: Blobstore + Sync + Clone,
-{
+impl Manifest for BlobManifest {
     fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         let res = self.files.get(path).map({
-            let blobstore = self.blobstore.clone();
-            move |d| BlobEntry::new(blobstore, path.clone(), d.entryid().into_nodehash(), d.flag())
+            move |d| {
+                BlobEntry::new(
+                    self.blobstore.clone(),
+                    path.clone(),
+                    d.entryid().into_nodehash(),
+                    d.flag(),
+                )
+            }
         });
 
         match res {
@@ -81,11 +85,14 @@ where
             .into_iter()
             .map({
                 let blobstore = self.blobstore.clone();
-                move |(path, d)|
-                    BlobEntry::new(blobstore.clone(),
-                                   path,
-                                   d.entryid().into_nodehash(),
-                                   d.flag())
+                move |(path, d)| {
+                    BlobEntry::new(
+                        blobstore.clone(),
+                        path,
+                        d.entryid().into_nodehash(),
+                        d.flag(),
+                    )
+                }
             })
             .map(|e_res| e_res.map(|e| e.boxed()));
         // TODO: (sid0) T23193289 replace with stream::iter_result once that becomes available

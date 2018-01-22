@@ -23,8 +23,8 @@ use manifest::BlobManifest;
 
 use utils::{get_node, RawNodeBlob};
 
-pub struct BlobEntry<B> {
-    blobstore: B,
+pub struct BlobEntry {
+    blobstore: Arc<Blobstore>,
     path: RepoPath,
     id: EntryId,
     ty: Type,
@@ -52,11 +52,8 @@ pub fn fetch_blob_from_blobstore(
         .boxify()
 }
 
-impl<B> BlobEntry<B>
-where
-    B: Blobstore + Sync + Clone,
-{
-    pub fn new(blobstore: B, path: MPath, nodeid: NodeHash, ty: Type) -> Result<Self> {
+impl BlobEntry {
+    pub fn new(blobstore: Arc<Blobstore>, path: MPath, nodeid: NodeHash, ty: Type) -> Result<Self> {
         let path = match ty {
             Type::Tree => RepoPath::dir(path)?,
             _ => RepoPath::file(path)?,
@@ -95,10 +92,7 @@ where
     }
 }
 
-impl<B> Entry for BlobEntry<B>
-where
-    B: Blobstore + Sync + Clone,
-{
+impl Entry for BlobEntry {
     fn get_type(&self) -> Type {
         self.ty
     }

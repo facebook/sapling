@@ -6,6 +6,7 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use bincode;
 use failure;
@@ -49,13 +50,10 @@ impl BlobChangeset {
         }
     }
 
-    pub fn load<B>(
-        blobstore: &B,
+    pub fn load(
+        blobstore: &Arc<Blobstore>,
         changesetid: &ChangesetId,
-    ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static
-    where
-        B: Blobstore,
-    {
+    ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let nodeid = changesetid.clone().into_nodehash();
         let key = cskey(&nodeid);
 
@@ -75,10 +73,10 @@ impl BlobChangeset {
         })
     }
 
-    pub fn save<B>(&self, blobstore: B) -> impl Future<Item = (), Error = Error> + Send + 'static
-    where
-        B: Blobstore + Send + 'static,
-    {
+    pub fn save(
+        &self,
+        blobstore: Arc<Blobstore>,
+    ) -> impl Future<Item = (), Error = Error> + Send + 'static {
         let key = cskey(&self.nodeid);
 
         self.revlogcs.get_node() // FIXME: generate from scratch
