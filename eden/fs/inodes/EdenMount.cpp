@@ -652,12 +652,14 @@ SharedRenameLock EdenMount::acquireSharedRenameLock() {
 }
 
 std::string EdenMount::getCounterName(CounterName name) {
-  if (name == CounterName::LOADED) {
-    return getPath().stringPiece().str() + ".loaded";
-  } else if (name == CounterName::UNLOADED) {
-    return getPath().stringPiece().str() + ".unloaded";
+  const auto prefix = getPath().stringPiece().str();
+  switch (name) {
+    case CounterName::LOADED:
+      return prefix + ".loaded";
+    case CounterName::UNLOADED:
+      return prefix + ".unloaded";
   }
-  folly::throwSystemErrorExplicit(EINVAL, "unknown counter name", name);
+  EDEN_BUG() << "unknown counter name " << static_cast<int>(name);
 }
 
 folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
