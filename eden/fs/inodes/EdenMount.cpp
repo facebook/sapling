@@ -660,6 +660,7 @@ std::string EdenMount::getCounterName(CounterName name) {
       return prefix + ".unloaded";
   }
   EDEN_BUG() << "unknown counter name " << static_cast<int>(name);
+  folly::assume_unreachable();
 }
 
 folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
