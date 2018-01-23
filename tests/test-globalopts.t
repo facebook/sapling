@@ -347,7 +347,6 @@ Testing -h/--help:
   
   enabled extensions:
   
-   clindex       alternative changelog index
    debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
@@ -438,7 +437,6 @@ Testing -h/--help:
   
   enabled extensions:
   
-   clindex       alternative changelog index
    debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
