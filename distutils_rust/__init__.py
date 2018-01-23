@@ -140,7 +140,7 @@ class BuildRustExt(distutils.core.Command):
             pass
 
         distutils.log.info("downloading vendored crates '%s'", ven.name)
-        cmd = [LFS_SCRIPT_PATH, 'download', ven.filename]
+        cmd = ['python', LFS_SCRIPT_PATH, 'download', ven.filename]
         with chdir(ven.dest):
             rc = subprocess.call(cmd)
             if rc:

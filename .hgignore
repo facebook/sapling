@@ -63,6 +63,8 @@ hgext/moreversion.py
 hgext/patchrmdir.c
 hgext/traceprof.cpp
 
+# Packaging sources
+SOURCES/
 # Build output
 build/
 rpmbuild/

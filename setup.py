@@ -713,7 +713,8 @@ class buildhgexe(build_ext):
         Why resource #1 should be used for .exe manifests? I don't know and
         wasn't able to find an explanation for mortals. But it seems to work.
         """
-        exefname = self.compiler.executable_filename(self.hgtarget)
+        exefname = self.compiler.executable_filename(self.hgtarget,
+                                                     output_dir=self.build_temp)
         fdauto, manfname = tempfile.mkstemp(suffix='.hg.exe.manifest')
         os.close(fdauto)
         with open(manfname, 'w') as f:
