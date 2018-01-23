@@ -244,7 +244,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   please report to the Source Control @ FB group.
 
 # Shift time back to make disable expired
-  $ hg sl --config infinitepushbackup.disableduntil=`date -v-1S +%s`  -T '{rev} {desc}\n'
+  $ hg sl --config infinitepushbackup.disableduntil=`date --date '-1 sec' +%s 2>/dev/null || date -v-1S +%s`  -T '{rev} {desc}\n'
   @  7 Not backed up changeset 3
   |
   o  1 Public changeset 2
