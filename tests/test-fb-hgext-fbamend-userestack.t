@@ -67,9 +67,9 @@ Test hg amend --fixup.
 
 Test that the operation field on the metadata is correctly set.
   $ hg debugobsolete
-  [a-f0-9]* [a-f0-9]* 0 .* {'ef1': '33', 'operation': 'amend', 'user': 'test'} (re)
-  [a-f0-9]* [a-f0-9]* 0 .* {'ef1': '4', 'operation': 'rebase', 'user': 'test'} (re)
-  [a-f0-9]* [a-f0-9]* 0 .* {'ef1': '4', 'operation': 'rebase', 'user': 'test'} (re)
+  7c3bad9141dcb46ff89abf5f61856facd56e476c * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'amend', 'user': 'test'} (glob)
+  4538525df7e2b9f09423636c61ef63a4cb872a2d * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)
+  47d2a3944de8b013de3be9578e8e344ea2e6c097 * 0 (Thu Jan 01 00:00:00 1970 +0000) {'operation': 'rebase', 'user': 'test'} (glob)
 
 Test hg amend --rebase
   $ hg amend -m "amended again" --rebase

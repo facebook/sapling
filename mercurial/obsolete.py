@@ -1077,10 +1077,6 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     if useoperation and operation:
         metadata['operation'] = operation
 
-    # Effect flag metadata handling
-    saveeffectflag = repo.ui.configbool('experimental',
-                                        'evolution.effect-flags')
-
     tr = repo.transaction('add-obsolescence-marker')
     try:
         markerargs = []
@@ -1103,13 +1099,6 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
             if nprec in nsucs:
                 raise error.Abort(_("changeset %s cannot obsolete itself")
                                   % prec)
-
-            # Effect flag can be different by relation
-            if saveeffectflag:
-                # The effect flag is saved in a versioned field name for future
-                # evolution
-                effectflag = obsutil.geteffectflag(rel)
-                localmetadata[obsutil.EFFECTFLAGFIELD] = "%d" % effectflag
 
             # Creating the marker causes the hidden cache to become invalid,
             # which causes recomputation when we ask for prec.parents() above.
