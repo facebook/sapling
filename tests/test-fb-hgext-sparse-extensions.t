@@ -7,6 +7,7 @@ test sparse interaction with other extensions
   > sparse=$TESTDIR/../hgext/fbsparse.py
   > strip=
   > [simplecache]
+  > showdebug=true
   > cachedir=$TESTTMP/hgsimplecache
   > EOF
 

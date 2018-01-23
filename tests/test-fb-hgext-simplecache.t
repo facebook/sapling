@@ -6,6 +6,7 @@ Setup the extension
   > [extensions]
   > simplecache=
   > [simplecache]
+  > showdebug=true
   > cachedir=$TESTTMP/hgsimplecache
   > caches=memcache
   >        local
@@ -244,6 +245,7 @@ Test strange (unicode) filenames
 Test local cache eviction
   $ cat >> $HGRCPATH <<EOF
   > [simplecache]
+  > showdebug=true
   > caches=local
   > EOF
   $ echo 'x' >> y && hg commit -qm "1" && hg export --debug > /dev/null

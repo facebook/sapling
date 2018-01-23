@@ -151,11 +151,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.upstream (list)
   undocumented: simplecache.cachedir (str)
   undocumented: simplecache.caches (list) [['local']]
-  undocumented: simplecache.evictionpercent (int) [50]
-  undocumented: simplecache.host (str) ['localhost']
-  undocumented: simplecache.maxcachesize (int) [2000]
-  undocumented: simplecache.port (str) [11101]
-  undocumented: simplecache.version (str) ['1']
   undocumented: smartlog.ignorebookmarks (str) ['!']
   undocumented: ssl.timeout (int) [5]
   undocumented: treemanifest.autocreatetrees (bool)

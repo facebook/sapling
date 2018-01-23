@@ -13,10 +13,21 @@ often take, like diffing two revisions (eg, hg export).
 Currently we cache the full results of these functions:
     copies.pathcopies (a dictionary)
     context.basectx._buildstatus (a scmutil.status object -- a tuple of lists)
+
+You can disable its debug statements (defaults to 'on' except in tests)::
+
+  [simplecache]
+  showdebug = False
 """
 
 import socket, json, random, os, tempfile
-from mercurial import extensions, node, copies, context
+from mercurial import (
+    context,
+    copies,
+    encoding,
+    extensions,
+    node,
+)
 from mercurial.scmutil import status
 
 testedwith = 'ships-with-fb-hgext'
@@ -217,22 +228,33 @@ def memoize(func, key, serializer, ui):
         try:
             cacheval = get(key, ui)
             if cacheval is not None:
-                ui.debug('got value for key %s from %s\n' % (key, name))
+                _debug(ui, 'got value for key %s from %s\n' % (key, name))
                 value = serializer.deserialize(cacheval)
                 return value
         except Exception as inst:
-            ui.debug('error getting or deserializing key %s: %s\n'
+            _debug(ui, 'error getting or deserializing key %s: %s\n'
                      % (key, inst))
 
-    ui.debug('falling back for value %s\n' % (key))
+    _debug(ui, 'falling back for value %s\n' % (key))
     value = func()
 
     for name in cachelist:
         get, set = cachefuncs[name]
         try:
             set(key, serializer.serialize(value), ui)
-            ui.debug('set value for key %s to %s\n' % (key, name))
+            _debug(ui, 'set value for key %s to %s\n' % (key, name))
         except Exception as inst:
-            ui.debug('error setting key %s: %s\n' % (key, inst))
+            _debug(ui, 'error setting key %s: %s\n' % (key, inst))
 
     return value
+
+def _runningintests():
+    return 'TESTTMP' in encoding.environ
+
+def _debug(ui, msg):
+    config = ui.configbool('simplecache', 'showdebug', None)
+    if config is None:
+        config = not _runningintests()
+
+    if config:
+        ui.debug(msg)
