@@ -117,9 +117,10 @@ class pathcopiesserializer(object):
 def pathcopiesui(ui):
     def pathcopies(orig, x, y, match=None):
         func = lambda: orig(x, y, match=match)
-        if x._node is not None and y._node is not None and not match:
+        if (x.node() not in UNCACHEABLE_NODES and y.node()
+            not in UNCACHEABLE_NODES and not match):
             key = 'pathcopies:%s:%s' % (
-                    node.hex(x._node), node.hex(y._node))
+                    node.hex(x.node()), node.hex(y.node()))
             return memoize(func, key, pathcopiesserializer, ui)
         return func()
     return pathcopies
