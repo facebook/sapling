@@ -681,6 +681,7 @@ Strip scratchontopofpublic commit and do hg update
   new changesets c70aee6da07d
   (run 'hg update' to get a working copy)
   'c70aee6da07d7cdb9897375473690df3a8563339' found remotely
+  pull finished in * sec (glob)
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 Trying to pull from bad path
@@ -706,6 +707,7 @@ Strip commit and pull it using hg update with bookmark name
   new changesets d8fde0ddfc96
   (run 'hg update' to get a working copy)
   'scratch/mybranch' found remotely
+  pull finished in * sec (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark scratch/mybranch)
   $ hg log -r scratch/mybranch -T '{node}'
@@ -735,6 +737,7 @@ Test debugfillinfinitepushmetadata
   new changesets 33910bfe6ffe:d8fde0ddfc96
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   'd8fde0ddfc962183977f92d2bc52d303b8840f9d' found remotely
+  pull finished in * sec (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo file > file
   $ hg add file

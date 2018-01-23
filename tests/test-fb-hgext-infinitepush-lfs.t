@@ -60,6 +60,7 @@ Setup another client
   new changesets 0da81a72db1a
   (run 'hg update' to get a working copy)
   'scratch/lfscommit' found remotely
+  pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark scratch/lfscommit)
 

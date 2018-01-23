@@ -725,6 +725,8 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 _("'%s' does not exist locally - looking for it " +
                   "remotely...\n") % mayberemote)
             # Try pulling node from remote repo
+            pullstarttime = time.time()
+
             try:
                 cmdname = '^pull'
                 pullcmd = commands.table[cmdname][0]
@@ -735,6 +737,8 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 ui.warn(_('pull failed: %s\n') % sys.exc_info()[1])
             else:
                 ui.warn(_("'%s' found remotely\n") % mayberemote)
+                pulltime = time.time() - pullstarttime
+                ui.warn(_("pull finished in %.3f sec\n") % pulltime)
     return orig(ui, repo, node, rev, **opts)
 
 def _pull(orig, ui, repo, source="default", **opts):

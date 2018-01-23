@@ -202,6 +202,7 @@ Create new bookmark and try to pull it
   new changesets 36667a3f76e4:2885148f6198
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   'scratch/branchtoupdateto1' found remotely
+  pull finished in * sec (glob)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ cat >> $HGRCPATH << EOF
@@ -221,4 +222,5 @@ Create new bookmark and try to pull it
   new changesets 1f558bd20eaa
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   'scratch/branchtoupdateto2' found remotely
+  pull finished in * sec (glob)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
