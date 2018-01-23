@@ -104,6 +104,7 @@ Short help:
   
   enabled extensions:
   
+   clindex       alternative changelog index
    debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
@@ -188,6 +189,7 @@ Short help:
   
   enabled extensions:
   
+   clindex       alternative changelog index
    debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
   
@@ -258,6 +260,7 @@ Test extension help:
       enabled extensions:
   
        children      command to display child changesets (DEPRECATED)
+       clindex       alternative changelog index
        debugshell    a python shell with repo, changelog & manifest objects
        githelp       try mapping git commands to Mercurial commands
        rebase        command to move sets of revisions to a different ancestor
@@ -974,6 +977,7 @@ Test that default list of commands omits extension commands
   
   enabled extensions:
   
+   clindex       alternative changelog index
    debugshell    a python shell with repo, changelog & manifest objects
    githelp       try mapping git commands to Mercurial commands
    helpext       (no help text available)

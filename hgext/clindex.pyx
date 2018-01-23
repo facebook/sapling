@@ -56,7 +56,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem('clindex', 'nodemap', default=True)
-configitem('clindex', 'verify', default=True)
+configitem('clindex', 'verify', default=False)
 
 # Inserting 20k nodes takes about 2ms. See https://phab.mercurial-scm.org/D1291
 # for the table of node count and performance.
