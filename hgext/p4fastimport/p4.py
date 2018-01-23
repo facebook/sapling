@@ -5,7 +5,6 @@ import collections
 import contextlib
 import json
 import marshal
-import re
 import time
 
 from .util import runworker
