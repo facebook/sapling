@@ -350,7 +350,6 @@ Test extension help:
        inhibitwarn   (no help text available)
        interactiveui
                      (no help text available)
-       keyword       expand keywords in tracked files
        linkrevcache  a simple caching layer to speed up _adjustlinkrev
        logginghelper
                      this extension logs different pieces of information that
