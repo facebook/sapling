@@ -18,13 +18,13 @@
 # sample of test scripts.  For example:
 #
 #  1) serial, no coverage, temp install:
-#      ./run-tests.py test-s*
+#      ./run-tests.py -j1 test-s*
 #  2) serial, no coverage, local hg:
-#      ./run-tests.py --local test-s*
+#      ./run-tests.py -j1 --local test-s*
 #  3) serial, coverage, temp install:
-#      ./run-tests.py -c test-s*
+#      ./run-tests.py -j1 -c test-s*
 #  4) serial, coverage, local hg:
-#      ./run-tests.py -c --local test-s*      # unsupported
+#      ./run-tests.py -j1 -c --local test-s*  # unsupported
 #  5) parallel, no coverage, temp install:
 #      ./run-tests.py -j2 test-s*
 #  6) parallel, no coverage, local hg:
@@ -51,6 +51,7 @@ import difflib
 import distutils.version as version
 import errno
 import json
+import multiprocessing
 import os
 import random
 import re
@@ -248,7 +249,7 @@ if 'java' in sys.platform:
     IMPL_PATH = b'JYTHONPATH'
 
 defaults = {
-    'jobs': ('HGTEST_JOBS', 1),
+    'jobs': ('HGTEST_JOBS', multiprocessing.cpu_count()),
     'timeout': ('HGTEST_TIMEOUT', 180),
     'slowtimeout': ('HGTEST_SLOWTIMEOUT', 500),
     'port': ('HGTEST_PORT', 20059),

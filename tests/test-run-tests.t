@@ -15,7 +15,7 @@ Define a helper to avoid the install step
 =============
   $ rt()
   > {
-  >     run-tests.py --with-hg=`which hg` "$@"
+  >     run-tests.py --with-hg=`which hg` -j 1 "$@"
   > }
 
 error paths
