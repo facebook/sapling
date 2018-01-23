@@ -386,6 +386,7 @@ Test extension help:
        sigtrace      sigtrace - dump stack traces on signal
        simplecache
        smartlog      command to display a relevant subgraph
+       sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
        stat          (no help text available)
        strip         strip changesets and their descendants from history
