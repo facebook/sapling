@@ -8,9 +8,9 @@
 # GNU General Public License version 2 or any later version.
 
 # Modifying this script is tricky because it has many modes:
-#   - serial (default) vs parallel (-jN, N > 1)
+#   - serial vs parallel (default) (-jN, N > 1)
 #   - no coverage (default) vs coverage (-c, -C, -s)
-#   - temp install (default) vs specific hg script (--with-hg, --local)
+#   - temp install vs specific hg script (--with-hg, --local (default))
 #   - tests are a mix of shell scripts and Python scripts
 #
 # If you change this script, it is recommended that you ensure you
@@ -18,19 +18,19 @@
 # sample of test scripts.  For example:
 #
 #  1) serial, no coverage, temp install:
-#      ./run-tests.py -j1 test-s*
+#      ./run-tests.py -j1 --build test-s*
 #  2) serial, no coverage, local hg:
 #      ./run-tests.py -j1 --local test-s*
 #  3) serial, coverage, temp install:
-#      ./run-tests.py -j1 -c test-s*
+#      ./run-tests.py -j1 -b -c test-s*
 #  4) serial, coverage, local hg:
 #      ./run-tests.py -j1 -c --local test-s*  # unsupported
 #  5) parallel, no coverage, temp install:
-#      ./run-tests.py -j2 test-s*
+#      ./run-tests.py -j2 -b test-s*
 #  6) parallel, no coverage, local hg:
 #      ./run-tests.py -j2 --local test-s*
 #  7) parallel, coverage, temp install:
-#      ./run-tests.py -j2 -c test-s*          # currently broken
+#      ./run-tests.py -j2 -c -b test-s*       # currently broken
 #  8) parallel, coverage, local install:
 #      ./run-tests.py -j2 -c --local test-s*  # unsupported (and broken)
 #  9) parallel, custom tmp dir:
@@ -380,6 +380,10 @@ def getparser():
     hgconf.add_argument("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg, "
              "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
+    hgconf.add_argument("-b", "--rebuild", dest="local", action="store_false",
+        help="build and install to a temporary location before running tests, "
+             "the reverse of --local")
+    hgconf.set_defaults(local=True)
     hgconf.add_argument("--ipv6", action="store_true",
         help="prefer IPv6 to IPv4 for network related tests")
     hgconf.add_argument("--pure", action="store_true",
