@@ -213,12 +213,13 @@ class overlaychangectx(context.changectx):
         self.commit = repo.handler.git.get_object(_maybehex(sha))
         self._overlay = getattr(repo, 'gitoverlay', repo)
         self._rev = self._overlay.rev(bin(self.commit.id))
+        self._node = bin(self.commit.id)
 
     def repo(self):
         return self._hgrepo
 
     def node(self):
-        return bin(self.commit.id)
+        return self._node
 
     def rev(self):
         return self._rev

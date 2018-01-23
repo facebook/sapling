@@ -28,9 +28,20 @@ from mercurial import (
     extensions,
     node,
 )
+from mercurial.node import (
+    nullid,
+    wdirid
+)
 from mercurial.scmutil import status
 
 testedwith = 'ships-with-fb-hgext'
+
+# context nodes that are special and should not be cached.
+UNCACHEABLE_NODES = [
+    None, # repo[None].node() returns this
+    nullid,
+    wdirid
+]
 
 def extsetup(ui):
     extensions.wrapfunction(copies, 'pathcopies', pathcopiesui(ui))
@@ -155,10 +166,11 @@ def buildstatusui(ui):
             return func()
         if ignored or clean or unknown:
             return func()
-        if self._node is None or other._node is None:
+        if (self.node() in UNCACHEABLE_NODES or
+            other.node() in UNCACHEABLE_NODES):
             return func()
         key = 'buildstatus:%s:%s' % (
-                node.hex(self._node), node.hex(other._node))
+                node.hex(self.node()), node.hex(other.node()))
         return memoize(func, key, buildstatusserializer, ui)
 
     return buildstatus
