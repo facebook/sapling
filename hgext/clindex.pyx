@@ -15,8 +15,7 @@ Config::
     nodemap = True
 
     # Verify operations against other implementations.
-    # Turn this off for performance.
-    verify = True
+    verify = False
 
     # Incrementally build Rust nodemap once it misses 20k revisions
     lagthreshold = 20000
@@ -56,7 +55,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem('clindex', 'nodemap', default=True)
-configitem('clindex', 'verify', default=True)
+configitem('clindex', 'verify', default=False)
 
 # Inserting 20k nodes takes about 2ms. See https://phab.mercurial-scm.org/D1291
 # for the table of node count and performance.
@@ -432,7 +431,7 @@ def reposetup(ui, repo):
             try:
                 self.changelog.index.updatecaches()
             except AttributeError as ex: # pure, or clindex is not used
-                return
+                pass
             super(clindexrepo, self).updatecaches(tr)
 
         @unfilteredmethod
@@ -442,7 +441,7 @@ def reposetup(ui, repo):
             try:
                 self.changelog.index.destroying()
             except AttributeError as ex:
-                return
+                pass
             super(clindexrepo, self).destroying()
 
         @unfilteredmethod
