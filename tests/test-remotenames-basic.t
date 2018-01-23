@@ -301,15 +301,14 @@ Test clone --mirror
 
 Test loading with hggit
 
+  $ . "$TESTDIR/hggit/testutil"
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=" >> $HGRCPATH
   $ echo "[devel]" >> $HGRCPATH
   $ echo "all-warnings=no" >> $HGRCPATH
-  $ hg help bookmarks  | grep -A 3 -- '--track'
+  $ hg help bookmarks  | egrep -- '--(un){0,1}track'
    -t --track BOOKMARK track this bookmark or remote name
    -u --untrack        remove tracking for this bookmark
-   -a --all            show both remote and local bookmarks
-      --remote         show only remote bookmarks
 
 Test branches marked as closed are not loaded
   $ cd ../alpha

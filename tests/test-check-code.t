@@ -203,9 +203,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-hgsubversion-template-keywords.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-urls.py it has no-che?k-code (glob)
   Skipping tests/test-hgsubversion-utility-commands.py it has no-che?k-code (glob)
-  tests/test-remotenames-basic.t:308:
-   >   $ hg help bookmarks  | grep -A 3 -- '--track'
-   don't use grep's context flags
   Skipping tests/test_hgsubversion_util.py it has no-che?k-code (glob)
   [1]
 
