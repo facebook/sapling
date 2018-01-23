@@ -317,7 +317,7 @@ Show all commands + options
   phase: public, draft, secret, force, rev
   recover: 
   rename: after, force, include, exclude, dry-run
-  resolve: all, list, mark, unmark, no-status, tool, include, exclude, template
+  resolve: all, list, mark, unmark, no-status, tool, include, exclude, template, skip
   revert: all, date, rev, no-backup, interactive, include, exclude, dry-run
   rollback: dry-run, force
   root: 

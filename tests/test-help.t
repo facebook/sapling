@@ -104,8 +104,14 @@ Short help:
   
   enabled extensions:
   
+   conflictinfo
    debugshell    a python shell with repo, changelog & manifest objects
+   errorredirect
+                 redirect error message
    githelp       try mapping git commands to Mercurial commands
+   mergedriver   custom merge drivers for autoresolved files
+   progressfile  allows users to have JSON progress bar information written to a
+                 path
   
   additional help topics:
   
@@ -188,8 +194,14 @@ Short help:
   
   enabled extensions:
   
+   conflictinfo
    debugshell    a python shell with repo, changelog & manifest objects
+   errorredirect
+                 redirect error message
    githelp       try mapping git commands to Mercurial commands
+   mergedriver   custom merge drivers for autoresolved files
+   progressfile  allows users to have JSON progress bar information written to a
+                 path
   
   additional help topics:
   
@@ -258,8 +270,14 @@ Test extension help:
       enabled extensions:
   
        children      command to display child changesets (DEPRECATED)
+       conflictinfo
        debugshell    a python shell with repo, changelog & manifest objects
+       errorredirect
+                     redirect error message
        githelp       try mapping git commands to Mercurial commands
+       mergedriver   custom merge drivers for autoresolved files
+       progressfile  allows users to have JSON progress bar information written
+                     to a path
        rebase        command to move sets of revisions to a different ancestor
   
       disabled extensions:
@@ -282,7 +300,6 @@ Test extension help:
        cleanobsstore
        clonebundles  advertise pre-generated bundles to seed clones
        configwarn    warn unsupported user configs
-       conflictinfo
        convert       import revisions from foreign VCS repositories into
                      Mercurial
        copytrace     extension that does copytracing fast
@@ -296,8 +313,6 @@ Test extension help:
        drop          drop specified changeset from the stack
        edrecord      (no help text available)
        eol           automatically manage newlines in repository files
-       errorredirect
-                     redirect error message
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)
@@ -341,7 +356,6 @@ Test extension help:
                      this extension logs different pieces of information that
                      will be used
        lz4revlog     store revlog deltas using lz4 compression
-       mergedriver   custom merge drivers for autoresolved files
        morecolors    make more output colorful
        morestatus    make status give a bit more context
        moreversion   (no help text available)
@@ -359,8 +373,6 @@ Test extension help:
        phabdiff      (no help text available)
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
-       progressfile  allows users to have JSON progress bar information written
-                     to a path
        pullcreatemarkers
                      (no help text available)
        purge         command to delete untracked files from the working
@@ -975,9 +987,15 @@ Test that default list of commands omits extension commands
   
   enabled extensions:
   
+   conflictinfo
    debugshell    a python shell with repo, changelog & manifest objects
+   errorredirect
+                 redirect error message
    githelp       try mapping git commands to Mercurial commands
    helpext       (no help text available)
+   mergedriver   custom merge drivers for autoresolved files
+   progressfile  allows users to have JSON progress bar information written to a
+                 path
   
   additional help topics:
   

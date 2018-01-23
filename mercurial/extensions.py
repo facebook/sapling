@@ -53,8 +53,12 @@ _sysroot = os.path.abspath(os.path.join(os.__file__, '../'))
 # hgext/ -- useful for extensions that need cleaning up, or significant
 # integration work, to be brought into mercurial/.
 DEFAULT_EXTENSIONS = [
+    'conflictinfo',
     'debugshell',
+    'errorredirect',
     'githelp',
+    'mergedriver',
+    'progressfile',
 ]
 
 def extensions(ui=None):

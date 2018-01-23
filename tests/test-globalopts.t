@@ -347,8 +347,14 @@ Testing -h/--help:
   
   enabled extensions:
   
+   conflictinfo
    debugshell    a python shell with repo, changelog & manifest objects
+   errorredirect
+                 redirect error message
    githelp       try mapping git commands to Mercurial commands
+   mergedriver   custom merge drivers for autoresolved files
+   progressfile  allows users to have JSON progress bar information written to a
+                 path
   
   additional help topics:
   
@@ -437,8 +443,14 @@ Testing -h/--help:
   
   enabled extensions:
   
+   conflictinfo
    debugshell    a python shell with repo, changelog & manifest objects
+   errorredirect
+                 redirect error message
    githelp       try mapping git commands to Mercurial commands
+   mergedriver   custom merge drivers for autoresolved files
+   progressfile  allows users to have JSON progress bar information written to a
+                 path
   
   additional help topics:
   

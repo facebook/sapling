@@ -57,7 +57,7 @@ def _handlecommandexception(orig, ui):
 
     script = ui.config('errorredirect', 'script')
     if not script:
-        return _printtrace(ui, warning)
+        return orig(ui)
 
     # run the external script
     env = encoding.environ.copy()
