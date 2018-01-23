@@ -48,6 +48,7 @@ Simple import
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
   $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
+  updating the branch cache (?)
   loading changelist numbers.
   2 changelists to import.
   loading list of files.
@@ -60,10 +61,9 @@ Simple import
   writing filelog: a80d06849b33, p1 b789fdd96dc2, linkrev 1, 4 bytes, src: *, path: Main/a (glob)
   writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
   writing filelog: b11e10a88bfa, p1 149da44f2a4e, linkrev 1, 4 bytes, src: *, path: Main/b/c (glob)
-  updating the branch cache (?)
-  writing filelog: ee08366a1a83, p1 000000000000, linkrev 0, 44 bytes, src: rcs, path: Main/largefile
+  writing filelog: ee08366a1a83, p1 000000000000, linkrev 0, 44 bytes, src: *, path: Main/largefile (glob)
   largefile: Main/largefile, oid: dde0d1d11f099d6572fa47fcbd1cae324aeaad7409cb107461b09ba4eb2177ac
-  writing filelog: a33f052256c3, p1 ee08366a1a83, linkrev 1, 88 bytes, src: rcs, path: Main/largefile
+  writing filelog: a33f052256c3, p1 ee08366a1a83, linkrev 1, 88 bytes, src: *, path: Main/largefile (glob)
   largefile: Main/largefile, oid: 595efb640da040786d840fbae4675925fd4621f3498b849744ce0d4446674e3f
   changelist 1: writing manifest. node: e970866c1151 p1: 000000000000 p2: 000000000000 linkrev: 0
   changelist 1: writing changelog: initial

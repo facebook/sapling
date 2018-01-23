@@ -326,6 +326,30 @@ class P4Filelog(object):
         self._data = data
         self._depotfile = depotfile
 
+        # used in Perforce prior to 99.1
+        self._keyword_to_typemod = {
+            'text': ('text', ''),
+            'xtext': ('text', 'x'),
+            'ktext': ('text', 'k'),
+            'kxtext': ('text', 'kx'),
+            'binary': ('binary', ''),
+            'xbinary': ('binary', 'x'),
+            'ctext': ('text', 'C'),
+            'cxtext': ('text', 'Cx'),
+            'symlink': ('symlink', ''),
+            'resource': ('resource', ''),
+            'uresource': ('resource', 'F'),
+            'ltext': ('text', 'F'),
+            'xltext': ('text', 'Fx'),
+            'ubinary': ('binary', 'F'),
+            'uxbinary': ('binary', 'Fx'),
+            'tempobj': ('binary', 'FSw'),
+            'ctempobj': ('binary', 'Sw'),
+            'xtempobj': ('binary', 'FSwx'),
+            'xunicode': ('unicode', 'x'),
+            'xutf16': ('utf16', 'x'),
+        }
+
 #    @property
 #    def branchcl(self):
 #        return self._parsed[1]
@@ -354,21 +378,33 @@ class P4Filelog(object):
     def revisions(self):
         return sorted(self._data.keys())
 
+    def _get_type_modifiers(self, filetype):
+        try:
+            filetype, modifiers = self._keyword_to_typemod[filetype]
+        except KeyError:
+            filetype, plus, modifiers = filetype.partition('+')
+        return filetype, modifiers
+
+    def _get_type(self, filetype):
+        return self._get_type_modifiers(filetype)[0]
+
+    def _get_modifiers(self, filetype):
+        return self._get_type_modifiers(filetype)[1]
+
     def isdeleted(self, clnum):
         return self._data[clnum]['action'] in ['move/delete', 'delete']
 
     def isexec(self, clnum):
         t = self._data[clnum]['type']
-        return 'xtext' == t or '+x' in t
+        return 'x' in self._get_modifiers(t)
 
     def issymlink(self, clnum):
         t = self._data[clnum]['type']
-        return 'symlink' in t
+        return 'symlink' == self._get_type(t)
 
     def iskeyworded(self, clnum):
         t = self._data[clnum]['type']
-        return (re.compile('kx?text').match(t) or
-            re.compile('\+kx?').search(t)) is not None
+        return 'k' in self._get_modifiers(t)
 
 ACTION_EDIT = ['edit', 'integrate']
 ACTION_ADD = ['add', 'branch', 'move/add']

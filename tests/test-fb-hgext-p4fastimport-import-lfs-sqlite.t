@@ -49,6 +49,7 @@ Simple import
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
   $ hg p4fastimport --debug -P $P4ROOT hg-p4-import
+  updating the branch cache (?)
   loading changelist numbers.
   2 changelists to import.
   loading list of files.
@@ -70,7 +71,7 @@ Simple import
   changelist 2: writing manifest. node: 31c95d82cc49 p1: 0637b0361958 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   writing lfs metadata to sqlite
-  updating the branch cache (?)
+  updating the branch cache
   2 revision(s), 3 file(s) imported.
 
 Verify
