@@ -236,6 +236,7 @@ Prevent adding new files in the root directory accidentally.
   .hgsigs
   .hgtags
   .jshintrc
+  .watchmanconfig
   CONTRIBUTING
   CONTRIBUTORS
   COPYING
