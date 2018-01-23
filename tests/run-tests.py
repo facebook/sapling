@@ -2525,6 +2525,7 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
+        # self._pythondir should make "import mercurial" do the right thing.
         pypath = [self._pythondir, self._testdir, runtestdir]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current

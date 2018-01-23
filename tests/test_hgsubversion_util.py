@@ -13,9 +13,6 @@ import tarfile
 import tempfile
 import unittest
 
-_rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, _rootdir)
-
 from mercurial import cmdutil
 from mercurial import commands
 from mercurial import context
@@ -334,25 +331,6 @@ def rmtree(path):
                 os.chmod(f, s.st_mode | stat.S_IWRITE)
     shutil.rmtree(path)
 
-def _verify_our_modules():
-    '''
-    Verify that hgsubversion was imported from the correct location.
-
-    The correct location is any location within the parent directory of the
-    directory containing this file.
-    '''
-
-    for modname, module in sys.modules.iteritems():
-        if not module or 'hgext.hgsubversion' not in modname:
-            continue
-
-        modloc = module.__file__
-        cp = os.path.commonprefix((os.path.abspath(__file__), modloc))
-        assert cp.rstrip(os.sep) == _rootdir, (
-            'Module location verification failed: hgsubversion was imported '
-            'from the wrong path!'
-        )
-
 def hgclone(ui, source, dest, update=True, rev=None):
     if getattr(hg, 'peer', None):
         # Since 1.9 (d976542986d2)
@@ -475,7 +453,6 @@ class TestBase(unittest.TestCase):
     stupid = False
 
     def setUp(self):
-        _verify_our_modules()
         if 'hgsubversion' in sys.modules:
             sys.modules['hgext_hgsubversion'] = sys.modules['hgsubversion']
 
@@ -546,8 +523,6 @@ class TestBase(unittest.TestCase):
         os.chdir(self.oldwd)
         rmtree(self.tmpdir)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
-
-        _verify_our_modules()
 
     def ui(self, layout='auto'):
         return testui(self.stupid, layout)

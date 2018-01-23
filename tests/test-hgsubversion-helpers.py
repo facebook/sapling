@@ -1,7 +1,4 @@
-import os, sys, unittest
-
-_rootdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, _rootdir)
+import os, unittest
 
 from hgext.hgsubversion import editor
 
