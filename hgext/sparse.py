@@ -8,7 +8,7 @@
 """
 from __future__ import absolute_import
 
-from hgext import fbsparse
+from . import fbsparse
 
 cmdtable = fbsparse.cmdtable.copy()
 

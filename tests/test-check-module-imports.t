@@ -279,7 +279,6 @@ outputs, which should be fixed later.
   hgext/smartlog.py:30: relative import of stdlib module
   hgext/smartlog.py:30: direct symbol import chain from itertools
   hgext/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
-  hgext/sparse.py:11: import should be relative: hgext
   hgext/treedirstate.py:48: symbol import follows non-symbol import: mercurial.i18n
   hgext/treedirstate.py:49: stdlib import "errno" follows local import: mercurial.i18n
   hgext/treedirstate.py:50: stdlib import "heapq" follows local import: mercurial.i18n
