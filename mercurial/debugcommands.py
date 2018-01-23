@@ -786,17 +786,28 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     localrevs = opts['rev']
     doit(localrevs, remoterevs)
 
-@command('debugextensions', cmdutil.formatteropts, [], norepo=True)
+@command('debugextensions', [('', 'excludedefault', False,
+                              _('exclude extensions marked as default-on'))
+                            ] + cmdutil.formatteropts, [], norepo=True)
 def debugextensions(ui, **opts):
     '''show information about active extensions'''
     opts = pycompat.byteskwargs(opts)
     exts = extensions.extensions(ui)
     hgver = util.version()
     fm = ui.formatter('debugextensions', opts)
+
+    def isdefault(name):
+        # An extension is considered default-on if it's not overidden (or
+        # specified) by config.
+        return (name in extensions.DEFAULT_EXTENSIONS and
+                not ui.config('extensions', name))
+
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
-        isdefault = extname in extensions.DEFAULT_EXTENSIONS
         extsource = pycompat.fsencode(extmod.__file__)
+        if isdefault(extname) and opts.get('excludedefault', False):
+            continue
+
         if isinternal:
             exttestedwith = []  # never expose magic string to users
         else:
@@ -811,7 +822,7 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s', extname)
             if isinternal or hgver in exttestedwith:
                 fm.plain('\n')
-            elif isdefault:
+            elif isdefault(extname):
                 fm.plain(_(' (default)\n'))
             elif not exttestedwith:
                 fm.plain(_(' (untested!)\n'))

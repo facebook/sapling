@@ -585,6 +585,8 @@ hide outer repo
   
   options:
   
+    --excludedefault exclude extensions marked as default-on
+  
   (some details hidden, use --verbose to show complete help)
 
 
@@ -595,6 +597,7 @@ hide outer repo
   
   options:
   
+      --excludedefault    exclude extensions marked as default-on
    -T --template TEMPLATE display with template (EXPERIMENTAL)
   
   global options ([+] can be repeated):
@@ -634,6 +637,7 @@ hide outer repo
   
   options:
   
+      --excludedefault    exclude extensions marked as default-on
    -T --template TEMPLATE display with template (EXPERIMENTAL)
   
   global options ([+] can be repeated):

@@ -1,4 +1,4 @@
-  $ hg debugextensions
+  $ hg debugextensions --excludedefault
 
   $ debugpath=`pwd`/extwithoutinfos.py
 
@@ -19,7 +19,7 @@
   > ext2 = `pwd`/extwithinfos.py
   > EOF
 
-  $ hg debugextensions
+  $ hg debugextensions --excludedefault
   ext1 (untested!)
   ext2 (3.2.1!)
   histedit
@@ -27,7 +27,7 @@
   patchbomb
   rebase
 
-  $ hg debugextensions -v
+  $ hg debugextensions -v --excludedefault
   ext1
     location: */extwithoutinfos.py* (glob)
     bundled: no
@@ -49,7 +49,7 @@
     location: */hgext/rebase.py* (glob)
     bundled: yes
 
-  $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
+  $ hg debugextensions --excludedefault -Tjson | sed 's|\\\\|/|g'
   [
    {
     "buglink": "",
