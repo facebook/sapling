@@ -93,8 +93,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   // need to waste effort populating them.  We zero out the struct here
   // once and vary just the bits that need to be updated in the loop below.
   // https://www.daemon-systems.org/man/DTTOIF.3.html
-  struct stat st;
-  memset(&st, 0, sizeof(st));
+  struct stat st = {};
 
   while (entry_iter < entries.end()) {
     const auto& entry = *entry_iter;

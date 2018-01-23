@@ -762,8 +762,7 @@ void EdenMount::mountStarted() {
 }
 
 struct stat EdenMount::initStatData() const {
-  struct stat st;
-  memset(&st, 0, sizeof(st));
+  struct stat st = {};
 
   st.st_uid = uid_;
   st.st_gid = gid_;

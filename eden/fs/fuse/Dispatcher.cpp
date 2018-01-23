@@ -169,14 +169,7 @@ folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
 
 folly::Future<struct fuse_kstatfs> Dispatcher::statfs(
     fusell::InodeNumber /*ino*/) {
-  struct fuse_kstatfs info;
-  memset(&info, 0, sizeof(info));
-
-  info.blocks = 0;
-  info.bfree = 0;
-  info.bavail = 0;
-  info.files = 0;
-  info.ffree = 0;
+  struct fuse_kstatfs info = {};
 
   // Suggest a large blocksize to software that looks at that kind of thing
   // bsize will be returned to applications that call pathconf() with

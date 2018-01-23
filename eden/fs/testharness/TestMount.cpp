@@ -311,8 +311,7 @@ void TestMount::rmdir(folly::StringPiece path) {
 void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
   auto inode = getInode(RelativePathPiece{path});
 
-  fuse_setattr_in desiredAttr;
-  memset(&desiredAttr, 0, sizeof(desiredAttr));
+  fuse_setattr_in desiredAttr = {};
   desiredAttr.mode = permissions;
   desiredAttr.valid = FATTR_MODE;
   inode->setattr(desiredAttr).get();

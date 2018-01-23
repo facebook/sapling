@@ -385,8 +385,7 @@ void FuseChannel::invalidateEntry(
     PathComponentPiece name) {
   auto namePiece = name.stringPiece();
 
-  fuse_notify_inval_entry_out notify;
-  memset(&notify, 0, sizeof(notify));
+  fuse_notify_inval_entry_out notify = {};
   notify.parent = parent;
   notify.namelen = namePiece.size();
 
@@ -743,8 +742,7 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
 
   return fh->write(folly::StringPiece(bufPtr, write->size), write->offset)
       .then([](size_t wrote) {
-        fuse_write_out out;
-        memset(&out, 0, sizeof(out));
+        fuse_write_out out = {};
         out.size = wrote;
         RequestData::get().sendReply(out);
       });
@@ -934,8 +932,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
         if (!fh) {
           throw std::runtime_error("Dispatcher::open failed to set fh");
         }
-        fuse_open_out out;
-        memset(&out, 0, sizeof(out));
+        fuse_open_out out = {};
         if (fh->usesDirectIO()) {
           out.open_flags |= FOPEN_DIRECT_IO;
         }
@@ -962,8 +959,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
   XLOG(DBG7) << "FUSE_STATFS";
   return dispatcher_->statfs(header->nodeid)
       .then([](struct fuse_kstatfs&& info) {
-        fuse_statfs_out out;
-        memset(&out, 0, sizeof(out));
+        fuse_statfs_out out = {};
         out.st = info;
         RequestData::get().sendReply(out);
       });
@@ -1019,8 +1015,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
       .then([size = getxattr->size](std::string attr) {
         auto& request = RequestData::get();
         if (size == 0) {
-          fuse_getxattr_out out;
-          memset(&out, 0, sizeof(out));
+          fuse_getxattr_out out = {};
           out.size = attr.size();
           request.sendReply(out);
         } else if (size < attr.size()) {
@@ -1049,8 +1044,7 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
 
         if (size == 0) {
           // caller is asking for the overall size
-          fuse_getxattr_out out;
-          memset(&out, 0, sizeof(out));
+          fuse_getxattr_out out = {};
           out.size = count;
           request.sendReply(out);
         } else if (size < count) {
@@ -1100,8 +1094,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
         if (!dh) {
           throw std::runtime_error("Dispatcher::opendir failed to set dh");
         }
-        fuse_open_out out;
-        memset(&out, 0, sizeof(out));
+        fuse_open_out out = {};
         out.fh = dispatcher_->getFileHandles().recordHandle(std::move(dh));
         XLOG(DBG7) << "OPENDIR fh=" << out.fh;
         try {
@@ -1170,8 +1163,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   return dispatcher_->create(header->nodeid, name, create->mode, create->flags)
       .then([this](Dispatcher::Create info) {
 
-        fuse_open_out out;
-        memset(&out, 0, sizeof(out));
+        fuse_open_out out = {};
         if (info.fh->usesDirectIO()) {
           out.open_flags |= FOPEN_DIRECT_IO;
         }
