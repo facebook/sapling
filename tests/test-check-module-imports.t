@@ -155,7 +155,7 @@ outputs, which should be fixed later.
   hgext/p4fastimport/__init__.py:44: imports from mercurial.node not lexically sorted: hex < short
   hgext/p4fastimport/importer.py:19: direct symbol import caseconflict, localpath from hgext.p4fastimport.util
   hgext/p4fastimport/importer.py:19: symbol import follows non-symbol import: hgext.p4fastimport.util
-  hgext/p4fastimport/p4.py:11: direct symbol import runworker from hgext.p4fastimport.util
+  hgext/p4fastimport/p4.py:10: direct symbol import runworker from hgext.p4fastimport.util
   hgext/pushrebase.py:27: multiple imported names: errno, os, tempfile, mmap, time
   hgext/pushrebase.py:49: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
   hgext/pushrebase.py:49: symbol import follows non-symbol import: mercurial.extensions
