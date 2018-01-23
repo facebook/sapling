@@ -287,6 +287,9 @@ def unshare(ui, repo):
         lock and lock.release()
 
     # update store, spath, svfs and sjoin of repo
+    # invalidate before rerunning __init__
+    repo.unfiltered().invalidate(clearfilecache=True)
+    repo.unfiltered().invalidatedirstate()
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
     # TODO: figure out how to access subrepos that exist, but were previously
