@@ -1,6 +1,7 @@
 Tests the behavior of the DEFAULT_EXTENSIONS constant in extensions.py
 
-  $ hg init
+  $ hg init a
+  $ cd a
 
 hg githelp works without enabling:
 
@@ -34,8 +35,31 @@ Or overriden by a different path:
   > 
   > @command('githelp')
   > def githhelp(ui, repo, *args, **opts):
-  >      ui.warn('Custom version of hg githelp')
+  >      ui.warn('Custom version of hg githelp\n')
   > 
   > EOF
   $ hg githelp --config extensions.githelp=`pwd`/githelp2.py -- git reset HEAD
-  Custom version of hg githelp (no-eol)
+  Custom version of hg githelp
+
+A default extension's reposetup and extsetup are run:
+  $ cd $TESTTMP
+  $ mkdir hgext
+  $ cat > hgext/mofunc.py <<EOF
+  > from hgext import githelp
+  > def extsetup(ui):
+  >     # Only print reposetup() once so that this test output doesn't change
+  >     # the number of times repo gets wrapped as we enable extensions.
+  >     githelp.reposetupcount = 0
+  >     def reposetup(ui, repo):
+  >         if githelp.reposetupcount == 0:
+  >             ui.warn('githelp reposetup()\n')
+  >         githelp.reposetupcount += 1
+  >     def extsetup(ui):
+  >         ui.warn('githelp extsetup()\n')
+  >     githelp.reposetup = reposetup
+  >     githelp.extsetup = extsetup
+  > EOF
+  $ hg -R a githelp --config extensions.path=hgext/mofunc.py -- git status
+  githelp extsetup()
+  githelp reposetup()
+  hg status

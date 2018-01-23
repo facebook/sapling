@@ -65,6 +65,10 @@ def extensions(ui=None):
                 conf = ui.config('extensions', format % name)
                 if conf is not None and not conf.startswith('!'):
                     return True
+                # Check DEFAULT_EXTENSIONS if no config for this extension was
+                # specified.
+                if conf is None and name in DEFAULT_EXTENSIONS:
+                    return True
     else:
         enabled = lambda name: True
     for name in _order:
