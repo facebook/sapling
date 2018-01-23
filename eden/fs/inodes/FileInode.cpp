@@ -642,7 +642,7 @@ folly::Future<size_t> FileInode::write(fusell::BufVec&& buf, off_t off) {
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
-  auto now = getNow();
+  const auto now = getNow();
   state->timeStamps.mtime = now;
   state->timeStamps.ctime = now;
 
@@ -667,7 +667,7 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
   checkUnixError(xfer);
 
   // Update mtime and ctime on write systemcall.
-  auto now = getNow();
+  const auto now = getNow();
   state->timeStamps.mtime = now;
   state->timeStamps.ctime = now;
 

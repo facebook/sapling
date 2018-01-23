@@ -254,8 +254,7 @@ void InodeBase::updateLocation(
 }
 
 void InodeBase::onPtrRefZero() const {
-  auto parentInfo = getParentInfo();
-  getMount()->getInodeMap()->onInodeUnreferenced(this, std::move(parentInfo));
+  getMount()->getInodeMap()->onInodeUnreferenced(this, getParentInfo());
 }
 
 ParentInodeInfo InodeBase::getParentInfo() const {

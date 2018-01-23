@@ -119,7 +119,6 @@ ParentCommits ClientConfig::getParentCommits() const {
 }
 
 void ClientConfig::setParentCommits(const ParentCommits& parents) const {
-  auto snapshotPath = getSnapshotPath();
 
   std::array<uint8_t, kSnapshotHeaderSize + (2 * Hash::RAW_SIZE)> buffer;
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
@@ -140,7 +139,7 @@ void ClientConfig::setParentCommits(const ParentCommits& parents) const {
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
   ByteRange snapshotData{buffer.data(), writtenSize};
 
-  folly::writeFileAtomic(snapshotPath.stringPiece(), snapshotData);
+  folly::writeFileAtomic(getSnapshotPath().stringPiece(), snapshotData);
 }
 
 void ClientConfig::setParentCommits(Hash parent1, folly::Optional<Hash> parent2)

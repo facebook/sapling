@@ -75,21 +75,16 @@ class ThriftStatusCallback : public InodeDiffCallback {
 };
 } // unnamed namespace
 
-const char kStatusCodeCharAdded = 'A';
-const char kStatusCodeCharModified = 'M';
-const char kStatusCodeCharRemoved = 'R';
-const char kStatusCodeCharIgnored = 'I';
-
 char scmStatusCodeChar(ScmFileStatus code) {
   switch (code) {
     case ScmFileStatus::ADDED:
-      return kStatusCodeCharAdded;
+      return 'A';
     case ScmFileStatus::MODIFIED:
-      return kStatusCodeCharModified;
+      return 'M';
     case ScmFileStatus::REMOVED:
-      return kStatusCodeCharRemoved;
+      return 'R';
     case ScmFileStatus::IGNORED:
-      return kStatusCodeCharIgnored;
+      return 'I';
   }
   throw std::runtime_error(folly::to<std::string>(
       "Unrecognized ScmFileStatus: ",

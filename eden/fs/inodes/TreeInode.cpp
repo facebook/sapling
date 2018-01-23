@@ -887,7 +887,7 @@ FileInodePtr TreeInode::symlink(
     contents->entries.emplace(name, std::move(entry));
 
     // Update mtime and ctime of the file
-    auto now = getNow();
+    const auto now = getNow();
     contents->timeStamps.mtime = now;
     contents->timeStamps.ctime = now;
 
@@ -1207,7 +1207,7 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directoryafter removing the
     // child.
-    auto now = getNow();
+    const auto now = getNow();
     contents->timeStamps.mtime = now;
     contents->timeStamps.ctime = now;
 
