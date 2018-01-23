@@ -319,10 +319,6 @@ class EdenFS(object):
         '''
         Run "eden clone"
         '''
-        # TODO: "eden clone" should handle creating the directory.
-        if not os.path.isdir(path):
-            os.mkdir(path)
-
         params = ['clone', repo, path]
         if allow_empty:
             params.append('--allow-empty-repo')
