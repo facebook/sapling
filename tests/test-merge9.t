@@ -22,7 +22,6 @@ a file-level merge failed
   $ echo quux > quux2
   $ hg ci -Am 'change foo'
   adding quux2
-  created new head
 
 test with the rename on the remote side
   $ HGMERGE=false hg merge

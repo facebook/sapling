@@ -319,7 +319,6 @@ Issue1049: Hg permits partial commit of merge without warning
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a
   $ hg ci -mc
-  created new head
   $ HGMERGE=true hg merge
   merging a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

@@ -604,7 +604,6 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
 
     # the backout should appear on the same branch
     branch = repo.dirstate.branch()
-    bheads = repo.branchheads(branch)
     rctx = scmutil.revsingle(repo, hex(parent))
     if not opts.get('merge') and op1 != node:
         dsguard = dirstateguard.dirstateguard(repo, 'backout')
@@ -647,7 +646,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     if not newnode:
         ui.status(_("nothing changed\n"))
         return 1
-    cmdutil.commitstatus(repo, newnode, branch, bheads)
+    cmdutil.commitstatus(repo, newnode, branch)
 
     def nice(node):
         return '%d:%s' % (repo.changelog.rev(node), short(node))
@@ -1526,10 +1525,10 @@ def _docommit(ui, repo, *pats, **opts):
     cmdutil.checkunfinished(repo, commit=True)
 
     branch = repo[None].branch()
-    bheads = repo.branchheads(branch)
 
     extra = {}
     if opts.get('close_branch'):
+        bheads = repo.branchheads(branch)
         extra['close'] = 1
 
         if not bheads:
@@ -1590,7 +1589,7 @@ def _docommit(ui, repo, *pats, **opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-    cmdutil.commitstatus(repo, node, branch, bheads, opts)
+    cmdutil.commitstatus(repo, node, branch, opts=opts)
 
 @command('config|showconfig|debugconfig',
     [('u', 'untrusted', None, _('show untrusted configuration options')),

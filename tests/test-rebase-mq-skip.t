@@ -128,7 +128,6 @@ already has one local mq patch
   >     hg ci -Am branch2-$i
   > done
   adding r1
-  created new head
   adding r3
   adding r7
   adding r8

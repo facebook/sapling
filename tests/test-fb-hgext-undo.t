@@ -24,7 +24,6 @@ Test data store
   $ touch b && hg add b && hg ci -mb
   $ hg up -q master
   $ touch c1 && hg add c1 && hg ci -mc1
-  created new head
   $ touch c2 && hg add c2 && hg ci -mc2
   $ hg book feature2
   $ touch d && hg add d && hg ci -md
@@ -86,7 +85,6 @@ Test debugundohistory
   (activating bookmark master)
   $ echo "test" >> a1
   $ hg commit -m "words"
-  created new head
   $ hg debugundohistory -l
   0: commit -m words
   1: update master
@@ -212,7 +210,7 @@ Test 'olddraft([NUM])' revset
 Test undolog lock
   $ cat > $TESTTMP/noopupdate.py <<EOF
   > from __future__ import absolute_import
-  > from mercurial import registrar, merge, encoding
+  > from mercurial import encoding, merge, registrar
   > cmdtable = {}
   > command = registrar.command(cmdtable)
   > def uisetup(ui):
@@ -568,7 +566,6 @@ Includes commit and book changes
   (leaving bookmark oldbook)
   $ touch newbranch
   $ hg add newbranch && hg ci -mnewbranch
-  created new head
   $ hg book "newbook"
   $ hg log -l 2
   changeset:   17:805791ba4bcd
@@ -671,7 +668,6 @@ Check local undo works forward
   summary:     newfiles
   
   $ touch a9 && hg add a9 && hg ci -m a9
-  created new head
   $ hg log -r . -T {node}
   3ee6a6880888df9e48cdc568b5e835bd3087f8cb (no-eol)
   $ hg undo -b 3532
@@ -904,13 +900,11 @@ Specific edge case testing
   $ hg up null
   0 files updated, 0 files merged, 9 files removed, 0 files unresolved
   $ touch b1 && hg add b1 && hg ci -m b1
-  created new head
   $ touch b2 && hg add b2 && hg ci -m b2
   $ touch b3 && hg add b3 && hg ci -m b3
   $ hg up null
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ touch c1 && hg add c1 && hg ci -m c1
-  created new head
   $ touch c2 && hg add c2 && hg ci -m c2
   $ touch c3 && hg add c3 && hg ci -m c3
   $ hg log -G -T compact

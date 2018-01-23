@@ -144,7 +144,6 @@ Try to delete necessary commit
 
 commit, then edit the revision
   $ hg ci -m 'wat'
-  created new head
   $ echo a > e
 
 qnew should fail while we're in the middle of the edit step

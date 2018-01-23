@@ -3401,43 +3401,11 @@ def buildcommittext(repo, ctx, subs, extramsg):
 
     return "\n".join(edittext)
 
-def commitstatus(repo, node, branch, bheads=None, opts=None):
+def commitstatus(repo, node, branch, opts=None):
     if opts is None:
         opts = {}
     ctx = repo[node]
     parents = ctx.parents()
-
-    if (not opts.get('amend') and bheads and node not in bheads and not
-        [x for x in parents if x.node() in bheads and x.branch() == branch]):
-        repo.ui.status(_('created new head\n'))
-        # The message is not printed for initial roots. For the other
-        # changesets, it is printed in the following situations:
-        #
-        # Par column: for the 2 parents with ...
-        #   N: null or no parent
-        #   B: parent is on another named branch
-        #   C: parent is a regular non head changeset
-        #   H: parent was a branch head of the current branch
-        # Msg column: whether we print "created new head" message
-        # In the following, it is assumed that there already exists some
-        # initial branch heads of the current branch, otherwise nothing is
-        # printed anyway.
-        #
-        # Par Msg Comment
-        # N N  y  additional topo root
-        #
-        # B N  y  additional branch root
-        # C N  y  additional topo head
-        # H N  n  usual case
-        #
-        # B B  y  weird additional branch root
-        # C B  y  branch merge
-        # H B  n  merge with named branch
-        #
-        # C C  y  additional head from merge
-        # C H  n  merge with a head
-        #
-        # H H  n  head merge: head count decreases
 
     if not opts.get('close_branch'):
         for r in parents:

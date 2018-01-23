@@ -20,7 +20,6 @@ Test merge with mq changeset as the second parent:
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg add c
   $ hg commit -m c
-  created new head
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -69,7 +68,6 @@ Update b and commit in an "update" changeset:
   $ hg st
   M b
   $ hg ci -m update
-  created new head
 
 # Here, qpush used to abort with :
 # The system cannot find the file specified => a

@@ -346,7 +346,6 @@ Graft again onto another branch should preserve the original source
   $ echo 'g'>g
   $ hg add g
   $ hg ci -m 7
-  created new head
   $ hg graft 7
   grafting 7:ef0ef43d49e7 "2"
 
@@ -458,7 +457,6 @@ Resolve conflicted graft
   $ hg up -q 0
   $ echo b > a
   $ hg ci -m 8
-  created new head
   $ echo c > a
   $ hg ci -m 9
   $ hg graft 1 --tool internal:fail

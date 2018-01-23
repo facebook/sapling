@@ -24,7 +24,6 @@ Test that amend --to option
   $ hg update -r "desc(ROOT)"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit "A"
-  created new head
   $ mkcommit "B"
   $ mkcommit "C"
 Test

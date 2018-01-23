@@ -478,7 +478,6 @@ cache of phase roots should be invalidated on strip (issue3827):
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (leaving bookmark bm3)
   *** runcommand commit -Am. a
-  created new head
   *** runcommand log -Gq
   @  5:731265503d86
   |

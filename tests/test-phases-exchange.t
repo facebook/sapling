@@ -512,7 +512,6 @@ initial setup
   $ hg up d6bcb4f74035 -q
   $ mkcommit a-H
   test-debug-phase: new rev 10:  x -> 1
-  created new head
   $ hgph
   @  10 draft a-H - 967b449fbc94
   |
@@ -1045,7 +1044,6 @@ pull new changeset with common draft locally
   $ hg up -q 967b449fbc94 # create a new root for draft
   $ mkcommit 'alpha-more'
   test-debug-phase: new rev 12:  x -> 1
-  created new head
   $ hg push -fr . ../mu
   pushing to ../mu
   searching for changes

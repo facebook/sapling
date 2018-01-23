@@ -211,7 +211,6 @@ new branch for merge tests
 
   $ hg ci -m5 # add sub
   committing subrepository t
-  created new head
   $ echo t2 > t/t
 
 6
@@ -265,7 +264,6 @@ merge tests
    source   t
    revision 60ca1237c19474e7a3978b0dc1ca4e6f36d51382
   $ hg ci -m9
-  created new head
   $ hg merge 6 --debug # test change
     searching for copies back to rev 2
   resolving manifests
@@ -341,7 +339,6 @@ should conflict
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg revert -r 4 .hgsub # remove t
   $ hg ci -m11
-  created new head
   $ hg debugsub
   path s
    source   s
@@ -392,7 +389,6 @@ local removed, remote changed, keep removed
   $ cat .hgsubstate
   e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
   $ hg ci -m 'local removed, remote changed, keep removed'
-  created new head
   $ hg debugsub
   path s
    source   s
@@ -418,7 +414,6 @@ BROKEN: should include subrepo t
   $ cat .hgsubstate
   e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
   $ hg ci -m 'local changed, remote removed, keep changed'
-  created new head
 BROKEN: should include subrepo t
   $ hg debugsub
   path s
@@ -448,7 +443,6 @@ local changed, remote removed, keep removed
   $ cat .hgsubstate
   e4ece1bf43360ddc8f6a96432201a37b7cd27ae4 s
   $ hg ci -m 'local changed, remote removed, keep removed'
-  created new head
   $ hg debugsub
   path s
    source   s
@@ -992,7 +986,6 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ echo 2 > repo2/s/b
   $ hg -R repo2/s ci -m3 -A
   adding b
-  created new head
   $ hg -R repo2 ci -m3
   $ hg -q -R repo2 push
   abort: push creates new remote head cc505f09a8b2! (in subrepository "s")
@@ -1451,7 +1444,6 @@ Test that removing .hgsub removes .hgsubstate:
 
   $ hg rm .hgsub
   $ hg ci -mrm2
-  created new head
   $ hg log -vr tip
   changeset:   14:2400bccd50af
   tag:         tip
@@ -1693,7 +1685,6 @@ configuration
   warning: changes are committed in secret phase from subrepository ss
   committing subrepository t
   warning: changes are committed in secret phase from subrepository s
-  created new head
   $ hg -R s/ss phase tip
   5: secret
   $ hg -R s phase tip
@@ -1839,7 +1830,6 @@ Test that '[paths]' is configured correctly at subrepo creation
   $ echo 'bar' > bar.txt
   $ hg ci -Am 'branch before subrepo add'
   adding bar.txt
-  created new head
   $ hg merge -r "first(subrepo('s'))"
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

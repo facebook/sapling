@@ -9,7 +9,6 @@ This runs with TZ="GMT"
   $ hg tag -d "2006-04-15 13:30" "Hi"
   $ hg backout --merge -d "2006-04-15 13:30 +0200" -m "rev 3" 1
   reverting a
-  created new head
   changeset 3:107ce1ee2b43 backs out changeset 1:25a1420a55f8
   merging with changeset 3:107ce1ee2b43
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

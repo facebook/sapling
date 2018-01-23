@@ -45,14 +45,12 @@ test branch selection options
   marked working directory as branch \xc3\xa6 (esc)
   $ echo ae2 > foo
   $ hg ci -d '0 0' -mae2
-  created new head
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch -f b
   marked working directory as branch b
   $ echo b2 > foo
   $ hg ci -d '0 0' -mb2
-  created new head
 
 unknown branch and fallback
 

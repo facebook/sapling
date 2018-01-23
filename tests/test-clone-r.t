@@ -19,7 +19,6 @@
 
   $ echo 1 >> afile
   $ hg commit -m "1.1"
-  created new head
 
   $ echo 2 >> afile
   $ hg commit -m "1.2"

@@ -447,7 +447,6 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ svn up -qr6 s
   $ hg ci -m updatesub
-  created new head
   $ echo pyc > s/dir/epsilon.pyc
   $ hg up 1
   D    *s/dir (glob)
@@ -473,7 +472,6 @@ test having obstructions when switching branches on checkout:
   $ echo "obstruct =        [svn]       $SVNREPOURL/src" >> .hgsub
   $ svn co -r5 --quiet "$SVNREPOURL"/src obstruct
   $ hg commit -m 'Other branch which will be obstructed'
-  created new head
 
 Switching back to the head where we have another path mapped to the
 same subrepo should work if the subrepo is clean.

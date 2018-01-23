@@ -430,7 +430,6 @@ Test that prefetch refills just part of a tree when the cache is deleted
 
   $ echo >> dir/x
   $ hg commit -m 'edit x locally'
-  created new head
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
   $ rm -rf $CACHEDIR/master/*
   $ hg cat subdir/z

@@ -53,7 +53,6 @@ Create new client
 Create scratch commit and back it up.
   $ hg up -q -r 'desc(third)'
   $ mkcommit scratch
-  created new head
   $ hg log -r . -T '{node}\n'
   ce87a066ebc28045311cd1272f5edc0ed80d5b1c
   $ hg log --graph -T '{desc}'

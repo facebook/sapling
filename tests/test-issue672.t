@@ -22,7 +22,6 @@ https://bz.mercurial-scm.org/672
 
   $ echo unrelated >> 2
   $ hg ci -m unrelated1 # 2
-  created new head
 
   $ hg merge --debug 1
     searching for copies back to rev 1
@@ -48,7 +47,6 @@ https://bz.mercurial-scm.org/672
 
   $ echo hello >> 1
   $ hg ci -m unrelated2 # 4
-  created new head
 
   $ hg co -C 3
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

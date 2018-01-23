@@ -67,7 +67,6 @@ clone and pull to break links
   $ hg pull -q
   $ echo b >> b
   $ hg ci -m changeb
-  created new head
   $ $PYTHON -c "file('.hg/store/data/dummy.i', 'wb').write('a\nb\r\n')"
 
 

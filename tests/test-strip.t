@@ -35,7 +35,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo blah >> bar
   $ hg ci -Amd
-  created new head
 
   $ echo final >> bar
   $ hg ci -Ame
@@ -769,7 +768,6 @@ initialization (previous repo is empty anyway)
   $ echo d > d
   $ hg add d
   $ hg commit -m commitD
-  created new head
   $ hg up 'desc(commitC)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 'desc(commitD)'

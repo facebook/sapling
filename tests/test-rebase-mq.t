@@ -311,7 +311,6 @@ Create new head to rebase bar onto:
   $ echo b > b
   $ hg add b
   $ hg ci -m b
-  created new head
   $ hg up -C 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a

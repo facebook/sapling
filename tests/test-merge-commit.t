@@ -20,7 +20,6 @@ Test with the merge on 3 having the rename on the local parent
   $ echo line0 > bar
   $ echo line1 >> bar
   $ hg ci -m '2: mv foo bar; change bar'
-  created new head
 
   $ hg merge 1
   merging bar and foo to bar
@@ -55,7 +54,6 @@ Revert the content change from rev 2:
   $ rm bar
   $ echo line1 > bar
   $ hg ci -m '4: revert content change from rev 2'
-  created new head
 
   $ hg log --template '{rev}:{node|short} {parents}\n'
   4:2263c1be0967 2:0f2ff26688b9 
@@ -143,7 +141,6 @@ Revert the content change from rev 2:
   $ rm bar
   $ echo line1 > bar
   $ hg ci -m '4: revert content change from rev 2'
-  created new head
 
   $ hg log --template '{rev}:{node|short} {parents}\n'
   4:2263c1be0967 2:0f2ff26688b9 

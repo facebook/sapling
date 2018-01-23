@@ -64,7 +64,6 @@ Create a new head on the default branch
   $ hg up 'desc("c_dA0")'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit c_dD0
-  created new head
   $ hg push -f
   pushing to $TESTTMP/single-head-server
   searching for changes
@@ -122,7 +121,6 @@ setup
   $ hg branch branch_A --force
   marked working directory as branch branch_A
   $ mkcommit c_aG0
-  created new head
   $ hg update 'desc("c_dF1")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit c_dH0

@@ -212,7 +212,6 @@ check remote tip
   bleah
   $ echo z > z
   $ hg ci -A -m z z
-  created new head
 
 test pushkeys and bookmarks
 

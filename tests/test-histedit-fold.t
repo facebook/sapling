@@ -377,7 +377,6 @@ dropped revision.
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg commit -m '+5.2'
-  created new head
   $ echo 6 >> file
   $ HGEDITOR=cat hg histedit --continue
   +4

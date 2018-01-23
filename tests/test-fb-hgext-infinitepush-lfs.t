@@ -69,7 +69,6 @@ Make pushbackup that contains bundle with 2 heads
   $ mkcommit newcommit
   $ hg up -q 0
   $ mkcommit newcommit2
-  created new head
   $ hg pushbackup
   starting backup * (glob)
   searching for changes

@@ -46,7 +46,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit B0
-  created new head
   $ mkcommit A1
   $ hg up 'desc(B0)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

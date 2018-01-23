@@ -73,7 +73,6 @@ initial
   remote: added 2 changesets with 2 changes to 2 files
   $ hg update -q 0
   $ mkcommit C
-  created new head
   $ hg prune -qd '0 0' .
   $ hg log -G --hidden
   x  7f7f229b13a6 (draft): C

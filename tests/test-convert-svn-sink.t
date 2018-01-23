@@ -371,7 +371,6 @@ Branchy history
   $ echo right-1 > b/right-1
   $ hg --cwd b ci -d '3 0' -Amright-1
   adding right-1
-  created new head
 
   $ svn-safe-append.py right-2 b/b
   $ echo right-2 > b/right-2

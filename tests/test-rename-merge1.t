@@ -19,7 +19,6 @@
   $ echo blahblah > a2
   $ hg mv a2 c2
   $ hg ci -m "modify"
-  created new head
 
   $ hg merge -y --debug
     searching for copies back to rev 1
@@ -166,7 +165,6 @@ Check for issue3074
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg rm file
   $ hg commit -m "deleted file"
-  created new head
   $ hg merge --debug
     searching for copies back to rev 1
     unmatched files in other:

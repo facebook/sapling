@@ -318,7 +318,6 @@ test merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a >> a
   $ hg ci -Am adda2 -d '2 0'
-  created new head
   $ hg merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

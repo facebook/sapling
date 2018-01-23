@@ -64,7 +64,6 @@ Test basic functions
   $ echo x >> x
   $ hg commit -Am 'extra commit to test multiple heads'
   adding x
-  created new head
   $ hg up 3
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg amend --fixup

@@ -487,7 +487,6 @@ first graft something so there's an additional entry:
   $ echo z > z
   $ hg ci -Am 'fork'
   adding z
-  created new head
   $ hg up 11
   5 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg graft 12

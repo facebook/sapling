@@ -111,7 +111,6 @@ Create a commit which deletes a file. Make sure it is backed up correctly
   $ cd ../client
   $ hg up -q 0
   $ mkcommit filetodelete
-  created new head
   $ hg rm filetodelete
   $ hg ci -m 'deleted'
   $ hg log -r . -T '{node}\n'

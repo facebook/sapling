@@ -198,7 +198,6 @@ Uncommit in the middle of a stack, does not move bookmark
   $ hg bookmark
      foo                       9:48e5bd7cd583
   $ hg commit -m 'new abc'
-  created new head
 
 Partial uncommit in the middle, does not move bookmark
 
@@ -331,7 +330,6 @@ Create some history
   $ touch b
   $ hg add b
   $ for i in 1 2 3; do echo $i > b; hg commit -m "b $i"; done
-  created new head
   $ hg log -G -T '{rev}:{node} {desc}' --hidden
   @  5:2cd56cdde163ded2fbb16ba2f918c96046ab0bf2 b 3
   |

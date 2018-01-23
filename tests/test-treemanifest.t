@@ -154,7 +154,6 @@ dir1's manifest does change, but only because dir1/a's filelog changes.)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 8 > dir2/a
   $ hg ci -m 'modify dir2/a'
-  created new head
 
   $ hg debugindex --dir dir2 > before
   $ hg merge 'desc("modify dir1/a")'
@@ -179,7 +178,6 @@ dir2's manifest does change, but only because dir2/a's filelog changes.)
   $ hg revert -r 'desc("modify dir1/a")' .
   reverting dir2/a
   $ hg ci -m 'merge, keeping parent 2'
-  created new head
   $ hg debugindex --dir dir1 > after
   $ diff before after
   $ rm before after
@@ -259,7 +257,6 @@ Commit should store revlog per directory
   $ echo 3 > dir1/a
   $ echo 3 > dir1/dir1/a
   $ hg ci -m 'first tree'
-  created new head
   $ find .hg/store/meta | sort
   .hg/store/meta
   .hg/store/meta/dir1
@@ -279,7 +276,6 @@ Merge of two trees
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge of flat manifests to new tree manifest'
-  created new head
   $ hg diff -r 3
 
 Parent of tree root manifest should be flat manifest, and two for merge
@@ -841,7 +837,6 @@ other branch
   reverting dir/file
   $ echo b > file # to make sure root manifest is sent
   $ hg ci -m grafted
-  created new head
   $ cd ..
 
   $ hg --config experimental.treemanifest=1 clone --pull -r 1 \

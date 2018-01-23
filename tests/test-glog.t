@@ -1783,7 +1783,6 @@ Test --follow-first
   $ hg up -q 3
   $ echo ee > e
   $ hg ci -Am "add another e" e
-  created new head
   $ hg merge --tool internal:other 4
   0 files updated, 1 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1994,7 +1993,6 @@ Test --follow and forward --rev
   $ hg up -q 6
   $ echo g > g
   $ hg ci -Am 'add g' g
-  created new head
   $ hg up -q 2
   $ hg log -G --template "{rev} {desc|firstline}\n"
   o  8 add g

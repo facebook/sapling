@@ -431,7 +431,6 @@ Test --tool parameter:
   $ echo c2b > c2
   $ hg ci -Am c2b
   adding c2
-  created new head
 
   $ cd ..
 

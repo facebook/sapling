@@ -18,7 +18,6 @@
   $ touch side1
   $ hg add side1
   $ hg commit -m "Added side1"
-  created new head
   $ touch side2
   $ hg add side2
   $ hg commit -m "Added side2"

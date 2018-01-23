@@ -16,7 +16,6 @@ the other changes
   $ echo line 0 > foo
   $ hg cat foo >> foo
   $ hg ci -m 'change foo'
-  created new head
 
 we get conflicts that shouldn't be there
   $ hg merge -P

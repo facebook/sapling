@@ -19,7 +19,6 @@
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "D" >> A
   $ commit "D" 3
-  created new head
 
 Merging a conflict araises
 
@@ -62,6 +61,5 @@ Test that if a file is removed but not marked resolved, the commit still fails
   $ hg resolve -ma
   (no more unresolved files)
   $ hg commit -m merged
-  created new head
 
   $ cd ..

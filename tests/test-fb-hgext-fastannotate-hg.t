@@ -159,7 +159,6 @@ annotate -nlf b
   > b5
   > EOF
   $ hg ci -mb2.1 -d '2 0'
-  created new head
   $ hg merge
   merging b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -251,7 +250,6 @@ annotate after merge with -l
   > a
   > EOF
   $ hg ci -mc -d '3 0'
-  created new head
   $ hg merge
   merging b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -691,7 +689,6 @@ create history with a filerev whose linkrev points to another branch
   $ echo unrelated > unrelated
   $ hg commit -Am 'unrelated'
   adding unrelated
-  created new head
   $ hg graft -r 'desc(contentB)'
   grafting 1:fd27c222e3e6 "contentB"
   $ echo C >> a

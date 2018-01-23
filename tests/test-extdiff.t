@@ -80,7 +80,6 @@ Test diff during merge:
   $ echo c >> c
   $ hg add c
   $ hg ci -m "new branch" -d '1 0'
-  created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -185,7 +184,6 @@ issue4463: usage of command line configuration without additional quoting
   $ touch 'sp ace'
   $ hg add 'sp ace'
   $ hg ci -m 'sp ace'
-  created new head
   $ echo > 'sp ace'
 
 Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting

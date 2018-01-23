@@ -29,7 +29,6 @@ Create path-conflicting dirstates
   $ echo a/a > a/a
   $ hg add a/a
   $ hg commit -m a/a
-  created new head
   $ hg bookmark a/a
   $ hg up -q a
   $ hg status
@@ -53,7 +52,6 @@ Attempt to create a path conflict in the manifest
   $ echo b > b
   $ hg add b
   $ hg commit -m b
-  created new head
   $ rm b
   $ mkdir b
   $ echo b/b > b/b
@@ -137,7 +135,6 @@ Test downgrade on pull
   $ echo x > a
   $ hg add a
   $ hg commit -m "add files"
-  created new head
   $ cd ..
   $ hg clone repo clone
   updating to branch default

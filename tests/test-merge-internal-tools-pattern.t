@@ -34,7 +34,6 @@ Branch 2: editing line 3:
   $ sed 's/line 3/third line/' f > f.new
   $ mv f.new f
   $ hg ci -Am "edited third line"
-  created new head
 
 Merge using internal:fail tool:
 
@@ -123,7 +122,6 @@ Merge using internal:union tool:
 
   $ echo "line 4b" >>f
   $ hg ci -Am "Adding fourth line v2 (commit 5)"
-  created new head
 
   $ echo "[merge-patterns]" > .hg/hgrc
   $ echo "* = internal:union" >> .hg/hgrc

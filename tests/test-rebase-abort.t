@@ -38,7 +38,6 @@
   $ echo l1 >> extra
   $ hg add extra
   $ hg ci -m L1
-  created new head
 
   $ sed -e 's/c2/l2/' common > common.new
   $ mv common.new common
@@ -182,7 +181,6 @@ Construct new repo:
   $ echo b > b
   $ hg ci -Am 'B bis'
   adding b
-  created new head
 
   $ echo c1 > c
   $ hg ci -Am C1
@@ -303,7 +301,6 @@ user has somehow managed to update to a different revision (issue4009)
   $ echo y > b
   $ hg add b
   $ hg commit -m b2
-  created new head
 
   $ hg rebase -d @ -b foo --tool=internal:fail
   rebasing 2:070cf4580bb5 "b2" (foo tip)
@@ -353,7 +350,6 @@ test aborting an interrupted series (issue5084)
   $ hg co -q 1
   $ hg rm a
   $ hg commit -m no-a
-  created new head
   $ hg co 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --template "{rev} {desc} {bookmarks}"
@@ -419,7 +415,6 @@ during a rebase (issue4661)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "conflicting change 1" > foo.txt
   $ hg ci -m "conflicting 1"
-  created new head
   $ echo "conflicting change 2" > foo.txt
   $ hg ci -m "conflicting 2"
 

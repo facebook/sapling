@@ -38,7 +38,6 @@ Branch shadowing:
   marked working directory as branch default
 
   $ hg ci -m "clear branch name"
-  created new head
 
 There should be only one default branch head
 
@@ -265,14 +264,12 @@ Test merging, add 3 default heads and one test head:
   $ echo c > c
   $ hg ci -Amc
   adding c
-  created new head
 
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo d > d
   $ hg ci -Amd
   adding d
-  created new head
 
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

@@ -126,7 +126,6 @@ Check diagnosis, debugging information
   $ mkcommit d
   $ hg update ".^^" -q
   $ mkcommit e
-  created new head
   $ mkcommit f
   $ hg log -G -r 0:: -T "{rev} {node} {desc|firstline}"
   @  6 dd82c74514cbce45a3c61caf7ffaba16de19cec4 add f

@@ -27,7 +27,6 @@ Test whereami
   $ echo c > c
   $ hg add  c
   $ hg commit -m c
-  created new head
 
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

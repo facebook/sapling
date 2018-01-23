@@ -370,7 +370,6 @@ below the current commit alone.
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit f
-  created new head
   $ hg up 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ showgraph

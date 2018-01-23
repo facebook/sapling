@@ -33,7 +33,6 @@ Should show b unknown and a back to normal:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo foo-b > a
   $ hg commit -m "2b"
-  created new head
 
   $ HGMERGE=true hg merge 1
   merging a

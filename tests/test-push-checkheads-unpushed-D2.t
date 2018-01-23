@@ -62,7 +62,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A1
-  created new head
   $ hg debugobsolete `getid "desc(A0)" ` `getid "desc(A1)"`
   obsoleted 1 changesets
   $ hg debugobsolete --record-parents `getid "desc(B0)"`
@@ -70,7 +69,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit C0
-  created new head
   $ hg log -G --hidden
   @  0f88766e02d6 (draft): C0
   |

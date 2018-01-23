@@ -21,7 +21,6 @@ setting up cset to push
 different msg so we get a clog new entry
   $ hg ci -Am b
   adding a
-  created new head
 
 pushing
   $ hg push -f ../a

@@ -1118,7 +1118,6 @@ simplemerge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo foo >> m
   $ hg commit -m 6foo
-  created new head
   $ hg merge
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1133,7 +1132,6 @@ conflict: keyword should stay outside conflict zone
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo bar >> m
   $ hg commit -m 8bar
-  created new head
   $ hg merge
   merging m
   warning: conflicts while merging m! (edit, then use 'hg resolve --mark')

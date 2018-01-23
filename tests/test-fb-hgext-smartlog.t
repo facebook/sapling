@@ -32,7 +32,6 @@ Continue repo setup
   $ touch b && hg add b && hg ci -mb
   $ hg up -q master
   $ touch c1 && hg add c1 && hg ci -mc1
-  created new head
   $ touch c2 && hg add c2 && hg ci -mc2
   $ hg book feature2
   $ touch d && hg add d && hg ci -md
@@ -271,7 +270,6 @@ Test with two unrelated histories
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   (leaving bookmark feature2)
   $ touch u1 && hg add u1 && hg ci -mu1
-  created new head
   $ touch u2 && hg add u2 && hg ci -mu2
 
   $ hg smartlog  -T compact
@@ -309,7 +307,6 @@ Test singlepublicsuccessor  template keyword
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c && hg ci -Am c
   adding c
-  created new head
   $ hg rebase -s 2 -d 1
   rebasing 2:d36c0562f908 "c" (tip)
   $ hg phase -r 3 --public
@@ -480,31 +477,17 @@ Make sure public commits that are descendants of master are not drawn
   |
 
 Make sure the template keywords are documented correctly
-  $ hg help templates | egrep -A2 '(amend|fold|histedit|rebase|singlepublic|split|undo)'successor
+  $ hg help templates | egrep '(amend|fold|histedit|rebase|singlepublic|split|undo|node.s )'successor
       amendsuccessors
                     Return all of the node's successors created as a result of
-                    amend
-  --
       foldsuccessors
                     Return all of the node's successors created as a result of
-                    fold
-  --
       histeditsuccessors
                     Return all of the node's successors created as a result of
-                    histedit
-  --
       rebasesuccessors
                     Return all of the node's successors created as a result of
-                    rebase
-  --
       singlepublicsuccessor
-                    String. Get a single public successor for a given node.  If
-                    there's none or more than one, return empty string. This is
-  --
       splitsuccessors
                     Return all of the node's successors created as a result of
-                    split
-  --
       undosuccessors
                     Return all of the node's successors created as a result of
-                    undo

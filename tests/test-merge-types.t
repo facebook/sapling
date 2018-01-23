@@ -25,7 +25,6 @@
   $ rm a
   $ ln -s symlink a
   $ hg ci -msymlink
-  created new head
 
 Symlink is local parent, executable is other:
 

@@ -13,7 +13,6 @@
   $ touch empty3
   $ hg add empty3
   $ hg commit -m 'add empty3'
-  created new head
 
   $ hg heads
   changeset:   2:a1cb177e0d44

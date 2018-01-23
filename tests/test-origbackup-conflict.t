@@ -43,7 +43,6 @@ Make files named b and d
   $ echo d2 > d
   $ hg add b d
   $ hg commit -m b1
-  created new head
   $ hg bookmark b1
 
 Perform an update that causes b to be backed up - it should replace the backup b dir

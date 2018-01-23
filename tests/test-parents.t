@@ -24,7 +24,6 @@ no working directory
   $ echo d > c
   $ hg ci -Amc2 -d '4 0'
   adding c
-  created new head
   $ hg up -C 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

@@ -416,7 +416,6 @@ Creating changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo aaa >> client-other/a
   $ hg -R client-other/ commit -m "C-E"
-  created new head
 
 (children of existing head)
 
@@ -1249,7 +1248,6 @@ Creating changesets
   $ hg -R client-other/ branch --force default
   marked working directory as branch default
   $ hg -R client-other/ commit -m "C-P"
-  created new head
 
 (update default head)
 
@@ -1259,7 +1257,6 @@ Creating changesets
   $ hg -R client-racy/ branch --force default
   marked working directory as branch default
   $ hg -R client-racy/ commit -m "C-Q"
-  created new head
 
 Pushing
 
@@ -1420,7 +1417,6 @@ Creating changesets
   $ hg -R client-other/ branch --force other
   marked working directory as branch other
   $ hg -R client-other/ commit -m "C-R"
-  created new head
 
 (update 'other named brnach through a 'default' changeset')
 
@@ -1432,7 +1428,6 @@ Creating changesets
   $ hg -R client-racy/ branch --force other
   marked working directory as branch other
   $ hg -R client-racy/ commit -m "C-T"
-  created new head
 
 Pushing
 
@@ -1604,7 +1599,6 @@ Creating changesets and markers
   $ hg -R client-racy/ branch --force default
   marked working directory as branch default
   $ hg -R client-racy/ commit -m "C-V"
-  created new head
   $ ID_Q=`hg -R client-racy log -T '{node}\n' -r 'desc("C-Q")'`
   $ ID_V=`hg -R client-racy log -T '{node}\n' -r 'desc("C-V")'`
   $ hg -R client-racy debugobsolete $ID_Q $ID_V
@@ -1792,7 +1786,6 @@ Creating changesets and markers
   $ hg -R client-other/ branch --force default
   marked working directory as branch default
   $ hg -R client-other/ commit -m "C-W"
-  created new head
   $ ID_V=`hg -R client-other log -T '{node}\n' -r 'desc("C-V")'`
   $ ID_W=`hg -R client-other log -T '{node}\n' -r 'desc("C-W")'`
   $ hg -R client-other debugobsolete $ID_V $ID_W

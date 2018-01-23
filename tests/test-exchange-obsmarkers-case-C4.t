@@ -60,10 +60,8 @@ Implemented as the non-split version
   $ mkcommit A
   $ hg update -q 0
   $ mkcommit B
-  created new head
   $ hg update -q 0
   $ mkcommit C
-  created new head
   $ hg debugobsolete --hidden `getid 'desc(A)'` `getid 'desc(B)'`
   obsoleted 1 changesets
   $ hg debugobsolete --hidden `getid 'desc(A)'` `getid 'desc(C)'`

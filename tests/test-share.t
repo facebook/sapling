@@ -244,7 +244,6 @@ test that commits work
    * bm3                       2:c2e0ac586386
   $ echo 'more shared bookmarks' > a
   $ hg commit -m 'testing shared bookmarks'
-  created new head
   $ hg bookmarks
      bm1                       3:b87954705719
    * bm3                       4:62f4ded848e4

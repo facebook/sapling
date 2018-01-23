@@ -484,7 +484,6 @@ update a remote bookmark from a non-head to a head
   $ echo c3 > f2
   $ hg ci -Am3
   adding f2
-  created new head
   $ hg push ../a --config "$TESTHOOK"
   pushing to ../a
   searching for changes
@@ -621,7 +620,6 @@ diverging a remote bookmark fails
   $ echo c4 > f2
   $ hg ci -Am4
   adding f2
-  created new head
   $ echo c5 > f2
   $ hg ci -Am5
   $ hg log -G
@@ -935,7 +933,6 @@ pushing a new bookmark on a new head does not require -f if -B is specified
   $ hg book W
   $ echo c5 > f2
   $ hg ci -Am5
-  created new head
   $ hg push -B .
   pushing to http://localhost:$HGPORT/
   searching for changes

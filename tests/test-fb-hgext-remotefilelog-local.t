@@ -79,7 +79,6 @@
   $ echo xxxx > x
   $ echo yyyy > y
   $ hg commit -m x
-  created new head
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
 # restore state for future tests
@@ -185,7 +184,6 @@
 
   $ echo merge >> w
   $ hg commit -m w
-  created new head
   $ hg merge 2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

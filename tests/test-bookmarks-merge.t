@@ -12,7 +12,6 @@
   $ echo c > c
   $ hg add c
   $ hg commit -m'c'
-  created new head
 
 # test merging of diverged bookmarks
   $ hg bookmark -r 1 "c@diverge"
@@ -42,7 +41,6 @@
   $ echo e > e
   $ hg add e
   $ hg commit -m'e'
-  created new head
   $ hg up -C 5
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark e

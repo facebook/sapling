@@ -173,13 +173,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   tests/test-fb-hgext-myparent.t:56:
    >   $ hg help templates | grep -A2 myparent
    don't use grep's context flags
-  tests/test-fb-hgext-rage.t:10:
-   >   $ echo "rpmbin = /bin/rpm" >> .hg/hgrc
-   don't use explicit paths for tools
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
-  tests/test-fb-hgext-smartlog.t:483:
-   >   $ hg help templates | egrep -A2 '(amend|fold|histedit|rebase|singlepublic|split|undo)'successor
-   don't use grep's context flags
   tests/test-hggit-git-submodules.t:61:
    >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new
    don't use grep's context flags

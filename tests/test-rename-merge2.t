@@ -73,7 +73,6 @@ $4 = expected result
   $ nc() { hg cp $1 $2; } # just copy
   $ nm() { hg mv $1 $2; } # just move
   $ tm "up a  " "nc a b" "      " "1  get local a to b"
-  created new head
   --------------
   test L:up a   R:nc a b W:       - 1  get local a to b
   --------------
@@ -112,7 +111,6 @@ $4 = expected result
   --------------
   
   $ tm "nc a b" "up a  " "      " "2  get rem change to a and b"
-  created new head
   --------------
   test L:nc a b R:up a   W:       - 2  get rem change to a and b
   --------------
@@ -152,7 +150,6 @@ $4 = expected result
   --------------
   
   $ tm "up a  " "nm a b" "      " "3  get local a change to b, remove a"
-  created new head
   --------------
   test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
   --------------
@@ -191,7 +188,6 @@ $4 = expected result
   --------------
   
   $ tm "nm a b" "up a  " "      " "4  get remote change to b"
-  created new head
   --------------
   test L:nm a b R:up a   W:       - 4  get remote change to b
   --------------
@@ -229,7 +225,6 @@ $4 = expected result
   --------------
   
   $ tm "      " "nc a b" "      " "5  get b"
-  created new head
   --------------
   test L:       R:nc a b W:       - 5  get b
   --------------
@@ -262,7 +257,6 @@ $4 = expected result
   --------------
   
   $ tm "nc a b" "      " "      " "6  nothing"
-  created new head
   --------------
   test L:nc a b R:       W:       - 6  nothing
   --------------
@@ -294,7 +288,6 @@ $4 = expected result
   --------------
   
   $ tm "      " "nm a b" "      " "7  get b"
-  created new head
   --------------
   test L:       R:nm a b W:       - 7  get b
   --------------
@@ -328,7 +321,6 @@ $4 = expected result
   --------------
   
   $ tm "nm a b" "      " "      " "8  nothing"
-  created new head
   --------------
   test L:nm a b R:       W:       - 8  nothing
   --------------
@@ -359,7 +351,6 @@ $4 = expected result
   --------------
   
   $ tm "um a b" "um a b" "      " "9  do merge with ancestor in a"
-  created new head
   --------------
   test L:um a b R:um a b W:       - 9  do merge with ancestor in a
   --------------
@@ -400,7 +391,6 @@ $4 = expected result
 m "um a c" "um x c" "      " "10 do merge with no ancestor"
 
   $ tm "nm a b" "nm a c" "      " "11 get c, keep b"
-  created new head
   --------------
   test L:nm a b R:nm a c W:       - 11 get c, keep b
   --------------
@@ -439,7 +429,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "nc a b" "up b  " "      " "12 merge b no ancestor"
-  created new head
   --------------
   test L:nc a b R:up b   W:       - 12 merge b no ancestor
   --------------
@@ -478,7 +467,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "up b  " "nm a b" "      " "13 merge b no ancestor"
-  created new head
   --------------
   test L:up b   R:nm a b W:       - 13 merge b no ancestor
   --------------
@@ -518,7 +506,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "nc a b" "up a b" "      " "14 merge b no ancestor"
-  created new head
   --------------
   test L:nc a b R:up a b W:       - 14 merge b no ancestor
   --------------
@@ -558,7 +545,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "up b  " "nm a b" "      " "15 merge b no ancestor, remove a"
-  created new head
   --------------
   test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
   --------------
@@ -598,7 +584,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "nc a b" "up a b" "      " "16 get a, merge b no ancestor"
-  created new head
   --------------
   test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
   --------------
@@ -638,7 +623,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "up a b" "nc a b" "      " "17 keep a, merge b no ancestor"
-  created new head
   --------------
   test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
   --------------
@@ -677,7 +661,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "nm a b" "up a b" "      " "18 merge b no ancestor"
-  created new head
   --------------
   test L:nm a b R:up a b W:       - 18 merge b no ancestor
   --------------
@@ -721,7 +704,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
-  created new head
   --------------
   test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
   --------------
@@ -766,7 +748,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"
-  created new head
   --------------
   test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
   --------------
@@ -809,7 +790,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   
   $ tm "um a b" "up a  " "      " "21 merge a and b to b"
-  created new head
   --------------
   test L:um a b R:up a   W:       - 21 merge a and b to b
   --------------
@@ -854,7 +834,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
 m "nm a b" "um x a" "      " "22 get a, keep b"
 
   $ tm "nm a b" "up a c" "      " "23 get c, keep b"
-  created new head
   --------------
   test L:nm a b R:up a c W:       - 23 get c, keep b
   --------------

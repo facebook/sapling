@@ -10,7 +10,6 @@
   $ hg up -qC 0
   $ echo ax > a
   $ hg ci -m 'changed a'
-  created new head
 
   $ hg up -qC 1
   $ cd subrepo
@@ -129,7 +128,6 @@ XXX: There's a difference between wdir() and '.', so there should be a status.
   $ hg ci -SAm 'add c'
   adding subrepo/c
   committing subrepository subrepo
-  created new head
   $ rm subrepo/c
 
 Merge sees deleted subrepo files as an uncommitted change

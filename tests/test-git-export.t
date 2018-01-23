@@ -600,7 +600,6 @@ Additions should be properly marked even in the middle of a merge
   $ echo "New File" >> inmerge
   $ hg add inmerge
   $ hg ci -m "file in merge"
-  created new head
   $ hg up 23
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge

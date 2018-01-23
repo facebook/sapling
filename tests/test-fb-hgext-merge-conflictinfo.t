@@ -27,7 +27,6 @@
   $ echo "Second conflicted version, F1" > F1
   $ echo "Second conflicted version, F2" > F2
   $ hg commit -m "second version, b"
-  created new head
   $ hg bookmark b
   $ hg log -G -T '({rev}) {desc}\nbookmark: {bookmarks}\nfiles: {files}\n\n'
   @  (2) second version, b

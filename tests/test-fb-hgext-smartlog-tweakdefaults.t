@@ -32,7 +32,6 @@ Prepare a repo for rebase checks
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b > b && hg ci -Am b          # rev 5
   adding b
-  created new head
   $ hg rebase --hidden -r 5 -d 1       # rev 6
   rebasing 5:1e9a3c00cbe9 "b" (tip)
   $ hg rebase --hidden -r 5 -d 2       # rev 7

@@ -15,7 +15,6 @@
   $ hg copy --after --force foo bar
   $ hg copy foo baz
   $ hg ci -m 'make bar and baz copies of foo' -d '2 0'
-  created new head
 
 Test that template can print all file copies (issue4362)
   $ hg log -r . --template "{file_copies % ' File: {file_copy}\n'}"
@@ -37,7 +36,6 @@ Test that template can print all file copies (issue4362)
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge remote copy' -d '4 0'
-  created new head
 
 Make and delete some tags
 
@@ -161,7 +159,6 @@ init broken repository
   $ hg up -qC 0
   $ echo bc >> b
   $ hg ci -m changebagain
-  created new head
   $ HGMERGE=internal:local hg -q merge
   $ hg ci -m merge
   $ hg mv b d

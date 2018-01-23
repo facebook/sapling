@@ -18,7 +18,6 @@ initialize repository
   $ echo 'c' > c
   $ hg ci -A -m "2"
   adding c
-  created new head
 
   $ echo 'd' > d
   $ hg ci -A -m "3"
@@ -74,7 +73,6 @@ aborted rebase should restore active bookmark.
   $ echo 'e' > d
   $ hg ci -A -m "4"
   adding d
-  created new head
   $ hg bookmark three
   $ hg rebase -s three -d two
   rebasing 4:dd7c838e8362 "4" (three tip)

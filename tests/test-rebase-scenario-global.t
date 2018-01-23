@@ -704,7 +704,6 @@ each root have a different common ancestor with the destination and this is a de
   $ echo I > J
   $ hg add J
   $ hg commit -m J
-  created new head
   $ echo I > K
   $ hg add K
   $ hg commit -m K
@@ -791,7 +790,6 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   $ touch other-file
   $ hg add other-file
   $ hg commit -m 'first source commit'
-  created new head
   $ mkdir subdir
   $ cd subdir
   $ touch subfile
@@ -820,7 +818,6 @@ Test that rebase is done in topo order (issue5370)
   $ hg up 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch d && hg add d && hg ci -m D
-  created new head
   $ hg up 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch e && hg add e && hg ci -m E
@@ -830,7 +827,6 @@ Test that rebase is done in topo order (issue5370)
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ touch g && hg add g && hg ci -m G
-  created new head
 
   $ hg tglog
   @  6: 124bb27b6f28 'G'
@@ -884,7 +880,6 @@ Make the repo a bit more interesting
   $ echo aaa > aaa
   $ hg add aaa
   $ hg commit -m aaa
-  created new head
   $ hg log -G
   @  changeset:   4:5f7bc9025ed2
   |  tag:         tip

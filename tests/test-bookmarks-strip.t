@@ -45,7 +45,6 @@ update to -2 (deactivates the active bookmark)
 commit new head
 
   $ hg ci -m 3
-  created new head
 
 bookmarks updated?
 

@@ -50,7 +50,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit C0
-  created new head
   $ cd ../client
   $ hg pull
   pulling from $TESTTMP/A6/server
@@ -64,7 +63,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A1
-  created new head
   $ hg up 'desc(C0)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit B1

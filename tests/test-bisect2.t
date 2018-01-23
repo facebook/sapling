@@ -49,7 +49,6 @@ create branch
   $ echo '5' >> b
   $ hg add b
   $ hg ci -m "5" -d "5 0"
-  created new head
 
 merge
 
@@ -65,7 +64,6 @@ create branch
   $ echo '7' > c
   $ hg add c
   $ hg ci -m "7" -d "7 0"
-  created new head
 
 create branch
 
@@ -74,7 +72,6 @@ create branch
   $ echo '8' > d
   $ hg add d
   $ hg ci -m "8" -d "8 0"
-  created new head
   $ echo '9' >> d
   $ hg ci -m "9" -d "9 0"
 
@@ -92,7 +89,6 @@ create branch
   $ echo '11' > e
   $ hg add e
   $ hg ci -m "11" -d "11 0"
-  created new head
   $ echo '12' >> e
   $ hg ci -m "12" -d "12 0"
   $ echo '13' >> e
@@ -105,7 +101,6 @@ create branch
   $ echo '14' > f
   $ hg add f
   $ hg ci -m "14" -d "14 0"
-  created new head
 
 merge
 
@@ -126,7 +121,6 @@ create branch
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '18' >> e
   $ hg ci -m "18" -d "18 0"
-  created new head
 
 log
 

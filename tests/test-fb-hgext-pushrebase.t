@@ -942,7 +942,6 @@ Push an already-public changeset and confirm it is rejected
   $ hg update -q '.^'
   $ echo 2 > C
   $ hg commit -m C -A C
-  created new head
   $ hg phase -r. --public
   $ hg push -r . --to default
   pushing to $TESTTMP/server2 (glob)

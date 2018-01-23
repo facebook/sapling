@@ -174,7 +174,6 @@ annotate -nlf b
   > b5
   > EOF
   $ hg ci -mb2.1 -d '2 0'
-  created new head
   $ hg merge
   merging b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -210,7 +209,6 @@ annotate after merge with -l
   > a
   > EOF
   $ hg ci -mc -d '3 0'
-  created new head
   $ hg merge
   merging b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -651,7 +649,6 @@ merge
   $ hg up 24 --quiet
   $ echo 7 >> baz
   $ hg ci -m 'one more line, out of line range'
-  created new head
   $ sed 's/3+/3-/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3+->3-'
@@ -680,7 +677,6 @@ merge
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge from other side'
-  created new head
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
   16: baz:0
   19: baz:3
@@ -700,7 +696,6 @@ we follow all branches in descending direction
   $ sed 's/3/+3/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->+3'
-  created new head
   $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
   @  30: baz:3->+3
   :
@@ -743,7 +738,6 @@ track of possible further descendants in specified range.
   > z
   > EOF
   $ hg ci -m 'baz: mostly rewrite with some content from 24'
-  created new head
   $ hg merge --tool :merge-other 24
   merging baz
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -912,7 +906,6 @@ create history with a filerev whose linkrev points to another branch
   $ echo unrelated > unrelated
   $ hg commit -Am 'unrelated'
   adding unrelated
-  created new head
   $ hg graft -r 'desc(contentB)'
   grafting 1:fd27c222e3e6 "contentB"
   $ echo C >> a

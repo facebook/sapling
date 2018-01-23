@@ -54,7 +54,6 @@ initial
   $ mkcommit A0
   $ hg up -q 0
   $ mkcommit B
-  created new head
   $ mkcommit A1
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
   obsoleted 1 changesets

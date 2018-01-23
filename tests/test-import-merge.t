@@ -22,7 +22,6 @@ Test import and merge diffs
   $ echo b > b
   $ hg ci -Am addb
   adding b
-  created new head
   $ hg up 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 3

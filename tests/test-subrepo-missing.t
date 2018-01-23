@@ -84,7 +84,6 @@ check that we can update parent repo with missing (amended) subrepo revision
   $ hg up --repository subrepo -r tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg ci -m "updated subrepo to tip"
-  created new head
   $ cd subrepo
   $ hg update -r tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

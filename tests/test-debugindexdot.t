@@ -9,7 +9,6 @@ Create a short file history including a merge.
   $ hg up -qC 0
   $ echo b >> a
   $ hg ci -m t3 -d '2 0'
-  created new head
   $ HGMERGE=true hg merge -q
   $ hg ci -m merge -d '3 0'
 

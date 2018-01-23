@@ -30,7 +30,6 @@
   $ echo r1 > r1
   $ hg ci -Am r1
   adding r1
-  created new head
 
   $ echo r2 > r2
   $ hg ci -Am r2
@@ -93,7 +92,6 @@ Rebase with no arguments - single revision in source branch:
   $ echo r1 > r1
   $ hg ci -Am r1
   adding r1
-  created new head
 
   $ hg tglog
   @  4: 8d0a8c99b309 'r1'

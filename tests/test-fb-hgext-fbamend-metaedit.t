@@ -68,14 +68,12 @@ We start with a plain base repo::
   $ hg up "desc(A)"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit "C"
-  created new head
   $ mkcommit "D"
   $ echo "D'" > D
   $ hg commit --amend -m "D2"
   $ hg up "desc(C)"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit "E"
-  created new head
   $ mkcommit "F"
 
 Test

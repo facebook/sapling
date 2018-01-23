@@ -41,7 +41,6 @@ Test symlink traversing when accessing history:
   $ echo c > b/a
   $ hg add b/a
   $ hg ci -m 'add directory b'
-  created new head
 
 Test that hg cat does not do anything wrong the working copy has 'b' as directory
 

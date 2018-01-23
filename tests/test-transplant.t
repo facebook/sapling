@@ -36,7 +36,6 @@
   $ echo b1 > b1
   $ hg ci -Amb1 -d '0 0'
   adding b1
-  created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -409,7 +408,6 @@ transplant --continue
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo foobar > foo
   $ hg ci -mfoobar
-  created new head
   $ hg transplant 1:3
   applying 46ae92138f3c
   patching file foo
@@ -469,7 +467,6 @@ test multiple revisions and --continue
   $ hg up -qC 0
   $ echo bazbaz > baz
   $ hg ci -Am anotherbaz baz
-  created new head
   $ hg transplant 1:3
   applying 46ae92138f3c
   46ae92138f3c transplanted to 1024233ea0ba
@@ -507,7 +504,6 @@ Issue1111: Test transplant --merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo d >> a
   $ hg ci -m appendd
-  created new head
 
 transplant
 
@@ -693,7 +689,6 @@ test filter with failed patch
   $ hg ci -Am foo
   adding b1
   adding test-filter
-  created new head
   $ hg transplant 1 --filter ./test-filter
   filtering * (glob)
   applying 348b36d0b6a5

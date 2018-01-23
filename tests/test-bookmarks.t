@@ -175,7 +175,6 @@ bookmark rev 0 again
   $ echo c > c
   $ hg add c
   $ hg commit -m 2
-  created new head
 
 bookmarks X moved to rev 2, Y at rev -1, Z at rev 0
 

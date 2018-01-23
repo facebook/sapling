@@ -25,7 +25,6 @@ extinct changeset.
   $ hg revert -ar 1
   adding A
   $ hg commit -Am "A'"
-  created new head
   $ hg log -G --template='{desc} {node}'
   @  A' f89bcc95eba5174b1ccc3e33a82e84c96e8338ee
   |

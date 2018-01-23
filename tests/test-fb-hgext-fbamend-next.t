@@ -181,7 +181,6 @@ Test --newest flag.
   $ touch test
   $ hg add test
   $ hg commit -m "test"
-  created new head
   $ hg book other
   $ showgraph
   @  6 other test

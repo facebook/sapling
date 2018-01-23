@@ -319,7 +319,6 @@ of just using revision numbers.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo black > color
   $ hg commit -A -m "2 black"
-  created new head
 
   $ hg update --clean 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

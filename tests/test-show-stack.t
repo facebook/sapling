@@ -84,7 +84,6 @@ Branch point in descendants displayed at top of graph
   $ hg -q up 3
   $ echo b > foo
   $ hg commit -m 'commit 5 (new dag branch)'
-  created new head
   $ hg -q up 2
   $ hg show stack
    \ /  (multiple children)
@@ -148,7 +147,6 @@ Now move on to stacks when there are more commits after the base branchpoint
   $ hg -q up 0
   $ echo 1 > foo
   $ hg commit -m 'new 1'
-  created new head
   $ echo 2 > foo
   $ hg commit -m 'new 2'
   $ hg -q up 2

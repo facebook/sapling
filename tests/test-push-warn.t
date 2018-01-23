@@ -105,9 +105,7 @@ Specifying a revset that evaluates to null will abort
   >    hg ci -m d-$i
   > done
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  created new head
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  created new head
 
   $ HGMERGE=true hg merge 3
   merging foo
@@ -411,13 +409,11 @@ multiple new heads but also doesn't report too many heads:
   $ echo b > h/b
   $ hg -R h ci -Am b
   adding b
-  created new head
   $ hg -R i up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > i/c
   $ hg -R i ci -Am c
   adding c
-  created new head
 
   $ for i in `$PYTHON $TESTDIR/seq.py 3`; do hg -R h up -q 0; echo $i > h/b; hg -R h ci -qAm$i; done
 
@@ -717,14 +713,12 @@ but child is on different branch:
   marked working directory as branch B
   $ echo a3 >a
   $ hg ci -ma3
-  created new head
   $ hg up 3
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch -f A
   marked working directory as branch A
   $ echo b3 >b
   $ hg ci -mb3
-  created new head
 
 glog of local:
 

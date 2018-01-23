@@ -26,7 +26,6 @@ Load commonly used test logic
   > 1
   > EOF
   $ hg commit -m "1.1"
-  created new head
   $ cat >>afile <<EOF
   > 2
   > EOF

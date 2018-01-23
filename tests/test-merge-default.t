@@ -13,13 +13,11 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo d >> a
   $ hg commit -md
-  created new head
 
   $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo e >> a
   $ hg commit -me
-  created new head
 
   $ hg up 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -146,7 +144,6 @@ Test experimental destination revset
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo f >> a
   $ hg commit -mf
-  created new head
   $ hg log -r '_destmerge()'
   changeset:   6:e88e33f3bf62
   parent:      5:a431fabd6039

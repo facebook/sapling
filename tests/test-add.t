@@ -98,7 +98,6 @@ should fail
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo aaa > a
   $ hg ci -m 2
-  created new head
 
   $ hg merge
   merging a

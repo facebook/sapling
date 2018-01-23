@@ -191,7 +191,6 @@ Create a branch:
   $ echo 1 > b
   $ hg add b
   $ hg commit -m "branch"
-  created new head
 
 Creating a new commit shouldn't append the .hgtags fnodes cache until
 tags info is accessed
@@ -264,7 +263,6 @@ Report tag parse error on other head:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'x y' >> .hgtags
   $ hg commit -m "head"
-  created new head
 
   $ hg tags --debug
   .hgtags@75d9f02dfe28, line 2: cannot parse entry
@@ -299,7 +297,6 @@ Test tag precedence rules:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo >> foo
   $ hg ci -m 'change foo 2' # rev 4
-  created new head
   $ hg tags
   tip                                4:0c192d7d5e6b
   bar                                1:78391a272241
@@ -523,7 +520,6 @@ Test tag rank:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo barbar > foo
   $ hg ci -m 'change foo'    # rev 6
-  created new head
   $ hg tags
   tip                                6:735c3ca72986
   bar                                0:bbd179dfa0a7

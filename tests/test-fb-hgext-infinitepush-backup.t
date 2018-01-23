@@ -114,7 +114,6 @@ Create one more head and run `hg pushbackup`. Make sure that only new head is pu
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit newhead
-  created new head
   $ hg pushbackup
   starting backup .* (re)
   searching for changes
@@ -126,11 +125,9 @@ Create two more heads and backup them
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead1
-  created new head
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newhead2
-  created new head
   $ hg pushbackup
   starting backup .* (re)
   searching for changes
@@ -394,10 +391,8 @@ Make sure it wasn't backed up.
 Create two heads, set maxheadstobackup to 1, make sure only latest head was backed up
   $ hg up -q 0
   $ mkcommit headone
-  created new head
   $ hg up -q 0
   $ mkcommit headtwo
-  created new head
   $ hg pushbackup --config infinitepushbackup.maxheadstobackup=1
   starting backup .* (re)
   searching for changes

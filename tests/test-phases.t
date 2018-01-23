@@ -104,7 +104,6 @@ Even on merge
   $ hg up -q 1
   $ mkcommit "B'"
   test-debug-phase: new rev 6:  x -> 1
-  created new head
   test-hook-close-phase: cf9fe039dfd67e829edf6522a45de057b5c86519:   -> draft
   $ hglog
   6 1 B'
@@ -212,7 +211,6 @@ head shadowed by the remote secret head.
   $ hg up -q 6 #B'
   $ mkcommit I
   test-debug-phase: new rev 8:  x -> 1
-  created new head
   test-hook-close-phase: 6d6770faffce199f1fddd1cf87f6f026138cf061:   -> draft
   $ hg push ../push-dest
   pushing to ../push-dest

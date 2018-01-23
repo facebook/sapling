@@ -27,7 +27,6 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   $ echo cfoo >> foo.txt
   $ echo cbar >> bar.txt
   $ hg commit -mc
-  created new head
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-list.py
@@ -185,7 +184,6 @@ mark a file driver-resolved, and leave others unresolved
   R bar.txt
   R foo.txt
   $ hg commit -m 'merged'
-  created new head
   $ cat foo.txt
   abar
   cbar
@@ -221,7 +219,6 @@ mark a file driver-resolved, and leave others unresolved (but skip merge driver)
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "s")
   $ hg commit -m 'merged'
-  created new head
 
 leave no files unresolved, but files driver-resolved
 (r = False, unresolved = n, driver-resolved = y)
@@ -270,7 +267,6 @@ implicitly makes them resolved
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "s")
   $ hg commit -m 'merged'
-  created new head
 
 indicate merge driver is necessary at commit
 (r = True, unresolved = n, driver-resolved = n)
@@ -323,7 +319,6 @@ XXX shouldn't output a warning
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
   $ hg commit -m 'merged'
-  created new head
 
 make sure this works sensibly when files are unresolved
 (r = True, unresolved = y, driver-resolved = n)
@@ -593,7 +588,6 @@ verify behavior with different merge driver
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
   $ hg -R repo1 commit -m merged
-  created new head
 
 this should invoke the merge driver
   $ cd repo1

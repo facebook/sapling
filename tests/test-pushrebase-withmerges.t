@@ -40,7 +40,6 @@ Build commit graph to push in
   $ hg up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ commit alpha
-  created new head
   $ hg merge @
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -48,7 +47,6 @@ Build commit graph to push in
   $ hg up null
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ commit beta
-  created new head
   $ hg merge @
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

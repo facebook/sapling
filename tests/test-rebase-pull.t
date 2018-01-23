@@ -204,7 +204,6 @@ pull --rebase works when a specific revision is pulled (issue3619)
   $ echo L1 > L1
   $ hg ci -Am L1
   adding L1
-  created new head
   $ hg pull --rev tip --rebase
   pulling from $TESTTMP/a
   searching for changes

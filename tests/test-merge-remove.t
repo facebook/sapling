@@ -13,7 +13,6 @@
   $ echo foo1 > foo1
   $ hg cat foo >> foo1
   $ hg ci -m 'mv foo foo1'
-  created new head
 
   $ hg merge
   merging foo1 and foo to foo1

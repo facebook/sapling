@@ -277,7 +277,6 @@ Issue332: confusing message when reverting directory
 
   $ hg ci -A -m b
   adding b/b
-  created new head
   $ echo foobar > b/b
   $ mkdir newdir
   $ echo foo > newdir/newfile
@@ -394,7 +393,6 @@ Adds a new commit
   $ echo foo > newadd
   $ hg add newadd
   $ hg commit -m 'other adds'
-  created new head
 
 
 merge it with the other head

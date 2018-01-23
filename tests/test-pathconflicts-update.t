@@ -30,7 +30,6 @@ Turn it on for this test.
 #endif
   $ hg add a/b
   $ hg commit -m "link"
-  created new head
   $ hg bookmark -i link
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -38,7 +37,6 @@ Turn it on for this test.
   $ echo 2 > a/b/c/d
   $ hg add a/b/c/d
   $ hg commit -m "dir"
-  created new head
   $ hg bookmark -i dir
 
 Update - local file conflicts with remote directory:

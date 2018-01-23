@@ -45,7 +45,6 @@ setup
   added 1 changesets with 1 changes to 1 files
   $ hg up -q '.^'
   $ mkcommit new
-  created new head
   $ hg debugobsolete --flags 1 `getid old` `getid new`
   obsoleted 1 changesets
   $ hg log -G --hidden
@@ -136,7 +135,6 @@ setup
   $ hg phase --draft --force '(0::) - 0'
   $ hg up -q '.^'
   $ mkcommit other
-  created new head
   $ hg log -G --hidden
   @  d7d41ccbd4de (draft) add other
   |
@@ -176,7 +174,6 @@ setup. (The obsolete marker is known locally only
   [1]
   $ hg up -q '.^'
   $ mkcommit new
-  created new head
   $ hg push -f
   pushing to $TESTTMP/remote
   searching for changes
@@ -187,7 +184,6 @@ setup. (The obsolete marker is known locally only
   $ mkcommit desc1
   $ hg up -q '.^'
   $ mkcommit desc2
-  created new head
   $ hg debugobsolete `getid old` `getid new`
   obsoleted 1 changesets
   $ hg log -G --hidden
@@ -297,7 +293,6 @@ setup
   $ cd local
   $ hg up -q '.^'
   $ mkcommit new-unrelated
-  created new head
   $ hg debugobsolete `getid old`
   obsoleted 1 changesets
   $ hg log -G --hidden

@@ -253,7 +253,6 @@ Test applying multiple patches
   $ echo e > e
   $ hg ci -Am adde
   adding e
-  created new head
   $ hg export . > ../patch1.diff
   $ hg up -qC 1
   $ echo f > f

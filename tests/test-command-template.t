@@ -177,7 +177,6 @@ Second branch starting at nullrev:
   $ echo second > second
   $ hg add second
   $ hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'
-  created new head
 
   $ echo third > third
   $ hg add third
@@ -2910,7 +2909,6 @@ latesttag:
   $ echo d >> head2
   $ hg ci -Am h2d -d '3 0'
   adding head2
-  created new head
 
   $ echo e >> head2
   $ hg ci -m h2e -d '4 0'
@@ -4574,7 +4572,6 @@ columns. We don't care about other aspects of the graph rendering here.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ printf "third\nfirst\n" > file
   $ hg commit -m "$wrappabletext"
-  created new head
 
   $ hg merge
   merging file
@@ -4604,7 +4601,6 @@ columns. We don't care about other aspects of the graph rendering here.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ printf "third\nfirst\nsecond\n" > file
   $ hg commit -m "$wrappabletext"
-  created new head
 
   $ hg log --graph -T "{graphwidth}"
   @  3

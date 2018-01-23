@@ -16,7 +16,6 @@
   $ echo blah > b
 
   $ hg ci -m "branch b"
-  created new head
   $ HGMERGE=true hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -29,7 +28,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m "merge a/b -> blah"
-  created new head
 
   $ hg log
   changeset:   4:2ee31f665a86

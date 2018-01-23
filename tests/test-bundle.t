@@ -21,7 +21,6 @@ Setting up test
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> afile
   $ hg commit -m "1.1"
-  created new head
   $ echo 2 >> afile
   $ hg commit -m "1.2"
   $ echo "a line" > fred
@@ -749,7 +748,6 @@ bundle single branch
   $ echo b >b
   $ hg ci -Amb
   adding b
-  created new head
   $ echo b1 >b1
   $ echo xx >x
   $ hg ci -Amb1
@@ -827,7 +825,6 @@ directory does not exist
   $ echo "ddd" >> d
   $ hg commit -A -m 3
   adding d
-  created new head
   $ hg update -r 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G

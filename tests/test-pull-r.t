@@ -36,7 +36,6 @@ don't show "(+1 heads)" message when pulling closed head
   $ hg up -q 0
   $ echo hello >> foo
   $ hg ci -mx1
-  created new head
   $ hg ci -mx2 --close-branch
   $ cd ../repo3
   $ hg heads -q --closed

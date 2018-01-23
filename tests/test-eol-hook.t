@@ -109,7 +109,6 @@ Create repo
   $ printf "some\nother\nfile" > c.txt
   $ hg add c.txt
   $ hg commit -m "LF c.txt, b.txt doesn't exist here"
-  created new head
   $ hg push -f ../main
   pushing to ../main
   searching for changes

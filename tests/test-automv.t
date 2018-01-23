@@ -43,7 +43,6 @@ mv/rm/add/modif
   R a.txt
   $ hg commit -m 'msg'
   detected move of 1 files
-  created new head
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -60,7 +59,6 @@ mv/rm/add/modif
   A b.txt
   R a.txt
   $ hg commit -m 'msg'
-  created new head
   $ hg status --change . -C
   A b.txt
   R a.txt
@@ -77,7 +75,6 @@ mv/rm/add/modif/changethreshold
   R a.txt
   $ hg commit --config automv.similarity='60' -m 'msg'
   detected move of 1 files
-  created new head
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -110,7 +107,6 @@ mv/rm/add/notincommitfiles
   A c.txt
   R a.txt
   $ hg commit c.txt -m 'msg'
-  created new head
   $ hg status --change . -C
   A c.txt
   $ hg status -C
@@ -123,7 +119,6 @@ mv/rm/add/notincommitfiles
   $ hg add c.txt
   $ hg commit -m 'msg'
   detected move of 1 files
-  created new head
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -140,7 +135,6 @@ mv/rm/add/--no-automv
   A b.txt
   R a.txt
   $ hg commit --no-automv -m 'msg'
-  created new head
   $ hg status --change . -C
   A b.txt
   R a.txt
@@ -153,7 +147,6 @@ mv/rm/add
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -175,7 +168,6 @@ mv/rm/add/modif
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -198,7 +190,6 @@ mv/rm/add/modif
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -219,7 +210,6 @@ mv/rm/add/modif/changethreshold
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -242,7 +232,6 @@ mv
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg status -C
   ! a.txt
@@ -259,7 +248,6 @@ mv/rm/add/notincommitfiles
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -293,7 +281,6 @@ mv/rm/add/--no-automv
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
@@ -313,7 +300,6 @@ mv/rm/commit/add/amend
   $ echo 'c' > c.txt
   $ hg add c.txt
   $ hg commit -m 'revision to amend to'
-  created new head
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg status -C

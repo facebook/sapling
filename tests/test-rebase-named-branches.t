@@ -130,7 +130,6 @@ Branch name containing a dash (issue3181)
   $ hg branch -f dev-one
   marked working directory as branch dev-one
   $ hg ci -m 'dev-one named branch'
-  created new head
 
   $ hg tglog
   @  10: 643fc9128048 'dev-one named branch' dev-one

@@ -48,7 +48,6 @@ Make sure HGMERGE doesn't interfere with the test
   $ hg rm file2
   $ echo changed2 >> file3
   $ hg ci -m 'changed file1, removed file2, changed file3'
-  created new head
 
 
 Non-interactive merge:

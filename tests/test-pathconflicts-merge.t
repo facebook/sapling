@@ -28,7 +28,6 @@ Turn it on for this test.
   $ ln -s c a/b
   $ hg add a/b
   $ hg commit -m "link"
-  created new head
   $ hg bookmark -i link
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -36,7 +35,6 @@ Turn it on for this test.
   $ echo 2 > a/b/c/d
   $ hg add a/b/c/d
   $ hg commit -m "dir"
-  created new head
   $ hg bookmark -i dir
 
 Merge - local file conflicts with remote directory
@@ -115,7 +113,6 @@ Merge - local directory conflicts with remote file or link
   $ hg resolve --mark a/b
   (no more unresolved files)
   $ hg commit -m "merge dir and file (move file into dir)"
-  created new head
   $ hg merge file2
   merging a/b/old-b and a/b to a/b/old-b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

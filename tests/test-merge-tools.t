@@ -22,21 +22,18 @@ revision 2
   $ echo "revision 2" > f
   $ echo "space" >> f
   $ hg commit -Am "revision 2"
-  created new head
   $ hg update 0 > /dev/null
 
 revision 3 - simple to merge
 
   $ echo "revision 3" >> f
   $ hg commit -Am "revision 3"
-  created new head
 
 revision 4 - hard to merge
 
   $ hg update 0 > /dev/null
   $ echo "revision 4" > f
   $ hg commit -Am "revision 4"
-  created new head
 
   $ echo "[merge-tools]" > .hg/hgrc
 
@@ -1210,7 +1207,6 @@ for Unix-like permission)
   $ hg commit -Am "revision 6"
   adding "; exit 1; echo "
   warning: filename contains '"', which is reserved on Windows: '"; exit 1; echo "'
-  created new head
   $ hg merge --config merge-tools.true.executable="true" -r 5
   merging "; exit 1; echo "
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

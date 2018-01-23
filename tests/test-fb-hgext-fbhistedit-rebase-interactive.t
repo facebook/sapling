@@ -31,9 +31,7 @@
 
   $ initrepo
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  created new head
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  created new head
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log before rebase

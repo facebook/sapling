@@ -44,7 +44,6 @@
   $ echo d > d
   $ hg ci -Am D
   adding d
-  created new head
 
   $ echo e > e
   $ hg ci -Am E
@@ -313,7 +312,6 @@ the same as branches remaining.
   $ echo a > A
   $ hg ci -Am A
   adding A
-  created new head
 
   $ hg tglog
   @  2: 'A' branch1
@@ -412,7 +410,6 @@ Make sure rebase does not break for phase/filter related reason
   $ echo c > c
   $ hg ci -Am C
   adding c
-  created new head
   $ hg up 1
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge
@@ -424,7 +421,6 @@ Make sure rebase does not break for phase/filter related reason
   $ echo e > e
   $ hg ci -Am E
   adding e
-  created new head
   $ hg merge 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -434,7 +430,6 @@ Make sure rebase does not break for phase/filter related reason
   $ echo g > g
   $ hg ci -Am G
   adding g
-  created new head
   $ echo h > h
   $ hg ci -Am H
   adding h

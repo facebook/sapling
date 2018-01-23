@@ -29,7 +29,6 @@
   $ echo l1 >>extra
   $ hg add extra
   $ hg ci -m L1
-  created new head
 
   $ sed -e 's/c2/l2/' common > common.new
   $ mv common.new common

@@ -12,7 +12,6 @@
   $ echo This is file b2 > b
   $ hg add b
   $ hg commit -m "commit #2"
-  created new head
   $ cd ..; rm -r t
 
   $ mkdir t
@@ -30,7 +29,6 @@
   $ echo This is file b2 > b
   $ hg commit -A -m "commit #2"
   adding b
-  created new head
   $ cd ..; rm -r t
 
   $ hg init t
@@ -48,6 +46,5 @@
   $ echo This is file b2 > b
   $ hg commit -A -m "commit #2"
   adding b
-  created new head
 
   $ cd ..

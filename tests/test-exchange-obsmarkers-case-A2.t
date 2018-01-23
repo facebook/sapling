@@ -59,7 +59,6 @@ initial
   $ hg up '.~1'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit B
-  created new head
   $ hg debugobsolete bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb `getid 'desc(B)'`
   $ hg log -G
   @  35b183996678 (draft): B

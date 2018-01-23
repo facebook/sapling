@@ -14,7 +14,6 @@ Should issue new head warning:
 
   $ hg ci -Amb
   adding a
-  created new head
 
   $ hg up -r0000
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

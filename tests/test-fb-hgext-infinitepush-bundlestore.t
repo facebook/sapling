@@ -95,7 +95,6 @@ Push to non-scratch bookmark
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit newcommit
-  created new head
   $ hg push -r .
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -502,7 +501,6 @@ still in the old bundle
   4 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (activating bookmark scratch/mybranch)
   $ mkcommit newscratchhead
-  created new head
   $ hg push -r . --to scratch/newscratchhead --create
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -543,7 +541,6 @@ multihead push works.
   $ hg up null
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit multihead2
-  created new head
   $ hg push -r . --bundle-store
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -563,7 +560,6 @@ Create two new scratch bookmarks
   $ hg up 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit scratchfirstpart
-  created new head
   $ hg push -r . --to scratch/firstpart --create
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -572,7 +568,6 @@ Create two new scratch bookmarks
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit scratchsecondpart
-  created new head
   $ hg push -r . --to scratch/secondpart --create
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -602,7 +597,6 @@ Pull two bookmarks from the second client
   176993b87e39bd88d66a2cccadabe33f0b346339 (no-eol)
 Make two commits to the scratch branch
   $ mkcommit testpullbycommithash1
-  created new head
   $ hg log -r '.' -T '{node}\n' > ../testpullbycommithash1
   $ mkcommit testpullbycommithash2
   $ hg push -r . --to scratch/mybranch --create -q

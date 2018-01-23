@@ -743,7 +743,6 @@ handle the loss of tags
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ printf '' > .hgtags
   $ hg commit -m 'delete all tags'
-  created new head
   $ hg log -r 'max(t7::)'
   changeset:   17:ffe462b50880
   user:        test

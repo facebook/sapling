@@ -192,7 +192,6 @@ Test merge states
   * files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo c >> b2
   $ hg ci -m diverging b2
-  created new head
   $ fileset 'resolved()'
   $ fileset 'unresolved()'
   $ hg merge

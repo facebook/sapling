@@ -57,7 +57,6 @@ initial
   $ mkcommit A
   $ hg up --quiet 0
   $ mkcommit B
-  created new head
   $ mkcommit C
   $ hg prune -qd '0 0' .
   $ hg log -G --hidden

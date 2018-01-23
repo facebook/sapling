@@ -47,7 +47,6 @@ it should not be in the diff.
   $ echo 123 > b
   $ hg add b
   $ hg ci -m "b"
-  created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

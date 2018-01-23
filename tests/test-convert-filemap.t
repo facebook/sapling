@@ -28,7 +28,6 @@
   $ echo >> bar
   $ echo >> quux
   $ hg ci -d '3 0' -m '3: change bar quux'
-  created new head
   $ hg up -qC 2
   $ hg merge -qr 3
   $ echo >> bar
@@ -42,7 +41,6 @@
   $ echo >> foo
   $ echo 2 >> baz
   $ hg ci -d '6 0' -m '6: change foo baz'
-  created new head
   $ hg up -qC 5
   $ hg merge -qr 6
   $ echo >> bar
@@ -508,7 +506,6 @@ test anonymous branch pruning
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> b
   $ hg ci -m changeb
-  created new head
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge

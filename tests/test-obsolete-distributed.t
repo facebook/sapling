@@ -44,11 +44,9 @@ Initial setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit c_A1
-  created new head
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit c_B0
-  created new head
   $ hg debugobsolete `getid 'desc("c_A0")'` `getid 'desc("c_A1")'`
   obsoleted 1 changesets
   $ hg log -G --hidden -v
@@ -80,7 +78,6 @@ server side: create new revision on the server (obsoleting another one)
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit c_B1
-  created new head
   $ hg debugobsolete `getid 'desc("c_B0")'` `getid 'desc("c_B1")'`
   obsoleted 1 changesets
   $ hg log -G

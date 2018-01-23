@@ -718,7 +718,6 @@ Test fuzziness (ambiguous patch location, fuzz=2)
   $ echo line1 >> a
   $ echo line0 >> a
   $ hg ci -m brancha
-  created new head
   $ hg import --config patch.fuzz=0 -v fuzzy-tip.patch
   applying fuzzy-tip.patch
   patching file a
@@ -1786,7 +1785,6 @@ Importing multiple failing patches:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'B' > b # just to make another commit
   $ hg commit -m "a new base"
-  created new head
   $ hg export --rev 'desc("four") + desc("extended jungle")' | hg import --partial -
   applying patch from stdin
   patching file a

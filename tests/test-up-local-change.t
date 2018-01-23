@@ -158,7 +158,6 @@ create a second head
   $ hg addremove
   adding b
   $ hg commit -m "3"
-  created new head
 
   $ cd ../r2
   $ hg -q pull ../r1
@@ -193,7 +192,6 @@ test conflicting untracked ignored file
   $ echo ignored > .hgignore
   $ hg add .hgignore
   $ hg ci -m 'add .hgignore'
-  created new head
   $ echo ignored > ignored
   $ hg add ignored
   $ hg ci -m 'add ignored file'

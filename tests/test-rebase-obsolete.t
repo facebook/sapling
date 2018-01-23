@@ -817,7 +817,6 @@ should display a friendly error message
   $ echo "non-relevant change" > nonrelevant
   $ hg add nonrelevant
   $ hg commit -m nonrelevant
-  created new head
   $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=true
   obsoleted 1 changesets
   $ hg log -G
@@ -855,7 +854,6 @@ If a rebase is going to create divergence, it should abort
   $ echo "john" > doe
   $ hg add doe
   $ hg commit -m "john doe"
-  created new head
   $ hg up 10
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "foo" > bar
@@ -947,7 +945,6 @@ Create the changes that we will rebase
   $ printf "b" > willconflict
   $ hg add willconflict
   $ hg commit -m "willconflict second version"
-  created new head
   $ printf "dummy" > K
   $ hg add K
   $ hg commit -m "dummy change"
@@ -1485,7 +1482,6 @@ equivalents in destination
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b && hg ci -Am b
   adding b
-  created new head
   $ hg rebase -r 2 -d 1
   rebasing 2:1e9a3c00cbe9 "b" (tip)
   $ hg log -r .  # working dir is at rev 3 (successor of 2)

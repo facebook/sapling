@@ -25,7 +25,6 @@
   >   hg add $x
   >   hg commit -m $x
   > done
-  created new head
   $ hg tglog
   @  6:1eb7eda15cd7b2222738a7c9b47d1f51349b2bdb:draft 'f'
   |

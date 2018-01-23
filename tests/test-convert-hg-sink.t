@@ -339,7 +339,6 @@ More source changes
   $ cd source
   $ echo 1 >> a
   $ hg ci -m '8: source first branch'
-  created new head
   $ hg up -qr -2
   $ echo 2 >> a
   $ hg ci -m '9: source second branch'

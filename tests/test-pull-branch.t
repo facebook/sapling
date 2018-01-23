@@ -92,7 +92,6 @@ Add a head on other branch:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b3.2 > foo
   $ hg ci -m b3.2 # 8
-  created new head
 
   $ cd ../tt
 
@@ -117,7 +116,6 @@ Should succeed because there is only one head on our branch:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo a5.2 > foo
   $ hg ci -ma5.2 # 10
-  created new head
   $ hg up 7
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b4.1 > foo

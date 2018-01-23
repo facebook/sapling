@@ -62,7 +62,6 @@ Initial
   $ hg prune -qd '0 0' .
   $ hg update -q 0
   $ mkcommit A1
-  created new head
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
   obsoleted 1 changesets
   $ hg prune -qd '0 0' .

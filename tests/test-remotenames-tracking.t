@@ -34,7 +34,6 @@ Create a tracking bookmark
   $ echo b > a
   $ hg add b
   $ hg commit -m b
-  created new head
   $ hg book b -t a
   $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
   @  2 b b

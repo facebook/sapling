@@ -45,7 +45,6 @@ the second head H2, and so on
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'Tainted file now super sanitized' > target
   $ hg ci -m 'super sanitized' target
-  created new head
   $ H2=`hg id --debug -i`
 
 Verify target contents before censorship at each revision
@@ -384,7 +383,6 @@ Censored nodes can be pushed if they censor previously unexchanged nodes
 
   $ echo 'Passwords: hunter2hunter2' > target
   $ hg ci -m 're-add password from clone' target
-  created new head
   $ H3=`hg id --debug -i`
   $ REV=$H3
   $ echo 'Re-sanitized; nothing to see here' > target

@@ -540,7 +540,6 @@ test revset converted() lookup
   $ echo f > c/f
   $ hg -R c ci -d'0 0' -Amf
   adding f
-  created new head
   $ hg -R c log -r "converted(09d945a62ce6)"
   changeset:   1:98c3dd46a874
   user:        test

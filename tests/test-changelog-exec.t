@@ -22,7 +22,6 @@ manifest of p2:
   $ hg up -qC 0
   $ echo >> foo
   $ hg ci -m 'change foo'
-  created new head
 
 manifest of p1:
 

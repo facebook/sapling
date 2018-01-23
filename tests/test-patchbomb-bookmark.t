@@ -118,7 +118,6 @@ Do the same and combine with -o only one must be exported
   $ echo 1 > x
   $ hg ci -Am1 -d '8 0'
   adding x
-  created new head
   $ hg push ../repo2 -B outgoing
   pushing to ../repo2
   searching for changes

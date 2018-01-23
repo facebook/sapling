@@ -53,7 +53,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit C0
-  created new head
   $ cd ../client
   $ hg pull
   pulling from $TESTTMP/D5/server
@@ -70,7 +69,6 @@ Test setup
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit B1
-  created new head
   $ hg debugobsolete `getid "desc(A0)" ` `getid "desc(A1)"`
   obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B0)" ` `getid "desc(B1)"`

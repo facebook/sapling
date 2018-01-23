@@ -45,7 +45,6 @@ Create another bookmark on the remote repo
   $ echo b >> a
   $ hg add a
   $ hg commit -m 'Commit secondbook points to'
-  created new head
 
 Do not pull new boookmark from local repo
   $ cd ../localrepo

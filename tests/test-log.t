@@ -535,7 +535,6 @@ log copies, non-linear manifest
   $ echo foo > foo
   $ hg ci -Ame2 -d '6 0'
   adding foo
-  created new head
   $ hg log -v --template '{rev} {file_copies}\n' -r 5
   5 e (dir/b)
 
@@ -636,7 +635,6 @@ log -r "follow('set:clean()')"
 
   $ hg ci -Amb1 -d '1 0'
   adding b1
-  created new head
 
 
 log -f
@@ -687,7 +685,6 @@ log -f -r '1 + 4'
   $ echo b2 > b2
   $ hg ci -Amb2 -d '1 0'
   adding b2
-  created new head
   $ hg log -f -r '1 + 4'
   changeset:   4:ddb82e70d1a1
   tag:         tip
@@ -1055,7 +1052,6 @@ Multiple copy sources of a file:
   $ hg up -q 4
   $ echo 7 >> b
   $ hg ci -m 'b1'
-  created new head
   $ echo 8 >> a
   $ hg ci -m 'a1'
   $ hg rm a
@@ -1553,7 +1549,6 @@ log -p -R repo
   $ touch branch
   $ hg ci -A -m "first branch, unrelated"
   adding branch
-  created new head
   $ touch foo
   $ hg ci -A -m "create foo, related"
   adding foo
@@ -1564,7 +1559,6 @@ log -p -R repo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'change foo in branch' > foo
   $ hg ci -m "change foo in branch, related"
-  created new head
   $ hg merge 7
   merging foo
   warning: conflicts while merging foo! (edit, then use 'hg resolve --mark')
@@ -1721,7 +1715,6 @@ Create a test repo:
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > a
   $ hg ci -m2
-  created new head
 
 Merge:
 
@@ -2207,7 +2200,6 @@ create history with a filerev whose linkrev points to another branch
   $ echo unrelated > unrelated
   $ hg commit -Am 'unrelated'
   adding unrelated
-  created new head
   $ hg graft -r 'desc(content2)'
   grafting 1:2294ae80ad84 "content2"
   $ echo 3 > a
@@ -2391,7 +2383,6 @@ Even when the file revision is missing from some head:
   $ echo c > c
   $ hg ci -Am2
   adding c
-  created new head
   $ hg up 'head() and not .'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
@@ -2449,7 +2440,6 @@ Check proper report when the manifest changes but not the file issue4499
   $ echo 2 > B
   $ echo 2 > C
   $ hg commit -m 'A3B2C2'
-  created new head
 
   $ hg log -G
   @  changeset:   2:fe5fc3d0eb17

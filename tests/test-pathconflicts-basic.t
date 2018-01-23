@@ -24,7 +24,6 @@ Turn it on for this test.
   $ echo 2 > a/b
   $ hg add a/b
   $ hg commit -m "dir"
-  created new head
   $ hg bookmark -i dir
 
 Basic merge - local file conflicts with remote directory

@@ -49,7 +49,6 @@ create two heads to verify that we only see one change in the log later
   $ echo b > b
   $ hg commit -Amb
   adding b
-  created new head
 
 clone, commit, pull
   $ hg clone . ../blackboxtest2
@@ -127,7 +126,6 @@ backup bundles get logged
   $ touch d
   $ hg commit -Amd
   adding d
-  created new head
   $ hg strip tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)

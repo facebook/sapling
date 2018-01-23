@@ -26,7 +26,6 @@ this is also case for issue3370.
   $ touch x
   $ hg add x
   $ hg commit -m '#2'
-  created new head
   $ hg tag -l C
 
   $ hg merge -q
@@ -68,7 +67,6 @@ additional test for issue3452:
   $ echo "modify 'a' at (E)" > a
   $ echo "modify 'b' at (E)" > b
   $ hg commit -m '(E)'
-  created new head
   $ hg tag -l E
 
   $ hg update -q --clean D
@@ -95,7 +93,6 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ hg rename b tmp
   $ hg rename tmp B
   $ hg commit -m '(B1)'
-  created new head
   $ hg tag -l B1
 
   $ hg merge -q C
@@ -139,7 +136,6 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ echo x > x
   $ hg add x
   $ hg commit -m '#3'
-  created new head
   $ echo 'modified at #4' > a
   $ hg commit -m '#4'
 

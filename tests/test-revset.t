@@ -2553,7 +2553,6 @@ test sorting by multiple keys including variable-length strings
   $ hg ci -m m111 -u u11 -d '120 0'
   $ hg branch -qf b111
   $ hg ci -m m112 -u u111 -d '110 14400'
-  created new head
 
  compare revisions (has fast path):
 
@@ -2677,7 +2676,6 @@ test sorting by multiple keys including variable-length strings
   $ hg addremove
   adding a
   $ hg ci -m 't1' -u 'tu' -d '130 0'
-  created new head
   $ echo 'a' >> a
   $ hg ci -m 't2' -u 'tu' -d '130 0'
   $ hg book book1

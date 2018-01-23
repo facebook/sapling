@@ -62,7 +62,6 @@ Prepare a basic merge
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #2"
-  created new head
   $ echo This is file b1 > b
 no merges expected
   $ hg merge -P 1
@@ -98,7 +97,6 @@ no merges expected
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #2"
-  created new head
   $ echo This is file b2 > b
 merge should fail
   $ hg merge 1
@@ -262,7 +260,6 @@ this merge of b should work
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #3"
-  created new head
 
 Contents of b should be "this is file b1"
   $ cat b
@@ -304,7 +301,6 @@ merge expected!
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #3"
-  created new head
   $ echo This is file b33 > b
 merge of b should fail
   $ hg merge 2
@@ -400,7 +396,6 @@ isn't changed on the filesystem (see also issue4583).
   $ hg update -q -C 3
   $ echo 'this is file b6' > b
   $ hg commit -m 'commit #6'
-  created new head
 
   $ cat b
   this is file b6

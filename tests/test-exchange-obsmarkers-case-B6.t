@@ -55,7 +55,6 @@ Initial
   $ mkcommit B0
   $ hg up --quiet 0
   $ mkcommit B1
-  created new head
   $ hg debugobsolete `getid 'desc(B0)'` `getid 'desc(B1)'`
   obsoleted 1 changesets
   $ hg prune -qd '0 0' .

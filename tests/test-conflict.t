@@ -32,7 +32,6 @@
   > Hop we are done.
   > EOF
   $ hg commit -m branch2
-  created new head
 
   $ hg merge 1
   merging a

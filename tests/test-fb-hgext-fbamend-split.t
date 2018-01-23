@@ -71,7 +71,6 @@ Test basic case of splitting a head.
   new file mode 100644
   examine changes to 'd2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
 
   $ showgraph
@@ -109,7 +108,6 @@ Split in the middle of a stack.
   new file mode 100644
   examine changes to 'c2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
   rebasing 4:* "add d1 and d2" (glob)
   rebasing 5:* "add d1 and d2"* (glob)
@@ -131,7 +129,6 @@ Split with multiple children and using hash.
   $ hg up c20c
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ mkcommit d
-  created new head
   $ hg split c20c << EOF
   > y
   > y
@@ -153,7 +150,6 @@ Split with multiple children and using hash.
   new file mode 100644
   examine changes to 'a2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
   rebasing 1:* "add b1 and b2" (glob)
   rebasing 6:* "add c1 and c2" (glob)
@@ -203,7 +199,6 @@ Split using revset.
   new file mode 100644
   examine changes to 'b2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
   rebasing 14:* "add c1 and c2" (glob)
   rebasing 15:* "add c1 and c2" (glob)
@@ -239,7 +234,6 @@ Test that command aborts when given multiple commits.
 
 Test --no-rebase flag.
   $ mkcommit e
-  created new head
   $ hg rebase -s 20 -d .
   rebasing 20:* "add c1 and c2" (glob)
   rebasing 21:* "add c1 and c2" (glob)
@@ -288,7 +282,6 @@ Test --no-rebase flag.
   new file mode 100644
   examine changes to 'e2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
 
   $ showgraph
@@ -348,7 +341,6 @@ Test that bookmarks are correctly moved.
   new file mode 100644
   examine changes to 'a2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
 
   $ showgraph

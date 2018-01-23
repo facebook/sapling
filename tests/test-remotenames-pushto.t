@@ -32,7 +32,6 @@ Test that config changes what is pushed by default
   $ echo c > c
   $ hg add c
   $ hg commit -m c
-  created new head
   $ hg push -r 'head()'
   pushing to $TESTTMP/repo1 (glob)
   searching for changes
@@ -118,7 +117,6 @@ Test that --non-forward-move is required to move bookmarks to odd locations
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> a
   $ hg commit -m c
-  created new head
   $ hg push --to @
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes

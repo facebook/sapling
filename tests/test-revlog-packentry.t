@@ -13,7 +13,6 @@ this should be stored as a delta against rev 0
   $ echo foo bar baz > foo
   $ hg ci -Am 'add foo again'
   adding foo
-  created new head
 
   $ hg debugindex foo
      rev    offset  length  ..... linkrev nodeid       p1           p2 (re)

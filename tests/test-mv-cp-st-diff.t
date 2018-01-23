@@ -78,7 +78,6 @@ rename in working dir
   $ tb "add a a1" "add a a2" "hg mv a b"
   % add a 0
   % hg ci -m t0
-  created new head
   % add a a1
   % hg ci -m t1
   % add a a2
@@ -228,7 +227,6 @@ copy in working dir
   $ tb "add a a1" "add a a2" "hg cp a b"
   % add a 1
   % hg ci -m t0
-  created new head
   % add a a1
   % hg ci -m t1
   % add a a2
@@ -395,7 +393,6 @@ single rename
   $ tb "hg mv a b" "add b b1" "add b w"
   % add a 2
   % hg ci -m t0
-  created new head
   % hg mv a b
   % hg ci -m t1
   % add b b1
@@ -560,7 +557,6 @@ single copy
   $ tb "hg cp a b" "add b b1" "add a w"
   % add a 3
   % hg ci -m t0
-  created new head
   % hg cp a b
   % hg ci -m t1
   % add b b1
@@ -760,7 +756,6 @@ rename chain
   $ tb "hg mv a b" "hg mv b c" "hg mv c d"
   % add a 4
   % hg ci -m t0
-  created new head
   % hg mv a b
   % hg ci -m t1
   % hg mv b c
@@ -914,7 +909,6 @@ copy chain
   $ tb "hg cp a b" "hg cp b c" "hg cp c d"
   % add a 5
   % hg ci -m t0
-  created new head
   % hg cp a b
   % hg ci -m t1
   % hg cp b c
@@ -1185,7 +1179,6 @@ circular rename
   $ tb "add a a1" "hg mv a b" "hg mv b a"
   % add a 6
   % hg ci -m t0
-  created new head
   % add a a1
   % hg ci -m t1
   % hg mv a b
@@ -1337,7 +1330,6 @@ directory move
   $ tb "hg mv x y" "add y/x x1" "add y/x x2"
   % add a 7
   % hg ci -m t0
-  created new head
   % hg mv x y
   moving x/x to y/x
   % hg ci -m t1
@@ -1549,7 +1541,6 @@ testing copies with unrelated branch
   $ echo a >> a
   $ hg ci -Am addunrelateda
   adding a
-  created new head
 
 unrelated branch diff
 

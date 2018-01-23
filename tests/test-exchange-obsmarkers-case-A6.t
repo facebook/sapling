@@ -54,7 +54,6 @@ initial
   $ mkcommit A0
   $ hg update -q 0
   $ mkcommit A1
-  created new head
 
 make both changeset known in remote
 

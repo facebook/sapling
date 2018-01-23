@@ -31,7 +31,6 @@
   $ hg add d/x
 
   $ hg ci -m 'rename A'
-  created new head
 
   $ hg tglog
   @  3: 73a3ee40125d 'rename A'
@@ -129,7 +128,6 @@ Rebased revision does not contain information about b (issue3739)
 
   $ hg cp a a-copied
   $ hg ci -m 'copy A'
-  created new head
 
   $ hg tglog
   @  3: 0a8162ff18a8 'copy A'
@@ -220,7 +218,6 @@ Test rebase across repeating renames:
 
   $ echo Another unrelated change >> unrelated.txt
   $ hg ci -m "Another unrelated change"
-  created new head
 
   $ hg tglog
   @  4: b918d683b091 'Another unrelated change'
@@ -278,7 +275,6 @@ Update back to before we performed copies, and inject an unrelated change.
   $ echo unrelated > unrelated
   $ hg add unrelated
   $ hg commit --message "Unrelated file created"
-  created new head
   $ hg update 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -307,7 +303,6 @@ copy records collapse correctly.
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo more >> unrelated
   $ hg ci -m 'unrelated commit is unrelated'
-  created new head
   $ hg rebase -s 2 --dest 5 --collapse
   rebasing 2:68bf06433839 "File b created as copy of a and modified"
   rebasing 3:af74b229bc02 "File c created as copy of b and modified"

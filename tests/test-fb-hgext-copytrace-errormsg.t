@@ -18,7 +18,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv 1 2
   $ hg ci -m dest
-  created new head
   $ hg rebase -s 1 -d .
   rebasing 1:812796267395 "2"
   other [source] changed 1 which local [dest] deleted

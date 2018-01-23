@@ -21,7 +21,6 @@
   $ echo quux > a/d
   $ hg add a/c
   $ hg ci -m "2 add a/c"
-  created new head
 
   $ hg merge --debug 1
     searching for copies back to rev 1
@@ -98,7 +97,6 @@
     a/c
   ? a/d
   $ hg ci -m "4 merge 1+2"
-  created new head
   $ hg debugrename b/c
   b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 
@@ -262,7 +260,6 @@ Do moves on a branch
   $ hg mv a/s s
   $ hg mv a/t t
   $ hg ci -Am2
-  created new head
   $ hg st --copies --change .
   A s/s
     a/s

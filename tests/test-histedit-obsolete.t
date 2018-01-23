@@ -492,7 +492,6 @@ Note that there is a few reordering in this series for more extensive test
   $ echo wat >> wat
   $ hg add wat
   $ hg ci -m 'add wat'
-  created new head
   $ hg merge f9daec13fb98
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

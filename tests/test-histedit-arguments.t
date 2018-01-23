@@ -271,7 +271,6 @@ short hash. This tests issue3893.
   $ echo x > x
   $ hg add x
   $ hg commit -m'x' x
-  created new head
   $ hg histedit -r 'heads(all())'
   abort: The specified revisions must have exactly one common root
   [255]
@@ -379,7 +378,6 @@ Set up default base revision tests
   $ hg -q up -r 1
   $ echo 3 > foo
   $ hg commit -m 'head 1 public'
-  created new head
   $ hg phase --force --public -r .
   $ echo 4 > foo
   $ hg commit -m 'head 1 draft 1'
@@ -393,11 +391,9 @@ Set up default base revision tests
   $ hg -q up -r 2
   $ echo 8 > foo
   $ hg commit -m 'head 3'
-  created new head
   $ hg -q up -r 2
   $ echo 9 > foo
   $ hg commit -m 'head 4'
-  created new head
   $ hg merge --tool :local -r 8
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

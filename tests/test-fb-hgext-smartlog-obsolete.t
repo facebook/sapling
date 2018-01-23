@@ -55,7 +55,6 @@ Check rebase template keyword.
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [*] Amended (glob)
   $ mkcommit c
-  created new head
   $ showgraph
   @  3 add c
   |
@@ -109,7 +108,6 @@ Check split template keyword.
   new file mode 100644
   examine changes to 'd2'? [Ynesfdaq?] n
   
-  created new head
   Done splitting? [yN] y
   $ showgraph
   @  8 add d1 and d2

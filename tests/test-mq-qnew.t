@@ -158,7 +158,6 @@ plain headers
   % fail when trying to import a merge
   adding a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  created new head
   merging a
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -237,7 +236,6 @@ hg headers
   % fail when trying to import a merge
   adding a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  created new head
   merging a
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved

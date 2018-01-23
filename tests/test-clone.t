@@ -732,12 +732,10 @@ Create repositories to test auto sharing functionality
   $ hg -q up -r 0
   $ echo head1 > foo
   $ hg commit -m head1
-  created new head
   $ hg bookmark head1
   $ hg -q up -r 0
   $ echo head2 > foo
   $ hg commit -m head2
-  created new head
   $ hg bookmark head2
   $ hg -q up -r 0
   $ hg branch branch1

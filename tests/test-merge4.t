@@ -10,7 +10,6 @@
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #2"
-  created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

@@ -535,15 +535,12 @@ and allowance of prune rebases
   $ hg up 0 && echo b > b && hg ci -Am b  # rev 2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding b
-  created new head
   $ hg up 0 && echo c > c && hg ci -Am c  # rev 3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding c
-  created new head
   $ hg up 0 && echo d > d && hg ci -Am d  # rev 4
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding d
-  created new head
   $ hg rebase -r 1 -d 2
   rebasing 1:09d39afb522a "a"
 
@@ -574,7 +571,6 @@ Test diff --per-file-stat
   $ echo b > b
   $ hg add a b
   $ hg ci -m A
-  created new head
   $ hg diff -r ".^" -r .
   diff -r 1e4be0697311 -r d17770b7624d a
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000

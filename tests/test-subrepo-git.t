@@ -770,7 +770,6 @@ check differences made by most recent change
 
   $ hg commit --subrepos -m "Added foobar"
   committing subrepository s
-  created new head
 
   $ hg diff -c . --subrepos --nodates
   diff -r af6d2edbb0d3 -r 255ee8cf690e .hgsubstate

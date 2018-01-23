@@ -372,7 +372,6 @@ test 'resolve -l'
   $ echo "file a change 2" > a
   $ echo "file b change 2" > b
   $ hg commit -m "head 2"
-  created new head
   $ hg merge
   merging a
   merging b

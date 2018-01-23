@@ -103,7 +103,6 @@ Testing diff --change when merge:
   $ sed -e 's,^8$,y,' file.txt > file.txt.tmp
   $ mv file.txt.tmp file.txt
   $ hg commit -m "change 8 to y"
-  created new head
 
   $ hg up -C -r 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

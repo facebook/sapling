@@ -36,7 +36,6 @@ Make a commit, than prune a commit, than create a bookmark on top of it.
 Do a backup and try to restore. Make sure it doesn't fail
   $ hg up -q null
   $ mkcommit tobepruned
-  created new head
   $ hg log -r . -T '{node}\n'
   edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff
   $ hg prune .

@@ -66,7 +66,6 @@
   $ echo 'bh2' >bh2
   $ hg add bh2
   $ hg commit -m "Adding b branch head 2"
-  created new head
   $ heads
   4: Adding b branch head 2 (b)
   3: Adding b branch head 1 (b)
@@ -83,7 +82,6 @@
   $ echo 'bh3' >bh3
   $ hg add bh3
   $ hg commit -m "Adding b branch head 3"
-  created new head
   $ heads
   5: Adding b branch head 3 (b)
   4: Adding b branch head 2 (b)
@@ -273,7 +271,6 @@ Topological heads:
   $ cd ..
 ______________
 
-"created new head" message tests
 
   $ hg init newheadmsg
   $ cd newheadmsg
@@ -303,7 +300,6 @@ Case NN: msg
   $ echo 1 > bb
   $ hg ci -Am "b4 (NN): new topo root for branch b"
   adding bb
-  created new head
 
 Case HN: no msg
 
@@ -317,7 +313,6 @@ Case BN: msg
   $ echo 1 > aa
   $ hg ci -Am "a6 (BN): new branch root"
   adding aa
-  created new head
 
 Case CN: msg
 
@@ -325,7 +320,6 @@ Case CN: msg
   $ echo 3 >> bbb
   $ hg ci -Am "b7 (CN): regular new head"
   adding bbb
-  created new head
 
 Case BB: msg
 
@@ -334,14 +328,12 @@ Case BB: msg
   $ hg branch -f default
   marked working directory as branch default
   $ hg ci -m "a8 (BB): weird new branch root"
-  created new head
 
 Case CB: msg
 
   $ hg up -q 4
   $ hg merge -q 1
   $ hg ci -m "b9 (CB): new head from branch merge"
-  created new head
 
 Case HB: no msg
 
@@ -354,7 +346,6 @@ Case CC: msg
   $ hg up -q 4
   $ hg merge -q 2
   $ hg ci -m "b11 (CC): new head from merge"
-  created new head
 
 Case CH: no msg
 

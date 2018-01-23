@@ -65,7 +65,6 @@ Multiple DAG heads will be shown
   $ hg -q up -r 1
   $ echo 3 > foo
   $ hg commit -m 'commit 3'
-  created new head
 
   $ hg show work
   @  f0ab commit 3
@@ -92,7 +91,6 @@ Draft child shows public head (multiple heads)
   $ hg -q up 0
   $ echo 4 > foo
   $ hg commit -m 'commit 4'
-  created new head
 
   $ hg show work
   @  668c commit 4
@@ -151,7 +149,6 @@ Bookmark name appears in output
   $ hg -q up -r 1
   $ echo 3 > foo
   $ hg commit -m 'commit 3'
-  created new head
   $ echo 4 > foo
   $ hg commit -m 'commit 4'
   $ hg bookmark mybook

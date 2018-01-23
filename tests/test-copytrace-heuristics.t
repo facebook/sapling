@@ -227,7 +227,6 @@ Test the copytrace.movecandidateslimit with many move candidates
   $ hg up -q ".^"
   $ echo b > a
   $ hg ci -m 'mod a'
-  created new head
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
@@ -274,7 +273,6 @@ Move file in one branch and delete it in another
   $ hg up -q ".^"
   $ hg rm a
   $ hg ci -m 'del a'
-  created new head
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
   @  changeset: 7d61ee3b1e48577891a072024968428ba465c47b
@@ -341,7 +339,6 @@ Move file twice and rebase mod on top of moves
   $ hg up -q 0
   $ echo c > a
   $ hg ci -m 'mod a'
-  created new head
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: d413169422167a3fa5275fc5d71f7dea9f5775f3
@@ -376,7 +373,6 @@ Move file twice and rebase moves on top of mods
   $ hg up -q 0
   $ echo c > a
   $ hg ci -m 'mod a'
-  created new head
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: d413169422167a3fa5275fc5d71f7dea9f5775f3
   |   desc: mod a
@@ -413,7 +409,6 @@ Move one file and add another file in the same folder in one branch, modify file
   $ hg up -q 0
   $ echo b > a
   $ hg ci -m 'mod a'
-  created new head
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e
@@ -450,7 +445,6 @@ Merge test
   $ hg up -q 0
   $ hg mv a b
   $ hg ci -m 'mv a b'
-  created new head
   $ hg up -q 2
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
@@ -486,7 +480,6 @@ Copy and move file
   $ hg up -q 0
   $ echo b > a
   $ hg ci -m 'mod a'
-  created new head
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: ef716627c70bf4ca0bdb623cfb0d6fe5b9acc51e

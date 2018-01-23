@@ -46,7 +46,6 @@ Setup client
   $ echo a > file1
   $ changeset_time=`expr $now - 13 \* 60`
   $ hg commit -d "$commit_time 0" -m "Backed up changeset"
-  created new head
   $ echo a1 > file1
   $ changeset_time=`expr $now - 12 \* 60`
   $ hg commit -d "$commit_time 0" -m "Backed up changeset 2"
@@ -152,7 +151,6 @@ Check smartlog summary with multiple unbacked up changesets
   $ echo b2 > file1
   $ commit_time=`expr $now - 11 \* 60`
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 2"
-  created new head
   $ hg smartlog -T '{rev}: {desc}\n' --config infinitepushbackup.enablestatus=yes  --config infinitepushbackup.autobackup=yes
   o  1: Public changeset 2
   |

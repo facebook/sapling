@@ -187,7 +187,6 @@ should fail
   $ echo c > c
   $ hg ci -Am2
   adding c
-  created new head
   $ hg summary
   parent: 2:db815d6d32e6 tip
    2
@@ -237,7 +236,6 @@ remove line 1
 
   $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
-  created new head
   changeset 3:26b8ccb9ad91 backs out changeset 1:5a50a024c182
   merging with changeset 3:26b8ccb9ad91
   merging a
@@ -295,7 +293,6 @@ invocation of the hook to be examined)
   2:6ea3f2a197a2
   ====
   reverting a
-  created new head
   changeset 3:d92a3f57f067 backs out changeset 1:5a50a024c182
   ==== preupdate:
   3:d92a3f57f067
@@ -329,7 +326,6 @@ invocation of the hook to be examined)
   1:5a50a024c182
   ====
   reverting a
-  created new head
   changeset 3:d92a3f57f067 backs out changeset 1:5a50a024c182
   ==== update:
   2:6ea3f2a197a2
@@ -391,7 +387,6 @@ without --merge
 with --merge
   $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
-  created new head
   changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
   merging with changeset 3:3202beb76721
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -420,7 +415,6 @@ with --merge
   $ echo d > d
   $ hg commit -d '3 0' -A -m c
   adding d
-  created new head
   $ hg merge 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -544,7 +538,6 @@ explicitly regardless of '--message')
   HG: user: test
   HG: branch 'branch2'
   HG: removed file1
-  created new head
   changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
   merging with changeset 3:d4e8f6db59fb
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved

@@ -204,7 +204,6 @@ Create repo b:
   $ echo C > C
   $ hg ci -Am C
   adding C
-  created new head
 
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -219,7 +218,6 @@ Create repo b:
   $ echo E > E
   $ hg ci -Am E
   adding E
-  created new head
 
   $ echo F > F
   $ hg ci -Am F
@@ -235,7 +233,6 @@ Create repo b:
   $ echo H > H
   $ hg ci -Am H
   adding H
-  created new head
 
   $ hg tglog
   @  7: c65502d41787 'H'
@@ -356,7 +353,6 @@ Create repo c:
   $ echo C > C
   $ hg ci -Am C
   adding C
-  created new head
 
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -371,7 +367,6 @@ Create repo c:
   $ echo E > E
   $ hg ci -Am E
   adding E
-  created new head
   $ echo F > E
   $ hg ci -m 'F'
 
@@ -390,7 +385,6 @@ Create repo c:
   $ echo I > I
   $ hg ci -Am I
   adding I
-  created new head
 
   $ hg tglog
   @  8: 46d6f0e29c20 'I'
@@ -478,7 +472,6 @@ Create repo d:
   $ echo D > D
   $ hg ci -Am D
   adding D
-  created new head
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -490,7 +483,6 @@ Create repo d:
   $ echo F > F
   $ hg ci -Am F
   adding F
-  created new head
 
   $ hg tglog
   @  5: c137c2b8081f 'F'
@@ -586,7 +578,6 @@ Interactions between collapse and keepbranches
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ repeatchange 3 "E" "user2"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  created new head
   $ hg tglog
   @  5: fbfb97b1089a 'E'
   |
@@ -745,7 +736,6 @@ Test stripping a revision with another child
   $ echo C > C
   $ hg ci -Am C
   adding C
-  created new head
 
   $ hg tglog
   @  2: c5cefa58fd55 'C'

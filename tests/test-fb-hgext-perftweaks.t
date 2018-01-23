@@ -115,7 +115,6 @@ Test avoiding calculating head changes during commit
   $ hg up -q A
   $ echo C > C
   $ hg commit -m C -A C
-  created new head
   $ hg up -q A
   $ echo D > D
   $ hg commit -m D -A D --config perftweaks.disableheaddetection=1

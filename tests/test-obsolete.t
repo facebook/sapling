@@ -83,7 +83,6 @@ Killing a single changeset with replacement
   $ hg up "desc('b')"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit new_c
-  created new head
   $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   $ hg debugobsolete --config format.obsstore-version=0 --flag 12 `getid original_c`  `getid new_c` -d '121 120'
   obsoleted 1 changesets
@@ -108,7 +107,6 @@ do it again (it read the obsstore before adding new changeset)
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit new_2_c
-  created new head
   $ hg debugobsolete -d '1337 0' `getid new_c` `getid new_2_c`
   obsoleted 1 changesets
   $ hg debugobsolete
@@ -120,7 +118,6 @@ Register two markers with a missing node
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit new_3_c
-  created new head
   $ hg debugobsolete -d '1338 0' `getid new_2_c` 1337133713371337133713371337133713371337
   obsoleted 1 changesets
   $ hg debugobsolete -d '1339 0' 1337133713371337133713371337133713371337 `getid new_3_c`
@@ -259,7 +256,6 @@ We need to create a clone of 5 and add a special marker with a flag
   $ hg revert -ar 5
   adding new_3_c
   $ hg ci -m 'add n3w_3_c'
-  created new head
   $ hg debugobsolete -d '1338 0' --flags 1 `getid new_3_c` `getid n3w_3_c`
   obsoleted 1 changesets
   $ hg log -r 'phasedivergent()'
@@ -608,7 +604,6 @@ Do not warn about new head when the new head is a successors of a remote one
   
   $ hg up -q 'desc(n3w_3_c)'
   $ mkcommit obsolete_e
-  created new head
   $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'` \
   > -u 'test <test@example.net>'
   obsoleted 1 changesets
@@ -1171,7 +1166,6 @@ Test bundle overlay onto hidden revision
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "C" >> foo
   $ hg ci -m "C"
-  created new head
   $ hg log -G
   @  2:c186d7714947 (draft) [tip ] C
   |
@@ -1228,7 +1222,6 @@ Test issue 4506
   $ echo "1" > bar
   $ hg add bar
   $ hg ci -m "content-1"
-  created new head
   $ hg up 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg graft 1

@@ -17,7 +17,6 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo C > afile
   $ hg ci -m "A->C"
-  created new head
 
   $ hg merge -r2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

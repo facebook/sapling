@@ -49,7 +49,6 @@ Test removing an unknown file
   $ hg purge
   $ hg rm removed
   $ hg ci -m removeremoved
-  created new head
   $ echo a > removed
   $ hg import --no-commit ../unknown.diff
   applying ../unknown.diff

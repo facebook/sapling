@@ -194,7 +194,6 @@ Set up a rebase situation for issue5581.
   $ echo c2 > b
   $ hg add b
   $ hg commit -m c2
-  created new head
   $ echo c3 >> a
   $ hg commit -m c3
   $ hg update 2
@@ -202,7 +201,6 @@ Set up a rebase situation for issue5581.
   $ echo c4 >> a
   $ echo c4 >> b
   $ hg commit -m c4
-  created new head
 
 Configure a merge tool that runs status in the middle of the rebase. The goal of
 the status call is to trigger a potential bug if fsmonitor's state is written

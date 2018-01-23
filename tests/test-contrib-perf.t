@@ -23,7 +23,6 @@ Prepare repo:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo merge-this >> a
   $ hg commit -m merge-able
-  created new head
 
   $ hg up -r 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

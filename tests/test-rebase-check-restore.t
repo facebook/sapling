@@ -28,7 +28,6 @@
 
   $ echo D >> A
   $ hg ci -m D
-  created new head
 
   $ echo E > E
   $ hg add E

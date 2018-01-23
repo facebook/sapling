@@ -438,7 +438,6 @@ checked out (= "default" is used as current branch)
   $ hg update -q 0
   $ echo 3 >> a
   $ hg commit -m "#2"
-  created new head
   $ hg commit --close-branch -m "#3"
 
 if there is at least one non-closed branch head:

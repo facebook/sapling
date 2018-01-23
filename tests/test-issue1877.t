@@ -15,7 +15,6 @@ https://bz.mercurial-scm.org/1877
   $ echo c > c
   $ hg add c
   $ hg ci -m'c'
-  created new head
   $ hg book
    * main                      2:d36c0562f908
   $ hg heads

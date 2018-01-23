@@ -26,7 +26,6 @@ Check rebase metadata
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b && hg ci -Am b
   adding b
-  created new head
   $ hg rebase -r . -d destination
   rebasing 3:1e9a3c00cbe9 "b" (tip)
   $ hg debugobsolete

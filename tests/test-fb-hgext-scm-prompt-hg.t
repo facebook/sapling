@@ -43,7 +43,6 @@ Test basic repo behaviors
   $ echo bb > b
   $ hg add b
   $ cmd hg commit -m 'c3'
-  created new head
   (active)
   $ hg log -T '{node|short} {desc}\n' -G
   @  4b6cc7d5194b c3

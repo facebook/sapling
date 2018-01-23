@@ -112,7 +112,6 @@ Create one more branch head on the server
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark scratch/serverbook)
   $ mkcommit head2
-  created new head
   $ hg log -G
   @  changeset:   2:dc4b2ecb723b
   |  tag:         tip
@@ -161,7 +160,6 @@ Push from another client, make sure that push doesn't override scratch bookmarks
   $ hg up scratch/serverbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit newscratch
-  created new head
   $ hg push -r . --to scratch/secondbranch --create
   pushing to ssh://user@dummy/repo
   searching for changes
@@ -188,11 +186,9 @@ Create new bookmark and try to pull it
   $ hg push -q -r . --to scratch/branchtoupdateto1 --create
   $ hg up -q ".^"
   $ mkcommit newcommittoupdate2
-  created new head
   $ hg push -q -r . --to scratch/branchtoupdateto2 --create
   $ hg up -q ".^"
   $ mkcommit newcommittopull
-  created new head
   $ hg push -q -r . --to scratch/branchtopull --create
   $ cd ../client
   $ hg up default/scratch/branchtoupdateto1

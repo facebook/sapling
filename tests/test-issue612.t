@@ -17,7 +17,6 @@ https://bz.mercurial-scm.org/612
   $ echo new > src/a.c
   $ echo compiled > src/a.o
   $ hg ci -mupdate
-  created new head
 
   $ hg status
   ? src/a.o

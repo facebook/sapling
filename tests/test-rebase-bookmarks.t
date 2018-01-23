@@ -34,7 +34,6 @@ Create a repo with several bookmarks
   $ echo d > d
   $ hg ci -Am D
   adding d
-  created new head
 
   $ hg book W
 
@@ -165,7 +164,6 @@ rebase --continue with bookmarks present (issue3802)
   $ echo 'C' > c
   $ hg add c
   $ hg ci -m 'other C'
-  created new head
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase --dest 4

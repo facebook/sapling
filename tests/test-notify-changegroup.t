@@ -155,7 +155,6 @@ commit as other user, change file so we can do an (automatic) merge
   $ echo b >> b/b
   $ echo y >> b/b
   $ hg --traceback --cwd b commit -Amy -u committer_3
-  created new head
 
 merge as a different user
 

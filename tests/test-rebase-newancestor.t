@@ -28,7 +28,6 @@
 
   $ echo D >> a
   $ hg ci -Am AD
-  created new head
 
   $ hg tglog
   @  3: 3878212183bd 'AD'

@@ -1012,7 +1012,6 @@ test file addition in slow path
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo >> foo
   $ hg ci -m 'change foo'
-  created new head
   $ hg up -C 1
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg qrefresh --git
@@ -1168,7 +1167,6 @@ strip again
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> foo
   $ hg ci -m 'change foo 2'
-  created new head
   $ HGMERGE=true hg merge
   merging foo
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved

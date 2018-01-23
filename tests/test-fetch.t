@@ -261,7 +261,6 @@ with a local change
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a2 > n1/a
   $ hg -R n1 ci -m a2
-  created new head
   $ hg -R n2 up -C b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo change >> n2/c
@@ -310,7 +309,6 @@ heads) with a local change
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo cc > n1/a
   $ hg -R n1 ci -m cc
-  created new head
   $ hg -R n2 up -C b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo change >> n2/b
@@ -374,7 +372,6 @@ test fetch with inactive branches
   $ echo c > ib1/c
   $ hg --cwd ib1 ci -Am newdefault
   adding c
-  created new head
   $ hg clone ib1 ib2
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

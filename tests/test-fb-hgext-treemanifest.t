@@ -166,7 +166,6 @@ Test rebase two commits with same changes
   $ echo >> noop
   $ hg add noop
   $ hg commit -Am 'rebase destination'
-  created new head
   $ hg rebase -d 6 -s '4 + 5' --config rebase.singletransaction=True
   rebasing 4:6052526a0d67 "modify subdir/y #1"
   rebasing 5:79a69a1547d7 "modify subdir/y #2"

@@ -342,6 +342,4 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-remotefilelog-histpack.py:24: imports not lexically sorted: mercurial.ui < pythonpath
   tests/test-fb-hgext-remotefilelog-histpack.py:26: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
   tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
-  tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: merge < registrar
-  tests/test-fb-hgext-undo.t:215: imports from mercurial not lexically sorted: encoding < merge
   [1]

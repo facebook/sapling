@@ -181,7 +181,6 @@ Backup and restore two commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark book/bookmarksbookmarks/somebook)
   $ mkcommit secondinbatch
-  created new head
   $ hg pushbackup
   starting backup .* (re)
   searching for changes

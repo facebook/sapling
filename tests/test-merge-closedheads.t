@@ -23,7 +23,6 @@
   $ echo "c1" > c1
   $ hg add c1
   $ hgcommit -m "c1"
-  created new head
   $ echo "c2" > c1
   $ hgcommit -m "c2"
 
@@ -33,7 +32,6 @@
   $ echo "d1" > d1
   $ hg add d1
   $ hgcommit -m "d1"
-  created new head
   $ echo "d2" > d1
   $ hgcommit -m "d2"
   $ hg tag -l good

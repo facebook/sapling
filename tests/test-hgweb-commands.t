@@ -2297,7 +2297,6 @@ filtered '0' changeset
   $ echo 'babar' > jungle
   $ hg add jungle
   $ hg ci -m 'Babar is in the jungle!'
-  created new head
   $ hg graft 0::
   grafting 0:b4e73ffab476 "0"
   grafting 1:e06180cbfb0c "1"

@@ -31,7 +31,6 @@
   $ hg ci -A -m 2
   adding x
   adding y
-  created new head
 
   $ hg merge 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -44,7 +43,6 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -A -m m2
-  created new head
 
   $ cd ..
 

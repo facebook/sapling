@@ -175,7 +175,6 @@ verify update will accept invalid legacy branch names
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'xxx2' >> b
   $ hg commit -d '8 0' -m 'adding head to branch b'
-  created new head
   $ echo 'xxx3' >> b
   $ hg commit -d '9 0' -m 'adding another cset to branch b'
   $ hg branches
@@ -452,7 +451,6 @@ multihead branch
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "m2" >m
   $ hg commit -d '10 0' -m 'head 2'
-  created new head
   $ hg log -b m
   changeset:   17:df343b0df04f
   branch:      m

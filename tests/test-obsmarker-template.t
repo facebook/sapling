@@ -378,7 +378,6 @@ Test templates with splitted commit
   $ echo 42 >> a
   $ hg commit -A -m "A0"
   adding a
-  created new head
   $ echo 43 >> b
   $ hg commit -A -m "A0"
   adding b
@@ -585,7 +584,6 @@ Simulate a fold
   $ hg commit -A -m "C0"
   adding A0
   adding B0
-  created new head
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
   obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B0)"` `getid "desc(C0)"`
@@ -1102,7 +1100,6 @@ Test setup
   $ hg commit -A -m "C0"
   adding A0
   adding B0
-  created new head
   $ hg debugobsolete `getid "desc(A0)"` `getid "desc(C0)"`
   obsoleted 1 changesets
   $ hg debugobsolete `getid "desc(B1)"` `getid "desc(C0)"`
@@ -1573,7 +1570,6 @@ Test setup
   $ hg up -r 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit C0
-  created new head
 
 Create the cycle
 
@@ -1785,7 +1781,6 @@ Split it
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ touch A
   $ hg commit -A -m "Add A,B,C" A
-  created new head
 
   $ touch B
   $ hg commit -A -m "Add A,B,C" B
@@ -2425,7 +2420,6 @@ Test templates with splitted and pruned commit
   $ echo 42 >> a
   $ hg commit -A -m "A1"
   adding a
-  created new head
   $ echo 43 >> b
   $ hg commit -A -m "A2"
   adding b

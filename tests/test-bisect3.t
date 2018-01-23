@@ -31,7 +31,6 @@ branch 4-8
   $ echo '4' >c
   $ hg add c
   $ hg ci -u test -d '4 0' -m '4'
-  created new head
   $ echo '5' >c
   $ hg ci -u test -d '5 0' -m '5'
   $ echo '6' >c
@@ -62,7 +61,6 @@ unrelated branch
   $ echo '13' >d
   $ hg add d
   $ hg ci -u test -d '13 0' -m '13'
-  created new head
   $ echo '14' >d
   $ hg ci -u test -d '14 0' -m '14'
 

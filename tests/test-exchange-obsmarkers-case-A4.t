@@ -61,7 +61,6 @@ initial
   $ hg update 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit A1
-  created new head
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa `getid 'desc(A0)'`
   $ hg debugobsolete `getid 'desc(A0)'` `getid 'desc(A1)'`
   obsoleted 1 changesets

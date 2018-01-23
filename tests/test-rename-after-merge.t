@@ -80,7 +80,6 @@ file while none of them belong to the second parent was broken
   $ hg ci -Am addcandd
   adding c1
   adding c2
-  created new head
 
 Merge heads:
 

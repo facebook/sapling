@@ -22,7 +22,6 @@ Create a repo with some tags
   $ echo newhead > newhead
   $ hg commit -A -m newhead
   adding newhead
-  created new head
   $ hg tag -m 'test head 2 tag' head2
 
   $ hg log -G -T '{rev}:{node|short} {tags} {desc}\n'

@@ -37,11 +37,9 @@ setup repo
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_1
-  created new head
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_2
-  created new head
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cd ..
@@ -121,7 +119,6 @@ indirect divergence with known changeset
   obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ mkcommit A_3
-  created new head
   $ hg debugobsolete `getid A_2` `getid A_3`
   obsoleted 1 changesets
   $ hg log -G --hidden
@@ -251,7 +248,6 @@ divergence that converge again is not divergence anymore
   obsoleted 1 changesets
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ mkcommit A_3
-  created new head
   $ hg debugobsolete `getid A_1` `getid A_3`
   obsoleted 1 changesets
   $ hg debugobsolete `getid A_2` `getid A_3`
@@ -343,19 +339,16 @@ split is not divergences
 Even when subsequent rewriting happen
 
   $ mkcommit A_3
-  created new head
   $ hg debugobsolete `getid A_1` `getid A_3`
   obsoleted 1 changesets
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_4
-  created new head
   $ hg debugobsolete `getid A_2` `getid A_4`
   obsoleted 1 changesets
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_5
-  created new head
   $ hg debugobsolete `getid A_4` `getid A_5`
   obsoleted 1 changesets
   $ hg log -G --hidden
@@ -419,15 +412,12 @@ Check more complex obsolescence graft (with divergence)
   $ hg debugobsolete `getid B_0` `getid A_2`
   obsoleted 1 changesets
   $ mkcommit A_7; hg up 0
-  created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit A_8; hg up 0
-  created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid A_5` `getid A_7` `getid A_8`
   obsoleted 1 changesets
   $ mkcommit A_9; hg up 0
-  created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid A_5` `getid A_9`
   $ hg log -G --hidden
@@ -524,7 +514,6 @@ Check more complex obsolescence graft (with divergence)
 fix the divergence
 
   $ mkcommit A_A; hg up 0
-  created new head
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg debugobsolete `getid A_9` `getid A_A`
   obsoleted 1 changesets

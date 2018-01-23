@@ -124,7 +124,6 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-A1'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1
   obsoleted 1 changesets
@@ -268,7 +267,6 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit 'C-A1'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
   obsoleted 1 changesets
@@ -454,7 +452,6 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-A1'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
   obsoleted 1 changesets
@@ -597,7 +594,6 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkcommit 'C-A1'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete `getid 'desc("C-A0")'` `getid 'desc("C-A1")'`
   obsoleted 1 changesets
@@ -678,7 +674,6 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-A1'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A0")'`
   $ hg debugobsolete --record-parents `getid 'desc("C-A0")'`
   obsoleted 1 changesets
@@ -753,19 +748,15 @@ setup
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-B'
-  created new head
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-C'
-  created new head
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-D'
-  created new head
   $ hg up 'desc("ROOT")'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit 'C-E'
-  created new head
   $ hg debugobsolete a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0 `getid 'desc("C-A")'`
   $ hg debugobsolete `getid 'desc("C-A")'` `getid 'desc("C-B")'` `getid 'desc("C-C")'` # record split
   obsoleted 1 changesets

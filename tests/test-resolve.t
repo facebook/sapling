@@ -20,14 +20,12 @@ create a second head with conflicting edits
   $ echo baz >> file1
   $ echo baz >> file2
   $ hg commit -Am 'append baz to files'
-  created new head
 
 create a third head with no conflicting edits
   $ hg up -qC 0
   $ echo foo > file3
   $ hg commit -Am 'add non-conflicting file'
   adding file3
-  created new head
 
 failing merge
 
