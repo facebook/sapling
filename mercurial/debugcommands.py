@@ -795,6 +795,7 @@ def debugextensions(ui, **opts):
     fm = ui.formatter('debugextensions', opts)
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         isinternal = extensions.ismoduleinternal(extmod)
+        isdefault = extname in extensions.DEFAULT_EXTENSIONS
         extsource = pycompat.fsencode(extmod.__file__)
         if isinternal:
             exttestedwith = []  # never expose magic string to users
@@ -810,6 +811,8 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s', extname)
             if isinternal or hgver in exttestedwith:
                 fm.plain('\n')
+            elif isdefault:
+                fm.plain(_(' (default)\n'))
             elif not exttestedwith:
                 fm.plain(_(' (untested!)\n'))
             else:

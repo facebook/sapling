@@ -863,7 +863,7 @@ Issue811: Problem loading extensions twice (by site and by user)
 Show extensions:
 (note that mq force load strip, also checking it's not loaded twice)
 
-  $ hg debugextensions
+  $ hg debugextensions | egrep -v "(default)"
   mq
   strip
 
