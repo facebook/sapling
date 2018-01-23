@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require p4
 
   $ echo "[extensions]" >> $HGRCPATH

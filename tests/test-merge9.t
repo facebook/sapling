@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 test that we don't interrupt the merge session if
 a file-level merge failed
 

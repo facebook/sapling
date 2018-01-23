@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hgcommit() {
   >    hg commit -u user "$@"
   > }

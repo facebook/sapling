@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require bzr
 
 N.B. bzr 1.13 has a bug that breaks this test.  If you see this

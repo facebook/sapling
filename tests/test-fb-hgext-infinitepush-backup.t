@@ -1,4 +1,3 @@
-
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > drawdag=$RUNTESTDIR/drawdag.py

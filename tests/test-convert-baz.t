@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require baz symlink
 
   $ baz my-id "mercurial <mercurial@mercurial-scm.org>"

@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
   $ hg init repo
   $ cd repo

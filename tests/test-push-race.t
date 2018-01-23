@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 ============================================================================================
 Test cases where there are race condition between two clients pushing to the same repository
 ============================================================================================

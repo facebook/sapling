@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 ==================================
 Basic testing for the push command
 ==================================

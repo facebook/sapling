@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
 Create an ondisk bundlestore in .hg/scratchbranches
   $ . "$TESTDIR/library.sh"

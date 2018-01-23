@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require mtn
 
 Monotone directory is called .monotone on *nix and monotone

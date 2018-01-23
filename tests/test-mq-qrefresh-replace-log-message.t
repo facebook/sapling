@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Environment setup for MQ
 
   $ echo "[extensions]" >> $HGRCPATH

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 This test file test the various templates related to obsmarkers.
 
 Global setup

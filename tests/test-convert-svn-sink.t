@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require svn13
 
   $ svnupanddisplay()

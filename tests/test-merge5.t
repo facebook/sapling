@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init
   $ echo This is file a1 > a
   $ echo This is file b1 > b

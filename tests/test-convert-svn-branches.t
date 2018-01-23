@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require svn svn-bindings
 
   $ cat >> $HGRCPATH <<EOF

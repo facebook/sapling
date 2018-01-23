@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 test merge-tools configuration - mostly exercising filemerge.py
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
 

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ cat > echo.py <<EOF
   > #!$PYTHON
   > from __future__ import absolute_import, print_function

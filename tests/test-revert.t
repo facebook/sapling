@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init repo
   $ cd repo
   $ echo 123 > a

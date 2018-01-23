@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Prepare repo a:
 
   $ hg init a

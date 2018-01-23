@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 ====================================
 Testing head checking code: Case C-2
 ====================================

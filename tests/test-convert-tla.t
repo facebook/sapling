@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require tla symlink
 
   $ tla my-id "mercurial <mercurial@mercurial-scm.org>"

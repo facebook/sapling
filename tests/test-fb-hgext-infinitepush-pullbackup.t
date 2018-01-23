@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"

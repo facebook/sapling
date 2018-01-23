@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Setup
 
   $ cat >> $HGRCPATH <<EOF

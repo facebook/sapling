@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
 Test interactions between mq and patch.eol
 

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require killdaemons
 
 This test checks behavior related to bundle1 that changed or is likely

@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
   $ catpatch() {
   >     cat $1 | sed -e "s/^\(# Parent \).*/\1/"

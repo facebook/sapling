@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init a
   $ cd a
   $ echo foo > t1

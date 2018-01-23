@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init
 
   $ echo foo > foo

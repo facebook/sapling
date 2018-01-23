@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Test for the heuristic copytracing algorithm
 ============================================
 

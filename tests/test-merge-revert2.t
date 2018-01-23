@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init
 
   $ echo "added file1" > file1

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require cvs
 
 Test config convert.cvsps.mergefrom config setting.

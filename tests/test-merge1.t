@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ cat <<EOF > merge
   > from __future__ import print_function
   > import sys, os

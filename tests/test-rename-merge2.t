@@ -1,4 +1,3 @@
-
   $ mkdir -p t
   $ cd t
   $ cat <<EOF > merge

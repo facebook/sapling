@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Test for changeset ba7c74081861
 (update dirstate correctly for non-branchmerge updates)
   $ hg init a

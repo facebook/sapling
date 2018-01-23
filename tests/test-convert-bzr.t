@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require bzr
 
   $ . "$TESTDIR/bzr-definitions"

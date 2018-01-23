@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

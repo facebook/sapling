@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 # Construct the following history tree:
 #
 # @  5:e1bb631146ca  b1

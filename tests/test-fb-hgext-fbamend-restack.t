@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Set up test environment.
   $ cat >> $HGRCPATH << EOF
   > [extensions]

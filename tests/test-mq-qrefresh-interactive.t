@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Create configuration
 
   $ echo "[ui]" >> $HGRCPATH

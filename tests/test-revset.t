@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ HGENCODING=utf-8
   $ export HGENCODING
   $ cat > testrevset.py << EOF

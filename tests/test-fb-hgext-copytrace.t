@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ . "$TESTDIR/copytrace.sh"
   $ cat >> $HGRCPATH << EOF
   > [extensions]

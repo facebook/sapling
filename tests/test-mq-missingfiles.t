@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
 Issue835: qpush fails immediately when patching a missing file, but
 remaining added files are still created empty which will trick a

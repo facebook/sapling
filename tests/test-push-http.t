@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require killdaemons
 
   $ hg init test

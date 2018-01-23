@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require cvs112
 
 This feature requires use of builtin cvsps!

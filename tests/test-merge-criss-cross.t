@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Criss cross merging
 
   $ hg init criss-cross

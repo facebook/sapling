@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #testcases b2-pushkey b2-binary
 
 #if b2-pushkey

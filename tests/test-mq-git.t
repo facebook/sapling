@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 # Test the plumbing of mq.git option
 # Automatic upgrade itself is tested elsewhere.
 

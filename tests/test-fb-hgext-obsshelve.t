@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 

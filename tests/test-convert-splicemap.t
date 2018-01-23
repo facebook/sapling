@@ -1,3 +1,4 @@
+  $ . helpers-usechg.sh
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH

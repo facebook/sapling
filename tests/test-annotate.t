@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ HGMERGE=true; export HGMERGE
 
 init

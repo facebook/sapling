@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ echo "[format]" >> $HGRCPATH
   $ echo "usegeneraldelta=yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH

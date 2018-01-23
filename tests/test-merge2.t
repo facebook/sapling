@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init t
   $ cd t
   $ echo This is file a1 > a

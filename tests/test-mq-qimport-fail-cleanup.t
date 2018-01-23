@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Failed qimport of patches from files should cleanup by recording successfully
 imported patches in series file.
 

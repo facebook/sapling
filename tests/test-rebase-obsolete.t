@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 ==========================
 Test rebase with obsolete
 ==========================

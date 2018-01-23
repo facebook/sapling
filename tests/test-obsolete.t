@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ cat >> $HGRCPATH << EOF
   > [phases]
   > # public changeset are not obsolete

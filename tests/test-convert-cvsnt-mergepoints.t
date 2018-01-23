@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require cvs
 
   $ filterpath()

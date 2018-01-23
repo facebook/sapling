@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require cvs
 
 This is https://bz.mercurial-scm.org/1148

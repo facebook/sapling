@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Log on empty repository: checking consistency
 
   $ hg init empty

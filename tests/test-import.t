@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ hg init a
   $ mkdir a/d1
   $ mkdir a/d1/d2

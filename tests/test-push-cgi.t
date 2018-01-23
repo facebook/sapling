@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require no-msys # MSYS will translate web paths as if they were file paths
 
 This is a test of the push wire protocol over CGI-based hgweb.

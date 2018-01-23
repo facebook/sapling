@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Test that qpush cleans things up if it doesn't complete
 
   $ echo "[extensions]" >> $HGRCPATH

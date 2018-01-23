@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > commitsubrepos = Yes

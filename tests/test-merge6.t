@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
   $ cat <<EOF > merge
   > import sys, os
   > print("merging for", os.path.basename(sys.argv[1]))

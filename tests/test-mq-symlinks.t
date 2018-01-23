@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 #require symlink
 
   $ echo "[extensions]" >> $HGRCPATH

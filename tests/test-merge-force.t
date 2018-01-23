@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 Set up a base, local, and remote changeset, as well as the working copy state.
 Files names are of the form base_remote_local_working-copy. For example,
 content1_content2_content1_content2-untracked represents a

@@ -1,3 +1,5 @@
+  $ . helpers-usechg.sh
+
 initial
   $ hg init test-a
   $ cd test-a
