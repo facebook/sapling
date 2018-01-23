@@ -1583,3 +1583,25 @@ Test automatic pattern replacement
   $ rt --extra-config-opt extensions.purge= test-config-opt.t
   .
   # Ran 1 tests, 0 skipped, 0 failed.
+
+--extra-rcpath works
+
+  $ cat << EOF > test-rcpath.t
+  >   $ hg config a
+  >   a.b=1
+  >   a.c=2
+  > EOF
+
+  $ cat << EOF > ab.rc
+  > [a]
+  > b=1
+  > EOF
+
+  $ cat << EOF > ac.rc
+  > [a]
+  > c=2
+  > EOF
+
+  $ rt --extra-rcpath `pwd`/ab.rc --extra-rcpath `pwd`/ac.rc test-rcpath.t
+  .
+  # Ran 1 tests, 0 skipped, 0 failed.

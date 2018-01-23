@@ -377,6 +377,8 @@ def getparser():
         help="compiler to build with")
     hgconf.add_argument('--extra-config-opt', action="append", default=[],
         help='set the given config opt in the test hgrc')
+    hgconf.add_argument('--extra-rcpath', action='append', default=[],
+        help='load the given config file or directory in the test hgrc')
     hgconf.add_argument("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg, "
              "and --with-chg=<testdir>/../contrib/chg/chg if --chg is set")
@@ -677,7 +679,7 @@ class Test(unittest.TestCase):
                  debug=False,
                  first=False,
                  timeout=None,
-                 startport=None, extraconfigopts=None,
+                 startport=None, extraconfigopts=None, extrarcpaths=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
                  slowtimeout=None, usechg=False,
                  useipv6=False):
@@ -707,6 +709,9 @@ class Test(unittest.TestCase):
         must have the form "key=value" (something understood by hgrc). Values
         of the form "foo.key=value" will result in "[foo] key=value".
 
+        extrarcpaths is an iterable for extra hgrc paths (files or
+        directories).
+
         py3kwarnings enables Py3k warnings.
 
         shell is the shell to execute tests in.
@@ -733,6 +738,7 @@ class Test(unittest.TestCase):
         self._slowtimeout = slowtimeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
+        self._extrarcpaths = extrarcpaths or []
         self._py3kwarnings = py3kwarnings
         self._shell = _bytespath(shell)
         self._hgcommand = hgcommand or b'hg'
@@ -869,7 +875,7 @@ class Test(unittest.TestCase):
         env = self._getenv()
         self._genrestoreenv(env)
         self._daemonpids.append(env['DAEMON_PIDS'])
-        self._createhgrc(env['HGRCPATH'])
+        self._createhgrc(env['HGRCPATH'].rsplit(os.pathsep, 1)[-1])
 
         vlog('# Test', self.name)
 
@@ -1056,7 +1062,9 @@ class Test(unittest.TestCase):
         for port in xrange(3):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
-        env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
+        rcpath = os.path.join(self._threadtmp, b'.hgrc')
+        rcpaths = self._extrarcpaths + [rcpath]
+        env["HGRCPATH"] = os.pathsep.join(rcpaths)
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b'daemon.pids')
         env["HGEDITOR"] = ('"' + sys.executable + '"'
                            + ' -c "import sys; sys.exit(0)"')
@@ -2739,6 +2747,7 @@ class TestRunner(object):
                     timeout=self.options.timeout,
                     startport=self._getport(count),
                     extraconfigopts=self.options.extra_config_opt,
+                    extrarcpaths=self.options.extra_rcpath,
                     py3kwarnings=self.options.py3k_warnings,
                     shell=self.options.shell,
                     hgcommand=self._hgcommand,
