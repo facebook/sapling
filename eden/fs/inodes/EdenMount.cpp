@@ -253,22 +253,20 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 EdenMount::~EdenMount() {}
 
 void EdenMount::performBindMounts() {
-  for (auto& bindMount : bindMounts_) {
-    auto& pathInMountDir = bindMount.pathInMountDir;
+  for (const auto& bindMount : bindMounts_) {
+    const auto pathInMountDir = bindMount.pathInMountDir.c_str();
     try {
       // If pathInMountDir does not exist, then it must be created before
       // the bind mount is performed.
-      boost::system::error_code errorCode;
-      boost::filesystem::path mountDir = pathInMountDir.c_str();
-      boost::filesystem::create_directories(mountDir, errorCode);
+      boost::filesystem::create_directories(pathInMountDir);
 
       fusell::privilegedBindMount(
-          bindMount.pathInClientDir.c_str(), pathInMountDir.c_str());
-    } catch (...) {
+          bindMount.pathInClientDir.c_str(), pathInMountDir);
+    } catch (const std::exception& ex) {
       // Consider recording all failed bind mounts in a way that can be
       // communicated back to the caller in a structured way.
-      XLOG(ERR) << "Failed to perform bind mount for "
-                << pathInMountDir.stringPiece() << ".";
+      XLOG(ERR) << "Failed to perform bind mount for " << pathInMountDir
+                << " due to: " << folly::exceptionStr(ex);
     }
   }
 }
