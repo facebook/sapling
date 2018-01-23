@@ -155,12 +155,12 @@ def checkinsertgeneratedconfig(localconfig, generatedconfig):
             configfile.write(includeline)
             configfile.write('\n')
 
-@command('enablebackup')
-def enablebackup(ui, repo, **opts):
+@command('backupenable')
+def backupenable(ui, repo, **opts):
     """
     Enable infinitepush backup
 
-    Enables backups that have been disabled by `hg disablebackup`.
+    Enables backups that have been disabled by `hg backupdisable`.
     """
 
     if autobackupenabled(ui):
@@ -176,9 +176,9 @@ def enablebackup(ui, repo, **opts):
     ui.write(_("infinitepush backup is enabled\n"))
     return 0
 
-@command('disablebackup',
+@command('backupdisable',
          [('', 'hours', '1', 'disable backup for the specified duration')])
-def disablebackup(ui, repo, **opts):
+def backupdisable(ui, repo, **opts):
     """
     Disable infinitepush backup
 
@@ -457,7 +457,7 @@ def smartlogsummary(ui, repo):
             ui.write(_('note: infinitepush backup is currently disabled until '
                 + converttimestamptolocaltime(int(timestamp)) + '\n'))
             ui.write(_('so your commits are not being backed up.\n'))
-            ui.write(_('Run `hg enablebackup` to turn backups back on.\n'))
+            ui.write(_('Run `hg backupenable` to turn backups back on.\n'))
         else:
             ui.write(_('note: infinitepush backup is currently disabled ' +
                        'by the Source Control Team,\n'))

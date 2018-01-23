@@ -193,14 +193,14 @@ Test template keyword for when a backup is in progress
 Test for infinitepushbackup disable
   $ echo "[infinitepushbackup]" >> .hg/hgrc
   $ echo "autobackup = True"  >> .hg/hgrc
-  $ hg enablebackup
+  $ hg backupenable
   infinitepush backup is already enabled
-  $ hg disablebackup
+  $ hg backupdisable
   infinitepush backup is now disabled until * (glob)
-  $ hg disablebackup
+  $ hg backupdisable
   note: infinitepush backup was already disabled
   infinitepush backup is now disabled until * (glob)
-  $ hg disablebackup --hours ggg
+  $ hg backupdisable --hours ggg
   note: infinitepush backup was already disabled
   abort: error: argument 'hours': invalid int value: 'ggg'
   
@@ -209,7 +209,7 @@ Test for infinitepushbackup disable
 Test for correct add include file in .hg/hgrc
   $ printf '\n' >> .hg/hgrc
   $ echo '[otherconfig]' >> .hg/hgrc
-  $ hg disablebackup
+  $ hg backupdisable
   note: infinitepush backup was already disabled
   infinitepush backup is now disabled until * (glob)
   $ grep '%include' .hg/hgrc | wc -l | xargs printf && printf '\n'
@@ -235,7 +235,7 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   
   note: infinitepush backup is currently disabled until * (glob)
   so your commits are not being backed up.
-  Run `hg enablebackup` to turn backups back on.
+  Run `hg backupenable` to turn backups back on.
   
   note: 3 changesets are not backed up.
   Run `hg pushbackup` to perform a backup.  If this fails,
