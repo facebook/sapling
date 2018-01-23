@@ -135,6 +135,9 @@ outputs, which should be fixed later.
   hgext/infinitepush/backupcommands.py:76: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
   hgext/infinitepush/backupcommands.py:77: symbol import follows non-symbol import: mercurial.node
   hgext/infinitepush/backupcommands.py:78: symbol import follows non-symbol import: mercurial.i18n
+  hgext/infinitepush/backupcommands.py:82: relative import of stdlib module
+  hgext/infinitepush/backupcommands.py:82: direct symbol import ConfigParser from ConfigParser
+  hgext/infinitepush/backupcommands.py:82: symbol import follows non-symbol import: ConfigParser
   hgext/infinitepush/infinitepushcommands.py:18: direct symbol import cmdtable from hgext.infinitepush.backupcommands
   hgext/infinitepush/infinitepushcommands.py:31: direct symbol import downloadbundle from hgext.infinitepush.common
   hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: hgext.infinitepush.common

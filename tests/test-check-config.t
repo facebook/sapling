@@ -96,6 +96,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsubversion.unsafeskip (list)
   undocumented: hgsubversion.username (str)
   undocumented: infinitepush.bundle-stream (bool)
+  undocumented: infinitepushbackup.disableduntil (str)
   undocumented: morestatus.show (bool)
   undocumented: nointerrupt.interactiveonly (bool) [True]
   undocumented: perftweaks.cachenoderevs (bool) [True]
