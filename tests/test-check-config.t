@@ -103,7 +103,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: perftweaks.disablebranchcache (bool)
   undocumented: perftweaks.disablecasecheck (bool)
   undocumented: perftweaks.disabletags (bool)
-  undocumented: perftweaks.preferdeltas (bool)
   undocumented: phabricator.graphql_app_id (str)
   undocumented: phabricator.graphql_app_token (str)
   undocumented: phabricator.graphql_host (str)

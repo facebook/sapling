@@ -484,9 +484,6 @@ coreconfigitem('experimental', 'evolution.track-operation',
 coreconfigitem('experimental', 'worddiff',
     default=False,
 )
-coreconfigitem('experimental', 'maxdeltachainspan',
-    default=-1,
-)
 coreconfigitem('experimental', 'mmapindexthreshold',
     default=None,
 )

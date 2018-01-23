@@ -420,8 +420,6 @@ class revlog(object):
             self._lazydeltabase = bool(opts.get('lazydeltabase', False))
             if 'compengine' in opts:
                 self._compengine = opts['compengine']
-            if 'maxdeltachainspan' in opts:
-                self._maxdeltachainspan = opts['maxdeltachainspan']
             if mmaplargeindex and 'mmapindexthreshold' in opts:
                 mmapindexthreshold = opts['mmapindexthreshold']
             self._withsparseread = bool(opts.get('with-sparse-read', False))
@@ -1824,19 +1822,22 @@ class revlog(object):
         if d is None:
             return False
 
-        # - 'dist' is the distance from the base revision -- bounding it limits
-        #   the amount of I/O we need to do.
         # - 'compresseddeltalen' is the sum of the total size of deltas we need
         #   to apply -- bounding it limits the amount of CPU we consume.
-        dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
+        _dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
 
-        defaultmax = textlen * 4
-        maxdist = self._maxdeltachainspan
-        if not maxdist:
-            maxdist = dist # ensure the conditional pass
-        maxdist = max(maxdist, defaultmax)
-        if (dist > maxdist or l > textlen or
-            compresseddeltalen > textlen * 2 or
+        # Criteria:
+        # 1. the delta is not larger than the full text
+        # 2. the delta chain cumulative size is not greater than twice the
+        #    fulltext
+        # 3. The chain length is less than the maximum
+        #
+        # This differs from upstream Mercurial's criteria. They prevent the
+        # total ondisk span from chain base to rev from being greater than 4x
+        # the full text len. This isn't good enough in our world since if we
+        # have 10+ branches going on at once, we can easily exceed the 4x limit
+        # and cause full texts to be written over and over again.
+        if (l > textlen or compresseddeltalen > textlen * 2 or
             (self._maxchainlen and chainlen > self._maxchainlen)):
             return False
 

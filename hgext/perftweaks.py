@@ -22,7 +22,6 @@ from mercurial import (
     merge,
     namespaces,
     phases,
-    revlog,
     scmutil,
     tags,
     util,
@@ -41,8 +40,6 @@ def extsetup(ui):
     wrapfunction(branchmap, 'read', _branchmapread)
     wrapfunction(branchmap, 'replacecache', _branchmapreplacecache)
     wrapfunction(branchmap, 'updatecache', _branchmapupdatecache)
-    if ui.configbool('perftweaks', 'preferdeltas'):
-        wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
 
     wrapfunction(dispatch, 'runcommand', _trackdirstatesizes)
     wrapfunction(dispatch, 'runcommand', _tracksparseprofiles)
@@ -248,35 +245,6 @@ def _editphases(orig, self, repo, tr, *args):
         _write(fp=None)
 
     return result
-
-def _isgooddelta(orig, self, d, textlen):
-    """Returns True if the given delta is good. Good means that it is within
-    the disk span, disk size, and chain length bounds that we know to be
-    performant."""
-    if d is None:
-        return False
-
-    # - 'dist' is the distance from the base revision -- bounding it limits
-    #   the amount of I/O we need to do.
-    # - 'compresseddeltalen' is the sum of the total size of deltas we need
-    #   to apply -- bounding it limits the amount of CPU we consume.
-    dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
-
-    # Our criteria:
-    # 1. the delta is not larger than the full text
-    # 2. the delta chain cumulative size is not greater than twice the fulltext
-    # 3. The chain length is less than the maximum
-    #
-    # This differs from upstream Mercurial's criteria. They prevent the total
-    # ondisk span from chain base to rev from being greater than 4x the full
-    # text len. This isn't good enough in our world since if we have 10+
-    # branches going on at once, we can easily exceed the 4x limit and cause
-    # full texts to be written over and over again.
-    if (l > textlen or compresseddeltalen > textlen * 2 or
-        (self._maxchainlen and chainlen > self._maxchainlen)):
-        return False
-
-    return True
 
 def _cachefilename(name):
     return 'noderevs/%s' % name

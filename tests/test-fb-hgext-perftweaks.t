@@ -138,29 +138,6 @@ Test disabling updating branchcache during commit
 
   $ cd ..
 
-Test changing the delta heuristic
-(this isn't a good test, but it executes the code path)
-  $ hg init preferdeltaserver
-  $ cd preferdeltaserver
-  $ touch a && hg commit -Aqm a
-  $ touch b && hg commit -Aqm b
-  $ cd ..
-  $ hg init preferdelta
-  $ cd preferdelta
-  $ cat >> .hg/hgrc <<EOF
-  > [perftweaks]
-  > preferdeltas=True
-  > EOF
-  $ hg pull ../preferdeltaserver
-  pulling from ../preferdeltaserver
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-  new changesets 3903775176ed:0e067c57feba
-  (run 'hg update' to get a working copy)
-
 Test file permissions
   $ umask 002
   $ cd ..
