@@ -243,6 +243,84 @@ Check behavior with nonsensical integers.
 
 
 
+Check whitespace handling options
+  $ hg init whitespace
+  $ cd whitespace
+  $ echo "some  text" > file
+  $ hg commit -qAm file
+  $ echo "some text " > file
+  $ hg commit -qAm file
+  $ hg show
+  changeset:   1:6dbf2c12e2e2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r 5b445d2a372e -r 6dbf2c12e2e2 file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -some  text
+  +some text 
+  
+  $ hg show -b
+  changeset:   1:6dbf2c12e2e2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  
+  $ echo "some text" > file
+  $ hg commit -qAm file
+  $ hg show -Z
+  changeset:   2:600038806867
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  
+  $ echo "some text " > file
+  $ hg commit -qAm file
+  $ hg show -Z
+  changeset:   3:747594f0817c
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  
+
+  $ printf "some\n\ntext" > file
+  $ hg commit -qAm file
+  $ printf "some\ntext" > file
+  $ hg commit -qAm file
+  $ hg show -B
+  changeset:   5:10f3fc1d00d6
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  
+
 Check --git and -g
 
   $ hg init git
@@ -338,6 +416,10 @@ Confirm that --help works (it didn't when we used an alias)
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -U --unified VALUE       number of lines of diff context to show (default:
                             <type 'int'>)
+   -w --ignore-all-space    ignore white space when comparing lines
+   -b --ignore-space-change ignore changes in the amount of white space
+   -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
   
   (some details hidden, use --verbose to show complete help)
   $ hg show --help --verbose
@@ -364,6 +446,10 @@ Confirm that --help works (it didn't when we used an alias)
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -U --unified VALUE       number of lines of diff context to show (default:
                             <type 'int'>)
+   -w --ignore-all-space    ignore white space when comparing lines
+   -b --ignore-space-change ignore changes in the amount of white space
+   -B --ignore-blank-lines  ignore changes whose lines are all blank
+   -Z --ignore-space-at-eol ignore changes in whitespace at EOL
   
   global options ([+] can be repeated):
   
