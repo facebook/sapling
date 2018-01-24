@@ -360,7 +360,6 @@ Test extension help:
        lz4revlog     store revlog deltas using lz4 compression
        morecolors    make more output colorful
        morestatus    make status give a bit more context
-       
        mq            manage a stack of patches
        myparent
        nointerrupt   warns but doesn't exit when the user first hits Ctrl+C

@@ -1274,13 +1274,6 @@ rustextmodules = [
     ),
 ]
 
-# replace '@RELEASE@' with the FB_RELEASE environment variable
-reporoot = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(reporoot, 'hgext', 'moreversion.pyt'), 'r') as src:
-    with open(os.path.join(reporoot, 'hgext', 'moreversion.py'), 'w') as dest:
-        release = os.environ.get('FB_RELEASE', 'UNKNOWN-RELEASE')
-        dest.write(src.read().replace('@RELEASE@', release))
-
 # If the Subversion SWIG bindings aren't present, require Subvertpy
 requires = []
 try:
