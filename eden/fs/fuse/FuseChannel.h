@@ -286,6 +286,7 @@ class FuseChannel {
   void fuseWorkerThread(size_t threadNumber);
   void maybeDispatchSessionComplete();
 
+  size_t bufferSize_{0};
   Dispatcher* const dispatcher_{nullptr};
   folly::File fuseDevice_;
   folly::EventBase* eventBase_;

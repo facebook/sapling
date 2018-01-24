@@ -25,6 +25,9 @@ namespace fusell {
 
 namespace {
 
+// This is the minimum size used by libfuse so we use it too!
+constexpr size_t MIN_BUFSIZE = 0x21000;
+
 StringPiece fuseOpcodeName(FuseOpcode opcode) {
   switch (opcode) {
     case FUSE_LOOKUP:
@@ -308,7 +311,8 @@ FuseChannel::FuseChannel(
     size_t numThreads,
     Dispatcher* const dispatcher,
     folly::Optional<fuse_init_out> connInfo)
-    : dispatcher_(dispatcher),
+    : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
+      dispatcher_(dispatcher),
       fuseDevice_(std::move(fuseDevice)),
       eventBase_(eventBase),
       connInfo_{connInfo},
@@ -487,9 +491,7 @@ void FuseChannel::fuseWorkerThread(size_t threadNumber) {
 }
 
 void FuseChannel::processSession() {
-  // This is the minimum size used by libfuse so we use it too!
-  constexpr size_t MIN_BUFSIZE = 0x21000;
-  std::vector<char> buf(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE));
+  std::vector<char> buf(bufferSize_);
 
   while (!sessionFinished_.load()) {
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
@@ -549,7 +551,7 @@ void FuseChannel::processSession() {
         fuse_init_out connInfo = {};
         connInfo.major = FUSE_KERNEL_VERSION;
         connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
-        connInfo.max_write = buf.size() - 4096;
+        connInfo.max_write = bufferSize_ - 4096;
 
         connInfo.max_readahead = in->max_readahead;
 
