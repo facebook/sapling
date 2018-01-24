@@ -7,7 +7,7 @@
 New errors are not allowed. Warnings are strongly discouraged.
 (The writing "no-che?k-code" is for not skipping this file when checking.)
 
-  $ testrepohg locate \
+  $ testrepohg files -I . \
   > -X contrib/python-zstandard \
   > -X hgext/fsmonitor/pywatchman \
   > -X lib/cdatapack \
