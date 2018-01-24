@@ -11,6 +11,7 @@ import argparse
 import io
 import logging
 import sys
+import textwrap
 from typing import List, Dict, Optional, cast
 from . import cmd_util
 from . import stats_print
@@ -60,19 +61,15 @@ def do_stats_general(
         # print InodeInfo for all the mountPoints
         inode_info = diag_info.mountPointInfo
         for key in inode_info:
-            out.write('Mount information for %s\n' % key)
-            out.write(
-                '    Loaded inodes in memory      : %d\n' %
-                inode_info[key].loadedInodeCount
-            )
-            out.write(
-                '    Unloaded inodes in memory    : %d\n' %
-                inode_info[key].unloadedInodeCount
-            )
-            out.write(
-                '    Materialized inodes in memory: %d\n\n' %
-                inode_info[key].materializedInodeCount
-            )
+            info = inode_info[key]
+            out.write(textwrap.dedent(f'''\
+                Mount information for {key}
+                    Loaded inodes in memory: {info.loadedInodeCount}
+                        Files: {info.loadedFileCount}
+                        Trees: {info.loadedTreeCount}
+                    Unloaded inodes in memory: {info.unloadedInodeCount}
+                    Materialized inodes in memory: {info.materializedInodeCount}
+                '''))
 
 
 MemoryMapping = Dict[bytes, bytes]

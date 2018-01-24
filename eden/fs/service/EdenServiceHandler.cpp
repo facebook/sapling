@@ -605,12 +605,14 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   INSTRUMENT_THRIFT_CALL(DBG3);
   auto mountList = server_->getMountPoints();
   for (auto& mount : mountList) {
+    auto inodeMap = mount->getInodeMap();
     // Set LoadedInde Count and unloaded Inode count for the mountPoint.
     MountInodeInfo mountInodeInfo;
-    mountInodeInfo.loadedInodeCount = stats::ServiceData::get()->getCounter(
-        mount->getCounterName(CounterName::LOADED));
-    mountInodeInfo.unloadedInodeCount = stats::ServiceData::get()->getCounter(
-        mount->getCounterName(CounterName::UNLOADED));
+    auto counts = inodeMap->getLoadedInodeCounts();
+    mountInodeInfo.loadedInodeCount = counts.fileCount + counts.treeCount;
+    mountInodeInfo.unloadedInodeCount = inodeMap->getUnloadedInodeCount();
+    mountInodeInfo.loadedFileCount = counts.fileCount;
+    mountInodeInfo.loadedTreeCount = counts.treeCount;
 
     // TODO: Currently getting Materialization status of an inode using
     // getDebugStatus which walks through entire Tree of inodes, in future we

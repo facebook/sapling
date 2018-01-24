@@ -775,6 +775,19 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
   data->loadedInodes_.emplace(inode->getNodeId(), inode.get());
 }
 
+InodeMap::LoadedInodeCounts InodeMap::getLoadedInodeCounts() const {
+  LoadedInodeCounts counts;
+  auto data = data_.rlock();
+  for (const auto& entry : data->loadedInodes_) {
+    if (dynamic_cast<FileInode*>(entry.second)) {
+      ++counts.fileCount;
+    } else {
+      ++counts.treeCount;
+    }
+  }
+  return counts;
+}
+
 fusell::InodeNumber InodeMap::allocateInodeNumber(Members& data) {
   // fusell::InodeNumber should generally be 64-bits wide, in which case it
   // isn't even worth bothering to handle the case where nextInodeNumber_ wraps.

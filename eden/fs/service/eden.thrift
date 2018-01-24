@@ -276,6 +276,8 @@ struct MountInodeInfo {
   1: i64 loadedInodeCount
   2: i64 unloadedInodeCount
   3: i64 materializedInodeCount
+  4: i64 loadedFileCount
+  5: i64 loadedTreeCount
 }
 
 /**

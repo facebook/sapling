@@ -410,10 +410,21 @@ class InodeMap {
   fusell::InodeNumber allocateInodeNumber();
   void inodeCreated(const InodePtr& inode);
 
-  uint64_t getLoadedInodeCount() {
+  struct LoadedInodeCounts {
+    size_t fileCount = 0;
+    size_t treeCount = 0;
+  };
+
+  /**
+   * More expensive than getLoadedInodeCount() because it checks the type of
+   * each inode.
+   */
+  LoadedInodeCounts getLoadedInodeCounts() const;
+
+  size_t getLoadedInodeCount() const {
     return data_.rlock()->loadedInodes_.size();
   }
-  uint64_t getUnloadedInodeCount() {
+  size_t getUnloadedInodeCount() const {
     return data_.rlock()->unloadedInodes_.size();
   }
 
