@@ -166,15 +166,3 @@ perfstatus
   $ hg perfvolatilesets
   $ hg perfwalk
   $ hg perfparents
-
-Check perf.py for historical portability
-
-  $ cd "$TESTDIR/.."
-
-  $ (testrepohg files -r 1.2 glob:mercurial/*.c glob:mercurial/*.py;
-  >  testrepohg files -r tip glob:mercurial/*.c glob:mercurial/*.py) |
-  > "$TESTDIR"/check-perf-code.py contrib/perf.py
-  contrib/perf.py:498:
-   >     from mercurial import (
-   import newer module separately in try clause for early Mercurial
-  [1]
