@@ -48,7 +48,7 @@ class FuseChannel {
       folly::EventBase* eventBase,
       size_t numThreads,
       Dispatcher* const dispatcher,
-      fuse_init_out connInfo);
+      folly::Optional<fuse_init_out> connInfo);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;
@@ -289,7 +289,7 @@ class FuseChannel {
   Dispatcher* const dispatcher_{nullptr};
   folly::File fuseDevice_;
   folly::EventBase* eventBase_;
-  fuse_init_out connInfo_;
+  folly::Optional<fuse_init_out> connInfo_;
   std::atomic<bool> sessionFinished_{false};
   folly::Synchronized<
       std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>>>

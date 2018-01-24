@@ -307,7 +307,7 @@ FuseChannel::FuseChannel(
     folly::EventBase* eventBase,
     size_t numThreads,
     Dispatcher* const dispatcher,
-    fuse_init_out connInfo)
+    folly::Optional<fuse_init_out> connInfo)
     : dispatcher_(dispatcher),
       fuseDevice_(std::move(fuseDevice)),
       eventBase_(eventBase),
@@ -320,10 +320,10 @@ FuseChannel::FuseChannel(
         std::thread([this, i] { fuseWorkerThread(i); }));
   }
 
-  if (connInfo_.major == FUSE_KERNEL_VERSION) {
-    XLOG(INFO) << "Takeover using max_write=" << connInfo_.max_write
-               << ", max_readahead=" << connInfo_.max_readahead
-               << ", want=" << flagsToLabel(capsLabels, connInfo_.flags);
+  if (connInfo_.hasValue()) {
+    XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
+               << ", max_readahead=" << connInfo_->max_readahead
+               << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
   }
 }
 
@@ -335,7 +335,7 @@ FuseChannel::~FuseChannel() {
 FuseChannelData FuseChannel::stealFuseDevice() {
   FuseChannelData data;
 
-  data.connInfo = connInfo_;
+  data.connInfo = connInfo_.value();
   // Claim the fd
   std::swap(data.fd, fuseDevice_);
 
@@ -546,15 +546,15 @@ void FuseChannel::processSession() {
       case FUSE_INIT: {
         const auto in = reinterpret_cast<const fuse_init_in*>(arg);
 
-        memset(&connInfo_, 0, sizeof(connInfo_));
-        connInfo_.major = FUSE_KERNEL_VERSION;
-        connInfo_.minor = FUSE_KERNEL_MINOR_VERSION;
-        connInfo_.max_write = buf.size() - 4096;
+        fuse_init_out connInfo = {};
+        connInfo.major = FUSE_KERNEL_VERSION;
+        connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+        connInfo.max_write = buf.size() - 4096;
 
-        connInfo_.max_readahead = in->max_readahead;
+        connInfo.max_readahead = in->max_readahead;
 
         const auto& capable = in->flags;
-        auto& want = connInfo_.flags;
+        auto& want = connInfo.flags;
 
         want |=
             capable &
@@ -573,8 +573,8 @@ void FuseChannel::processSession() {
         XLOG(INFO) << "Speaking fuse protocol kernel=" << in->major << "."
                    << in->minor << " local=" << FUSE_KERNEL_VERSION << "."
                    << FUSE_KERNEL_MINOR_VERSION
-                   << ", max_write=" << connInfo_.max_write
-                   << ", max_readahead=" << connInfo_.max_readahead
+                   << ", max_write=" << connInfo.max_write
+                   << ", max_readahead=" << connInfo.max_readahead
                    << ", capable=" << flagsToLabel(capsLabels, capable)
                    << ", want=" << flagsToLabel(capsLabels, want);
 
@@ -583,8 +583,9 @@ void FuseChannel::processSession() {
           throw std::runtime_error("fuse kernel major version is unsupported");
         }
 
-        sendReply(*header, connInfo_);
-        dispatcher_->initConnection(connInfo_);
+        connInfo_ = connInfo;
+        sendReply(*header, connInfo);
+        dispatcher_->initConnection(connInfo);
         break;
       }
 
@@ -733,7 +734,7 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
     const uint8_t* arg) {
   const auto write = reinterpret_cast<const fuse_write_in*>(arg);
   auto bufPtr = reinterpret_cast<const char*>(write + 1);
-  if (connInfo_.minor < 9) {
+  if (connInfo_->minor < 9) {
     bufPtr = reinterpret_cast<const char*>(arg) + FUSE_COMPAT_WRITE_IN_SIZE;
   }
   XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
@@ -777,7 +778,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
   XLOG(DBG7) << "FUSE_GETATTR";
 
   // If we're new enough, check to see if a file handle was provided
-  if (connInfo_.minor >= 9) {
+  if (connInfo_->minor >= 9) {
     const auto getattr = reinterpret_cast<const fuse_getattr_in*>(arg);
     if (getattr->getattr_flags & FUSE_GETATTR_FH) {
       return dispatcher_->getGenericFileHandle(getattr->fh)
@@ -840,7 +841,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
   const auto nod = reinterpret_cast<const fuse_mknod_in*>(arg);
   auto nameStr = reinterpret_cast<const char*>(nod + 1);
 
-  if (connInfo_.minor >= 12) {
+  if (connInfo_->minor >= 12) {
     // TODO: do something useful with nod->umask
   } else {
     // Else: no umask or padding fields available

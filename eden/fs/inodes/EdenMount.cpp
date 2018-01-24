@@ -683,25 +683,24 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     eventBase_ = eventBase;
     threadPool_ = threadPool;
 
+    folly::File fuseDevice;
+    folly::Optional<fuse_init_out> connInfo;
+
     if (takeoverData.hasValue()) {
       auto& channelData = takeoverData.value();
-      channel_ = std::make_unique<fusell::FuseChannel>(
-          std::move(channelData.fd),
-          path_,
-          eventBase_,
-          FLAGS_fuseNumThreads,
-          dispatcher_.get(),
-          channelData.connInfo);
+      fuseDevice = std::move(channelData.fd);
+      connInfo = channelData.connInfo;
     } else {
-      auto fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
-      channel_ = std::make_unique<fusell::FuseChannel>(
-          std::move(fuseDevice),
-          path_,
-          eventBase_,
-          FLAGS_fuseNumThreads,
-          dispatcher_.get(),
-          fuse_init_out{});
+      fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
     }
+
+    channel_ = std::make_unique<fusell::FuseChannel>(
+        std::move(fuseDevice),
+        path_,
+        eventBase_,
+        FLAGS_fuseNumThreads,
+        dispatcher_.get(),
+        connInfo);
 
     // we'll use this shortly to wait until the mount is started successfully.
     auto initFuture = initFusePromise_.getFuture();
