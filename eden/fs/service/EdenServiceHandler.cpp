@@ -12,6 +12,7 @@
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
+#include <folly/chrono/Conv.h>
 #include <folly/container/Access.h>
 #include <folly/experimental/logging/Logger.h>
 #include <folly/experimental/logging/LoggerDB.h>
@@ -593,10 +594,11 @@ int64_t EdenServiceHandler::unloadInodeForPath(
   } else {
     inode = edenMount->getInode(RelativePathPiece{*path}).get().asTreePtr();
   }
-  // Convert age to std::chrono::nanoseconds.
-  std::chrono::seconds sec(age->seconds);
-  std::chrono::nanoseconds nsec(age->nanoSeconds);
-  return inode->unloadChildrenNow(sec + nsec);
+  auto cutoff = std::chrono::system_clock::now() -
+      std::chrono::seconds(age->seconds) -
+      std::chrono::nanoseconds(age->nanoSeconds);
+  auto cutoff_ts = folly::to<timespec>(cutoff);
+  return inode->unloadChildrenLastAccessedBefore(cutoff_ts);
 }
 
 void EdenServiceHandler::getStatInfo(InternalStats& result) {

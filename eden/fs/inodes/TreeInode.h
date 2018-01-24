@@ -485,13 +485,12 @@ class TreeInode : public InodeBase {
   void unloadChildrenNow();
 
   /**
-   * unloadChildrenNow function is used to unload inodes from a directory based
-   * on the age of the inode.
-   * Age of the inode is determined by the last access time of the inode, if
-   * time since last access time is greater than the 'age' parameter, we will
-   * unload the inode.
+   * Unload all unreferenced inodes under this tree whose last access time is
+   * older than the specified cutoff.
+   *
+   * Returns the number of inodes unloaded.
    */
-  uint64_t unloadChildrenNow(std::chrono::nanoseconds age);
+  uint64_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
 
   /**
    * Load all materialized children underneath this TreeInode.
@@ -768,13 +767,6 @@ class TreeInode : public InodeBase {
    */
   folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
       const fuse_setattr_in& attr) override;
-
-  /**
-   * Internal function used by unloadChildrenNow(std::chrono::nanoseconds age)
-   * which takes struct timespec as parameter. We will unload inodes under a
-   * directory whose atime lies before 'timePointAge'.
-   */
-  uint64_t unloadChildrenNow(const timespec& timePointAge);
 
   folly::Synchronized<Dir> contents_;
 };

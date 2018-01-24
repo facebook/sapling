@@ -13,6 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
+#include <folly/chrono/Conv.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncSignalHandler.h>
 #include <gflags/gflags.h>
@@ -229,8 +230,10 @@ void EdenServer::unloadInodes() {
 
     uint64_t totalUnloaded = serviceData->getCounter(kPeriodicUnloadCounterKey);
     for (auto& rootInode : roots) {
-      totalUnloaded += rootInode->unloadChildrenNow(
-          std::chrono::minutes(FLAGS_unload_age_minutes));
+      auto cutoff = std::chrono::system_clock::now() -
+          std::chrono::minutes(FLAGS_unload_age_minutes);
+      auto cutoff_ts = folly::to<timespec>(cutoff);
+      totalUnloaded += rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
     }
     serviceData->setCounter(kPeriodicUnloadCounterKey, totalUnloaded);
   }

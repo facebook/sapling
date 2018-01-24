@@ -455,21 +455,13 @@ def do_unload_inodes(args: argparse.Namespace):
     mount, rel_path = get_mount_path(args.path)
 
     with config.get_thrift_client() as client:
-        inodeInfo_before_unload = client.debugInodeStatus(mount, rel_path)
-        inodeCount_before_unload = get_loaded_inode_count(
-            inodeInfo_before_unload)
-
         # set the age in nanoSeconds
         age = TimeSpec()
         age.seconds = int(args.age)
         age.nanoSeconds = int((args.age - age.seconds) * 10**9)
-        client.unloadInodeForPath(mount, rel_path, age)
+        count = client.unloadInodeForPath(mount, rel_path, age)
 
-        inodeInfo_after_unload = client.debugInodeStatus(mount, rel_path)
-        inodeCount_after_unload = get_loaded_inode_count(inodeInfo_after_unload)
-        count = inodeCount_before_unload - inodeCount_after_unload
-        print('Unloaded %s Inodes under the directory : %s' %
-              (count, args.path))
+        print(f'Unloaded {count} inodes under {mount}/{rel_path}')
 
 
 def do_flush_cache(args: argparse.Namespace):

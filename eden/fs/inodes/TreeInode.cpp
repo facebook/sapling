@@ -2862,21 +2862,7 @@ void TreeInode::unloadChildrenNow() {
   // all of our children trees, which may result in them being destroyed.
 }
 
-uint64_t TreeInode::unloadChildrenNow(std::chrono::nanoseconds age) {
-  // Get the timepoint and convert to timespec.
-  auto now = folly::to<std::chrono::system_clock::time_point>(getNow());
-  auto timePointRel = now - age;
-  auto epochTime = timePointRel.time_since_epoch();
-  auto sec = std::chrono::duration_cast<std::chrono::seconds>(epochTime);
-  auto nsec =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(epochTime - sec);
-  timespec timePoint;
-  timePoint.tv_sec = sec.count();
-  timePoint.tv_nsec = nsec.count();
-  return unloadChildrenNow(timePoint);
-}
-
-uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
+uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // Unloading inodes from the InodeMap requires to lock contents_ of TreeInode.
   // Getting atime of an inode requires a lock on the inode.
 
@@ -2908,12 +2894,18 @@ uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   // We are intentionally making toUnload as a list of FileInode* rather than
   // FileInodePtr to make raw pointer comparision to check if the pointer in
   // toUnload exists in contents_->entries.
-  std::unordered_set<FileInode*> toUnload;
+  std::unordered_set<InodeBase*> toUnload;
   {
     for (const auto& inode : potentialUnload) {
-      auto timeStamps = inode->getTimestamps();
-      auto atime = timeStamps.atime;
-      if (atime >= timePointAge) {
+      // Is atime the right thing to check here?  If a read is served from
+      // the kernel's cache, the cached atime is updated, but FUSE does not
+      // tell us.  That said, if we update atime whenever FUSE forwards a
+      // read request on to Eden, then atime ought to be a suitable proxy
+      // for whether it's a good idea to unload the inode or not.
+      //
+      // https://sourceforge.net/p/fuse/mailman/message/34448996/
+      auto atime = inode->getTimestamps().atime;
+      if (atime < cutoff) {
         toUnload.insert(inode.get());
       }
     }
@@ -2928,7 +2920,6 @@ uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   // than the required age.
   std::vector<TreeInodePtr> treeChildren;
   std::vector<InodeBase*> toDelete;
-  uint64_t unloadCount = 0;
   {
     auto* inodeMap = getInodeMap();
     auto contents = contents_.wlock();
@@ -2944,17 +2935,15 @@ uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
       } else {
         // Check if the entry is present in the toUnload list(atime greater than
         // age)
-        auto asFile = dynamic_cast<FileInode*>(entry.second->getInode());
-        if (toUnload.find(asFile) != toUnload.end() &&
-            entry.second->getInode()->isPtrAcquireCountZero()) {
+        auto entryInode = entry.second->getInode();
+        if (toUnload.count(entryInode) && entryInode->isPtrAcquireCountZero()) {
           // Unload the inode
           inodeMap->unloadInode(
-              entry.second->getInode(), this, entry.first, false, inodeMapLock);
+              entryInode, this, entry.first, false, inodeMapLock);
           // Record that we should now delete this inode after releasing
           // the locks.
-          toDelete.push_back(entry.second->getInode());
+          toDelete.push_back(entryInode);
           entry.second->clearInode();
-          unloadCount++;
         }
       }
     }
@@ -2963,10 +2952,14 @@ uint64_t TreeInode::unloadChildrenNow(const timespec& timePointAge) {
   for (auto* child : toDelete) {
     delete child;
   }
+
+  // Note that unloadCount only includes released FileInodes at the moment.
+  // It should include TreeInodes too.
+  uint64_t unloadCount = toDelete.size();
   for (auto& child : treeChildren) {
     // TODO(T21096505): Currently unloadChildrenNow is now unloading TreeInodes,
     // we have to make sure that even treeChildren also gets unloaded.
-    unloadCount += child->unloadChildrenNow(timePointAge);
+    unloadCount += child->unloadChildrenLastAccessedBefore(cutoff);
   }
 
   return unloadCount;
