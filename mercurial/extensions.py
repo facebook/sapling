@@ -95,6 +95,11 @@ def find(name):
     return mod
 
 def loadpath(path, module_name):
+    """loads the given extension from the given path
+
+    Note, this cannot be used to load core extensions, since the relative
+    imports they use no longer work within loadpath.
+    """
     module_name = module_name.replace('.', '_')
     path = util.normpath(util.expandpath(path))
     module_name = pycompat.fsdecode(module_name)
