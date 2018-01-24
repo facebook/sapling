@@ -54,7 +54,7 @@ import random
 import struct
 import string
 
-from .extlib import treedirstate
+from .extlib import treedirstate as rusttreedirstate
 
 dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1
@@ -158,7 +158,7 @@ class treedirstatemap(object):
         self.copymap = {}
 
         self._filename = 'dirstate'
-        self._rmap = hgext.extlib.treedirstate.treedirstatemap(ui, opener)
+        self._rmap = rusttreedirstate.treedirstatemap(ui, opener)
         self._treeid = None
         self._parents = None
         self._dirtyparents = False
