@@ -546,8 +546,11 @@ def has_serve():
 
 @check("test-repo", "running tests from repository")
 def has_test_repo():
-    t = os.environ["TESTDIR"]
-    return os.path.isdir(os.path.join(t, "..", ".hg"))
+    # This used to check for the existence of a .hg folder to ensure a repo (so
+    # it can run `hg files`). Internally, we'll always have a repo, and
+    # externally we'll likely use git to publish so we'll need another solution
+    # there anyways.
+    return True
 
 @check("tic", "terminfo compiler and curses module")
 def has_tic():
