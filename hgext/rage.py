@@ -19,15 +19,15 @@ from mercurial import (
     util,
 )
 from mercurial import pycompat, scmutil
-from hgext import blackbox
-from hgext import (
+from . import blackbox
+from . import (
     shareutil,
     smartlog,
     fbsparse as sparse,
 )
 import os, socket, re, tempfile, time, traceback
 
-from hgext.remotefilelog import (
+from .remotefilelog import (
     constants,
     shallowutil
 )

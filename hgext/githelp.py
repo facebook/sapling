@@ -29,7 +29,7 @@ from mercurial import (
     registrar,
     util,
 )
-from hgext import pager
+from . import pager
 import re, getopt
 
 pager.attended.append('githelp')

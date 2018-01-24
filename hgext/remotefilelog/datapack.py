@@ -10,7 +10,7 @@ from mercurial.i18n import _
 from . import basepack, constants, shallowutil
 from .lz4wrapper import lz4compress, lz4decompress
 try:
-    from hgext.extlib import cstore
+    from ..extlib import cstore
     cstore.datapack
 except ImportError:
     cstore = None

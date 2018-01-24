@@ -96,8 +96,8 @@ from mercurial import (
     wireproto,
 )
 
-from hgext.extlib import cstore
-from hgext.remotefilelog import (
+from ..extlib import cstore
+from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     connectionpool,
     resolveprefetchopts,
@@ -105,24 +105,24 @@ from hgext.remotefilelog import (
     shallowutil,
     wirepack,
 )
-from hgext.remotefilelog.contentstore import (
+from ..remotefilelog.contentstore import (
     manifestrevlogstore,
     unioncontentstore,
 )
-from hgext.remotefilelog.metadatastore import (
+from ..remotefilelog.metadatastore import (
     unionmetadatastore,
 )
-from hgext.remotefilelog.datapack import (
+from ..remotefilelog.datapack import (
     datapack,
     datapackstore,
     mutabledatapack,
 )
-from hgext.remotefilelog.historypack import (
+from ..remotefilelog.historypack import (
     historypack,
     historypackstore,
     mutablehistorypack,
 )
-from hgext.remotefilelog.repack import (
+from ..remotefilelog.repack import (
     _computeincrementaldatapack,
     _computeincrementalhistorypack,
     _runrepack,

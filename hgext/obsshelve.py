@@ -53,7 +53,7 @@ from mercurial import (
     util,
     vfs as vfsmod,
 )
-from hgext import (
+from . import (
     rebase,
 )
 

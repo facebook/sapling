@@ -49,7 +49,7 @@ from mercurial.node import (
     nullid,
 )
 
-from hgext.extlib import indexes
+from .extlib import indexes
 
 configtable = {}
 configitem = registrar.configitem(configtable)

@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import os
-from hgext.extutil import runshellcommand, flock
+from ..extutil import runshellcommand, flock
 from mercurial import (
     encoding,
     error,

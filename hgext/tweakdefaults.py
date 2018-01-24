@@ -84,7 +84,7 @@ from mercurial import (
     util,
 )
 
-from hgext import rebase
+from . import rebase
 import inspect
 import json
 import os

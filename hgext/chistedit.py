@@ -25,7 +25,7 @@ algorithm might still be able to merge these files without conflict.
 """
 
 from __future__ import print_function
-from hgext import histedit
+from . import histedit
 from mercurial import (
     cmdutil,
     destutil,

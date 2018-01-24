@@ -80,7 +80,7 @@ from .node import (
     hex,
     nullid,
 )
-from .import (
+from . import (
     tags as tagsmod,
     util,
 )

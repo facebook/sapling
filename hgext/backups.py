@@ -18,7 +18,7 @@ from mercurial import hg, exchange, obsolete, registrar
 from mercurial import bundle2, registrar
 from mercurial import lock as lockmod
 from mercurial import pycompat
-from hgext import pager
+from . import pager
 from mercurial.node import nullid, short
 from mercurial.i18n import _
 import os, glob, time

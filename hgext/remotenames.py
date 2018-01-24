@@ -44,8 +44,8 @@ from mercurial import util
 from mercurial import vfs as vfsmod
 from mercurial.i18n import _
 from mercurial.node import hex, short, bin, nullid
-from hgext import schemes
-from hgext.convert import hg as converthg
+from . import schemes
+from .convert import hg as converthg
 
 try:
     from mercurial import smartset

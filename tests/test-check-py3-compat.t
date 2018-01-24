@@ -25,7 +25,6 @@
   fb/packaging/build_deb.py not using absolute_import
   fb/packaging/build_nupkg.py not using absolute_import
   fb/packaging/build_nupkg.py requires print_function
-  fb/packaging/build_rpm.py not using absolute_import
   fb/packaging/nupkg_templates.py not using absolute_import
   fb/tests/sqldirstate_benchmark.py not using absolute_import
   fb/tests/sqldirstate_benchmark.py requires print_function

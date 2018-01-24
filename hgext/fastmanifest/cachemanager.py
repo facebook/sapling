@@ -18,7 +18,7 @@ from mercurial import (
     util,
 )
 
-from hgext.extlib import cfastmanifest
+from ..extlib import cfastmanifest
 from . import constants, concurrency
 from .metrics import metricscollector
 from .implementation import fastmanifestcache, CacheFullException

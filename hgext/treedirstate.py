@@ -54,7 +54,7 @@ import random
 import struct
 import string
 
-import hgext.extlib.treedirstate
+from .extlib import treedirstate
 
 dirstateheader = b'########################treedirstate####'
 treedirstateversion = 1

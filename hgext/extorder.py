@@ -33,7 +33,7 @@ from mercurial import (
 try:
     from mercurial import chgserver
 except ImportError:
-    from hgext import chgserver
+    from . import chgserver
 chgserver._configsections.append('extorder')
 
 testedwith = 'ships-with-fb-hgext'
