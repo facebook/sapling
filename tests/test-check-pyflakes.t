@@ -1,4 +1,4 @@
-#require test-repo pyflakes hg10
+#require test-repo pyflakes
 
   $ . "$TESTDIR/helpers-testrepo.sh"
 
@@ -13,7 +13,7 @@ run pyflakes on all tracked files ending in .py or without a file ending
   
   $ cd "`dirname "$TESTDIR"`"
 
-  $ testrepohg locate 'set:**.py or grep("^#!.*python")' \
+  $ testrepohg locate '**.py' -I '.' \
   > -X hgext/fsmonitor/pywatchman \
   > -X mercurial/pycompat.py -X contrib/python-zstandard \
   > -X hg-git \

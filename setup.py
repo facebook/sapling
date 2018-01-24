@@ -121,7 +121,7 @@ else:
 ispypy = "PyPy" in sys.version
 
 import ctypes
-import stat, subprocess, time
+import stat, subprocess
 import re
 import shutil
 import tempfile
