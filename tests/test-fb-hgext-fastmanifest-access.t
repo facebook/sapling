@@ -52,6 +52,9 @@ Check diagnosis, debugging information
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > fastmanifest=
+  > # Similar to test-fb-hgext-fastmanifest.t, turn off simplecache to ensure we
+  > # hit only fastmanifest in this test.
+  > simplecache=!
   > [fastmanifest]
   > cachecutoffdays=-1
   > logfile=$TESTTMP/logfile
