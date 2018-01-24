@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import os
+import unittest
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
@@ -112,4 +113,61 @@ class CommitTest(EdenHgTestCase):
 
         self.hg('commit', '-m', 'commit changes to hello.txt')
         self.assert_status_empty()
+        self.assert_dirstate_empty()
+
+    def test_commit_single_new_file(self) -> None:
+        self.assert_status_empty()
+        self.assert_dirstate_empty()
+
+        self.write_file('hello.txt', 'updated')
+        self.write_file('foo/new.txt', 'new and improved\n')
+        self.hg('add', 'foo/new.txt')
+        self.assert_status({
+            'foo/new.txt': 'A',
+            'hello.txt': 'M',
+        })
+
+        self.hg('commit', '-m', 'test', 'foo/new.txt', stdout=None, stderr=None)
+        self.assert_status({
+            'hello.txt': 'M',
+        })
+        self.assert_dirstate_empty()
+
+    def test_commit_single_modified_file(self) -> None:
+        self.assert_status_empty()
+        self.assert_dirstate_empty()
+
+        self.write_file('hello.txt', 'updated')
+        self.write_file('foo/bar.txt', 'bar updated\n')
+        self.assert_status({
+            'foo/bar.txt': 'M',
+            'hello.txt': 'M',
+        })
+        self.assert_dirstate_empty()
+
+        self.hg('commit', '-m', 'test', 'foo/bar.txt', stdout=None, stderr=None)
+        self.assert_status({
+            'hello.txt': 'M',
+        })
+        self.assert_dirstate_empty()
+
+    @unittest.skip('TODO: this behavior is currently broken')
+    def test_commit_subdirectory(self) -> None:
+        self.assert_status_empty()
+        self.assert_dirstate_empty()
+
+        self.write_file('hello.txt', 'updated')
+        self.write_file('foo/new.txt', 'new and improved\n')
+        self.write_file('foo/bar.txt', 'bar updated\n')
+        self.hg('add', 'foo/new.txt')
+        self.assert_status({
+            'foo/new.txt': 'A',
+            'foo/bar.txt': 'M',
+            'hello.txt': 'M',
+        })
+
+        self.hg('commit', '-m', 'test', 'foo', stdout=None, stderr=None)
+        self.assert_status({
+            'hello.txt': 'M',
+        })
         self.assert_dirstate_empty()
