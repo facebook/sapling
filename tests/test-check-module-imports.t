@@ -14,8 +14,8 @@ these may expose other cycles.
 Known-bad files are excluded by -X as some of them would produce unstable
 outputs, which should be fixed later.
 
-  $ testrepohg locate 'set:**.py or grep(r"^#!.*?python")' \
-  > 'tests/**.t' \
+  $ testrepohg locate '**.py' 'tests/**.t' \
+  > -I . \
   > -X hgweb.cgi \
   > -X setup.py \
   > -X contrib/debugshell.py \
