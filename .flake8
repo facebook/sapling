@@ -1,0 +1,4 @@
+[flake8]
+ignore = B301,F821,E302,E731
+exclude=build/
+max-line-length = 80
