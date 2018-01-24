@@ -1,4 +1,4 @@
-#require test-repo jshint hg10
+#require test-repo jshint
 
   $ . "$TESTDIR/helpers-testrepo.sh"
 

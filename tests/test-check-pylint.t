@@ -1,4 +1,4 @@
-#require test-repo pylint hg10
+#require test-repo pylint
 
 Run pylint for known rules we care about.
 -----------------------------------------
