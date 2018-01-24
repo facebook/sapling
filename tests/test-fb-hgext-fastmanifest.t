@@ -21,6 +21,9 @@ Check diagnosis, debugging information
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > fastmanifest=
+  > # Turn off simplecache to ensure we exercise
+  > # fastmanifest in this test.
+  > simplecache=!
   > [fastmanifest]
   > cachecutoffdays=-1
   > randomorder=False
