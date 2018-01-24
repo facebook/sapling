@@ -558,6 +558,8 @@ class fullmatchctx(matchctx):
         super(fullmatchctx, self).__init__(ctx, subset, status)
     def switch(self, ctx, status=None):
         return fullmatchctx(ctx, status)
+    def narrow(self, files):
+        return matchctx(self.ctx, files, self._status)
 
 # filesets using matchctx.switch()
 _switchcallers = [

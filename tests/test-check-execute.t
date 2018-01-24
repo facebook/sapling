@@ -1,4 +1,4 @@
-#require test-repo execbit
+#require test-repo execbit hg10
 
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
@@ -21,5 +21,5 @@ look for shell scripts with execute bit but not shebang
 
 look for non scripts with no shebang
 
-  $ testrepohg files 'set:exec() and not **.sh and not **.py and not grep(r"^#!")'
+  $ testrepohg files 'set:** and exec() and not **.sh and not **.py and not grep(r"^#!")'
   [1]
