@@ -355,6 +355,7 @@ Testing -h/--help:
    mergedriver   custom merge drivers for autoresolved files
    progressfile  allows users to have JSON progress bar information written to a
                  path
+   simplecache
   
   additional help topics:
   
@@ -451,6 +452,7 @@ Testing -h/--help:
    mergedriver   custom merge drivers for autoresolved files
    progressfile  allows users to have JSON progress bar information written to a
                  path
+   simplecache
   
   additional help topics:
   

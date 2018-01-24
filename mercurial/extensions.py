@@ -59,6 +59,7 @@ DEFAULT_EXTENSIONS = [
     'githelp',
     'mergedriver',
     'progressfile',
+    'simplecache',
 ]
 
 def extensions(ui=None):

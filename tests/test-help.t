@@ -112,6 +112,7 @@ Short help:
    mergedriver   custom merge drivers for autoresolved files
    progressfile  allows users to have JSON progress bar information written to a
                  path
+   simplecache
   
   additional help topics:
   
@@ -202,6 +203,7 @@ Short help:
    mergedriver   custom merge drivers for autoresolved files
    progressfile  allows users to have JSON progress bar information written to a
                  path
+   simplecache
   
   additional help topics:
   
@@ -279,6 +281,7 @@ Test extension help:
        progressfile  allows users to have JSON progress bar information written
                      to a path
        rebase        command to move sets of revisions to a different ancestor
+       simplecache
   
       disabled extensions:
   
@@ -392,7 +395,6 @@ Test extension help:
        shareutil     (no help text available)
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack traces on signal
-       simplecache
        smartlog      command to display a relevant subgraph
        sparse        allow sparse checkouts of the working directory
        sshaskpass    ssh-askpass implementation that works with chg
@@ -995,6 +997,7 @@ Test that default list of commands omits extension commands
    mergedriver   custom merge drivers for autoresolved files
    progressfile  allows users to have JSON progress bar information written to a
                  path
+   simplecache
   
   additional help topics:
   
