@@ -49,8 +49,7 @@ class FileInode : public InodeBase {
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
-      timespec ctime,
-      dev_t rdev = 0);
+      timespec ctime);
 
   /**
    * If hash is none, this opens the file in the overlay and leaves the inode
@@ -75,8 +74,7 @@ class FileInode : public InodeBase {
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
-      timespec ctime,
-      dev_t rdev = 0);
+      timespec ctime);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
 
@@ -214,11 +212,7 @@ class FileInode : public InodeBase {
         mode_t mode,
         const folly::Optional<Hash>& hash,
         const timespec& lastCheckoutTime);
-    State(
-        FileInode* inode,
-        mode_t mode,
-        const timespec& creationTime,
-        dev_t rdev = 0);
+    State(FileInode* inode, mode_t mode, const timespec& creationTime);
     ~State();
 
     /**
@@ -249,9 +243,6 @@ class FileInode : public InodeBase {
     Tag tag;
 
     mode_t mode;
-
-    // TODO: Since rdev is immutable, move it out of the locked state.
-    const dev_t rdev{0};
 
     /**
      * Set only in 'not loaded', 'loading', and 'loaded' states, none otherwise.

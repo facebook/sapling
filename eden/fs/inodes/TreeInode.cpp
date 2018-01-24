@@ -900,8 +900,7 @@ FileInodePtr TreeInode::symlink(
   return inode;
 }
 
-FileInodePtr
-TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
+FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
   std::shared_ptr<FileHandle> handle;
@@ -914,6 +913,12 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
         name,
         "only unix domain sockets are supported by mknod");
   }
+
+  // The dev parameter to mknod only applies to block and character devices,
+  // which edenfs does not support today.  Therefore, we do not need to store
+  // it.  If we add block device support in the future, makes sure dev makes it
+  // into the FileInode and directory entry.
+  (void)dev;
 
   materialize();
 
@@ -945,7 +950,7 @@ TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t rdev) {
     auto currentTime = getNow();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
-    auto entry = std::make_unique<Entry>(mode, childNumber, rdev);
+    auto entry = std::make_unique<Entry>(mode, childNumber);
 
     // build a corresponding FileInode
     inode = FileInodePtr::makeNew(

@@ -81,8 +81,8 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a materialized entry.
      */
-    Entry(mode_t m, fusell::InodeNumber number, dev_t rdev = 0)
-        : mode_(m), inodeNumber_{number}, rdev_(rdev) {}
+    Entry(mode_t m, fusell::InodeNumber number)
+        : mode_(m), inodeNumber_{number} {}
 
     Entry(Entry&& e) = default;
     Entry& operator=(Entry&& e) = default;
@@ -164,14 +164,6 @@ class TreeInode : public InodeBase {
       return getDtype() == dtype_t::Dir;
     }
 
-    dev_t getRdev() const {
-      // Callers should not check getRdev() if an inode is loaded.
-      // If the child inode is loaded it is the authoritative source for
-      // the mode bits.
-      DCHECK(!inode_);
-      return rdev_;
-    }
-
     InodeBase* getInode() const {
       return inode_;
     }
@@ -211,12 +203,6 @@ class TreeInode : public InodeBase {
      * is set.)
      */
     fusell::InodeNumber inodeNumber_{0};
-
-    /**
-     * The value of the rdev field that we report in stat.
-     * This is used for mknod and thus for unix domain sockets.
-     **/
-    dev_t rdev_{0};
 
     /**
      * A pointer to the child inode, if it is loaded, or null if it is not

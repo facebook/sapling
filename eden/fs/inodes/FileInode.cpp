@@ -66,9 +66,8 @@ FileInode::State::State(
 FileInode::State::State(
     FileInode* inode,
     mode_t m,
-    const timespec& creationTime,
-    dev_t rdev)
-    : tag(MATERIALIZED_IN_OVERLAY), mode(m), rdev(rdev) {
+    const timespec& creationTime)
+    : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
   timeStamps.setTimestampValues(creationTime);
   checkInvariants();
 }
@@ -153,11 +152,10 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
     PathComponentPiece name,
     mode_t mode,
     folly::File&& file,
-    timespec ctime,
-    dev_t rdev) {
+    timespec ctime) {
   // The FileInode is in MATERIALIZED_IN_OVERLAY state.
   auto inode = FileInodePtr::makeNew(
-      ino, parentInode, name, mode, std::move(file), ctime, rdev);
+      ino, parentInode, name, mode, std::move(file), ctime);
 
   return inode->state_.withWLock([&](auto& state) {
     auto fileHandle = std::make_shared<FileHandle>(
@@ -191,10 +189,9 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t mode,
     folly::File&& file,
-    timespec ctime,
-    dev_t rdev)
+    timespec ctime)
     : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
-      state_(folly::in_place, this, mode, ctime, rdev) {}
+      state_(folly::in_place, this, mode, ctime) {}
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
@@ -486,7 +483,7 @@ folly::Future<struct stat> FileInode::stat() {
                    << " is too short for header: size=" << st.st_size;
       }
       st.st_size -= Overlay::kHeaderLength;
-      st.st_rdev = state->rdev;
+      st.st_rdev = 0; // Eden does not support device files.
     } else {
       // blob is guaranteed set because ensureDataLoaded() returns a FileHandle
       // so openCount > 0.
