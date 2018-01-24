@@ -11,17 +11,18 @@ import os
 import unittest
 
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
+from eden.integration.lib import hgrepo
 
 
 @hg_test
 class CommitTest(EdenHgTestCase):
-    def populate_backing_repo(self, repo):
+    def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         repo.write_file('hello.txt', 'hola')
         repo.write_file('foo/bar.txt', 'test\n')
         repo.write_file('foo/subdir/test.txt', 'test\n')
         self.commit1 = repo.commit('Initial commit.\n')
 
-    def test_commit_modification(self):
+    def test_commit_modification(self) -> None:
         '''Test committing a modification to an existing file'''
         self.assert_status_empty()
 
@@ -34,7 +35,7 @@ class CommitTest(EdenHgTestCase):
         self.assertEqual('test version 2\n', self.read_file('foo/bar.txt'))
         self.assertEqual([self.commit1, commit2], self.repo.log())
 
-    def test_commit_new_file(self):
+    def test_commit_new_file(self) -> None:
         '''Test committing a new file'''
         self.assert_status_empty()
 
@@ -48,7 +49,7 @@ class CommitTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assertEqual('new and improved\n', self.read_file('foo/new.txt'))
 
-    def test_commit_remove_file(self):
+    def test_commit_remove_file(self) -> None:
         '''Test a commit that removes a file'''
         self.assert_status_empty()
 
@@ -61,7 +62,7 @@ class CommitTest(EdenHgTestCase):
         self.assert_status_empty()
         self.assertFalse(os.path.exists(self.get_path('foo/subdir/test.txt')))
 
-    def test_amend(self):
+    def test_amend(self) -> None:
         '''Test amending a commit'''
         self.assert_status_empty()
 
@@ -80,7 +81,7 @@ class CommitTest(EdenHgTestCase):
         self.assertEqual('new and improved\n', self.read_file('foo/new.txt'))
         self.assertEqual([commit2], self.repo.log())
 
-    def test_commit_interactive_with_new_file(self):
+    def test_commit_interactive_with_new_file(self) -> None:
         self.assert_status_empty()
         self.assert_dirstate_empty()
 
