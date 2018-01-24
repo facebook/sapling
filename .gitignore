@@ -21,6 +21,7 @@ syntax: glob
 *.zip
 \#*\#
 .\#*
+.shim/
 tests/.coverage*
 tests/.testtimes*
 tests/.hypothesis
@@ -55,7 +56,7 @@ cscope.*
 .idea/*
 .asv/*
 i18n/hg.pot
-locale/*/LC_MESSAGES/hg.mo
+mercurial/locale/*/LC_MESSAGES/hg.mo
 hgext/__index__.py
 hgext/clindex.c
 hgext/extlib/linelog.c
