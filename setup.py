@@ -362,43 +362,16 @@ def localhgenv():
         env['SystemRoot'] = os.environ['SystemRoot']
     return env
 
-version = ''
-
-if os.path.isdir('.hg'):
+def pickversion():
     hg = findhg()
-    cmd = ['log', '-r', '.', '--template', '{tags}\n']
-    numerictags = [t for t in sysstr(hg.run(cmd)).split() if t[0:1].isdigit()]
-    hgid = sysstr(hg.run(['id', '-i'])).strip()
-    if not hgid:
-        # Bail out if hg is having problems interacting with this repository,
-        # rather than falling through and producing a bogus version number.
-        # Continuing with an invalid version number will break extensions
-        # that define minimumhgversion.
-        raise SystemExit('Unable to determine hg version from local repository')
-    if numerictags: # tag(s) found
-        version = numerictags[-1]
-        if hgid.endswith('+'): # propagate the dirty status to the tag
-            version += '+'
-    else: # no tag found
-        ltagcmd = ['parents', '--template', '{latesttag}']
-        ltag = sysstr(hg.run(ltagcmd))
-        changessincecmd = ['log', '-T', 'x\n', '-r', "only(.,'%s')" % ltag]
-        changessince = len(hg.run(changessincecmd).splitlines())
-        version = '%s+%s-%s' % (ltag, changessince, hgid)
-    if version.endswith('+'):
-        version += time.strftime('%Y%m%d')
-elif os.path.exists('.hg_archival.txt'):
-    kw = dict([[t.strip() for t in l.split(':', 1)]
-               for l in open('.hg_archival.txt')])
-    if 'tag' in kw:
-        version = kw['tag']
-    elif 'latesttag' in kw:
-        if 'changessincelatesttag' in kw:
-            version = '%(latesttag)s+%(changessincelatesttag)s-%(node).12s' % kw
-        else:
-            version = '%(latesttag)s+%(latesttagdistance)s-%(node).12s' % kw
-    else:
-        version = kw.get('node', '')[:12]
+    # New version system: YYMMDD_HHmmSS_hash
+    # This is duplicated a bit from build_rpm.py:auto_release_str()
+    template = '{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
+    out = sysstr(hg.run(['log', '-r.', '-T', template]))
+    # ex. 20180105_214829_58fda95a0202
+    return '_'.join(out.split())
+
+version = pickversion()
 
 if version:
     versionb = version
