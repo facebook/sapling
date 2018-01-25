@@ -62,10 +62,30 @@ to prevent accesses of flat manifests.
   [treemanifest]
   treeonly = True
 
+`treemanifest.cacheserverstore` causes the treemanifest server to store a cache
+of treemanifest revisions in individual files. These improve lookup speed since
+we don't have to open a revlog.
+
+  [treemanifest]
+  cacheserverstore = True
+
+`treemanifest.servermaxcachesize` the maximum number of entries in the server
+cache.
+
+  [treemanifest]
+  servermaxcachesize = 1000000
+
+`treemanifest.servercacheevictionpercent` the percent of the cache to evict
+when the maximum size is hit.
+
+  [treemanifest]
+  servercacheevictionpercent = 50
 """
 from __future__ import absolute_import
 
+import hashlib
 import os
+import random
 import shutil
 import struct
 import time
@@ -140,6 +160,9 @@ configitem = registrar.configitem(configtable)
 
 configitem('treemanifest', 'sendtrees', default=False)
 configitem('treemanifest', 'server', default=False)
+configitem('treemanifest', 'cacheserverstore', default=True)
+configitem('treemanifest', 'servermaxcachesize', default=1000000)
+configitem('treemanifest', 'servercacheevictionpercent', default=50)
 
 PACK_CATEGORY='manifests'
 
@@ -282,6 +305,14 @@ def setuptreestores(repo, mfl):
         # Data store
         datastore = cstore.datapackstore(packpath)
         revlogstore = manifestrevlogstore(repo)
+        if repo.ui.configbool("treemanifest", "cacheserverstore"):
+            maxcachesize = repo.ui.configint('treemanifest',
+                                             'servermaxcachesize')
+            evictionrate = repo.ui.configint('treemanifest',
+                                             'servercacheevictionpercent')
+            revlogstore = cachestore(revlogstore, repo.cachevfs, maxcachesize,
+                                     evictionrate)
+
         mfl.datastore = unioncontentstore(datastore, revlogstore)
 
         # History store
@@ -1708,6 +1739,7 @@ def _handlebundle2part(orig, self, bundle, part):
 
 class MissingNodesError(error.Abort):
     def __init__(self, nodes, message=None, hint=None):
+        nodes = list(nodes)
         nodestr = '\n'.join(hex(mfnode) for mfnode in nodes[:10])
         if len(nodes) > 10:
             nodestr += '\n...'
@@ -1717,3 +1749,132 @@ class MissingNodesError(error.Abort):
             fullmessage += ' ' + message
         fullmessage += '\n' + nodestr
         super(MissingNodesError, self).__init__(fullmessage, hint=hint)
+
+NODEINFOFORMAT = '!20s20s20sI'
+NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
+class cachestore(object):
+    def __init__(self, store, vfs, maxcachesize, evictionrate, version=1):
+        self.store = store
+        self.vfs = vfs
+        self.version = version
+        self.maxcachesize = maxcachesize
+        self.evictionrate = evictionrate
+
+    def _key(self, name, node, category):
+        shakey = hex(hashlib.sha1(name + node).digest())
+        return os.path.join('trees', 'v' + str(self.version), category,
+                            shakey[:2], shakey[2:])
+
+    def _cachedirectory(self, key):
+        # The given key is of the format:
+        #   trees/v1/category/XX/XXXX...{38 character hash}
+        # So the directory is key[:-39] which is equivalent to
+        #   trees/v1/category/XX
+        return key[:-39]
+
+    def get(self, name, node):
+        if node == nullid:
+            return ''
+
+        try:
+            key = self._key(name, node, 'get')
+            return self._read(key)
+        except (IOError, OSError):
+            data = self.store.get(name, node)
+            self._write(key, data)
+            return data
+
+    def getdelta(self, name, node):
+        revision = self.get(name, node)
+        return (revision, name, nullid,
+                self.getmeta(name, node))
+
+    def getdeltachain(self, name, node):
+        revision = self.get(name, node)
+        return [(name, node, None, nullid, revision)]
+
+    def getmeta(self, name, node):
+        # TODO: We should probably cache getmeta as well
+        return self.store.getmeta(name, node)
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            if not self.vfs.exists(self._key(name, node, 'get')):
+                missing.append((name, node))
+
+        return self.store.getmissing(missing)
+
+    def getancestors(self, name, node, known=None):
+        return self.store.getancestors(name, node, known=known)
+
+    def _serializenodeinfo(self, nodeinfo):
+        p1, p2, linknode, copyfrom = nodeinfo
+        if copyfrom is None:
+            copyfrom = ''
+        raw = struct.pack(NODEINFOFORMAT, p1, p2, linknode, len(copyfrom))
+        return raw + copyfrom
+
+    def _deserializenodeinfo(self, raw):
+        p1, p2, linknode, copyfromlen = struct.unpack_from(NODEINFOFORMAT, raw,
+                                                           0)
+        if len(raw) != NODEINFOLEN + copyfromlen:
+            raise IOError("invalid nodeinfo serialization: %s %s %s %s %s" %
+                          (hex(p1), hex(p2), hex(linknode), str(copyfromlen),
+                           raw[NODEINFOLEN:]))
+        return p1, p2, linknode, raw[NODEINFOLEN:NODEINFOLEN + copyfromlen]
+
+    def _verifyvalue(self, value):
+        sha, value = value[:20], value[20:]
+        realsha = hashlib.sha1(value).digest()
+        if sha != realsha:
+            raise IOError()
+        return value
+
+    def _read(self, key):
+        with self.vfs(key) as f:
+            raw = f.read()
+            if raw == '':
+                raise IOError("missing file contents: %s" % self.vfs.join(key))
+
+            sha, value = raw[:20], raw[20:]
+            realsha = hashlib.sha1(value).digest()
+            if sha != realsha:
+                raise IOError("invalid file contents: %s" % self.vfs.join(key))
+            return value
+
+    def _write(self, key, value):
+        # Prevent the cache from getting 10% bigger than the max, by checking at
+        # least once every 10% of the max size.
+        checkfreq = int(self.maxcachesize * 0.1)
+        checkcache = random.randint(0, checkfreq)
+        if checkcache == 0:
+            # Expire cache if it's too large
+            try:
+                cachedir = self._cachedirectory(key)
+                if self.vfs.exists(cachedir):
+                    entries = os.listdir(self.vfs.join(cachedir))
+                    maxdirsize = self.maxcachesize / 256
+                    if len(entries) > maxdirsize:
+                        random.shuffle(entries)
+                        evictionpercent = self.evictionrate / 100.0
+                        unlink = self.vfs.tryunlink
+                        for i in xrange(0, int(len(entries) * evictionpercent)):
+                            unlink(os.path.join(cachedir, entries[i]))
+            except Exception:
+                pass
+
+        with self.vfs(key, 'w+') as f:
+            sha = hashlib.sha1(value).digest()
+            f.write(sha)
+            f.write(value)
+
+    def getnodeinfo(self, name, node):
+        key = self._key(name, node, 'nodeinfo')
+        try:
+            raw = self._read(key)
+            return self._deserializenodeinfo(raw)
+        except (IOError, OSError):
+            nodeinfo = self.store.getnodeinfo(name, node)
+            self._write(key, self._serializenodeinfo(nodeinfo))
+            return nodeinfo

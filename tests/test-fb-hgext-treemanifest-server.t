@@ -193,3 +193,55 @@ Test stripping trees
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
+
+Test fetching from the server populates the cache
+  $ cd ../
+  $ hgcloneshallow ssh://user@dummy/master client2 -q -U
+  $ cd client2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > fastmanifest=
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > [treemanifest]
+  > demanddownload=True
+  > sendtrees=True
+  > treeonly=True
+  > EOF
+  $ clearcache
+  $ hg status --change tip > /dev/null
+  2 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  $ find ../master/.hg/cache/trees/v1/get -type f | wc -l
+  \s*4 (re)
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  \s*5 (re)
+
+- Move the revlogs away to show that the cache is answering prefetches
+  $ mv ../master/.hg/store/meta ../master/.hg/store/meta.bak
+  $ clearcache
+  $ hg status --change tip > /dev/null
+  2 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  $ mv ../master/.hg/store/meta.bak ../master/.hg/store/meta
+
+- Ensure the server evicts the cache
+  $ cat >> ../master/.hg/hgrc <<EOF
+  > [treemanifest]
+  > servermaxcachesize=0
+  > servercacheevictionpercent=90
+  > EOF
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} cp {} {}2
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  \s*20 (re)
+  $ clearcache
+  $ hg status --change tip
+  2 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  A subdir2/z
+  $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
+  \s*12 (re)
