@@ -30,8 +30,7 @@ public:
 
   int64_t aliveSince() override {
     // crude implementation because QsfpCache depends on it
-    time_t now = time(NULL);
-    return (uint64_t) (now - startTime);
+    return (uint64_t) startTime;
   }
 };
 
