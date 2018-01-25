@@ -399,11 +399,11 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
             continue
 
         base = fl.revision(deltabase, raw=True)
-        text = mdiff.patch(base, delta)
-        if isinstance(text, buffer):
-            text = str(text)
+        rawtext = mdiff.patch(base, delta)
+        if isinstance(rawtext, buffer):
+            rawtext = bytes(rawtext)
 
-        meta, text = shallowutil.parsemeta(text)
+        meta, text = shallowutil.parsemeta(rawtext)
         if 'copy' in meta:
             copyfrom = meta['copy']
             copynode = bin(meta['copyrev'])
@@ -415,7 +415,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
                 if not available(f, node, f, p):
                     continue
 
-        fl.add(text, meta, trp, linknode, p1, p2)
+        fl.addrevision(rawtext, trp, linknode, p1, p2, node=node, flags=flags)
         processed.add((f, node))
         skipcount = 0
 

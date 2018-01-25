@@ -322,16 +322,12 @@
   adding changesets
   adding manifests
   adding file changes
-  remote: abort: data/y.i@*: no match found! (glob)
-  transaction abort!
-  rollback completed
-  * files fetched over * fetches - * (glob)
-  abort: error downloading file contents:
-  'connection closed early'
-  [255]
+  added 2 changesets with 2 changes to 1 files
+  new changesets * (glob)
+  (run 'hg update' to get a working copy)
 
   $ hg update tip
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # LFS fast path about binary diff works
 
