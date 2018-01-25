@@ -34,7 +34,7 @@ cpp_library(
         "//folly/futures:core",
         "//folly/io:iobuf",
         "//folly/lang:bits",
-        "//scm/hgext:datapack",
+        "//scm/hg:datapack",
     ],
     external_deps = [
         ("boost", None, "boost_filesystem"),

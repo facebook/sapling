@@ -33,8 +33,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/TimeUtil.h"
 
-#include "scm/hgext/cstore/uniondatapackstore.h"
-#include "scm/hgext/ctreemanifest/treemanifest.h"
+#include "hgext/extlib/cstore/uniondatapackstore.h"
+#include "hgext/extlib/ctreemanifest/treemanifest.h"
 
 using folly::ByteRange;
 using folly::Endian;
