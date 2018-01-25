@@ -11,9 +11,7 @@ Inital setup
   > [extensions]
   > lfs=
   > [lfs]
-  > blobstore=cache/lfs-local
-  > remotestore=dummy
-  > remotepath=$TESTTMP/lfs-remote
+  > url=file://$TESTTMP/lfs-remote
   > EOF
 
   $ cd client
