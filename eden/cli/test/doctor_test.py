@@ -475,6 +475,63 @@ All is well.
 
         mock_rpm_q.assert_has_calls(calls)
 
+    def test_unconfigured_mounts_dont_crash(self):
+        # If Eden advertises that a mount is active, but it is not in the
+        # configuration, then at least don't throw an exception.
+        tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
+        try:
+            edenfs_path1 = os.path.join(tmp_dir, 'path1')
+            edenfs_path2 = os.path.join(tmp_dir, 'path2')
+
+            mount_paths = OrderedDict()
+            mount_paths[edenfs_path1] = {
+                'bind-mounts': {},
+                'mount': edenfs_path1,
+                'scm_type': 'hg',
+                'snapshot': 'abcd' * 10,
+                'client-dir': '/I_DO_NOT_EXIST1'
+            }
+            # path2 is not configured in the config...
+            config = FakeConfig(mount_paths, is_healthy=True)
+            # ... but is advertised by the daemon...
+            config.get_thrift_client()._mounts = [
+                eden_ttypes.MountInfo(mountPoint=edenfs_path1),
+                eden_ttypes.MountInfo(mountPoint=edenfs_path2),
+            ]
+
+            # ... and is in the system mount table.
+            mount_table = FakeMountTable()
+            mount_table.stats[edenfs_path1] = mtab.MTStat(
+                st_uid=os.getuid(),
+                st_dev=11)
+            mount_table.stats[edenfs_path2] = mtab.MTStat(
+                st_uid=os.getuid(),
+                st_dev=12)
+
+            os.mkdir(edenfs_path1)
+            hg_dir = os.path.join(edenfs_path1, '.hg')
+            os.mkdir(hg_dir)
+            dirstate = os.path.join(hg_dir, 'dirstate')
+            dirstate_hash = b'\xab\xcd' * 10
+            parents = (dirstate_hash, b'\x00' * 20)
+            with open(dirstate, 'wb') as f:
+                eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
+
+            dry_run = False
+            out = io.StringIO()
+            exit_code = doctor.cure_what_ails_you(
+                config, dry_run, out, mount_table)
+        finally:
+            shutil.rmtree(tmp_dir)
+
+        self.assertEqual(
+            f'''\
+Performing 3 checks for {edenfs_path1}.
+All is well.
+''', out.getvalue()
+        )
+        self.assertEqual(0, exit_code)
+
 
 class StaleMountsCheckTest(unittest.TestCase):
     maxDiff = None

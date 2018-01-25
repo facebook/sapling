@@ -89,6 +89,13 @@ def cure_what_ails_you(
 
     watchman_roots = _get_watch_roots_for_watchman()
     for mount_path in active_mount_points:
+        if mount_path not in config.get_mount_paths():
+            # TODO: if there are mounts in active_mount_points that aren't in
+            # config.get_mount_paths(), should we try to add them to the config?
+            # I've only seen this happen in the wild if a clone fails partway, for
+            # example, if a post-clone hook fails.
+            continue
+
         # For now, we assume that each mount_path is actively mounted. We should
         # update the listMounts() Thrift API to return information that notes
         # whether a mount point is active and use it here.
