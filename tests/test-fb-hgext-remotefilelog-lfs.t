@@ -298,6 +298,7 @@
   > sys.stdout.flush()
   > EOF
   $ hg bookmark -i base
+  $ cp -R . ../shallow3
   $ $PYTHON noise.py 20000000 >> y
   $ hg commit -m 'make y 20MB' y
   $ $PYTHON noise.py  1000000 >> y
@@ -313,6 +314,24 @@
   >     print('unexpected size: %s' % size)
   > EOF
   size is less than 10 KB - expected
+
+# Applying the bundle should work
+
+  $ cd ../shallow3
+  $ hg unbundle ../shallow/test-bundle
+  adding changesets
+  adding manifests
+  adding file changes
+  remote: abort: data/y.i@*: no match found! (glob)
+  transaction abort!
+  rollback completed
+  * files fetched over * fetches - * (glob)
+  abort: error downloading file contents:
+  'connection closed early'
+  [255]
+
+  $ hg update tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 # LFS fast path about binary diff works
 
