@@ -1864,7 +1864,7 @@ class cachestore(object):
             except Exception:
                 pass
 
-        with self.vfs(key, 'w+') as f:
+        with self.vfs(key, 'w+', atomictemp=True) as f:
             sha = hashlib.sha1(value).digest()
             f.write(sha)
             f.write(value)
