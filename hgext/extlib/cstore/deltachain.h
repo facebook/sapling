@@ -175,6 +175,7 @@ class DeltaChainIterator {
       _index(0) {
       _chains.push_back(chain);
     }
+    virtual ~DeltaChainIterator();
 
     DeltaChainLink next();
 };

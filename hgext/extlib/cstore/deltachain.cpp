@@ -9,6 +9,10 @@
 
 #include "hgext/extlib/cstore/deltachain.h"
 
+DeltaChainIterator::~DeltaChainIterator()
+{
+}
+
 DeltaChainLink DeltaChainIterator::next() {
   std::shared_ptr<DeltaChain> chain = _chains.back();
 

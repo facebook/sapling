@@ -17,6 +17,7 @@ extern "C" {
 #include <ctime>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -43,20 +44,29 @@ class DatapackStoreKeyIterator : public KeyIterator {
 /* Manages access to a directory of datapack files. */
 class DatapackStore : public DataStore {
   private:
-    std::string _path;
-    clock_t _lastRefresh;
+    std::string path_;
+    clock_t lastRefresh_;
+    bool removeOnRefresh_;
+    std::unordered_map<std::string, std::shared_ptr<datapack_handle_t>> packs_;
 
-    std::unordered_set<std::string> _packPaths;
+    std::shared_ptr<datapack_handle_t> addPack(const std::string &path);
+    std::vector<std::shared_ptr<datapack_handle_t>> refresh();
 
-    datapack_handle_t *addPack(const std::string &path);
-
-    std::vector<datapack_handle_t*> refresh();
   public:
-    std::vector<datapack_handle_t*> _packs;
-
-    DatapackStore(const std::string &path);
-
     ~DatapackStore();
+    /** Initialize the store for the specified path.
+     * If removeDeadPackFilesOnRefresh is set to true (NOT the default),
+     * then the refresh() method can choose to unmap pack files that
+     * have been deleted.  Since the DataStore API doesn't provide
+     * for propagating ownership out through the DeltaChain and DeltaChain
+     * iterator, it is not safe to removeDeadPackFilesOnRefresh if the calling
+     * code is keeping longlived references to those values; it is the
+     * responsibility of the calling code to ensure that the lifetime is
+     * managed correctly as it cannot be enforced automatically without
+     * restructing this API.
+     */
+    explicit DatapackStore(const std::string &path,
+	                   bool removeDeadPackFilesOnRefresh = false);
 
     DeltaChainIterator getDeltaChain(const Key &key);
 
