@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import errno
 import io
 import os
 import shutil
@@ -14,7 +15,7 @@ import tempfile
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set, Union
 from unittest.mock import call, patch
 import eden.cli.doctor as doctor
 import eden.cli.config as config_mod
@@ -101,8 +102,15 @@ class DoctorTest(unittest.TestCase):
             with open(dirstate, 'wb') as f:
                 eden.dirstate.write(f, parents, tuples_dict={}, copymap={})
 
+            mount_table = FakeMountTable()
+            mount_table.stats[edenfs_path1] = mtab.MTStat(
+                st_uid=os.getuid(),
+                st_dev=11)
+            mount_table.stats[edenfs_path2] = mtab.MTStat(
+                st_uid=os.getuid(),
+                st_dev=12)
             exit_code = doctor.cure_what_ails_you(
-                config, dry_run, out, FakeMountTable())
+                config, dry_run, out, mount_table)
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -163,8 +171,15 @@ Number of issues that could not be fixed: 2.
             eden_ttypes.MountInfo(mountPoint=edenfs_path),
             eden_ttypes.MountInfo(mountPoint=edenfs_path_not_watched),
         ]
+        mount_table = FakeMountTable()
+        mount_table.stats['/path/to/eden-mount'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=10)
+        mount_table.stats['/path/to/eden-mount-not-watched'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=11)
         exit_code = doctor.cure_what_ails_you(
-            config, dry_run, out, FakeMountTable())
+            config, dry_run, out, mount_table=mount_table)
 
         self.assertEqual(
             'Performing 2 checks for /path/to/eden-mount.\n'
@@ -467,6 +482,12 @@ class StaleMountsCheckTest(unittest.TestCase):
     def setUp(self):
         self.active_mounts: List[bytes] = [b'/mnt/active1', b'/mnt/active2']
         self.mount_table = FakeMountTable()
+        self.mount_table.stats['/mnt/active1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=10)
+        self.mount_table.stats['/mnt/active2'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=11)
         self.check = doctor.StaleMountsCheck(
             active_mount_points=self.active_mounts,
             mount_table=self.mount_table)
@@ -474,12 +495,17 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_does_not_unmount_active_mounts(self):
         self.mount_table.set_eden_mounts(self.active_mounts)
         result = self.check.do_check(dry_run=False)
+        self.assertEqual('', result.message)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
     def test_stale_nonactive_mount_is_unmounted(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=12)
+
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(dedent('''\
@@ -493,14 +519,20 @@ class StaleMountsCheckTest(unittest.TestCase):
         self.mount_table.set_eden_mounts(
             self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1')
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=12)
+        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=13)
 
         result = self.check.do_check(dry_run=False)
-        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(dedent('''\
             Unmounted 2 stale edenfs mount points:
               /mnt/stale1
               /mnt/stale2
         '''), result.message)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
         self.assertEqual(
             [b'/mnt/stale1', b'/mnt/stale2'],
             self.mount_table.unmount_lazy_calls)
@@ -509,6 +541,13 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
         self.mount_table.set_eden_mounts(
             self.active_mounts + [b'/mnt/stale2', b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=12)
+        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=13)
+
         result = self.check.do_check(dry_run=True)
         self.assertEqual(
             doctor.CheckResultType.NOT_FIXED_BECAUSE_DRY_RUN,
@@ -525,6 +564,12 @@ class StaleMountsCheckTest(unittest.TestCase):
     def test_fails_if_unmount_fails(self):
         self.mount_table.set_eden_mounts(
             self.active_mounts + [b'/mnt/stale1', b'/mnt/stale2'])
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=12)
+        self.mount_table.stats['/mnt/stale2'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=13)
         self.mount_table.fail_unmount_lazy(b'/mnt/stale1', b'/mnt/stale2')
         self.mount_table.fail_unmount_force(b'/mnt/stale1')
 
@@ -550,6 +595,38 @@ class StaleMountsCheckTest(unittest.TestCase):
         result = self.check.do_check(dry_run=False)
         self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
         self.assertEqual('', result.message)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    def test_gives_up_if_cannot_stat_active_mount(self):
+        del self.mount_table.stats['/mnt/active1']
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FAILED_TO_FIX, result.result_type)
+        self.assertEqual(
+            'Failed to lstat active eden mount b\'/mnt/active1\'\n',
+            result.message)
+
+    def test_does_not_unmount_other_users_mounts(self):
+        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid() + 1,
+            st_dev=12)
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual('', result.message)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
+    def test_does_not_unmount_mounts_with_same_device_as_active_mount(self):
+        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
+            st_uid=os.getuid(),
+            st_dev=10)
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual('', result.message)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
@@ -641,6 +718,7 @@ class FakeMountTable(mtab.MountTable):
         self.unmount_force_calls: List[bytes] = []
         self.unmount_lazy_fails: Set[bytes] = set()
         self.unmount_force_fails: Set[bytes] = set()
+        self.stats: Dict[Union[bytes, str], mtab.MTStat] = {}
 
     def set_eden_mounts(self, mounts: List[bytes]):
         self.set_mounts([
@@ -677,6 +755,23 @@ class FakeMountTable(mtab.MountTable):
             return False
         self._remove_mount(mount_point)
         return True
+
+    def lstat(self, path: Union[bytes, str]) -> mtab.MTStat:
+        # This is a little awkward because os.lstat supports both bytes and str
+        if isinstance(path, bytes):
+            path2: Any = path.decode('latin-1')
+        elif isinstance(path, str):
+            path2 = path.encode('utf-8')
+        else:
+            raise ValueError("path must be bytes or str")
+
+        try:
+            return self.stats[path]
+        except KeyError:
+            try:
+                return self.stats[path2]
+            except KeyError:
+                raise OSError(errno.ENOENT, f'no path {path}')
 
     def _remove_mount(self, mount_point: bytes):
         self.mounts[:] = [

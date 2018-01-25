@@ -10,6 +10,7 @@
 import abc
 import binascii
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -20,6 +21,9 @@ from typing import Dict, List, Set, TextIO, Union
 from . import config as config_mod
 from . import version
 from . import mtab
+
+
+log = logging.getLogger('eden.cli.doctor')
 
 
 class CheckResultType(Enum):
@@ -67,13 +71,13 @@ def cure_what_ails_you(
     else:
         with config.get_thrift_client() as client:
             active_mount_points = [
-                mount.mountPoint for mount in client.listMounts()]
+                mount.mountPoint for mount in client.listMounts()
+                if mount.mountPoint is not None]
 
     # This list is a mix of messages to print to stdout and checks to perform.
     checks_and_messages: List[Union[str, Check]] = [
-        # Temporarily disabled while @chadaustin figures out why it unmounts
-        # active mounts too.
-        # StaleMountsCheck(active_mount_points, mount_table),
+        StaleMountsCheck(
+            active_mount_points, mount_table),
     ]
     if is_healthy:
         checks_and_messages.append(EdenfsIsLatest(config))
@@ -164,13 +168,23 @@ class StaleMountsCheck(Check):
         self._mount_table = mount_table
 
     def do_check(self, dry_run: bool) -> CheckResult:
-        stale_mounts = self.get_all_stale_eden_mount_points()
+        active_mount_devices: List[int] = []
+        for amp in self._active_mount_points:
+            try:
+                active_mount_devices.append(self._mount_table.lstat(amp).st_dev)
+            except OSError as e:
+                # If dry_run, should this return NOT_FIXED_BECAUSE_DRY_RUN?
+                return CheckResult(
+                    CheckResultType.FAILED_TO_FIX,
+                    f'Failed to lstat active eden mount {amp}\n')
+
+        stale_mounts = self.get_all_stale_eden_mount_points(active_mount_devices)
         if not stale_mounts:
             return CheckResult(CheckResultType.NO_ISSUE, '')
 
         if dry_run:
             message = f'Found {len(stale_mounts)} stale edenfs mount point{"s" if len(stale_mounts) != 1 else ""}:\n'
-            for mp in sorted(stale_mounts):
+            for mp in stale_mounts:
                 message += f'  {printable_bytes(mp)}\n'
             message += 'Not unmounting because dry run.\n'
 
@@ -189,7 +203,7 @@ class StaleMountsCheck(Check):
 
         # Use a refreshed list -- it's possible MNT_DETACH succeeded on some of
         # the points.
-        for mp in self.get_all_stale_eden_mount_points():
+        for mp in self.get_all_stale_eden_mount_points(active_mount_devices):
             if self._mount_table.unmount_force(mp):
                 unmounted.append(mp)
             else:
@@ -211,9 +225,26 @@ class StaleMountsCheck(Check):
                 message += f'  {printable_bytes(mp)}\n'
             return CheckResult(CheckResultType.FIXED, message)
 
-    def get_all_stale_eden_mount_points(self) -> List[bytes]:
-        all_eden_mount_points = self.get_all_eden_mount_points()
-        return sorted(all_eden_mount_points - set(self._active_mount_points))
+    def get_all_stale_eden_mount_points(
+            self, active_mount_devices: List[int]) -> List[bytes]:
+        me = os.getuid()
+
+        stale_eden_mount_points: Set[bytes] = set()
+        for mount_point in self.get_all_eden_mount_points():
+            try:
+                st = self._mount_table.lstat(mount_point)
+            except OSError as e:
+                log.warning(f'lstat("{mount_point}") failed: {e}')
+                continue
+
+            # Exclude any mounts that aren't owned by the current user and whose
+            # device ID matches the device ID of any existing mounts.  Avoid
+            # excluding by path because the same FUSE mount can show up in the
+            # mount table multiple times if it's underneath a bind mount.
+            if st.st_uid == me and st.st_dev not in active_mount_devices:
+                stale_eden_mount_points.add(mount_point)
+
+        return sorted(stale_eden_mount_points)
 
     def get_all_eden_mount_points(self) -> Set[bytes]:
         all_system_mounts = self._mount_table.read()

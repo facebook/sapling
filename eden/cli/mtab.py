@@ -8,8 +8,9 @@
 
 import abc
 import logging
+import os
 import subprocess
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Union
 
 
 log = logging.getLogger('eden.cli.mtab')
@@ -19,6 +20,12 @@ MountInfo = NamedTuple('MountInfo', [
     ('device', bytes),
     ('mount_point', bytes),
     ('vfstype', bytes),
+])
+
+
+MTStat = NamedTuple('MTStat', [
+    ('st_uid', int),
+    ('st_dev', int),
 ])
 
 
@@ -34,6 +41,10 @@ class MountTable(abc.ABC):
     @abc.abstractmethod
     def unmount_force(self, mount_point: bytes) -> bool:
         "Corresponds to `umount -f` on Linux."
+
+    @abc.abstractmethod
+    def lstat(self, path: Union[bytes, str]) -> MTStat:
+        "Returns a subset of the results of os.lstat."
 
 
 def parse_mtab(contents: bytes) -> List[MountInfo]:
@@ -69,3 +80,9 @@ class LinuxMountTable(MountTable):
     def unmount_force(self, mount_point: bytes) -> bool:
         # MNT_FORCE
         return 0 == subprocess.call(['sudo', 'umount', '-f', mount_point])
+
+    def lstat(self, path: Union[bytes, str]) -> MTStat:
+        st = os.lstat(path)
+        return MTStat(
+            st_uid=st.st_uid,
+            st_dev=st.st_dev)
