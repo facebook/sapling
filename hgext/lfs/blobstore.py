@@ -314,8 +314,12 @@ class _gitlfsremote(object):
                             continue
                         raise
 
-        oids = worker.worker(self.ui, 0.1, transfer, (),
-                             sorted(objects, key=lambda o: o.get('oid')))
+        if action == 'download':
+            oids = worker.worker(self.ui, 0.1, transfer, (),
+                                 sorted(objects, key=lambda o: o.get('oid')))
+        else:
+            oids = transfer(objects)
+
         processed = 0
         for _one, oid in oids:
             processed += sizes[oid]
