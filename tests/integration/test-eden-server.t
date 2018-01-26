@@ -57,7 +57,6 @@ Add commit with null manifest
   $ echo 1 > 1
   $ hg add 1
   $ hg ci -m 'null manifest'
-  created new head
   $ hg rm 1
   $ hg commit --amend --traceback
   $ hg log -r 7f48e9c786d1 -T '{node}'
