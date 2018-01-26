@@ -420,13 +420,11 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
                          if f not in results and matchfn(f))
     else:
         if matchalways:
-            visit.update(f for f, st in dmap.iteritems() if f not in results)
+            visit.update(f for f in dmap if f not in results)
             visit.update(f for f in copymap if f not in results)
         else:
-            visit.update(f for f, st in dmap.iteritems()
-                         if f not in results and matchfn(f))
-            visit.update(f for f in copymap
-                         if f not in results and matchfn(f))
+            visit.update(f for f in dmap if f not in results and matchfn(f))
+            visit.update(f for f in copymap if f not in results and matchfn(f))
 
     audit = pathutil.pathauditor(self._root, cached=True).check
     auditpass = [f for f in visit if audit(f)]

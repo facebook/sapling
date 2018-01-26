@@ -129,9 +129,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   hgext/phabstatus.py:78:
    >             repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
    use pycompat.getcwd instead (py3)
-  hgext/treedirstate.py:674:
-   >     if 'CHGINTERNALMARK' in os.environ:
-   use encoding.environ instead (py3)
   hgext/tweakdefaults.py:275:
    >     if pipei_bufsize != 4096 and os.name == 'nt':
    use pycompat.osname instead (py3)

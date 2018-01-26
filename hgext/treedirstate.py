@@ -237,7 +237,8 @@ class treedirstatemap(object):
         return self._rmap.hasremovedfile(filename)
 
     def __contains__(self, filename):
-        return self.hastrackedfile(filename) or self.hasremovedfile(filename)
+        return (self._rmap.hastrackedfile(filename) or
+                self._rmap.hasremovedfile(filename))
 
     def trackedfiles(self):
         """Returns a list of all filenames tracked by the dirstate."""
@@ -671,7 +672,7 @@ def wrapclose(orig, self):
     invocations that involve writing to treedirstate.
     """
     # For chg, do not clean up on the "serve" command
-    if 'CHGINTERNALMARK' in os.environ:
+    if 'CHGINTERNALMARK' in encoding.environ:
         return orig(self)
 
     try:

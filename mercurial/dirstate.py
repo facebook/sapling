@@ -1025,7 +1025,6 @@ class dirstate(object):
 
         dmap = self._map
         dmap.preload()
-        dcontains = dmap.__contains__
         dget = dmap.__getitem__
         ladd = lookup.append            # aka "unsure"
         madd = modified.append
@@ -1048,7 +1047,9 @@ class dirstate(object):
         full = listclean or match.traversedir is not None
         for fn, st in self.walk(match, subrepos, listunknown, listignored,
                                 full=full).iteritems():
-            if not dcontains(fn):
+            try:
+                t = dget(fn)
+            except KeyError:
                 if (listignored or mexact(fn)) and dirignore(fn):
                     if listignored:
                         iadd(fn)
@@ -1063,7 +1064,6 @@ class dirstate(object):
             # a list, but falls back to creating a full-fledged iterator in
             # general. That is much slower than simply accessing and storing the
             # tuple members one by one.
-            t = dget(fn)
             state = t[0]
             mode = t[1]
             size = t[2]
