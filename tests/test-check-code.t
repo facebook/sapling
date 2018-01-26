@@ -23,7 +23,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   fb/tests/test-hg-rsh.t:2:
    >   $ HGRSH=$TESTDIR/../staticfiles/bin/hg-rsh
    don't use explicit paths for tools
-  fb/tests/test-hg-rsh.t:32:
+  fb/tests/test-hg-rsh.t:35:
    >   > %include /bin/../etc/mercurial/repo-specific/common.rc
    don't use explicit paths for tools
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
@@ -238,6 +238,7 @@ Prevent adding new files in the root directory accidentally.
   COPYING
   Makefile
   README.rst
+  TARGETS
   hg
   hgeditor
   hgweb.cgi
