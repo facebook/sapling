@@ -60,6 +60,7 @@ cpp_library(
     deps = [
         "//folly:exception",
         "//folly:expected",
+        "//folly:fbstring",
         "//folly:format",
         "//folly:optional",
         "//folly:string",

@@ -10,6 +10,7 @@
 #pragma once
 #include <boost/operators.hpp>
 #include <folly/Expected.h>
+#include <folly/FBString.h>
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
@@ -87,7 +88,10 @@ template <typename STR>
 class AbsolutePathBase;
 } // namespace detail
 
-using PathComponent = detail::PathComponentBase<std::string>;
+// Intentionally use folly::fbstring because Dir entries are keyed on
+// PathComponent and the fact that folly::fbstring is 24 bytes and std::string
+// is 32 bytes adds up.
+using PathComponent = detail::PathComponentBase<folly::fbstring>;
 using PathComponentPiece = detail::PathComponentBase<folly::StringPiece>;
 
 using RelativePath = detail::RelativePathBase<std::string>;
