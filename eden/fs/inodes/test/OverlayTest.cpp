@@ -24,8 +24,8 @@
 
 using namespace facebook::eden;
 using folly::Future;
-using folly::StringPiece;
 using folly::makeFuture;
+using folly::StringPiece;
 using std::string;
 
 class OverlayTest : public ::testing::Test {

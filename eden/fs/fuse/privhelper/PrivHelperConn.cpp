@@ -25,12 +25,12 @@
 #include "eden/fs/utils/ControlMsg.h"
 
 using folly::ByteRange;
+using folly::checkUnixError;
 using folly::IOBuf;
 using folly::StringPiece;
-using folly::checkUnixError;
+using folly::throwSystemError;
 using folly::io::Appender;
 using folly::io::Cursor;
-using folly::throwSystemError;
 using std::string;
 
 DEFINE_int32(

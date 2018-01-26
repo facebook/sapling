@@ -23,11 +23,11 @@ namespace eden {
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;
+using folly::fbvector;
 using folly::File;
 using folly::MutableStringPiece;
 using folly::Optional;
 using folly::StringPiece;
-using folly::fbvector;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;

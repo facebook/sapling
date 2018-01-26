@@ -25,9 +25,9 @@
 #include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
-using ::testing::UnorderedElementsAre;
 using folly::StringPiece;
 using std::string;
+using ::testing::UnorderedElementsAre;
 
 class DiffResults {
  public:

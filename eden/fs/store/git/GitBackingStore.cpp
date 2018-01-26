@@ -24,8 +24,8 @@
 using folly::ByteRange;
 using folly::Future;
 using folly::IOBuf;
-using folly::StringPiece;
 using folly::makeFuture;
+using folly::StringPiece;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;

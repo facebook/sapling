@@ -14,9 +14,9 @@
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+using apache::thrift::CompactSerializer;
 using folly::IOBuf;
 using std::string;
-using apache::thrift::CompactSerializer;
 
 namespace facebook {
 namespace eden {

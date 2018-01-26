@@ -77,10 +77,10 @@ using apache::thrift::ThriftServer;
 using facebook::eden::fusell::FuseChannelData;
 using folly::File;
 using folly::Future;
+using folly::makeFuture;
 using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
-using folly::makeFuture;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -568,7 +568,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
        doTakeover,
        edenMount,
        optionalTakeover = std::move(optionalTakeover)]() mutable {
-
         addToMountPoints(edenMount);
 
         return (optionalTakeover ? performTakeoverFuseStart(

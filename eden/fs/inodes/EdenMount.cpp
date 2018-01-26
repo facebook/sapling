@@ -41,20 +41,19 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 
+using facebook::eden::fusell::FuseChannelData;
 using folly::Future;
-using folly::StringPiece;
-using folly::Unit;
-using folly::Unit;
 using folly::makeFuture;
 using folly::setThreadName;
+using folly::StringPiece;
 using folly::to;
-using std::chrono::system_clock;
+using folly::Unit;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
-using facebook::eden::fusell::FuseChannelData;
+using std::chrono::system_clock;
 
 DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 
@@ -505,13 +504,12 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
 
         // Perform the requested checkout operation after the journal diff
         // completes.
-        return journalDiffFuture.then(
-            [this, ctx, fromTree, toTree]() {
-              ctx->start(this->acquireRenameLock());
-              return this->getRootInode()
-                  ->checkout(ctx.get(), fromTree, toTree)
-                  .then([toTree]() mutable { return toTree; });
-            });
+        return journalDiffFuture.then([this, ctx, fromTree, toTree]() {
+          ctx->start(this->acquireRenameLock());
+          return this->getRootInode()
+              ->checkout(ctx.get(), fromTree, toTree)
+              .then([toTree]() mutable { return toTree; });
+        });
       })
       .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
                 std::shared_ptr<const Tree> toTree) {
@@ -671,85 +669,86 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
     std::shared_ptr<UnboundedQueueThreadPool> threadPool,
     folly::Optional<FuseChannelData> takeoverData) {
-  return folly::makeFutureWith([this,
-                                eventBase,
-                                threadPool,
-                                takeoverData =
-                                    std::move(takeoverData)]() mutable {
-    if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
-      throw std::runtime_error("mount point has already been started");
-    }
+  return folly::makeFutureWith(
+      [this,
+       eventBase,
+       threadPool,
+       takeoverData = std::move(takeoverData)]() mutable {
+        if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
+          throw std::runtime_error("mount point has already been started");
+        }
 
-    eventBase_ = eventBase;
-    threadPool_ = threadPool;
+        eventBase_ = eventBase;
+        threadPool_ = threadPool;
 
-    folly::File fuseDevice;
-    folly::Optional<fuse_init_out> connInfo;
+        folly::File fuseDevice;
+        folly::Optional<fuse_init_out> connInfo;
 
-    if (takeoverData.hasValue()) {
-      auto& channelData = takeoverData.value();
-      fuseDevice = std::move(channelData.fd);
-      connInfo = channelData.connInfo;
-    } else {
-      fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
-    }
+        if (takeoverData.hasValue()) {
+          auto& channelData = takeoverData.value();
+          fuseDevice = std::move(channelData.fd);
+          connInfo = channelData.connInfo;
+        } else {
+          fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
+        }
 
-    channel_ = std::make_unique<fusell::FuseChannel>(
-        std::move(fuseDevice),
-        path_,
-        eventBase_,
-        FLAGS_fuseNumThreads,
-        dispatcher_.get(),
-        connInfo);
+        channel_ = std::make_unique<fusell::FuseChannel>(
+            std::move(fuseDevice),
+            path_,
+            eventBase_,
+            FLAGS_fuseNumThreads,
+            dispatcher_.get(),
+            connInfo);
 
-    // we'll use this shortly to wait until the mount is started successfully.
-    auto initFuture = initFusePromise_.getFuture();
+        // we'll use this shortly to wait until the mount is started
+        // successfully.
+        auto initFuture = initFusePromise_.getFuture();
 
-    channel_->getThreadsStoppingFuture().then([this] {
-      // If threads are stopping before we got as far as setting the state to
-      // RUNNING, we must have experienced an error
-      if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
-        initFusePromise_.setException(
-            std::runtime_error("fuse session failed to initialize"));
-      } else {
-        // If we were RUNNING and a thread stopped, then record
-        // that transition to FUSE_DONE.
-        doStateTransition(State::RUNNING, State::FUSE_DONE);
-      }
-    });
+        channel_->getThreadsStoppingFuture().then([this] {
+          // If threads are stopping before we got as far as setting the state
+          // to RUNNING, we must have experienced an error
+          if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
+            initFusePromise_.setException(
+                std::runtime_error("fuse session failed to initialize"));
+          } else {
+            // If we were RUNNING and a thread stopped, then record
+            // that transition to FUSE_DONE.
+            doStateTransition(State::RUNNING, State::FUSE_DONE);
+          }
+        });
 
-    channel_->getSessionCompleteFuture().then([this] {
-      // In case we are performing a graceful restart,
-      // extract the fuse device now.
-      auto channelData = channel_->stealFuseDevice();
-      channel_.reset();
+        channel_->getSessionCompleteFuture().then([this] {
+          // In case we are performing a graceful restart,
+          // extract the fuse device now.
+          auto channelData = channel_->stealFuseDevice();
+          channel_.reset();
 
-      std::vector<AbsolutePath> bindMounts;
-      for (const auto& entry : bindMounts_) {
-        bindMounts.push_back(entry.pathInMountDir);
-      }
+          std::vector<AbsolutePath> bindMounts;
+          for (const auto& entry : bindMounts_) {
+            bindMounts.push_back(entry.pathInMountDir);
+          }
 
-      fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
-          path_,
-          config_->getClientDirectory(),
-          bindMounts,
-          std::move(channelData.fd),
-          channelData.connInfo,
-          SerializedFileHandleMap{}, // placeholder
-          SerializedInodeMap{} // placeholder
-          ));
-    });
+          fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
+              path_,
+              config_->getClientDirectory(),
+              bindMounts,
+              std::move(channelData.fd),
+              channelData.connInfo,
+              SerializedFileHandleMap{}, // placeholder
+              SerializedInodeMap{} // placeholder
+              ));
+        });
 
-    if (takeoverData.hasValue()) {
-      // When doing takeover, we are immediately ready.
-      doStateTransition(State::STARTING, State::RUNNING);
-      initFusePromise_.setValue();
-    }
+        if (takeoverData.hasValue()) {
+          // When doing takeover, we are immediately ready.
+          doStateTransition(State::STARTING, State::RUNNING);
+          initFusePromise_.setValue();
+        }
 
-    // wait for init to complete or error; this will throw an exception
-    // if the init procedure failed.
-    return initFuture;
-  });
+        // wait for init to complete or error; this will throw an exception
+        // if the init procedure failed.
+        return initFuture;
+      });
 }
 
 void EdenMount::mountStarted() {

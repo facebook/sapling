@@ -25,8 +25,7 @@ RequestData::RequestData(
     FuseChannel* channel,
     const fuse_in_header& fuseHeader,
     Dispatcher* dispatcher)
-    : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {
-}
+    : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {}
 
 RequestData::~RequestData() {
   channel_->finishRequest(fuseHeader_);

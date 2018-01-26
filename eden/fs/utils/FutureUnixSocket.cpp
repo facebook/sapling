@@ -13,12 +13,12 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/AsyncTimeout.h>
 
+using folly::exception_wrapper;
 using folly::Future;
+using folly::make_exception_wrapper;
+using folly::makeFuture;
 using folly::Promise;
 using folly::Unit;
-using folly::exception_wrapper;
-using folly::makeFuture;
-using folly::make_exception_wrapper;
 
 namespace facebook {
 namespace eden {

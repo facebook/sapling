@@ -43,9 +43,9 @@
 #include "eden/fs/store/ObjectStore.h"
 
 using folly::Future;
+using folly::makeFuture;
 using folly::Optional;
 using folly::StringPiece;
-using folly::makeFuture;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;

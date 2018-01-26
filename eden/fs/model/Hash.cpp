@@ -18,8 +18,8 @@
 #include <string>
 
 using folly::ByteRange;
-using folly::StringPiece;
 using folly::range;
+using folly::StringPiece;
 using folly::ssl::OpenSSLHash;
 using std::string;
 

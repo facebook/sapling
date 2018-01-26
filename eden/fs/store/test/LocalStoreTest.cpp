@@ -24,8 +24,8 @@ using namespace facebook::eden;
 
 using folly::IOBuf;
 using folly::StringPiece;
-using folly::test::TemporaryDirectory;
 using folly::unhexlify;
+using folly::test::TemporaryDirectory;
 using std::string;
 using KeySpace = facebook::eden::LocalStore::KeySpace;
 

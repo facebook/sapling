@@ -38,7 +38,6 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
 
 class ClientConfig {
  public:
-
   /**
    * Manually construct a ClientConfig object.
    *

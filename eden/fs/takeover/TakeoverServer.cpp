@@ -28,13 +28,13 @@
 using namespace std::literals::chrono_literals;
 
 using folly::AsyncServerSocket;
+using folly::checkUnixError;
+using folly::exceptionStr;
 using folly::Future;
+using folly::makeFuture;
 using folly::SocketAddress;
 using folly::StringPiece;
 using folly::Unit;
-using folly::checkUnixError;
-using folly::exceptionStr;
-using folly::makeFuture;
 using std::make_unique;
 
 namespace facebook {

@@ -31,11 +31,11 @@
 #include "eden/fs/utils/XAttr.h"
 
 using folly::ByteRange;
+using folly::checkUnixError;
 using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
-using folly::checkUnixError;
-using folly::makeFuture;
 using std::shared_ptr;
 using std::string;
 using std::vector;

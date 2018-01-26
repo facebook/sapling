@@ -32,9 +32,9 @@
 
 using folly::ByteRange;
 using folly::Future;
+using folly::makeFuture;
 using folly::StringPiece;
 using folly::Unit;
-using folly::makeFuture;
 using folly::test::TemporaryDirectory;
 using folly::test::TemporaryFile;
 using std::make_shared;

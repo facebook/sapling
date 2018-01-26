@@ -25,18 +25,18 @@
 
 using folly::ByteRange;
 using folly::EventBase;
+using folly::exception_wrapper;
 using folly::File;
 using folly::Future;
 using folly::IOBuf;
-using folly::MutableByteRange;
-using folly::Unit;
-using folly::exception_wrapper;
-using folly::io::Cursor;
-using folly::io::RWPrivateCursor;
-using folly::makeSystemError;
 using folly::make_exception_wrapper;
+using folly::makeSystemError;
+using folly::MutableByteRange;
 using folly::throwSystemError;
 using folly::throwSystemErrorExplicit;
+using folly::Unit;
+using folly::io::Cursor;
+using folly::io::RWPrivateCursor;
 using std::unique_ptr;
 using std::vector;
 

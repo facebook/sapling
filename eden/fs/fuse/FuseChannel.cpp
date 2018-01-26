@@ -1176,7 +1176,6 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   XLOG(DBG7) << "FUSE_CREATE " << name;
   return dispatcher_->create(header->nodeid, name, create->mode, create->flags)
       .then([this](Dispatcher::Create info) {
-
         fuse_open_out out = {};
         if (info.fh->usesDirectIO()) {
           out.open_flags |= FOPEN_DIRECT_IO;

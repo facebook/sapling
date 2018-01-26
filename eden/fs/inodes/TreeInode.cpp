@@ -46,10 +46,10 @@
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::Future;
+using folly::makeFuture;
 using folly::Optional;
 using folly::StringPiece;
 using folly::Unit;
-using folly::makeFuture;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;

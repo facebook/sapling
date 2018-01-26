@@ -21,10 +21,10 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/ObjectStore.h"
 
-using folly::Future;
-using folly::Unit;
 using folly::exception_wrapper;
+using folly::Future;
 using folly::makeFuture;
+using folly::Unit;
 using std::make_shared;
 using std::vector;
 

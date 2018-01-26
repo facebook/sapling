@@ -23,8 +23,8 @@
 
 using folly::Future;
 using folly::Promise;
-using folly::Unit;
 using folly::throwSystemErrorExplicit;
+using folly::Unit;
 using std::string;
 
 namespace facebook {

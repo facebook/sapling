@@ -19,9 +19,9 @@
 
 using facebook::eden::IoFuture;
 using facebook::eden::waitForIO;
+using folly::checkUnixError;
 using folly::EventBase;
 using folly::EventHandler;
-using folly::checkUnixError;
 using namespace std::chrono_literals;
 
 namespace {

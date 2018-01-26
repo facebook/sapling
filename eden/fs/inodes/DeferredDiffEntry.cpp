@@ -23,8 +23,8 @@
 #include "eden/fs/utils/Bug.h"
 
 using folly::Future;
-using folly::Unit;
 using folly::makeFuture;
+using folly::Unit;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;

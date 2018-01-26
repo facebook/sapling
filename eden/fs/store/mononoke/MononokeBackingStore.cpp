@@ -23,15 +23,15 @@
 
 using folly::Future;
 using folly::IOBuf;
-using folly::makeFuture;
 using folly::make_exception_wrapper;
+using folly::makeFuture;
 using proxygen::ErrorCode;
 using proxygen::HTTPException;
 using proxygen::HTTPHeaders;
 using proxygen::HTTPMessage;
 using proxygen::HTTPTransaction;
-using proxygen::URL;
 using proxygen::UpgradeProtocol;
+using proxygen::URL;
 
 namespace facebook {
 namespace eden {

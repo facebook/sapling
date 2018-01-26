@@ -119,7 +119,6 @@ ParentCommits ClientConfig::getParentCommits() const {
 }
 
 void ClientConfig::setParentCommits(const ParentCommits& parents) const {
-
   std::array<uint8_t, kSnapshotHeaderSize + (2 * Hash::RAW_SIZE)> buffer;
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{buffer});
   folly::io::RWPrivateCursor cursor{&buf};

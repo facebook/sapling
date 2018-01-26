@@ -21,14 +21,14 @@
 #include "eden/fs/takeover/TakeoverServer.h"
 
 using namespace facebook::eden;
-using ::testing::ElementsAre;
-using ::testing::ElementsAreArray;
 using folly::EventBase;
 using folly::Future;
-using folly::Promise;
 using folly::makeFuture;
+using folly::Promise;
 using folly::test::TemporaryDirectory;
 using std::string;
+using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
 using namespace std::literals::chrono_literals;
 
 namespace {
