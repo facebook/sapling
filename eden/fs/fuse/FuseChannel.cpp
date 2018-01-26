@@ -844,7 +844,14 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
   auto nameStr = reinterpret_cast<const char*>(nod + 1);
 
   if (connInfo_->minor >= 12) {
-    // TODO: do something useful with nod->umask
+    // TODO: Implement proper scheme for mkdir to handle umask and permissions.
+    // We don't handle umask here or set permissions properly,
+    // but even if we did, TreeInode::getAttr() returns a constexpr
+    // for mode because we don't store proper mode on mkdir or mknod.
+    // Some ideas for fixing this include:
+    // - Add mode attribute to TreeInode::Dir
+    // - Add a disk map which tracks permissions and timestamps for objects
+    // - Cover both the reading (e.g., mkdir) and reading (e.g., stat) paths
   } else {
     // Else: no umask or padding fields available
     nameStr = reinterpret_cast<const char*>(arg) + FUSE_COMPAT_MKNOD_IN_SIZE;
@@ -866,9 +873,13 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
 
   XLOG(DBG7) << "FUSE_MKDIR " << name;
 
-  // TODO: do something useful with dir->umask
+  // TODO: Please see the TODO in FuseChannel::fuseMknod explaining
+  // why we don't properly handle umask and permissions here and for
+  // some ideas of how to fix it.
 
-  return dispatcher_->mkdir(header->nodeid, name, dir->mode)
+  XLOG(DBG7) << "mode = " << dir->mode << "; umask = " << dir->umask;
+
+  return dispatcher_->mkdir(header->nodeid, name, dir->mode & ~dir->umask)
       .then([](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
 }
 
