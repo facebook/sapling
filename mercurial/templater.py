@@ -1169,6 +1169,84 @@ def startswith(context, mapping, args):
         return text
     return ''
 
+@templatefunc('truncate(text, maxlines, [suffix])')
+def truncate(context, mapping, args):
+    """Truncate text to no more than "maxlines" in length. If "suffix" is
+    supplied, then it replaces the last line if, and only if, the text was
+    truncated. """
+    if not (2 <= len(args) <= 3):
+        # i18n: "truncate" is a keyword
+        raise error.ParseError(
+            _("truncate expects two or three arguments, got %d") % len(args)
+        )
+    text = evalstring(context, mapping, args[0])
+    maxlines = evalinteger(
+        context,
+        mapping,
+        args[1],
+        # i18n: "truncate" is a keyword
+        _("truncate expects an integer line count")
+    )
+    if len(args) == 3:
+        suffix = evalstring(context, mapping, args[2])
+        truncatelines = maxlines - 1
+    else:
+        suffix = None
+        truncatelines = maxlines
+
+    lines = text.splitlines(True)
+    if len(lines) <= maxlines:
+        return text
+
+    lines = lines[0:truncatelines]
+    if suffix:
+        lines.append(suffix)
+    return ''.join(lines)
+
+@templatefunc('truncatelonglines(text, maxwidth, [suffix])')
+def truncatelonglines(context, mapping, args):
+    """Truncate lines in text to no more than "maxwidth" in width. If "suffix" is
+    supplied, then it replaces the last characters on the line if, and only if,
+    the lines was truncated. """
+    if not (2 <= len(args) <= 3):
+        # i18n: "truncatelonglines" is a keyword
+        raise error.ParseError(
+            _("truncatelonglines expects two or three arguments, got %d") %
+            len(args)
+        )
+    text = evalstring(context, mapping, args[0])
+    maxwidth = evalinteger(
+        context,
+        mapping,
+        args[1],
+        # i18n: "truncatelonglines" is a keyword
+        _("truncatelonglines expects an integer line width")
+    )
+    truncatedwidth = maxwidth
+    if len(args) == 3:
+        suffix = evalstring(context, mapping, args[2])
+        truncatedwidth -= len(suffix.decode('utf8'))
+    else:
+        suffix = None
+
+    if truncatedwidth < 0:
+        truncatedwidth = 0
+
+    lines = text.splitlines(True)
+    output = []
+    for line in lines:
+        stripped = line.rstrip('\r\n')
+        if len(stripped) > maxwidth:
+            eol = line[len(stripped):]
+            line = stripped[:truncatedwidth]
+            if suffix is not None:
+                line += suffix
+            line += eol
+
+        output.append(line)
+
+    return ''.join(output)
+
 @templatefunc('word(number, text[, separator])')
 def word(context, mapping, args):
     """Return the nth word from a string."""

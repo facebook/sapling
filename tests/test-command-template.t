@@ -4703,3 +4703,15 @@ one column. The remaining columns are added in between the nodes.
 
   $ cd ..
 
+Confirm that truncation does the right thing
+
+  $ hg debugtemplate '{truncatelonglines("abcdefghijklmnopqrst\n", 10)}'
+  abcdefghij
+  $ hg debugtemplate '{truncatelonglines("abcdefghijklmnopqrst\n", 10, "…")}'
+  abcdefghi\xe2\x80\xa6 (esc)
+  $ hg debugtemplate '{truncate("a\nb\nc\n", 2)}'
+  a
+  b
+  $ hg debugtemplate '{truncate("a\nb\nc\n", 2, "truncated\n")}'
+  a
+  truncated
