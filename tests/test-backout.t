@@ -26,7 +26,9 @@ specified explicitly)
   M a
   $ HGEDITOR=cat hg backout -d '2 0' tip --tool=true
   reverting a
-  Backed out changeset a820f4f40a57
+  Back out "b"
+  
+  Original commit changeset: a820f4f40a57
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
@@ -35,12 +37,12 @@ specified explicitly)
   HG: user: test
   HG: branch 'default'
   HG: changed a
-  changeset 2:2929462c3dff backs out changeset 1:a820f4f40a57
+  changeset 2:67231b3f8b90 backs out changeset 1:a820f4f40a57
   $ cat a
   a
   $ hg summary
-  parent: 2:2929462c3dff tip
-   Backed out changeset a820f4f40a57
+  parent: 2:67231b3f8b90 tip
+   Back out "b"
   branch: default
   commit: (clean)
   update: (current)
@@ -65,10 +67,10 @@ commit option
 
   $ hg backout -d '4 0' 1 --tool=:fail
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  changeset 3:1c2161e97c0a backs out changeset 1:22cb4f70d813
+  changeset 3:6b2e5750efab backs out changeset 1:22cb4f70d813
   $ hg summary
-  parent: 3:1c2161e97c0a tip
-   Backed out changeset 22cb4f70d813
+  parent: 3:6b2e5750efab tip
+   Back out "chair"
   branch: default
   commit: (clean)
   update: (current)
@@ -82,7 +84,7 @@ commit option
   use 'hg resolve' to retry unresolved file merges
   [1]
   $ hg summary
-  parent: 4:ed99997b793d tip
+  parent: 4:2cf19744f63f tip
    ypples
   branch: default
   commit: 1 unresolved (clean)
@@ -106,11 +108,11 @@ specified explicitly)
 
   $ HGEDITOR=cat hg backout -d '2 0' tip --tool=true -m "Backed out changeset 76862dcce372"
   adding a
-  changeset 2:de31bdc76c0d backs out changeset 1:76862dcce372
+  changeset 2:0ab3c2be0b32 backs out changeset 1:76862dcce372
   $ cat a
   content
   $ hg summary
-  parent: 2:de31bdc76c0d tip
+  parent: 2:0ab3c2be0b32 tip
    Backed out changeset 76862dcce372
   branch: default
   commit: (clean)
@@ -121,12 +123,12 @@ backout of backout is as if nothing happened
 
   $ hg backout -d '3 0' --merge tip --tool=true
   removing a
-  changeset 3:7f6d0f120113 backs out changeset 2:de31bdc76c0d
+  changeset 3:351f7c594da1 backs out changeset 2:0ab3c2be0b32
   $ test -f a
   [1]
   $ hg summary
-  parent: 3:7f6d0f120113 tip
-   Backed out changeset de31bdc76c0d
+  parent: 3:351f7c594da1 tip
+   Back out "Backed out changeset 76862dcce372
   branch: default
   commit: (clean)
   update: (current)
@@ -151,7 +153,7 @@ transaction: in-memory dirstate changes should be written into
   $ hg backout -d '6 0' -m 'to be rollback-ed soon' -r .
   adding b
   removing c
-  changeset 6:4bfec048029d backs out changeset 5:fac0b729a654
+  changeset 6:319d18976a82 backs out changeset 5:e5fe3726b7ac
   $ hg rollback -q
   $ hg status -A
   A b
@@ -238,14 +240,14 @@ remove line 1
 
   $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
-  changeset 3:26b8ccb9ad91 backs out changeset 1:5a50a024c182
-  merging with changeset 3:26b8ccb9ad91
+  changeset 3:d3729c426fdb backs out changeset 1:5a50a024c182
+  merging with changeset 3:d3729c426fdb
   merging a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -m d
   $ hg summary
-  parent: 4:c7df5e0b9c09 tip
+  parent: 4:76e753f52d24 tip
    d
   branch: default
   commit: (clean)
@@ -295,11 +297,11 @@ invocation of the hook to be examined)
   2:6ea3f2a197a2
   ====
   reverting a
-  changeset 3:d92a3f57f067 backs out changeset 1:5a50a024c182
+  changeset 3:9a3b8b6c2523 backs out changeset 1:5a50a024c182
   ==== preupdate:
-  3:d92a3f57f067
+  3:9a3b8b6c2523
   ====
-  merging with changeset 3:d92a3f57f067
+  merging with changeset 3:9a3b8b6c2523
   ==== preupdate:
   2:6ea3f2a197a2
   ====
@@ -328,15 +330,15 @@ invocation of the hook to be examined)
   1:5a50a024c182
   ====
   reverting a
-  changeset 3:d92a3f57f067 backs out changeset 1:5a50a024c182
+  changeset 3:9a3b8b6c2523 backs out changeset 1:5a50a024c182
   ==== update:
   2:6ea3f2a197a2
   ====
-  merging with changeset 3:d92a3f57f067
+  merging with changeset 3:9a3b8b6c2523
   merging a
   ==== update:
   2:6ea3f2a197a2
-  3:d92a3f57f067
+  3:9a3b8b6c2523
   ====
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -389,8 +391,8 @@ without --merge
 with --merge
   $ hg backout --merge -d '3 0' 1 --tool=true
   reverting a
-  changeset 3:3202beb76721 backs out changeset 1:22bca4c721e5
-  merging with changeset 3:3202beb76721
+  changeset 3:19e57856498e backs out changeset 1:22bca4c721e5
+  merging with changeset 3:19e57856498e
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg locate b
@@ -451,10 +453,10 @@ backout with valid parent should be ok
 
   $ hg backout -d '5 0' --parent 2 4 --tool=true
   removing d
-  changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
+  changeset 5:84e16af81ce4 backs out changeset 4:b2f3bb92043e
   $ hg summary
-  parent: 5:10e5328c8435 tip
-   Backed out changeset b2f3bb92043e
+  parent: 5:84e16af81ce4 tip
+   Back out "d"
   branch: default
   commit: (clean)
   update: (current)
@@ -475,10 +477,10 @@ backout with valid parent should be ok
 
   $ hg backout -d '6 0' --parent 3 4 --tool=true
   removing c
-  changeset 5:033590168430 backs out changeset 4:b2f3bb92043e
+  changeset 5:042ecc423244 backs out changeset 4:b2f3bb92043e
   $ hg summary
-  parent: 5:033590168430 tip
-   Backed out changeset b2f3bb92043e
+  parent: 5:042ecc423244 tip
+   Back out "d"
   branch: default
   commit: (clean)
   update: (current)
@@ -533,6 +535,8 @@ explicitly regardless of '--message')
   removing file1
   backout on branch1
   
+  Original commit changeset: bf1602f437f3
+  
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
   HG: Leave message empty to abort commit.
@@ -540,14 +544,14 @@ explicitly regardless of '--message')
   HG: user: test
   HG: branch 'branch2'
   HG: removed file1
-  changeset 3:d4e8f6db59fb backs out changeset 1:bf1602f437f3
-  merging with changeset 3:d4e8f6db59fb
+  changeset 3:8857f307d2b3 backs out changeset 1:bf1602f437f3
+  merging with changeset 3:8857f307d2b3
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg summary
   parent: 2:45bbcd363bf0 
    file2
-  parent: 3:d4e8f6db59fb tip
+  parent: 3:8857f307d2b3 tip
    backout on branch1
   branch: branch2
   commit: 1 removed (merge)
@@ -578,12 +582,12 @@ on branch2 with branch1 merged, so file1 should be gone:
   (branch merge, don't forget to commit)
   $ hg ci -d '4 0' -m 'merge backout of branch1'
   $ hg id
-  22149cdde76d (branch2) tip
+  6b63d6afbede (branch2) tip
   $ hg st -A
   C default
   C file2
   $ hg summary
-  parent: 4:22149cdde76d tip
+  parent: 4:6b63d6afbede tip
    merge backout of branch1
   branch: branch2
   commit: (clean)

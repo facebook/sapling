@@ -773,7 +773,7 @@ graft --force after backout
   $ hg ci -m 28
   $ hg backout 28
   reverting a
-  changeset 29:53177ba928f6 backs out changeset 28:50a516bb8b57
+  changeset 29:9915a2e5f087 backs out changeset 28:50a516bb8b57
   $ hg graft 28
   skipping ancestor revision 28:50a516bb8b57
   [255]
@@ -822,8 +822,8 @@ Empty graft
   $ hg tag -f something
   $ hg graft -qr 27
   $ hg graft -f 27
-  grafting 27:ed6c7e54e319 "28"
-  note: graft of 27:ed6c7e54e319 created no changes to commit
+  grafting 27:f42eca69d511 "28"
+  note: graft of 27:f42eca69d511 created no changes to commit
 
   $ cd ..
 

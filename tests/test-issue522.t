@@ -16,7 +16,7 @@ revision.
 
   $ hg backout -r tip -m 'backout changed foo'
   reverting foo
-  changeset 2:4d9e78aaceee backs out changeset 1:b515023e500e
+  changeset 2:9eaf049ccce4 backs out changeset 1:b515023e500e
 
   $ hg up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -30,7 +30,7 @@ revision.
      bar
   resolving manifests
    branchmerge: True, force: False, partial: False
-   ancestor: bbd179dfa0a7, local: 71766447bdbb+, remote: 4d9e78aaceee
+   ancestor: bbd179dfa0a7, local: 71766447bdbb+, remote: 9eaf049ccce4
    foo: remote is newer -> g
   getting foo
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -633,15 +633,18 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         return 0
 
     def commitfunc(ui, repo, message, match, opts):
+        olddescription = repo.changelog.changelogrevision(
+                            node).description.rstrip()
         editform = 'backout'
         e = cmdutil.getcommiteditor(editform=editform,
                                     **pycompat.strkwargs(opts))
+
+        addmessage = '\n\n' + 'Original commit changeset: %s' % short(node)
         if not message:
-            # we don't translate commit messages
-            message = "Backed out changeset %s" % short(node)
+            message = "Back out \"%s\"" % olddescription
             e = cmdutil.getcommiteditor(edit=True, editform=editform)
-        return repo.commit(message, opts.get('user'), opts.get('date'),
-                           match, editor=e)
+        return repo.commit(message + addmessage, opts.get('user'),
+                    opts.get('date'), match, editor=e)
     newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
     if not newnode:
         ui.status(_("nothing changed\n"))
