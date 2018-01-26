@@ -1205,9 +1205,9 @@ def truncate(context, mapping, args):
 
 @templatefunc('truncatelonglines(text, maxwidth, [suffix])')
 def truncatelonglines(context, mapping, args):
-    """Truncate lines in text to no more than "maxwidth" in width. If "suffix" is
-    supplied, then it replaces the last characters on the line if, and only if,
-    the lines was truncated. """
+    """Truncate lines in text to no more than "maxwidth" in width. If "suffix"
+    is supplied, then it replaces the last characters on the line if, and only
+    if, the lines was truncated. """
     if not (2 <= len(args) <= 3):
         # i18n: "truncatelonglines" is a keyword
         raise error.ParseError(

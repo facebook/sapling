@@ -269,15 +269,6 @@ outputs, which should be fixed later.
   hgext/smartlog.py:30: relative import of stdlib module
   hgext/smartlog.py:30: direct symbol import chain from itertools
   hgext/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
-  hgext/treedirstate.py:48: symbol import follows non-symbol import: mercurial.i18n
-  hgext/treedirstate.py:49: stdlib import "errno" follows local import: mercurial.i18n
-  hgext/treedirstate.py:50: stdlib import "heapq" follows local import: mercurial.i18n
-  hgext/treedirstate.py:51: stdlib import "itertools" follows local import: mercurial.i18n
-  hgext/treedirstate.py:52: stdlib import "os" follows local import: mercurial.i18n
-  hgext/treedirstate.py:53: stdlib import "random" follows local import: mercurial.i18n
-  hgext/treedirstate.py:54: stdlib import "struct" follows local import: mercurial.i18n
-  hgext/treedirstate.py:55: imports not lexically sorted: string < struct
-  hgext/treedirstate.py:55: stdlib import "string" follows local import: mercurial.i18n
   hgext/treemanifest/__init__.py:120: symbol import follows non-symbol import: hgext.remotefilelog
   hgext/treemanifest/__init__.py:128: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore
   hgext/treemanifest/__init__.py:128: symbol import follows non-symbol import: hgext.remotefilelog.contentstore

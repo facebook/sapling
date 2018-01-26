@@ -31,6 +31,15 @@
 """
 
 from __future__ import absolute_import
+
+import errno
+import heapq
+import itertools
+import random
+import string
+import struct
+
+from mercurial.i18n import _
 from mercurial import (
     commands,
     dirstate,
@@ -45,13 +54,6 @@ from mercurial import (
     txnutil,
     util,
 )
-from mercurial.i18n import _
-import errno
-import heapq
-import itertools
-import random
-import struct
-import string
 
 from .extlib import treedirstate as rusttreedirstate
 
