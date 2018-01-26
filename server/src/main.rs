@@ -284,13 +284,12 @@ fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger) -> ! {
             };
             let drain = slog_term::PlainSyncDecorator::new(stderr_write);
             let drain = slog_term::FullFormat::new(drain).build();
-            let drain = KVFilter::new(
-                drain,
-                Level::Critical,
-                hashmap! {
-                    "remote".into() => hashset!["true".into()],
-                },
-            );
+            let drain = KVFilter::new(drain, Level::Critical)
+                .only_pass_any_on_all_keys(
+                    hashmap! {
+                        "remote".into() => hashset!["true".into()],
+                    }
+                );
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = Logger::root(drain, o![]);
 
