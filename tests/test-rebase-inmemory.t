@@ -156,4 +156,45 @@ we requested in-memory.
   |/
   o  0: b173517d0057 'a'
   
+Rerun with merge conflicts:
+  $ hg up 2
+  2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ echo 'e' > c
+  $ hg add
+  adding c
+  $ hg com -m 'e -> c'
+  $ hg up 1
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg tglog
+  o  4: 6af061510c70 'e -> c'
+  |
+  | o  3: 844a7de3e617 'c'
+  | |
+  o |  2: 09c044d2cb43 'd'
+  | |
+  @ |  1: fc055c3b4d33 'b'
+  |/
+  o  0: b173517d0057 'a'
+  
+  $ hg rebase -r 3 -d 4
+  rebasing 3:844a7de3e617 "c"
+  merging c
+  hit merge conflicts; re-running rebase without in-memory merge (in-memory merge does not support merge conflicts)
+  rebase aborted
+  rebasing 3:844a7de3e617 "c"
+  merging c
+  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
 
+Also ensure the last test works if rebasing the WCP (turning off IMM mid-call):
+  $ hg rebase --abort
+  rebase aborted
+  $ hg up -C 3
+  3 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg rebase -r 3 -d 4
+  rebasing 3:844a7de3e617 "c"
+  merging c
+  warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]

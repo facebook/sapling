@@ -824,31 +824,42 @@ def rebase(ui, repo, **opts):
                 why_not_imm=whynotimm)
             inmemory = False
 
-    if inmemory:
-        try:
-            # in-memory merge doesn't support conflicts, so if we hit any, abort
-            # and re-run as an on-disk merge.
-            return _origrebase(ui, repo, inmemory=inmemory, **opts)
-        except error.InMemoryMergeConflictsError as e:
-            ui.warn(('hit merge conflicts; re-running rebase without in-memory'
-                      ' merge (%s)\n' % e))
-            ui.log("rebase", "", rebase_imm_restart=True)
-            _origrebase(ui, repo, **{'abort': True})
-            return _origrebase(ui, repo, inmemory=False, **opts)
-        except Exception as e:
-            ui.warn(('hit error; re-running rebase without in-memory merge '
-                     '(%s)\n' % e))
-            ui.log("rebase", "", rebase_imm_restart=True,
-                rebase_imm_exception=str(e))
-            _origrebase(ui, repo, **{'abort': True})
-            return _origrebase(ui, repo, inmemory=False, **opts)
-    else:
-        return _origrebase(ui, repo, **opts)
-
-def _origrebase(ui, repo, inmemory=False, **opts):
     opts = pycompat.byteskwargs(opts)
     rbsrt = rebaseruntime(repo, ui, inmemory, opts)
 
+    if rbsrt.inmemory:
+        try:
+            return _origrebase(ui, repo, rbsrt, **opts)
+        except error.InterventionRequired:
+            # This can occur if in-memory was turned off and then legitimate
+            # conflicts were raised. Raise as usual.
+            raise
+        except error.InMemoryMergeConflictsError as e:
+            # in-memory merge doesn't support conflicts, so if we hit any, abort
+            # and re-run as an on-disk merge.
+            ui.warn(('hit merge conflicts; re-running rebase without in-memory'
+                      ' merge (%s)\n' % e))
+            ui.log("rebase", "", rebase_imm_restart=True)
+            rbsrt.inmemory = False
+            _origrebase(ui, repo, rbsrt, **{'abort': True})
+            return _origrebase(ui, repo, rbsrt, **opts)
+        except Exception as e:
+            # In-memory merge can be turned off during `_origrebase` (see
+            # `_shoulddisableimm()`). So we double check the value of
+            # `rbsrt.inmemory`.
+            if rbsrt.inmemory:
+                ui.warn(('hit error; re-running rebase without in-memory merge '
+                         '(%s)\n' % e))
+                ui.log("rebase", "", rebase_imm_restart=True,
+                    rebase_imm_exception=str(e))
+                _origrebase(ui, repo, rbsrt, **{'abort': True})
+                return _origrebase(ui, repo, rbsrt, **opts)
+            else:
+                raise
+    else:
+        return _origrebase(ui, repo, rbsrt, **opts)
+
+def _origrebase(ui, repo, rbsrt, **opts):
     with repo.wlock(), repo.lock():
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
@@ -913,7 +924,7 @@ def _origrebase(ui, repo, inmemory=False, **opts):
         with util.acceptintervention(tr):
             # Same logic for the dirstate guard, except we don't create one when
             # rebasing in-memory (it's not needed).
-            if singletr and not inmemory:
+            if singletr and not rbsrt.inmemory:
                 dsguard = dirstateguard.dirstateguard(repo, 'rebase')
             with util.acceptintervention(dsguard):
                 rbsrt._performrebase(tr)
