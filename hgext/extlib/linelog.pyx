@@ -8,7 +8,7 @@ IF UNAME_SYSNAME != "Windows":
 
 import os
 
-cdef extern from "../../lib/linelog/linelog.c":
+cdef extern from "lib/linelog/linelog.c":
     # (duplicated) declarations for Cython, as Cython cannot parse .h file
     ctypedef uint32_t linelog_linenum
     ctypedef uint32_t linelog_revnum
@@ -136,7 +136,7 @@ cdef class _buffer: # thin wrapper around linelog_buf
             if result == LINELOG_RESULT_OK:
                 return
             elif result == LINELOG_RESULT_ENEEDRESIZE:
-                self.resize((self.buf.neededsize / unitsize + 1) * unitsize)
+                self.resize((self.buf.neededsize // unitsize + 1) * unitsize)
             else:
                 raise LinelogError(result)
 

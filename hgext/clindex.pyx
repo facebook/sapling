@@ -49,7 +49,14 @@ from mercurial.node import (
     nullid,
 )
 
-from .extlib import indexes
+try:
+    from .extlib import indexes
+    indexes.nodemap.emptyindexbuffer() # force demandimport to load indexes
+except ImportError:
+    disabled = True
+else:
+    # clindex cannot be enabled without Rust indexes
+    disabled = False
 
 configtable = {}
 configitem = registrar.configitem(configtable)
@@ -470,3 +477,8 @@ def uisetup(ui):
     # filecache method has to be wrapped using wrapfilecache
     extensions.wrapfilecache(localrepo.localrepository, 'changelog',
                              _wrapchangelog)
+
+# When clindex is disabled, make entry points no-ops.
+if disabled:
+    uisetup = lambda ui: None
+    reposetup = lambda ui, repo: None

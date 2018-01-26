@@ -878,7 +878,7 @@ packages = ['mercurial',
 common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
                   'mercurial/cext/util.h']
-common_include_dirs = ['mercurial']
+common_include_dirs = ['.']
 
 def get_env_path_list(var_name, default=None):
     '''Get a path list from an environment variable.  The variable is parsed as
@@ -1065,10 +1065,11 @@ extmodules += cythonize([
               extra_compile_args=filter(None, [PRODUCEDEBUGSYMBOLS])),
     Extension('hgext.traceprof',
               sources=['hgext/traceprof.pyx'],
-              include_dirs=['hgext'],
+              include_dirs=common_include_dirs,
               extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS])),
     Extension('hgext.extlib.linelog',
               sources=['hgext/extlib/linelog.pyx'],
+              include_dirs=common_include_dirs,
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
 ], compiler_directives=cythonopts)
 

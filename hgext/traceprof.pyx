@@ -33,7 +33,7 @@ from cpython.object cimport PyObject
 import contextlib
 import gc
 
-cdef extern from "extlib/traceprofimpl.cpp":
+cdef extern from "hgext/extlib/traceprofimpl.cpp":
     void enable()
     void disable()
     IF UNAME_SYSNAME == "Windows":

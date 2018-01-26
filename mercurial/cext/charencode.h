@@ -8,8 +8,8 @@
 #ifndef _HG_CHARENCODE_H_
 #define _HG_CHARENCODE_H_
 
+#include "mercurial/compat.h"
 #include <Python.h>
-#include "compat.h"
 
 /* This should be kept in sync with normcasespecs in encoding.py. */
 enum normcase_spec {

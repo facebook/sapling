@@ -12,7 +12,7 @@
 #include <assert.h>
 
 #include "charencode.h"
-#include "compat.h"
+#include "mercurial/compat.h"
 #include "util.h"
 
 #ifdef IS_PY3K

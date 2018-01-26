@@ -1010,3 +1010,8 @@ def rejectpush(ui, **kwargs):
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True
+
+if __name__ == '__main__':
+    import hgdemandimport
+    hgdemandimport.enable()
+    run()

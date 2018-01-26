@@ -13,8 +13,8 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "bitmanipulation.h"
 #include "charencode.h"
+#include "mercurial/bitmanipulation.h"
 #include "util.h"
 
 #ifdef IS_PY3K

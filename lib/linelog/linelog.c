@@ -183,7 +183,7 @@ void linelog_annotateresult_clear(linelog_annotateresult *ar)
 
 linelog_result linelog_clear(linelog_buf *buf)
 {
-	linelog_inst insts[2] = {{.offset = 2}, {.offset = 0}};
+	linelog_inst insts[2] = {{JGE, 0, 2}, {JGE, 0, 0}};
 	returnonerror(writeinst(buf, &insts[1], 1));
 	returnonerror(writeinst(buf, &insts[0], 0));
 	return LINELOG_RESULT_OK;
@@ -359,7 +359,8 @@ static linelog_result replacelines(linelog_buf *buf, linelog_annotateresult *ar,
 	linelog_offset a1newaddr = inst0.offset;
 	appendinst(a1inst);  /* [3] */
 	if (!a1instisjge0) { /* [4] */
-		linelog_inst ret = {.opcode = JGE, .offset = a1addr + 1};
+		linelog_inst ret = {/* .opcode = */ JGE, 0,
+		                    /* .offset = */ a1addr + 1};
 		appendinst(ret);
 	}
 #undef appendinst

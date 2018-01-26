@@ -12,9 +12,9 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "bitmanipulation.h"
-#include "charencode.h"
-#include "util.h"
+#include "mercurial/bitmanipulation.h"
+#include "mercurial/cext/charencode.h"
+#include "mercurial/cext/util.h"
 
 #ifdef IS_PY3K
 /* The mapping of Python types is meant to be temporary to get Python
@@ -433,7 +433,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		dirstateTupleObject *tuple;
 		char state;
 		int mode, size, mtime;
-		Py_ssize_t len, l;
+		Py_ssize_t len, l1;
 		PyObject *o;
 		char *t;
 
@@ -473,10 +473,10 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		o = PyDict_GetItem(copymap, k);
 		if (o) {
 			*p++ = '\0';
-			l = PyBytes_GET_SIZE(o);
-			memcpy(p, PyBytes_AS_STRING(o), l);
-			p += l;
-			len += l + 1;
+			l1 = PyBytes_GET_SIZE(o);
+			memcpy(p, PyBytes_AS_STRING(o), l1);
+			p += l1;
+			len += l1 + 1;
 		}
 		putbe32((uint32_t)len, t);
 	}

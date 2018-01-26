@@ -25,9 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bitmanipulation.h"
-#include "compat.h"
-#include "mpatch.h"
+#include "mercurial/bitmanipulation.h"
+#include "mercurial/compat.h"
+#include "mercurial/mpatch.h"
 #include "util.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";

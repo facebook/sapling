@@ -15,8 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bdiff.h"
-#include "bitmanipulation.h"
+#include "mercurial/bdiff.h"
+#include "mercurial/bitmanipulation.h"
 #include "util.h"
 
 
