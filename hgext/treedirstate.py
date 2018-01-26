@@ -49,7 +49,6 @@ from mercurial.i18n import _
 import errno
 import heapq
 import itertools
-import os
 import random
 import struct
 import string
