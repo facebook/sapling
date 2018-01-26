@@ -19,8 +19,11 @@ amend modified chunks into the corresponding non-public changesets.
     addnoise = 1
     # make `amend --correlated` a shortcut to the main command
     amendflag = correlated
+    # truncate descriptions after 50 characters
+    maxdescwidth = 50
 
     [color]
+    absorb.description = magenta
     absorb.node = blue bold
     absorb.path = bold
 """
@@ -58,8 +61,10 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem('absorb', 'amendflag', default=None)
+configitem('absorb', 'maxdescwidth', default=50)
 
 colortable = {
+    'absorb.description': 'magenta',
     'absorb.node': 'blue bold',
     'absorb.path': 'bold',
 }
@@ -284,7 +289,7 @@ class filefixupstate(object):
         self.fixups = [] # [(linelog rev, a1, a2, b1, b2)]
         self.finalcontents = [] # [str]
 
-    def diffwith(self, targetfctx, showchanges=False):
+    def diffwith(self, targetfctx, showchanges=False, showdescs=False):
         """calculate fixups needed by examining the differences between
         self.fctxs[-1] and targetfctx, chunk by chunk.
 
@@ -317,7 +322,7 @@ class filefixupstate(object):
             self.chunkstats[1] += 1
             self.fixups += newfixups
             if showchanges:
-                self._showchanges(alines, blines, chunk, newfixups)
+                self._showchanges(alines, blines, chunk, newfixups, showdescs)
 
     def apply(self):
         """apply self.fixups. update self.linelog, self.finalcontents.
@@ -533,7 +538,7 @@ class filefixupstate(object):
         pushchunk()
         return result
 
-    def _showchanges(self, alines, blines, chunk, fixups):
+    def _showchanges(self, alines, blines, chunk, fixups, showdescs=False):
         ui = self.ui
 
         def label(line, label):
@@ -559,9 +564,22 @@ class filefixupstate(object):
         buf += [(bidxs[i - b1], label('+' + blines[i], 'diff.inserted'))
                 for i in xrange(b1, b2)]
         for idx, line in buf:
-            shortnode = idx and node.short(self.fctxs[idx].node()) or ''
+            fctx = self.fctxs[idx]
+            shortnode = idx and node.short(fctx.node()) or ''
+            if showdescs:
+                w = ui.configint('absorb', 'maxdescwidth')
+                if w < 0:
+                    w = 0
+                if shortnode:
+                    dlines = fctx.changectx().description().splitlines()
+                    d = dlines[0][:w] if dlines else ''
+                    desc = ui.label(d.ljust(w + 2), 'absorb.description')
+                else:
+                    desc = ' ' * (w + 2)
+            else:
+                desc = ''
             ui.write(ui.label(shortnode[0:7].ljust(8), 'absorb.node') +
-                     line + '\n')
+                     desc + line + '\n')
 
 class fixupstate(object):
     """state needed to run absorb
@@ -596,7 +614,8 @@ class fixupstate(object):
         self.replacemap = {} # {oldnode: newnode or None}
         self.finalnode = None # head after all fixups
 
-    def diffwith(self, targetctx, match=None, showchanges=False):
+    def diffwith(self, targetctx, match=None, showchanges=False,
+                 showdescs=False):
         """diff and prepare fixups. update self.fixupmap, self.paths"""
         # only care about modified files
         self.status = self.stack[-1].status(targetctx, match)
@@ -631,7 +650,9 @@ class fixupstate(object):
                 colorpath = self.ui.label(path, 'absorb.path')
                 header = 'showing changes for ' + colorpath
                 self.ui.write(header + '\n')
-            fstate.diffwith(targetfctx, showchanges=showchanges)
+            fstate.diffwith(targetfctx,
+                            showchanges=showchanges,
+                            showdescs=showdescs)
             self.fixupmap[path] = fstate
             self.paths.append(path)
 
@@ -913,7 +934,8 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
         origchunks = patch.parsepatch(diff)
         chunks = cmdutil.recordfilter(ui, origchunks)[0]
         targetctx = overlaydiffcontext(stack[-1], chunks)
-    state.diffwith(targetctx, matcher, showchanges=opts.get('print_changes'))
+    state.diffwith(targetctx, matcher, showchanges=opts.get('print_changes'),
+                   showdescs=opts.get('print_descriptions'))
     if not opts.get('dry_run'):
         state.apply()
         if state.commit():
@@ -930,6 +952,8 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
           ('e', 'edit-lines', None,
            _('edit what lines belong to which changesets before commit '
              '(EXPERIMENTAL)')),
+          ('d', 'print-descriptions', None,
+           _('print the first line of the changeset description')),
          ] + commands.dryrunopts + commands.walkopts,
          _('hg absorb [OPTION] [FILE]...'))
 def absorbcmd(ui, repo, *pats, **opts):

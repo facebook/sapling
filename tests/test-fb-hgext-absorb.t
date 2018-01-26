@@ -63,6 +63,19 @@ Preview absorb changes:
   ad8b8b7 +4d
   4f55fa6 +5e
 
+  $ hg absorb --print-changes --print-descriptions --dry-run --config absorb.maxdescwidth=15
+  showing changes for a
+                           @@ -0,2 +0,2 @@
+  4ec16f8 commit 1         -1
+  5c5f952 commit 2         -2
+  4ec16f8 commit 1         +1a
+  5c5f952 commit 2         +2b
+                           @@ -3,2 +3,2 @@
+  ad8b8b7 commit 4         -4
+  4f55fa6 commit 5         -5
+  ad8b8b7 commit 4         +4d
+  4f55fa6 commit 5         +5e
+
 Run absorb:
 
   $ hg absorb
