@@ -368,8 +368,10 @@ def pickversion():
     # This is duplicated a bit from build_rpm.py:auto_release_str()
     template = '{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
     out = sysstr(hg.run(['log', '-r.', '-T', template]))
-    # ex. 20180105_214829_58fda95a0202
-    return '_'.join(out.split())
+    # Some tools parse this number to figure out if they support this version of
+    # Mercurial, so prepend with 4.4.2.
+    # ex. 4.4.2_20180105_214829_58fda95a0202
+    return '4.4.2_' + '_'.join(out.split())
 
 version = pickversion()
 
