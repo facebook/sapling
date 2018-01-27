@@ -44,6 +44,13 @@
 #
 # The default format string is " (%s)" (note the space)
 #
+# Options: you may want to set these environment variables
+#  * HOME_IS_NOT_A_REPO : Stop walking up the filesystem looking for a git or
+#    hg repo at (but not including) /home instead of /.  This helps when /home
+#    is a remote or autofs mount point.
+#  * WANT_OLD_SCM_PROMPT : Use '%s' as the formatting for the prompt instead
+#    of ' (%s)'
+#
 # Notes to developers:
 #
 #  * Aliases can screw up the default commands. To prevent this issue, use
@@ -198,6 +205,7 @@ _scm_prompt() {
   # find out if we're in a git or hg repo by looking for the control dir
   dir="$PWD"
   while : ; do
+    [[ -n "$HOME_IS_NOT_A_REPO" ]] && [[ "$dir" = "/home" ]] && break
     if [[ -d "$dir/.git" ]]; then
       br="$(_git_prompt "$dir/.git")"
       break
