@@ -224,18 +224,22 @@ def find_hg_bin() -> str:
     if _hg_bin:
         return _hg_bin
 
-    try:
-        from libfb.py import pathutils
-        _hg_bin = pathutils.get_build_rule_output_path(
-            '@/scm/telemetry/hg:hg',
-            pathutils.BuildRuleTypes.RUST_BINARY,
-            start_path=__file__
-        )
-        if _hg_bin:
-            return _hg_bin
-    except ImportError:
-        # Code to load the custom Hg wrapper was not available.
-        pass
+    # TODO(T25533322): Once we are sure that `hg status` is a read-only
+    # operation in stock Hg (or at least when the Eden extension is enabled),
+    # go back to using the Rust wrapper for Hg by default.
+    if False:
+        try:
+            from libfb.py import pathutils
+            _hg_bin = pathutils.get_build_rule_output_path(
+                '@/scm/telemetry/hg:hg',
+                pathutils.BuildRuleTypes.RUST_BINARY,
+                start_path=__file__
+            )
+            if _hg_bin:
+                return _hg_bin
+        except ImportError:
+            # Code to load the custom Hg wrapper was not available.
+            pass
 
     _hg_bin = distutils.spawn.find_executable('hg.real')
     if _hg_bin:
