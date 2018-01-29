@@ -2,6 +2,7 @@ CREATE TABLE `bookmarkstonode` (
   `node` varbinary(64) NOT NULL,
   `bookmark` varbinary(512) NOT NULL,
   `reponame` varbinary(255) NOT NULL,
+  `time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`reponame`,`bookmark`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
