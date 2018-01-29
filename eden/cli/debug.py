@@ -170,8 +170,7 @@ def do_uptime(args: argparse.Namespace, out: IO[bytes] = None):
     days = uptime.days
     hours, remainder = divmod(uptime.seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-    uptime = b'%dd:%02dh:%02dm:%02ds\n' % (days, hours, minutes, seconds)
-    out.write(uptime)
+    out.write(b'%dd:%02dh:%02dm:%02ds\n' % (days, hours, minutes, seconds))
 
 
 def do_hg_copy_map_get_all(args: argparse.Namespace):

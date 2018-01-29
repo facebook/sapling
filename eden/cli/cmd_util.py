@@ -35,7 +35,7 @@ def find_default_config_dir(home_dir):
     return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
 
 
-def create_config(args):
+def create_config(args) -> config_mod.Config:
     home_dir = args.home_dir or util.get_home_dir()
     config = args.config_dir or find_default_config_dir(home_dir)
     return config_mod.Config(config, args.etc_eden_dir, home_dir)

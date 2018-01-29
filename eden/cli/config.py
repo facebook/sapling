@@ -424,7 +424,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with open(config_path, 'w') as f:
             toml.dump(config_data, f)
 
-    def mount(self, path):
+    def mount(self, path) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
         path = os.path.realpath(path)
@@ -467,7 +467,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with self.get_thrift_client() as client:
             client.mount(mount_info)
 
-    def unmount(self, path, delete_config):
+        return 0
+
+    def unmount(self, path, delete_config) -> None:
         path = os.path.realpath(path)
         with self.get_thrift_client() as client:
             client.unmount(path)

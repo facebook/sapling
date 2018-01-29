@@ -261,24 +261,29 @@ def do_doctor(args) -> int:
                                          mount_table=mtab.LinuxMountTable())
 
 
-def do_mount(args):
+def do_mount(args) -> int:
     config = create_config(args)
-    try:
-        return config.mount(args.path)
-    except EdenNotRunningError as ex:
-        print_stderr('error: {}', ex)
-        return 1
+    for path in args.paths:
+        try:
+            exitcode = config.mount(path)
+            if exitcode:
+                return exitcode
+        except EdenNotRunningError as ex:
+            print_stderr('error: {}', ex)
+            return 1
+    return 0
 
 
-def do_unmount(args):
-    args.path = normalize_path_arg(args.path)
+def do_unmount(args) -> int:
     config = create_config(args)
-    try:
-        return config.unmount(args.path, delete_config=args.destroy)
-    except EdenService.EdenError as ex:
-        print_stderr('error: {}', ex)
-        return 1
-
+    for path in args.paths:
+        path = normalize_path_arg(path)
+        try:
+            config.unmount(path, delete_config=args.destroy)
+        except EdenService.EdenError as ex:
+            print_stderr('error: {}', ex)
+            return 1
+    return 0
 
 def do_checkout(args):
     config = create_config(args)
@@ -610,7 +615,7 @@ def create_parser():
         'mount', help='Remount an existing client (for instance, after it was '
         'unmounted with "unmount")')
     mount_parser.add_argument(
-        'path', help='The client mount path')
+        'paths', nargs='+', metavar='path', help='The client mount path')
     mount_parser.set_defaults(func=do_mount)
 
     unmount_parser = subparsers.add_parser(
@@ -620,7 +625,8 @@ def create_parser():
         action='store_true',
         help='Permanently delete all state associated with the client.')
     unmount_parser.add_argument(
-        'path', help='Path where client should be unmounted from')
+        'paths', nargs='+', metavar='path',
+        help='Path where client should be unmounted from')
     unmount_parser.set_defaults(func=do_unmount)
 
     # We intentionally do not specify a help option for debug, so it
