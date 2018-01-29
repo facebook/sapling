@@ -52,6 +52,11 @@ class indexapi(object):
         """Returns the bundleid for the bundle that contains the given node."""
         raise NotImplementedError()
 
+    def getnodebyprefix(self, prefix):
+        """Returns the node with the given hash prefix.
+        None if it doesn't exist. Raise error for ambiguous identifier"""
+        raise NotImplementedError()
+
     def getnode(self, bookmark):
         """Returns the node for the given bookmark. None if it doesn't exist."""
         raise NotImplementedError()

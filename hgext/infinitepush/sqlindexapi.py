@@ -195,6 +195,33 @@ class sqlindexapi(indexapi):
         self.log.info("Found bundle %r" % bundle)
         return bundle
 
+    def getnodebyprefix(self, prefix):
+        """Returns the node with the given hash prefix.
+        None if it doesn't exist.
+        Raise error for ambiguous identifier"""
+        if not self._connected:
+            self.sqlconnect()
+        self.log.info("GET NODE BY PREFIX %r %r" % (self.reponame, prefix))
+        nodeprefixpattern = prefix + '%'
+        self.sqlcursor.execute(
+            "SELECT node from nodestobundle "
+            "WHERE node LIKE %s "
+            "AND reponame = %s "
+            "LIMIT 2", params=(nodeprefixpattern, self.reponame))
+        result = self.sqlcursor.fetchall()
+
+        if len(result) != 1 or len(result[0]) == 0:
+            self.log.info("No matching node")
+            return None
+
+        if len(result[0]) > 1:
+            raise indexexception('ambiguous identifier \'%s\''
+                        % prefix)
+
+        node = result[0][0]
+        self.log.info("Found node %r" % node)
+        return node
+
     def getnode(self, bookmark):
         """Returns the node for the given bookmark. None if it doesn't exist."""
         if not self._connected:

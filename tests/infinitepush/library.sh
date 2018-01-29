@@ -1,3 +1,5 @@
+#!/bin/bash
+
 scratchnodes() {
   for node in `find ../repo/.hg/scratchbranches/index/nodemap/* | sort`; do
      echo ${node##*/} `cat $node`
@@ -77,12 +79,13 @@ if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
   exit 80
 fi
 
-if [[ ! -f "$TESTDIR/infinitepush/getdb.sh" ]]; then
-  echo "skipped: infinitepush/getdb.sh missing"
+if [[ ! -f "$TESTDIR/../fb/tests/getdb.sh" ]]; then
+  echo "skipped: fb/tests/getdb.sh missing"
   exit 80
 fi
 
-source $TESTDIR/infinitepush/getdb.sh >/dev/null
+# shellcheck source=/dev/null
+source "$TESTDIR/../fb/tests/getdb.sh" >/dev/null
 
 if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
     # Assuming they are set using the legacy way: $DBHOSTPORT

@@ -15,6 +15,7 @@ import os
 
 from indexapi import (
     indexapi,
+    indexexception,
 )
 
 from mercurial import util
@@ -62,6 +63,22 @@ class fileindexapi(indexapi):
     def getbundle(self, node):
         nodepath = os.path.join(self._nodemap, node)
         return self._read(nodepath)
+
+    def getnodebyprefix(self, hashprefix):
+        vfs = self._repo.vfs
+        if not vfs.exists(self._nodemap):
+            return None
+
+        files = vfs.listdir(self._nodemap)
+        nodefiles = filter(lambda n: n.startswith(hashprefix), files)
+
+        if not nodefiles:
+            return None
+        if len(nodefiles) > 1:
+            raise indexexception('ambiguous identifier \'%s\''
+                        % hashprefix)
+
+        return nodefiles[0]
 
     def getnode(self, bookmark):
         bookmarkpath = os.path.join(self._bookmarkmap, bookmark)

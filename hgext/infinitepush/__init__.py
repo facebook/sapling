@@ -684,11 +684,14 @@ def _lookupwrap(orig):
                 r = hex(repo.lookup(localkey))
                 return "%s %s\n" % (1, r)
             except Exception as inst:
-                if repo.bundlestore.index.getbundle(localkey):
-                    return "%s %s\n" % (1, localkey)
-                else:
-                    r = str(inst)
-                    return "%s %s\n" % (0, r)
+                try:
+                    node = repo.bundlestore.index.getnodebyprefix(localkey)
+                    if node:
+                        return "%s %s\n" % (1, node)
+                    else:
+                        return "%s %s\n" % (0, str(inst))
+                except Exception as inst:
+                    return "%s %s\n" % (0, str(inst))
     return _lookup
 
 def _decodebookmarks(stream):
@@ -716,7 +719,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
         if _scratchbranchmatcher(mayberemote):
             dopull = True
             kwargs['bookmark'] = [mayberemote]
-        elif len(mayberemote) == 40 and _maybehash(mayberemote):
+        elif _maybehash(mayberemote):
             dopull = True
             kwargs['rev'] = [mayberemote]
 
