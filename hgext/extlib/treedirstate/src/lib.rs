@@ -33,7 +33,7 @@ extern crate tempdir;
 
 extern crate vlqencoding;
 
-pub mod dirstate;
+pub mod treedirstate;
 pub mod errors;
 pub mod filestate;
 pub mod filestore;

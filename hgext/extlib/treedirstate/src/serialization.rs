@@ -1,14 +1,14 @@
 // Copyright Facebook, Inc. 2017
 //! Trait for serialization and deserialization of tree data.
 
-use filestate::FileState;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use errors::*;
+use filestate::FileState;
 use std::io::{Read, Write};
-use vlqencoding::{VLQDecode, VLQEncode};
-use tree::{Key, Node, NodeEntry, NodeEntryMap};
-use dirstate::DirstateRoot;
 use store::BlockId;
+use tree::{Key, Node, NodeEntry, NodeEntryMap};
+use treedirstate::TreeDirstateRoot;
+use vlqencoding::{VLQDecode, VLQEncode};
 
 pub trait Serializable
 where
@@ -120,8 +120,8 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
 const DIRSTATE_ROOT_MAGIC_LEN: usize = 4;
 const DIRSTATE_ROOT_MAGIC: [u8; DIRSTATE_ROOT_MAGIC_LEN] = *b"////";
 
-impl Serializable for DirstateRoot {
-    fn deserialize(r: &mut Read) -> Result<DirstateRoot> {
+impl Serializable for TreeDirstateRoot {
+    fn deserialize(r: &mut Read) -> Result<TreeDirstateRoot> {
         // Sanity check that this is a root
         let mut buffer = [0; DIRSTATE_ROOT_MAGIC_LEN];
         r.read_exact(&mut buffer)?;
@@ -134,7 +134,7 @@ impl Serializable for DirstateRoot {
         let removed_root_id = BlockId(r.read_u64::<BigEndian>()?);
         let removed_file_count = r.read_u32::<BigEndian>()?;
 
-        Ok(DirstateRoot {
+        Ok(TreeDirstateRoot {
             tracked_root_id,
             tracked_file_count,
             removed_root_id,

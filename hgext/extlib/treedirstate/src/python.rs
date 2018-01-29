@@ -3,14 +3,14 @@
 
 use cpython::*;
 use cpython::exc;
-use dirstate::Dirstate;
-use errors::ErrorKind;
 use errors;
+use errors::ErrorKind;
 use filestate::FileState;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use store::BlockId;
 use tree::{Key, KeyRef};
+use treedirstate::TreeDirstate;
 
 py_module_initializer!(
     treedirstate,
@@ -31,7 +31,7 @@ fn callback_error(py: Python, mut e: PyErr) -> ErrorKind {
 
 py_class!(class treedirstatemap |py| {
     data repodir: PathBuf;
-    data dirstate: RefCell<Dirstate>;
+    data dirstate: RefCell<TreeDirstate>;
     data casefolderid: RefCell<Option<usize>>;
 
     def __new__(
@@ -40,7 +40,7 @@ py_class!(class treedirstatemap |py| {
         opener: &PyObject
     ) -> PyResult<treedirstatemap> {
         let repodir = opener.getattr(py, "base")?.extract::<String>(py)?;
-        let dirstate = Dirstate::new();
+        let dirstate = TreeDirstate::new();
         treedirstatemap::create_instance(
             py,
             repodir.into(),
