@@ -23,9 +23,6 @@
   contrib/python-zstandard/tests/test_train_dictionary.py not using absolute_import
   fb/facebook-hg-rpms/sctrigger.py not using absolute_import
   fb/packaging/build_deb.py not using absolute_import
-  fb/packaging/build_nupkg.py not using absolute_import
-  fb/packaging/build_nupkg.py requires print_function
-  fb/packaging/nupkg_templates.py not using absolute_import
   fb/tests/sqldirstate_benchmark.py not using absolute_import
   fb/tests/sqldirstate_benchmark.py requires print_function
   hgext/arcdiff.py not using absolute_import
@@ -122,7 +119,6 @@
   hgext/upgradegeneraldelta.py not using absolute_import
   hgext/whereami.py not using absolute_import
   hgsubversion/setup.py not using absolute_import
-  setup.py not using absolute_import
   tests/bundlerepologger.py not using absolute_import
   tests/comprehensive/test-hgsubversion-custom-layout.py not using absolute_import
   tests/comprehensive/test-hgsubversion-obsstore-on.py not using absolute_import
