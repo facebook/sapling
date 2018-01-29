@@ -4,6 +4,10 @@
 # 'python setup.py install', or
 # 'python setup.py --help' for more options
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 from distutils.version import LooseVersion
 import glob
 import os
@@ -1327,16 +1331,33 @@ setup(name='mercurial',
       cmdclass=cmdclass,
       distclass=hgdist,
       install_requires=requires,
-      options={'py2exe': {'packages': ['hgdemandimport', 'hgext', 'email',
-                                       # implicitly imported per module policy
-                                       # (cffi wouldn't be used as a frozen exe)
-                                       'mercurial.cext',
-                                       #'mercurial.cffi',
-                                       'mercurial.pure']},
-               'bdist_mpkg': {'zipdist': False,
-                              'license': 'COPYING',
-                              'readme': 'contrib/macosx/Readme.html',
-                              'welcome': 'contrib/macosx/Welcome.html',
-                              },
-               },
+      options={
+          'py2exe': {
+              'packages': [
+                  'hgdemandimport',
+                  'hgext',
+                  'email',
+                  # implicitly imported per module policy
+                  # (cffi wouldn't be used as a frozen exe)
+                  'mercurial.cext',
+                  # 'mercurial.cffi',
+                  'mercurial.pure',
+              ],
+              'excludes': [
+                  'Tkinter',
+                  'sqlite3',
+                  '_sqlite3',
+                  'sqlite3.dbapi'
+              ],
+              'includes': [
+                  'dumbdbm',
+                  'dbhash',
+              ]},
+          'bdist_mpkg': {
+              'zipdist': False,
+              'license': 'COPYING',
+              'readme': 'contrib/macosx/Readme.html',
+              'welcome': 'contrib/macosx/Welcome.html',
+          },
+      },
       **extra)
