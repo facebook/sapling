@@ -1501,15 +1501,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         committed changeset, instead of creating a new changeset.  Otherwise, a
         new changeset will be created (the normal commit behavior).
         """
-
-        try:
-            ver = float(util.version()[:3])
-        except ValueError:
-            ver = 1
-        if ver < 2.19:
-            msg = _("The amend option is unavailable with hg versions < 2.2\n\n"
-                    "Press any key to continue.")
-        elif opts.get('amend') is None:
+        if opts.get('amend') is None:
             opts['amend'] = True
             msg = _("Amend option is turned on -- committing the currently "
                     "selected changes will not create a new changeset, but "
