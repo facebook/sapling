@@ -143,17 +143,11 @@
   a
 
 # revert
-# The sleep+rebuild+status here is an attempt to reduce some flakiness in what gets
-# downloaded. I assume it is from the dirstate being non-deterministic due to
-# the 1 second unix timestamp granularity.
-  $ sleep 1
-  $ hg debugrebuilddirstate
-  $ hg status
-
+# The (re) below is an attempt to reduce some flakiness in what gets downloaded.
   $ clearcache
   $ hg revert -r .~2 y z
   no changes needed to z
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+  [12] files fetched over [12] fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re)
   $ hg checkout -C -r . -q
 
 # explicit bundle should produce full bundle file
@@ -164,7 +158,7 @@
   $ cd ..
 
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  [12] files fetched over 1 fetches \- \([12] misses, 0.00% hit ratio\) over .*s (re)
   $ cd shallow2
   $ hg unbundle ../local.bundle
   adding changesets
