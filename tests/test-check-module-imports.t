@@ -168,10 +168,6 @@ outputs, which should be fixed later.
   hgext/remotefilelog/__init__.py:103: stdlib import "os" follows local import: mercurial
   hgext/remotefilelog/__init__.py:104: stdlib import "time" follows local import: mercurial
   hgext/remotefilelog/__init__.py:105: stdlib import "traceback" follows local import: mercurial
-  hgext/remotefilelog/basepack.py:3: multiple imported names: errno, hashlib, mmap, os, struct, time
-  hgext/remotefilelog/basepack.py:5: relative import of stdlib module
-  hgext/remotefilelog/basepack.py:5: direct symbol import defaultdict from collections
-  hgext/remotefilelog/basepack.py:7: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/basestore.py:3: multiple imported names: errno, hashlib, os, shutil, stat, time
   hgext/remotefilelog/basestore.py:15: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/basestore.py:16: symbol import follows non-symbol import: mercurial.node

@@ -197,6 +197,7 @@ def populateextmods(localmods):
         'hgext.extlib.cstore',
         'hgext.extlib.indexes',
         'hgext.extlib.linelog',
+        'hgext.extlib.litemmap',
         'hgext.extlib.treedirstate',
         'hgext.patchrmdir',
         'hgext.traceprof',

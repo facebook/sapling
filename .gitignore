@@ -62,6 +62,7 @@ hgext/clindex.c
 hgext/extlib/linelog.c
 hgext/patchrmdir.c
 hgext/traceprof.cpp
+hgext/extlib/litemmap.c
 
 # Packaging sources
 SOURCES/

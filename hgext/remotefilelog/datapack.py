@@ -321,7 +321,7 @@ class datapack(basepack.basepack):
 
             if self.VERSION == 1:
                 # <4 byte len> + <metadata-list>
-                metalen = struct.unpack_from('!I', data, offset)[0]
+                metalen = struct.unpack('!I', data[offset:offset + 4])[0]
                 offset += 4 + metalen
 
             yield (filename, node, deltabase, uncompressedlen)

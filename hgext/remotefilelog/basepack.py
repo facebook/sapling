@@ -1,12 +1,21 @@
 from __future__ import absolute_import
 
-import errno, hashlib, mmap, os, struct, time
+import collections
+import errno
+import hashlib
+import os
+import struct
+import time
 
-from collections import defaultdict
-from mercurial import policy, pycompat, util
 from mercurial.i18n import _
-from mercurial import vfs as vfsmod
+from mercurial import (
+    policy,
+    pycompat,
+    util,
+    vfs as vfsmod,
+)
 
+from ..extlib import litemmap
 from . import shallowutil
 
 osutil = policy.importmod(r'osutil')
@@ -137,8 +146,8 @@ class basepackstore(object):
         packsuffixlen = len(self.PACKSUFFIX)
 
         ids = set()
-        sizes = defaultdict(lambda: 0)
-        mtimes = defaultdict(lambda: [])
+        sizes = collections.defaultdict(lambda: 0)
+        mtimes = collections.defaultdict(lambda: [])
         try:
             for filename, type, stat in osutil.listdir(self.path, stat=True):
                 id = None
@@ -310,8 +319,9 @@ class basepack(versionmixin):
         if self.VERSION == 0:
             return self.indexsize
         else:
-            nodecount = struct.unpack_from('!Q', self._index,
-                                           self.params.indexstart - 8)[0]
+            offset = self.params.indexstart - 8
+            nodecount = struct.unpack_from('!Q',
+                                           self._index[offset:offset + 8])[0]
             return self.params.indexstart + nodecount * self.INDEXENTRYLENGTH
 
     def freememory(self):
@@ -328,10 +338,9 @@ class basepack(versionmixin):
         # TODO: use an opener/vfs to access these paths
         with open(self.indexpath, PACKOPENMODE) as indexfp:
             # memory-map the file, size 0 means whole file
-            self._index = mmap.mmap(indexfp.fileno(), 0,
-                                    access=mmap.ACCESS_READ)
+            self._index = litemmap.mmap(indexfp.fileno(), 0)
         with open(self.packpath, PACKOPENMODE) as datafp:
-            self._data = mmap.mmap(datafp.fileno(), 0, access=mmap.ACCESS_READ)
+            self._data = litemmap.mmap(datafp.fileno(), 0)
 
         self._pagedin = 0
         return True
