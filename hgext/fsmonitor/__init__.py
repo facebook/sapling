@@ -177,8 +177,10 @@ def _handleunavailable(ui, state, ex):
         if ex.invalidate:
             state.invalidate()
         ui.log('fsmonitor', 'Watchman unavailable: %s\n', ex.msg)
+        ui.log('fsmonitor_status', '', fsmonitor_status='unavailable')
     else:
         ui.log('fsmonitor', 'Watchman exception: %s\n', ex)
+        ui.log('fsmonitor_status', '', fsmonitor_status='exception')
 
 def _hashignore(ignore):
     """Calculate hash for ignore patterns and filenames
@@ -351,6 +353,11 @@ def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
             fresh_instance = True
             # Ignore any prior noteable files from the state info
             notefiles = []
+
+    if fresh_instance:
+        self._ui.log('fsmonitor_status', '', fsmonitor_status='fresh')
+    else:
+        self._ui.log('fsmonitor_status', '', fsmonitor_status='normal')
 
     # for file paths which require normalization and we encounter a case
     # collision, we store our own foldmap
