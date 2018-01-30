@@ -46,9 +46,9 @@ According to P4, Main/d/d is a file inside Main/d, which is a symlink(!)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -l Main
   total 8
-  -rw-r--r-- 1 .* a (re)
-  drwxr-xr-x 2 .* b (re)
-  lrwxrwxrwx 1 .* d -> b (re)
+  -rw-r--r--. 1 .* a (re)
+  drwxr-xr-x. 2 .* b (re)
+  lrwxrwxrwx. 1 .* d -> b (re)
 
 Repeat with a file nested under several directories
 
