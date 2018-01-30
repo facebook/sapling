@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "tree.h"
-#include "tree_iterator.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "tests.h"
+#include "tree_iterator.h"
 
 typedef struct _iterator_expectations_t {
   char *path;

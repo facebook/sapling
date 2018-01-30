@@ -7,10 +7,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "node.h"
-#include "tree.h"
 #include "checksum.h"
-#include "buffer.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/buffer.h"
+#include "node.h"
 
 #define DEFAULT_BUILD_BUFFER_SZ     16384
 #define BUFFER_GROWTH_FACTOR        2.0

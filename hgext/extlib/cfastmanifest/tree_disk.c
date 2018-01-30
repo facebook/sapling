@@ -11,8 +11,8 @@
 #include <arpa/inet.h>
 
 #include "checksum.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
-#include "tree.h"
 #include "tree_arena.h"
 
 // FILE FORMAT

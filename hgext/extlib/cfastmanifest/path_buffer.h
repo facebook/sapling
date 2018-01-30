@@ -7,7 +7,7 @@
 #ifndef CFASTMANIFEST_PATH_BUFFER_H
 #define CFASTMANIFEST_PATH_BUFFER_H
 
-#include "buffer.h"
+#include "lib/clib/buffer.h"
 
 // a common usage pattern for this module is to store a path.  the path can
 // be of any length, theoretically, so we have to support expansion.

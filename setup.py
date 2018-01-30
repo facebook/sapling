@@ -1009,9 +1009,7 @@ if not iswindows:
                 'hgext/extlib/ctreemanifest/manifest_ptr.cpp',
                 'hgext/extlib/ctreemanifest/treemanifest.cpp',
             ],
-            include_dirs=[
-                '.',
-            ] + include_dirs,
+            include_dirs=common_include_dirs,
             library_dirs=[
                 'build/' + distutils_dir_name('lib'),
             ] + library_dirs,
@@ -1038,12 +1036,7 @@ if not iswindows:
                      'hgext/extlib/cfastmanifest/tree_iterator.c',
                      'hgext/extlib/cfastmanifest/tree_path.c',
             ],
-            include_dirs=[
-                '.',
-                'hgext/extlib/cfastmanifest',
-                'lib/clib',
-                'lib/third-party',
-            ] + include_dirs,
+            include_dirs=common_include_dirs,
             library_dirs=library_dirs,
             libraries=[SHA1_LIBRARY],
             extra_compile_args=filter(None, [

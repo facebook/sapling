@@ -5,9 +5,9 @@
 //
 // no-check-code
 
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "lib/clib/sha1.h"
 #include "node.h"
-#include "tree.h"
 
 static void update_checksum(node_t *node) {
   fbhg_sha1_ctx_t ctx;

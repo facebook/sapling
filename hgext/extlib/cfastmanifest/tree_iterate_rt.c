@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-#include "convert.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/convert.h"
 #include "node.h"
-#include "tree.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {

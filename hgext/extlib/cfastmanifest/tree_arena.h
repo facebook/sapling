@@ -9,8 +9,8 @@
 #ifndef __FASTMANIFEST_TREE_ARENA_H__
 #define __FASTMANIFEST_TREE_ARENA_H__
 
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
-#include "tree.h"
 
 typedef enum {
   ARENA_POLICY_FAIL,                    // fail immediately when there is

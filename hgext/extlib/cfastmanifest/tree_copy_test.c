@@ -4,10 +4,10 @@
 //
 // no-check-code
 
+#include "checksum.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
 #include "tests.h"
-#include "tree.h"
-#include "checksum.h"
 
 void test_copy_empty() {
   tree_t *src = alloc_tree();

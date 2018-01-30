@@ -6,8 +6,8 @@
 
 #include <stdlib.h>
 
-#include "convert.h"
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/convert.h"
 #include "tests.h"
 
 static char buffer[SHA1_BYTES * 2];

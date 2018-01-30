@@ -14,7 +14,7 @@ typedef unsigned char bool;
 #include <stdbool.h>
 #endif
 
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 
 typedef struct {
   PyObject_HEAD;

@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
-#include "tree.h"
 #include "tests.h"
 
 typedef struct {

@@ -10,10 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/portability/portability.h"
 #include "node.h"
-#include "portability/portability.h"
 #include "result.h"
-#include "tree.h"
 
 #define ASSERT(cond) if (!(cond)) {             \
     printf("failed on line %d\n", __LINE__);    \

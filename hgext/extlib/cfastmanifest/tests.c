@@ -4,10 +4,10 @@
 //
 // no-check-code
 
-#include "node.h"
-#include "tree.h"
-#include "tree_path.h"
 #include "tests.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "node.h"
+#include "tree_path.h"
 
 typedef struct _get_path_unfiltered_metadata_t {
   node_t *node;

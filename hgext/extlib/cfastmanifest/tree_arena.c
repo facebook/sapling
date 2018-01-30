@@ -7,8 +7,8 @@
 
 #include <stdlib.h>
 
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
-#include "tree.h"
 #include "tree_arena.h"
 
 #define ARENA_INCREMENT_PERCENTAGE   20

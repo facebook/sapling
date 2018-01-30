@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "tests.h"
 
 #define TMPFILE_TEMPLATE "/tmp/tree_disk_test.XXXXXX"

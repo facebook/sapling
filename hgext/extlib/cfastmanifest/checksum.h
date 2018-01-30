@@ -8,7 +8,7 @@
 #ifndef __FASTMANIFEST_CHECKSUM_H__
 #define __FASTMANIFEST_CHECKSUM_H__
 
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 
 extern void update_checksums(tree_t *tree);
 

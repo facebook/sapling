@@ -4,8 +4,8 @@
 //
 // no-check-code
 
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
-#include "tree.h"
 #include "tests.h"
 
 /**

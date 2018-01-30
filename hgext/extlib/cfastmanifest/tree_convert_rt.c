@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-#include "tree.h"
 #include "checksum.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {

@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#include "buffer.h"
-#include "convert.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/buffer.h"
+#include "lib/clib/convert.h"
+#include "lib/clib/portability/portability.h"
 #include "path_buffer.h"
-#include "portability/portability.h"
-#include "tree.h"
 #include "tree_arena.h"
 
 #define MAX_FOLDER_DEPTH            1024

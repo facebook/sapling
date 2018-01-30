@@ -6,7 +6,7 @@
 // no-check-code
 
 #include "checksum.h"
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "node.h"
 #include "tests.h"
 

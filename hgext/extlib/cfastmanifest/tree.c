@@ -9,7 +9,7 @@
 
 #include <stdlib.h>
 
-#include "tree.h"
+#include "hgext/extlib/cfastmanifest/tree.h"
 #include "tree_arena.h"
 #include "tree_path.h"
 
