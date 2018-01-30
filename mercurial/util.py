@@ -717,6 +717,18 @@ def acceptintervention(tr=None):
 def nullcontextmanager():
     yield
 
+@contextlib.contextmanager
+def environoverride(name, value):
+    origvalue = encoding.environ.get(name)
+    try:
+        encoding.environ[name] = value
+        yield
+    finally:
+        if origvalue is None:
+            del encoding.environ[name]
+        else:
+            encoding.environ[name] = origvalue
+
 class _lrucachenode(object):
     """A node in a doubly linked list.
 

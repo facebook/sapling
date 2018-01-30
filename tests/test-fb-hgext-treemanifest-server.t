@@ -3,6 +3,13 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
+- Disable simplecache since it can cause certain reads to not actually hit the
+- ondisk structures.
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > simplecache=!
+  > EOF
+
   $ hginit master
   $ cd master
   $ cat >> .hg/hgrc <<EOF
@@ -106,10 +113,19 @@ Test pushing flat and tree
   > [[ \$(hg log -r \$HG_NODE -T '{file_adds}') == 'subdir2/z' ]] && exit 1
   > exit 2
   > EOF
+  $ cat >> $TESTTMP/myhook.py <<EOF
+  > from mercurial import bundlerepo
+  > def myhook(ui=None, repo=None, hooktype=None, **hookargs):
+  >     node = hookargs.get('node', None)
+  >     ctx = repo[node]
+  >     # Test comparing a flat and tree manifest
+  >     ctx.p1().manifest().diff(ctx.manifest())
+  > EOF
   $ chmod a+x $TESTTMP/myhook.sh
   $ cp ../master/.hg/hgrc ../master/.hg/hgrc.bak
   $ cat >> ../master/.hg/hgrc <<EOF
   > [hooks]
+  > prepushrebase.myhookpy=python:$TESTTMP/myhook.py:myhook
   > prepushrebase.myhook=$TESTTMP/myhook.sh
   > EOF
   $ hg push --to mybook

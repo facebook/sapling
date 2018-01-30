@@ -166,9 +166,14 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
     if bundlepath:
         packpaths = encoding.environ.get("HG_HOOK_PACKPATHS")
         if packpaths:
-            ui.setconfig("treemanifest", "treeonly", True)
+            # Temporarily set the overall setting, then set it directly on the
+            # repository.
+            with ui.configoverride({("treemanifest", "treeonly"): True}):
+                repo = orig(ui, bundlepath, create=create, **kwargs)
+            repo.ui.setconfig("treemanifest", "treeonly", True)
+        else:
+            repo = orig(ui, bundlepath, create=create, **kwargs)
 
-        repo = orig(ui, bundlepath, create=create, **kwargs)
 
         # Add hook pack paths to the store
         if packpaths:
@@ -947,9 +952,20 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
         if ':' in path:
             raise RuntimeError(_("tree pack path may not contain colon (%s)") %
                                path)
-    prelockrebaseargs['hook_packpaths'] = ':'.join(op.records[treepackrecords])
+    packpaths = ':'.join(op.records[treepackrecords])
+    prelockrebaseargs['hook_packpaths'] = packpaths
 
-    op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
+    if op.records[treepackrecords]:
+        # If we received trees, force python hooks to operate in treeonly mode
+        # so they load only trees.
+        repo = op.repo
+        with repo.baseui.configoverride({("treemanifest", "treeonly"): True}),\
+             util.environoverride('HG_HOOK_BUNDLEPATH', bundlefile),\
+             util.environoverride('HG_HOOK_PACKPATHS', packpaths):
+            brepo = hg.repository(repo.ui, repo.root)
+            brepo.hook("prepushrebase", throw=True, **prelockrebaseargs)
+    else:
+        op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
 def prefetchcaches(op, params, bundle):
     bundlerepocache = {}
