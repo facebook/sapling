@@ -15,12 +15,13 @@ should complain
 basic operation
 (this also tests that editor is invoked if the commit message is not
 specified explicitly)
+(this also tests correctness of default message)
 
   $ echo a > a
   $ hg commit -d '0 0' -A -m a
   adding a
   $ echo b >> a
-  $ hg commit -d '1 0' -m b
+  $ hg commit -d '1 0' -m $'b\nc'
 
   $ hg status --rev tip --rev "tip^1"
   M a
@@ -28,7 +29,7 @@ specified explicitly)
   reverting a
   Back out "b"
   
-  Original commit changeset: a820f4f40a57
+  Original commit changeset: a451c20d3c0b
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
@@ -37,11 +38,11 @@ specified explicitly)
   HG: user: test
   HG: branch 'default'
   HG: changed a
-  changeset 2:67231b3f8b90 backs out changeset 1:a820f4f40a57
+  changeset 2:8540552e2ce9 backs out changeset 1:a451c20d3c0b
   $ cat a
   a
   $ hg summary
-  parent: 2:67231b3f8b90 tip
+  parent: 2:8540552e2ce9 tip
    Back out "b"
   branch: default
   commit: (clean)
@@ -123,12 +124,12 @@ backout of backout is as if nothing happened
 
   $ hg backout -d '3 0' --merge tip --tool=true
   removing a
-  changeset 3:351f7c594da1 backs out changeset 2:0ab3c2be0b32
+  changeset 3:5b1b9b2a0f35 backs out changeset 2:0ab3c2be0b32
   $ test -f a
   [1]
   $ hg summary
-  parent: 3:351f7c594da1 tip
-   Back out "Backed out changeset 76862dcce372
+  parent: 3:5b1b9b2a0f35 tip
+   Back out "Backed out changeset 76862dcce372"
   branch: default
   commit: (clean)
   update: (current)
@@ -153,7 +154,7 @@ transaction: in-memory dirstate changes should be written into
   $ hg backout -d '6 0' -m 'to be rollback-ed soon' -r .
   adding b
   removing c
-  changeset 6:319d18976a82 backs out changeset 5:e5fe3726b7ac
+  changeset 6:3ab761ce0df4 backs out changeset 5:19a306f2a2e0
   $ hg rollback -q
   $ hg status -A
   A b

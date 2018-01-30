@@ -633,8 +633,9 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         return 0
 
     def commitfunc(ui, repo, message, match, opts):
+        # take the first line of old description only, the title
         olddescription = repo.changelog.changelogrevision(
-                            node).description.rstrip()
+                            node).description.splitlines()[0]
         editform = 'backout'
         e = cmdutil.getcommiteditor(editform=editform,
                                     **pycompat.strkwargs(opts))
