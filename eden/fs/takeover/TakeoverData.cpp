@@ -24,7 +24,8 @@ namespace facebook {
 namespace eden {
 
 const std::set<int32_t> kSupportedTakeoverVersions{
-    TakeoverData::kTakeoverProtocolVersionOne};
+    TakeoverData::kTakeoverProtocolVersionOne,
+    TakeoverData::kTakeoverProtocolVersionThree};
 
 folly::Optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
@@ -46,13 +47,18 @@ folly::Optional<int32_t> TakeoverData::computeCompatibleVersion(
 }
 
 IOBuf TakeoverData::serialize(int32_t protocolVersion) {
-  if (protocolVersion != kTakeoverProtocolVersionOne) {
-    auto bug = EDEN_BUG()
-        << "only kTakeoverProtocolVersionOne is supported, but somehow "
-        << "we were asked to handle version " << protocolVersion;
-    bug.toException().throw_exception();
+  switch (protocolVersion) {
+    case kTakeoverProtocolVersionOne:
+      return serializeVersion1();
+    case kTakeoverProtocolVersionThree:
+      return serializeVersion3();
+    default: {
+      auto bug = EDEN_BUG()
+          << "only kTakeoverProtocolVersionOne is supported, but somehow "
+          << "we were asked to handle version " << protocolVersion;
+      bug.toException().throw_exception();
+    }
   }
-  return serialize1();
 }
 
 folly::IOBuf TakeoverData::serializeError(
@@ -64,7 +70,9 @@ folly::IOBuf TakeoverData::serializeError(
     // reporting case.
     case kTakeoverProtocolVersionNeverSupported:
     case kTakeoverProtocolVersionOne:
-      break;
+      return serializeErrorVersion1(ew);
+    case kTakeoverProtocolVersionThree:
+      return serializeErrorVersion3(ew);
     default: {
       auto bug = EDEN_BUG()
           << "only kTakeoverProtocolVersionOne is supported, but somehow "
@@ -72,14 +80,33 @@ folly::IOBuf TakeoverData::serializeError(
       bug.toException().throw_exception();
     }
   }
-  return serializeError1(ew);
 }
 
-TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
-  return deserialize1(buf);
+TakeoverData TakeoverData::deserialize(IOBuf* buf) {
+  // We need to probe the data to see which version we have
+  folly::io::Cursor cursor(buf);
+
+  auto messageType = cursor.readBE<uint32_t>();
+  switch (messageType) {
+    case MessageType::ERROR:
+    case MessageType::MOUNTS:
+      // A version 1 response.  We don't advance the buffer that we pass down
+      // because it the messageType is needed to decode the response.
+      return deserializeVersion1(buf);
+    case kTakeoverProtocolVersionThree:
+      // Version 3 (there was no 2 because of how Version 1 used word values
+      // 1 and 2) doesn't care about this version byte, so we skip past it
+      // and let the underlying code decode the data
+      buf->trimStart(sizeof(uint32_t));
+      return deserializeVersion3(buf);
+    default:
+      throw std::runtime_error(folly::sformat(
+          "Unrecognized TakeoverData response starting with {:x}",
+          messageType));
+  }
 }
 
-IOBuf TakeoverData::serialize1() {
+IOBuf TakeoverData::serializeVersion1() {
   // Compute the body data length
   uint64_t bodyLength = sizeof(uint32_t);
   for (const auto& mount : mountPoints) {
@@ -139,7 +166,6 @@ IOBuf TakeoverData::serialize1() {
     // takeover.
     app.push(folly::StringPiece{reinterpret_cast<const char*>(&mount.connInfo),
                                 sizeof(mount.connInfo)});
-
     auto serializedFileHandleMap =
         CompactSerializer::serialize<std::string>(mount.fileHandleMap);
     app.writeBE<uint32_t>(serializedFileHandleMap.size());
@@ -154,7 +180,8 @@ IOBuf TakeoverData::serialize1() {
   return buf;
 }
 
-folly::IOBuf TakeoverData::serializeError1(const folly::exception_wrapper& ew) {
+folly::IOBuf TakeoverData::serializeErrorVersion1(
+    const folly::exception_wrapper& ew) {
   // Compute the body data length
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
@@ -178,7 +205,7 @@ folly::IOBuf TakeoverData::serializeError1(const folly::exception_wrapper& ew) {
   return buf;
 }
 
-TakeoverData TakeoverData::deserialize1(const IOBuf* buf) {
+TakeoverData TakeoverData::deserializeVersion1(IOBuf* buf) {
   folly::io::Cursor cursor(buf);
 
   auto messageType = cursor.readBE<uint32_t>();
@@ -245,6 +272,103 @@ TakeoverData TakeoverData::deserialize1(const IOBuf* buf) {
   }
 
   return data;
+}
+
+IOBuf TakeoverData::serializeVersion3() {
+  SerializedTakeoverData serialized;
+
+  folly::IOBufQueue bufQ;
+  folly::io::QueueAppender app(&bufQ, 0);
+
+  // First word is the protocol version
+  app.writeBE<uint32_t>(kTakeoverProtocolVersionThree);
+
+  std::vector<SerializedMountInfo> serializedMounts;
+  for (const auto& mount : mountPoints) {
+    SerializedMountInfo serializedMount;
+
+    serializedMount.mountPath = mount.mountPath.stringPiece().str();
+    serializedMount.stateDirectory = mount.stateDirectory.stringPiece().str();
+
+    for (const auto& bindMount : mount.bindMounts) {
+      serializedMount.bindMountPaths.push_back(bindMount.stringPiece().str());
+    }
+
+    // Stuffing the fuse connection information in as a binary
+    // blob because we know that the endianness of the target
+    // machine must match the current system for a graceful
+    // takeover, and it saves us from re-encoding an operating
+    // system specific struct into a thrift file.
+    serializedMount.connInfo = std::string{
+        reinterpret_cast<const char*>(&mount.connInfo), sizeof(mount.connInfo)};
+
+    serializedMount.fileHandleMap = mount.fileHandleMap;
+    serializedMount.inodeMap = mount.inodeMap;
+
+    serializedMounts.emplace_back(std::move(serializedMount));
+  }
+
+  serialized.set_mounts(std::move(serializedMounts));
+
+  CompactSerializer::serialize(serialized, &bufQ);
+  return std::move(*bufQ.move());
+}
+
+folly::IOBuf TakeoverData::serializeErrorVersion3(
+    const folly::exception_wrapper& ew) {
+  SerializedTakeoverData serialized;
+  auto exceptionClassName = ew.class_name();
+  folly::StringPiece what = ew ? ew.get_exception()->what() : "";
+  serialized.set_errorReason(
+      folly::to<std::string>(exceptionClassName, ": ", what));
+
+  folly::IOBufQueue bufQ;
+  folly::io::QueueAppender app(&bufQ, 0);
+
+  // First word is the protocol version
+  app.writeBE<uint32_t>(kTakeoverProtocolVersionThree);
+
+  CompactSerializer::serialize(serialized, &bufQ);
+  return std::move(*bufQ.move());
+}
+
+TakeoverData TakeoverData::deserializeVersion3(IOBuf* buf) {
+  auto serialized = CompactSerializer::deserialize<SerializedTakeoverData>(buf);
+
+  switch (serialized.getType()) {
+    case SerializedTakeoverData::Type::errorReason:
+      throw std::runtime_error(serialized.get_errorReason());
+
+    case SerializedTakeoverData::Type::mounts: {
+      TakeoverData data;
+      for (auto& serializedMount : serialized.mutable_mounts()) {
+        const auto* connInfo = reinterpret_cast<const fuse_init_out*>(
+            serializedMount.connInfo.data());
+
+        std::vector<AbsolutePath> bindMounts;
+        for (const auto& path : serializedMount.bindMountPaths) {
+          bindMounts.emplace_back(AbsolutePathPiece{path});
+        }
+
+        data.mountPoints.emplace_back(
+            AbsolutePath{serializedMount.mountPath},
+            AbsolutePath{serializedMount.stateDirectory},
+            std::move(bindMounts),
+            folly::File{},
+            *connInfo,
+            std::move(serializedMount.fileHandleMap),
+            std::move(serializedMount.inodeMap));
+      }
+      return data;
+    }
+    case SerializedTakeoverData::Type::__EMPTY__:
+      // This case triggers when there are no mounts to pass between
+      // the processes; we allow for it here and return an empty
+      // TakeoverData instance.
+      return TakeoverData{};
+  }
+  throw std::runtime_error(
+      "impossible enum variant for SerializedTakeoverData");
 }
 
 } // namespace eden

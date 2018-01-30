@@ -21,3 +21,24 @@ struct SerializedInodeMap {
   1: i64 nextInodeNumber
   2: list<SerializedInodeMapEntry> unloadedInodes,
 }
+
+struct SerializedMountInfo {
+  1: string mountPath,
+  2: string stateDirectory,
+  3: list<string> bindMountPaths,
+  // This binary blob is really a fuse_init_out instance.
+  // We don't transcribe that into thrift because the layout
+  // is system dependent and happens to be flat and thus is
+  // suitable for reinterpret_cast to be used upon it to
+  // access the struct once we've moved it across the process
+  // boundary.  Note that takeover is always local to the same
+  // machine and thus has the same endianness.
+  4: binary connInfo, // fuse_init_out
+  5: handlemap.SerializedFileHandleMap fileHandleMap,
+  6: SerializedInodeMap inodeMap,
+}
+
+union SerializedTakeoverData {
+  1: list<SerializedMountInfo> mounts,
+  2: string errorReason,
+}

@@ -404,3 +404,37 @@ TEST(Takeover, errorVersionMismatch) {
       "The client and the server do not share a common "
       "takeover protocol implementation.");
 }
+
+TEST(Takeover, oneToTwo) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object with no mount points
+  TakeoverData serverData;
+  auto lockFilePath = tmpDirPath + PathComponentPiece{"lock"};
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+  auto thriftSocketPath = tmpDirPath + PathComponentPiece{"thrift"};
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  // Perform the takeover, explicitly using the older version
+  // of the takeover protocol
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionOne});
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure the received lock file and thrift socket FD refer to the
+  // expected files.
+  checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+
+  // Make sure the received mount information is empty
+  EXPECT_EQ(0, clientData.mountPoints.size());
+}

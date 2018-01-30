@@ -52,6 +52,16 @@ class TakeoverData {
     // This is the protocol version supported by eden just prior
     // to this protocol versioning code being written
     kTakeoverProtocolVersionOne = 1,
+
+    // This version introduced thrift encoding of the takeover structures.
+    // It is nominally version 2 but named 3 here because VersionOne
+    // responses don't include a version header, but do always respond
+    // with either a word set to either 1 or 2.  To disambiguate things
+    // we want to use word value 3 to indicate this new protocol, but
+    // naming the symbol Version3 and assigning it the value 3 seemed
+    // like too much of a headache, so we simply skip over using
+    // version 2 to describe this next one.
+    kTakeoverProtocolVersionThree = 3,
   };
 
   // Given a set of versions provided by a client, find the largest
@@ -106,7 +116,7 @@ class TakeoverData {
   /**
    * Deserialize the TakeoverData from a buffer.
    */
-  static TakeoverData deserialize(const folly::IOBuf* buf);
+  static TakeoverData deserialize(folly::IOBuf* buf);
 
   /**
    * The main eden lock file that prevents two edenfs processes from running at
@@ -134,18 +144,36 @@ class TakeoverData {
   /**
    * Serialize data using version 1 of the takeover protocol.
    */
-  folly::IOBuf serialize1();
+  folly::IOBuf serializeVersion1();
 
   /**
    * Serialize an exception using version 1 of the takeover protocol.
    */
-  static folly::IOBuf serializeError1(const folly::exception_wrapper& ew);
+  static folly::IOBuf serializeErrorVersion1(
+      const folly::exception_wrapper& ew);
 
   /**
    * Deserialize the TakeoverData from a buffer using version 1 of the takeover
    * protocol.
    */
-  static TakeoverData deserialize1(const folly::IOBuf* buf);
+  static TakeoverData deserializeVersion1(folly::IOBuf* buf);
+
+  /**
+   * Serialize data using version 2 of the takeover protocol.
+   */
+  folly::IOBuf serializeVersion3();
+
+  /**
+   * Serialize an exception using version 2 of the takeover protocol.
+   */
+  static folly::IOBuf serializeErrorVersion3(
+      const folly::exception_wrapper& ew);
+
+  /**
+   * Deserialize the TakeoverData from a buffer using version 2 of the takeover
+   * protocol.
+   */
+  static TakeoverData deserializeVersion3(folly::IOBuf* buf);
 
   /**
    * Message type values.
