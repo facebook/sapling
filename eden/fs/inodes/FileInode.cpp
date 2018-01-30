@@ -434,14 +434,9 @@ Future<string> FileInode::getxattr(StringPiece name) {
   return getSha1().then([](Hash hash) { return hash.toString(); });
 }
 
-Future<Hash> FileInode::getSha1(bool failIfSymlink) {
+Future<Hash> FileInode::getSha1() {
   auto state = state_.wlock();
   state->checkInvariants();
-
-  if (failIfSymlink && !S_ISREG(state->mode)) {
-    // We only define a SHA-1 value for regular files
-    return makeFuture<Hash>(InodeError(kENOATTR, inodePtrFromThis()));
-  }
 
   switch (state->tag) {
     case State::NOT_LOADED:

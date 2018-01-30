@@ -93,7 +93,7 @@ class FileInode : public InodeBase {
    * file.
    */
   void updateOverlayHeader() const override;
-  folly::Future<Hash> getSha1(bool failIfSymlink = true);
+  folly::Future<Hash> getSha1();
 
   /**
    * Compute the path to the overlay file for this item.
