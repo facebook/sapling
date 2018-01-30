@@ -10,16 +10,23 @@
 #include "eden/fs/takeover/TakeoverClient.h"
 
 #include <folly/experimental/logging/xlog.h>
+#include <folly/io/Cursor.h>
 #include <folly/io/async/EventBase.h>
+#include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
+using apache::thrift::CompactSerializer;
+using folly::IOBuf;
 using std::string;
 
 namespace facebook {
 namespace eden {
 
-TakeoverData takeoverMounts(AbsolutePathPiece socketPath) {
+TakeoverData takeoverMounts(
+    AbsolutePathPiece socketPath,
+    const std::set<int32_t>& supportedVersions) {
   folly::EventBase evb;
   folly::Expected<UnixSocket::Message, folly::exception_wrapper>
       expectedMessage;
@@ -27,7 +34,18 @@ TakeoverData takeoverMounts(AbsolutePathPiece socketPath) {
   auto connectTimeout = std::chrono::seconds(1);
   FutureUnixSocket socket;
   socket.connect(&evb, socketPath.stringPiece(), connectTimeout)
+      .then([&socket, supportedVersions] {
+        // Send our protocol version so that the server knows
+        // whether we're capable of handshaking successfully
+
+        TakeoverVersionQuery query;
+        query.versions = supportedVersions;
+
+        return socket.send(
+            CompactSerializer::serialize<folly::IOBufQueue>(query).move());
+      })
       .then([&socket] {
+        // Wait for the takeover data response
         auto timeout = std::chrono::seconds(60);
         return socket.receive(timeout);
       })

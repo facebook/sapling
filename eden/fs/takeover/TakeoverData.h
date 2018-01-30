@@ -26,6 +26,9 @@ class exception_wrapper;
 namespace facebook {
 namespace eden {
 
+// Holds the versions supported by this build.
+extern const std::set<int32_t> kSupportedTakeoverVersions;
+
 class SerializedFileHandleMap;
 
 /**
@@ -34,6 +37,30 @@ class SerializedFileHandleMap;
  */
 class TakeoverData {
  public:
+  enum : int32_t {
+    // The list of possible versions supported by the client
+    // and server in this build of the code.  If/when we
+    // bump the version we will retain support for the prior
+    // version in both the client and server in order to
+    // allow rolling back a new build.
+
+    // This is a protocol version that we will never support.
+    // It is included in this enum to reserve it and so that
+    // we can use it in tests
+    kTakeoverProtocolVersionNeverSupported = 0,
+
+    // This is the protocol version supported by eden just prior
+    // to this protocol versioning code being written
+    kTakeoverProtocolVersionOne = 1,
+  };
+
+  // Given a set of versions provided by a client, find the largest
+  // version that is also present in the provided set of supported
+  // versions.
+  static folly::Optional<int32_t> computeCompatibleVersion(
+      const std::set<int32_t>& versions,
+      const std::set<int32_t>& supported = kSupportedTakeoverVersions);
+
   struct MountInfo {
     MountInfo(
         AbsolutePathPiece mountPath,
@@ -67,12 +94,14 @@ class TakeoverData {
    * This includes all data except for file descriptors.  The file descriptors
    * must be sent separately.
    */
-  folly::IOBuf serialize();
+  folly::IOBuf serialize(int32_t protocolVersion);
 
   /**
    * Serialize an exception.
    */
-  static folly::IOBuf serializeError(const folly::exception_wrapper& ew);
+  static folly::IOBuf serializeError(
+      int32_t protocolVersion,
+      const folly::exception_wrapper& ew);
 
   /**
    * Deserialize the TakeoverData from a buffer.
@@ -102,6 +131,22 @@ class TakeoverData {
   folly::Promise<folly::Unit> takeoverComplete;
 
  private:
+  /**
+   * Serialize data using version 1 of the takeover protocol.
+   */
+  folly::IOBuf serialize1();
+
+  /**
+   * Serialize an exception using version 1 of the takeover protocol.
+   */
+  static folly::IOBuf serializeError1(const folly::exception_wrapper& ew);
+
+  /**
+   * Deserialize the TakeoverData from a buffer using version 1 of the takeover
+   * protocol.
+   */
+  static TakeoverData deserialize1(const folly::IOBuf* buf);
+
   /**
    * Message type values.
    * If we ever need to include more information in the takeover data in the

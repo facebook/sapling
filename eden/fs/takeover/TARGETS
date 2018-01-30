@@ -24,6 +24,7 @@ cpp_library(
         "//eden/fs/fuse:fusell",
         "//eden/fs/utils:io",
         "//eden/fs/utils:path",
+        "//eden/fs/utils:utils",
         "//folly:file",
         "//folly:file_util",
         "//folly:format",

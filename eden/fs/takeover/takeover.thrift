@@ -1,6 +1,12 @@
 include "eden/fs/fuse/handlemap.thrift"
 namespace cpp2 facebook.eden
 
+// A list of takeover data serialization versions that the client supports
+struct TakeoverVersionQuery {
+  // The set of versions supported by the client
+  1: set<i32> versions,
+}
+
 struct SerializedInodeMapEntry {
   1: i64 inodeNumber,
   2: i64 parentInode,

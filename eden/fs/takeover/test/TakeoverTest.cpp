@@ -65,12 +65,14 @@ class ErrorHandler : public TakeoverHandler {
  */
 Future<TakeoverData> takeoverViaEventBase(
     EventBase* evb,
-    AbsolutePathPiece socketPath) {
+    AbsolutePathPiece socketPath,
+    const std::set<int32_t>& supportedVersions) {
   Promise<TakeoverData> promise;
   auto future = promise.getFuture();
   std::thread thread([path = AbsolutePath{socketPath},
+                      supportedVersions,
                       promise = std::move(promise)]() mutable {
-    promise.setWith([&] { return takeoverMounts(path); });
+    promise.setWith([&] { return takeoverMounts(path, supportedVersions); });
   });
 
   return future.via(evb).ensure(
@@ -111,7 +113,8 @@ void loopWithTimeout(EventBase* evb, std::chrono::milliseconds timeout = 300s) {
  */
 folly::Try<TakeoverData> runTakeover(
     const TemporaryDirectory& tmpDir,
-    TakeoverHandler* handler) {
+    TakeoverHandler* handler,
+    const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions) {
   // Ignore SIGPIPE so that sendmsg() will fail with an error code instead
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
@@ -122,9 +125,10 @@ folly::Try<TakeoverData> runTakeover(
 
   TakeoverServer server(&evb, socketPath, handler);
 
-  auto future = takeoverViaEventBase(&evb, socketPath).ensure([&] {
-    evb.terminateLoopSoon();
-  });
+  auto future =
+      takeoverViaEventBase(&evb, socketPath, supportedVersions).ensure([&] {
+        evb.terminateLoopSoon();
+      });
   loopWithTimeout(&evb);
   if (!future.isReady()) {
     // This should generally only happen if we timed out.
@@ -338,4 +342,65 @@ TEST(Takeover, error) {
       result.value(),
       std::runtime_error,
       "logic_error: purposely failing for testing");
+}
+
+TEST(Takeover, computeCompatibleVersion) {
+  const std::set<int32_t> noVersions;
+  const std::set<int32_t> oneVersion{1};
+  const std::set<int32_t> newVersion{1, 2};
+  const std::set<int32_t> newerVersion{2, 3};
+  const std::set<int32_t> newestVersion{3, 4};
+  const std::set<int32_t> laundryList{1, 2, 3, 4};
+
+  // Check that computeCompatibleVersion is doing the right things.
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(noVersions, oneVersion),
+      folly::none);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(oneVersion, oneVersion).value(),
+      1);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(oneVersion, newVersion).value(),
+      1);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(newVersion, newerVersion).value(),
+      2);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(newerVersion, newestVersion)
+          .value(),
+      3);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(newVersion, newestVersion),
+      folly::none);
+
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(newestVersion, laundryList)
+          .value(),
+      4);
+
+  // Try it with the parameters flipped; we should still have the
+  // same output.
+  EXPECT_EQ(
+      TakeoverData::computeCompatibleVersion(laundryList, newestVersion)
+          .value(),
+      4);
+}
+
+TEST(Takeover, errorVersionMismatch) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  ErrorHandler handler;
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionNeverSupported});
+  EXPECT_THROW_RE(
+      result.value(),
+      std::runtime_error,
+      "The client and the server do not share a common "
+      "takeover protocol implementation.");
 }

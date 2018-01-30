@@ -14,6 +14,8 @@
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
+#include "eden/fs/utils/Bug.h"
+
 using apache::thrift::CompactSerializer;
 using folly::IOBuf;
 using std::string;
@@ -21,7 +23,63 @@ using std::string;
 namespace facebook {
 namespace eden {
 
-IOBuf TakeoverData::serialize() {
+const std::set<int32_t> kSupportedTakeoverVersions{
+    TakeoverData::kTakeoverProtocolVersionOne};
+
+folly::Optional<int32_t> TakeoverData::computeCompatibleVersion(
+    const std::set<int32_t>& versions,
+    const std::set<int32_t>& supported) {
+  folly::Optional<int32_t> best;
+
+  for (auto& version : versions) {
+    if (best.hasValue() && best.value() > version) {
+      // No better than the current best
+      continue;
+    }
+    if (supported.find(version) == supported.end()) {
+      // Not supported
+      continue;
+    }
+    best = version;
+  }
+  return best;
+}
+
+IOBuf TakeoverData::serialize(int32_t protocolVersion) {
+  if (protocolVersion != kTakeoverProtocolVersionOne) {
+    auto bug = EDEN_BUG()
+        << "only kTakeoverProtocolVersionOne is supported, but somehow "
+        << "we were asked to handle version " << protocolVersion;
+    bug.toException().throw_exception();
+  }
+  return serialize1();
+}
+
+folly::IOBuf TakeoverData::serializeError(
+    int32_t protocolVersion,
+    const folly::exception_wrapper& ew) {
+  switch (protocolVersion) {
+    // We allow NeverSupported in the error case so that we don't
+    // end up EDEN_BUG'ing out in the version mismatch error
+    // reporting case.
+    case kTakeoverProtocolVersionNeverSupported:
+    case kTakeoverProtocolVersionOne:
+      break;
+    default: {
+      auto bug = EDEN_BUG()
+          << "only kTakeoverProtocolVersionOne is supported, but somehow "
+          << "we were asked to handle version " << protocolVersion;
+      bug.toException().throw_exception();
+    }
+  }
+  return serializeError1(ew);
+}
+
+TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
+  return deserialize1(buf);
+}
+
+IOBuf TakeoverData::serialize1() {
   // Compute the body data length
   uint64_t bodyLength = sizeof(uint32_t);
   for (const auto& mount : mountPoints) {
@@ -96,7 +154,7 @@ IOBuf TakeoverData::serialize() {
   return buf;
 }
 
-folly::IOBuf TakeoverData::serializeError(const folly::exception_wrapper& ew) {
+folly::IOBuf TakeoverData::serializeError1(const folly::exception_wrapper& ew) {
   // Compute the body data length
   auto exceptionClassName = ew.class_name();
   folly::StringPiece what = ew ? ew.get_exception()->what() : "";
@@ -120,7 +178,7 @@ folly::IOBuf TakeoverData::serializeError(const folly::exception_wrapper& ew) {
   return buf;
 }
 
-TakeoverData TakeoverData::deserialize(const IOBuf* buf) {
+TakeoverData TakeoverData::deserialize1(const IOBuf* buf) {
   folly::io::Cursor cursor(buf);
 
   auto messageType = cursor.readBE<uint32_t>();

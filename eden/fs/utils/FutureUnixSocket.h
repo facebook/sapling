@@ -75,6 +75,14 @@ class FutureUnixSocket : private UnixSocket::ReceiveCallback {
   }
 
   /**
+   * Returns 'true' if the underlying descriptor is open, or rather,
+   * it has not been closed locally.
+   */
+  explicit operator bool() const {
+    return socket_.get() != nullptr;
+  }
+
+  /**
    * Get the user ID of the remote peer.
    */
   uid_t getRemoteUID();
