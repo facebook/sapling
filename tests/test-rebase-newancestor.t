@@ -3,7 +3,6 @@
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > [alias]
   > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
   > EOF

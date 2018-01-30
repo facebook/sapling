@@ -11,7 +11,6 @@ Enable obsolete
   > [experimental]
   > evolution.createmarkers=True
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > [alias]
   > debugobsolete = debugobsolete -d '0 0'
   > [phases]

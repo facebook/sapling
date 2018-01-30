@@ -3,7 +3,6 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > absorb=
-  > drawdag=$RUNTESTDIR/drawdag.py
   > EOF
 
   $ hg init

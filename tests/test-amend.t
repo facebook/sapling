@@ -3,7 +3,6 @@
   $ cat << EOF >> $HGRCPATH
   > [extensions]
   > amend=
-  > debugdrawdag=$TESTDIR/drawdag.py
   > [diff]
   > git=1
   > EOF

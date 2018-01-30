@@ -6,7 +6,6 @@ Test uncommit - set up the config
   > evolution.allowunstable=True
   > [extensions]
   > uncommit =
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Build up a repo

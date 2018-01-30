@@ -4,7 +4,6 @@ flag should probably live in somewhere else)
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > 
   > [phases]
   > publish=False

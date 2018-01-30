@@ -2,7 +2,6 @@
   > [extensions]
   > blackbox=
   > fbamend=
-  > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = all
   > [blackbox]

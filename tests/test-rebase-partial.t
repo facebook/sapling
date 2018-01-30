@@ -4,7 +4,6 @@ destination (issue5422)
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > 
   > [experimental]
   > evolution.createmarkers=True

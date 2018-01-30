@@ -22,7 +22,6 @@
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > testrevset=$TESTTMP/testrevset.py
   > EOF
 

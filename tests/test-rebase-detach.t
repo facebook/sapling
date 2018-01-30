@@ -6,7 +6,6 @@
   > tglog = log -G --template "{rev}: {node|short} '{desc}'\n"
   > 
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Rebasing D onto B detaching from C (one commit):

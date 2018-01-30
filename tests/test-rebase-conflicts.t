@@ -3,7 +3,6 @@
   > usegeneraldelta=yes
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > 
   > [phases]
   > publish=False

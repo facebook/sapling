@@ -16,7 +16,6 @@ Enable obsolete
   > publish=False
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Setup rebase canonical repo

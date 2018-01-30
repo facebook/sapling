@@ -2,7 +2,6 @@
   > [extensions]
   > fbamend=
   > inhibit=
-  > drawdag=$RUNTESTDIR/drawdag.py
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF

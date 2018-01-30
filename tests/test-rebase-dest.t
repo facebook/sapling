@@ -107,7 +107,6 @@ Setup rebase with multiple destinations
   > [ui]
   > allowemptycommit=1
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > [phases]
   > publish=False
   > [alias]

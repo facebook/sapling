@@ -1,7 +1,6 @@
   $ cat >> $HGRCPATH<<EOF
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
   $ hg init non-merge

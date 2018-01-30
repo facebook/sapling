@@ -3,7 +3,6 @@
   $ cat > .hg/hgrc <<EOF
   > [extensions]
   > sparse=$TESTDIR/../hgext/fbsparse.py
-  > dragdag=$RUNTESTDIR/drawdag.py
   > rebase=
   > EOF
 

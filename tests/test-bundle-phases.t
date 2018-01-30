@@ -3,7 +3,6 @@
   > bundle-phases=yes
   > [extensions]
   > strip=
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
 Set up repo with linear history

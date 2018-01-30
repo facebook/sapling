@@ -3,7 +3,6 @@
   > [extensions]
   > amend=
   > rebase=
-  > debugdrawdag=$TESTDIR/drawdag.py
   > [rebase]
   > experimental.inmemory=1
   > [diff]

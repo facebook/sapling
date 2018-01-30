@@ -3,7 +3,6 @@ Test rebase --continue with rebasestate written by legacy client
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > rebase=
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
   $ hg init

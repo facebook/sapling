@@ -1,6 +1,5 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > bruterebase=$TESTDIR/bruterebase.py
   > [experimental]
   > evolution.createmarkers=True

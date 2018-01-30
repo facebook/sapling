@@ -1,6 +1,5 @@
   $ cat >> $HGRCPATH<<EOF
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > [experimental]
   > evolution=true
   > EOF

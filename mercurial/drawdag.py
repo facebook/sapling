@@ -86,20 +86,16 @@ import collections
 import itertools
 import re
 
-from mercurial.i18n import _
-from mercurial import (
+from .i18n import _
+from . import (
     context,
     error,
     node,
     obsolete,
     pycompat,
-    registrar,
     scmutil,
     tags as tagsmod,
 )
-
-cmdtable = {}
-command = registrar.command(cmdtable)
 
 _pipechars = b'\\/+-|'
 _nonpipechars = b''.join(pycompat.bytechr(i) for i in range(33, 127)
@@ -340,9 +336,8 @@ def _getcomments(text):
             continue
         yield line.split(b' # ', 1)[1].split(b' # ')[0].strip()
 
-@command(b'debugdrawdag', [])
-def debugdrawdag(ui, repo, **opts):
-    """read an ASCII graph from stdin and create changesets
+def drawdag(repo, text):
+    """given an ASCII graph as text, create changesets in repo.
 
     The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
     to the name of the node. The command will create dummy changesets and local
@@ -357,8 +352,6 @@ def debugdrawdag(ui, repo, **opts):
     Note that the revset cannot have confusing characters which can be seen as
     the part of the graph edges, like `|/+-\`.
     """
-    text = ui.fin.read()
-
     # parse the graph and make sure len(parents) <= 2 for each node
     edges = _parseasciigraph(text)
     for k, v in edges.items():

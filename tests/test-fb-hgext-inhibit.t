@@ -2,7 +2,6 @@
   > [experimental]
   > evolution=createmarkers
   > [extensions]
-  > drawdag=$RUNTESTDIR/drawdag.py
   > inhibit=
   > EOF
 

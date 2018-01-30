@@ -4,7 +4,6 @@
   $ export HGENCODING
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > drawdag=$TESTDIR/drawdag.py
   > EOF
 
   $ try() {

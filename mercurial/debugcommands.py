@@ -38,6 +38,7 @@ from . import (
     context,
     dagparser,
     dagutil,
+    drawdag,
     encoding,
     error,
     exchange,
@@ -2462,3 +2463,23 @@ def debugwireargs(ui, repopath, *vals, **opts):
     ui.write("%s\n" % res1)
     if res1 != res2:
         ui.warn("%s\n" % res2)
+
+@command(b'debugdrawdag', [])
+def debugdrawdag(ui, repo, **opts):
+    """read an ASCII graph from stdin and create changesets
+
+    The ASCII graph is like what :hg:`log -G` outputs, with each `o` replaced
+    to the name of the node. The command will create dummy changesets and local
+    tags with those names to make the dummy changesets easier to be referred
+    to.
+
+    If the name of a node is a single character 'o', It will be replaced by the
+    word to the right. This makes it easier to reuse
+    :hg:`log -G -T '{desc}'` outputs.
+
+    For root (no parents) nodes, revset can be used to query existing repo.
+    Note that the revset cannot have confusing characters which can be seen as
+    the part of the graph edges, like `|/+-\`.
+    """
+    text = ui.fin.read()
+    return drawdag.drawdag(repo, text)

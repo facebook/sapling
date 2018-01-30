@@ -1060,6 +1060,7 @@ Test list of internal help commands
                  show the contents of the current dirstate
    debugdiscovery
                  runs the changeset discovery protocol in isolation
+   debugdrawdag  read an ASCII graph from stdin and create changesets
    debugextensions
                  show information about active extensions
    debugfileset  parse and apply a fileset specification

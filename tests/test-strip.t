@@ -4,7 +4,6 @@
   $ echo "usegeneraldelta=yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "strip=" >> $HGRCPATH
-  $ echo "drawdag=$TESTDIR/drawdag.py" >> $HGRCPATH
 
   $ restore() {
   >     hg unbundle -q .hg/strip-backup/*
