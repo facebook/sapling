@@ -1,12 +1,12 @@
-  $ . helpers-usechg.sh
-
 Create an ondisk bundlestore
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ cp $HGRCPATH $TESTTMP/defaulthgrc
   $ setupcommon
   $ hg init repo
-  $ (cd repo && setupserver)
+  $ cd repo
+  $ setupserver
+  $ cd ..
 
 Test `hg up` command for the commit that doesn't exist locally but does remotely.
 We are making commit in repo (server) and will recover it in client 1 via short hash.
@@ -96,13 +96,17 @@ Set up similar test but with sql infinitepush storage
 
 With no configuration it should abort
   $ hg init server
-  $ (cd server && setupsqlserverhgrc babar && setupdb)
+  $ cd server
+  $ setupsqlserverhgrc babar
+  $ setupdb
+  $ cd ..
   $ hg clone -q ssh://user@dummy/server client1
   $ hg clone -q ssh://user@dummy/server client2
-  $ (cd ./client1 && setupsqlclienthgrc)
-  $ (cd ./client2 && setupsqlclienthgrc)
-
   $ cd ./client1
+  $ setupsqlclienthgrc
+  $ cd ../client2
+  $ setupsqlclienthgrc
+  $ cd ../client1
   $ mkcommit someothercommit
   $ hg log -r .
   changeset:   0:af79492bdbc1
