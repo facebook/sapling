@@ -203,22 +203,60 @@ class sqlindexapi(indexapi):
             self.sqlconnect()
         self.log.info("GET NODE BY PREFIX %r %r" % (self.reponame, prefix))
         nodeprefixpattern = prefix + '%'
-        self.sqlcursor.execute(
-            "SELECT node from nodestobundle "
-            "WHERE node LIKE %s "
-            "AND reponame = %s "
-            "LIMIT 2", params=(nodeprefixpattern, self.reponame))
-        result = self.sqlcursor.fetchall()
+        result = None
 
+        if len(prefix) >= 6 and len(prefix) < 20:
+            # With longer hashes we can make more complex QUERY
+            # in order to return some suggestions with the matched PREFIX
+            # so user can pick up the desired one easily
+            # there is no need to go this path for prefixes longer than 20
+            # because to find several commits is highly unlikely
+            cmd = (
+                'SELECT t1.node, t2.message, t2.author '
+                'FROM nodestobundle t1 JOIN nodesmetadata t2 '
+                'ON t1.node = t2.node AND t1.reponame = t2.reponame '
+                'WHERE t1.node LIKE %s AND t1.reponame =  %s '
+                'LIMIT 5'
+            )
+            params = (nodeprefixpattern, self.reponame)
+            self.sqlcursor.execute(cmd, params)
+            result = self.sqlcursor.fetchall()
+
+            def gettitle(s):
+                return s.splitlines()[0]
+
+            if len(result) > 1:
+                raise indexexception(
+                    ('ambiguous identifier \'%s\'\n' % prefix) +
+                     'suggestions are: \n' +
+                     '\n'.join(
+                        ['author: {}, commithash: {}, message: \'{}\''.format(
+                            u[2], u[0], gettitle(u[1])
+                        ) for u in result]
+                    )
+                )
+
+        else:
+            self.sqlcursor.execute(
+                "SELECT node from nodestobundle "
+                "WHERE node LIKE %s "
+                "AND reponame = %s "
+                "LIMIT 2", params=(nodeprefixpattern, self.reponame))
+            result = self.sqlcursor.fetchall()
+
+            if len(result) > 1:
+                raise indexexception(('ambiguous identifier \'%s\'\n'
+                            % prefix) +
+                            'suggestion: provide longer commithash prefix')
+
+        # result not found
         if len(result) != 1 or len(result[0]) == 0:
             self.log.info("No matching node")
             return None
 
-        if len(result[0]) > 1:
-            raise indexexception('ambiguous identifier \'%s\''
-                        % prefix)
-
         node = result[0][0]
+
+        # Log found result. It is unique.
         self.log.info("Found node %r" % node)
         return node
 

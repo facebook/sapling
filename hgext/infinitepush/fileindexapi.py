@@ -74,9 +74,11 @@ class fileindexapi(indexapi):
 
         if not nodefiles:
             return None
+
         if len(nodefiles) > 1:
-            raise indexexception('ambiguous identifier \'%s\''
-                        % hashprefix)
+            raise indexexception(('ambiguous identifier \'%s\'\n'
+                        % hashprefix) +
+                        'suggestion: provide longer commithash prefix')
 
         return nodefiles[0]
 

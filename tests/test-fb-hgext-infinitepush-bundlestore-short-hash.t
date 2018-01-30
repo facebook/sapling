@@ -76,6 +76,7 @@ Test pulling a commit with the same prefix by creating fake files
   'b1b6fe' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo
   pull failed: ambiguous identifier 'b1b6fe'
+  suggestion: provide longer commithash prefix
   abort: unknown revision 'b1b6fe'!
   [255]
 
@@ -84,6 +85,7 @@ Clean up from the previous tests
   $ rm -r ./client2
 
 Set up similar test but with sql infinitepush storage
+The test scenario will cover several different lengths of prefix
 
 #if no-osx
   $ mkcommit() {
@@ -107,36 +109,65 @@ With no configuration it should abort
   $ cd ../client2
   $ setupsqlclienthgrc
   $ cd ../client1
-  $ mkcommit someothercommit
-  $ hg log -r .
-  changeset:   0:af79492bdbc1
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     someothercommit
-  
+  $ mkcommit someothercommit1
+  $ mkcommit someothercommit2
+  $ mkcommit someothercommit3
+
   $ hg pushbackup
   starting backup * (glob)
   searching for changes
-  remote: pushing 1 commit:
-  remote:     af79492bdbc1  someothercommit
+  remote: pushing 3 commits:
+  remote:     8d765bbfea1e  someothercommit1
+  remote:     7771af6bb3e9  someothercommit2
+  remote:     e9c85ac3eb26  someothercommit3
   finished in * seconds (glob)
   $ cd ../
 
-  $ (cd ./client2 && hg up af7949)
-  'af7949' does not exist locally - looking for it remotely...
+case 1: test length of prefix = 6
+  $ (cd ./client2 && hg up 8d765b)
+  '8d765b' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/server
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  new changesets af79492bdbc1
+  new changesets 8d765bbfea1e
   (run 'hg update' to get a working copy)
-  'af7949' found remotely
+  '8d765b' found remotely
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-Test when it is not found
+case 2: test length of prefix < 6
+  $ (cd ./client2 && hg up 7771a)
+  '7771a' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files
+  new changesets 7771af6bb3e9
+  (run 'hg update' to get a working copy)
+  '7771a' found remotely
+  pull finished in * sec (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+case 3: test longerlength
+  $ (cd ./client2 && hg up e9c85ac3eb26)
+  'e9c85ac3eb26' does not exist locally - looking for it remotely...
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 3 files
+  new changesets e9c85ac3eb26
+  (run 'hg update' to get a working copy)
+  'e9c85ac3eb26' found remotely
+  pull finished in * sec (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test when the commit is not found
   $ (cd ./client2 && hg up af7948)
   'af7948' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/server
