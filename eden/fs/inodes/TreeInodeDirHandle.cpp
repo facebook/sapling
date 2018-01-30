@@ -39,10 +39,9 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   // while trying to skip around and respect the offset parameter.
   // Let's go for the simple approach and see if that is good enough.
   //
-  // There are three components to the DirList that we need to populate:
+  // `off` is the index into a synthesized list of entries:
   // 1. The "." and ".." entries
-  // 2. The overlay entries if we have any
-  // 3. The tree entries if we do not have an overlay entry for this dir.
+  // 3. The TreeInode's entries in order.
   //
   // We're going to build a vector of this combined information,
   // then we can paginate sanely using the off parameter.
@@ -50,12 +49,13 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   /** This struct is pretty lightweight and doesn't need to make any
    * heap copies of names as we accumulate the view of the entries */
   struct Entry {
-    const char* name;
+    // This must not contain any embedded nuls.
+    folly::StringPiece name;
     dtype_t type;
     /// If 0, look up/assign it based on name
     fusell::InodeNumber ino;
 
-    Entry(const char* name, dtype_t type, fusell::InodeNumber ino = 0)
+    Entry(folly::StringPiece name, dtype_t type, fusell::InodeNumber ino = 0)
         : name(name), type(type), ino(ino) {}
   };
   folly::fbvector<Entry> entries;
@@ -67,17 +67,13 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     // Reserved entries for linking to parent and self.
     entries.emplace_back(".", dtype_t::Dir, dir_inode);
     auto parent = inode_->getParentBuggy();
-    if (!parent) {
-      // For the root of the mount point, just add its own inode ID
-      // as its parent.
-      entries.emplace_back("..", dtype_t::Dir, dir_inode);
-    } else {
-      entries.emplace_back("..", dtype_t::Dir, parent->getNodeId());
-    }
+    // For the root of the mount point, just add its own inode ID
+    // as its parent.
+    auto parent_inode = parent ? parent->getNodeId() : dir_inode;
+    entries.emplace_back("..", dtype_t::Dir, parent_inode);
 
     for (const auto& entry : dir->entries) {
-      entries.emplace_back(
-          entry.first.value().c_str(), entry.second->getDtype());
+      entries.emplace_back(entry.first.value(), entry.second->getDtype());
     }
   }
 
