@@ -100,7 +100,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluate(
           }
 
           // Not the leaf of a pattern; if this is a dir, we need to recurse
-          if (it->second->isDirectory()) {
+          if (it->second.isDirectory()) {
             recurse.emplace_back(std::make_pair(it->first, node.get()));
           }
         }
@@ -115,7 +115,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluate(
             }
             // Not the leaf of a pattern; if this is a dir, we need to
             // recurse
-            if (entry.second->isDirectory()) {
+            if (entry.second.isDirectory()) {
               recurse.emplace_back(std::make_pair(entry.first, node.get()));
             }
           }
@@ -208,7 +208,7 @@ Future<unordered_set<RelativePath>> GlobNode::evaluateRecursiveComponent(
 
       // Remember to recurse through child dirs after we've released
       // the lock on the contents.
-      if (entry.second->isDirectory()) {
+      if (entry.second.isDirectory()) {
         subDirNames.emplace_back(candidateName);
       }
     }

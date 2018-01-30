@@ -221,10 +221,13 @@ class TreeInode : public InodeBase {
     InodeBase* inode_{nullptr};
   };
 
+  // TODO: We can do better than this.
+  static_assert(sizeof(Entry) == 48, "Entry is six words");
+
   /** Represents a directory in the overlay */
   struct Dir {
     /** The direct children of this directory */
-    PathMap<std::unique_ptr<Entry>> entries;
+    PathMap<Entry> entries;
     InodeTimestamps timeStamps;
     /**
      * If this TreeInode is unmaterialized (identical to an existing source
@@ -574,12 +577,12 @@ class TreeInode : public InodeBase {
       std::unique_ptr<InodeBase> childInode);
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
-      Entry* entry,
+      const Entry& entry,
       PathComponentPiece name,
       fusell::InodeNumber number) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
-      Entry* entry,
+      const Entry& entry,
       PathComponentPiece name,
       fusell::InodeNumber number);
 
@@ -594,7 +597,7 @@ class TreeInode : public InodeBase {
   folly::Future<folly::Unit> doRename(
       TreeRenameLocks&& locks,
       PathComponentPiece srcName,
-      PathMap<std::unique_ptr<Entry>>::iterator srcIter,
+      PathMap<Entry>::iterator srcIter,
       TreeInodePtr destParent,
       PathComponentPiece destName);
 
@@ -687,7 +690,7 @@ class TreeInode : public InodeBase {
   folly::Future<InodePtr> loadChildLocked(
       Dir& dir,
       PathComponentPiece name,
-      Entry* entry,
+      Entry& entry,
       std::vector<IncompleteInodeLoad>* pendingLoads);
 
   /**

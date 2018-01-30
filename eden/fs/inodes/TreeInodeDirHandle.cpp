@@ -73,7 +73,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     entries.emplace_back("..", dtype_t::Dir, parent_inode);
 
     for (const auto& entry : dir->entries) {
-      entries.emplace_back(entry.first.value(), entry.second->getDtype());
+      entries.emplace_back(entry.first.value(), entry.second.getDtype());
     }
   }
 

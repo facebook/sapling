@@ -218,14 +218,13 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
     const auto& name = iter.first;
     const auto& value = iter.second;
 
-    unique_ptr<TreeInode::Entry> entry;
     if (value.inodeNumber == 0) {
       auto hash = Hash(folly::ByteRange(folly::StringPiece(value.hash)));
-      entry = make_unique<TreeInode::Entry>(value.mode, hash);
+      result.entries.emplace(PathComponentPiece{name}, value.mode, hash);
     } else {
-      entry = make_unique<TreeInode::Entry>(value.mode, value.inodeNumber);
+      result.entries.emplace(
+          PathComponentPiece{name}, value.mode, value.inodeNumber);
     }
-    result.entries.emplace(PathComponentPiece(name), std::move(entry));
   }
 
   return folly::Optional<TreeInode::Dir>(std::move(result));
@@ -242,16 +241,16 @@ void Overlay::saveOverlayDir(
   DCHECK(dir->isMaterialized());
   for (auto& entIter : dir->entries) {
     const auto& entName = entIter.first;
-    const auto ent = entIter.second.get();
+    const auto& ent = entIter.second;
 
     overlay::OverlayEntry oent;
-    oent.mode = ent->getModeUnsafe();
-    if (ent->isMaterialized()) {
-      oent.inodeNumber = ent->getInodeNumber();
+    oent.mode = ent.getModeUnsafe();
+    if (ent.isMaterialized()) {
+      oent.inodeNumber = ent.getInodeNumber();
       DCHECK_NE(oent.inodeNumber, 0);
     } else {
       oent.inodeNumber = 0;
-      auto entHash = ent->getHash();
+      auto entHash = ent.getHash();
       auto bytes = entHash.getBytes();
       oent.hash = std::string(
           reinterpret_cast<const char*>(bytes.data()), bytes.size());

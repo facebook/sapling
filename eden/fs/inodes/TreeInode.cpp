@@ -205,8 +205,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
 
     // Check to see if the entry is already loaded
     auto& entryPtr = iter->second;
-    if (entryPtr->getInode()) {
-      return makeFuture<InodePtr>(InodePtr::newPtrLocked(entryPtr->getInode()));
+    if (entryPtr.getInode()) {
+      return makeFuture<InodePtr>(InodePtr::newPtrLocked(entryPtr.getInode()));
     }
 
     // The entry is not loaded yet.  Ask the InodeMap about the entry.
@@ -215,28 +215,27 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     folly::Promise<InodePtr> promise;
     returnFuture = promise.getFuture();
     bool startLoad;
-    if (entryPtr->hasInodeNumber()) {
-      childNumber = entryPtr->getInodeNumber();
+    if (entryPtr.hasInodeNumber()) {
+      childNumber = entryPtr.getInodeNumber();
       startLoad = getInodeMap()->shouldLoadChild(
           this, name, childNumber, std::move(promise));
     } else {
       childNumber =
           getInodeMap()->newChildLoadStarted(this, name, std::move(promise));
       // Immediately record the newly allocated inode number
-      entryPtr->setInodeNumber(childNumber);
+      entryPtr.setInodeNumber(childNumber);
       startLoad = true;
     }
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
-      auto loadFuture =
-          startLoadingInodeNoThrow(entryPtr.get(), name, childNumber);
+      auto loadFuture = startLoadingInodeNoThrow(entryPtr, name, childNumber);
       if (loadFuture.isReady() && loadFuture.hasValue()) {
         // If we finished loading the inode immediately, just call
         // InodeMap::inodeLoadComplete() now, since we still have the data_
         // lock.
         auto childInode = loadFuture.get();
-        entryPtr->setInode(childInode.get());
+        entryPtr.setInode(childInode.get());
         promises = getInodeMap()->inodeLoadComplete(childInode.get());
         childInodePtr = InodePtr::newPtrLocked(childInode.release());
       } else {
@@ -323,16 +322,16 @@ fusell::InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   }
 
   auto& ent = iter->second;
-  if (ent->getInode()) {
-    return ent->getInode()->getNodeId();
+  if (ent.getInode()) {
+    return ent.getInode()->getNodeId();
   }
 
-  if (ent->hasInodeNumber()) {
-    return ent->getInodeNumber();
+  if (ent.hasInodeNumber()) {
+    return ent.getInodeNumber();
   }
 
   auto inodeNumber = getInodeMap()->allocateInodeNumber();
-  ent->setInodeNumber(inodeNumber);
+  ent.setInodeNumber(inodeNumber);
   return inodeNumber;
 }
 
@@ -410,10 +409,10 @@ void TreeInode::loadChildInode(
       return;
     }
 
-    auto& entryPtr = iter->second;
+    auto& entry = iter->second;
     // InodeMap makes sure to only try loading each inode once, so this entry
     // should not already be loaded.
-    if (entryPtr->getInode() != nullptr) {
+    if (entry.getInode() != nullptr) {
       auto bug = EDEN_BUG()
           << "InodeMap requested to load inode " << number << "(" << name
           << " in " << getNodeId() << "), which is already loaded";
@@ -428,7 +427,7 @@ void TreeInode::loadChildInode(
       return;
     }
 
-    future = startLoadingInodeNoThrow(entryPtr.get(), name, number);
+    future = startLoadingInodeNoThrow(entry, name, number);
   }
   registerInodeLoadComplete(future.value(), name, number);
 }
@@ -474,7 +473,7 @@ void TreeInode::inodeLoadComplete(
           childName,
           "inode removed before loading finished");
     }
-    iter->second->setInode(childInode.get());
+    iter->second.setInode(childInode.get());
     // Make sure that we are still holding the contents_ lock when
     // calling inodeLoadComplete().  This ensures that no-one can look up
     // the inode by name before it is also available in the InodeMap.
@@ -491,7 +490,7 @@ void TreeInode::inodeLoadComplete(
 }
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
-    Entry* entry,
+    const Entry& entry,
     PathComponentPiece name,
     fusell::InodeNumber number) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
@@ -513,13 +512,13 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
 }
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
-    Entry* entry,
+    const Entry& entry,
     PathComponentPiece name,
     fusell::InodeNumber number) {
   XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
              << " / \"" << name << "\"";
-  DCHECK(entry->getInode() == nullptr);
-  if (!S_ISDIR(entry->getMode())) {
+  DCHECK(entry.getInode() == nullptr);
+  if (!S_ISDIR(entry.getMode())) {
     // If this is a file we can just go ahead and create it now;
     // we don't need to load anything else.
     //
@@ -530,13 +529,13 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         number,
         inodePtrFromThis(),
         name,
-        entry->getMode(),
-        entry->getOptionalHash());
+        entry.getMode(),
+        entry.getOptionalHash());
   }
 
-  if (!entry->isMaterialized()) {
+  if (!entry.isMaterialized()) {
     return getStore()
-        ->getTree(entry->getHash())
+        ->getTree(entry.getHash())
         .then(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
@@ -548,7 +547,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   // No corresponding TreeEntry, this exists only in the overlay.
-  CHECK_EQ(number, entry->getInodeNumber());
+  CHECK_EQ(number, entry.getInodeNumber());
   auto overlayDir = getOverlay()->loadOverlayDir(number);
   if (!overlayDir) {
     auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
@@ -638,13 +637,13 @@ void TreeInode::childMaterialized(
                  << getLogPath() << ": entry not present";
     }
 
-    auto* childEntry = iter->second.get();
-    if (contents->isMaterialized() && childEntry->isMaterialized()) {
+    auto& childEntry = iter->second;
+    if (contents->isMaterialized() && childEntry.isMaterialized()) {
       // Nothing to do
       return;
     }
 
-    childEntry->setMaterialized(childNodeId);
+    childEntry.setMaterialized(childNodeId);
     contents->setMaterialized();
     getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
   }
@@ -671,15 +670,14 @@ void TreeInode::childDematerialized(
                  << getLogPath() << ": entry not present";
     }
 
-    auto* childEntry = iter->second.get();
-    if (!childEntry->isMaterialized() &&
-        childEntry->getHash() == childScmHash) {
+    auto& childEntry = iter->second;
+    if (!childEntry.isMaterialized() && childEntry.getHash() == childScmHash) {
       // Nothing to do.  Our child's state and our own are both unchanged.
       return;
     }
 
     // Mark the child dematerialized.
-    childEntry->setDematerialized(childScmHash);
+    childEntry.setDematerialized(childScmHash);
 
     // Mark us materialized!
     //
@@ -713,9 +711,8 @@ TreeInode::Dir TreeInode::buildDirFromTree(
 
   dir.treeHash = tree->getHash();
   for (const auto& treeEntry : tree->getTreeEntries()) {
-    Entry entry{treeEntry.getMode(), treeEntry.getHash()};
     dir.entries.emplace(
-        treeEntry.getName(), std::make_unique<Entry>(std::move(entry)));
+        treeEntry.getName(), treeEntry.getMode(), treeEntry.getHash());
   }
   // Set timestamps to lastCheckoutTime
   dir.timeStamps.setTimestampValues(lastCheckoutTime);
@@ -762,8 +759,14 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     mode = S_IFREG | (07777 & mode);
 
     // Record the new entry
-    auto& entry = contents->entries[name];
-    entry = std::make_unique<Entry>(mode, childNumber);
+    auto insertion = contents->entries.emplace(name, mode, childNumber);
+    auto& entry = insertion.first->second;
+    if (!insertion.second) {
+      // FUSE will never call into this code path if a file is being replaced.
+      auto bug = EDEN_BUG()
+          << "create() on path component that already exists" << name;
+      return makeFuture<TreeInode::CreateResult>(bug.toException());
+    }
 
     // Build a corresponding FileInode.  This code does not have to do anything
     // special to handle O_EXCL, because the kernel and FUSE take care of making
@@ -780,7 +783,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
         std::move(file),
         currentTime);
 
-    entry->setInode(inode.get());
+    entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
 
     auto now = getMount()->getClock().getRealtime();
@@ -872,17 +875,17 @@ FileInodePtr TreeInode::symlink(
           " bytes");
     }
 
-    auto entry = std::make_unique<Entry>(S_IFLNK | 0770, childNumber);
+    auto entry = Entry(S_IFLNK | 0770, childNumber);
 
     // build a corresponding FileInode
     inode = FileInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
-        entry->getMode(),
+        entry.getMode(),
         std::move(file),
         currentTime);
-    entry->setInode(inode.get());
+    entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));
 
@@ -950,17 +953,17 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
     auto currentTime = getNow();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
-    auto entry = std::make_unique<Entry>(mode, childNumber);
+    auto entry = Entry(mode, childNumber);
 
     // build a corresponding FileInode
     inode = FileInodePtr::makeNew(
         childNumber,
         this->inodePtrFromThis(),
         name,
-        entry->getMode(),
+        entry.getMode(),
         std::move(file),
         currentTime);
-    entry->setInode(inode.get());
+    entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
     contents->entries.emplace(name, std::move(entry));
 
@@ -1024,8 +1027,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     overlay->saveOverlayDir(childNumber, &emptyDir);
 
     // Add a new entry to contents_.entries
-    auto emplaceResult = contents->entries.emplace(
-        name, std::make_unique<Entry>(mode, childNumber));
+    auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
     CHECK(emplaceResult.second)
         << "directory contents should not have changed since the check above";
     auto& entry = emplaceResult.first->second;
@@ -1033,7 +1035,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     // Create the TreeInode
     newChild = TreeInodePtr::makeNew(
         childNumber, this->inodePtrFromThis(), name, std::move(emptyDir));
-    entry->setInode(newChild.get());
+    entry.setInode(newChild.get());
     inodeMap->inodeCreated(newChild);
 
     // Save our updated overlay data
@@ -1178,20 +1180,20 @@ int TreeInode::tryRemoveChild(
       return ENOENT;
     }
     auto& ent = entIter->second;
-    if (!ent->getInode()) {
+    if (!ent.getInode()) {
       // The inode in question is not loaded.  The caller will need to load it
       // and retry (if they want to retry).
       return EBADF;
     }
     if (child) {
-      if (ent->getInode() != child.get()) {
+      if (ent.getInode() != child.get()) {
         // This entry no longer refers to what the caller expected.
         return EBADF;
       }
     } else {
       // Make sure the entry being removed is the expected file/directory type.
       auto* currentChild =
-          dynamic_cast<typename InodePtrType::InodeType*>(ent->getInode());
+          dynamic_cast<typename InodePtrType::InodeType*>(ent.getInode());
       if (!currentChild) {
         return InodePtrType::InodeType::WRONG_TYPE_ERRNO;
       }
@@ -1291,12 +1293,12 @@ class TreeInode::TreeRenameLocks {
     return destContents_;
   }
 
-  const PathMap<std::unique_ptr<Entry>>::iterator& destChildIter() const {
+  const PathMap<Entry>::iterator& destChildIter() const {
     return destChildIter_;
   }
   InodeBase* destChild() const {
     DCHECK(destChildExists());
-    return destChildIter_->second->getInode();
+    return destChildIter_->second.getInode();
   }
 
   bool destChildExists() const {
@@ -1304,7 +1306,7 @@ class TreeInode::TreeRenameLocks {
   }
   bool destChildIsDirectory() const {
     DCHECK(destChildExists());
-    return destChildIter_->second->isDirectory();
+    return destChildIter_->second.isDirectory();
   }
   bool destChildIsEmpty() const {
     DCHECK_NOTNULL(destChildContents_);
@@ -1349,7 +1351,7 @@ class TreeInode::TreeRenameLocks {
    * This may point to destContents_->entries.end() if the destination child
    * does not exist.
    */
-  PathMap<std::unique_ptr<Entry>>::iterator destChildIter_;
+  PathMap<Entry>::iterator destChildIter_;
 };
 
 Future<Unit> TreeInode::rename(
@@ -1376,13 +1378,13 @@ Future<Unit> TreeInode::rename(
       // The source path does not exist.  Fail the rename.
       return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis(), name));
     }
-    Entry* srcEntry = srcIter->second.get();
+    Entry& srcEntry = srcIter->second;
 
     // Perform as much input validation as possible now, before starting inode
     // loads that might be necessary.
 
     // Validate invalid file/directory replacement
-    if (srcEntry->isDirectory()) {
+    if (srcEntry.isDirectory()) {
       // The source is a directory.
       // The destination must not exist, or must be an empty directory,
       // or the exact same directory.
@@ -1393,7 +1395,7 @@ Future<Unit> TreeInode::rename(
                      << destName;
           return makeFuture<Unit>(InodeError(ENOTDIR, destParent, destName));
         } else if (
-            locks.destChild() != srcEntry->getInode() &&
+            locks.destChild() != srcEntry.getInode() &&
             !locks.destChildIsEmpty()) {
           XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
                      << name << " over non-empty directory "
@@ -1421,7 +1423,7 @@ Future<Unit> TreeInode::rename(
     }
 
     // Check to see if we need to load the source or destination inodes
-    needSrc = !srcEntry->getInode();
+    needSrc = !srcEntry.getInode();
     needDest = locks.destChildExists() && !locks.destChild();
 
     // If we don't have to load anything now, we can immediately perform the
@@ -1477,14 +1479,14 @@ bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
 Future<Unit> TreeInode::doRename(
     TreeRenameLocks&& locks,
     PathComponentPiece srcName,
-    PathMap<std::unique_ptr<Entry>>::iterator srcIter,
+    PathMap<Entry>::iterator srcIter,
     TreeInodePtr destParent,
     PathComponentPiece destName) {
-  Entry* srcEntry = srcIter->second.get();
+  Entry& srcEntry = srcIter->second;
 
   // If the source and destination refer to exactly the same file,
   // then just succeed immediately.  Nothing needs to be done in this case.
-  if (locks.destChildExists() && srcEntry->getInode() == locks.destChild()) {
+  if (locks.destChildExists() && srcEntry.getInode() == locks.destChild()) {
     return folly::Unit{};
   }
 
@@ -1497,11 +1499,11 @@ Future<Unit> TreeInode::doRename(
   // We don't have to worry about the source being a child of the destination
   // directory.  That will have already been caught by the earlier check that
   // ensures the destination directory is non-empty.
-  if (srcEntry->isDirectory()) {
+  if (srcEntry.isDirectory()) {
     // Our caller has already verified that the source is also a
     // directory here.
     auto* srcTreeInode =
-        boost::polymorphic_downcast<TreeInode*>(srcEntry->getInode());
+        boost::polymorphic_downcast<TreeInode*>(srcEntry.getInode());
     if (srcTreeInode == destParent.get() ||
         isAncestor(locks.renameLock(), srcTreeInode, destParent.get())) {
       return makeFuture<Unit>(InodeError(EINVAL, destParent, destName));
@@ -1512,7 +1514,7 @@ Future<Unit> TreeInode::doRename(
   // Update the destination with the source data (this copies in the hash if
   // it happens to be set).
   std::unique_ptr<InodeBase> deletedInode;
-  auto* childInode = srcEntry->getInode();
+  auto* childInode = srcEntry.getInode();
   if (locks.destChildExists()) {
     deletedInode = locks.destChild()->markUnlinked(
         destParent.get(), destName, locks.renameLock());
@@ -1707,7 +1709,7 @@ Future<Unit> TreeInode::diff(
     Entry* inodeEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
-      inodeEntry = iter->second.get();
+      inodeEntry = &iter->second;
       if (inodeEntry->isDirectory()) {
         // Ignore .gitignore directories
         XLOG(DBG4) << "Ignoring .gitignore directory in " << getLogPath();
@@ -1729,7 +1731,7 @@ Future<Unit> TreeInode::diff(
       inode = InodePtr::newPtrLocked(inodeEntry->getInode());
     } else {
       inodeFuture = loadChildLocked(
-          *contents, kIgnoreFilename, inodeEntry, &pendingLoads);
+          *contents, kIgnoreFilename, *inodeEntry, &pendingLoads);
     }
   }
 
@@ -1909,7 +1911,7 @@ Future<Unit> TreeInode::computeDiff(
                     entryIgnored));
           } else {
             auto inodeFuture = self->loadChildLocked(
-                *contents, name, inodeEntry, &pendingLoads);
+                *contents, name, *inodeEntry, &pendingLoads);
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
                     context,
@@ -1982,7 +1984,7 @@ Future<Unit> TreeInode::computeDiff(
         // This inode is not loaded but is materialized.
         // We'll have to load it to confirm if it is the same or different.
         auto inodeFuture = self->loadChildLocked(
-            *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
+            *contents, scmEntry.getName(), *inodeEntry, &pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2000,7 +2002,7 @@ Future<Unit> TreeInode::computeDiff(
         // This is a modified directory.  We have to load it then recurse
         // into it to find files with differences.
         auto inodeFuture = self->loadChildLocked(
-            *contents, scmEntry.getName(), inodeEntry, &pendingLoads);
+            *contents, scmEntry.getName(), *inodeEntry, &pendingLoads);
         deferredEntries.emplace_back(
             DeferredDiffEntry::createModifiedEntryFromInodeFuture(
                 context,
@@ -2061,7 +2063,7 @@ Future<Unit> TreeInode::computeDiff(
     // inode entries are both sorted in the same order.
     vector<TreeEntry> emptyEntries;
     const auto& scEntries = tree ? tree->getTreeEntries() : emptyEntries;
-    const auto& inodeEntries = contents->entries;
+    auto& inodeEntries = contents->entries;
     size_t scIdx = 0;
     auto inodeIter = inodeEntries.begin();
     while (true) {
@@ -2072,7 +2074,7 @@ Future<Unit> TreeInode::computeDiff(
         }
 
         // This entry is present locally but not in the source control tree.
-        processUntracked(inodeIter->first, inodeIter->second.get());
+        processUntracked(inodeIter->first, &inodeIter->second);
         ++inodeIter;
       } else if (inodeIter == inodeEntries.end()) {
         // This entry is present in the old tree but not the old one.
@@ -2082,11 +2084,11 @@ Future<Unit> TreeInode::computeDiff(
         processRemoved(scEntries[scIdx]);
         ++scIdx;
       } else if (scEntries[scIdx].getName() > inodeIter->first) {
-        processUntracked(inodeIter->first, inodeIter->second.get());
+        processUntracked(inodeIter->first, &inodeIter->second);
         ++inodeIter;
       } else {
         const auto& scmEntry = scEntries[scIdx];
-        auto* inodeEntry = inodeIter->second.get();
+        auto* inodeEntry = &inodeIter->second;
         ++scIdx;
         ++inodeIter;
         processBothPresent(scmEntry, inodeEntry);
@@ -2341,9 +2343,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // and does not currently exist in the filesystem.  Go ahead and add it
       // now.
       if (!ctx->isDryRun()) {
-        auto newEntry =
-            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
-        contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
+        contents.entries.emplace(
+            newScmEntry->getName(),
+            newScmEntry->getMode(),
+            newScmEntry->getHash());
       }
     } else if (!newScmEntry) {
       // This file exists in the old tree, but is being removed in the new
@@ -2359,9 +2362,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
           ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
       if (ctx->forceUpdate()) {
         DCHECK(!ctx->isDryRun());
-        auto newEntry =
-            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
-        contents.entries.emplace(newScmEntry->getName(), std::move(newEntry));
+        contents.entries.emplace(
+            newScmEntry->getName(),
+            newScmEntry->getMode(),
+            newScmEntry->getHash());
       }
     }
 
@@ -2370,9 +2374,9 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   auto& entry = it->second;
-  if (entry->getInode()) {
+  if (entry.getInode()) {
     // If the inode is already loaded, create a CheckoutAction to process it
-    auto childPtr = InodePtr::newPtrLocked(entry->getInode());
+    auto childPtr = InodePtr::newPtrLocked(entry.getInode());
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
@@ -2385,12 +2389,11 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   //
   // This also handles materialized inodes--an inode cannot be materialized if
   // it does not have an inode number assigned to it.
-  if (entry->hasInodeNumber()) {
+  if (entry.hasInodeNumber()) {
     // This child is potentially modified, but is not currently loaded.
     // Start loading it and create a CheckoutAction to process it once it
     // is loaded.
-    auto inodeFuture =
-        loadChildLocked(contents, name, entry.get(), pendingLoads);
+    auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
   }
@@ -2399,16 +2402,15 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   auto conflictType = ConflictType::ERROR;
   if (!oldScmEntry) {
     conflictType = ConflictType::UNTRACKED_ADDED;
-  } else if (entry->getHash() != oldScmEntry->getHash()) {
+  } else if (entry.getHash() != oldScmEntry->getHash()) {
     conflictType = ConflictType::MODIFIED_MODIFIED;
   }
   if (conflictType != ConflictType::ERROR) {
     // If this is are a directory we unfortunately have to load the directory
     // and recurse into it just so we can accurately report the list of files
     // with conflicts.
-    if (entry->isDirectory()) {
-      auto inodeFuture =
-          loadChildLocked(contents, name, entry.get(), pendingLoads);
+    if (entry.isDirectory()) {
+      auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
       return make_unique<CheckoutAction>(
           ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
     }
@@ -2429,7 +2431,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (!newScmEntry) {
     contents.entries.erase(it);
   } else {
-    *entry = Entry{newScmEntry->getMode(), newScmEntry->getHash()};
+    entry = Entry{newScmEntry->getMode(), newScmEntry->getHash()};
   }
 
   // Note that we intentionally don't bother calling
@@ -2469,7 +2471,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
           << inode->getLogPath();
       return folly::makeFuture<Unit>(bug.toException());
     }
-    if (it->second->getInode() != inode.get()) {
+    if (it->second.getInode() != inode.get()) {
       auto bug = EDEN_BUG()
           << "entry changed while holding rename lock during checkout: "
           << inode->getLogPath();
@@ -2481,8 +2483,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
     if (newScmEntry) {
       DCHECK_EQ(newScmEntry->getName(), name);
-      it->second =
-          make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
+      it->second = Entry(newScmEntry->getMode(), newScmEntry->getHash());
     } else {
       contents->entries.erase(it);
     }
@@ -2545,9 +2546,8 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         // Add the new entry
         auto contents = parentInode->contents_.wlock();
         DCHECK_EQ(TreeEntryType::BLOB, newScmEntry->getType());
-        auto newTreeEntry =
-            make_unique<Entry>(newScmEntry->getMode(), newScmEntry->getHash());
-        auto ret = contents->entries.emplace(name, std::move(newTreeEntry));
+        auto ret = contents->entries.emplace(
+            name, newScmEntry->getMode(), newScmEntry->getHash());
         if (!ret.second) {
           // Hmm.  Someone else already created a new entry in this location
           // before we had a chance to add our new entry.  We don't block new
@@ -2616,14 +2616,14 @@ void TreeInode::saveOverlayPostCheckout(
         // operation.)  Even if the child is still identical to its source
         // control state we still want to make sure we are materialized if the
         // child is.
-        if (inodeIter->second->isMaterialized()) {
+        if (inodeIter->second.isMaterialized()) {
           return folly::none;
         }
 
         // If if the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
-        if (inodeIter->second->getHash() != scmIter->getHash()) {
+        if (inodeIter->second.getHash() != scmIter->getHash()) {
           return folly::none;
         }
       }
@@ -2740,31 +2740,31 @@ folly::Future<folly::Unit> recursivelyLoadMaterializedChildren(
 folly::Future<InodePtr> TreeInode::loadChildLocked(
     Dir& /* contents */,
     PathComponentPiece name,
-    Entry* entry,
+    Entry& entry,
     std::vector<IncompleteInodeLoad>* pendingLoads) {
-  DCHECK(!entry->getInode());
+  DCHECK(!entry.getInode());
 
   bool startLoad;
   fusell::InodeNumber childNumber;
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
-  if (entry->hasInodeNumber()) {
-    childNumber = entry->getInodeNumber();
+  if (entry.hasInodeNumber()) {
+    childNumber = entry.getInodeNumber();
     startLoad = getInodeMap()->shouldLoadChild(
         this, name, childNumber, std::move(promise));
   } else {
     childNumber =
         getInodeMap()->newChildLoadStarted(this, name, std::move(promise));
     // Immediately record the newly allocated inode number
-    entry->setInodeNumber(childNumber);
+    entry.setInodeNumber(childNumber);
     startLoad = true;
   }
 
   if (startLoad) {
     auto loadFuture =
-        startLoadingInodeNoThrow(entry, name, entry->getInodeNumber());
+        startLoadingInodeNoThrow(entry, name, entry.getInodeNumber());
     pendingLoads->emplace_back(
-        this, std::move(loadFuture), name, entry->getInodeNumber());
+        this, std::move(loadFuture), name, entry.getInodeNumber());
   }
 
   return future;
@@ -2783,17 +2783,17 @@ folly::Future<folly::Unit> TreeInode::loadMaterializedChildren(
 
     for (auto& entry : contents->entries) {
       const auto& name = entry.first;
-      const auto& ent = entry.second;
-      if (!ent->isMaterialized()) {
+      auto& ent = entry.second;
+      if (!ent.isMaterialized()) {
         continue;
       }
 
-      if (ent->getInode()) {
+      if (ent.getInode()) {
         // Already loaded, most likely via prefetch
         continue;
       }
 
-      auto future = loadChildLocked(*contents, name, ent.get(), &pendingLoads);
+      auto future = loadChildLocked(*contents, name, ent, &pendingLoads);
       inodeFutures.emplace_back(std::move(future));
     }
   }
@@ -2827,22 +2827,22 @@ void TreeInode::unloadChildrenNow() {
     auto inodeMapLock = inodeMap->lockForUnload();
 
     for (auto& entry : contents->entries) {
-      if (!entry.second->getInode()) {
+      if (!entry.second.getInode()) {
         continue;
       }
 
-      auto* asTree = dynamic_cast<TreeInode*>(entry.second->getInode());
+      auto* asTree = dynamic_cast<TreeInode*>(entry.second.getInode());
       if (asTree) {
         treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
       } else {
-        if (entry.second->getInode()->isPtrAcquireCountZero()) {
+        if (entry.second.getInode()->isPtrAcquireCountZero()) {
           // Unload the inode
           inodeMap->unloadInode(
-              entry.second->getInode(), this, entry.first, false, inodeMapLock);
+              entry.second.getInode(), this, entry.first, false, inodeMapLock);
           // Record that we should now delete this inode after releasing
           // the locks.
-          toDelete.push_back(entry.second->getInode());
-          entry.second->clearInode();
+          toDelete.push_back(entry.second.getInode());
+          entry.second.clearInode();
         }
       }
     }
@@ -2880,11 +2880,11 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   {
     auto contents = contents_.rlock();
     for (auto& entry : contents->entries) {
-      if (!entry.second->getInode()) {
+      if (!entry.second.getInode()) {
         continue;
       }
 
-      auto* asFile = dynamic_cast<FileInode*>(entry.second->getInode());
+      auto* asFile = dynamic_cast<FileInode*>(entry.second.getInode());
       if (asFile) {
         potentialUnload.push_back(FileInodePtr::newPtrLocked(asFile));
       }
@@ -2926,16 +2926,16 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
     auto inodeMapLock = inodeMap->lockForUnload();
 
     for (auto& entry : contents->entries) {
-      if (!entry.second->getInode()) {
+      if (!entry.second.getInode()) {
         continue;
       }
-      auto asTree = dynamic_cast<TreeInode*>(entry.second->getInode());
+      auto asTree = dynamic_cast<TreeInode*>(entry.second.getInode());
       if (asTree) {
         treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
       } else {
         // Check if the entry is present in the toUnload list(atime greater than
         // age)
-        auto entryInode = entry.second->getInode();
+        auto entryInode = entry.second.getInode();
         if (toUnload.count(entryInode) && entryInode->isPtrAcquireCountZero()) {
           // Unload the inode
           inodeMap->unloadInode(
@@ -2943,7 +2943,7 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
           // Record that we should now delete this inode after releasing
           // the locks.
           toDelete.push_back(entryInode);
-          entry.second->clearInode();
+          entry.second.clearInode();
         }
       }
     }
@@ -2986,31 +2986,31 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
     info.treeHash = thriftHash(contents->treeHash);
 
     for (const auto& entry : contents->entries) {
-      if (entry.second->getInode()) {
+      if (entry.second.getInode()) {
         // A child inode exists, so just grab an InodePtr and add it to the
         // childInodes list.  We will process all loaded children after
         // releasing our own contents_ lock (since we need to grab each child
         // Inode's own lock to get its data).
         childInodes.emplace_back(
-            entry.first, InodePtr::newPtrLocked(entry.second->getInode()));
+            entry.first, InodePtr::newPtrLocked(entry.second.getInode()));
       } else {
         // We can store data about unloaded entries immediately, since we have
         // the authoritative data ourself, and don't need to ask a separate
         // InodeBase object.
         info.entries.emplace_back();
         auto& infoEntry = info.entries.back();
-        auto* inodeEntry = entry.second.get();
+        auto& inodeEntry = entry.second;
         infoEntry.name = entry.first.stringPiece().str();
-        if (inodeEntry->hasInodeNumber()) {
-          infoEntry.inodeNumber = inodeEntry->getInodeNumber();
+        if (inodeEntry.hasInodeNumber()) {
+          infoEntry.inodeNumber = inodeEntry.getInodeNumber();
         } else {
           infoEntry.inodeNumber = 0;
         }
-        infoEntry.mode = inodeEntry->getMode();
+        infoEntry.mode = inodeEntry.getMode();
         infoEntry.loaded = false;
-        infoEntry.materialized = inodeEntry->isMaterialized();
+        infoEntry.materialized = inodeEntry.isMaterialized();
         if (!infoEntry.materialized) {
-          infoEntry.hash = thriftHash(inodeEntry->getHash());
+          infoEntry.hash = thriftHash(inodeEntry.getHash());
         }
       }
     }
