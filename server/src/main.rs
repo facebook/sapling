@@ -6,6 +6,7 @@
 
 #![deny(warnings)]
 #![feature(never_type)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate failure_ext as failure;
@@ -33,9 +34,13 @@ extern crate async_compression;
 extern crate blobrepo;
 extern crate bytes;
 extern crate hgproto;
+#[cfg(test)]
+extern crate many_files_dirs;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 extern crate metaconfig;
 extern crate repoinfo;
 extern crate revset;
@@ -46,6 +51,7 @@ extern crate stats;
 mod errors;
 mod repo;
 mod listener;
+mod manifest_utils;
 
 use std::io;
 use std::panic;

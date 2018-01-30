@@ -15,7 +15,7 @@ use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::EntryId;
 
-type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
+pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
 pub fn make_file<C: AsRef<str>>(content: C) -> ContentFactory {
     let content = content.as_ref().to_owned().into_bytes();
@@ -65,9 +65,11 @@ impl Manifest for MockManifest {
     }
 }
 
-struct MockEntry {
+pub struct MockEntry {
     path: RepoPath,
     content_factory: ContentFactory,
+    ty: Option<Type>,
+    hash: Option<EntryId>,
 }
 
 impl Clone for MockEntry {
@@ -75,22 +77,34 @@ impl Clone for MockEntry {
         MockEntry {
             path: self.path.clone(),
             content_factory: self.content_factory.clone(),
+            ty: self.ty.clone(),
+            hash: self.hash.clone(),
         }
     }
 }
 
 impl MockEntry {
-    fn new(path: RepoPath, content_factory: ContentFactory) -> Self {
+    pub fn new(path: RepoPath, content_factory: ContentFactory) -> Self {
         MockEntry {
             path,
             content_factory,
+            ty: None,
+            hash: None,
         }
+    }
+
+    pub fn set_type(&mut self, ty: Type) {
+        self.ty = Some(ty);
+    }
+
+    pub fn set_hash(&mut self, hash: EntryId) {
+        self.hash = Some(hash);
     }
 }
 
 impl Entry for MockEntry {
     fn get_type(&self) -> Type {
-        unimplemented!();
+        self.ty.expect("ty is not set!")
     }
     fn get_parents(&self) -> BoxFuture<Parents, Error> {
         unimplemented!();
@@ -105,7 +119,10 @@ impl Entry for MockEntry {
         unimplemented!();
     }
     fn get_hash(&self) -> &EntryId {
-        unimplemented!();
+        match self.hash {
+            Some(ref hash) => hash,
+            None => panic!("hash is not set!"),
+        }
     }
     fn get_path(&self) -> &RepoPath {
         &self.path
