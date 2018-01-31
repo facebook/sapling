@@ -211,9 +211,21 @@ impl RevlogRepo {
             .into_future()
     }
 
+    /// This method will soon be deleted, please use `get_changeset_by_changesetid` instead.
     pub fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<RevlogChangeset, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         self.get_changeset_blob_by_nodeid(nodeid)
+            .and_then(|rev| RevlogChangeset::new(rev))
+            .boxify()
+    }
+
+    pub fn get_changeset_by_changesetid(
+        &self,
+        changesetid: &ChangesetId,
+    ) -> BoxFuture<RevlogChangeset, Error> {
+        // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
+        let nodeid = changesetid.clone().into_nodehash();
+        self.get_changeset_blob_by_nodeid(&nodeid)
             .and_then(|rev| RevlogChangeset::new(rev))
             .boxify()
     }

@@ -20,7 +20,7 @@ use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
-use mercurial_types::nodehash::EntryId;
+use mercurial_types::nodehash::{ChangesetId, EntryId};
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -75,7 +75,7 @@ where
                 move |(seq, csid)| {
                     debug!(logger, "{}: changeset {}", seq, csid);
                     STATS::changesets.add_value(1);
-                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), csid)
+                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), ChangesetId::new(csid))
                 }
             }) // Stream<Future<()>>
             .map(|copy| cpupool.spawn(copy))
@@ -118,7 +118,7 @@ fn copy_changeset<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     linknodes_store: L,
-    csid: NodeHash,
+    csid: ChangesetId,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
@@ -129,7 +129,7 @@ where
         let csid = csid;
 
         revlog_repo
-            .get_changeset_by_nodeid(&csid)
+            .get_changeset_by_changesetid(&csid)
             .from_err()
             .and_then(move |cs| {
                 let bcs = BlobChangeset::new(&csid, cs);
@@ -139,9 +139,10 @@ where
             })
     };
 
-    let entryid = EntryId::new(csid);
+    let nodeid = csid.clone().into_nodehash();
+    let entryid = EntryId::new(nodeid);
     let manifest = revlog_repo
-        .get_changeset_by_nodeid(&csid)
+        .get_changeset_by_changesetid(&csid)
         .join(revlog_repo.get_changelog_revlog_entry_by_id(&entryid))
         .from_err()
         .and_then(move |(cs, entry)| {

@@ -15,7 +15,7 @@ use futures::future::{Future, IntoFuture};
 use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
-use mercurial_types::{Blob, BlobNode, Changeset, MPath, NodeHash, Parents, Time};
+use mercurial_types::{Blob, BlobNode, Changeset, MPath, Parents, Time};
 use mercurial_types::nodehash::{ChangesetId, ManifestId};
 
 use errors::*;
@@ -34,18 +34,18 @@ struct RawCSBlob<'a> {
 }
 
 pub struct BlobChangeset {
-    nodeid: NodeHash, // redundant - can be computed from revlogcs?
+    changesetid: ChangesetId, // redundant - can be computed from revlogcs?
     revlogcs: RevlogChangeset,
 }
 
-fn cskey(nodeid: &NodeHash) -> String {
-    format!("changeset-{}.bincode", nodeid)
+fn cskey(changesetid: &ChangesetId) -> String {
+    format!("changeset-{}.bincode", changesetid)
 }
 
 impl BlobChangeset {
-    pub fn new(nodeid: &NodeHash, revlogcs: RevlogChangeset) -> Self {
+    pub fn new(changesetid: &ChangesetId, revlogcs: RevlogChangeset) -> Self {
         Self {
-            nodeid: *nodeid,
+            changesetid: *changesetid,
             revlogcs,
         }
     }
@@ -54,8 +54,8 @@ impl BlobChangeset {
         blobstore: &Arc<Blobstore>,
         changesetid: &ChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
-        let nodeid = changesetid.clone().into_nodehash();
-        let key = cskey(&nodeid);
+        let changesetid = changesetid.clone();
+        let key = cskey(&changesetid);
 
         blobstore.get(key).and_then(move |got| match got {
             None => Ok(None),
@@ -65,7 +65,7 @@ impl BlobChangeset {
                 let blob = Blob::from(blob.into_owned());
                 let node = BlobNode::new(blob, p1, p2);
                 let cs = BlobChangeset {
-                    nodeid: nodeid,
+                    changesetid: changesetid,
                     revlogcs: RevlogChangeset::new(node)?,
                 };
                 Ok(Some(cs))
@@ -77,7 +77,7 @@ impl BlobChangeset {
         &self,
         blobstore: Arc<Blobstore>,
     ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-        let key = cskey(&self.nodeid);
+        let key = cskey(&self.changesetid);
 
         self.revlogcs.get_node() // FIXME: generate from scratch
             .map_err(Error::from)
