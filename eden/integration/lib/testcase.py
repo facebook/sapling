@@ -67,7 +67,7 @@ FILENAME_STRATEGY = st.text(
 set_hypothesis_home_dir(tempfile.mkdtemp(prefix='eden_hypothesis.'))
 atexit.register(shutil.rmtree, hypothesis_home_dir())
 
-if is_sandcastle() and not edenclient.can_run_eden():
+if not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.

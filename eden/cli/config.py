@@ -53,11 +53,6 @@ MOUNT_CONFIG = 'config.toml'
 SNAPSHOT = 'SNAPSHOT'
 SNAPSHOT_MAGIC = b'eden\x00\x00\x00\x01'
 
-# In our test environment, when we need to run as root, we
-# may need to launch via a helper script that is whitelisted
-# by the local sudo configuration.
-SUDO_HELPER = '/var/www/scripts/testinfra/run_eden.sh'
-
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     'git': 'refs/heads/master',
     'hg': '.',
@@ -612,8 +607,6 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                 for key, value in eden_env.items():
                     sudo_cmd.append('%s=%s' % (key, value))
 
-                if ('SANDCASTLE' in os.environ) and os.path.exists(SUDO_HELPER):
-                    cmd = [SUDO_HELPER] + cmd
                 cmd = sudo_cmd + cmd
 
         if foreground:

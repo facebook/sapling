@@ -16,6 +16,7 @@ import tempfile
 import time
 from types import TracebackType
 from typing import cast, Dict, Optional, List
+from eden.cli import util
 
 import eden.thrift
 from fb303.ttypes import fb_status
@@ -201,6 +202,9 @@ class EdenFS(object):
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
         ]
+        if 'SANDCASTLE' in os.environ:
+            extra_daemon_args.append('--allowRoot')
+
         if takeover:
             args.append('--takeover')
 
@@ -243,7 +247,18 @@ class EdenFS(object):
         Run "eden shutdown" to stop the eden daemon.
         '''
         assert self._process is not None
-        self.run_cmd('shutdown')
+
+        # We need to take care here: the normal `eden shutdown` command will
+        # wait for eden to successfully finish by repeatedly testing to see
+        # whether the process is alive.  However, running as root we don't
+        # spawn an intermediate process and this results in our child process
+        # (attached to self._process) to land in a defunct state such that
+        # the `kill(pid, 0)` test in the `eden shutdown` command still considers
+        # the process alive.   To avoid this situation we ask the shutdown
+        # command not to wait and instead perform our own polling here against
+        # the real process handle.
+        self.run_cmd('shutdown', '-t', '0')
+        util.poll_until(lambda: self._process.poll(), timeout=15)
         return_code = self._process.wait()
         self._process = None
         if return_code != 0:

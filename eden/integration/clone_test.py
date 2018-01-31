@@ -15,6 +15,7 @@ import os
 import subprocess
 import stat
 import tempfile
+import unittest
 
 
 # This is the name of the default repository created by EdenRepoTestBase.
@@ -203,6 +204,7 @@ echo -n "$1" >> "{scratch_file}"
             f'No repository configured named "{repo_name}". '
             'Try one of: "main".', context.exception.stderr.decode())
 
+    @unittest.skipIf(os.geteuid() == 0, "no way to pass --allowRoot through clone")
     def test_clone_should_start_daemon(self):
         # Shut down Eden.
         self.assertTrue(self.eden.is_healthy())
