@@ -40,6 +40,8 @@ class BasicTest:
         output = self.eden.run_cmd('version', cwd=self.mount)
         first_line = output.split('\n')[0]
         self.assertTrue(first_line.startswith('Installed: '))
+        if 'Not Installed' in first_line:
+            self.skipTest("eden is not installed")
         parts = first_line[11:].split('-')
         self.assertEqual(len(parts[0]), 8)
         self.assertEqual(len(parts[1]), 6)

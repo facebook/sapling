@@ -13,10 +13,13 @@ from . import config as config_mod
 
 
 def get_installed_eden_rpm_version() -> str:
-    return subprocess.check_output(
-        ['rpm', '-q', 'fb-eden', '--queryformat', '%{version}-%{release}']
-    ).decode('utf-8')
-
+    proc = subprocess.run(['rpm', '-q', 'fb-eden', '--queryformat',
+                           '%{version}-%{release}'],
+                          stdout=subprocess.PIPE,
+                          encoding='utf-8')
+    if proc.returncode != 0:
+        return "<Not Installed>"
+    return proc.stdout
 
 # returns (runing_version, release) tuple
 def get_running_eden_version_parts(
