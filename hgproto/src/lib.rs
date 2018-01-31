@@ -16,7 +16,6 @@
 extern crate bytes;
 extern crate futures;
 extern crate tokio_io;
-extern crate tokio_proto;
 
 #[macro_use]
 extern crate slog;
