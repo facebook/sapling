@@ -39,24 +39,25 @@ class SetAttrTest:
         filename = os.path.join(self.mount, 'hello')
 
         # Chown should fail with EPERM unless we are setting it
-        # to the same current ownership
+        # to the same current ownership.
+        # If we're running as root, this is EACCES instead.
         st = os.lstat(filename)
         os.chown(filename, st.st_uid, st.st_gid)
 
         with self.assertRaises(OSError) as context:
             os.chown(filename, st.st_uid + 1, st.st_gid)
         self.assertEqual(
-            errno.EPERM,
+            errno.EACCES if os.geteuid() == 0 else errno.EPERM,
             context.exception.errno,
-            msg="changing uid of a file should raise EPERM"
+            msg="changing uid of a file should raise EPERM/EACCES"
         )
 
         with self.assertRaises(OSError) as context:
             os.chown(filename, st.st_uid, st.st_gid + 1)
         self.assertEqual(
-            errno.EPERM,
+            errno.EACCES if os.geteuid() == 0 else errno.EPERM,
             context.exception.errno,
-            msg="changing gid of a file should raise EPERM"
+            msg="changing gid of a file should raise EPERM/EACCES"
         )
 
     def test_truncate(self):
