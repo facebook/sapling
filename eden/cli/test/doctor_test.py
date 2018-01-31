@@ -663,6 +663,37 @@ class StaleMountsCheckTest(unittest.TestCase):
             'Failed to lstat active eden mount b\'/mnt/active1\'\n',
             result.message)
 
+    @patch('eden.cli.doctor.log.warning')
+    def test_does_not_unmount_if_cannot_stat_stale_mount(self, warning):
+        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = OSError(
+            errno.EACCES, os.strerror(errno.EACCES)
+        )
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.NO_ISSUE, result.result_type)
+        self.assertEqual('', result.message)
+        self.assertEqual([], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+        # Verify that the reason for skipping this mount is logged.
+        warning.assert_called_once_with(
+            'Unclear whether /mnt/stale1 is stale or not. '
+            'lstat() failed: [Errno 13] Permission denied')
+
+    def test_does_unmount_if_stale_mount_is_unconnected(self):
+        self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
+        self.mount_table.stats['/mnt/stale1'] = OSError(
+            errno.ENOTCONN, os.strerror(errno.ENOTCONN)
+        )
+
+        result = self.check.do_check(dry_run=False)
+        self.assertEqual(doctor.CheckResultType.FIXED, result.result_type)
+        self.assertEqual(
+            'Unmounted 1 stale edenfs mount point:\n  /mnt/stale1\n',
+            result.message)
+        self.assertEqual([b'/mnt/stale1'], self.mount_table.unmount_lazy_calls)
+        self.assertEqual([], self.mount_table.unmount_force_calls)
+
     def test_does_not_unmount_other_users_mounts(self):
         self.mount_table.set_eden_mounts(self.active_mounts + [b'/mnt/stale1'])
         self.mount_table.stats['/mnt/stale1'] = mtab.MTStat(
@@ -823,12 +854,17 @@ class FakeMountTable(mtab.MountTable):
             raise ValueError("path must be bytes or str")
 
         try:
-            return self.stats[path]
+            result = self.stats[path]
         except KeyError:
             try:
-                return self.stats[path2]
+                result = self.stats[path2]
             except KeyError:
                 raise OSError(errno.ENOENT, f'no path {path}')
+
+        if isinstance(result, BaseException):
+            raise result
+        else:
+            return result
 
     def _remove_mount(self, mount_point: bytes):
         self.mounts[:] = [

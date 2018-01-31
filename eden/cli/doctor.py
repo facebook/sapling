@@ -9,6 +9,7 @@
 
 import abc
 import binascii
+import errno
 import json
 import logging
 import os
@@ -241,15 +242,19 @@ class StaleMountsCheck(Check):
             try:
                 st = self._mount_table.lstat(mount_point)
             except OSError as e:
-                log.warning(f'lstat("{mount_point}") failed: {e}')
-                continue
-
-            # Exclude any mounts that aren't owned by the current user and whose
-            # device ID matches the device ID of any existing mounts.  Avoid
-            # excluding by path because the same FUSE mount can show up in the
-            # mount table multiple times if it's underneath a bind mount.
-            if st.st_uid == me and st.st_dev not in active_mount_devices:
-                stale_eden_mount_points.add(mount_point)
+                if e.errno == errno.ENOTCONN:
+                    stale_eden_mount_points.add(mount_point)
+                else:
+                    log.warning(
+                        f"Unclear whether {printable_bytes(mount_point)} "
+                        f"is stale or not. lstat() failed: {e}")
+            else:
+                # Exclude any mounts that aren't owned by the current user and whose
+                # device ID matches the device ID of any existing mounts.  Avoid
+                # excluding by path because the same FUSE mount can show up in the
+                # mount table multiple times if it's underneath a bind mount.
+                if st.st_uid == me and st.st_dev not in active_mount_devices:
+                    stale_eden_mount_points.add(mount_point)
 
         return sorted(stale_eden_mount_points)
 
