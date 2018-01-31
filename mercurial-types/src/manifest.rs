@@ -17,10 +17,30 @@ use nodehash::EntryId;
 use path::{MPath, RepoPath};
 
 /// Interface for a manifest
+///
+/// A `Manifest` represents the mapping between a list of names and `Entry`s - ie,
+/// functionally equivalent to a directory.
+///
+/// The name "Manifest" comes from Mercurial, where a single object represents the entire repo
+/// namespace ("flat manifest"). But modern Mercurial and Mononoke use a distinct Manifest for
+/// each directory ("tree manifest"). As a result, operations on a manifest are path element at
+/// a time.
+///
+/// TODO: (jsgf) T25575327 lookup should just take a single element
 pub trait Manifest: Send + 'static {
+    /// Look up a specific entry in the Manifest by name
+    ///
+    /// If the name exists, return it as Some(entry). If it doesn't exist, return None.
+    /// If it returns an error, it indicates something went wrong with the underlying
+    /// infrastructure.
     fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error>;
+
+    /// List all the entries in the Manifest.
+    ///
+    /// Entries are returned in canonical order.
     fn list(&self) -> BoxStream<Box<Entry + Sync>, Error>;
 
+    /// Return self as a type-erased boxed trait (still needed as a trait method? T25577105)
     fn boxed(self) -> Box<Manifest + Sync>
     where
         Self: Sync + Sized,
@@ -73,6 +93,16 @@ impl Manifest for Box<Manifest + Sync> {
     }
 }
 
+/// Type of an Entry
+///
+/// File and Executable are identical - they both represent files containing arbitrary content.
+/// The only difference is that the Executables are created with executable permission when
+/// checked out.
+///
+/// Symlink is also the same as File, but the content of the file is interpolated into a path
+/// being traversed during lookup.
+///
+/// Tree is a reference to another Manifest (directory-like) object.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 pub enum Type {
     File,
@@ -81,6 +111,19 @@ pub enum Type {
     Executable,
 }
 
+impl Display for Type {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            &Type::Symlink => "l",
+            &Type::Executable => "x",
+            &Type::Tree => "t",
+            &Type::File => "",
+        };
+        write!(fmt, "{}", s)
+    }
+}
+
+/// Concrete representation of various Entry Types.
 pub enum Content {
     File(Blob<Vec<u8>>),       // TODO stream
     Executable(Blob<Vec<u8>>), // TODO stream
@@ -88,16 +131,38 @@ pub enum Content {
     Tree(Box<Manifest + Sync>),
 }
 
+/// An entry represents a single entry in a Manifest
+///
+/// The Entry has at least a name, a type, and the identity of the object it refers to
+
 pub trait Entry: Send + 'static {
+    /// Type of the object this entry refers to
     fn get_type(&self) -> Type;
+
+    /// Get the parents (in the history graph) of the referred-to object
     fn get_parents(&self) -> BoxFuture<Parents, Error>;
+
+    /// Get the raw content of the object as it exists in the blobstore,
+    /// without any interpretation. This is only really useful for doing a bit-level duplication.
     fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error>;
+
+    /// Get the interpreted content of the object. This will likely require IO
     fn get_content(&self) -> BoxFuture<Content, Error>;
+
+    /// Get the logical size of the entry. Some entries don't really have a meaningful size.
     fn get_size(&self) -> BoxFuture<Option<usize>, Error>;
+
+    /// Get the identity of the object this entry refers to.
     fn get_hash(&self) -> &EntryId;
+
+    /// Get the full path of this entry (meaningless - see T25575327)
     fn get_path(&self) -> &RepoPath;
+
+    /// Also meaningless (T25575327)
     fn get_mpath(&self) -> &MPath;
 
+    /// Return an Entry as a type-erased trait object.
+    /// (Do we still need this as a trait method? T25577105)
     fn boxed(self) -> Box<Entry + Sync>
     where
         Self: Sync + Sized,
@@ -106,6 +171,9 @@ pub trait Entry: Send + 'static {
     }
 }
 
+/// Wrapper for boxing an instance of Entry
+///
+/// TODO: (jsgf) T25577105 Are the Box variants of Manifest/Entry traits still needed?
 pub struct BoxEntry<Ent>
 where
     Ent: Entry,
@@ -190,17 +258,5 @@ impl Entry for Box<Entry + Sync> {
 
     fn get_mpath(&self) -> &MPath {
         (**self).get_mpath()
-    }
-}
-
-impl Display for Type {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
-            &Type::Symlink => "l",
-            &Type::Executable => "x",
-            &Type::Tree => "t",
-            &Type::File => "",
-        };
-        write!(fmt, "{}", s)
     }
 }

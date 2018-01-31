@@ -47,7 +47,6 @@ impl NodeHash {
     }
 }
 
-
 struct StringVisitor;
 
 impl<'de> serde::de::Visitor<'de> for StringVisitor {
@@ -216,6 +215,7 @@ impl Display for ManifestId {
     }
 }
 
+/// TODO: (jsgf) T25576292 EntryId should be a (Type, NodeId) tuple
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
 pub struct EntryId(NodeHash);
