@@ -58,8 +58,6 @@ Dispatcher::~Dispatcher() {}
 
 Dispatcher::Dispatcher(ThreadLocalEdenStats* stats) : stats_(stats) {}
 
-void Dispatcher::onConnectionReady() {}
-
 FileHandleMap& Dispatcher::getFileHandles() {
   return fileHandles_;
 }
@@ -77,7 +75,6 @@ std::shared_ptr<DirHandle> Dispatcher::getDirHandle(uint64_t dh) {
 
 void Dispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
-  onConnectionReady();
 }
 
 void Dispatcher::destroy() {}

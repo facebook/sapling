@@ -41,14 +41,37 @@ class FuseChannel {
    * a pre-existing fuseDevice descriptor.  The descriptor may
    * have been obtained via privilegedFuseMount() or may have
    * been passed to us as part of a graceful restart procedure.
+   *
+   * The caller is expected to follow up with a call to the
+   * initialize() method to perform the handshake with the
+   * kernel and set up the thread pool.
    */
   FuseChannel(
       folly::File&& fuseDevice,
       AbsolutePathPiece mountPath,
       folly::EventBase* eventBase,
       size_t numThreads,
-      Dispatcher* const dispatcher,
-      folly::Optional<fuse_init_out> connInfo);
+      Dispatcher* const dispatcher);
+
+  /**
+   * Initialize the FuseChannel; until this completes successfully,
+   * FUSE requests will not be serviced.
+   *
+   * If the optional connInfo field is set then we are performing
+   * a graceful restart / takeover and will populate the internal
+   * connInfo_ field from its value.
+   *
+   * Otherwise: we will wait for the INIT request from the kernel
+   * and validate that we are compatible.  The `threadPool`
+   * argument will be used as an executor to perform this blocking
+   * INIT operation.
+   *
+   * Once that first step is complete, set up the thread pool
+   * that will be used to service incoming fuse requests.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+      folly::Optional<fuse_init_out> connInfo,
+      folly::Executor* threadPool);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;
@@ -285,6 +308,8 @@ class FuseChannel {
  private:
   void fuseWorkerThread(size_t threadNumber);
   void maybeDispatchSessionComplete();
+  void readInitPacket();
+  void startWorkerThreads();
 
   size_t bufferSize_{0};
   Dispatcher* const dispatcher_{nullptr};
@@ -296,8 +321,8 @@ class FuseChannel {
       std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>>>
       requests_;
   std::vector<std::thread> workerThreads_;
-  std::atomic<size_t> joinedThreads_{0};
-  const size_t numThreads_;
+  std::atomic<size_t> activeThreads_{0};
+  size_t numThreads_;
   const AbsolutePath mountPath_;
   folly::Promise<folly::Unit> threadsFinishedPromise_;
   folly::Promise<folly::Unit> threadsStoppingPromise_;

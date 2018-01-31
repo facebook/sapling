@@ -65,7 +65,6 @@ class Dispatcher {
    * to the kernel
    */
   virtual void initConnection(const fuse_init_out& out);
-  virtual void onConnectionReady();
 
   /**
    * Called when fuse is tearing down the session

@@ -40,6 +40,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using facebook::eden::fusell::FuseChannelData;
 using folly::Future;
@@ -697,67 +698,52 @@ folly::Future<folly::Unit> EdenMount::startFuse(
             path_,
             eventBase_,
             FLAGS_fuseNumThreads,
-            dispatcher_.get(),
-            connInfo);
-
-        // we'll use this shortly to wait until the mount is started
-        // successfully.
-        auto initFuture = initFusePromise_.getFuture();
+            dispatcher_.get());
 
         channel_->getThreadsStoppingFuture().then([this] {
-          // If threads are stopping before we got as far as setting the state
-          // to RUNNING, we must have experienced an error
-          if (doStateTransition(State::STARTING, State::FUSE_ERROR)) {
-            initFusePromise_.setException(
-                std::runtime_error("fuse session failed to initialize"));
-          } else {
+          if (!doStateTransition(State::STARTING, State::FUSE_ERROR)) {
             // If we were RUNNING and a thread stopped, then record
             // that transition to FUSE_DONE.
             doStateTransition(State::RUNNING, State::FUSE_DONE);
           }
         });
 
-        channel_->getSessionCompleteFuture().then([this] {
-          // In case we are performing a graceful restart,
-          // extract the fuse device now.
-          auto channelData = channel_->stealFuseDevice();
-          channel_.reset();
+        channel_->getSessionCompleteFuture()
+            .then([this] {
+              // In case we are performing a graceful restart,
+              // extract the fuse device now.
+              auto channelData = channel_->stealFuseDevice();
+              channel_.reset();
 
-          std::vector<AbsolutePath> bindMounts;
-          for (const auto& entry : bindMounts_) {
-            bindMounts.push_back(entry.pathInMountDir);
-          }
+              std::vector<AbsolutePath> bindMounts;
+              for (const auto& entry : bindMounts_) {
+                bindMounts.push_back(entry.pathInMountDir);
+              }
 
-          fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
-              path_,
-              config_->getClientDirectory(),
-              bindMounts,
-              std::move(channelData.fd),
-              channelData.connInfo,
-              SerializedFileHandleMap{}, // placeholder
-              SerializedInodeMap{} // placeholder
-              ));
-        });
+              fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
+                  path_,
+                  config_->getClientDirectory(),
+                  bindMounts,
+                  std::move(channelData.fd),
+                  channelData.connInfo,
+                  SerializedFileHandleMap{}, // placeholder
+                  SerializedInodeMap{} // placeholder
+                  ));
+            })
+            .onError([this](folly::exception_wrapper&& ew) {
+              XLOG(ERR) << "session complete with err" << ew;
+              fuseCompletionPromise_.setException(std::move(ew));
+            });
 
-        if (takeoverData.hasValue()) {
-          // When doing takeover, we are immediately ready.
-          doStateTransition(State::STARTING, State::RUNNING);
-          initFusePromise_.setValue();
-        }
-
-        // wait for init to complete or error; this will throw an exception
-        // if the init procedure failed.
-        return initFuture;
+        return channel_->initialize(connInfo, threadPool.get())
+            .then([this](folly::Unit&&) {
+              doStateTransition(State::STARTING, State::RUNNING);
+            })
+            .onError([this](folly::exception_wrapper&& ew) {
+              doStateTransition(State::STARTING, State::FUSE_ERROR);
+              return makeFuture<folly::Unit>(std::move(ew));
+            });
       });
-}
-
-void EdenMount::mountStarted() {
-  // Don't update status_ if it has already been put into an error
-  // state or something.
-  if (doStateTransition(State::STARTING, State::RUNNING)) {
-    // Let ::start() know that we're up and running
-    initFusePromise_.setValue();
-  }
 }
 
 struct stat EdenMount::initStatData() const {

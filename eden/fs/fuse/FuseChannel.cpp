@@ -309,31 +309,56 @@ FuseChannel::FuseChannel(
     AbsolutePathPiece mountPath,
     folly::EventBase* eventBase,
     size_t numThreads,
-    Dispatcher* const dispatcher,
-    folly::Optional<fuse_init_out> connInfo)
+    Dispatcher* const dispatcher)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       dispatcher_(dispatcher),
       fuseDevice_(std::move(fuseDevice)),
       eventBase_(eventBase),
-      connInfo_{connInfo},
       numThreads_(numThreads),
-      mountPath_(mountPath) {
-  workerThreads_.reserve(numThreads);
-  for (auto i = 0; i < numThreads; ++i) {
-    workerThreads_.emplace_back(
-        std::thread([this, i] { fuseWorkerThread(i); }));
-  }
+      mountPath_(mountPath) {}
 
-  if (connInfo_.hasValue()) {
-    XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
-               << ", max_readahead=" << connInfo_->max_readahead
-               << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
+folly::Future<folly::Unit> FuseChannel::initialize(
+    folly::Optional<fuse_init_out> connInfo,
+    folly::Executor* threadPool) {
+  // Asynchronously initialize the fuse session.
+  // We cannot block the caller, so we fire this off against the provided
+  // thread pool.
+
+  auto init = connInfo.hasValue()
+      ? makeFutureWith([this, connInfo = std::move(connInfo.value())] {
+          connInfo_ = connInfo;
+          XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
+                     << ", max_readahead=" << connInfo_->max_readahead
+                     << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
+        })
+      : folly::via(threadPool).then([this] { readInitPacket(); });
+  return init.then([this] { startWorkerThreads(); });
+}
+
+void FuseChannel::startWorkerThreads() {
+  try {
+    workerThreads_.reserve(numThreads_);
+    for (auto i = 0; i < numThreads_; ++i) {
+      workerThreads_.emplace_back(
+          std::thread([this, i] { fuseWorkerThread(i); }));
+    }
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "Error initializing worker threads.  initialized "
+              << activeThreads_ << " out of " << numThreads_
+              << " threads.  The error was: " << ex;
+    if (activeThreads_ == 0) {
+      // None were started, immediately report failure
+      threadsFinishedPromise_.setValue();
+      sessionCompletePromise_.setValue();
+    } else {
+      requestSessionExit();
+    }
+    throw;
   }
 }
 
 FuseChannel::~FuseChannel() {
-  CHECK_EQ(joinedThreads_, numThreads_)
-      << "we MUST have joined all of the threads";
+  CHECK_EQ(activeThreads_, 0) << "we MUST have joined all of the threads";
 }
 
 FuseChannelData FuseChannel::stealFuseDevice() {
@@ -462,19 +487,23 @@ void FuseChannel::requestSessionExit() {
 }
 
 void FuseChannel::fuseWorkerThread(size_t threadNumber) {
+  ++activeThreads_;
+
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
   processSession();
   eventBase_->runInEventBaseThread([this, threadNumber]() {
     workerThreads_[threadNumber].join();
-    if (++joinedThreads_ == numThreads_) {
-      threadsFinishedPromise_.setValue();
+    bool complete = false;
+    bool threadsFinished = false;
 
-      // We may be complete; check to see if there are any
-      // outstanding requests.  Take care to avoid triggering
-      // the promise callbacks while we hold a lock.
-      bool complete = false;
-      {
-        const auto requests = requests_.wlock();
+    // We may be complete; check to see if there are any
+    // outstanding requests.  Take care to avoid triggering
+    // the promise callbacks while we hold a lock.
+    {
+      const auto requests = requests_.wlock();
+      if (--activeThreads_ == 0) {
+        threadsFinished = true;
+
         // there may be outstanding requests even though we have
         // now shut down all of the fuse device processing threads.
         // If there are none outstanding then we can consider the
@@ -483,11 +512,100 @@ void FuseChannel::fuseWorkerThread(size_t threadNumber) {
         // method below.
         complete = requests->size() == 0;
       }
-      if (complete) {
-        sessionCompletePromise_.setValue();
-      }
+    }
+
+    if (threadsFinished) {
+      threadsFinishedPromise_.setValue();
+    }
+
+    if (complete) {
+      sessionCompletePromise_.setValue();
     }
   });
+}
+
+void FuseChannel::readInitPacket() {
+  struct {
+    fuse_in_header header;
+    fuse_init_in init;
+  } init;
+
+  while (true) {
+    auto res = read(fuseDevice_.fd(), &init, sizeof(init));
+    if (res < 0) {
+      res = -errno;
+    }
+    switch (res) {
+      case -EINTR:
+      case -EAGAIN:
+      case -ENOENT:
+        // These are all variations on being interrupted; let's
+        // continue and retry.
+        continue;
+
+      case sizeof(init):
+        // Successfully read the init header
+        break;
+      default:
+        // Failed somehow
+        throw std::runtime_error(folly::to<std::string>(
+            "error reading fuse kernel initialization request, result=", res));
+    }
+
+    switch (init.header.opcode) {
+      case FUSE_INIT: {
+        fuse_init_out connInfo = {};
+        connInfo.major = FUSE_KERNEL_VERSION;
+        connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+        connInfo.max_write = bufferSize_ - 4096;
+
+        connInfo.max_readahead = init.init.max_readahead;
+
+        const auto& capable = init.init.flags;
+        auto& want = connInfo.flags;
+
+        want |=
+            capable &
+            (
+                // TODO: follow up and look at the new flags; particularly
+                // FUSE_PARALLEL_DIROPS, FUSE_DO_READDIRPLUS,
+                // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
+                // but may not directly benefit eden today.
+
+                // It would be great to enable FUSE_ATOMIC_O_TRUNC but it
+                // seems to trigger a kernel/FUSE bug.  See
+                // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
+                // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
+                FUSE_BIG_WRITES | FUSE_ASYNC_READ);
+
+        XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
+                   << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
+                   << FUSE_KERNEL_MINOR_VERSION
+                   << ", max_write=" << connInfo.max_write
+                   << ", max_readahead=" << connInfo.max_readahead
+                   << ", capable=" << flagsToLabel(capsLabels, capable)
+                   << ", want=" << flagsToLabel(capsLabels, want);
+
+        if (init.init.major != FUSE_KERNEL_VERSION) {
+          replyError(init.header, EPROTO);
+          throw std::runtime_error("fuse kernel major version is unsupported");
+        }
+
+        connInfo_ = connInfo;
+        sendReply(init.header, connInfo);
+        dispatcher_->initConnection(connInfo);
+        return;
+      }
+      default:
+        replyError(init.header, EPROTO);
+        throw std::runtime_error(folly::to<std::string>(
+            "expect to receive FUSE_INIT but got ",
+            fuseOpcodeName(init.header.opcode),
+            " (",
+            init.header.opcode,
+            ")"));
+    }
+  }
 }
 
 void FuseChannel::processSession() {
@@ -545,51 +663,10 @@ void FuseChannel::processSession() {
                << " gid=" << header->gid << " pid=" << header->pid;
 
     switch (header->opcode) {
-      case FUSE_INIT: {
-        const auto in = reinterpret_cast<const fuse_init_in*>(arg);
-
-        fuse_init_out connInfo = {};
-        connInfo.major = FUSE_KERNEL_VERSION;
-        connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
-        connInfo.max_write = bufferSize_ - 4096;
-
-        connInfo.max_readahead = in->max_readahead;
-
-        const auto& capable = in->flags;
-        auto& want = connInfo.flags;
-
-        want |=
-            capable &
-            (
-                // TODO: follow up and look at the new flags; particularly
-                // FUSE_PARALLEL_DIROPS, FUSE_DO_READDIRPLUS,
-                // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
-                // but may not directly benefit eden today.
-
-                // It would be great to enable FUSE_ATOMIC_O_TRUNC but it
-                // seems to trigger a kernel/FUSE bug.  See
-                // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
-                // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
-                FUSE_BIG_WRITES | FUSE_ASYNC_READ);
-
-        XLOG(INFO) << "Speaking fuse protocol kernel=" << in->major << "."
-                   << in->minor << " local=" << FUSE_KERNEL_VERSION << "."
-                   << FUSE_KERNEL_MINOR_VERSION
-                   << ", max_write=" << connInfo.max_write
-                   << ", max_readahead=" << connInfo.max_readahead
-                   << ", capable=" << flagsToLabel(capsLabels, capable)
-                   << ", want=" << flagsToLabel(capsLabels, want);
-
-        if (in->major != FUSE_KERNEL_VERSION) {
-          replyError(*header, EPROTO);
-          throw std::runtime_error("fuse kernel major version is unsupported");
-        }
-
-        connInfo_ = connInfo;
-        sendReply(*header, connInfo);
-        dispatcher_->initConnection(connInfo);
-        break;
-      }
+      case FUSE_INIT:
+        replyError(*header, EPROTO);
+        throw std::runtime_error(
+            "received FUSE_INIT after we have been initialized!?");
 
       case FUSE_GETLK:
       case FUSE_SETLK:
@@ -710,7 +787,7 @@ void FuseChannel::finishRequest(const fuse_in_header& header) {
     // We only want to fulfil on the transition, so we take
     // care to gate this on whether we actually erased and
     // element in the map above.
-    complete = erased && requests->size() == 0 && joinedThreads_ == numThreads_;
+    complete = erased && requests->size() == 0 && activeThreads_ == 0;
   }
   if (complete) {
     sessionCompletePromise_.setValue();

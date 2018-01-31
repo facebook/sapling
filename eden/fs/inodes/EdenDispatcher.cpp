@@ -45,10 +45,6 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 
-void EdenDispatcher::onConnectionReady() {
-  mount_->mountStarted();
-}
-
 namespace {
 
 /** Compute a fuse_entry_out */

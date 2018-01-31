@@ -439,13 +439,6 @@ class EdenMount {
   }
 
   /**
-   * Indicate that the mount point has been successfully started.
-   *
-   * This function should only be invoked by the Dispatcher class.
-   */
-  void mountStarted();
-
-  /**
    * Return a new stat structure that has been minimally initialized with
    * data for this mount point.
    *
@@ -652,12 +645,6 @@ class EdenMount {
    * The current state of the mount point.
    */
   std::atomic<State> state_{State::UNINITIALIZED};
-
-  /**
-   * A promise associated with the future returned from EdenMount::startFuse()
-   * that completes when the state transitions to RUNNING or FUSE_ERROR.
-   */
-  folly::Promise<folly::Unit> initFusePromise_;
 
   /**
    * A promise associated with the future returned from
