@@ -7,21 +7,21 @@
   > rebase=
   > EOF
 
+  $ addcommits ()
+  > {
+  >     for x in "$@" ; do
+  >         echo "$x" > "$x"
+  >         hg add "$x"
+  >         hg ci -m "$x"
+  >     done
+  > }
   $ initrepo ()
   > {
   >     hg init r
   >     cd r
-  >     for x in a b c d e f ; do
-  >         echo $x > $x
-  >         hg add $x
-  >         hg ci -m $x
-  >     done
+  >     addcommits a b c d e f
   >     hg update 1
-  >     for x in g h i ; do
-  >         echo $x > $x
-  >         hg add $x
-  >         hg ci -m $x
-  >     done
+  >     addcommits g h i
   >     hg update 1
   >     echo CONFLICT > f
   >     hg add f
@@ -152,3 +152,43 @@ Rebase with base
   |
   o  0:cb9a9f314b8b a
   
+Rebase with -s and -d and checked out to something that is not a child of
+either the source or destination.  This unfortunately is rejected since the
+histedit code currently requires all edited commits to be ancestors of the
+current working directory parent.
+
+  $ hg update 6
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ addcommits x y z
+  $ hg update 5
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
+  o  12:70ff95fe5c79 z
+  |
+  o  11:9843e524084d y
+  |
+  o  10:a5ae87083656 x
+  |
+  | o  9:50cf975d06ef h
+  | |
+  | o  8:ba6932766227 g
+  | |
+  | o  7:b6ca70f8129d conflict f
+  |/
+  o  6:bb8affa27bd8 i
+  |
+  @  5:652413bf663e f
+  |
+  o  4:e860deea161a e
+  |
+  o  3:055a42cdd887 d
+  |
+  o  2:177f92b77385 c
+  |
+  o  1:d2ae7f538514 b
+  |
+  o  0:cb9a9f314b8b a
+  
+  $ HGEDITOR=true hg rebase -i -s 11 -d 8
+  abort: source revision (-s) must be an ancestor of the working directory for interactive rebase
+  [255]

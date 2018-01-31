@@ -368,6 +368,11 @@ def _rebase(orig, ui, repo, **opts):
 
     topmost, empty = repo.dirstate.parents()
     revs = histedit.between(repo, src, topmost, keepf)
+
+    if srcf and not revs:
+        raise error.Abort(_('source revision (-s) must be an ancestor of the '
+                            'working directory for interactive rebase'))
+
     ctxs = [repo[r] for r in revs]
     state = histedit.histeditstate(repo)
     rules = [histedit.base(state, repo[dest])] + \
