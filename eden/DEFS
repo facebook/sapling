@@ -44,6 +44,7 @@ def get_test_env_and_deps(suffix=''):
         'EDENFS_SERVER_PATH': daemon_target,
         'EDENFS_POST_CLONE_PATH': '//eden/hooks/hg:post-clone',
         'EDENFS_LAME_THRIFT_PAR': '//eden/fs/service:thrift-EdenService-pyremote',
+        'EDENFS_FSATTR_BIN': '//eden/integration:fsattr',
     }
 
     envs = {

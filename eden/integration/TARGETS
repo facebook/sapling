@@ -5,6 +5,16 @@ include_defs("//eden/DEFS")
 # Run all tests with the default build type (the empty suffix)
 artifacts = get_test_env_and_deps("")
 
+cpp_binary(
+    name = "fsattr",
+    srcs = ["fsattr.cpp"],
+    deps = [
+        "//eden/fs/utils:utils",
+        "//folly:json",
+        "//folly/init:init",
+    ],
+)
+
 python_unittest(
     name = "integration",
     srcs = glob(["*.py"]),

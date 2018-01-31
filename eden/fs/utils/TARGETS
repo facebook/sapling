@@ -35,6 +35,7 @@ cpp_library(
         "//folly:exception",
         "//folly:exception_wrapper",
         "//folly:fbvector",
+        "//folly:file",
         "//folly:format",
         "//folly:singleton",
         "//folly:string",

@@ -77,3 +77,17 @@ def _find_daemon():
 
 
 EDEN_DAEMON = _find_daemon()
+
+
+def _find_fsattr():
+    fsattr = os.environ.get('EDENFS_FSATTR_BIN')
+    if not fsattr:
+        fsattr = os.path.join(BUCK_OUT, 'gen/eden/integration/fsattr')
+    if not os.access(fsattr, os.X_OK):
+        msg = 'unable to find fsattr for integration testing: {!r}'.format(
+            fsattr)
+        raise Exception(msg)
+    return fsattr
+
+
+FSATTR = _find_fsattr()
