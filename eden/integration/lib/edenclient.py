@@ -393,6 +393,9 @@ def _compute_can_run_eden() -> bool:
         return False
 
     # We must be able to start eden as root.
+    if os.geteuid() == 0:
+        return True
+
     # The daemon must either be setuid root, or we must have sudo priviliges.
     # Typically for the tests the daemon process is not setuid root,
     # so check if we have are able to run things under sudo.
