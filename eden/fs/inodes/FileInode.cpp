@@ -56,7 +56,7 @@ FileInode::State::State(
         filePath.c_str(), Overlay::kHeaderIdentifierFile, timeStamps);
     tag = MATERIALIZED_IN_OVERLAY;
   } else {
-    timeStamps.setTimestampValues(lastCheckoutTime);
+    timeStamps.setAll(lastCheckoutTime);
     tag = NOT_LOADED;
   }
 
@@ -68,7 +68,7 @@ FileInode::State::State(
     mode_t m,
     const timespec& creationTime)
     : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
-  timeStamps.setTimestampValues(creationTime);
+  timeStamps.setAll(creationTime);
   checkInvariants();
 }
 
@@ -242,7 +242,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     }
 
     // Set in-memory timeStamps
-    self->setattrTimes(attr, state->timeStamps);
+    state->timeStamps.setattrTimes(self->getClock(), attr);
 
     // We need to call fstat function here to get the size of the overlay
     // file. We might update size in the result while truncating the file
@@ -790,7 +790,7 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
 
 namespace {
 folly::IOBuf createOverlayHeaderFromTimestamps(
-    const InodeBase::InodeTimestamps& timestamps) {
+    const InodeTimestamps& timestamps) {
   return Overlay::createHeader(
       Overlay::kHeaderIdentifierFile,
       Overlay::kHeaderVersion,
@@ -999,9 +999,8 @@ void FileInode::storeSha1(
 }
 
 // Gets the in-memory timestamps of the inode.
-InodeBase::InodeTimestamps FileInode::getTimestamps() const {
-  auto state = state_.rlock();
-  return state->timeStamps;
+InodeTimestamps FileInode::getTimestamps() const {
+  return state_.rlock()->timeStamps;
 }
 
 folly::Future<folly::Unit> FileInode::prefetch() {

@@ -236,7 +236,7 @@ TEST(EdenMount, testLastCheckoutTime) {
 
   // Check if TreeInode is updating lastCheckoutTime correctly
   auto treeInode = testMount.getTreeInode("dir");
-  InodeBase::InodeTimestamps stDir = treeInode->getTimestamps();
+  auto stDir = treeInode->getTimestamps();
   EXPECT_EQ(sec.count(), stDir.atime.tv_sec);
   EXPECT_EQ(nsec.count(), stDir.atime.tv_nsec);
   EXPECT_EQ(sec.count(), stDir.ctime.tv_sec);

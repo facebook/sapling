@@ -312,7 +312,7 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
 
-    InodeBase::InodeTimestamps timeStamps;
+    InodeTimestamps timeStamps;
     auto dir = deserializeOverlayDir(dirInodeNumber, timeStamps);
     if (!dir.hasValue()) {
       continue;
@@ -369,7 +369,7 @@ AbsolutePath Overlay::getFilePath(fusell::InodeNumber inodeNumber) const {
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     fusell::InodeNumber inodeNumber,
-    InodeBase::InodeTimestamps& timeStamps) const {
+    InodeTimestamps& timeStamps) const {
   auto path = getFilePath(inodeNumber);
 
   // Read the file and de-serialize it into data
@@ -435,7 +435,7 @@ folly::IOBuf Overlay::createHeader(
 folly::File Overlay::openFile(
     folly::StringPiece filePath,
     folly::StringPiece headerId,
-    InodeBase::InodeTimestamps& timeStamps) {
+    InodeTimestamps& timeStamps) {
   // Open the overlay file
   folly::File file(filePath, O_RDWR);
 
@@ -483,7 +483,7 @@ folly::File Overlay::createOverlayFile(
 void Overlay::parseHeader(
     folly::StringPiece header,
     folly::StringPiece headerId,
-    InodeBase::InodeTimestamps& timeStamps) {
+    InodeTimestamps& timeStamps) {
   folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{header});
   folly::io::Cursor cursor(&buf);
 
@@ -512,7 +512,7 @@ void Overlay::parseHeader(
 // Helper function to update timestamps into overlay file
 void Overlay::updateTimestampToHeader(
     int fd,
-    const InodeBase::InodeTimestamps& timeStamps) {
+    const InodeTimestamps& timeStamps) {
   // Create a string piece with timestamps
   std::array<uint64_t, 6> buf;
   folly::IOBuf timestamps(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));

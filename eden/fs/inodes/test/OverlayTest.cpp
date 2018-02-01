@@ -49,8 +49,8 @@ class OverlayTest : public ::testing::Test {
   }
 
   static void expectTimeStampsEqual(
-      const InodeBase::InodeTimestamps& a,
-      const InodeBase::InodeTimestamps& b) {
+      const InodeTimestamps& a,
+      const InodeTimestamps& b) {
     expectTimeSpecsEqual(a.atime, b.atime);
     expectTimeSpecsEqual(a.mtime, b.mtime);
     expectTimeSpecsEqual(a.ctime, b.ctime);
@@ -89,8 +89,8 @@ TEST_F(OverlayTest, testModifyRemount) {
 TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
   // Materialize file and directory
   // test timestamp behavior in overlay on remount.
-  InodeBase::InodeTimestamps beforeRemountFile;
-  InodeBase::InodeTimestamps beforeRemountDir;
+  InodeTimestamps beforeRemountFile;
+  InodeTimestamps beforeRemountDir;
   mount_.overwriteFile("dir/a.txt", "contents changed\n");
 
   {
@@ -117,7 +117,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
     // Check for materialized directory
     mount_.remount();
     auto inodeRemount = mount_.getTreeInode("dir");
-    InodeBase::InodeTimestamps afterRemount = inodeRemount->getTimestamps();
+    auto afterRemount = inodeRemount->getTimestamps();
     expectTimeStampsEqual(beforeRemountDir, afterRemount);
   }
 }

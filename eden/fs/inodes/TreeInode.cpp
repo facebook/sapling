@@ -714,8 +714,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(
     dir.entries.emplace(
         treeEntry.getName(), treeEntry.getMode(), treeEntry.getHash());
   }
-  // Set timestamps to lastCheckoutTime
-  dir.timeStamps.setTimestampValues(lastCheckoutTime);
+  dir.timeStamps.setAll(lastCheckoutTime);
   return dir;
 }
 
@@ -751,7 +750,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // Since we will move this file into the underlying file data, we
     // take special care to ensure that it is opened read-write
 
-    auto currentTime = getMount()->getClock().getRealtime();
+    auto currentTime = getNow();
     folly::File file =
         getOverlay()->createOverlayFile(childNumber, currentTime);
     // The mode passed in by the caller may not have the file type bits set.
@@ -786,7 +785,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
 
-    auto now = getMount()->getClock().getRealtime();
+    auto now = getNow();
     contents->timeStamps.ctime = now;
     contents->timeStamps.mtime = now;
     this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
@@ -3058,9 +3057,8 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
 }
 
 // Gets the immemory timestamps of the inode.
-InodeBase::InodeTimestamps TreeInode::getTimestamps() const {
-  auto contents = contents_.rlock();
-  return contents->timeStamps;
+InodeTimestamps TreeInode::getTimestamps() const {
+  return contents_.rlock()->timeStamps;
 }
 
 folly::Future<folly::Unit> TreeInode::prefetch() {
@@ -3093,7 +3091,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   result.st.st_ino = getNodeId();
   result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
-  setattrTimes(attr, contents->timeStamps);
+  contents->timeStamps.setattrTimes(getClock(), attr);
   result.st.st_atim = contents->timeStamps.atime;
   result.st.st_ctim = contents->timeStamps.ctime;
   result.st.st_mtim = contents->timeStamps.mtime;

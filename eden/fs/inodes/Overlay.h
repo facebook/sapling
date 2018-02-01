@@ -78,7 +78,7 @@ class Overlay {
   static folly::File openFile(
       folly::StringPiece filePath,
       folly::StringPiece headerId,
-      InodeBase::InodeTimestamps& timestamps);
+      InodeTimestamps& timestamps);
 
   /**
    * Helper function that creates a new overlay file and adds header to it
@@ -93,7 +93,7 @@ class Overlay {
    */
   static void updateTimestampToHeader(
       int fd,
-      const InodeBase::InodeTimestamps& timeStamps);
+      const InodeTimestamps& timeStamps);
 
   /**
    * Get the maximum inode number stored in the overlay.
@@ -119,7 +119,7 @@ class Overlay {
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
       fusell::InodeNumber inodeNumber,
-      InodeBase::InodeTimestamps& timeStamps) const;
+      InodeTimestamps& timeStamps) const;
   /**
    * Helper function to add header to the overlay file
    */
@@ -131,7 +131,7 @@ class Overlay {
   static void parseHeader(
       folly::StringPiece header,
       folly::StringPiece headerId,
-      InodeBase::InodeTimestamps& timeStamps);
+      InodeTimestamps& timeStamps);
 
   /** path to ".eden/CLIENT/local" */
   AbsolutePath localDir_;

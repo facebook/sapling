@@ -57,14 +57,6 @@ InodeBase::InodeBase(
              << ") created: " << getLogPath();
 }
 
-// Helper function to set the timestamps of InodeTimestamps.
-void InodeBase::InodeTimestamps::setTimestampValues(
-    const struct timespec& timeStamp) {
-  atime = timeStamp;
-  ctime = timeStamp;
-  mtime = timeStamp;
-}
-
 // See Dispatcher::getattr
 folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
@@ -341,35 +333,11 @@ folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
 }
 
 timespec InodeBase::getNow() const {
-  return getMount()->getClock().getRealtime();
+  return getClock().getRealtime();
 }
 
-// Helper function to set timeStamps of FileInode and TreeInode
-void InodeBase::setattrTimes(
-    const fuse_setattr_in& attr,
-    InodeTimestamps& timeStamps) {
-  auto currentTime = getNow();
-
-  // Set atime for TreeInode.
-  if (attr.valid & FATTR_ATIME) {
-    timeStamps.atime.tv_sec = attr.atime;
-    timeStamps.atime.tv_nsec = attr.atimensec;
-  } else if (attr.valid & FATTR_ATIME_NOW) {
-    timeStamps.atime = currentTime;
-  }
-
-  // Set mtime for TreeInode.
-  if (attr.valid & FATTR_MTIME) {
-    timeStamps.mtime.tv_sec = attr.mtime;
-    timeStamps.mtime.tv_nsec = attr.mtimensec;
-  } else if (attr.valid & FATTR_MTIME_NOW) {
-    timeStamps.mtime = currentTime;
-  }
-
-  // we do not allow users to set ctime using setattr. ctime should be changed
-  // when ever setattr is called, as this function is called in setattr, update
-  // ctime to currentTime.
-  timeStamps.ctime = currentTime;
+const Clock& InodeBase::getClock() const {
+  return getMount()->getClock();
 }
 
 // Helper function to update Journal used by FileInode and TreeInode.

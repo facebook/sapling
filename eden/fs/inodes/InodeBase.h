@@ -16,6 +16,7 @@
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -46,17 +47,6 @@ class InodeBase {
       PathComponentPiece name);
 
   virtual ~InodeBase();
-
-  /**
-   * Structure for wrapping atime,ctime,mtime
-   */
-  struct InodeTimestamps {
-    timespec atime;
-    timespec ctime;
-    timespec mtime;
-
-    void setTimestampValues(const timespec& timeStamp);
-  };
 
   fusell::InodeNumber getNodeId() const {
     return ino_;
@@ -359,10 +349,10 @@ class InodeBase {
   timespec getNow() const;
 
   /**
-   * Helper function to update timeStamps passed by FileInode and TreeInode in
-   * InodeBase
+   * Convenience method to return the mount point's Clock.
    */
-  void setattrTimes(const fuse_setattr_in& attr, InodeTimestamps& timeStamps);
+  const Clock& getClock() const;
+
   /**
    * Helper function to update Journal in FileInode and TreeInode.
    */
