@@ -236,7 +236,7 @@ mod tests {
         assert_equal(value, (&expected).into_iter());
     }
 
-    type Checker<TDir, TFile> = BoxFnOnce<(Result<VfsNode<TDir, TFile>>,)>;
+    type Checker<TDir, TFile> = BoxFnOnce<'static, (Result<VfsNode<TDir, TFile>>,)>;
 
     fn check_dir<Els, TDir, TFile>(expected: Els) -> Checker<TDir, TFile>
     where
