@@ -1,7 +1,5 @@
   $ . helpers-usechg.sh
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]

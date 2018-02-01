@@ -2,8 +2,6 @@
 
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/sh

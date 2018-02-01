@@ -1,6 +1,4 @@
   $ CACHEDIR=`pwd`/hgcache
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $HGRCPATH <<EOF
   > [treemanifest]

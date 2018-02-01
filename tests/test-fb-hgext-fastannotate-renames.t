@@ -1,5 +1,3 @@
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]

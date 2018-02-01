@@ -2,8 +2,6 @@ Setup. SCM_SAMPLING_FILEPATH needs to be cleared as some environments may
 have it set.
 
   $ unset SCM_SAMPLING_FILEPATH
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ mkcommit() {
   >    echo "$1" > "$1"

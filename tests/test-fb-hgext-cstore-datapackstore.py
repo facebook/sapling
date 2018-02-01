@@ -2,20 +2,13 @@
 from __future__ import absolute_import
 
 import hashlib
-import os
 import random
 import shutil
-import sys
 import tempfile
 import time
 import unittest
 
 import silenttestrunner
-
-# Load the local cstore, not the system one
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
-import pythonpath
-pythonpath.setcstorepath()
 
 from hgext.extlib.cstore import (
     datapackstore,

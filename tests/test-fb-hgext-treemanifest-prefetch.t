@@ -16,8 +16,6 @@ There are three cases which are of interest in this test:
 #testcases remotefilelog.true.shallowrepo.true remotefilelog.true.shallowrepo.false remotefilelog.false
 
   $ CACHEDIR=`pwd`/hgcache
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ . "$TESTDIR/library.sh"
 

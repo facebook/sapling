@@ -1,7 +1,5 @@
   $ . "$TESTDIR/library.sh"
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ hg init master
   $ hg clone -q ssh://user@dummy/master client

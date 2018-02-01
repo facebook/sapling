@@ -1,7 +1,5 @@
 (this file is backported from core hg tests/test-annotate.t)
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $HGRCPATH << EOF
   > [diff]

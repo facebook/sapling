@@ -2,8 +2,6 @@
 
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ mkcommit() {
   >    echo "$1" > "$1"

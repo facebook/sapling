@@ -1,5 +1,3 @@
-  $ PYTHONPATH=$TESTDIR/../:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat > loop.py <<EOF
   > from mercurial import commands, registrar

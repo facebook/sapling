@@ -1,15 +1,8 @@
 #!/usr/bin/env python2.7
 from __future__ import absolute_import
 
-import os
 import random
-import sys
 import unittest
-
-# Add the repo root to the path so we can find the built ctreemanifest
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
-import pythonpath
-pythonpath.setcstorepath()
 
 from mercurial.node import hex, nullid
 

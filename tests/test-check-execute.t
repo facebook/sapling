@@ -1,4 +1,4 @@
-#require test-repo execbit hg10
+#require test-repo execbit hg10 slow
 
   $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"

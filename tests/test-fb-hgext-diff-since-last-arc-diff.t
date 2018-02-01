@@ -1,7 +1,5 @@
 Load extensions
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > arcconfig=$TESTDIR/../hgext/extlib/phabricator/arcconfig.py

@@ -1,4 +1,3 @@
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "phabdiff=" >> $HGRCPATH
 

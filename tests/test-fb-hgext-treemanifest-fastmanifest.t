@@ -2,8 +2,6 @@
 
   $ . "$TESTDIR/library.sh"
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $TESTTMP/flatcheck.py <<EOF
   > import sys, traceback

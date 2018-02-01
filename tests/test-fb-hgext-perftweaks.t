@@ -168,8 +168,6 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   > [extensions]
   > sampling=
   > EOF
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
   $ unset SCM_SAMPLING_FILEPATH
   $ hg status
   >>> import json

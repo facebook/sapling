@@ -7,17 +7,11 @@ import random
 import shutil
 import stat
 import struct
-import sys
 import tempfile
 import time
 import unittest
 
 import silenttestrunner
-
-# Load the local remotefilelog, not the system one
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
-import pythonpath
-pythonpath.setcstorepath()
 
 from hgext.remotefilelog.datapack import (
     datapack,

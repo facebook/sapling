@@ -1,5 +1,3 @@
-  $ PYTHONPATH=$TESTDIR/../:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $TESTTMP/signal.py << EOF
   > from mercurial import registrar

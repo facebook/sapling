@@ -1,7 +1,5 @@
   $ . "$TESTDIR/library.sh"
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
 - Disable simplecache since it can cause certain reads to not actually hit the
 - ondisk structures.

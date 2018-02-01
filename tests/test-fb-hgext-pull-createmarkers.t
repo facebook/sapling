@@ -2,8 +2,6 @@
 
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
 Test that hg pull creates obsolescence markers for landed diffs
   $ cat >> $HGRCPATH <<EOF

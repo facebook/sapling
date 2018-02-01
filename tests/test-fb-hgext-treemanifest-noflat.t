@@ -2,8 +2,6 @@
 
 This file tests that normal mercurial operations almost never read the flat manifests
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ cat >> $TESTTMP/flatcheck.py <<EOF
   > import sys, traceback

@@ -1,5 +1,3 @@
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
   $ LFSPATH=$TESTTMP/lfs
   $ export LFSPATH
   $ mkdir $LFSPATH

@@ -1,7 +1,5 @@
 Setup
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
 Check diagnosis, debugging information
 1) Setup configuration

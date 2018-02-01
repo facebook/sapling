@@ -291,24 +291,20 @@ outputs, which should be fixed later.
   hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
   hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
-  tests/test-fb-hgext-cstore-datapackstore.py:17: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-cstore-datapackstore.py:20: direct symbol import datapackstore from hgext.extlib.cstore
-  tests/test-fb-hgext-cstore-datapackstore.py:24: direct symbol import fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
-  tests/test-fb-hgext-cstore-datapackstore.py:30: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:16: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:19: direct symbol import datapackstore, uniondatapackstore from hgext.extlib.cstore
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:24: direct symbol import datapack, mutabledatapack from hgext.remotefilelog.datapack
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:30: symbol import follows non-symbol import: mercurial.node
-  tests/test-fb-hgext-cstore-uniondatapackstore.py:31: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-remotefilelog-datapack.py:19: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
-  tests/test-fb-hgext-remotefilelog-datapack.py:28: direct symbol import SMALLFANOUTCUTOFF, SMALLFANOUTPREFIX, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
-  tests/test-fb-hgext-remotefilelog-datapack.py:28: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTPREFIX
-  tests/test-fb-hgext-remotefilelog-datapack.py:35: symbol import follows non-symbol import: mercurial.node
-  tests/test-fb-hgext-remotefilelog-datapack.py:36: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-remotefilelog-histpack.py:18: imports not lexically sorted: pythonpath < silenttestrunner
-  tests/test-fb-hgext-remotefilelog-histpack.py:21: direct symbol import historypack, mutablehistorypack from hgext.remotefilelog.historypack
-  tests/test-fb-hgext-remotefilelog-histpack.py:24: imports not lexically sorted: mercurial.ui < pythonpath
-  tests/test-fb-hgext-remotefilelog-histpack.py:26: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
-  tests/test-fb-hgext-remotefilelog-histpack.py:26: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
+  tests/test-fb-hgext-cstore-datapackstore.py:13: direct symbol import datapackstore from hgext.extlib.cstore
+  tests/test-fb-hgext-cstore-datapackstore.py:17: direct symbol import fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
+  tests/test-fb-hgext-cstore-datapackstore.py:23: imports not lexically sorted: mercurial.ui < silenttestrunner
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:12: direct symbol import datapackstore, uniondatapackstore from hgext.extlib.cstore
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:17: direct symbol import datapack, mutabledatapack from hgext.remotefilelog.datapack
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:23: symbol import follows non-symbol import: mercurial.node
+  tests/test-fb-hgext-cstore-uniondatapackstore.py:24: imports not lexically sorted: mercurial.ui < silenttestrunner
+  tests/test-fb-hgext-remotefilelog-datapack.py:16: direct symbol import datapack, datapackstore, fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
+  tests/test-fb-hgext-remotefilelog-datapack.py:22: direct symbol import SMALLFANOUTCUTOFF, SMALLFANOUTPREFIX, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
+  tests/test-fb-hgext-remotefilelog-datapack.py:22: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTPREFIX
+  tests/test-fb-hgext-remotefilelog-datapack.py:29: symbol import follows non-symbol import: mercurial.node
+  tests/test-fb-hgext-remotefilelog-datapack.py:30: imports not lexically sorted: mercurial.ui < silenttestrunner
+  tests/test-fb-hgext-remotefilelog-histpack.py:15: direct symbol import historypack, mutablehistorypack from hgext.remotefilelog.historypack
+  tests/test-fb-hgext-remotefilelog-histpack.py:18: imports not lexically sorted: mercurial.ui < silenttestrunner
+  tests/test-fb-hgext-remotefilelog-histpack.py:20: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
+  tests/test-fb-hgext-remotefilelog-histpack.py:20: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
   [1]

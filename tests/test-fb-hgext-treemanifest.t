@@ -1,7 +1,5 @@
   $ . "$TESTDIR/library.sh"
 
-  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
-  $ export PYTHONPATH
 
   $ hginit master
   $ cd master
