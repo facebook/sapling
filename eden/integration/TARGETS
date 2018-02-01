@@ -10,8 +10,12 @@ cpp_binary(
     srcs = ["fsattr.cpp"],
     deps = [
         "//eden/fs/utils:utils",
+        "//folly:dynamic",
         "//folly:json",
         "//folly/init:init",
+    ],
+    external_deps = [
+        "gflags",
     ],
 )
 
