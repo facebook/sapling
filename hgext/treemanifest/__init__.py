@@ -299,24 +299,24 @@ def _prunesharedpacks(repo, packpath):
         pass
 
 def setuptreestores(repo, mfl):
-    if repo.ui.configbool("treemanifest", "server"):
+    ui = repo.ui
+    if ui.configbool('treemanifest', 'server'):
         packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
         # Data store
         datastore = cstore.datapackstore(packpath)
         revlogstore = manifestrevlogstore(repo)
-        if repo.ui.configbool("treemanifest", "cacheserverstore"):
-            maxcachesize = repo.ui.configint('treemanifest',
-                                             'servermaxcachesize')
-            evictionrate = repo.ui.configint('treemanifest',
-                                             'servercacheevictionpercent')
-            revlogstore = cachestore(revlogstore, repo.cachevfs, maxcachesize,
-                                     evictionrate)
+        if ui.configbool("treemanifest", "cacheserverstore"):
+            maxcachesize = ui.configint('treemanifest', 'servermaxcachesize')
+            evictionrate = ui.configint(
+                'treemanifest', 'servercacheevictionpercent')
+            revlogstore = cachestore(
+                revlogstore, repo.cachevfs, maxcachesize, evictionrate)
 
         mfl.datastore = unioncontentstore(datastore, revlogstore)
 
         # History store
-        historystore = historypackstore(repo.ui, packpath)
+        historystore = historypackstore(ui, packpath)
         mfl.historystore = unionmetadatastore(
             historystore,
             revlogstore,
@@ -324,10 +324,10 @@ def setuptreestores(repo, mfl):
         _prunesharedpacks(repo, packpath)
         return
 
-    usecdatapack = repo.ui.configbool('remotefilelog', 'fastdatapack')
+    usecdatapack = ui.configbool('remotefilelog', 'fastdatapack')
 
     if not util.safehasattr(repo, 'name'):
-        repo.name = repo.ui.config('remotefilelog', 'reponame')
+        repo.name = ui.config('remotefilelog', 'reponame')
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
     _prunesharedpacks(repo, packpath)
 
@@ -335,19 +335,19 @@ def setuptreestores(repo, mfl):
                                                  PACK_CATEGORY)
 
     # Data store
-    if repo.ui.configbool("treemanifest", "usecunionstore"):
+    if ui.configbool('treemanifest', 'usecunionstore'):
         datastore = cstore.datapackstore(packpath)
         localdatastore = cstore.datapackstore(localpackpath)
         # TODO: can't use remotedatastore with cunionstore yet
         # TODO make reportmetrics work with cstore
         mfl.datastore = cstore.uniondatapackstore([localdatastore, datastore])
     else:
-        datastore = datapackstore(repo.ui, packpath, usecdatapack=usecdatapack)
-        localdatastore = datapackstore(repo.ui, localpackpath,
+        datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
+        localdatastore = datapackstore(ui, localpackpath,
                                        usecdatapack=usecdatapack)
         stores = [datastore, localdatastore]
         remotedatastore = remotetreedatastore(repo)
-        if repo.ui.configbool("treemanifest", "demanddownload", True):
+        if ui.configbool('treemanifest', 'demanddownload', True):
             stores.append(remotedatastore)
 
         mfl.datastore = unioncontentstore(*stores,
@@ -356,11 +356,11 @@ def setuptreestores(repo, mfl):
 
     mfl.shareddatastores = [datastore]
     mfl.localdatastores = [localdatastore]
-    mfl.ui = repo.ui
+    mfl.ui = ui
 
     # History store
-    sharedhistorystore = historypackstore(repo.ui, packpath)
-    localhistorystore = historypackstore(repo.ui, localpackpath)
+    sharedhistorystore = historypackstore(ui, packpath)
+    localhistorystore = historypackstore(ui, localpackpath)
     mfl.sharedhistorystores = [
         sharedhistorystore
     ]
@@ -372,7 +372,7 @@ def setuptreestores(repo, mfl):
         localhistorystore,
         writestore=localhistorystore,
     )
-    shallowutil.reportpackmetrics(repo.ui, 'treestore', mfl.datastore,
+    shallowutil.reportpackmetrics(ui, 'treestore', mfl.datastore,
         mfl.historystore)
 
 class treemanifestlog(manifest.manifestlog):
