@@ -14,7 +14,7 @@
 namespace facebook {
 namespace eden {
 
-timespec UnixClock::getRealtime() {
+timespec UnixClock::getRealtime() const {
   timespec rv;
   if (clock_gettime(CLOCK_REALTIME, &rv)) {
     throw std::system_error(

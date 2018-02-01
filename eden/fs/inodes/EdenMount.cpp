@@ -475,7 +475,7 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   // This ensures that any inode objects created once the checkout starts will
   // get the current checkout time, rather than the time from the previous
   // checkout
-  *lastCheckoutTime_.wlock() = getCurrentCheckoutTime();
+  *lastCheckoutTime_.wlock() = clock_->getRealtime();
 
   auto fromTreeFuture = objectStore_->getTreeForCommit(oldParents.parent1());
   auto toTreeFuture = objectStore_->getTreeForCommit(snapshotHash);
@@ -623,10 +623,6 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   journalDelta->fromHash = oldParents.parent1();
   journalDelta->toHash = parents.parent1();
   journal_.addDelta(std::move(journalDelta));
-}
-
-struct timespec EdenMount::getCurrentCheckoutTime() {
-  return getClock().getRealtime();
 }
 
 struct timespec EdenMount::getLastCheckoutTime() {

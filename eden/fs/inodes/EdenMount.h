@@ -228,7 +228,7 @@ class EdenMount {
   /**
    * Returns the Clock with which this mount was configured.
    */
-  Clock& getClock() {
+  const Clock& getClock() const {
     return *clock_;
   }
 
@@ -551,8 +551,6 @@ class EdenMount {
       const ParentCommits& parentCommits);
   folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::Future<SerializedFileHandleMap> shutdownImpl(bool doTakeover);
-
-  struct timespec getCurrentCheckoutTime();
 
   /**
    * Private destructor.

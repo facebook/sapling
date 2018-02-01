@@ -22,7 +22,7 @@ class FakeClock : public Clock {
   using time_point = clock::time_point;
   using duration = clock::duration;
 
-  timespec getRealtime() override {
+  timespec getRealtime() const override {
     return folly::to<timespec>(currentTime_);
   }
 

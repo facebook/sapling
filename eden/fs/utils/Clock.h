@@ -23,7 +23,7 @@ class Clock {
   /**
    * Returns the real time elapsed since the Epoch.
    */
-  virtual timespec getRealtime() = 0;
+  virtual timespec getRealtime() const = 0;
 };
 
 /**
@@ -32,7 +32,7 @@ class Clock {
 class UnixClock : public Clock {
  public:
   /// CLOCK_REALTIME
-  timespec getRealtime() override;
+  timespec getRealtime() const override;
 };
 
 } // namespace eden
