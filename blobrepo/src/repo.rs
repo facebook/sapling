@@ -28,7 +28,7 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
+use mercurial_types::{Changeset, Entry, Manifest, NodeHash, RepoPath};
 use mercurial_types::nodehash::{ChangesetId, ManifestId};
 use rocksblob::Rocksblob;
 use storage_types::Version;
@@ -37,7 +37,7 @@ use tokio_core::reactor::Remote;
 use BlobChangeset;
 use BlobManifest;
 use errors::*;
-use file::fetch_blob_from_blobstore;
+use file::{fetch_blob_from_blobstore, BlobEntry};
 
 pub struct BlobRepo {
     blobstore: Arc<Blobstore>,
@@ -166,6 +166,10 @@ impl BlobRepo {
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()
+    }
+
+    pub fn get_root_entry(&self, manifestid: &ManifestId) -> Box<Entry + Sync> {
+        Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
     pub fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {

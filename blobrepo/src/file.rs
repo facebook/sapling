@@ -11,7 +11,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, MPath, NodeHash, Parents, RepoPath};
+use mercurial_types::{Blob, MPath, ManifestId, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
 
@@ -64,6 +64,15 @@ impl BlobEntry {
             id: EntryId::new(nodeid),
             ty,
         })
+    }
+
+    pub fn new_root(blobstore: Arc<Blobstore>, manifestid: ManifestId) -> Self {
+        Self {
+            blobstore,
+            path: RepoPath::RootPath,
+            id: EntryId::new(manifestid.into_nodehash()),
+            ty: Type::Tree,
+        }
     }
 
     fn get_node(&self) -> BoxFuture<RawNodeBlob, Error> {
@@ -151,11 +160,5 @@ impl Entry for BlobEntry {
 
     fn get_path(&self) -> &RepoPath {
         &self.path
-    }
-
-    fn get_mpath(&self) -> &MPath {
-        self.path
-            .mpath()
-            .expect("entries should always have an associated path")
     }
 }

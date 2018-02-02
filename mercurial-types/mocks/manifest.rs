@@ -127,9 +127,4 @@ impl Entry for MockEntry {
     fn get_path(&self) -> &RepoPath {
         &self.path
     }
-    fn get_mpath(&self) -> &MPath {
-        self.path
-            .mpath()
-            .expect("entries should always have an associated path")
-    }
 }

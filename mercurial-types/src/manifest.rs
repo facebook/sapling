@@ -158,8 +158,12 @@ pub trait Entry: Send + 'static {
     /// Get the full path of this entry (meaningless - see T25575327)
     fn get_path(&self) -> &RepoPath;
 
-    /// Also meaningless (T25575327)
-    fn get_mpath(&self) -> &MPath;
+    fn get_mpath(&self) -> MPath {
+        match self.get_path() {
+            &RepoPath::RootPath => MPath::empty(),
+            &RepoPath::DirectoryPath(ref path) | &RepoPath::FilePath(ref path) => path.clone(),
+        }
+    }
 
     /// Return an Entry as a type-erased trait object.
     /// (Do we still need this as a trait method? T25577105)
@@ -222,7 +226,7 @@ where
         self.entry.get_path()
     }
 
-    fn get_mpath(&self) -> &MPath {
+    fn get_mpath(&self) -> MPath {
         self.entry.get_mpath()
     }
 }
@@ -256,7 +260,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_path()
     }
 
-    fn get_mpath(&self) -> &MPath {
+    fn get_mpath(&self) -> MPath {
         (**self).get_mpath()
     }
 }

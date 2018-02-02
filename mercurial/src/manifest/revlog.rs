@@ -354,12 +354,6 @@ impl Entry for RevlogEntry {
     fn get_path(&self) -> &RepoPath {
         &self.path
     }
-
-    fn get_mpath(&self) -> &MPath {
-        self.path
-            .mpath()
-            .expect("entries should always have an associated path")
-    }
 }
 
 fn strip_file_metadata(blob: &Blob<Vec<u8>>) -> Blob<Vec<u8>> {
