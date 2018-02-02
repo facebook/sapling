@@ -29,6 +29,17 @@ struct InodeTimestamps {
   timespec ctime{};
 
   /**
+   * Initializes all timestamps to zero.
+   */
+  InodeTimestamps() {}
+
+  /**
+   * Initializes all timestamps from the same value.
+   */
+  explicit InodeTimestamps(const timespec& ts)
+      : atime(ts), mtime(ts), ctime(ts) {}
+
+  /**
    * Assigns the specified ts to atime, mtime, and ctime.
    */
   void setAll(const timespec& ts) {
