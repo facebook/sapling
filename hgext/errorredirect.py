@@ -29,11 +29,12 @@ Examples::
   [errorredirect]
   script = (echo "$WARNING"; cat) | cat >&2
 """
+from __future__ import absolute_import
 
 import signal
 import subprocess
-import traceback
 import sys
+import traceback
 
 from mercurial import (
     dispatch,

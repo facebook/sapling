@@ -36,7 +36,6 @@
   hgext/directaccess.py not using absolute_import
   hgext/drop.py not using absolute_import
   hgext/edrecord.py not using absolute_import
-  hgext/errorredirect.py not using absolute_import
   hgext/extorder.py not using absolute_import
   hgext/fastannotate/error.py not using absolute_import
   hgext/fastannotate/formatter.py not using absolute_import
