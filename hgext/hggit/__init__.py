@@ -19,6 +19,7 @@ For more information and instructions, see :hg:`help git`
 
 # global modules
 import os
+import warnings
 
 # local modules
 import compat
@@ -52,6 +53,10 @@ from mercurial import (
     templatekw,
     vfs as vfsmod,
 )
+
+# Disable DeprecationWarning from newer dulwich since hggit also supports older
+# dulwich.
+warnings.filterwarnings(r'ignore', r'', DeprecationWarning, r'hgext.hggit')
 
 try:
     from mercurial import exchange
