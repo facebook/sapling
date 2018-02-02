@@ -90,7 +90,7 @@ static void enlargecontext(context_t *ctx, size_t newsize)
 
 	newsize = defaultdatasize
 		* ((newsize + defaultdatasize - 1) / defaultdatasize);
-	ctx->data = reallocx(ctx->data, newsize);
+	ctx->data = chg_reallocx(ctx->data, newsize);
 	ctx->maxdatasize = newsize;
 	debugmsg("enlarge context buffer to %zu", ctx->maxdatasize);
 }
@@ -201,7 +201,7 @@ static const char **unpackcmdargsnul(const context_t *ctx)
 	for (;;) {
 		if (nargs + 1 >= maxnargs) {  /* including last NULL */
 			maxnargs += 256;
-			args = reallocx(args, maxnargs * sizeof(args[0]));
+			args = chg_reallocx(args, maxnargs * sizeof(args[0]));
 		}
 		args[nargs] = s;
 		nargs++;
@@ -495,7 +495,7 @@ hgclient_t *hgc_open(const char *sockname)
 	}
 	debugmsg("connected to %s", addr.sun_path);
 
-	hgclient_t *hgc = mallocx(sizeof(hgclient_t));
+	hgclient_t *hgc = chg_mallocx(sizeof(hgclient_t));
 	memset(hgc, 0, sizeof(*hgc));
 	hgc->sockfd = fd;
 	initcontext(&hgc->ctx);

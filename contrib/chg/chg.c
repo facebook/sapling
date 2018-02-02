@@ -102,8 +102,8 @@ static void setcmdserverargs(struct cmdserveropts *opts,
 		size_t n = testsensitiveflag(argv[i]);
 		if (n == 0 || i + n > (size_t)argc)
 			continue;
-		opts->args = reallocx(opts->args,
-				      (n + opts->argsize) * sizeof(char *));
+		opts->args = chg_reallocx(opts->args,
+		                          (n + opts->argsize) * sizeof(char *));
 		memcpy(opts->args + opts->argsize, argv + i,
 		       sizeof(char *) * n);
 		opts->argsize += n;
@@ -217,7 +217,7 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
 	size_t argsize = baseargvsize + opts->argsize + 1;
 
-	const char **argv = mallocx(sizeof(char *) * argsize);
+	const char **argv = chg_mallocx(sizeof(char *) * argsize);
 	memcpy(argv, baseargv, sizeof(baseargv));
 	memcpy(argv + baseargvsize, opts->args, sizeof(char *) * opts->argsize);
 	argv[argsize - 1] = NULL;

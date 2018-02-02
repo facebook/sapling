@@ -110,7 +110,7 @@ void fsetcloexec(int fd)
 		abortmsgerrno("cannot set flags of fd %d", fd);
 }
 
-void *mallocx(size_t size)
+void *chg_mallocx(size_t size)
 {
 	void *result = malloc(size);
 	if (!result)
@@ -118,7 +118,7 @@ void *mallocx(size_t size)
 	return result;
 }
 
-void *reallocx(void *ptr, size_t size)
+void *chg_reallocx(void *ptr, size_t size)
 {
 	void *result = realloc(ptr, size);
 	if (!result)
