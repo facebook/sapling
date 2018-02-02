@@ -274,16 +274,17 @@ FindResult treemanifest::find(
           manifest = ManifestPtr(manifest->copy());
           iterator = manifest->findChild(word, wordlen, RESULT_DIRECTORY,
                                          &exacthit);
-          entry = &(*iterator);
         }
 
         manifest->removeChild(iterator);
+        // entry is invalid now
+        entry = nullptr;
       }
     }
 
     *resultManifest = manifest;
 
-    if (findContext->invalidate_checksums) {
+    if (entry && findContext->invalidate_checksums) {
       if (!manifest->isMutable()) {
         throw std::logic_error("attempting to null node on immutable manifest");
       }
