@@ -250,6 +250,7 @@ outputs, which should be fixed later.
   hgext/remotefilelog/shallowutil.py:*: relative import of stdlib module (glob)
   hgext/remotefilelog/shallowutil.py:*: direct symbol import defaultdict from collections (glob)
   hgext/remotefilelog/shallowutil.py:*: imports from mercurial not lexically sorted: error < util (glob)
+  hgext/remotefilelog/shallowutil.py:*: symbol import follows non-symbol import: mercurial.node (glob)
   hgext/remotefilelog/shallowutil.py:*: symbol import follows non-symbol import: mercurial.i18n (glob)
   hgext/remotefilelog/shallowverifier.py:9: direct symbol import verifier from mercurial.verify
   hgext/remotefilelog/wirepack.py:12: stdlib import "struct" follows local import: hgext.remotefilelog

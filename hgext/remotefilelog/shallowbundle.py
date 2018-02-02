@@ -88,7 +88,21 @@ class shallowcg1packer(changegroup.cg1packer):
                 core generatemanifests method, whose length depends on the
                 version of core Hg.
         """
-        if _cansendflat(self._repo, mfs.keys()):
+        # If we're not using the fastpath, then all the trees will be necessary
+        # so we can inspect which files changed and need to be sent. So let's
+        # bulk fetch the trees up front.
+        repo = self._repo
+        if (not fastpathlinkrev and
+            util.safehasattr(repo, 'prefetchtrees')):
+            try:
+                repo.prefetchtrees(mfs.keys())
+            except shallowutil.MissingNodesError:
+                # During migrations, we may be sending flat manifests that don't
+                # have tree equivalents (like an old commit made before the
+                # conversion). In that case, don't worry if the prefetch fails.
+                pass
+
+        if _cansendflat(repo, mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
             # us.
             chunks = super(shallowcg1packer, self).generatemanifests(
@@ -103,7 +117,7 @@ class shallowcg1packer(changegroup.cg1packer):
         else:
             # If not using the fast path, we need to discover what files to send
             if not fastpathlinkrev:
-                mflog = self._repo.manifestlog
+                mflog = repo.manifestlog
                 for mfnode, clnode in mfs.iteritems():
                     mfctx = mflog[mfnode]
                     p1node = mfctx.parents[0]

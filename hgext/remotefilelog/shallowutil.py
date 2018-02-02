@@ -10,6 +10,7 @@ import errno, hashlib, os, stat, struct, tempfile
 
 from collections import defaultdict
 from mercurial import filelog, revlog, util, error, pycompat
+from mercurial.node import hex
 from mercurial.i18n import _
 
 from . import constants
@@ -519,3 +520,16 @@ def getreponame(ui):
     if reponame:
         return os.path.basename(reponame)
     return "unknown"
+
+class MissingNodesError(error.Abort):
+    def __init__(self, nodes, message=None, hint=None):
+        nodes = list(nodes)
+        nodestr = '\n'.join(hex(mfnode) for mfnode in nodes[:10])
+        if len(nodes) > 10:
+            nodestr += '\n...'
+        fullmessage = _(
+            'unable to download the following trees from the server:')
+        if message is not None:
+            fullmessage += ' ' + message
+        fullmessage += '\n' + nodestr
+        super(MissingNodesError, self).__init__(fullmessage, hint=hint)

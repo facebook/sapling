@@ -1196,7 +1196,7 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
                             (count, time.time() - start))
 
         if missingnodes:
-            raise MissingNodesError(missingnodes,
+            raise shallowutil.MissingNodesError(missingnodes,
                                     'nodes missing from server response')
     except bundle2.AbortFromPart as exc:
         repo.ui.debug('remote: abort: %s\n' % exc)
@@ -1204,7 +1204,7 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
         # currently pushed ui buffer, instead of it randomly showing up in a
         # future ui read.
         time.sleep(0.1)
-        raise MissingNodesError(mfnodes, hint=exc.hint)
+        raise shallowutil.MissingNodesError(mfnodes, hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:
@@ -1738,19 +1738,6 @@ def _handlebundle2part(orig, self, bundle, part):
             mfl.historystore)
     else:
         orig(self, bundle, part)
-
-class MissingNodesError(error.Abort):
-    def __init__(self, nodes, message=None, hint=None):
-        nodes = list(nodes)
-        nodestr = '\n'.join(hex(mfnode) for mfnode in nodes[:10])
-        if len(nodes) > 10:
-            nodestr += '\n...'
-        fullmessage = _(
-            'unable to download the following trees from the server:')
-        if message is not None:
-            fullmessage += ' ' + message
-        fullmessage += '\n' + nodestr
-        super(MissingNodesError, self).__init__(fullmessage, hint=hint)
 
 NODEINFOFORMAT = '!20s20s20sI'
 NODEINFOLEN = struct.calcsize(NODEINFOFORMAT)
