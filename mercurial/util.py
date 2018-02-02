@@ -1115,6 +1115,8 @@ def mainfrozen():
 if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(pycompat.sysexecutable)
+elif 'HGDATAPATH' in encoding.environ:
+    datapath = encoding.environ['HGDATAPATH']
 else:
     datapath = os.path.dirname(pycompat.fsencode(__file__))
 
