@@ -778,11 +778,11 @@ static PyObject *lazymanifest_diff(lazymanifest *self, PyObject *args)
 		PyObject *outer;
 		/* If we're looking at a deleted entry and it's not
 		 * the end of the manifest, just skip it. */
-		if (left->deleted && sneedle < self->numlines) {
+		if (sneedle < self->numlines && left->deleted) {
 			sneedle++;
 			continue;
 		}
-		if (right->deleted && oneedle < other->numlines) {
+		if (oneedle < other->numlines && right->deleted) {
 			oneedle++;
 			continue;
 		}
