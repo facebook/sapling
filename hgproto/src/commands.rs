@@ -14,7 +14,7 @@ use std::io::{self, BufRead};
 use slog::Logger;
 
 use bytes::Bytes;
-use futures::future::{self, Future};
+use futures::future::{self, ok, Future};
 use futures::stream::Stream;
 
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt};
@@ -40,7 +40,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         &self,
         req: SingleRequest,
         instream: BytesStream<S>,
-    ) -> BoxFuture<(SingleResponse, BytesStream<S>), Error>
+    ) -> BoxFuture<(SingleResponse, BoxFuture<BytesStream<S>, Error>), Error>
     where
         S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     {
@@ -52,86 +52,86 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 .between(pairs)
                 .map(SingleResponse::Between)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Branches { nodes } => hgcmds
                 .branches(nodes)
                 .map(SingleResponse::Branches)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Branchmap => hgcmds
                 .branchmap()
                 .map(SingleResponse::Branchmap)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Clonebundles => hgcmds
                 .clonebundles()
                 .map(SingleResponse::Clonebundles)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Capabilities => hgcmds
                 .capabilities()
                 .map(SingleResponse::Capabilities)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Changegroup { roots } => hgcmds
                 .changegroup(roots)
                 .map(|_| SingleResponse::Changegroup)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Changegroupsubset { bases, heads } => hgcmds
                 .changegroupsubset(bases, heads)
                 .map(|_| SingleResponse::Changegroupsubset)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Debugwireargs { one, two, all_args } => {
                 self.debugwireargs(one, two, all_args)
                     .map(SingleResponse::Debugwireargs)
                     .map_err(self::Error::into)
-                    .map(|res| (res, instream))
+                    .map(|res| (res, ok(instream).boxify()))
                     .boxify()
             }
             SingleRequest::Getbundle(args) => hgcmds
                 .getbundle(args)
                 .map(SingleResponse::Getbundle)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Heads => hgcmds
                 .heads()
                 .map(SingleResponse::Heads)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Hello => hgcmds
                 .hello()
                 .map(SingleResponse::Hello)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Listkeys { namespace } => hgcmds
                 .listkeys(namespace)
                 .map(SingleResponse::Listkeys)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Lookup { key } => hgcmds
                 .lookup(key)
                 .map(SingleResponse::Lookup)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Known { nodes } => hgcmds
                 .known(nodes)
                 .map(SingleResponse::Known)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Pushkey {
                 namespace,
@@ -142,22 +142,24 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 .pushkey(namespace, key, old, new)
                 .map(|_| SingleResponse::Pushkey)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Streamout => hgcmds
                 .stream_out()
                 .map(|_| SingleResponse::Streamout)
                 .map_err(self::Error::into)
-                .map(|res| (res, instream))
+                .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
-            SingleRequest::Unbundle { heads } => hgcmds
-                .unbundle(heads, Bundle2Stream::new(instream, self.logger.new(o!())))
-                .map(|rest| {
-                    let (bytes, mut remainder) = rest;
-                    remainder.prepend_bytes(bytes.freeze());
-                    (SingleResponse::Unbundle, remainder)
-                })
-                .boxify(),
+            SingleRequest::Unbundle { heads } => ok((
+                SingleResponse::Unbundle,
+                hgcmds
+                    .unbundle(heads, Bundle2Stream::new(instream, self.logger.new(o!())))
+                    .map(|(bytes, mut remainder)| {
+                        remainder.prepend_bytes(bytes.freeze());
+                        remainder
+                    })
+                    .boxify(),
+            )).boxify(),
         }
     }
 
@@ -339,12 +341,14 @@ mod test {
         let r = handler
             .handle(SingleRequest::Hello, BytesStream::new(stream::empty()))
             .wait();
+        let r = r.map(|(r, _)| r);
         println!("hello r = {:?}", r);
+
         let mut res: HashMap<String, Vec<String>> = HashMap::new();
         res.insert("capabilities".into(), vec!["something".into()]);
 
         match r {
-            Ok((SingleResponse::Hello(ref r), _)) if r == &res => (),
+            Ok(SingleResponse::Hello(ref r)) if r == &res => (),
             bad => panic!("Bad result {:?}", bad),
         }
     }
@@ -357,6 +361,7 @@ mod test {
         let r = handler
             .handle(SingleRequest::Heads, BytesStream::new(stream::empty()))
             .wait();
+        let r = r.map(|(r, _)| r);
         println!("heads r = {:?}", r);
 
         match r {

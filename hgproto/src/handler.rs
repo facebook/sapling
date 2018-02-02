@@ -7,8 +7,8 @@
 use std::io;
 use std::sync::Arc;
 
-use futures::{stream, Future, IntoFuture, Poll, Stream};
-use futures::future::Either;
+use futures::{stream, Future, Poll, Stream};
+use futures::future::{err, ok, Either};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use tokio_io::codec::Decoder;
@@ -96,36 +96,49 @@ where
 {
     let input = BytesStream::new(input);
 
-    stream::unfold(input, move |input| {
-        if input.is_empty() {
-            return None;
-        }
+    stream::unfold(Some(ok(input).boxify()), move |input| {
+        let input = match input {
+            None => return None,
+            Some(input) => input,
+        };
 
-        let future = input
-            .into_future_decode(handler.reqdec.clone())
-            .map_err(|(err, _)| -> Error { err.into() })
-            .and_then({
-                let handler = handler.clone();
-                move |(req, remainder)| match req {
-                    None => Either::A(if remainder.is_empty() {
-                        Ok((stream::empty().boxify(), remainder)).into_future()
-                    } else {
-                        let (bytes, _) = remainder.into_parts();
-                        Err(ErrorKind::UnconsumedData(
-                            String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                        ).into())
-                            .into_future()
-                    }),
-                    Some(req) => {
-                        Either::B(handle_request(req, remainder, handler.clone()).map(
-                            move |(resp, remainder)| (handler.respenc.encode(resp), remainder),
-                        ))
-                    }
+        let future = input.and_then({
+            let handler = handler.clone();
+            move |input| {
+                if input.is_empty() {
+                    return Either::A(ok((None, None)));
                 }
-            });
+
+                let future = input
+                    .into_future_decode(handler.reqdec.clone())
+                    .map_err(|(err, _)| -> Error { err.into() })
+                    .and_then({
+                        let handler = handler.clone();
+                        move |(req, remainder)| match req {
+                            None => Either::A(if remainder.is_empty() {
+                                ok((None, None))
+                            } else {
+                                let (bytes, _) = remainder.into_parts();
+                                err(ErrorKind::UnconsumedData(
+                                    String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                                ).into())
+                            }),
+                            Some(req) => {
+                                Either::B(handle_request(req, remainder, handler.clone()).map(
+                                    move |(resp, remainder)| {
+                                        (Some(handler.respenc.encode(resp)), Some(remainder))
+                                    },
+                                ))
+                            }
+                        }
+                    });
+                Either::B(future)
+            }
+        });
 
         Some(future)
-    }).flatten()
+    }).filter_map(|x| x)
+        .flatten()
         .boxify()
 }
 
@@ -133,7 +146,7 @@ fn handle_request<In, H, Dec, Enc>(
     req: Request,
     input: BytesStream<In>,
     handler: Arc<HgProtoHandlerInner<H, Dec, Enc>>,
-) -> BoxFuture<(Response, BytesStream<In>), Error>
+) -> BoxFuture<(Response, BoxFuture<BytesStream<In>, Error>), Error>
 where
     In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     H: HgCommands + Send + Sync + 'static,
@@ -147,18 +160,21 @@ where
             let (send, recv) = oneshot::channel();
             Either::A(
                 stream::unfold(
-                    (reqs.into_iter(), input, send),
+                    (reqs.into_iter(), ok(input).boxify(), send),
                     move |(mut reqs, input, send)| match reqs.next() {
                         None => {
                             let _ = send.send(input);
                             None
                         }
-                        Some(req) => Some(
-                            handler
-                                .commands_handler
-                                .handle(req, input)
-                                .map(|(res, remainder)| (res, (reqs, remainder, send))),
-                        ),
+                        Some(req) => Some(input.and_then({
+                            let handler = handler.clone();
+                            move |input| {
+                                handler
+                                    .commands_handler
+                                    .handle(req, input)
+                                    .map(|(res, remainder)| (res, (reqs, remainder, send)))
+                            }
+                        })),
                     },
                 ).collect()
                     .and_then(|resps| {
