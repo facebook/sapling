@@ -947,23 +947,29 @@ def _shoulddisableimm(ui, repo, rebaseset):
     ui.log("rebase", "", rebase_rebasing_wcp=rebasingwcp)
     if rebasingwcp:
         whynotimm = "wcp in rebaseset"
-        ui.log("rebase", "disabling IMM because: %s" % whynotimm,
-            why_not_imm=whynotimm)
+        msg = "disabling IMM because: %s" % whynotimm
+        ui.log("rebase", msg, why_not_imm=whynotimm)
+        ui.debug(msg + '\n')
         return True
 
     # Check for paths in the rebaseset that are likely to later trigger
     # conflicts or a mergedriver run (and thus cause the whole rebase to later
     # be restarted).
+    #
+    # Note that this is crude, as it will include commits even if their
+    # artifacts don't need to be rebuilt (don't needs to be merged).
     badpaths = ui.config("rebase", "experimental.inmemorydisallowedpaths")
     if badpaths:
         badpathsre = util.re.compile(badpaths)
         ctxs = [repo[rev] for rev in rebaseset]
-        paths = set.union(set(ctx.files()) for ctx in ctxs)
+        sets = [set(ctx.files()) for ctx in ctxs]
+        paths = set.union(*sets)
         for path in paths:
             if badpathsre.match(path):
                 whynotimm = "path matched inmemory_disallowed_paths: %s" % path
-                ui.log("rebase", "disabling IMM because: %s" % whynotimm,
-                    why_not_imm=whynotimm)
+                msg = "disabling IMM because: %s" % whynotimm
+                ui.log("rebase", msg, why_not_imm=whynotimm)
+                ui.debug(msg + '\n')
                 return True
 
     return False # no change

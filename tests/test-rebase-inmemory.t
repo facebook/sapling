@@ -143,7 +143,8 @@ Rebase the working copy parent, which should default to an on-disk merge even if
 we requested in-memory.
   $ hg up -C 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase -r 3 -d 0 --debug | grep rebasing
+  $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
+  disabling IMM because: wcp in rebaseset
   rebasing on disk
   rebasing 3:753feb6fd12a "c" (tip)
   $ hg tglog
@@ -196,4 +197,59 @@ Also ensure the last test works if rebasing the WCP (turning off IMM mid-call):
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+
+Test inmemorydisallowedpaths carve-out:
+  $ cat <<EOF >> $HGRCPATH
+  > [rebase]
+  > experimental.inmemorydisallowedpaths=c|g
+  > EOF
+  $ hg up 3
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 'g' > g
+  $ hg add -q g
+  $ hg com -qm g
+  $ hg up -qC 4
+  $ echo 'h' > h
+  $ hg add -q h
+  $ hg com -qm h
+  $ hg up 0
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  $ hg tglog
+  o  6: 02554e3f8526 'h'
+  |
+  | o  5: e8cedfb0cf72 'g'
+  | |
+  o |  4: 6af061510c70 'e -> c'
+  | |
+  | o  3: 844a7de3e617 'c'
+  | |
+  o |  2: 09c044d2cb43 'd'
+  | |
+  o |  1: fc055c3b4d33 'b'
+  |/
+  @  0: b173517d0057 'a'
+  
+  $ hg rebase -r 5 -d 0 --debug | grep disabling
+  disabling IMM because: path matched inmemory_disallowed_paths: g
+  $ hg rebase -s 3 -d 0 --debug | grep disabling
+  disabling IMM because: path matched inmemory_disallowed_paths: c
+  $ hg tglog
+  o  6: f3a876323b82 'g'
+  |
+  | o  5: 02554e3f8526 'h'
+  | |
+  | o  4: 6af061510c70 'e -> c'
+  | |
+  +---o  3: 844a7de3e617 'c'
+  | |
+  | o  2: 09c044d2cb43 'd'
+  | |
+  | o  1: fc055c3b4d33 'b'
+  |/
+  @  0: b173517d0057 'a'
+  
+  $ hg rebase -r 5 -d 0 --debug | grep disabling
   [1]
