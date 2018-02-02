@@ -159,7 +159,7 @@ def extsetup(ui):
         # Mercurial >= 3.2
         extensions.wrapfunction(exchange, 'pull', wrappers.exchangepull)
 
-    helpdir = os.path.join(os.path.dirname(__file__), 'help')
+    helpdir = os.path.join(hgutil.datapath, 'help', 'subversion')
 
     entries = (
         (['subversion'],
