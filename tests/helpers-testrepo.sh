@@ -1,4 +1,3 @@
-# shellcheck disable=SC2148
 # In most cases, the mercurial repository can be read by the bundled hg, but
 # that isn't always true because third-party extensions may change the store
 # format, for example. In which case, the system hg installation is used.
@@ -45,7 +44,6 @@ EOF
 
 # Use the system hg command if the bundled hg can't read the repository with
 # no warning nor error.
-# shellcheck disable=SC2006
 if [ -n "`hg id --cwd "$TESTDIR/.." 2>&1 >/dev/null`" ]; then
     alias testrepohg=syshg
     alias testrepohgenv=syshgenv
