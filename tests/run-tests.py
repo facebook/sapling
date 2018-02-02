@@ -2150,6 +2150,7 @@ class TextTestRunner(unittest.TextTestRunner):
             self.stream.writeln(
                 '# Ran %d tests, %d skipped, %d failed.'
                 % (result.testsRun, skipped + ignored, failed))
+            result.testsSkipped = skipped + ignored
             if failed:
                 self.stream.writeln('python hash seed: %s' %
                     os.environ['PYTHONHASHSEED'])
@@ -2634,6 +2635,8 @@ class TestRunner(object):
                 desc['case'] = case
             return self._gettest(desc, i)
 
+        failed = False
+        allskipped = False
         try:
             if self.options.restart:
                 orig = list(testdescs)
@@ -2654,7 +2657,6 @@ class TestRunner(object):
 
             tests = [self._gettest(d, i) for i, d in enumerate(testdescs)]
 
-            failed = False
             kws = self.options.keywords
             if kws is not None and PYTHON3:
                 kws = kws.encode('utf-8')
@@ -2689,6 +2691,8 @@ class TestRunner(object):
                 self._usecorrecthg()
 
                 result = runner.run(suite)
+                if tests and result.testsSkipped == len(tests):
+                    allskipped = True
 
             if result.failures:
                 failed = True
@@ -2701,6 +2705,8 @@ class TestRunner(object):
 
         if failed:
             return 1
+        elif allskipped:
+            return Test.SKIPPED_STATUS
 
     def _getport(self, count):
         port = self._ports.get(count) # do we have a cached entry?
