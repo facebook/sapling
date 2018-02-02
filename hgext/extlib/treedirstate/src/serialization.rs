@@ -110,7 +110,7 @@ impl<T: Serializable + Clone> Serializable for NodeEntryMap<T> {
                 }
             }
             w.write_vlq(name.len())?;
-            w.write(name)?;
+            w.write_all(name)?;
         }
         Ok(())
     }
@@ -143,7 +143,7 @@ impl Serializable for TreeDirstateRoot {
     }
 
     fn serialize(&self, w: &mut Write) -> Result<()> {
-        w.write(&DIRSTATE_ROOT_MAGIC)?;
+        w.write_all(&DIRSTATE_ROOT_MAGIC)?;
         w.write_u64::<BigEndian>(self.tracked_root_id.0)?;
         w.write_u32::<BigEndian>(self.tracked_file_count)?;
         w.write_u64::<BigEndian>(self.removed_root_id.0)?;
