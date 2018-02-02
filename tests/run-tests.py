@@ -459,6 +459,8 @@ def parseargs(args, parser):
         if options.chg:
             pathandattrs.append((b'contrib/chg/chg', 'with_chg'))
         for relpath, attr in pathandattrs:
+            if getattr(options, attr, None):
+                continue
             binpath = os.path.join(reporootdir, relpath)
             if os.name != 'nt' and not os.access(binpath, os.X_OK):
                 parser.error('--local specified, but %r not found or '
