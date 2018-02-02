@@ -145,16 +145,19 @@ def extsetup(ui):
 
     wrapfunction = extensions.wrapfunction
 
-    wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
-
-    wrapfunction(upgrade, '_finishdatamigration',
-                 wrapper.upgradefinishdatamigration)
-
-    wrapfunction(upgrade, 'preservedrequirements',
-                 wrapper.upgraderequirements)
-
-    wrapfunction(upgrade, 'supporteddestrequirements',
-                 wrapper.upgraderequirements)
+    try:
+        # Older Mercurial does not have wrapconvertsink. These methods are
+        # "convert"-related and missing them is not fatal.  Ignore them so
+        # bootstrapping from an old Mercurial works.
+        wrapfunction(scmutil, 'wrapconvertsink', wrapper.convertsink)
+        wrapfunction(upgrade, '_finishdatamigration',
+                     wrapper.upgradefinishdatamigration)
+        wrapfunction(upgrade, 'preservedrequirements',
+                     wrapper.upgraderequirements)
+        wrapfunction(upgrade, 'supporteddestrequirements',
+                     wrapper.upgraderequirements)
+    except AttributeError:
+        pass
 
     wrapfunction(changegroup,
                  'supportedoutgoingversions',

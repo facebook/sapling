@@ -313,7 +313,9 @@ def findhg():
     """Try to figure out how we should invoke hg for examining the local
     repository contents.
 
-    Returns an hgcommand object."""
+    Returns an hgcommand object, or None if a working hg command cannot be
+    found.
+    """
     # By default, prefer the "hg" command in the user's path.  This was
     # presumably the hg command that the user used to create this repository.
     #
@@ -345,8 +347,8 @@ def findhg():
     if retcode == 0 and not filterhgerr(err):
         return hgcommand(hgcmd, hgenv)
 
-    raise SystemExit('Unable to find a working hg binary to extract the '
-                     'version from the repository tags')
+    # Neither local or system hg can be used.
+    return None
 
 def localhgenv():
     """Get an environment dictionary to use for invoking or importing
@@ -367,6 +369,9 @@ def localhgenv():
 
 def pickversion():
     hg = findhg()
+    if not hg:
+        # if hg is not found, fallback to a fixed version
+        return '4.4.2'
     # New version system: YYMMDD_HHmmSS_hash
     # This is duplicated a bit from build_rpm.py:auto_release_str()
     template = '{sub("([:+-]|\d\d\d\d$)", "",date|isodatesec)} {node|short}'
