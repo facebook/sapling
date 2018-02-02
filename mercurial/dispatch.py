@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
 
 import difflib
 import errno
@@ -1010,8 +1010,3 @@ def rejectpush(ui, **kwargs):
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True
-
-if __name__ == '__main__':
-    import hgdemandimport
-    hgdemandimport.enable()
-    run()
