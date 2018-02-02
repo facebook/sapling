@@ -96,59 +96,9 @@
   > EOF
   $ hg buggylocking
   devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
-#if no-chg
-  $ hg buggylocking --traceback
+  $ hg buggylocking --traceback 2>&1 | egrep '(devel-warn|buggylocking)'
   devel-warn: "wlock" acquired after "lock" at:
-   */hg:* in <module> (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in buggylocking (glob)
-#else
-  $ hg buggylocking --traceback
-  devel-warn: "wlock" acquired after "lock" at:
-   */hg:* in <module> (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   */mercurial/commands.py:* in serve (glob)
-   */mercurial/server.py:* in runservice (glob)
-   */mercurial/commandserver.py:* in run (glob)
-   */mercurial/commandserver.py:* in _mainloop (glob)
-   */mercurial/commandserver.py:* in _runworker (glob)
-   */mercurial/commandserver.py:* in _serverequest (glob)
-   */mercurial/commandserver.py:* in serve (glob)
-   */mercurial/commandserver.py:* in serveone (glob)
-   */mercurial/chgserver.py:* in runcommand (glob)
-   */mercurial/commandserver.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   $TESTTMP/buggylocking.py:* in buggylocking (glob)
-#endif
   $ hg properlocking
   $ hg nowaitlocking
 
@@ -173,61 +123,9 @@ Stripping from a transaction
   devel-warn: foorbar is deprecated, go shopping
   (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
 
-#if no-chg
-  $ hg oldanddeprecated --traceback
+  $ hg oldanddeprecated --traceback 2>&1 | egrep '(buggylocking|devel-warn)'
   devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
-   */hg:* in <module> (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-#else
-  $ hg oldanddeprecated --traceback
-  devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
-   */hg:* in <module> (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   */mercurial/commands.py:* in serve (glob)
-   */mercurial/server.py:* in runservice (glob)
-   */mercurial/commandserver.py:* in run (glob)
-   */mercurial/commandserver.py:* in _mainloop (glob)
-   */mercurial/commandserver.py:* in _runworker (glob)
-   */mercurial/commandserver.py:* in _serverequest (glob)
-   */mercurial/commandserver.py:* in serve (glob)
-   */mercurial/commandserver.py:* in serveone (glob)
-   */mercurial/chgserver.py:* in runcommand (glob)
-   */mercurial/commandserver.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _callcatch (glob)
-   */mercurial/scmutil.py:* in callcatch (glob)
-   */mercurial/dispatch.py:* in _runcatchfunc (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
-#endif
 
 #if no-chg
   $ hg blackbox -l 7

@@ -301,17 +301,17 @@ Test internal debugstacktrace command
   >     util.dst('hi ...\\nfrom h hidden in g', 1, depth=2)
   > f()
   > EOF
-  $ $PYTHON debugstacktrace.py
+  $ $PYTHON debugstacktrace.py 2>&1 | egrep '(stacktrace|hello from|from h|hi \.\.)'
   stacktrace at:
-   debugstacktrace.py:12 in * (glob)
-   debugstacktrace.py:5  in f
+   debugstacktrace.py:12*in * (glob)
+   debugstacktrace.py:5*in f (glob)
   hello from g at:
-   debugstacktrace.py:12 in * (glob)
-   debugstacktrace.py:6  in f
+   debugstacktrace.py:12*in * (glob)
+   debugstacktrace.py:6*in f (glob)
   hi ...
   from h hidden in g at:
-   debugstacktrace.py:6 in f
-   debugstacktrace.py:9 in g
+   debugstacktrace.py:6*in f (glob)
+   debugstacktrace.py:9*in g (glob)
 
 Test debugcapabilities command:
 
