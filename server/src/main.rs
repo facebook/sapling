@@ -51,7 +51,6 @@ extern crate stats;
 mod errors;
 mod repo;
 mod listener;
-mod manifest_utils;
 
 use std::io;
 use std::panic;

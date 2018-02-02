@@ -87,6 +87,7 @@ pub mod nodehash;
 pub mod path;
 pub mod utils;
 pub mod manifest;
+pub mod manifest_utils;
 pub mod blob;
 pub mod blobnode;
 pub mod changeset;
