@@ -57,7 +57,7 @@ Pushing with treemanifest disabled does nothing
   $ ls ../client2/.hg/store/packs/manifests || true
   * $ENOENT$ (glob)
 
-  $ hg -R ../client2 strip -q -r tip
+  $ hg -R ../client2 strip -q -r tip --config extensions.treemanifest=! --config fastmanifest.usetree=False
 
 Pushing p2p puts the received packs in the local pack store
   $ hg push -q ../client2

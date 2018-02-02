@@ -257,9 +257,6 @@ def stripmanifest(orig, repo, striprev, tr, files):
     orig(repo, striprev, tr, files)
 
 def reposetup(ui, repo):
-    wraprepo(repo)
-
-def wraprepo(repo):
     if not isinstance(repo, localrepo.localrepository):
         return
 
@@ -268,6 +265,8 @@ def wraprepo(repo):
         serverreposetup(repo)
     else:
         clientreposetup(repo)
+
+    wraprepo(repo)
 
 def clientreposetup(repo):
     repo.name = repo.ui.config('remotefilelog', 'reponame')
@@ -284,6 +283,38 @@ def clientreposetup(repo):
 
     if not util.safehasattr(repo, 'connectionpool'):
         repo.connectionpool = connectionpool.connectionpool(repo)
+
+def wraprepo(repo):
+    class treerepository(repo.__class__):
+        def prefetchtrees(self, mfnodes, basemfnodes=None):
+            if not treeenabled(self.ui):
+                return
+
+            mfstore = self.manifestlog.datastore
+            missingentries = mfstore.getmissing(('', n) for n in mfnodes)
+            mfnodes = list(n for path, n in missingentries)
+            if not mfnodes:
+                return
+
+            # If we have no base nodes, scan the changelog looking for a
+            # semi-recent manifest node to treat as the base.
+            if not basemfnodes:
+                changeloglen = len(repo.changelog) - 1
+                basemfnodes = _findrecenttree(repo, changeloglen)
+
+            self._prefetchtrees('', mfnodes, basemfnodes, [])
+
+        def _prefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
+            # If possible, use remotefilelog's more expressive fallbackpath
+            fallbackpath = getfallbackpath(self)
+
+            start = time.time()
+            with self.connectionpool.get(fallbackpath) as conn:
+                remote = conn.peer
+                _gettrees(self, remote, rootdir, mfnodes, basemfnodes,
+                          directories, start)
+
+    repo.__class__ = treerepository
 
 def _prunesharedpacks(repo, packpath):
     """Wipe the packpath if it has too many packs in it"""
@@ -1141,27 +1172,7 @@ def _prefetchonlytrees(repo, opts):
     if base is not None:
         basemfnode.add(repo[base].manifestnode())
 
-    prefetchtrees(repo, '', mfnodes, basemfnode, [])
-
-def _prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
-    '''
-    This is a legacy name for prefetchtrees(), to help transition other modules
-    that call this using the old (private) _prefetchtrees() name.
-
-    This can be deleted once everything has been switched to use the public
-    prefetchtrees() name.
-    '''
-    return prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories)
-
-def prefetchtrees(repo, rootdir, mfnodes, basemfnodes, directories):
-    # If possible, use remotefilelog's more expressive fallbackpath
-    fallbackpath = getfallbackpath(repo)
-
-    start = time.time()
-    with repo.connectionpool.get(fallbackpath) as conn:
-        remote = conn.peer
-        _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories,
-                  start)
+    repo.prefetchtrees(mfnodes, basemfnodes=basemfnode)
 
 def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
     if 'gettreepack' not in shallowutil.peercapabilities(remote):
@@ -1283,11 +1294,8 @@ def _cansendtrees(repo, nodes):
     if not sendtrees:
         return False
 
-    mfnodes = []
-    for node in nodes:
-        mfnodes.append(('', repo[node].manifestnode()))
-
-    return not repo.manifestlog.datastore.getmissing(mfnodes)
+    repo.prefetchtrees(repo[node].manifestnode() for node in nodes)
+    return True
 
 def createtreepackpart(repo, outgoing, partname):
     rootdir = ''
@@ -1361,8 +1369,7 @@ def _postpullprefetch(ui, repo):
 
     mfnodes = None
     if ctxs:
-        missingnodes = mfstore.getmissing(('', c.manifestnode()) for c in ctxs)
-        mfnodes = list(n for k, n in missingnodes)
+        mfnodes = list(c.manifestnode() for c in ctxs)
 
     if mfnodes:
         ui.status(_("prefetching trees\n"))
@@ -1374,12 +1381,7 @@ def _postpullprefetch(ui, repo):
         missingbases = list(mfstore.getmissing(('', n) for n in basemfnodes))
         basemfnodes.difference_update(n for k, n in missingbases)
 
-        # If we have no base nodes, scan the change log looking for a
-        # semi-recent manifest node to treat as the base.
-        if not basemfnodes:
-            basemfnodes = _findrecenttree(repo, len(repo.changelog) - 1)
-
-        prefetchtrees(repo, '', mfnodes, basemfnodes, [])
+        repo.prefetchtrees(mfnodes, basemfnodes=basemfnodes)
 
 def _findrecenttree(repo, startrev):
     cl = repo.changelog
@@ -1628,7 +1630,7 @@ class remotetreedatastore(object):
             # Find a recent tree that we already have
             basemfnodes = _findrecenttree(self._repo, linkrev)
 
-        prefetchtrees(self._repo, name, [node], basemfnodes, [])
+        self._repo._prefetchtrees(name, [node], basemfnodes, [])
         self._shared.markforrefresh()
         return self._shared.get(name, node)
 

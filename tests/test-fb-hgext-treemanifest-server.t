@@ -96,14 +96,12 @@ Test pushing only flat fails if forcetreereceive is on
   > [extensions]
   > pushrebase=
   > EOF
-  $ mv .hg/store/packs .hg/store/packs.bak
-  $ hg push --to mybook
+  $ hg push --to mybook --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes
   remote: error: pushes must contain tree manifests when the server has pushrebase.forcetreereceive enabled
   abort: push failed on remote
   [255]
-  $ mv .hg/store/packs.bak .hg/store/packs
 
 Test pushing flat and tree
   $ cat >> $TESTTMP/myhook.sh <<EOF

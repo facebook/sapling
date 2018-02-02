@@ -459,7 +459,7 @@ Test repack option
   [255]
 #else
   $ hg prefetch -r '4' --repack
-  3 trees fetched over * (glob)
+  2 trees fetched over * (glob)
   (running background incremental repack)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (remotefilelog.true.shallowrepo.true !)
 
@@ -481,19 +481,15 @@ file prefetching code path fetches 1 file for revision 5 and while doing so,
 also fetches 3 trees dealing with the tree manifest of the base revision 2.
 
   $ hg prefetch
-  0 trees fetched over * (glob)
   3 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 #else
 The tree prefetching code path fetches no trees for revision 5. And there is no
 prefetching of files in this test case.
   $ hg prefetch
-  0 trees fetched over * (glob)
 #endif
 
-Running prefetch in the master repository should fail gracefully
+Running prefetch in the master repository should exit gracefully
 
   $ cd ../master
   $ hg prefetch
-  abort: no remote server configured to fetch trees from
-  [255]

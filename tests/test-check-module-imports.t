@@ -246,11 +246,11 @@ outputs, which should be fixed later.
   hgext/remotefilelog/shallowrepo.py:26: direct symbol import historypackstore from hgext.remotefilelog.historypack
   hgext/remotefilelog/shallowrepo.py:26: symbol import follows non-symbol import: hgext.remotefilelog.historypack
   hgext/remotefilelog/shallowrepo.py:28: stdlib import "os" follows local import: hgext.remotefilelog.historypack
-  hgext/remotefilelog/shallowutil.py:9: multiple imported names: errno, hashlib, os, stat, struct, tempfile
-  hgext/remotefilelog/shallowutil.py:11: relative import of stdlib module
-  hgext/remotefilelog/shallowutil.py:11: direct symbol import defaultdict from collections
-  hgext/remotefilelog/shallowutil.py:12: imports from mercurial not lexically sorted: error < util
-  hgext/remotefilelog/shallowutil.py:13: symbol import follows non-symbol import: mercurial.i18n
+  hgext/remotefilelog/shallowutil.py:*: multiple imported names: errno, hashlib, os, stat, struct, tempfile (glob)
+  hgext/remotefilelog/shallowutil.py:*: relative import of stdlib module (glob)
+  hgext/remotefilelog/shallowutil.py:*: direct symbol import defaultdict from collections (glob)
+  hgext/remotefilelog/shallowutil.py:*: imports from mercurial not lexically sorted: error < util (glob)
+  hgext/remotefilelog/shallowutil.py:*: symbol import follows non-symbol import: mercurial.i18n (glob)
   hgext/remotefilelog/shallowverifier.py:9: direct symbol import verifier from mercurial.verify
   hgext/remotefilelog/wirepack.py:12: stdlib import "struct" follows local import: hgext.remotefilelog
   hgext/remotefilelog/wirepack.py:13: relative import of stdlib module
@@ -267,17 +267,17 @@ outputs, which should be fixed later.
   hgext/smartlog.py:30: relative import of stdlib module
   hgext/smartlog.py:30: direct symbol import chain from itertools
   hgext/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
-  hgext/treemanifest/__init__.py:120: symbol import follows non-symbol import: hgext.remotefilelog
-  hgext/treemanifest/__init__.py:128: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore
-  hgext/treemanifest/__init__.py:128: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
-  hgext/treemanifest/__init__.py:132: direct symbol import unionmetadatastore from hgext.remotefilelog.metadatastore
-  hgext/treemanifest/__init__.py:132: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
-  hgext/treemanifest/__init__.py:135: direct symbol import datapack, datapackstore, mutabledatapack from hgext.remotefilelog.datapack
-  hgext/treemanifest/__init__.py:135: symbol import follows non-symbol import: hgext.remotefilelog.datapack
-  hgext/treemanifest/__init__.py:140: direct symbol import historypack, historypackstore, mutablehistorypack from hgext.remotefilelog.historypack
-  hgext/treemanifest/__init__.py:140: symbol import follows non-symbol import: hgext.remotefilelog.historypack
-  hgext/treemanifest/__init__.py:145: direct symbol import _computeincrementaldatapack, _computeincrementalhistorypack, _runrepack, _topacks, backgroundrepack from hgext.remotefilelog.repack
-  hgext/treemanifest/__init__.py:145: symbol import follows non-symbol import: hgext.remotefilelog.repack
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog (glob)
+  hgext/treemanifest/__init__.py:*: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore (glob)
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.contentstore (glob)
+  hgext/treemanifest/__init__.py:*: direct symbol import unionmetadatastore from hgext.remotefilelog.metadatastore (glob)
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore (glob)
+  hgext/treemanifest/__init__.py:*: direct symbol import datapack, datapackstore, mutabledatapack from hgext.remotefilelog.datapack (glob)
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.datapack (glob)
+  hgext/treemanifest/__init__.py:*: direct symbol import historypack, historypackstore, mutablehistorypack from hgext.remotefilelog.historypack (glob)
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.historypack (glob)
+  hgext/treemanifest/__init__.py:*: direct symbol import _computeincrementaldatapack, _computeincrementalhistorypack, _runrepack, _topacks, backgroundrepack from hgext.remotefilelog.repack (glob)
+  hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.repack (glob)
   hgext/tweakdefaults.py:69: imports from mercurial not lexically sorted: encoding < error
   hgext/tweakdefaults.py:88: stdlib import "inspect" follows local import: hgext
   hgext/tweakdefaults.py:89: stdlib import "json" follows local import: hgext
