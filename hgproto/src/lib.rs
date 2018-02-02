@@ -169,7 +169,7 @@ pub enum SingleResponse {
     Known(Vec<bool>),
     Pushkey,
     Streamout, /* (BoxStream<Vec<u8>, Error>) */
-    Unbundle,
+    ReadyForStream,
 }
 
 impl SingleResponse {
@@ -179,7 +179,7 @@ impl SingleResponse {
 
         match self {
             &Getbundle(_) => true,
-            &Unbundle => true,
+            &ReadyForStream => true,
             _ => false,
         }
     }

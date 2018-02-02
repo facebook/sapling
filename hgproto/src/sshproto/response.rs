@@ -107,6 +107,8 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
             Bytes::from(out)
         }
 
+        &ReadyForStream => Bytes::from(b"0\n".as_ref()),
+
         &Getbundle(ref res) => res.clone(),
 
         r => panic!("Response for {:?} unimplemented", r),

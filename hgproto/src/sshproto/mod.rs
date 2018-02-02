@@ -24,13 +24,21 @@
 //! pair := <hash> '-' <hash>
 //! list := (<hash> ' ')* <item>
 //!
-//! Responses to commands are always:
+//! Responses to commands are almost always:
 //! ```
 //! <numbytes> '\n'
 //! <byte>{numbytes}
 //! ```
 //!
-//! Each command has its own encoding of the response.
+//! The expections are requests that pass streaming arguments (f.e. unbundle). After such a
+//! requests the responder should respond with
+//! ```
+//! '0\n'
+//! ```
+//! to acknowledge readiness for processing the stream. After the stream is fully read the
+//! responder should respond with a stream (no acknowledgment is required).
+//!
+//! Each command has its own encoding of the regular or streaming responses.
 
 use bytes::BytesMut;
 use tokio_io::codec::Decoder;

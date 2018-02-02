@@ -151,7 +151,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 .map(|res| (res, ok(instream).boxify()))
                 .boxify(),
             SingleRequest::Unbundle { heads } => ok((
-                SingleResponse::Unbundle,
+                SingleResponse::ReadyForStream,
                 hgcmds
                     .unbundle(heads, Bundle2Stream::new(instream, self.logger.new(o!())))
                     .map(|(bytes, mut remainder)| {
