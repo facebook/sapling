@@ -5,6 +5,7 @@ It also checks certain aspects of the parsers module as a whole.
 
 from __future__ import absolute_import, print_function
 
+import os
 import struct
 import subprocess
 import sys
@@ -161,9 +162,12 @@ def runversiontests():
     testversionokay(1, makehex(major, minor, micro))
     testversionokay(2, makehex(major, minor, micro + 1))
     # Test different major-minor versions.
-    testversionfail(3, makehex(major + 1, minor, micro))
-    testversionfail(4, makehex(major, minor + 1, micro))
-    testversionfail(5, "'foo'")
+    # This does not work well if hg is a single packed binary without some
+    # customized wrapping logic. So skip the test in that case.
+    if os.environ.get('HGTEST_NORMAL_LAYOUT', '1') == '1':
+        testversionfail(3, makehex(major + 1, minor, micro))
+        testversionfail(4, makehex(major, minor + 1, micro))
+        testversionfail(5, "'foo'")
 
 def runtest() :
     # Only test the version-detection logic if it is present.

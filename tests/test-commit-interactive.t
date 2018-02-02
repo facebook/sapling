@@ -879,7 +879,7 @@ Help, quit
   abort: user quit
   [255]
 
-#if gettext
+#if gettext normal-layout
 
 Test translated help message
 

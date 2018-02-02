@@ -471,6 +471,7 @@ converting empty dir should fail "nicely
 
   $ mkdir emptydir
 
+#if normal-layout
 override $PATH to ensure p4 not visible; use $PYTHON in case we're
 running from a devel copy, not a temp installation
 
@@ -488,6 +489,7 @@ running from a devel copy, not a temp installation
   cannot find required "p4" tool
   abort: emptydir: missing or unsupported repository
   [255]
+#endif
 
 convert with imaginary source type
 

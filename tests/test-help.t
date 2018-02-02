@@ -1377,7 +1377,7 @@ test advanced, deprecated and experimental options are shown with -v
   $ hg help -v debugoptEXP | grep eopt
     --eopt option is (EXPERIMENTAL)
 
-#if gettext
+#if gettext normal-layout
 test deprecated option is hidden with translation with untranslated description
 (use many globy for not failing on changed transaction)
   $ LANGUAGE=sv hg help debugoptDEP
@@ -2050,10 +2050,13 @@ Compression engines listed in `hg help bundlespec`
       "gzip"
         better compression than "gzip". It also frequently yields better (?)
 
+#if normal-layout
 Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
   $ $PYTHON check-seclevel.py
+#endif
+
   $ cd $TESTTMP
 
 #if serve

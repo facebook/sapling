@@ -216,6 +216,12 @@ def has_fifo():
     except OSError:
         return False
 
+@check("normal-layout", "common file layout that hg is not a packed binary")
+def has_normal_layout():
+    # Cannot test this reliably. So test an environment variable set by the
+    # test runner.
+    return os.environ.get('HGTEST_NORMAL_LAYOUT', '1') == '1'
+
 @check("killdaemons", 'killdaemons.py support')
 def has_killdaemons():
     return True

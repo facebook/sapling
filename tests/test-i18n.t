@@ -1,3 +1,5 @@
+#require normal-layout
+
 (Translations are optional)
 
 #if gettext no-outer-repo

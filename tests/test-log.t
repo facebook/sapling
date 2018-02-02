@@ -1426,7 +1426,7 @@ log -b 2
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit on default
   
-#if gettext
+#if gettext normal-layout
 
 Test that all log names are translated (e.g. branches, bookmarks, tags):
 
