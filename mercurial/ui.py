@@ -1082,11 +1082,12 @@ class ui(object):
             command = fullcmd
 
         try:
-            pager = subprocess.Popen(
-                command, shell=shell, bufsize=-1,
-                close_fds=util.closefds, stdin=subprocess.PIPE,
-                stdout=util.stdout, stderr=util.stderr,
-                env=util.shellenviron(env))
+            with self.timeblockedsection('pager'):
+                pager = subprocess.Popen(
+                    command, shell=shell, bufsize=-1,
+                    close_fds=util.closefds, stdin=subprocess.PIPE,
+                    stdout=util.stdout, stderr=util.stderr,
+                    env=util.shellenviron(env))
         except OSError as e:
             if e.errno == errno.ENOENT and not shell:
                 self.warn(_("missing pager command '%s', skipping pager\n")
@@ -1110,7 +1111,8 @@ class ui(object):
             os.dup2(stdoutfd, util.stdout.fileno())
             os.dup2(stderrfd, util.stderr.fileno())
             pager.stdin.close()
-            pager.wait()
+            with self.timeblockedsection('pager'):
+                pager.wait()
 
         return True
 
