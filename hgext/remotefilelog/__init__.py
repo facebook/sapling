@@ -66,7 +66,6 @@ from . import (
     shallowrepo,
     shallowstore,
     shallowutil,
-    shallowverifier,
 )
 from mercurial.node import hex
 from mercurial.i18n import _
@@ -552,17 +551,6 @@ def onetimeclientsetup(ui):
         return orig(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, *args, **kwargs)
     wrapfunction(patch, 'trydiff', trydiff)
-
-    # Prevent verify from processing files
-    # a stub for mercurial.hg.verify()
-    def _verify(orig, repo):
-        lock = repo.lock()
-        try:
-            return shallowverifier.shallowverifier(repo).verify()
-        finally:
-            lock.release()
-
-    wrapfunction(hg, 'verify', _verify)
 
     if util.safehasattr(cmdutil, '_revertprefetch'):
         wrapfunction(cmdutil, '_revertprefetch', _revertprefetch)

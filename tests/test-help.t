@@ -325,7 +325,6 @@ Test extension help:
        fastmanifest
        fastpartialmatch
                      extension that makes node prefix lookup faster
-       fastverify
        fbamend       extends the existing commit amend functionality
        fbconduit     (no help text available)
        fbhistedit    extends the existing histedit functionality
@@ -638,6 +637,12 @@ Test command without options
       information about recovery from corruption of the repository.
   
       Returns 0 on success, 1 if errors are encountered.
+  
+      Manifest verification can be extremely slow on large repos, so it can be
+      disabled if "verify.skipmanifests" is True:
+  
+        [verify]
+            skipmanifests = true
   
   (some details hidden, use --verbose to show complete help)
 

@@ -75,7 +75,6 @@ outputs, which should be fixed later.
   hgext/fastmanifest/implementation.py:23: direct symbol import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES from hgext.fastmanifest.constants
   hgext/fastmanifest/implementation.py:23: symbol import follows non-symbol import: hgext.fastmanifest.constants
   hgext/fastmanifest/implementation.py:30: import should be relative: hgext
-  hgext/fastverify.py:24: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/__init__.py:58: symbol import follows non-symbol import: mercurial.node
   hgext/fbamend/__init__.py:60: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/__init__.py:62: import should be relative: hgext
@@ -161,13 +160,13 @@ outputs, which should be fixed later.
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: hex < nullid
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
   hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:71: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:73: direct symbol import wrapfunction from mercurial.extensions
-  hgext/remotefilelog/__init__.py:73: symbol import follows non-symbol import: mercurial.extensions
-  hgext/remotefilelog/__init__.py:103: stdlib import "os" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:104: stdlib import "time" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:105: stdlib import "traceback" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:70: symbol import follows non-symbol import: mercurial.node
+  hgext/remotefilelog/__init__.py:71: symbol import follows non-symbol import: mercurial.i18n
+  hgext/remotefilelog/__init__.py:72: direct symbol import wrapfunction from mercurial.extensions
+  hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.extensions
+  hgext/remotefilelog/__init__.py:102: stdlib import "os" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:103: stdlib import "time" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:104: stdlib import "traceback" follows local import: mercurial
   hgext/remotefilelog/basestore.py:3: multiple imported names: errno, hashlib, os, shutil, stat, time
   hgext/remotefilelog/basestore.py:15: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/basestore.py:16: symbol import follows non-symbol import: mercurial.node
@@ -252,7 +251,6 @@ outputs, which should be fixed later.
   hgext/remotefilelog/shallowutil.py:*: imports from mercurial not lexically sorted: error < util (glob)
   hgext/remotefilelog/shallowutil.py:*: symbol import follows non-symbol import: mercurial.node (glob)
   hgext/remotefilelog/shallowutil.py:*: symbol import follows non-symbol import: mercurial.i18n (glob)
-  hgext/remotefilelog/shallowverifier.py:9: direct symbol import verifier from mercurial.verify
   hgext/remotefilelog/wirepack.py:12: stdlib import "struct" follows local import: hgext.remotefilelog
   hgext/remotefilelog/wirepack.py:13: relative import of stdlib module
   hgext/remotefilelog/wirepack.py:13: direct symbol import StringIO from StringIO

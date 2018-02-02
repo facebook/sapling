@@ -5534,6 +5534,12 @@ def verify(ui, repo):
     repository.
 
     Returns 0 on success, 1 if errors are encountered.
+
+    Manifest verification can be extremely slow on large repos, so it can be
+    disabled if ``verify.skipmanifests`` is True::
+
+        [verify]
+            skipmanifests = true
     """
     return hg.verify(repo)
 

@@ -195,6 +195,11 @@ class verifier(object):
 
     def _verifymanifest(self, mflinkrevs, dir="", storefiles=None,
                         progress=None):
+        if self.ui.configbool("verify", "skipmanifests", False):
+            self.ui.warn(_("verify.skipmanifests is enabled; skipping "
+                           "verification of manifests\n"))
+            return []
+
         repo = self.repo
         ui = self.ui
         match = self.match
@@ -296,6 +301,9 @@ class verifier(object):
         return filenodes
 
     def _crosscheckfiles(self, filelinkrevs, filenodes):
+        if self.ui.configbool("verify", "skipmanifests", False):
+            return
+
         repo = self.repo
         ui = self.ui
         ui.status(_("crosschecking files in changesets and manifests\n"))
@@ -325,6 +333,9 @@ class verifier(object):
         ui.progress(_('crosschecking'), None)
 
     def _verifyfiles(self, filenodes, filelinkrevs):
+        if self.ui.configbool("verify", "skipmanifests", False):
+            return 0, 0
+
         repo = self.repo
         ui = self.ui
         lrugetctx = self.lrugetctx

@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fastverify=
+  > [verify]
+  > skipmanifests=true
   > EOF
 
 Turn manifest verification on and off:
