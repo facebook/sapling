@@ -28,7 +28,7 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Changeset, Manifest, NodeHash};
+use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
 use mercurial_types::nodehash::{ChangesetId, ManifestId};
 use rocksblob::Rocksblob;
 use storage_types::Version;
@@ -177,6 +177,10 @@ impl BlobRepo {
         key: &AsRef<[u8]>,
     ) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
         self.bookmarks.get(key).boxify()
+    }
+
+    pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
+        self.linknodes.get(path, node)
     }
 }
 
