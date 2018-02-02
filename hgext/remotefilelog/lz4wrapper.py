@@ -12,6 +12,7 @@ lz4compress = lzcompresshc = lz4decompress = missing
 try:
     # newer python-lz4 has these functions deprecated as top-level ones,
     # so we are trying to import from lz4.block first
+    import lz4.block
     def _compressHC(*args, **kwargs):
         return lz4.block.compress(*args, mode='high_compression', **kwargs)
     lzcompresshc = _compressHC

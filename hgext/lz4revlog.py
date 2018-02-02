@@ -73,6 +73,7 @@ def replaceclass(container, classname):
 try:
     # newer python-lz4 has these functions deprecated as top-level ones,
     # so we are trying to import from lz4.block first
+    import lz4.block
     def _compresshc(*args, **kwargs):
         return lz4.block.compress(*args, mode='high_compression', **kwargs)
     lz4compress = lz4.block.compress

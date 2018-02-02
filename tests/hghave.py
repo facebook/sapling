@@ -248,6 +248,15 @@ def has_lz4():
         return True
     except ImportError:
         return False
+    except AttributeError:
+        pass
+    # modern lz4 has "compress" defined in lz4.block
+    try:
+        import lz4.block
+        lz4.block.compress # silence unused import warning
+        return True
+    except (ImportError, AttributeError):
+        return False
 
 def gethgversion():
     m = matchoutput('hg --version --quiet 2>&1', br'(\d+)\.(\d+)')
