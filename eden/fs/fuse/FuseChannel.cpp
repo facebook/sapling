@@ -610,6 +610,9 @@ void FuseChannel::readInitPacket() {
 
 void FuseChannel::processSession() {
   std::vector<char> buf(bufferSize_);
+  // Save this for the sanity check later in the loop to avoid
+  // additional syscalls on each loop iteration.
+  auto myPid = getpid();
 
   while (!sessionFinished_.load()) {
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
@@ -661,6 +664,22 @@ void FuseChannel::processSession() {
                << " unique=" << header->unique << " len=" << header->len
                << " nodeid=" << header->nodeid << " uid=" << header->uid
                << " gid=" << header->gid << " pid=" << header->pid;
+
+    // Sanity check to ensure that the request wasn't from ourself.
+    //
+    // We should never make requests to ourself via normal filesytem
+    // operations going through the kernel.  Otherwise we risk deadlocks if the
+    // kernel calls us while holding an inode lock, and we then end up making a
+    // filesystem call that need the same inode lock.  We will then not be able
+    // to resolve this deadlock on kernel inode locks without rebooting the
+    // system.
+    if (header->pid == myPid) {
+      XLOG(DFATAL) << "Received FUSE request from our own pid: opcode="
+                   << header->opcode << " nodeid=" << header->nodeid
+                   << " pid=" << header->pid;
+      replyError(*header, EIO);
+      continue;
+    }
 
     switch (header->opcode) {
       case FUSE_INIT:
