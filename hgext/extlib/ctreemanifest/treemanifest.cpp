@@ -613,7 +613,6 @@ bool SubtreeIterator::next(std::string **path, Manifest **result,
 bool SubtreeIterator::next(std::string **path, Manifest **result,
                            Manifest **p1, Manifest **p2, ManifestEntry **resultEntry) {
   // Pop the last returned directory off the path
-  assert(this->path.size() > 0);
   size_t slashoffset = this->path.find_last_of('/', this->path.size() - 1);
   if (slashoffset == std::string::npos) {
     this->path.erase();
