@@ -336,10 +336,10 @@ class basepack(versionmixin):
             self._data.close()
 
         # TODO: use an opener/vfs to access these paths
-        with open(self.indexpath, PACKOPENMODE) as indexfp:
+        with util.posixfile(self.indexpath, PACKOPENMODE) as indexfp:
             # memory-map the file, size 0 means whole file
             self._index = litemmap.mmap(indexfp.fileno(), 0)
-        with open(self.packpath, PACKOPENMODE) as datafp:
+        with util.posixfile(self.packpath, PACKOPENMODE) as datafp:
             self._data = litemmap.mmap(datafp.fileno(), 0)
 
         self._pagedin = 0

@@ -209,7 +209,7 @@ class basestore(object):
             data = shallowutil.readfile(filepath)
             if self._validatecache and not self._validatedata(data, filepath):
                 if self._validatecachelog:
-                    with open(self._validatecachelog, 'a+') as f:
+                    with util.posixfile(self._validatecachelog, 'a+') as f:
                         f.write("corrupt %s during read\n" % filepath)
                 os.rename(filepath, filepath + ".corrupt")
                 raise KeyError("corrupt local cache file %s" % filepath)
@@ -251,7 +251,7 @@ class basestore(object):
         they want to be kept alive in the store.
         """
         repospath = os.path.join(self._path, "repos")
-        with open(repospath, 'a') as reposfile:
+        with util.posixfile(repospath, 'a') as reposfile:
             reposfile.write(os.path.dirname(path) + "\n")
 
         repospathstat = os.stat(repospath)
@@ -259,14 +259,14 @@ class basestore(object):
             os.chmod(repospath, 0o0664)
 
     def _validatekey(self, path, action):
-        with open(path, 'rb') as f:
+        with util.posixfile(path, 'rb') as f:
             data = f.read()
 
         if self._validatedata(data, path):
             return True
 
         if self._validatecachelog:
-            with open(self._validatecachelog, 'a+') as f:
+            with util.posixfile(self._validatecachelog, 'a+') as f:
                 f.write("corrupt %s during %s\n" % (path, action))
 
         os.rename(path, path + ".corrupt")

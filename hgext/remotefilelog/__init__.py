@@ -696,7 +696,7 @@ def gcclient(ui, cachepath):
         ui.warn(_("no known cache at %s\n") % cachepath)
         return
 
-    reposfile = open(repospath, 'r')
+    reposfile = util.posixfile(repospath, 'r')
     repos = set([r[:-1] for r in reposfile.readlines()])
     reposfile.close()
 
@@ -766,7 +766,7 @@ def gcclient(ui, cachepath):
     # write list of valid repos back
     oldumask = os.umask(0o002)
     try:
-        reposfile = open(repospath, 'w')
+        reposfile = util.posixfile(repospath, 'w')
         reposfile.writelines([("%s\n" % r) for r in validrepos])
         reposfile.close()
     finally:
@@ -828,7 +828,7 @@ def readytofetch(repo):
     fname = repo.vfs.join('lastprefetch')
 
     ready = False
-    with open(fname, 'a'):
+    with util.posixfile(fname, 'a'):
         # the with construct above is used to avoid race conditions
         modtime = os.path.getmtime(fname)
         if (time.time() - modtime) > timeout:

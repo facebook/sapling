@@ -297,7 +297,7 @@ def ancestormap(raw):
     return mapping
 
 def readfile(path):
-    f = open(path, 'rb')
+    f = util.posixfile(path, 'rb')
     try:
         result = f.read()
 
@@ -316,7 +316,7 @@ def unlinkfile(filepath):
         # On Windows, os.unlink cannnot delete readonly files
         os.chmod(filepath, stat.S_IWUSR)
 
-    os.unlink(filepath)
+    util.unlink(filepath)
 
 
 def renamefile(source, destination):

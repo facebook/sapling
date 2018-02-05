@@ -257,7 +257,7 @@ def _loadfileblob(repo, cachepath, path, node):
         finally:
             os.umask(oldumask)
     else:
-        with open(filecachepath, "r") as f:
+        with util.posixfile(filecachepath, "r") as f:
             text = f.read()
     return text
 
