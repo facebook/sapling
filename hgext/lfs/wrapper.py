@@ -21,7 +21,6 @@ from mercurial import (
 
 from . import (
     blobstore,
-    lfutil,
     pointer,
 )
 
@@ -313,7 +312,7 @@ def upgradefinishdatamigration(orig, ui, srcrepo, dstrepo, requirements):
     for dirpath, dirs, files in srclfsvfs.walk():
         for oid in files:
             ui.write(_('copying lfs blob %s\n') % oid)
-            lfutil.link(srclfsvfs.join(oid), dstlfsvfs.join(oid))
+            srclfsvfs.linktovfs(oid, dstlfsvfs)
 
 def upgraderequirements(orig, repo):
     reqs = orig(repo)

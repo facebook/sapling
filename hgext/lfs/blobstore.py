@@ -22,8 +22,6 @@ from mercurial import (
     worker,
 )
 
-from . import lfutil
-
 # 64 bytes for SHA256
 _lfsre = re.compile(r'\A[a-f0-9]{64}\Z')
 
@@ -55,6 +53,13 @@ class lfsvfs(vfsmod.vfs):
                              if _lfsre.match(dirpath + f)])
 
         yield ('', [], oids)
+
+    def linktovfs(self, oid, vfs):
+        """Hardlink a file to another lfs vfs"""
+        src = self.join(oid)
+        dst = vfs.join(oid)
+        util.makedirs(os.path.dirname(dst))
+        util.copyfile(src, dst, hardlink=True)
 
 class filewithprogress(object):
     """a file-like object that supports __len__ and read.
@@ -108,12 +113,12 @@ class local(object):
         # XXX: should we verify the content of the cache, and hardlink back to
         # the local store on success, but truncate, write and link on failure?
         if self.cachevfs and not self.cachevfs.exists(oid):
-            lfutil.link(self.vfs.join(oid), self.cachevfs.join(oid))
+            self.vfs.linktovfs(oid, self.cachevfs)
 
     def read(self, oid):
         """Read blob from local blobstore."""
         if self.cachevfs and not self.vfs.exists(oid):
-            lfutil.link(self.cachevfs.join(oid), self.vfs.join(oid))
+            self.cachevfs.linktovfs(oid, self.vfs)
         return self.vfs.read(oid)
 
     def has(self, oid):
