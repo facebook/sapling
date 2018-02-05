@@ -276,10 +276,14 @@ class mercurial_sink(common.converter_sink):
 
         sha1s = re.findall(sha1re, text)
         for sha1 in sha1s:
-            oldrev = source.lookuprev(sha1)
-            newrev = revmap.get(oldrev)
-            if newrev is not None:
-                text = text.replace(sha1, newrev[:len(sha1)])
+            try:
+                oldrev = source.lookuprev(sha1)
+                newrev = revmap.get(oldrev)
+                if newrev is not None:
+                    text = text.replace(sha1, newrev[:len(sha1)])
+            except Exception:
+                # Don't crash if we find a bad sha in the message
+                continue
 
         extra = commit.extra.copy()
 
