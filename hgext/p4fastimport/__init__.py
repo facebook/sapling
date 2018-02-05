@@ -38,7 +38,7 @@ from . import (
     filetransaction as ftrmod
 )
 
-from .util import runworker, lastcl, decodefileflags
+from .util import decodefileflags, getcl, lastcl, runworker
 
 from mercurial.i18n import _
 from mercurial.node import short, hex
@@ -341,9 +341,9 @@ def p4fastimport(ui, repo, client, **opts):
         'p4syncimport',
         [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
          ('B', 'bookmark', '', _('bookmark to set'), _('NAME'))],
-        _('[-P PATH] client [-B NAME] bookmarkname'),
+        _('[-P PATH] [-B NAME] oldclient newclient'),
         )
-def p4syncimport(ui, repo, client, **opts):
+def p4syncimport(ui, repo, oldclient, newclient, **opts):
     if opts.get('bookmark'):
         scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
 
@@ -353,19 +353,31 @@ def p4syncimport(ui, repo, client, **opts):
     p1ctx, startcl, __ = startfrom(ui, repo, opts)
 
     # Fail if the specified client does not exist
-    if not p4.exists_client(client):
-        raise error.Abort(_('p4 client %s does not exist.') % client)
+    if not p4.exists_client(oldclient):
+        raise error.Abort(_('p4 client %s does not exist.') % oldclient)
+    if not p4.exists_client(newclient):
+        raise error.Abort(_('p4 client %s does not exist.') % newclient)
 
     # Get a list of files that we will have to import
-    latestcl = p4.get_latest_cl(client)
+    oldcl = p4.get_latest_cl(oldclient)
+    latestcl = p4.get_latest_cl(newclient)
+    lastimportedcl = getcl(p1ctx)
     if latestcl is None:
-        raise error.Abort(_('Cannot find latest p4 changelist number.'))
+        raise error.Abort(_('cannot find latest p4 changelist number'))
+    ui.debug('%r (current client) %r (requested client) '
+             '%r (latest imported)\n' % (oldcl, latestcl, lastimportedcl))
+    if oldcl != lastimportedcl:
+        # Consider running p4fastimport from here
+        raise error.Abort(_('repository must contain most recent changes'))
 
-    ui.note(_('Latest change list number %s\n') % latestcl)
-    p4filelogs = p4.get_filelogs_at_cl(client, latestcl)
+    ui.note(_('latest change list number %s\n') % latestcl)
+    p4filelogs = p4.get_filelogs_at_cl(newclient, latestcl)
     p4filelogs = sorted(p4filelogs)
     newp4filelogs, reusep4filelogs = importer.get_filelogs_to_sync(
-            client, repo, p1ctx, startcl - 1, p4filelogs)
+            newclient, repo, p1ctx, startcl - 1, p4filelogs)
+
+    if not newp4filelogs and not reusep4filelogs:
+        raise error.Abort(_('nothing to import.'))
 
     # sync import.
     with repo.wlock(), repo.lock():
@@ -377,7 +389,8 @@ def p4syncimport(ui, repo, client, **opts):
         try:
             for p4fl, localname in newp4filelogs:
                 bfi = importer.SyncFileImporter(
-                        ui, repo, client, latestcl, p4fl, localfile=localname)
+                        ui, repo, newclient, latestcl, p4fl,
+                        localfile=localname)
                 # Create hg filelog
                 fileflags, largefiles, oldtiprev, newtiprev = bfi.create(tr)
                 fileinfo[p4fl.depotfile] = {
@@ -389,7 +402,7 @@ def p4syncimport(ui, repo, client, **opts):
                 count += 1
             # Generate manifest and changelog
             clog = importer.SyncChangeManifestImporter(
-                     ui, repo, client, latestcl, p1ctx=p1ctx)
+                     ui, repo, newclient, latestcl, p1ctx=p1ctx)
             revisions = []
             for cl, hgnode in clog.creategen(tr, fileinfo, reusep4filelogs):
                 revisions.append((cl, hex(hgnode)))

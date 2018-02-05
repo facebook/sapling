@@ -31,10 +31,6 @@ def relpath(client, depotfile):
     return p4.decodefilename(filename)
 
 def get_filelogs_to_sync(client, repo, p1ctx, cl, p4filelogs):
-    latestcl = p4.get_latest_cl(client)
-    if latestcl > cl or latestcl is None:
-        p4filelogslist = [(p4fl, None) for p4fl in p4filelogs]
-        return p4filelogslist, []
     p1 = repo[p1ctx.node()]
     hgfilelogs = p1.manifest().copy()
     addedp4filelogs = []
