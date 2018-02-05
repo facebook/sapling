@@ -36,6 +36,7 @@ Test `hg up` command for the commit that doesn't exist locally
 Also doesn't exist remotely
 But can be recovered from backup
 We are making a test commit in client 1 and will recover it from client2
+We will also run few checks with `hg hide` / `hg up` commands.
 
   $ hg clone ssh://user@dummy/repo client1 -q
   $ cd client1
@@ -47,15 +48,33 @@ We are making a test commit in client 1 and will recover it from client2
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     someothercommit
   
+Backup commit
   $ hg pushbackup
   starting backup * (glob)
   searching for changes
   remote: pushing 1 commit:
   remote:     c1b6fe8fce73  someothercommit
   finished in * seconds (glob)
-  $ cd ../
 
-  $ (cd ./client2 && hg up c1b6fe)
+Quick test `hg hide` / `hg up`
+Check update now accesses hidden commits rather than trying to pull
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > fbamend=
+  > [experimental]
+  > evolution=exchange
+  > evolution.createmarkers=True
+  > EOF
+  $ hg hide c1b6fe8fce73
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at f8b49bf62d4d
+  1 changesets hidden
+  $ hg up c1b6fe8fce73
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Check hg up on another client.
+Commit should be pulled from backup storage.
+  $ (cd ../client2 && hg up c1b6fe)
   'c1b6fe' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -68,6 +87,8 @@ We are making a test commit in client 1 and will recover it from client2
   'c1b6fe' found remotely
   pull finished in * sec (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd ..
 
 Test pulling a commit with the same prefix by creating fake files
   $ echo ' ' > ./repo/.hg/scratchbranches/index/nodemap/b1b6fe8fce73221de4162469dac9a6f8d01744a1

@@ -711,6 +711,13 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
+    '''
+    If this extension is used, in order to be consistent,
+    we make hidden revisions available for lookup by default.
+    Update will accesses hidden commits rather than trying to pull.
+    '''
+    repo = repo.unfiltered()
+
     if not opts.get('date') and (rev or node) not in repo:
         mayberemote = rev or node
         mayberemote = _tryhoist(ui, mayberemote)
@@ -742,6 +749,7 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 ui.warn(_("'%s' found remotely\n") % mayberemote)
                 pulltime = time.time() - pullstarttime
                 ui.warn(_("pull finished in %.3f sec\n") % pulltime)
+
     return orig(ui, repo, node, rev, **opts)
 
 def _pull(orig, ui, repo, source="default", **opts):
