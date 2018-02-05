@@ -27,6 +27,7 @@ from mercurial import (
     encoding,
     extensions,
     node,
+    pycompat,
 )
 from mercurial.node import (
     nullid,
@@ -235,6 +236,9 @@ cachefuncs = {
 def memoize(func, key, serializer, ui):
     version = ui.config('simplecache', 'version', default='1')
     key = "%s:v%s" % (key, version)
+    if pycompat.iswindows:
+        # : is prohibited in Windows filenames, while ! is allowed
+        key = key.replace(':', '!')
     cachelist = ui.configlist('simplecache', 'caches', ['local'])
     for name in cachelist:
         get, set = cachefuncs[name]
