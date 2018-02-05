@@ -72,7 +72,7 @@ configitem('experimental', 'lfs.user-agent',
 )
 
 configitem('lfs', 'url',
-    default=configitem.dynamicdefault,
+    default='',
 )
 configitem('lfs', 'usercache',
     default=None,
@@ -82,18 +82,6 @@ configitem('lfs', 'threshold',
 )
 configitem('lfs', 'retry',
     default=5,
-)
-# Deprecated
-configitem('lfs', 'remotestore',
-    default=None,
-)
-# Deprecated
-configitem('lfs', 'dummy',
-    default=None,
-)
-# Deprecated
-configitem('lfs', 'git-lfs',
-    default=None,
 )
 
 cmdtable = {}

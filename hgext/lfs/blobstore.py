@@ -390,9 +390,7 @@ _storemap = {
 
 def remote(ui):
     """remotestore factory. return a store in _storemap depending on config"""
-    defaulturl = ''
-
-    url = util.url(ui.config('lfs', 'url', defaulturl))
+    url = util.url(ui.config('lfs', 'url'))
     scheme = url.scheme
     if scheme not in _storemap:
         raise error.Abort(_('lfs: unknown url scheme: %s') % scheme)
