@@ -26,7 +26,7 @@ Configs::
     retry = 5
 
     # the local directory to store lfs files for sharing across local clones.
-    # If not set, the cache is located in an OS specific cache location.
+    # If not set, the cache is disabled (default).
     usercache = /path/to/global/cache
 """
 

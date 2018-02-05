@@ -94,8 +94,11 @@ class local(object):
     def __init__(self, repo):
         fullpath = repo.svfs.join('lfs/objects')
         self.vfs = lfsvfs(fullpath)
-        usercache = lfutil._usercachedir(repo.ui, 'lfs')
-        self.cachevfs = lfsvfs(usercache)
+        usercachepath = repo.ui.config('lfs', 'usercache')
+        if usercachepath:
+            self.cachevfs = lfsvfs(usercachepath)
+        else:
+            self.cachevfs = None
 
     def write(self, oid, data):
         """Write blob to local blobstore."""
@@ -104,19 +107,20 @@ class local(object):
 
         # XXX: should we verify the content of the cache, and hardlink back to
         # the local store on success, but truncate, write and link on failure?
-        if not self.cachevfs.exists(oid):
+        if self.cachevfs and not self.cachevfs.exists(oid):
             lfutil.link(self.vfs.join(oid), self.cachevfs.join(oid))
 
     def read(self, oid):
         """Read blob from local blobstore."""
-        if not self.vfs.exists(oid):
+        if self.cachevfs and not self.vfs.exists(oid):
             lfutil.link(self.cachevfs.join(oid), self.vfs.join(oid))
         return self.vfs.read(oid)
 
     def has(self, oid):
         """Returns True if the local blobstore contains the requested blob,
         False otherwise."""
-        return self.cachevfs.exists(oid) or self.vfs.exists(oid)
+        return ((self.cachevfs and self.cachevfs.exists(oid))
+                or self.vfs.exists(oid))
 
 class memlocal(object):
     """In-memory local blobstore for ad-hoc uploading/downloading without
