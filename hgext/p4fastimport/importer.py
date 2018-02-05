@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 import collections
 import gzip
+import json
 import os
 import re
 
@@ -16,7 +17,7 @@ from mercurial import (
 )
 
 from . import p4
-from .util import caseconflict, localpath
+from .util import caseconflict, localpath, runworker
 
 KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
                 "Date|Change|File|" + \
@@ -30,17 +31,42 @@ def relpath(client, depotfile):
     filename = where['clientFile'].replace('//%s/' % client, '')
     return p4.decodefilename(filename)
 
-def get_filelogs_to_sync(client, repo, p1ctx, cl, p4filelogs):
+def get_localname(client, p4filelogs):
+    for p4fl in p4filelogs:
+        depotfile = p4fl.depotfile
+        localname = relpath(client, depotfile)
+        yield 1, json.dumps({depotfile:localname})
+
+def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
+    # to categorize the list of p4 filelogs in current client spec.
+    # it returns two lists:
+    # - reusep4filelogs: each item in this list is a filename in hg.
+    #   it represents files present in the parent's commit
+    # - addedp4filelogs: each item in this list is a tuple containing
+    #   p4filelog and its corresponding filename in hg.
+    #   it represents files not in the parent's commit
     p1 = repo[p1ctx.node()]
     hgfilelogs = p1.manifest().copy()
+    p4flmapping = collections.defaultdict()
     addedp4filelogs = []
     reusep4filelogs = []
+    wargs = (client,)
+
     for p4fl in p4filelogs:
-        localname = relpath(client, p4fl.depotfile)
-        if localname in hgfilelogs:
-            reusep4filelogs.append(localname)
+        p4flmapping[p4fl.depotfile] = p4fl
+    ui.debug('%d p4 filelogs to read\n' % (len(p4filelogs)))
+    # parallelize calls to translate each p4 filepath into hg filepath
+    for i, serialized in runworker(ui, get_localname, wargs, p4filelogs):
+        data = json.loads(serialized)
+        localfile = data.values()[0].encode('utf-8')
+        p4file = data.keys()[0].encode('utf-8')
+        if localfile in hgfilelogs:
+            reusep4filelogs.append(localfile)
         else:
-            addedp4filelogs.append((p4fl, localname))
+            p4fl = p4flmapping[p4file]
+            addedp4filelogs.append((p4fl, localfile))
+    ui.debug('%d new filelogs and %s reuse filelogs\n' % (
+        len(addedp4filelogs), len(reusep4filelogs)))
     return addedp4filelogs, reusep4filelogs
 
 class ImportSet(object):

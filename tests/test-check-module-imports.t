@@ -142,15 +142,13 @@ outputs, which should be fixed later.
   hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: importer < p4
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: filetransaction < importer
-  hgext/p4fastimport/__init__.py:41: direct symbol import runworker, lastcl, decodefileflags from hgext.p4fastimport.util
+  hgext/p4fastimport/__init__.py:41: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
   hgext/p4fastimport/__init__.py:41: symbol import follows non-symbol import: hgext.p4fastimport.util
-  hgext/p4fastimport/__init__.py:41: imports from hgext.p4fastimport.util not lexically sorted: lastcl < runworker
-  hgext/p4fastimport/__init__.py:41: imports from hgext.p4fastimport.util not lexically sorted: decodefileflags < lastcl
   hgext/p4fastimport/__init__.py:43: symbol import follows non-symbol import: mercurial.i18n
   hgext/p4fastimport/__init__.py:44: symbol import follows non-symbol import: mercurial.node
   hgext/p4fastimport/__init__.py:44: imports from mercurial.node not lexically sorted: hex < short
-  hgext/p4fastimport/importer.py:19: direct symbol import caseconflict, localpath from hgext.p4fastimport.util
-  hgext/p4fastimport/importer.py:19: symbol import follows non-symbol import: hgext.p4fastimport.util
+  hgext/p4fastimport/importer.py:20: direct symbol import caseconflict, localpath, runworker from hgext.p4fastimport.util
+  hgext/p4fastimport/importer.py:20: symbol import follows non-symbol import: hgext.p4fastimport.util
   hgext/p4fastimport/p4.py:10: direct symbol import runworker from hgext.p4fastimport.util
   hgext/pushrebase.py:27: multiple imported names: errno, os, tempfile, mmap, time
   hgext/pushrebase.py:49: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions

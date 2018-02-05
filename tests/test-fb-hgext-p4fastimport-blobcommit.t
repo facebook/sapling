@@ -80,6 +80,8 @@ Sync Import
   incremental import from changelist: 3, node: * (glob)
   2 (current client) 4 (requested client) 2 (latest imported)
   latest change list number 4
+  3 p4 filelogs to read
+  1 new filelogs and 2 reuse filelogs
   running a sync import.
   writing filelog: b8a08782de62, p1 000000000000, linkrev 2, 4 bytes, src: *, path: Main/Outside/a (glob)
   changelist 4: writing manifest. node: * p1: 11c5dab8abaf p2: 000000000000 linkrev: 2 (glob)
@@ -139,6 +141,8 @@ Remove stuff
   incremental import from changelist: 6, node: * (glob)
   5 (current client) 2 (requested client) 5 (latest imported)
   latest change list number 2
+  2 p4 filelogs to read
+  0 new filelogs and 2 reuse filelogs
   running a sync import.
   changelist 2: writing manifest. node: 38e379ab01af p1: e432a49b940b p2: 000000000000 linkrev: 4
   changelist 2: writing changelog: p4fastimport synchronizing client view

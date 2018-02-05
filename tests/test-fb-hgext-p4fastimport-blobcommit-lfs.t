@@ -86,6 +86,8 @@ Sync Commit
   incremental import from changelist: 3, node: * (glob)
   2 (current client) 3 (requested client) 2 (latest imported)
   latest change list number 3
+  3 p4 filelogs to read
+  1 new filelogs and 2 reuse filelogs
   running a sync import.
   writing filelog: cf38a89d2b54, p1 000000000000, linkrev 2, 23 bytes, src: *, path: Outside/anotherlargefile (glob)
   largefile: Outside/anotherlargefile, oid: 9703972eff7a4df07317eda436ab7ef827ed16ea28c62abdcd7de269745c610c

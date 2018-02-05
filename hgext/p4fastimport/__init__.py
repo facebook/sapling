@@ -371,10 +371,13 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
         raise error.Abort(_('repository must contain most recent changes'))
 
     ui.note(_('latest change list number %s\n') % latestcl)
+    # p4filelogs: a full list of filelogs included in newclient's view
+    # newp4filelogs: a list of files that will need new entries in hgfilelog
+    # reusep4filelogs: a list of files that do not need new entries in hgfilelog
     p4filelogs = p4.get_filelogs_at_cl(newclient, latestcl)
     p4filelogs = sorted(p4filelogs)
     newp4filelogs, reusep4filelogs = importer.get_filelogs_to_sync(
-            newclient, repo, p1ctx, startcl - 1, p4filelogs)
+            ui, newclient, repo, p1ctx, startcl - 1, p4filelogs)
 
     if not newp4filelogs and not reusep4filelogs:
         raise error.Abort(_('nothing to import.'))
