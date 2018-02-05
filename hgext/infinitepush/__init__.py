@@ -708,14 +708,20 @@ def _decodebookmarks(stream):
     return result
 
 def _update(orig, ui, repo, node=None, rev=None, **opts):
+    """commit cloud (infinitepush) extension for hg up
+    `hg up` will access:
+    * local repo
+    * hidden commits
+    * remote commits
+    * commit cloud (infinitepush) storage
+    """
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
-    '''
-    If this extension is used, in order to be consistent,
-    we make hidden revisions available for lookup by default.
-    Update will accesses hidden commits rather than trying to pull.
-    '''
+    # In order to be consistent,
+    # we make hidden revisions available for lookup by default.
+    # Update will access hidden commits rather than trying to pull.
+
     repo = repo.unfiltered()
 
     if not opts.get('date') and (rev or node) not in repo:
