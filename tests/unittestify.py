@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import contextlib
 import glob
 import os
+import random
 import re
 import subprocess
 import unittest
@@ -71,7 +72,8 @@ class hgtests(unittest.TestCase):
         else:
             blacklist = re.compile('\A%s\Z'
                                    % os.environ.get('HGTEST_BLACKLIST', ''))
-        port = 20058
+        # Randomize the port so a stress run of a single test would be fine
+        port = random.randint(10000, 60000)
         with chdir(path):
             cls._runtests_dir = os.getcwd()
             for name in glob.glob('test-*.t') + glob.glob('test-*.py'):
