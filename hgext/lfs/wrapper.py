@@ -272,7 +272,7 @@ def extractpointers(repo, revs):
     ui = repo.ui
     if ui.debugflag:
         ui.write(_('lfs: computing set of blobs to upload\n'))
-    pointers = {}
+    pointers = util.sortdict()
     for r in revs:
         ctx = repo[r]
         for p in pointersfromctx(ctx).values():
@@ -281,7 +281,7 @@ def extractpointers(repo, revs):
 
 def pointersfromctx(ctx):
     """return a dict {path: pointer} for given single changectx"""
-    result = {}
+    result = util.sortdict()
     for f in ctx.files():
         if f not in ctx:
             continue
