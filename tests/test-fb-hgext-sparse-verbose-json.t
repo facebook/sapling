@@ -34,7 +34,10 @@ Verify basic --include and --reset
   ]
   $ hg sparse --clear-rules
   $ hg sparse --include 'hide' --verbose
+  calculating actions for refresh
+  applying changes to disk (1 actions)
   removing show
+  updating dirstate
   Profile # change: 0
   Include rule # change: 1
   Exclude rule # change: 0
@@ -52,7 +55,10 @@ Verify basic --include and --reset
   ]
   $ hg sparse --include 'hide'
   $ hg sparse --reset --verbose
+  calculating actions for refresh
+  applying changes to disk (1 actions)
   getting show
+  updating dirstate
   Profile # change: 0
   Include rule # change: -1
   Exclude rule # change: 0
@@ -76,7 +82,11 @@ Verifying that problematic files still allow us to see the deltas when forcing:
   $ hg sparse --include 'show*' --force
   pending changes to 'hide'
   $ hg sparse --delete 'show*' --force --verbose
+  calculating actions for refresh
+  verifying no pending changes in newly included files
   pending changes to 'hide'
+  applying changes to disk (1 actions)
+  updating dirstate
   Profile # change: 0
   Include rule # change: -1
   Exclude rule # change: 0

@@ -1065,6 +1065,8 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     pending.update(removed)
     sparsematch = repo.sparsematch()
     abort = False
+    if len(pending) > 0:
+        ui.note(_('verifying pending changes for refresh\n'))
     for file in pending:
         if not sparsematch(file):
             ui.warn(_("pending changes to '%s'\n") % file)
@@ -1074,6 +1076,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
             "pending changes"))
 
     # Calculate actions
+    ui.note(_('calculating actions for refresh\n'))
     dirstate = repo.dirstate
     ctx = repo['.']
     added = []
@@ -1084,7 +1087,10 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
 
     actions = {}
 
+    filecount = 0
     for file in files:
+        filecount += 1
+        ui.progress(_('calculating'), filecount, total=len(files))
         old = origsparsematch(file)
         new = sparsematch(file)
         # Add files that are newly included, or that don't exist in
@@ -1105,6 +1111,8 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
                 actions[file] = ('r', [], '')
 
     # Verify there are no pending changes in newly included files
+    if len(lookup) > 0:
+        ui.note(_('verifying no pending changes in newly included files\n'))
     abort = False
     for file in lookup:
         ui.warn(_("pending changes to '%s'\n") % file)
@@ -1123,22 +1131,39 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
                 dropped.append(file)
 
     # Apply changes to disk
+    if len(actions) > 0:
+        ui.note(_('applying changes to disk (%d actions)\n') % len(actions))
     typeactions = dict((m, [])
                        for m in 'a f g am cd dc r dm dg m e k p pr'.split())
+    actioncount = 0
     for f, (m, args, msg) in actions.iteritems():
+        actioncount += 1
+        ui.progress(_('applying'), actioncount, total=len(actions))
         if m not in typeactions:
             typeactions[m] = []
         typeactions[m].append((f, args, msg))
     mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
 
     # Fix dirstate
+    filecount = len(added) + len(dropped) + len(lookup)
+    if filecount > 0:
+        ui.note(_('updating dirstate\n'))
+    _recording = _('recording')
+    _files = _('files')
+    progress = 0
     for file in added:
+        progress += 1
+        ui.progress(_recording, progress, total=filecount, unit=_files)
         dirstate.normal(file)
 
     for file in dropped:
+        progress += 1
+        ui.progress(_recording, progress, total=filecount, unit=_files)
         dirstate.drop(file)
 
     for file in lookup:
+        progress += 1
+        ui.progress(_recording, progress, total=filecount, unit=_files)
         # File exists on disk, and we're bringing it back in an unknown state.
         dirstate.normallookup(file)
 
