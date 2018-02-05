@@ -1670,41 +1670,40 @@ Future<Unit> TreeInode::diff(
     bool isIgnored) {
   static const PathComponentPiece kIgnoreFilename{".gitignore"};
 
-  // If this directory is already ignored, we don't need to bother loading its
-  // .gitignore file.  Everything inside this directory must also be ignored,
-  // unless it is explicitly tracked in source control.
-  //
-  // Explicit include rules cannot be used to unignore files inside an ignored
-  // directory.
-  if (isIgnored) {
-    // We can pass in a null GitIgnoreStack pointer here.
-    // Since the entire directory is ignored, we don't need to check ignore
-    // status for any entries that aren't already tracked in source control.
-    return computeDiff(
-        contents_.wlock(),
-        context,
-        currentPath,
-        std::move(tree),
-        nullptr,
-        isIgnored);
-  }
-
-  // Load the ignore rules for this directory.
-  //
-  // In our repositories less than .1% of directories contain a .gitignore
-  // file, so we optimize for the case where a .gitignore isn't present.
-  // When there is no .gitignore file we avoid acquiring and releasing the
-  // contents_ lock twice, and we avoid creating a Future to load the
-  // .gitignore data.
   InodePtr inode;
-  Optional<Future<InodePtr>> inodeFuture;
+  auto inodeFuture = Future<InodePtr>::makeEmpty();
   vector<IncompleteInodeLoad> pendingLoads;
   {
     // We have to get a write lock since we may have to load
     // the .gitignore inode, which changes the entry status
     auto contents = contents_.wlock();
 
-    XLOG(DBG7) << "Loading ignore file for " << getLogPath();
+    // If this directory is already ignored, we don't need to bother loading its
+    // .gitignore file.  Everything inside this directory must also be ignored,
+    // unless it is explicitly tracked in source control.
+    //
+    // Explicit include rules cannot be used to unignore files inside an ignored
+    // directory.
+    if (isIgnored) {
+      // We can pass in a null GitIgnoreStack pointer here.
+      // Since the entire directory is ignored, we don't need to check ignore
+      // status for any entries that aren't already tracked in source control.
+      return computeDiff(
+          std::move(contents),
+          context,
+          currentPath,
+          std::move(tree),
+          nullptr,
+          isIgnored);
+    }
+
+    // Load the ignore rules for this directory.
+    //
+    // In our repositories less than .1% of directories contain a .gitignore
+    // file, so we optimize for the case where a .gitignore isn't present.
+    // When there is no .gitignore file we avoid acquiring and releasing the
+    // contents_ lock twice, and we avoid creating a Future to load the
+    // .gitignore data.
     Entry* inodeEntry = nullptr;
     auto iter = contents->entries.find(kIgnoreFilename);
     if (iter != contents->entries.end()) {
@@ -1726,6 +1725,7 @@ Future<Unit> TreeInode::diff(
           isIgnored);
     }
 
+    XLOG(DBG7) << "Loading ignore file for " << getLogPath();
     if (inodeEntry->getInode()) {
       inode = InodePtr::newPtrLocked(inodeEntry->getInode());
     } else {
@@ -1740,8 +1740,8 @@ Future<Unit> TreeInode::diff(
     load.finish();
   }
 
-  if (inodeFuture.hasValue()) {
-    return inodeFuture.value().then(
+  if (!inode) {
+    return inodeFuture.then(
         [self = inodePtrFromThis(),
          context,
          currentPath = RelativePath{currentPath},
