@@ -1678,6 +1678,20 @@ Future<Unit> TreeInode::diff(
     // the .gitignore inode, which changes the entry status
     auto contents = contents_.wlock();
 
+    XLOG(DBG7) << "diff() on directory " << getLogPath() << " (" << getNodeId()
+               << ", "
+               << (contents->isMaterialized() ? "materialized"
+                                              : contents->treeHash->toString())
+               << ") vs " << (tree ? tree->getHash().toString() : "null tree");
+
+    // Check to see if we can short-circuit the diff operation if we have the
+    // same hash as the tree we are being compared to.
+    if (!contents->isMaterialized() && tree &&
+        contents->treeHash.value() == tree->getHash()) {
+      // There are no changes in our tree or any children subtrees.
+      return makeFuture();
+    }
+
     // If this directory is already ignored, we don't need to bother loading its
     // .gitignore file.  Everything inside this directory must also be ignored,
     // unless it is explicitly tracked in source control.
