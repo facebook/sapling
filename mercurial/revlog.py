@@ -1482,6 +1482,10 @@ class revlog(object):
         if rev1 != nullrev and self.deltaparent(rev2) == rev1:
             return bytes(self._chunk(rev2))
 
+        if rev1 > -1 and (self.flags(rev1) or self.flags(rev2)):
+            raise error.ProgrammingError(
+                'cannot revdiff revisions with non-zero flags')
+
         return mdiff.textdiff(self.revision(rev1, raw=True),
                               self.revision(rev2, raw=True))
 

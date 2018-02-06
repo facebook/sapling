@@ -230,6 +230,9 @@ class remotefilelog(object):
         return linknode
 
     def revdiff(self, node1, node2):
+        if node1 != nullid and (self.flags(node1) or self.flags(node2)):
+            raise error.ProgrammingError(
+                'cannot revdiff revisions with non-zero flags')
         return mdiff.textdiff(self.revision(node1, raw=True),
                               self.revision(node2, raw=True))
 
