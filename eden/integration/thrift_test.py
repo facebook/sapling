@@ -177,7 +177,7 @@ class ThriftTest:
         unloaded_inode_count = self.client.unloadInodeForPath(self.mount, '', age)
         result = self.client.debugInodeStatus(self.mount, '')
 
-        # Check if the inodes we are epecting to be unloaded are actually unloading.
+        # Check if the inodes we are expecting to be unloaded are actually unloading.
         for item in result:
             for inode in item.entries:
                 if inode.loaded:
@@ -195,8 +195,11 @@ class ThriftTest:
                         'new inodes should not be unloaded'
                     )
 
-        self.assertEqual(
-            unloaded_inode_count, 100, 'Only the old batch of inodes should unload'
+        self.assertGreaterEqual(
+            unloaded_inode_count, 100, 'At least the old batch of inodes should unload'
+        )
+        self.assertLess(
+            unloaded_inode_count, 200, 'Not all unodes should unload'
         )
 
     def read_file(self, filename):
