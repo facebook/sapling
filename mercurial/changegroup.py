@@ -777,6 +777,8 @@ class cg1packer(object):
         progress(msgbundling, None)
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
+        if not revlog.candelta(prev, rev):
+            raise error.ProgrammingError('cannot change deltabase for cg1')
         return prev
 
     def revchunk(self, revlog, rev, prev, linknode):
@@ -836,16 +838,19 @@ class cg2packer(cg1packer):
             # expensive. The revlog caches should have prev cached, meaning
             # less CPU for changegroup generation. There is likely room to add
             # a flag and/or config option to control this behavior.
-            return prev
+            base = prev
         elif dp == nullrev:
             # revlog is configured to use full snapshot for a reason,
             # stick to full snapshot.
-            return nullrev
+            base = nullrev
         elif dp not in (p1, p2, prev):
             # Pick prev when we can't be sure remote has the base revision.
-            return prev
+            base = prev
         else:
-            return dp
+            base = dp
+        if base != nullrev and not revlog.candelta(base, rev):
+            base = nullrev
+        return base
 
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         # Do nothing with flags, it is implicitly 0 in cg1 and cg2

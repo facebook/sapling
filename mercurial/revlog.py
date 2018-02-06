@@ -1456,6 +1456,13 @@ class revlog(object):
         """Clear the raw chunk cache."""
         self._chunkcache = (0, '')
 
+    def candelta(self, baserev, rev):
+        """whether two revisions (prev, rev) can be delta-ed or not"""
+        # disable delta if either rev uses non-default flag (ex. LFS)
+        if self.flags(baserev) or self.flags(rev):
+            return False
+        return True
+
     def deltaparent(self, rev):
         """return deltaparent of the given revision"""
         base = self.index[rev][3]

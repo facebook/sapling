@@ -314,17 +314,17 @@
   uncompressed size of bundle content:
        * (changelog) (glob)
        * (manifests) (glob)
-       *  a (glob)
+      * a (glob)
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
   $ hg -R bundle.hg debugfilerev -r 'bundle()'
   5b495c34b263: a-two
-   a: bin=0 lnk=0 flag=2000 size=16 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1
+   a: bin=0 lnk=0 flag=2000 size=16 copied='' chain=000000000000,4b09ab2030a1
   a887db3fdadc: a-three
-   a: bin=0 lnk=0 flag=2000 size=18 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d0f2c6cc8434
+   a: bin=0 lnk=0 flag=2000 size=18 copied='' chain=000000000000,d0f2c6cc8434
   617b75df8389: a-4
-   a: bin=0 lnk=0 flag=2000 size=14 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d0f2c6cc8434,47910e2096f9
+   a: bin=0 lnk=0 flag=2000 size=14 copied='' chain=000000000000,47910e2096f9
   8317d37315be: branching
-   a: bin=0 lnk=0 flag=2000 size=20 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d55fa5808479
+   a: bin=0 lnk=0 flag=2000 size=20 copied='' chain=000000000000,d55fa5808479
   $ hg -R bundle.hg log -p -T '{rev} {desc}\n' a
   5 branching
   diff --git a/a b/a
