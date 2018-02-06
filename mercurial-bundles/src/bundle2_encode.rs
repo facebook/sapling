@@ -341,13 +341,11 @@ where
                 (Ok(Async::NotReady), EncodeState::Finish(compressor))
             } else {
                 (
-                    Err(
-                        Error::from(err)
-                            .context(ErrorKind::Bundle2Encode(
-                                "error while completing write".into(),
-                            ))
-                            .into(),
-                    ),
+                    Err(Error::from(err)
+                        .context(ErrorKind::Bundle2Encode(
+                            "error while completing write".into(),
+                        ))
+                        .into()),
                     EncodeState::Invalid,
                 )
             },

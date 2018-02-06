@@ -11,7 +11,6 @@
 use std::io::BufRead;
 use std::mem;
 
-use ascii::AsciiString;
 use async_compression::Decompressor;
 use bytes::{Bytes, BytesMut};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -20,7 +19,7 @@ use tokio_io::AsyncRead;
 use tokio_io::codec::{Decoder, Framed, FramedParts};
 
 use errors::*;
-use part_header::{self, PartHeader};
+use part_header::{self, PartHeader, PartHeaderType};
 use part_inner::validate_header;
 use types::StreamHeader;
 use utils::{get_decompressor_type, BytesExt};
@@ -56,7 +55,7 @@ pub type OuterStream<'a, R> = Framed<Either<R, Decompressor<'a, R>>, OuterDecode
 enum OuterState {
     Header,
     Payload {
-        part_type: AsciiString,
+        part_type: PartHeaderType,
         part_id: u32,
     },
     DiscardPayload,
@@ -169,7 +168,7 @@ impl OuterDecoder {
                 match part_header {
                     None => (Ok(Some(OuterFrame::Discard)), OuterState::DiscardPayload),
                     Some(header) => {
-                        let part_type = header.part_type().to_ascii_string();
+                        let part_type = *header.part_type();
                         let part_id = header.part_id();
                         (
                             Ok(Some(OuterFrame::Header(header))),
@@ -262,12 +261,12 @@ impl OuterDecoder {
 pub enum OuterFrame {
     Header(PartHeader),
     Payload {
-        part_type: AsciiString,
+        part_type: PartHeaderType,
         part_id: u32,
         payload: Bytes,
     },
     PartEnd {
-        part_type: AsciiString,
+        part_type: PartHeaderType,
         part_id: u32,
     },
     Discard,

@@ -14,7 +14,7 @@ use futures::{Async, Future, Poll, Stream};
 
 use chunk::Chunk;
 use errors::*;
-use part_header::{PartHeader, PartHeaderBuilder};
+use part_header::{PartHeader, PartHeaderBuilder, PartHeaderType};
 
 /// Represents a stream of chunks produced by the individual part handler.
 pub struct ChunkStream(Box<Stream<Item = Chunk, Error = Error> + Send>);
@@ -59,18 +59,16 @@ impl GenerationState {
 }
 
 impl PartEncodeBuilder {
-    pub fn mandatory<S: Into<String>>(part_type: S) -> Result<Self> {
+    pub fn mandatory(part_type: PartHeaderType) -> Result<Self> {
         Ok(PartEncodeBuilder {
-            // Mandatory parts are represented as all-uppercase.
-            headerb: PartHeaderBuilder::new(part_type.into().to_uppercase())?,
+            headerb: PartHeaderBuilder::new(part_type, true)?,
             data: PartEncodeData::None,
         })
     }
 
-    pub fn advisory<S: Into<String>>(part_type: S) -> Result<Self> {
+    pub fn advisory(part_type: PartHeaderType) -> Result<Self> {
         Ok(PartEncodeBuilder {
-            // Advisory parts are represented as all-lowercase.
-            headerb: PartHeaderBuilder::new(part_type.into().to_lowercase())?,
+            headerb: PartHeaderBuilder::new(part_type, false)?,
             data: PartEncodeData::None,
         })
     }

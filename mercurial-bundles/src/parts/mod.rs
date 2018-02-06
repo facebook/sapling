@@ -14,6 +14,7 @@ use super::changegroup::packer::Cg2Packer;
 use errors::*;
 use mercurial_types::{BlobNode, Delta, MPath, NULL_HASH};
 use part_encode::PartEncodeBuilder;
+use part_header::PartHeaderType;
 
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
@@ -22,7 +23,7 @@ where
     K: AsRef<[u8]>,
     V: AsRef<[u8]>,
 {
-    let mut builder = PartEncodeBuilder::mandatory("listkeys")?;
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Listkeys)?;
     builder.add_mparam("namespace", namespace)?;
     // Ideally we'd use a size_hint here, but streams don't appear to have one.
     let payload = Vec::with_capacity(256);
@@ -45,7 +46,7 @@ pub fn changegroup_part<S>(changelogentries: S) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = BlobNode, Error = Error> + Send + 'static,
 {
-    let mut builder = PartEncodeBuilder::mandatory("changegroup")?;
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
     builder.add_mparam("version", "02")?;
 
     let changelogentries = changelogentries.map(|blobnode| {

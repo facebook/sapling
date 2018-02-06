@@ -4,9 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use ascii::AsciiString;
-
-use part_header::PartHeader;
+use part_header::{PartHeader, PartHeaderType};
 
 pub use failure::{Error, Result, ResultExt};
 
@@ -22,8 +20,8 @@ pub enum ErrorKind {
     #[fail(display = "invalid delta: {}", _0)] InvalidDelta(String),
     #[fail(display = "invalid wire pack entry: {}", _0)] InvalidWirePackEntry(String),
     #[fail(display = "unknown part type: {:?}", _0)] BundleUnknownPart(PartHeader),
-    #[fail(display = "unknown params for bundle2 part '{}': {:?}", _0, _1)]
-    BundleUnknownPartParams(AsciiString, Vec<String>),
+    #[fail(display = "unknown params for bundle2 part '{:?}': {:?}", _0, _1)]
+    BundleUnknownPartParams(PartHeaderType, Vec<String>),
     #[fail(display = "error while generating listkey part")] ListkeyGeneration,
 }
 

@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(ascii_ctype)]
 
 extern crate ascii;
 #[macro_use]
@@ -21,9 +22,10 @@ extern crate futures;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
-#[cfg(test)]
 #[macro_use]
 extern crate maplit;
+#[cfg(not(test))]
+extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;

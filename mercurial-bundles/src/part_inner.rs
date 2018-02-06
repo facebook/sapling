@@ -14,7 +14,6 @@ use std::str;
 use futures::{future, Stream};
 use slog;
 
-use ascii::AsciiStr;
 use bytes::Bytes;
 use futures::stream::Map;
 use tokio_io::AsyncRead;
@@ -22,25 +21,17 @@ use tokio_io::AsyncRead;
 use changegroup;
 use errors::*;
 use futures_ext::{BoxStreamWrapper, StreamExt, StreamLayeredExt, TakeWhile};
-use part_header::PartHeader;
+use part_header::{PartHeader, PartHeaderType};
 use part_outer::{OuterFrame, OuterStream};
 use wirepack;
 
 // --- Part parameters
 
-macro_rules! add_part {
-    ( $m:expr, $part_type:expr, [$( $params:expr ),*] ) => {{
-        let mut h = HashSet::new();
-        $(h.insert($params);)*
-        $m.insert(AsciiStr::from_ascii($part_type).unwrap(), h);
-    }}
-}
-
 lazy_static! {
-    static ref KNOWN_PARAMS: HashMap<&'static AsciiStr, HashSet<&'static str>> = {
-        let mut m: HashMap<&'static AsciiStr, HashSet<&'static str>> = HashMap::new();
-        add_part!(m, "changegroup", ["version", "nbchanges", "treemanifest"]);
-        add_part!(m, "b2x:treegroup2", ["version", "cache", "category"]);
+    static ref KNOWN_PARAMS: HashMap<PartHeaderType, HashSet<&'static str>> = {
+        let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
+        m.insert(PartHeaderType::Changegroup, hashset!{"version", "nbchanges", "treemanifest"});
+        m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m
     };
 }
@@ -101,7 +92,7 @@ impl InnerPart {
 }
 
 pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
-    match KNOWN_PARAMS.get(header.part_type_lower()) {
+    match KNOWN_PARAMS.get(header.part_type()) {
         Some(ref known_params) => {
             // Make sure all the mandatory params are recognized.
             let unknown_params: Vec<_> = header
@@ -112,14 +103,14 @@ pub fn validate_header(header: PartHeader) -> Result<Option<PartHeader>> {
                 .collect();
             if !unknown_params.is_empty() {
                 bail_err!(ErrorKind::BundleUnknownPartParams(
-                    header.part_type().to_ascii_string(),
+                    *header.part_type(),
                     unknown_params,
                 ));
             }
             Ok(Some(header))
         }
         None => {
-            if header.is_mandatory() {
+            if header.mandatory() {
                 bail_err!(ErrorKind::BundleUnknownPart(header));
             }
             Ok(None)
@@ -138,14 +129,14 @@ pub fn inner_stream<'a, R: AsyncRead + BufRead + 'a + Send>(
     let wrapped_stream: WrappedStream<'a, R> = stream
         .take_while_wrapper(is_payload_fut as fn(&OuterFrame) -> BoolFuture)
         .map(OuterFrame::get_payload as fn(OuterFrame) -> Bytes);
-    match header.part_type_lower().as_str() {
-        "changegroup" => {
+    match header.part_type() {
+        &PartHeaderType::Changegroup => {
             let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
                 logger.new(o!("stream" => "cg2")),
             ));
             Box::new(cg2_stream)
         }
-        "b2x:treegroup2" => {
+        &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(
                 logger.new(o!("stream" => "wirepack")),
                 // Mercurial only knows how to send trees at the moment.

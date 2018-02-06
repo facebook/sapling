@@ -31,7 +31,7 @@ use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
 use errors::*;
 use part_encode::PartEncodeBuilder;
-use part_header::PartHeaderBuilder;
+use part_header::{PartHeaderBuilder, PartHeaderType};
 use types::StreamHeader;
 use utils::get_compression_param;
 use wirepack;
@@ -159,7 +159,7 @@ fn unknown_part(ct: Option<CompressorType>) {
 
     builder.set_compressor_type(ct);
 
-    let unknown_part = PartEncodeBuilder::mandatory("unknown:unknown").unwrap();
+    let unknown_part = PartEncodeBuilder::mandatory(PartHeaderType::Replycaps).unwrap();
 
     builder.add_part(unknown_part);
     let encode_fut = builder.build();
@@ -199,7 +199,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     assert_eq!(app_errors.len(), 1);
     assert_matches!(&app_errors[0],
                     &ErrorKind::BundleUnknownPart(ref header)
-                    if header.part_type() == "UNKNOWN:UNKNOWN");
+                    if header.part_type() == &PartHeaderType::Replycaps && header.mandatory());
 }
 
 fn parse_bundle(
@@ -216,7 +216,7 @@ fn parse_bundle(
     let (res, stream) = core.next_stream(stream);
     let res = res.unwrap();
 
-    let mut header = PartHeaderBuilder::new("CHANGEGROUP").unwrap();
+    let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, true).unwrap();
     header.add_mparam("version", "02").unwrap();
     header.add_aparam("nbchanges", "2").unwrap();
     let header = header.build(0);
@@ -371,7 +371,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     // The bundle has a changegroup as well, which we skip over.
     let mut parts = parts.into_iter().skip_while(|part| match *part {
         StreamEvent::Next(Bundle2Item::Header(ref header))
-            if header.part_type() == "B2X:TREEGROUP2" =>
+            if header.part_type() == &PartHeaderType::B2xTreegroup2 && header.mandatory() =>
         {
             false
         }
@@ -379,7 +379,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     });
 
     // Header
-    let mut header = PartHeaderBuilder::new("B2X:TREEGROUP2").unwrap();
+    let mut header = PartHeaderBuilder::new(PartHeaderType::B2xTreegroup2, true).unwrap();
     header.add_mparam("version", "1").unwrap();
     header.add_mparam("cache", "False").unwrap();
     header.add_mparam("category", "manifests").unwrap();

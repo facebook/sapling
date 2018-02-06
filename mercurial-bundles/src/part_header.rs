@@ -6,22 +6,72 @@
 
 //! Construct and serialize headers for bundle2 parts.
 
-use std::ascii::AsciiExt;
 use std::collections::HashMap;
 
-use ascii::{AsciiStr, AsciiString, IntoAsciiString};
 use bytes::{BigEndian, BufMut, Bytes};
-use failure::SyncFailure;
+use quickcheck::{Arbitrary, Gen};
 
 use chunk::Chunk;
 use errors::*;
 use utils::BytesExt;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum PartHeaderType {
+    Changegroup,
+    ReplyChangegroup,
+    Replycaps,
+    Listkeys,
+    B2xTreegroup2,
+    // RemoteChangegroup,       // We don't wish to support this functionality
+    // CheckBookmarks,          // TODO Do we want to support this?
+    // CheckHeads,              // TODO Do we want to support this?
+    // CheckUpdatedHeads,       // TODO Do we want to support this?
+    // CheckPhases,             // TODO Do we want to support this?
+    // Output,                  // TODO Do we want to support this?
+    // ErrorAbort,              // TODO Do we want to support this?
+    // ErrorPushkey,            // TODO Do we want to support this?
+    // ErrorUnsupportedContent, // TODO Do we want to support this?
+    // ErrorPushRaced,          // TODO Do we want to support this?
+    // Pushkey,                 // TODO Do we want to support this?
+    // Bookmarks,               // TODO Do we want to support this?
+    // PhaseHeads,              // TODO Do we want to support this?
+    // ReplyPushkey,            // TODO Do we want to support this?
+    // Obsmarkers,              // TODO Do we want to support this?
+    // ReplyObsmarkers,         // TODO Do we want to support this?
+    // HgtagsFnodes,            // TODO Do we want to support this?
+    // Pushvars,                // TODO Do we want to support this?
+}
+
+impl PartHeaderType {
+    fn decode(data: &str) -> Result<Self> {
+        use self::PartHeaderType::*;
+        match data.to_ascii_lowercase().as_str() {
+            "changegroup" => Ok(Changegroup),
+            "reply:changegroup" => Ok(ReplyChangegroup),
+            "replycaps" => Ok(Replycaps),
+            "listkeys" => Ok(Listkeys),
+            "b2x:treegroup2" => Ok(B2xTreegroup2),
+            bad => bail_msg!("unknown header type {}", bad),
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        use self::PartHeaderType::*;
+        match *self {
+            Changegroup => "changegroup",
+            ReplyChangegroup => "reply:changegroup",
+            Replycaps => "replycaps",
+            Listkeys => "listkeys",
+            B2xTreegroup2 => "b2x:treegroup2",
+        }
+    }
+}
+
 /// A bundle2 part header.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PartHeader {
-    part_type: AsciiString,
-    part_type_lower: AsciiString,
+    part_type: PartHeaderType,
+    mandatory: bool,
     part_id: u32,
     // Part parameter keys are strings and values are arbitrary bytestrings
     // (which can even include null characters).
@@ -31,13 +81,8 @@ pub struct PartHeader {
 
 impl PartHeader {
     #[inline]
-    pub fn part_type(&self) -> &AsciiStr {
+    pub fn part_type(&self) -> &PartHeaderType {
         &self.part_type
-    }
-
-    #[inline]
-    pub fn part_type_lower(&self) -> &AsciiStr {
-        &self.part_type_lower
     }
 
     #[inline]
@@ -55,17 +100,23 @@ impl PartHeader {
         &self.aparams
     }
 
-    pub fn is_mandatory(&self) -> bool {
-        // PartHeaderBuilder ensures that self.part_type is non-empty.
-        self.part_type[0].is_uppercase()
+    pub fn mandatory(&self) -> bool {
+        self.mandatory
     }
 
     pub fn encode(self) -> Chunk {
         let mut out_buf: Vec<u8> = Vec::new();
 
         // part type
-        out_buf.put_u8(self.part_type.len() as u8);
-        out_buf.put_slice(self.part_type.as_bytes());
+        let part_type = self.part_type.as_str();
+        let part_type = if self.mandatory {
+            part_type.to_ascii_uppercase()
+        } else {
+            part_type.to_owned()
+        };
+        let part_type = part_type.as_bytes();
+        out_buf.put_u8(part_type.len() as u8);
+        out_buf.put_slice(part_type);
 
         // part id
         out_buf.put_u32::<BigEndian>(self.part_id);
@@ -123,9 +174,12 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     // ---
     // This function assumes that the full header is available.
     let type_size = header_bytes.drain_u8() as usize;
-    let part_type = header_bytes
+    let part_type_encoded = header_bytes
         .drain_str(type_size)
         .with_context(|_| ErrorKind::Bundle2Decode("invalid part type".into()))?;
+    let part_type = PartHeaderType::decode(&part_type_encoded)?;
+
+    let mandatory = part_type_encoded.chars().any(|c| c.is_ascii_uppercase());
 
     let part_id = header_bytes.drain_u32();
 
@@ -133,7 +187,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
     let naparams = header_bytes.drain_u8() as usize;
 
     let mut param_sizes = Vec::with_capacity(nmparams + naparams);
-    let mut header = PartHeaderBuilder::with_capacity(part_type, nmparams, naparams)
+    let mut header = PartHeaderBuilder::with_capacity(part_type, mandatory, nmparams, naparams)
         .with_context(|_| ErrorKind::Bundle2Decode("invalid part header".into()))?;
 
     for _ in 0..(nmparams + naparams) {
@@ -148,7 +202,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
         let (ksize, vsize) = param_sizes[cur];
         let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|_| {
             let err_msg = format!(
-                "part '{}' (id {}): invalid param {}",
+                "part '{:?}' (id {}): invalid param {}",
                 header.part_type(),
                 part_id,
                 cur
@@ -164,7 +218,7 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
         let (ksize, vsize) = param_sizes[cur];
         let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|_| {
             let err_msg = format!(
-                "part '{}' (id {}): invalid param {}",
+                "part '{:?}' (id {}): invalid param {}",
                 header.part_type(),
                 part_id,
                 cur
@@ -188,34 +242,26 @@ fn decode_header_param(buf: &mut Bytes, ksize: usize, vsize: usize) -> Result<(S
 /// Builder for a bundle2 part header.
 #[derive(Debug, Eq, PartialEq)]
 pub struct PartHeaderBuilder {
-    part_type: AsciiString,
+    part_type: PartHeaderType,
+    mandatory: bool,
     mparams: HashMap<String, Bytes>,
     aparams: HashMap<String, Bytes>,
 }
 
 impl PartHeaderBuilder {
-    pub fn new<S>(part_type: S) -> Result<Self>
-    where
-        S: IntoAsciiString + Send + 'static,
-    {
-        Self::with_capacity(part_type, 0, 0)
+    pub fn new(part_type: PartHeaderType, mandatory: bool) -> Result<Self> {
+        Self::with_capacity(part_type, mandatory, 0, 0)
     }
 
-    pub fn with_capacity<S>(
-        part_type: S,
+    pub fn with_capacity(
+        part_type: PartHeaderType,
+        mandatory: bool,
         mparam_capacity: usize,
         aparam_capacity: usize,
-    ) -> Result<Self>
-    where
-        S: IntoAsciiString + Send + 'static,
-    {
-        let part_type = part_type
-            .into_ascii_string()
-            .map_err(|e| Error::from(SyncFailure::new(e)))
-            .context("invalid part type")?;
-        Self::check_part_type(&part_type)?;
+    ) -> Result<Self> {
         Ok(PartHeaderBuilder {
-            part_type: part_type,
+            part_type,
+            mandatory,
             mparams: HashMap::with_capacity(mparam_capacity),
             aparams: HashMap::with_capacity(aparam_capacity),
         })
@@ -257,7 +303,7 @@ impl PartHeaderBuilder {
         Ok(self)
     }
 
-    pub fn part_type(&self) -> &AsciiStr {
+    pub fn part_type(&self) -> &PartHeaderType {
         &self.part_type
     }
 
@@ -266,44 +312,29 @@ impl PartHeaderBuilder {
     /// We only accept part_id at this point because in the serialization use
     /// case, a part id is only assigned when the header is finalized.
     pub fn build(self, part_id: u32) -> PartHeader {
-        let part_type_lower = self.part_type.to_ascii_lowercase();
         PartHeader {
             part_type: self.part_type,
-            part_type_lower: part_type_lower,
+            mandatory: self.mandatory,
             part_id: part_id,
             mparams: self.mparams,
             aparams: self.aparams,
         }
     }
 
-    fn check_part_type(part_type: &AsciiStr) -> Result<()> {
-        if part_type.is_empty() {
-            bail_msg!("part type empty");
-        }
-        if part_type.len() > u8::max_value() as usize {
-            bail_msg!(
-                "part type '{}' exceeds max length {}",
-                part_type,
-                u8::max_value()
-            );
-        }
-        Ok(())
-    }
-
     fn check_param(&self, key: &str, val: &[u8]) -> Result<()> {
         if self.mparams.contains_key(key) || self.aparams.contains_key(key) {
             bail_msg!(
-                "part '{}': key '{}' already present in this part",
+                "part '{:?}': key '{}' already present in this part",
                 self.part_type,
                 key
             );
         }
         if key.is_empty() {
-            bail_msg!("part '{}': empty key", self.part_type);
+            bail_msg!("part '{:?}': empty key", self.part_type);
         }
         if key.len() > u8::max_value() as usize {
             bail_msg!(
-                "part '{}': key '{}' exceeds max length {}",
+                "part '{:?}': key '{}' exceeds max length {}",
                 self.part_type,
                 key,
                 u8::max_value()
@@ -311,20 +342,34 @@ impl PartHeaderBuilder {
         }
         if val.is_empty() {
             bail_msg!(
-                "part '{}': value for key '{}' is empty",
+                "part '{:?}': value for key '{}' is empty",
                 self.part_type,
                 key
             );
         }
         if val.len() > u8::max_value() as usize {
             bail_msg!(
-                "part '{}': value for key '{}' exceeds max length {}",
+                "part '{:?}': value for key '{}' exceeds max length {}",
                 self.part_type,
                 key,
                 u8::max_value()
             );
         }
         Ok(())
+    }
+}
+
+impl Arbitrary for PartHeaderType {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        use self::PartHeaderType::*;
+        g.choose(&[
+            Changegroup,
+            ReplyChangegroup,
+            Replycaps,
+            Listkeys,
+            B2xTreegroup2,
+        ]).expect("empty choice provided")
+            .clone()
     }
 }
 
@@ -338,16 +383,8 @@ mod test {
     const MAX_LEN: usize = ::std::u8::MAX as usize;
 
     #[test]
-    fn test_check_part_type() {
-        assert_part_type("", false);
-        assert_part_type("abc", true);
-        assert_part_type("a".repeat(MAX_LEN), true);
-        assert_part_type("a".repeat(MAX_LEN + 1), false);
-    }
-
-    #[test]
     fn test_check_params() {
-        let mut header = PartHeaderBuilder::new("test").unwrap();
+        let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
 
         assert_param(&mut header, "", &b"val"[..], false);
         assert_param(&mut header, "key", &b""[..], false);
@@ -365,18 +402,24 @@ mod test {
     fn test_roundtrip() {
         quickcheck(
             roundtrip
-                as fn(AsciiString, u32, HashMap<String, QCBytes>, HashMap<String, QCBytes>)
-                    -> TestResult,
+                as fn(
+                    PartHeaderType,
+                    bool,
+                    u32,
+                    HashMap<String, QCBytes>,
+                    HashMap<String, QCBytes>,
+                ) -> TestResult,
         );
     }
 
     fn roundtrip(
-        part_type: AsciiString,
+        part_type: PartHeaderType,
+        mandatory: bool,
         part_id: u32,
         mparams: HashMap<String, QCBytes>,
         aparams: HashMap<String, QCBytes>,
     ) -> TestResult {
-        match roundtrip_inner(part_type, part_id, mparams, aparams) {
+        match roundtrip_inner(part_type, mandatory, part_id, mparams, aparams) {
             Ok(test_result) => test_result,
             Err(_err) => TestResult::discard(),
         }
@@ -387,12 +430,13 @@ mod test {
     /// For convenience, errors here are treated as skipped tests. Panics are
     /// test failures.
     fn roundtrip_inner(
-        part_type: AsciiString,
+        part_type: PartHeaderType,
+        mandatory: bool,
         part_id: u32,
         mparams: HashMap<String, QCBytes>,
         aparams: HashMap<String, QCBytes>,
     ) -> Result<TestResult> {
-        let mut builder = PartHeaderBuilder::new(part_type)?;
+        let mut builder = PartHeaderBuilder::new(part_type, mandatory)?;
         for (k, v) in mparams {
             builder.add_mparam(k, v)?;
         }
@@ -409,18 +453,6 @@ mod test {
         assert_eq!(header, decoded_header);
 
         Ok(TestResult::passed())
-    }
-
-    fn assert_part_type<S>(part_type: S, valid: bool)
-    where
-        S: IntoAsciiString + Send + 'static,
-    {
-        let header = PartHeaderBuilder::new(part_type);
-        if valid {
-            header.unwrap();
-        } else {
-            header.unwrap_err();
-        }
     }
 
     fn assert_param<S: Into<String>, B: Into<Bytes>>(
