@@ -14,6 +14,7 @@ from mercurial.node import hex
 from mercurial.i18n import _
 
 from . import constants
+from ..lfs import pointer
 
 if not pycompat.iswindows:
     import grp
@@ -88,12 +89,17 @@ def createrevlogtext(text, copyfrom=None, copyrev=None):
 
     return text
 
-def parsemeta(text):
+def parsemeta(text, flags=0):
     """parse mercurial filelog metadata"""
-    meta, size = filelog.parsemeta(text)
-    if text.startswith('\1\n'):
-        s = text.index('\1\n', 2)
-        text = text[s + 2:]
+    if flags == revlog.REVIDX_EXTSTORED:
+        # LFS stores copy metadata differently
+        p = pointer.deserialize(text)
+        meta = p.hgmeta()
+    else:
+        meta, size = filelog.parsemeta(text)
+        if text.startswith('\1\n'):
+            s = text.index('\1\n', 2)
+            text = text[s + 2:]
     return meta or {}, text
 
 def sumdicts(*dicts):

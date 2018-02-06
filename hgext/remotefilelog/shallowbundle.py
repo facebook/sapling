@@ -434,7 +434,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         if isinstance(rawtext, buffer):
             rawtext = bytes(rawtext)
 
-        meta, text = shallowutil.parsemeta(rawtext)
+        meta, text = shallowutil.parsemeta(rawtext, flags)
         if 'copy' in meta:
             copyfrom = meta['copy']
             copynode = bin(meta['copyrev'])

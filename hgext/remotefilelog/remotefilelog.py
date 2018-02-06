@@ -128,27 +128,18 @@ class remotefilelog(object):
             # _metatuple: used by "addrevision" internally by remotefilelog
             # meta was parsed confidently
             meta, metaoffset = _metatuple
+            if flags == revlog.REVIDX_DEFAULT_FLAGS:
+                # For non-LFS text, remove hg filelog metadata
+                blobtext = rawtext[metaoffset:]
+            else:
+                # For LFS text, which does not contain the filelog metadata,
+                # do not mangle it.
+                blobtext = rawtext
         else:
-            # not from self.addrevision, but something else (repo._filecommit)
+            # Not from self.addrevision, but something else (repo._filecommit)
             # calls addrawrevision directly. remotefilelog needs to get and
             # strip filelog metadata.
-            # we don't have confidence about whether rawtext contains filelog
-            # metadata or not (flag processor could replace it), so we just
-            # parse it as best-effort.
-            # in LFS (flags != 0)'s case, the best way is to call LFS code to
-            # get the meta information, instead of filelog.parsemeta.
-            meta, metaoffset = filelog.parsemeta(rawtext)
-        if flags != 0:
-            # when flags != 0, be conservative and do not mangle rawtext, since
-            # a read flag processor expects the text not being mangled at all.
-            metaoffset = 0
-        if metaoffset:
-            # remotefilelog fileblob stores copy metadata in its ancestortext,
-            # not its main blob. so we need to remove filelog metadata
-            # (containing copy information) from text.
-            blobtext = rawtext[metaoffset:]
-        else:
-            blobtext = rawtext
+            meta, blobtext = shallowutil.parsemeta(rawtext, flags)
         data = self._createfileblob(blobtext, meta, flags, p1, p2, node,
                                     linknode)
         self.repo.contentstore.addremotefilelognode(self.filename, node, data)
