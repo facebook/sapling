@@ -8,7 +8,7 @@ pub use failure::{Error, Result};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
-    #[fail(display = "Unimplmented oepration '{}'", _0)] Unimplemented(String),
+    #[fail(display = "Unimplemented operation '{}'", _0)] Unimplemented(String),
     #[fail(display = "command parse failed for '{}'", _0)] CommandParse(String),
     #[fail(display = "unconsumed data left after parsing '{}'", _0)] UnconsumedData(String),
     #[fail(display = "malformed batch with command '{}'", _0)] BatchInvalid(String),
