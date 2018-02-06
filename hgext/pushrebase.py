@@ -902,6 +902,10 @@ def bundle2rebase(op, part):
         # Perform the rebase + commit to the main repo
         added, replacements = runrebase(op, revs, oldonto, onto)
 
+        # revs is modified by runrebase to ensure garbage collection of
+        # manifests, so don't use it from here on.
+        revs = None
+
         markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
     finally:
         try:
@@ -1057,7 +1061,12 @@ def runrebase(op, revs, oldonto, onto):
     mapping[oldonto.node()] = onto.node()
 
     lastdestnode = onto.node()
-    for rev in revs:
+
+    # Pop rev contexts from the list as we iterate, so we garbage collect the
+    # manifests we're creating.
+    revs.reverse()
+    while revs:
+        rev = revs.pop()
         newrev = _graft(op, rev, mapping, lastdestnode)
 
         new = op.repo[newrev]
