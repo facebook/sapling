@@ -29,6 +29,7 @@ Test the default SIGUSR1 signal
 Test the signal config option
 
   $ echo 'signal=USR2' >> $HGRCPATH
+  $ echo 'memsignal=USR1' >> $HGRCPATH
   $ hg signal USR2
   $ ls $TESTTMP/dump-*.log
   $TESTTMP/dump-*-*.log (glob)
@@ -37,6 +38,7 @@ Test the signal config option
   $ rm $TESTTMP/dump-*.log
 
   $ echo 'signal=INVALIDSIGNAL' >> $HGRCPATH
+  $ echo 'memsignal=INVALIDSIGNAL' >> $HGRCPATH
   $ hg signal USR1 || false
   * (glob)
   [1]
