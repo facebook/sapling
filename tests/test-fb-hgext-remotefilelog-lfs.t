@@ -168,6 +168,10 @@
   x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
   x-is-binary 0
 
+  $ hg debugfilerevision -r . y
+  515a4dfd2e0c: shallow.lfs.commit
+   y: bin=0 lnk=0 flag=2000 size=35 copied='x' chain=f3e0509ec098
+
   $ hg log -r . -T '{file_copies}\n'
   y (x)
 

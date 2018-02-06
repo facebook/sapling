@@ -847,6 +847,52 @@ def debugextensions(ui, **opts):
 
     fm.end()
 
+@command('debugfilerevision',
+         [('r', 'rev', [], _('examine specified REV'))] + cmdutil.walkopts,
+         _('[-r REV] FILE'))
+def debugfilerevision(ui, repo, *pats, **opts):
+    """dump internal metadata for given file revisions
+
+    Show metadata for given files in revisions specified by '--rev'. By
+    default, investigate the current working parent and files changed by it.
+
+    If '--verbose' is set, also print raw content.
+    """
+
+    def deltachainshortnodes(flog, fctx):
+        chain = flog._deltachain(fctx.filerev())[0]
+        # chain could be using revs or nodes, convert to short nodes
+        if chain and isinstance(chain[0], int):
+            chain = [flog.node(x) for x in chain]
+        return [short(x) for x in chain]
+
+    for rev in scmutil.revrange(repo, opts.get('rev') or ['.']):
+        ctx = repo[rev]
+        ui.write(('%s: %s\n')
+                 % (short(ctx.node()), ctx.description().split('\n')[0]))
+        if pats:
+            m = scmutil.match(ctx, pats, opts)
+            paths = ctx.walk(m)
+        else:
+            paths = [f for f in ctx.files() if f in ctx]
+        for path in paths:
+            fctx = ctx[path]
+            flog = fctx.filelog()
+            fields = [
+                ('bin', lambda: '%d' % fctx.isbinary()),
+                ('lnk', lambda: '%d' % fctx.islink()),
+                ('flag', lambda: '%x' % fctx.rawflags()),
+                ('size', lambda: '%d' % fctx.size()),
+                ('copied', lambda: '%r' % (fctx.renamed() or ('',))[0]),
+                ('chain', lambda: ','.join(deltachainshortnodes(flog, fctx))),
+            ]
+            msg = ' %s:' % fctx.path()
+            for name, func in fields:
+                msg += ' %s=%s' % (name, func())
+            ui.write(('%s\n') % msg)
+            if ui.verbose:
+                ui.write(('  rawdata: %r\n') % fctx.rawdata())
+
 @command('debugfileset',
     [('r', 'rev', '', _('apply the filespec on this revision'), _('REV'))],
     _('[-r REV] FILESPEC'))

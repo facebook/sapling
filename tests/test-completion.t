@@ -88,6 +88,7 @@ Show debug commands if there are no other candidates
   debugdiscovery
   debugdrawdag
   debugextensions
+  debugfilerevision
   debugfileset
   debugformat
   debugfsinfo
@@ -270,6 +271,7 @@ Show all commands + options
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: 
   debugextensions: excludedefault, template
+  debugfilerevision: rev, include, exclude
   debugfileset: rev
   debugformat: template
   debugfsinfo: 

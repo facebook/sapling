@@ -31,11 +31,10 @@
   lfs
 
 # Ensure metadata is stored
-  $ hg debugdata largefile 0
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b
-  size 1501
-  x-is-binary 0
+  $ hg debugfilerev largefile -v
+  00c137947d30: add large file
+   largefile: bin=0 lnk=0 flag=2000 size=1501 copied='' chain=1c509d1a5c8a
+    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:f11e77c257047a398492d8d6cb9f6acf3aa7c4384bb23080b43546053e183e4b\nsize 1501\nx-is-binary 0\n'
 
 # Check the blobstore is populated
   $ find .hg/store/lfs/objects | sort
@@ -150,6 +149,23 @@
   $ echo SHORTER > s
   $ hg commit -m 'switch large and small again'
 
+  $ hg debugfilerev -r 'all()'
+  fd47a419c4f7: commit with lfs content
+   large: bin=0 lnk=0 flag=2000 size=39 copied='' chain=2c531e0992ff
+   small: bin=0 lnk=0 flag=0 size=8 copied='' chain=b92a1ddc2cb0
+  514ca5454649: renames
+   l: bin=0 lnk=0 flag=2000 size=39 copied='large' chain=46a2f24864bc
+   s: bin=0 lnk=0 flag=0 size=8 copied='small' chain=594f4fdf95ce
+  e8e237bfd98f: large to small, small to large
+   l: bin=0 lnk=0 flag=0 size=6 copied='' chain=b484bd96359a
+   s: bin=0 lnk=0 flag=2000 size=27 copied='' chain=594f4fdf95ce,2521c65ce463
+  15c00ca48977: random modifications
+   l: bin=0 lnk=0 flag=0 size=8 copied='' chain=8f150b4b7e9f
+   s: bin=0 lnk=0 flag=2000 size=29 copied='' chain=552783341059
+  5adf850972b9: switch large and small again
+   l: bin=0 lnk=0 flag=2000 size=20 copied='' chain=8f150b4b7e9f,6f1ff1f39c11
+   s: bin=0 lnk=0 flag=0 size=8 copied='' chain=0c1fa52a67c6
+
 # Test lfs_files template
 
   $ hg log -r 'all()' -T '{rev} {join(lfs_files, ", ")}\n'
@@ -247,55 +263,29 @@
   1: a1 (a2)a2 (a1) |  | 
   0:  |  | a1 a2
 
-  $ for n in a1 a2; do
-  >   for r in 0 1 2; do
-  >     printf '\n%s @ %s\n' $n $r
-  >     hg debugdata $n $r
-  >   done
-  > done
-  
-  a1 @ 0
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024
-  size 29
-  x-is-binary 0
-  
-  a1 @ 1
-  \x01 (esc)
-  copy: a2
-  copyrev: 50470ad23cf937b1f4b9f80bfe54df38e65b50d9
-  \x01 (esc)
-  SMALL
-  
-  a1 @ 2
-  \x01 (esc)
-  \x01 (esc)
-  \x01 (esc)
-  META
-  
-  a2 @ 0
-  SMALL
-  
-  a2 @ 1
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024
-  size 29
-  x-hg-copy a1
-  x-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4
-  x-is-binary 0
-  
-  a2 @ 2
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943
-  size 32
-  x-is-binary 0
-
 # Verify commit hashes include rename metadata
 
   $ hg log -T '{rev}:{node|short} {desc}\n'
   2:0fae949de7fa meta
   1:9cd6bdffdac0 b
   0:7f96794915f7 a
+
+  $ hg debugfilerev -r 'all()' -v
+  7f96794915f7: a
+   a1: bin=0 lnk=0 flag=2000 size=29 copied='' chain=be23af27908a
+    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024\nsize 29\nx-is-binary 0\n'
+   a2: bin=0 lnk=0 flag=0 size=6 copied='' chain=50470ad23cf9
+    rawdata: 'SMALL\n'
+  9cd6bdffdac0: b
+   a1: bin=0 lnk=0 flag=0 size=6 copied='a2' chain=0d759f317f5a
+    rawdata: '\x01\ncopy: a2\ncopyrev: 50470ad23cf937b1f4b9f80bfe54df38e65b50d9\n\x01\nSMALL\n'
+   a2: bin=0 lnk=0 flag=2000 size=29 copied='a1' chain=50470ad23cf9,b982e9429db8
+    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024\nsize 29\nx-hg-copy a1\nx-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4\nx-is-binary 0\n'
+  0fae949de7fa: meta
+   a1: bin=0 lnk=0 flag=0 size=11 copied='' chain=0984adb90885
+    rawdata: '\x01\n\x01\n\x01\nMETA\n'
+   a2: bin=0 lnk=0 flag=2000 size=32 copied='' chain=50470ad23cf9,b982e9429db8,7691bcc594f0
+    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943\nsize 32\nx-is-binary 0\n'
 
   $ cd ..
 
@@ -326,6 +316,15 @@
        * (manifests) (glob)
        *  a (glob)
   $ hg --config extensions.strip= strip -r 2 --no-backup --force -q
+  $ hg -R bundle.hg debugfilerev -r 'bundle()'
+  5b495c34b263: a-two
+   a: bin=0 lnk=0 flag=2000 size=16 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1
+  a887db3fdadc: a-three
+   a: bin=0 lnk=0 flag=2000 size=18 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d0f2c6cc8434
+  617b75df8389: a-4
+   a: bin=0 lnk=0 flag=2000 size=14 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d0f2c6cc8434,47910e2096f9
+  8317d37315be: branching
+   a: bin=0 lnk=0 flag=2000 size=20 copied='' chain=3de1e168d42e,1d08aa13117c,4b09ab2030a1,d55fa5808479
   $ hg -R bundle.hg log -p -T '{rev} {desc}\n' a
   5 branching
   diff --git a/a b/a

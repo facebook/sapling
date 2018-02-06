@@ -266,6 +266,16 @@ class remotefilelog(object):
         text, verifyhash = self._processflags(rawtext, flags, 'read')
         return text
 
+    def _deltachain(self, node):
+        """Obtain the delta chain for a revision.
+
+        Return (chain, False), chain is a list of nodes. This is to be
+        compatible with revlog API.
+        """
+        store = self.repo.contentstore
+        chain = store.getdeltachain(self.filename, node)
+        return ([x[1] for x in chain], False)
+
     def _processflags(self, text, flags, operation, raw=False):
         # mostly copied from hg/mercurial/revlog.py
         validatehash = True

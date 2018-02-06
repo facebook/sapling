@@ -1068,6 +1068,8 @@ Test list of internal help commands
    debugdrawdag  read an ASCII graph from stdin and create changesets
    debugextensions
                  show information about active extensions
+   debugfilerevision
+                 dump internal metadata for given file revisions
    debugfileset  parse and apply a fileset specification
    debugformat   display format information about the current repository
    debugfsinfo   show information detected about current filesystem
