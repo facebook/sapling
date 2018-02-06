@@ -57,9 +57,8 @@ Helper functions to create commits:
   > }
 
 Generate bundles
-XXX: shallow bundle application is broken (seems to be infinite loop)
 
-  $ for i in full; do
+  $ for i in shallow full; do
   >   for j in normal lfs; do
   >     NAME=src-$i-$j
   >     hg init $TESTTMP/$NAME
@@ -74,6 +73,28 @@ XXX: shallow bundle application is broken (seems to be infinite loop)
   >     SRCNAMES="$SRCNAMES $NAME"
   >   done
   > done
+  ---- Source repo: shallow normal ----
+  ed3e785005fc: X
+   X: bin=0 lnk=0 flag=0 size=41 copied='' chain=e59d6c47cda0
+   Y: bin=0 lnk=0 flag=0 size=41 copied='' chain=583fc1cb5a72
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=0 size=3 copied='' chain=0ad6e257ad34
+  ---- Source repo: shallow lfs ----
+  ed3e785005fc: X
+   X: bin=0 lnk=0 flag=2000 size=41 copied='' chain=e59d6c47cda0
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='' chain=583fc1cb5a72
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
   ---- Source repo: full normal ----
   ed3e785005fc: X
    X: bin=0 lnk=0 flag=0 size=45 copied='' chain=e59d6c47cda0
@@ -125,6 +146,70 @@ Apply bundles
   >     hg unbundle $TESTTMP/$i.bundle -q 2>/dev/null || echo 'CRASHED!' && hg debugfilerev -r 'all()-X'
   >   done
   > done
+  ---- Applying src-shallow-normal.bundle to dst-shallow-normal ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=0 size=3 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-normal.bundle to dst-shallow-lfs ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=0 size=3 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-normal.bundle to dst-full-normal ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=000000000000,5322d1c20036
+   Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=000000000000,78eb25c15608
+   Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-normal.bundle to dst-full-lfs ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=000000000000,5322d1c20036
+   Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=000000000000,78eb25c15608
+   Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-lfs.bundle to dst-shallow-normal ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-lfs.bundle to dst-shallow-lfs ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-lfs.bundle to dst-full-normal ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
+  ---- Applying src-shallow-lfs.bundle to dst-full-lfs ----
+  9f4445d5e0fc: Y
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
+  c73835eb729c: Z
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
+   Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
   ---- Applying src-full-normal.bundle to dst-shallow-normal ----
   9f4445d5e0fc: Y
    X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=c6fdd3c3ab39

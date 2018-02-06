@@ -165,6 +165,11 @@ class remotefilelog(object):
         # the delta base stored in different forms: one LFS, one non-LFS.
         if self.flags(basenode) or self.flags(node):
             return False
+        # Do not use delta if "node" is a copy. This avoids cycles (in a graph
+        # where edges are node -> deltabase, and node -> copyfrom). The cycle
+        # could make remotefilelog cgunpacker enter an infinite loop.
+        if self.renamed(node):
+            return False
         return True
 
     def cmp(self, node, text):
