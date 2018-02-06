@@ -192,14 +192,27 @@ class HgServer(object):
             self._commands[value.__COMMAND_ID__] = value
 
     def initialize(self):
-        hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
         self.ui = HgUI.load()
-        self.ui.readconfig(hgrc, self.repo_path)
         for opt in self.config_overrides:
             self.ui.setconfig(opt.section, opt.name, opt.value,
                               source='--config')
 
-        mercurial.extensions.loadall(self.ui)
+        # Create a fresh copy of the UI object, and load the repository's
+        # config into it.  Then load extensions specified by this config.
+        hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
+        local_ui = self.ui.copy()
+        local_ui.readconfig(hgrc, self.repo_path)
+        mercurial.extensions.loadall(local_ui)
+
+        # Create the repository using the original clean UI object that has not
+        # loaded the repo config yet.  This is required to ensure that
+        # secondary repository objects end up with the correct configuration,
+        # and do not have configuration settings from this repository.
+        #
+        # Secondary repo objects can be created mainly happens due to the share
+        # extension.  In general the repository we are pointing at should
+        # should not itself point to another shared repo, but it seems safest
+        # to exactly mimic mercurial's own start-up behavior here.
         repo = mercurial.hg.repository(self.ui, self.repo_path)
         self.repo = repo.unfiltered()
 
