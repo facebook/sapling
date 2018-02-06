@@ -258,8 +258,8 @@ def has_lz4():
         pass
     # modern lz4 has "compress" defined in lz4.block
     try:
-        import lz4.block
-        lz4.block.compress # silence unused import warning
+        from lz4 import block as lz4block
+        lz4block.compress # silence unused import warning
         return True
     except (ImportError, AttributeError):
         return False

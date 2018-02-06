@@ -140,6 +140,7 @@ outputs, which should be fixed later.
   hgext/infinitepush/infinitepushcommands.py:31: symbol import follows non-symbol import: hgext.infinitepush.common
   hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
   hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
+  hgext/lz4revlog.py:76: relative import of stdlib module
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: importer < p4
   hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: filetransaction < importer
   hgext/p4fastimport/__init__.py:41: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
@@ -197,6 +198,7 @@ outputs, which should be fixed later.
   hgext/remotefilelog/historypack.py:4: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/lz4wrapper.py:3: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/lz4wrapper.py:5: stdlib import "lz4" follows local import: mercurial.i18n
+  hgext/remotefilelog/lz4wrapper.py:15: relative import of stdlib module
   hgext/remotefilelog/metadatastore.py:3: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: ancestor < error
@@ -288,6 +290,7 @@ outputs, which should be fixed later.
   hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
   hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
+  tests/hghave.py:261: relative import of stdlib module
   tests/test-fb-hgext-cstore-datapackstore.py:13: direct symbol import datapackstore from hgext.extlib.cstore
   tests/test-fb-hgext-cstore-datapackstore.py:17: direct symbol import fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-cstore-datapackstore.py:23: imports not lexically sorted: mercurial.ui < silenttestrunner
