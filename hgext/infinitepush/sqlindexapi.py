@@ -17,6 +17,8 @@ from indexapi import (
     indexexception,
 )
 
+from mercurial import util
+
 def _convertbookmarkpattern(pattern):
     pattern = pattern.replace('_', '\\_')
     pattern = pattern.replace('%', '\\%')
@@ -285,10 +287,13 @@ class sqlindexapi(indexapi):
         query = _convertbookmarkpattern(query)
         self.sqlcursor.execute(
             "SELECT bookmark, node from bookmarkstonode WHERE "
-            "reponame = %s AND bookmark LIKE %s",
+            "reponame = %s AND bookmark LIKE %s "
+            # Bookmarks have to be restored in the same order of creation
+            # See T24417531
+            "ORDER BY time ASC",
             params=(self.reponame, query))
         result = self.sqlcursor.fetchall()
-        bookmarks = {}
+        bookmarks = util.sortdict()
         for row in result:
             if len(row) != 2:
                 self.log.info("Bad row returned: %s" % row)

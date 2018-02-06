@@ -85,6 +85,7 @@ osutil = policy.importmod(r'osutil')
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
 revsetpredicate = registrar.revsetpredicate()
 templatekeyword = registrar.templatekeyword()
 localoverridesfile = 'generated.infinitepushbackups.rc'
@@ -95,8 +96,8 @@ backupbookmarktuple = namedtuple('backupbookmarktuple',
 
 class backupstate(object):
     def __init__(self):
-        self.heads = set()
-        self.localbookmarks = {}
+        self.heads = util.sortdict()
+        self.localbookmarks = util.sortdict()
 
     def empty(self):
         return not self.heads and not self.localbookmarks
@@ -228,7 +229,6 @@ def backup(ui, repo, dest=None, **opts):
     Local heads are saved remotely as:
         infinitepush/backups/USERNAME/HOST/REPOROOT/heads/HEAD_HASH
     """
-
     if opts.get('background'):
         _dobackgroundbackup(ui, repo, dest)
         return 0
@@ -272,9 +272,12 @@ def restore(ui, repo, dest=None, **opts):
 
     __, backupstate = allbackupstates.popitem()
     pullcmd, pullopts = _getcommandandoptions('^pull')
-    # pull backuped heads and nodes that are pointed by bookmarks
-    pullopts['rev'] = list(backupstate.heads |
-                           set(backupstate.localbookmarks.values()))
+    # Pull backuped heads and nodes that are pointed by bookmarks.
+    # Note that we are avoiding the use of set() because we want to pull
+    # revisions in the same order
+    pullopts['rev'] = list(backupstate.heads) \
+                      + [x for x in backupstate.localbookmarks.values()
+                            if x not in backupstate.heads]
     if dest:
         pullopts['source'] = dest
     result = pullcmd(ui, repo, **pullopts)
@@ -292,7 +295,7 @@ def restore(ui, repo, dest=None, **opts):
     # manually write local backup state and flag to not autobackup
     # just after we restored, which would be pointless
     _writelocalbackupstate(repo.vfs,
-                           list(backupstate.heads),
+                           backupstate.heads.values(),
                            backupstate.localbookmarks)
     repo.ignoreautobackup = True
 
@@ -557,7 +560,7 @@ def _dobackup(ui, repo, dest, **opts):
     afterbackupheads = _backupheads(ui, repo)
     other = _getremote(repo, ui, dest, **opts)
     outgoing, badhexnodes = _getrevstobackup(repo, ui, other,
-                                             afterbackupheads - bkpstate.heads)
+                                        afterbackupheads - set(bkpstate.heads))
     # If remotefilelog extension is enabled then there can be nodes that we
     # can't backup. In this case let's remove them from afterbackupheads
     afterbackupheads.difference_update(badhexnodes)
@@ -568,8 +571,8 @@ def _dobackup(ui, repo, dest, **opts):
     afterbackuplocalbooks = _filterbookmarks(
         afterbackuplocalbooks, repo, afterbackupheads)
 
-    newheads = afterbackupheads - bkpstate.heads
-    removedheads = bkpstate.heads - afterbackupheads
+    newheads = afterbackupheads - set(bkpstate.heads)
+    removedheads = set(bkpstate.heads) - afterbackupheads
     newbookmarks = _dictdiff(afterbackuplocalbooks, bkpstate.localbookmarks)
     removedbookmarks = _dictdiff(bkpstate.localbookmarks, afterbackuplocalbooks)
 
@@ -606,7 +609,7 @@ def _dobackup(ui, repo, dest, **opts):
 
         if backup:
             _sendbundle(bundler, other)
-            _writelocalbackupstate(repo.vfs, afterbackupheads,
+            _writelocalbackupstate(repo.vfs, list(afterbackupheads),
                                    afterbackuplocalbooks)
             if ui.config('infinitepushbackup', 'savelatestbackupinfo'):
                 _writelocalbackupinfo(repo.vfs, **afterbackupinfo)
@@ -739,7 +742,7 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
                 bookname = parsed.localbookmark
                 allbackupstates[key].localbookmarks[bookname] = hexnode
             else:
-                allbackupstates[key].heads.add(hexnode)
+                allbackupstates[key].heads[hexnode] = hexnode
         else:
             ui.warn(_('wrong format of backup bookmark: %s') % book)
 

@@ -419,7 +419,9 @@ def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
 def localrepolistkeys(orig, self, namespace, patterns=None):
     if namespace == 'bookmarks' and patterns:
         index = self.bundlestore.index
-        results = {}
+        # Using sortdict instead of a dictionary to ensure that bookmaks are
+        # restored in the same order after a pullbackup. See T24417531
+        results = util.sortdict()
         bookmarks = orig(self, namespace)
         for pattern in patterns:
             results.update(index.getbookmarks(pattern))

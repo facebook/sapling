@@ -12,6 +12,7 @@ from . import (
     encoding,
     obsolete,
     phases,
+    util,
 )
 
 def _nslist(repo):
@@ -54,7 +55,10 @@ def encodekeys(keys):
 
 def decodekeys(data):
     """decode the content of a pushkey namespace from exchange over the wire"""
-    result = {}
+    # Note that the order is required in some cases. E.g. pullbackup needs to
+    # retrieve commits in the same order of creation to mantain the order of
+    # revision codes. See T24417531
+    result = util.sortdict()
     for l in data.splitlines():
         k, v = l.split('\t')
         result[decode(k)] = decode(v)
