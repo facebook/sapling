@@ -169,6 +169,13 @@ class remotefilelog(object):
 
     rawsize = size
 
+    def candelta(self, basenode, node):
+        # Do not use delta if either node is LFS. Avoids issues if clients have
+        # the delta base stored in different forms: one LFS, one non-LFS.
+        if self.flags(basenode) or self.flags(node):
+            return False
+        return True
+
     def cmp(self, node, text):
         """compare text with a given file revision
 
@@ -201,6 +208,8 @@ class remotefilelog(object):
         if isinstance(node, int):
             raise error.ProgrammingError(
                 'remotefilelog does not accept integer rev for flags')
+        if node == nullid:
+            return revlog.REVIDX_DEFAULT_FLAGS
         store = self.repo.contentstore
         return store.getmeta(self.filename, node).get(constants.METAKEYFLAG, 0)
 

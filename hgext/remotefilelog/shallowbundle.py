@@ -224,15 +224,19 @@ class shallowcg1packer(changegroup.cg1packer):
 
     def nodechunk(self, revlog, node, prevnode, linknode):
         prefix = ''
-        if prevnode == nullid:
+        if prevnode is not nullid and not revlog.candelta(prevnode, node):
+            basenode = nullid
+        else:
+            basenode = prevnode
+        if basenode == nullid:
             delta = revlog.revision(node, raw=True)
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
             # Actually uses remotefilelog.revdiff which works on nodes, not revs
-            delta = revlog.revdiff(prevnode, node)
+            delta = revlog.revdiff(basenode, node)
         p1, p2 = revlog.parents(node)
         flags = revlog.flags(node)
-        meta = self.builddeltaheader(node, p1, p2, prevnode, linknode, flags)
+        meta = self.builddeltaheader(node, p1, p2, basenode, linknode, flags)
         meta += prefix
         l = len(meta) + len(delta)
         yield changegroup.chunkheader(l)
