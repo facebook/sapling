@@ -43,6 +43,15 @@ class gitlfspointer(dict):
     def size(self):
         return int(self['size'])
 
+    def hgmeta(self):
+        """Translate LFS metadata to hg filelog metadata dictionary"""
+        hgmeta = {}
+        for k, v in self.iteritems():
+            if k.startswith('x-hg-'):
+                name = k[len('x-hg-'):]
+                hgmeta[name] = v
+        return hgmeta
+
     # regular expressions used by _validate
     # see https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
     _keyre = re.compile(r'\A[a-z0-9.-]+\Z')

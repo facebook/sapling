@@ -55,11 +55,7 @@ def readfromstore(self, text):
     text = store.read(oid)
 
     # pack hg filelog metadata
-    hgmeta = {}
-    for k in p.keys():
-        if k.startswith('x-hg-'):
-            name = k[len('x-hg-'):]
-            hgmeta[name] = p[k]
+    hgmeta = p.hgmeta()
     if hgmeta or text.startswith('\1\n'):
         text = filelog.packmeta(hgmeta, text)
 
