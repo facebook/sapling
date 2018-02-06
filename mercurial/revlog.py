@@ -1904,6 +1904,14 @@ class revlog(object):
             return btext[0]
 
         def builddelta(rev):
+            chainbase = self.chainbase(rev)
+            if self._generaldelta:
+                base = rev
+            else:
+                base = chainbase
+            # Refuse to build delta if deltabase rev has a non-zero flag
+            if self.flags(base):
+                return None
             # can we use the cached delta?
             if cachedelta and cachedelta[0] == rev:
                 delta = cachedelta[1]
@@ -1923,12 +1931,7 @@ class revlog(object):
                     delta = mdiff.textdiff(ptext, t)
             header, data = self.compress(delta)
             deltalen = len(header) + len(data)
-            chainbase = self.chainbase(rev)
             dist = deltalen + offset - self.start(chainbase)
-            if self._generaldelta:
-                base = rev
-            else:
-                base = chainbase
             chainlen, compresseddeltalen = self._chaininfo(rev)
             chainlen += 1
             compresseddeltalen += deltalen
@@ -1950,7 +1953,7 @@ class revlog(object):
             textlen = len(rawtext)
 
         # should we try to build a delta?
-        if prev != nullrev and self.storedeltachains:
+        if prev != nullrev and self.storedeltachains and not flags:
             tested = set()
             # This condition is true most of the time when processing
             # changegroup data into a generaldelta repo. The only time it

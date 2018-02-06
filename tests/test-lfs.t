@@ -158,12 +158,12 @@
    s: bin=0 lnk=0 flag=0 size=8 copied='small' chain=594f4fdf95ce
   e8e237bfd98f: large to small, small to large
    l: bin=0 lnk=0 flag=0 size=6 copied='' chain=b484bd96359a
-   s: bin=0 lnk=0 flag=2000 size=27 copied='' chain=594f4fdf95ce,2521c65ce463
+   s: bin=0 lnk=0 flag=2000 size=27 copied='' chain=2521c65ce463
   15c00ca48977: random modifications
    l: bin=0 lnk=0 flag=0 size=8 copied='' chain=8f150b4b7e9f
    s: bin=0 lnk=0 flag=2000 size=29 copied='' chain=552783341059
   5adf850972b9: switch large and small again
-   l: bin=0 lnk=0 flag=2000 size=20 copied='' chain=8f150b4b7e9f,6f1ff1f39c11
+   l: bin=0 lnk=0 flag=2000 size=20 copied='' chain=6f1ff1f39c11
    s: bin=0 lnk=0 flag=0 size=8 copied='' chain=0c1fa52a67c6
 
 # Test lfs_files template
@@ -279,12 +279,12 @@
   9cd6bdffdac0: b
    a1: bin=0 lnk=0 flag=0 size=6 copied='a2' chain=0d759f317f5a
     rawdata: '\x01\ncopy: a2\ncopyrev: 50470ad23cf937b1f4b9f80bfe54df38e65b50d9\n\x01\nSMALL\n'
-   a2: bin=0 lnk=0 flag=2000 size=29 copied='a1' chain=50470ad23cf9,b982e9429db8
+   a2: bin=0 lnk=0 flag=2000 size=29 copied='a1' chain=b982e9429db8
     rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:5bb8341bee63b3649f222b2215bde37322bea075a30575aa685d8f8d21c77024\nsize 29\nx-hg-copy a1\nx-hg-copyrev be23af27908a582af43e5cda209a5a9b319de8d4\nx-is-binary 0\n'
   0fae949de7fa: meta
    a1: bin=0 lnk=0 flag=0 size=11 copied='' chain=0984adb90885
     rawdata: '\x01\n\x01\n\x01\nMETA\n'
-   a2: bin=0 lnk=0 flag=2000 size=32 copied='' chain=50470ad23cf9,b982e9429db8,7691bcc594f0
+   a2: bin=0 lnk=0 flag=2000 size=32 copied='' chain=7691bcc594f0
     rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:876dadc86a8542f9798048f2c47f51dbf8e4359aed883e8ec80c5db825f0d943\nsize 32\nx-is-binary 0\n'
 
   $ cd ..

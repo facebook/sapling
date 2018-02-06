@@ -90,11 +90,11 @@ XXX: shallow bundle application is broken (seems to be infinite loop)
    X: bin=0 lnk=0 flag=2000 size=41 copied='' chain=e59d6c47cda0
    Y: bin=0 lnk=0 flag=2000 size=41 copied='' chain=583fc1cb5a72
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
   c73835eb729c: Z
-   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39,5322d1c20036
-   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=583fc1cb5a72,88c7303c7f80,78eb25c15608
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
    Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
 
 Note: full normal repo has a wrong size=45 where it should be 41, see XXX note
@@ -150,11 +150,10 @@ Apply bundles
    Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=583fc1cb5a72,88c7303c7f80,78eb25c15608
    Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
   ---- Applying src-full-normal.bundle to dst-full-lfs ----
+  CRASHED!
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
-  c73835eb729c: Z
-  abort: integrity check failed on data/X.i:2!
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
   ---- Applying src-full-lfs.bundle to dst-shallow-normal ----
   9f4445d5e0fc: Y
    X: bin=0 lnk=0 flag=2000 size=207 copied='' chain=c6fdd3c3ab39
@@ -176,14 +175,14 @@ Apply bundles
    X: bin=0 lnk=0 flag=0 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
    Y: bin=0 lnk=0 flag=0 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
   c73835eb729c: Z
-   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=000000000000,5322d1c20036
-   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=000000000000,78eb25c15608
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
    Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
   ---- Applying src-full-lfs.bundle to dst-full-lfs ----
   9f4445d5e0fc: Y
-   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=e59d6c47cda0,c6fdd3c3ab39
-   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=583fc1cb5a72,88c7303c7f80
+   X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
+   Y: bin=0 lnk=0 flag=2000 size=42 copied='X' chain=88c7303c7f80
   c73835eb729c: Z
-   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=000000000000,5322d1c20036
-   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=000000000000,78eb25c15608
+   X: bin=0 lnk=0 flag=2000 size=41 copied='Y' chain=5322d1c20036
+   Y: bin=0 lnk=0 flag=2000 size=41 copied='X' chain=78eb25c15608
    Z: bin=0 lnk=0 flag=2000 size=3 copied='' chain=0ad6e257ad34
