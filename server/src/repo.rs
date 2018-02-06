@@ -201,6 +201,12 @@ impl RepoClient {
             common_ancestors,
         ));
 
+        // TODO(stash): avoid collecting all the changelogs in the vector - T25767311
+        let nodestosend = nodestosend
+            .collect()
+            .map(|nodes| stream::iter_ok(nodes.into_iter().rev()))
+            .flatten_stream();
+
         let changelogentries = nodestosend
             .and_then({
                 let hgrepo = hgrepo.clone();

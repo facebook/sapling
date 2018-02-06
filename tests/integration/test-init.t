@@ -97,9 +97,17 @@ setup repo2
   $ touch b
   $ hg add b
   $ hg ci -mb
+  $ echo content > c
+  $ hg add c
+  $ hg ci -mc
   $ hg log
-  changeset:   1:0e067c57feba
+  changeset:   2:3e19bf519e9a
   tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+  changeset:   1:0e067c57feba
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
@@ -134,15 +142,25 @@ start mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
-  new changesets 0e067c57feba
+  added 2 changesets with 0 changes to 0 files
+  new changesets 0e067c57feba:3e19bf519e9a
   (run 'hg update' to get a working copy)
-  $ hg log -r 0e067c57feba
+  $ hg log -r '::3e19bf519e9a'
+  changeset:   0:3903775176ed
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
   changeset:   1:0e067c57feba
-  tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
+  
+  changeset:   2:3e19bf519e9a
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
   
   $ ls
   a
