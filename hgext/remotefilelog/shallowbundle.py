@@ -416,7 +416,20 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         if not available(f, node, f, deltabase):
             continue
 
-        base = fl.revision(deltabase, raw=True)
+        # Deltas are always against flags=0 rawtext (see revdiff and its
+        # callers), if deltabase is not nullid.
+        if flags and deltabase != nullid:
+            raise error.Abort('unexpected deltabase')
+
+        # If deltabase does not have flags=0, convert it to flags=0
+        # rawtext, which is equivalent to raw=False text.
+        #
+        # This happens if a non-LFS delta is being applied to a LFS base.
+        base = fl.revision(deltabase, raw=False)
+
+        # For LFS pointer (rawtext), delta contains flags!=0 rawtext. So
+        # "rawtext" will be the original LFS rawtext, and base should be
+        # an empty string in this case.
         rawtext = mdiff.patch(base, delta)
         if isinstance(rawtext, buffer):
             rawtext = bytes(rawtext)
@@ -433,7 +446,10 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
                 if not available(f, node, f, p):
                     continue
 
-        fl.addrevision(rawtext, trp, linknode, p1, p2, node=node, flags=flags)
+        # Use addrawrevision so if it's already LFS, take it as-is, do not
+        # re-calculate the LFS object.
+        fl.addrawrevision(rawtext, trp, linknode, p1, p2, node=node,
+                          flags=flags)
         processed.add((f, node))
         skipcount = 0
 
