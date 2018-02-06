@@ -173,6 +173,7 @@ pub enum SingleResponse {
     Pushkey,
     Streamout, /* (BoxStream<Vec<u8>, Error>) */
     ReadyForStream,
+    Unbundle,
 }
 
 impl SingleResponse {

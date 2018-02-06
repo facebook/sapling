@@ -124,11 +124,17 @@ where
                                 ).into())
                             }),
                             Some(req) => {
-                                Either::B(handle_request(req, remainder, handler.clone()).map(
-                                    move |(resp, remainder)| {
-                                        (Some(handler.respenc.encode(resp)), Some(remainder))
-                                    },
-                                ))
+                                let (resps, remainder) =
+                                    handle_request(req, remainder, handler.clone());
+                                Either::B(ok((
+                                    Some(
+                                        resps
+                                            .map(move |resp| handler.respenc.encode(resp))
+                                            .flatten()
+                                            .boxify(),
+                                    ),
+                                    Some(remainder),
+                                )))
                             }
                         }
                     });
@@ -142,11 +148,18 @@ where
         .boxify()
 }
 
+/// Handles a singular request regardless if it contains multiple batched commands or a single one
+/// It returns stream of responses that should be send to the client as soon as they are produced
+/// and a future containing the remainder of the input that might contain more requests and that
+/// will become available once the stream of responses is consumed.
 fn handle_request<In, H, Dec, Enc>(
     req: Request,
     input: BytesStream<In>,
     handler: Arc<HgProtoHandlerInner<H, Dec, Enc>>,
-) -> BoxFuture<(Response, BoxFuture<BytesStream<In>, Error>), Error>
+) -> (
+    BoxStream<Response, Error>,
+    BoxFuture<BytesStream<In>, Error>,
+)
 where
     In: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
     H: HgCommands + Send + Sync + 'static,
@@ -155,40 +168,36 @@ where
     Enc: ResponseEncoder + Clone + Send + Sync + 'static,
     Error: From<Dec::Error>,
 {
-    let future = match req {
+    match req {
         Request::Batch(reqs) => {
             let (send, recv) = oneshot::channel();
-            Either::A(
-                stream::unfold(
-                    (reqs.into_iter(), ok(input).boxify(), send),
-                    move |(mut reqs, input, send)| match reqs.next() {
-                        None => {
-                            let _ = send.send(input);
-                            None
+            let responses = stream::unfold(
+                (reqs.into_iter(), ok(input).boxify(), send),
+                move |(mut reqs, input, send)| match reqs.next() {
+                    None => {
+                        let _ = send.send(input);
+                        None
+                    }
+                    Some(req) => Some(input.map({
+                        let handler = handler.clone();
+                        move |input| {
+                            let (resps, remainder) = handler.commands_handler.handle(req, input);
+                            (resps, (reqs, remainder, send))
                         }
-                        Some(req) => Some(input.and_then({
-                            let handler = handler.clone();
-                            move |input| {
-                                handler
-                                    .commands_handler
-                                    .handle(req, input)
-                                    .map(|(res, remainder)| (res, (reqs, remainder, send)))
-                            }
-                        })),
-                    },
-                ).collect()
-                    .and_then(|resps| {
-                        recv.from_err()
-                            .map(|remainder| (Response::Batch(resps), remainder))
-                    }),
+                    })),
+                },
+            ).flatten()
+                .collect()
+                .map(Response::Batch)
+                .into_stream();
+            (
+                responses.boxify(),
+                recv.from_err().and_then(|input| input).boxify(),
             )
         }
-        Request::Single(req) => Either::B(
-            handler
-                .commands_handler
-                .handle(req, input)
-                .map(|(res, remainder)| (Response::Single(res), remainder)),
-        ),
-    };
-    future.boxify()
+        Request::Single(req) => {
+            let (resps, remainder) = handler.commands_handler.handle(req, input);
+            (resps.map(Response::Single).boxify(), remainder)
+        }
+    }
 }
