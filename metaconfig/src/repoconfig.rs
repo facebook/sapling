@@ -18,6 +18,7 @@ use blobrepo::BlobRepo;
 use mercurial::RevlogRepo;
 use mercurial_types::{Changeset, MPath, Manifest, NodeHash};
 use mercurial_types::manifest::Content;
+use mercurial_types::nodehash::ChangesetId;
 use mercurial_types::path::MPathElement;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
@@ -81,10 +82,10 @@ impl RepoConfigs {
     /// Read the config repo and generate RepoConfigs based on it
     pub fn read_revlog_config_repo(
         repo: RevlogRepo,
-        changeset_hash: NodeHash,
+        changesetid: ChangesetId,
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
-            repo.get_changeset_by_nodeid(&changeset_hash)
+            repo.get_changeset_by_changesetid(&changesetid)
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
                 })
@@ -143,8 +144,7 @@ impl RepoConfigs {
                             .from_err()
                             .and_then(|node| match node {
                                 VfsNode::File(file) => Ok(file),
-                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into())
-                                    .into()),
+                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
                             })
                             .and_then(|file| {
                                 file.read().map_err(|err| {
@@ -153,8 +153,7 @@ impl RepoConfigs {
                             })
                             .and_then(|content| match content {
                                 Content::File(blob) => Ok(blob),
-                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into())
-                                    .into()),
+                                _ => Err(ErrorKind::InvalidFileStructure("expected file".into()).into()),
                             })
                             .and_then(|blob| {
                                 let bytes =

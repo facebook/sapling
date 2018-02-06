@@ -205,8 +205,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
             .ok_or_else(|| failure::err_msg("bookmark for config repo not found"))?
             .0
     } else {
-        let nodehash = mercurial_types::NodeHash::from_str(matches.value_of("crhash").unwrap())?;
-        mercurial_types::nodehash::ChangesetId::new(nodehash)
+        mercurial_types::nodehash::ChangesetId::from_str(matches.value_of("crhash").unwrap())?
     };
 
     info!(
@@ -214,7 +213,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
         "Config repository will be read from commit: {}", changesetid
     );
 
-    RepoConfigs::read_revlog_config_repo(config_repo, changesetid.into_nodehash())
+    RepoConfigs::read_revlog_config_repo(config_repo, changesetid)
         .from_err()
         .wait()
 }
@@ -289,12 +288,9 @@ fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger) -> ! {
             };
             let drain = slog_term::PlainSyncDecorator::new(stderr_write);
             let drain = slog_term::FullFormat::new(drain).build();
-            let drain = KVFilter::new(drain, Level::Critical)
-                .only_pass_any_on_all_keys(
-                    hashmap! {
-                        "remote".into() => hashset!["true".into()],
-                    }
-                );
+            let drain = KVFilter::new(drain, Level::Critical).only_pass_any_on_all_keys(hashmap! {
+                "remote".into() => hashset!["true".into()],
+            });
             let drain = slog::Duplicate::new(drain, listen_log.clone()).fuse();
             let conn_log = Logger::root(drain, o![]);
 

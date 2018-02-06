@@ -4,9 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::path::Path;
-use std::io;
 use std::fs;
+use std::io;
+use std::path::Path;
 
 use futures::Stream;
 use futures::sync::mpsc;
@@ -73,10 +73,12 @@ where
     let wr = FramedWrite::new(tx, SshEncoder::new());
     let rd = FramedRead::new(rx, SshDecoder::new());
 
-    let stdin = rd.filter_map(|s| if s.stream() == SshStream::Stdin {
-        Some(s.data())
-    } else {
-        None
+    let stdin = rd.filter_map(|s| {
+        if s.stream() == SshStream::Stdin {
+            Some(s.data())
+        } else {
+            None
+        }
     }).boxify();
 
     let (stdout, stderr) = {
