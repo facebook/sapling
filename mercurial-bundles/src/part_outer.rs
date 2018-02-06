@@ -123,7 +123,7 @@ impl OuterDecoder {
     fn decode_next(
         buf: &mut BytesMut,
         mut state: OuterState,
-        _logger: &slog::Logger,
+        logger: &slog::Logger,
     ) -> (Result<Option<OuterFrame>>, OuterState) {
         // TODO: the only state valid when the stream terminates is
         // StreamEnd. Communicate that to callers.
@@ -150,7 +150,7 @@ impl OuterDecoder {
                     return (Ok(Some(OuterFrame::StreamEnd)), OuterState::StreamEnd);
                 }
 
-                let part_header = Self::decode_header(buf.split_to(header_len).freeze());
+                let part_header = Self::decode_header(buf.split_to(header_len).freeze(), logger);
                 if let Err(e) = part_header {
                     let next = match e.downcast::<ErrorKind>() {
                         Ok(ek) => if ek.is_app_error() {
@@ -195,8 +195,9 @@ impl OuterDecoder {
         }
     }
 
-    fn decode_header(header_bytes: Bytes) -> Result<Option<PartHeader>> {
+    fn decode_header(header_bytes: Bytes, logger: &slog::Logger) -> Result<Option<PartHeader>> {
         let header = part_header::decode(header_bytes)?;
+        debug!(logger, "Decoded header: {:?}", header);
         match validate_header(header)? {
             Some(header) => Ok(Some(header)),
             None => {
