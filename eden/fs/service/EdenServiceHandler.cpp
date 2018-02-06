@@ -575,8 +575,8 @@ void EdenServiceHandler::debugSetLogLevel(
     inherit = false;
   }
 
-  auto db = folly::LoggerDB::get();
-  result.categoryCreated = !db->getCategoryOrNull(*category);
+  auto& db = folly::LoggerDB::get();
+  result.categoryCreated = !db.getCategoryOrNull(*category);
   folly::Logger(*category).getCategory()->setLevel(
       folly::stringToLogLevel(*level), inherit);
 }

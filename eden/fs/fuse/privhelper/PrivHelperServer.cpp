@@ -61,7 +61,7 @@ void PrivHelperServer::initLogging() {
   // Initialize the folly logging code for use inside the privhelper process.
   // For simplicity and safety we always use a fixed logging configuration here
   // rather than parsing a more complex full logging configuration string.
-  auto* rootCategory = folly::LoggerDB::get()->getCategory(".");
+  auto* rootCategory = folly::LoggerDB::get().getCategory(".");
 
   // We always use a non-async file writer, rather than the threaded async
   // writer.
