@@ -37,7 +37,7 @@ use tokio_core::reactor::Remote;
 use BlobChangeset;
 use BlobManifest;
 use errors::*;
-use file::{fetch_blob_from_blobstore, BlobEntry};
+use file::{fetch_file_content_from_blobstore, BlobEntry};
 
 pub struct BlobRepo {
     blobstore: Arc<Blobstore>,
@@ -124,8 +124,8 @@ impl BlobRepo {
         ))
     }
 
-    pub fn get_blob(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
-        fetch_blob_from_blobstore(&self.blobstore, *key)
+    pub fn get_file_content(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
+        fetch_file_content_from_blobstore(&self.blobstore, *key)
     }
 
     pub fn get_changesets(&self) -> BoxStream<NodeHash, Error> {

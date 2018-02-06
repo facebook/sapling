@@ -30,7 +30,7 @@ pub struct BlobEntry {
     ty: Type,
 }
 
-pub fn fetch_blob_from_blobstore(
+pub fn fetch_file_content_from_blobstore(
     blobstore: &Arc<Blobstore>,
     nodeid: NodeHash,
 ) -> BoxFuture<Vec<u8>, Error> {
