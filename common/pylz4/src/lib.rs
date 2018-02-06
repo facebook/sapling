@@ -19,17 +19,19 @@ extern crate byteorder;
 extern crate failure_ext as failure;
 extern crate lz4;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use failure::Error;
 use std::io::Cursor;
 use std::ptr;
 
-use lz4::liblz4::{LZ4StreamDecode, LZ4_createStreamDecode, LZ4_decompress_safe_continue,
-                  LZ4_freeStreamDecode};
+use lz4::liblz4::{LZ4F_compressBound, LZ4StreamDecode, LZ4_compress_continue, LZ4_createStream,
+                  LZ4_createStreamDecode, LZ4_decompress_safe_continue, LZ4_freeStreamDecode};
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Bad LZ4: {}", _0)] BadLZ4(String),
+    #[fail(display = "Failed to init LZ4 context")] LZ4InitFailed,
+    #[fail(display = "Compression failed")] LZ4CompressFailed,
 }
 
 // Wrapper for the lz4 library context
@@ -94,4 +96,42 @@ pub fn decompress(i: &[u8]) -> Result<(Vec<u8>, &[u8]), Error> {
     let inused = i.len();
     let remains = &i[inused..];
     Ok((data, remains))
+}
+
+pub fn compress(input_data: &[u8]) -> Result<Vec<u8>, Error> {
+    let ctx = unsafe { LZ4_createStream() };
+    if ctx.is_null() {
+        bail_err!(ErrorKind::LZ4InitFailed);
+    }
+    // First 4 bytes is an original size stored as le32
+    let prefix = 4;
+    let mut compressed =
+        Vec::with_capacity(prefix + unsafe { LZ4F_compressBound(input_data.len(), ptr::null()) });
+
+    compressed
+        .write_u32::<LittleEndian>(input_data.len() as u32)
+        .unwrap();
+    unsafe {
+        let dest = compressed.as_mut_ptr().offset(4);
+        let res = LZ4_compress_continue(ctx, input_data.as_ptr(), dest, input_data.len() as i32);
+        if res == 0 {
+            bail_err!(ErrorKind::LZ4CompressFailed);
+        }
+        compressed.set_len((res + 4) as usize);
+    }
+    Ok(compressed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_compress_decompress() {
+        let data = "testdata".as_bytes();
+        let compressed = compress(data).unwrap();
+        let (res, remains) = decompress(&compressed).unwrap();
+        assert!(remains.is_empty());
+        assert_eq!(data, res.as_slice());
+    }
 }
