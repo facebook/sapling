@@ -398,6 +398,11 @@ class remotefilectx(context.filectx):
         when there is a merge going on, or zero revs when a root node with no
         parents is being created.
         """
+        # When the correctness of file history is not a requirement.
+        # just return whatever the linknode says for performance.
+        # developer config: unsafe.incorrectfilehistory
+        if self._repo.ui.configbool('unsafe', 'incorrectfilehistory'):
+            return linknode in self._repo.changelog.nodemap
         if not revs:
             return False
         try:
