@@ -966,7 +966,7 @@ coreconfigitem('ui', 'debug',
     default=False,
 )
 coreconfigitem('ui', 'debugger',
-    default=None,
+    default='ipdb',
 )
 coreconfigitem('ui', 'editor',
     default=dynamicdefault,
