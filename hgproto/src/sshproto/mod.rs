@@ -38,7 +38,9 @@
 //! to acknowledge readiness for processing the stream. After the stream is fully read the
 //! responder should respond with a stream (no acknowledgment is required).
 //!
-//! Each command has its own encoding of the regular or streaming responses.
+//! Each command has its own encoding of the regular or streaming responses, although by
+//! convention the streaming responses are chunked. See `hgproto/dechunker.rs` for the format of
+//! chunking.
 
 use bytes::BytesMut;
 use tokio_io::codec::Decoder;

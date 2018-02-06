@@ -11,10 +11,12 @@
 //! protocols, and a Tokio Service framework for them via a trait.
 
 #![deny(warnings)]
+#![feature(conservative_impl_trait)]
 
 // Tokio/IO
 extern crate bytes;
 extern crate futures;
+#[macro_use]
 extern crate tokio_io;
 
 #[macro_use]
@@ -49,6 +51,7 @@ use bytes::Bytes;
 use mercurial_types::NodeHash;
 
 mod batch;
+mod dechunker;
 mod errors;
 mod handler;
 mod commands;

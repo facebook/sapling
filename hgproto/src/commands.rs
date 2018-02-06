@@ -14,9 +14,10 @@ use std::io::{self, BufRead};
 use slog::Logger;
 
 use bytes::Bytes;
-use futures::future::{self, ok, Future};
+use futures::future::{self, err, ok, Either, Future};
 use futures::stream::Stream;
 
+use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt};
 use mercurial_bundles::bundle2::{self, Bundle2Stream};
 use mercurial_types::NodeHash;
@@ -153,11 +154,35 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             SingleRequest::Unbundle { heads } => ok((
                 SingleResponse::ReadyForStream,
                 hgcmds
-                    .unbundle(heads, Bundle2Stream::new(instream, self.logger.new(o!())))
-                    .map(|(bytes, mut remainder)| {
-                        remainder.prepend_bytes(bytes.freeze());
-                        remainder
+                    .unbundle(
+                        heads,
+                        Bundle2Stream::new(Dechunker::new(instream), self.logger.new(o!())),
+                    )
+                    .then(|rest| {
+                        let (bytes, remainder) = match rest {
+                            Err(e) => return Either::A(err(e)),
+                            Ok(rest) => rest,
+                        };
+                        if !bytes.is_empty() {
+                            Either::A(err(ErrorKind::UnconsumedData(
+                                String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                            ).into()))
+                        } else {
+                            Either::B(remainder.check_is_done().from_err())
+                        }
                     })
+                    .then(
+                        |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
+                            Ok((true, remainder)) => ok(remainder.into_inner()),
+                            Ok((false, mut remainder)) => match remainder.fill_buf() {
+                                Err(e) => err(e.into()),
+                                Ok(buf) => err(ErrorKind::UnconsumedData(
+                                    String::from_utf8_lossy(buf).into_owned(),
+                                ).into()),
+                            },
+                            Err(e) => err(e.into()),
+                        },
+                    )
                     .boxify(),
             )).boxify(),
         }
