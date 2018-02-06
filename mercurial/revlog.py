@@ -1887,7 +1887,9 @@ class revlog(object):
                     fh = ifh
                 else:
                     fh = dfh
-                basetext = self.revision(baserev, _df=fh, raw=True)
+                # Deltas are against "flags=0 rawtext".Need "flags=0" rawtext
+                # here, which is equivalent to non-raw text.
+                basetext = self.revision(baserev, _df=fh, raw=False)
                 btext[0] = mdiff.patch(basetext, delta)
 
             try:
