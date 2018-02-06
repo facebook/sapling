@@ -258,9 +258,10 @@ def _parseasciigraph(text):
     return dict(edges)
 
 class simplefilectx(object):
-    def __init__(self, path, data):
+    def __init__(self, path, data, renamed=None):
         self._data = data
         self._path = path
+        self._renamed = renamed
 
     def data(self):
         return self._data
@@ -272,6 +273,8 @@ class simplefilectx(object):
         return self._path
 
     def renamed(self):
+        if self._renamed:
+            return (self._renamed, node.nullid)
         return None
 
     def flags(self):
@@ -292,7 +295,14 @@ class simplecommitctx(context.committablectx):
             self._parents.append(repo[node.nullid])
 
     def filectx(self, key):
-        return simplefilectx(key, self._added[key])
+        data = self._added[key]
+        m = re.match('\A(.*) \((?:renamed|copied) from (.+)\)\s*\Z', data, re.S)
+        if m:
+            data = m.group(1)
+            renamed = m.group(2)
+        else:
+            renamed = None
+        return simplefilectx(key, data, renamed)
 
     def commit(self):
         return self._repo.commitctx(self)
@@ -364,7 +374,8 @@ def drawdag(repo, text):
     comments = list(_getcomments(text))
     filere = re.compile(br'^(\w+)/([\w/]+)\s*=\s*(.*)$', re.M)
     for name, path, content in filere.findall(b'\n'.join(comments)):
-        files[name][path] = content.replace(br'\n', b'\n')
+        content = content.replace(br'\n', b'\n').replace(br'\1', b'\1')
+        files[name][path] = content
 
     committed = {None: node.nullid}  # {name: node}
 
