@@ -792,11 +792,7 @@ namespace {
 folly::IOBuf createOverlayHeaderFromTimestamps(
     const InodeTimestamps& timestamps) {
   return Overlay::createHeader(
-      Overlay::kHeaderIdentifierFile,
-      Overlay::kHeaderVersion,
-      timestamps.atime,
-      timestamps.ctime,
-      timestamps.mtime);
+      Overlay::kHeaderIdentifierFile, Overlay::kHeaderVersion, timestamps);
 }
 } // namespace
 

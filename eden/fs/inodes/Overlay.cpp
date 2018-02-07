@@ -264,12 +264,8 @@ void Overlay::saveOverlayDir(
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
   // Add header to the overlay directory.
-  auto header = createHeader(
-      kHeaderIdentifierDir,
-      kHeaderVersion,
-      dir->timeStamps.atime,
-      dir->timeStamps.ctime,
-      dir->timeStamps.mtime);
+  auto header =
+      createHeader(kHeaderIdentifierDir, kHeaderVersion, dir->timeStamps);
 
   auto iov = header.getIov();
   iov.push_back(
@@ -409,19 +405,17 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
 folly::IOBuf Overlay::createHeader(
     StringPiece identifier,
     uint32_t version,
-    const struct timespec& atime,
-    const struct timespec& ctime,
-    const struct timespec& mtime) {
+    const InodeTimestamps& timestamps) {
   folly::IOBuf header(folly::IOBuf::CREATE, kHeaderLength);
   folly::io::Appender appender(&header, 0);
   appender.push(identifier);
   appender.writeBE(version);
-  appender.writeBE<uint64_t>(atime.tv_sec);
-  appender.writeBE<uint64_t>(atime.tv_nsec);
-  appender.writeBE<uint64_t>(ctime.tv_sec);
-  appender.writeBE<uint64_t>(ctime.tv_nsec);
-  appender.writeBE<uint64_t>(mtime.tv_sec);
-  appender.writeBE<uint64_t>(mtime.tv_nsec);
+  appender.writeBE<uint64_t>(timestamps.atime.tv_sec);
+  appender.writeBE<uint64_t>(timestamps.atime.tv_nsec);
+  appender.writeBE<uint64_t>(timestamps.ctime.tv_sec);
+  appender.writeBE<uint64_t>(timestamps.ctime.tv_nsec);
+  appender.writeBE<uint64_t>(timestamps.mtime.tv_sec);
+  appender.writeBE<uint64_t>(timestamps.mtime.tv_nsec);
   auto paddingSize = kHeaderLength - header.length();
   appender.ensure(paddingSize);
   memset(appender.writableData(), 0, paddingSize);
@@ -450,8 +444,8 @@ folly::File Overlay::openFile(
 
 // Helper function to  add header to the materialized file
 void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
-  auto header =
-      createHeader(kHeaderIdentifierFile, kHeaderVersion, ctime, ctime, ctime);
+  InodeTimestamps ts{ctime};
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, ts);
 
   auto data = header.coalesce();
   auto wrote = folly::writeFull(fd, data.data(), data.size());

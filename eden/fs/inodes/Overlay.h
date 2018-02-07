@@ -66,9 +66,7 @@ class Overlay {
   static folly::IOBuf createHeader(
       folly::StringPiece identifier,
       uint32_t version,
-      const struct timespec& atime,
-      const struct timespec& ctime,
-      const struct timespec& mtime);
+      const InodeTimestamps& timestamps);
 
   /**
    * Helper function that opens an existing overlay file,
