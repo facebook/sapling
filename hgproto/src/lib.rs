@@ -117,6 +117,7 @@ pub enum SingleRequest {
     Unbundle {
         heads: Vec<String>,
     },
+    Gettreepack(GettreepackArgs),
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for
@@ -148,6 +149,22 @@ impl Debug for GetbundleArgs {
     }
 }
 
+/// The arguments that `gettreepack` accepts, in a separate struct for
+/// the convenience of callers.
+#[derive(Debug, Eq, PartialEq)]
+pub struct GettreepackArgs {
+    /// The directory of the tree to send (including its subdirectories). Can be empty, that means
+    /// "root of the repo".
+    pub rootdir: Bytes,
+    /// The manifest nodes of the specified root directory to send.
+    pub mfnodes: Vec<NodeHash>,
+    /// The manifest nodes of the rootdir that are already on the client.
+    pub basemfnodes: Vec<NodeHash>,
+    ///  The fullpath (not relative path) of directories underneath
+    /// the rootdir that should be sent.
+    pub directories: Vec<Bytes>,
+}
+
 #[derive(Debug)]
 pub enum Response {
     Batch(Vec<SingleResponse>),
@@ -174,6 +191,7 @@ pub enum SingleResponse {
     Streamout, /* (BoxStream<Vec<u8>, Error>) */
     ReadyForStream,
     Unbundle,
+    Gettreepack(Bytes),
 }
 
 impl SingleResponse {
@@ -184,6 +202,7 @@ impl SingleResponse {
         match self {
             &Getbundle(_) => true,
             &ReadyForStream => true,
+            &Gettreepack(_) => true,
             _ => false,
         }
     }

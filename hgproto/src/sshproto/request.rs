@@ -13,7 +13,7 @@ use nom::{is_alphanumeric, is_digit, ErrorKind, FindSubstring, IResult, Needed, 
 
 use mercurial_types::NodeHash;
 
-use {GetbundleArgs, Request, SingleRequest};
+use {GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use batch;
 use errors;
 use errors::*;
@@ -69,12 +69,30 @@ fn ident_complete(input: &[u8]) -> IResult<&[u8], &[u8]> {
     }
 }
 
+named!(
+    batch_param_comma_separated<Bytes>,
+    map_res!(
+        do_parse!(key: take_while!(notcomma) >> (key)),
+        |k: &[u8]| if k.is_empty() {
+            bail_msg!("empty input while parsing batch params")
+        } else {
+            Ok::<_, Error>(Bytes::from(batch::unescape(k)?))
+        }
+    )
+);
+
 /// A "*" parameter is a meta-parameter - its argument is a count of
 /// a number of other parameters. (We accept nested/recursive star parameters,
 /// but I don't know if that ever happens in practice.)
 named!(
     param_star<HashMap<Vec<u8>, Vec<u8>>>,
     do_parse!(tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: apply!(params, count) >> (res))
+);
+
+/// List of comma-separated values, each of which is encoded using batch param encoding.
+named!(
+    gettreepack_directories<Vec<Bytes>>,
+    separated_list_complete!(tag!(","), batch_param_comma_separated)
 );
 
 /// A named parameter is a name followed by a decimal integer of the number of
@@ -317,6 +335,11 @@ fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
     }
 }
 
+fn bytes_complete(inp: &[u8]) -> IResult<&[u8], Bytes> {
+    let res = Bytes::from(inp);
+    IResult::Done(b"", res)
+}
+
 macro_rules! replace_expr {
     ($_t:tt $sub:expr) => {$sub};
 }
@@ -401,9 +424,12 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
         match parse_res {
             IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
             IResult::Incomplete(_) => None,
-            IResult::Error(_) => Err(errors::ErrorKind::CommandParse(
-                String::from_utf8_lossy(buf.as_ref()).into_owned(),
-            ))?,
+            IResult::Error(err) => {
+                println!("{:?}", err);
+                Err(errors::ErrorKind::CommandParse(
+                    String::from_utf8_lossy(buf.as_ref()).into_owned(),
+                ))?
+            }
         }
     };
 
@@ -479,6 +505,13 @@ fn parse_with_params(
         | command!("unbundle", Unbundle, parse_params, {
               heads => stringlist,
           })
+        | call!(parse_command, "gettreepack", parse_params, 0+1,
+            |kv| Ok(Gettreepack(GettreepackArgs {
+                rootdir: parseval(&kv, "rootdir", bytes_complete)?,
+                mfnodes: parseval(&kv, "mfnodes", hashlist)?,
+                basemfnodes: parseval(&kv, "basemfnodes", hashlist)?,
+                directories: parseval(&kv, "directories", gettreepack_directories)?,
+            })))
     )
 }
 
@@ -1295,6 +1328,49 @@ mod test_parse {
         );
     }
 
+    #[test]
+    fn test_parse_gettreepack() {
+        let inp = "gettreepack\n\
+                   * 4\n\
+                   rootdir 0\n\
+                   mfnodes 40\n\
+                   1111111111111111111111111111111111111111\
+                   basemfnodes 40\n\
+                   1111111111111111111111111111111111111111\
+                   directories 0\n";
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
+                rootdir: Bytes::new(),
+                mfnodes: vec![hash_ones()],
+                basemfnodes: vec![hash_ones()],
+                directories: vec![],
+            })),
+        );
+
+        let inp =
+            "gettreepack\n\
+             * 4\n\
+             rootdir 5\n\
+             ololo\
+             mfnodes 81\n\
+             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222\
+             basemfnodes 81\n\
+             2222222222222222222222222222222222222222 1111111111111111111111111111111111111111\
+             directories 5\n\
+             :o,:s";
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
+                rootdir: Bytes::from("ololo".as_bytes()),
+                mfnodes: vec![hash_ones(), hash_twos()],
+                basemfnodes: vec![hash_twos(), hash_ones()],
+                directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
+            })),
+        );
+    }
 
     #[test]
     fn test_parse_known_1() {

@@ -114,6 +114,8 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
 
         &Getbundle(ref res) => res.clone(),
 
+        &Gettreepack(ref res) => res.clone(),
+
         r => panic!("Response for {:?} unimplemented", r),
     }
 }

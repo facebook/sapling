@@ -24,7 +24,7 @@ use mercurial_bundles::bundle2::{self, Bundle2Stream};
 use mercurial_types::NodeHash;
 use tokio_io::AsyncRead;
 
-use {BranchRes, GetbundleArgs, SingleRequest, SingleResponse};
+use {BranchRes, GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
 use errors::*;
 
@@ -246,6 +246,15 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ]);
                 (resps.boxify(), recv.from_err().boxify())
             }
+            SingleRequest::Gettreepack(args) => (
+                hgcmds
+                    .gettreepack(args)
+                    .map(SingleResponse::Gettreepack)
+                    .map_err(self::Error::into)
+                    .into_stream()
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
         }
     }
 
@@ -399,6 +408,11 @@ pub trait HgCommands {
         R: AsyncRead + BufRead + 'static + Send,
     {
         unimplemented("unbundle")
+    }
+
+    // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
+    fn gettreepack(&self, _params: GettreepackArgs) -> HgCommandRes<Bytes> {
+        unimplemented("gettreepack")
     }
 }
 

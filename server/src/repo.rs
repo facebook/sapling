@@ -98,6 +98,7 @@ fn wireprotocaps() -> Vec<String> {
         "known".to_string(),
         "getbundle".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
+        "gettreepack".to_string(),
     ]
 }
 
