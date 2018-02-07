@@ -102,30 +102,30 @@ class Client(object):
 
     def _getquery(self):
         return '''
-              query RevisionQuery(
-                $params: [DifferentialRevisionQueryParams!]!
-              ) {
-                query: differential_revision_query(query_params: $params) {
-                  results {
+        query RevisionQuery(
+          $params: [DifferentialRevisionQueryParams!]!
+        ) {
+          query: differential_revision_query(query_params: $params) {
+            results {
+              nodes {
+                number
+                diff_status_name
+                latest_active_diff {
+                  local_commit_info: diff_properties (
+                    property_names: ["local:commits"]
+                  ) {
                     nodes {
-                      number
-                      diff_status_name
-                      latest_active_diff {
-                        local_commit_info: diff_properties (
-                          property_names: ["local:commits"]
-                        ) {
-                          nodes {
-                            property_value
-                          }
-                        }
-                      }
-                      differential_diffs {
-                        count
-                      }
+                      property_value
                     }
                   }
                 }
+                differential_diffs {
+                  count
+                }
               }
+            }
+          }
+        }
         '''
 
     def _processrevisioninfo(self, ret, rev_numbers):
