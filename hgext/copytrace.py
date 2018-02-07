@@ -196,7 +196,9 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
         # Merge in any existing amend copies from any previous amends.
         try:
-            orig_data = db.get(old.node(), '{}')
+            orig_data = db[old.node()]
+        except KeyError:
+            orig_data = '{}'
         except anydbm.error as e:
             ui.log('copytrace',
                    'Failed to read key %s from amendcopytrace db: %s' %
