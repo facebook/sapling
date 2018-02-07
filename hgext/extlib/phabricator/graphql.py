@@ -93,10 +93,7 @@ class Client(object):
     def getrevisioninfo(self, timeout, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
         if self._mock:
-            response = self._mocked_responses.pop()
-            if 'error_info' in response:
-                raise ClientError(None, response['error_info'])
-            ret = {'query': {0: {'results': {'nodes': response}}}}
+            ret = self._mocked_responses.pop()
         else:
             params = { 'params': { 'numbers': rev_numbers } }
             ret = self._client.query(timeout, self._getquery(), params)
@@ -131,14 +128,20 @@ class Client(object):
         '''
 
     def _processrevisioninfo(self, ret, rev_numbers):
-        revisions = ret['query'][0]['results']['nodes']
+        try:
+            errormsg = ret['errors'][0]['message']
+            raise ClientError(None, errormsg)
+        except (KeyError, TypeError):
+            pass
+
+        revisions = ret['data']['query'][0]['results']['nodes']
         if revisions is None:
             return None
 
         infos = {}
         for revision in rev_numbers:
             info = {}
-            for node in ret['query'][0]['results']['nodes']:
+            for node in ret['data']['query'][0]['results']['nodes']:
                 if node['number'] != revision:
                     continue
 

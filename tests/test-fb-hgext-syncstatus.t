@@ -28,11 +28,11 @@ And now with bad responses:
   $ cat > $TESTTMP/mockduit << EOF
   > [{}]
   > EOF
-  $ OVERRIDE_GRAPHQL_URI=https://a.com HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
-  Error
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
+  KeyError: 'data'
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"error_info": "failed, yo"}]
+  > [{"errors": [{"message": "failed, yo"}]}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
@@ -42,7 +42,7 @@ And now with bad responses:
 Missing status field is treated as an error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "latest_active_diff": {
   >     "local_commit_info": {
@@ -52,7 +52,7 @@ Missing status field is treated as an error
   >     }
   >   },
   >   "differential_diffs": {"count": 3}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
   KeyError: 'diff_status_name'
@@ -60,7 +60,7 @@ Missing status field is treated as an error
 Missing count field is treated as an error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Approved",
   >   "latest_active_diff": {
@@ -70,7 +70,7 @@ Missing count field is treated as an error
   >       ]
   >     }
   >   }
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
   KeyError: 'differential_diffs'
@@ -78,7 +78,7 @@ Missing count field is treated as an error
 Missing hash field is treated as unsync
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Approved",
   >   "latest_active_diff": {
@@ -89,7 +89,7 @@ Missing hash field is treated as unsync
   >     }
   >   },
   >   "differential_diffs": {"count": 3}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   unsync
@@ -97,7 +97,7 @@ Missing hash field is treated as unsync
 And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Committed",
   >   "latest_active_diff": {
@@ -108,7 +108,7 @@ And finally, the success case
   >     }
   >   },
   >   "differential_diffs": {"count": 3}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   committed

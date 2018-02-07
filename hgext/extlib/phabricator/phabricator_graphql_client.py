@@ -44,7 +44,7 @@ class PhabricatorGraphQLClient(object):
             self.graphql_url,
             data=data,
             timeout=timeout,
-            ca_bundle=self.ca_bundle).get('data')
+            ca_bundle=self.ca_bundle)
 
     def _checkconnection(self, timeout):
         """

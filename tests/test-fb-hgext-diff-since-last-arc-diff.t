@@ -33,28 +33,27 @@ Prep configuration
 Now progressively test the response handling for variations of missing data
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[]]
+  > [{}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
-  abort: unable to determine previous changeset hash
-  [255]
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff 2>&1 | grep Error
+  KeyError: 'data'
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
   >   "differential_diffs": {"count": 3}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
   [255]
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review"
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
   abort: unable to determine previous changeset hash
@@ -64,7 +63,7 @@ This is the case when the diff is up to date with the current commit;
 there is no diff since what was landed.
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
   >   "latest_active_diff": {
@@ -75,7 +74,7 @@ there is no diff since what was landed.
   >     }
   >   },
   >   "differential_diffs": {"count": 1}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
 
@@ -85,7 +84,7 @@ the commit list returned from our mocked phabricator; it is present to
 assert that we order the commits consistently based on the time field.
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [[{
+  > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
   >   "latest_active_diff": {
@@ -96,7 +95,7 @@ assert that we order the commits consistently based on the time field.
   >     }
   >   },
   >   "differential_diffs": {"count": 1}
-  > }]]
+  > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff --nodates
   diff -r 88dd5a13bf28 foo
