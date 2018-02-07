@@ -382,6 +382,16 @@ pypats = [
   ]
 ]
 
+# ported from check-commit
+pycorepats = [
+    [
+    (r"\n\n\n", "use single blank line"),
+    (r"\bdef (?!cffi|http)[a-z]+_[a-z]\(", "use foobar, not foo_bar naming"),
+    ],
+    # warnings
+    [],
+]
+
 pyfilters = [
     (r"""(?msx)(?P<comment>\#.*?$)|
          ((?P<quote>('''|\"\"\"|(?<!')'(?!')|(?<!")"(?!")))
@@ -518,6 +528,8 @@ checks = [
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', pyfilters, pypats),
     ('python', r'.*\.(py|cgi)$', r'^#!.*python', [], pynfpats),
     ('python', r'.*hgext.*\.py$', '', [], pyextnfpats),
+    ('python', r'.*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py',
+     '', pyfilters, pycorepats),
     ('python 3', r'.*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py',
      '', pyfilters, py3pats),
     ('test script', r'(.*/)?test-[^.~]*$', '', testfilters, testpats),
