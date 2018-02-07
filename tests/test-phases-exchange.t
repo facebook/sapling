@@ -1138,12 +1138,13 @@ Test that test are properly ignored on remote event when existing locally
 same over the wire
 
   $ cd ../beta
-  $ hg serve -p $HGPORT -d --pid-file=../beta.pid -E ../beta-error.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../beta.pid -E ../beta-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../beta.pid >> $DAEMON_PIDS
   $ cd ../gamma
 
   $ hg pull http://localhost:$HGPORT/ # bundle2+
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg phase f54f1bb90ff3
@@ -1152,7 +1153,7 @@ same over the wire
 enforce bundle1
 
   $ hg pull http://localhost:$HGPORT/ --config devel.legacy.exchange=bundle1
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg phase f54f1bb90ff3
@@ -1161,7 +1162,7 @@ enforce bundle1
 check that secret local on both side are not synced to public
 
   $ hg push -r b555f63b6063 http://localhost:$HGPORT/
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]

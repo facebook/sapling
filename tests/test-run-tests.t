@@ -551,7 +551,8 @@ Verify that when a process fails to start we show a useful message
 Verify that we can try other ports
 ===================================
   $ hg init inuse
-  $ hg serve -R inuse -p $HGPORT -d --pid-file=blocks.pid
+  $ hg serve -R inuse -p 0 --port-file $TESTTMP/.port -d --pid-file=blocks.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat blocks.pid >> $DAEMON_PIDS
   $ cat > test-serve-inuse.t <<EOF
   >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid

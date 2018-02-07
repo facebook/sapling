@@ -1515,7 +1515,8 @@ Path refreshing works as expected
   > [paths]
   > / = $root/refreshtest/*
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid --webdir-conf paths.conf
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
@@ -1546,7 +1547,8 @@ immediately.
   > [paths]
   > / = $root/refreshtest/*
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid --webdir-conf paths.conf
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
@@ -1573,7 +1575,8 @@ immediately.
   > /dir1/a_repo/b_repo = $root/b
   > /dir1/dir2/index = $root/b
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid --webdir-conf paths.conf
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ echo 'index file' > $root/a/index
@@ -1684,7 +1687,8 @@ Repos named 'index' take precedence over the index file
   > [paths]
   > / = $root/a
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid --webdir-conf paths.conf
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg id http://localhost:$HGPORT1

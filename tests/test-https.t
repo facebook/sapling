@@ -22,7 +22,8 @@ Make server certificates:
   adding foo.d/bAr.hg.d/BaR
   adding foo.d/baR.d.hg/bAR
   adding foo.d/foo
-  $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg0.pid --certificate=$PRIV
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../hg0.pid >> $DAEMON_PIDS
 
 cacert not found
@@ -35,7 +36,7 @@ cacert not found
 Test server address cannot be reused
 
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
-  abort: cannot start server at 'localhost:$HGPORT': $EADDRINUSE$
+  abort: cannot start server at 'localhost:$HGPORT': $EADDRINUSE$ (glob)
   [255]
 
   $ cd ..
@@ -210,14 +211,14 @@ pull without cacert
   > changegroup = sh -c "printenv.py changegroup"
   > EOF
   $ hg pull $DISABLECACERTS
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
   (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e to trust this server)
   [255]
 
   $ hg pull --insecure
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
@@ -226,7 +227,7 @@ pull without cacert
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 5fed3813f7f5
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=https://localhost:$HGPORT/
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=https://localhost:$HGPORT/ (glob)
   (run 'hg update' to get a working copy)
   $ cd ..
 
@@ -236,7 +237,7 @@ cacert configured in local repo
   $ echo "[web]" >> copy-pull/.hg/hgrc
   $ echo "cacerts=$CERTSDIR/pub.pem" >> copy-pull/.hg/hgrc
   $ hg -R copy-pull pull
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   searching for changes
   no changes found
@@ -248,12 +249,12 @@ variables in the filename
   $ echo "[web]" >> $HGRCPATH
   $ echo 'cacerts=$P/pub.pem' >> $HGRCPATH
   $ P="$CERTSDIR" hg -R copy-pull pull
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   searching for changes
   no changes found
   $ P="$CERTSDIR" hg -R copy-pull pull --insecure
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
@@ -265,14 +266,14 @@ empty cacert file
 
 #if sslcontext
   $ hg --config web.cacerts=emptycafile -R copy-pull pull
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   abort: error loading CA file emptycafile: * (glob)
   (file is empty or malformed?)
   [255]
 #else
   $ hg --config web.cacerts=emptycafile -R copy-pull pull
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   abort: error: * (glob)
   [255]
@@ -295,14 +296,14 @@ cacert mismatch
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem"
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem" \
   > --insecure
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
@@ -310,11 +311,12 @@ cacert mismatch
 
 Test server cert which isn't valid yet
 
-  $ hg serve -R test -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg1.pid --certificate=server-not-yet.pem
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg1.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-not-yet.pem" \
   > https://localhost:$HGPORT1/
-  pulling from https://localhost:$HGPORT1/
+  pulling from https://localhost:$HGPORT1/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
@@ -322,11 +324,12 @@ Test server cert which isn't valid yet
 
 Test server cert which no longer is valid
 
-  $ hg serve -R test -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg2.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-expired.pem" \
   > https://localhost:$HGPORT2/
-  pulling from https://localhost:$HGPORT2/
+  pulling from https://localhost:$HGPORT2/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
@@ -538,9 +541,11 @@ The per-host config option by itself works
 
 Prepare for connecting through proxy
 
-  $ hg serve -R test -p $HGPORT -d --pid-file=hg0.pid --certificate=$PRIV
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg0.pid --certificate=$PRIV
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg0.pid >> $DAEMON_PIDS
-  $ hg serve -R test -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg2.pid >> $DAEMON_PIDS
 tinyproxy.py doesn't fully detach, so killing it may result in extra output
 from the shell. So don't kill it.
@@ -555,8 +560,8 @@ from the shell. So don't kill it.
 
 Test unvalidated https through proxy
 
-  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --insecure
-  pulling from https://localhost:$HGPORT/
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://localhost:$HGPORT/ --insecure
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
@@ -564,9 +569,9 @@ Test unvalidated https through proxy
 
 Test https with cacert and fingerprint through proxy
 
-  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull \
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://localhost:$HGPORT/ \
   > --config web.cacerts="$CERTSDIR/pub.pem"
-  pulling from https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   searching for changes
   no changes found
@@ -580,15 +585,15 @@ Test https with cacert and fingerprint through proxy
 Test https with cert problems through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull \
-  > --config web.cacerts="$CERTSDIR/pub-other.pem"
-  pulling from https://localhost:$HGPORT/
+  > --config web.cacerts="$CERTSDIR/pub-other.pem" https://localhost:$HGPORT/
+  pulling from https://localhost:$HGPORT/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)
   [255]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull \
   > --config web.cacerts="$CERTSDIR/pub-expired.pem" https://localhost:$HGPORT2/
-  pulling from https://localhost:$HGPORT2/
+  pulling from https://localhost:$HGPORT2/ (glob)
   warning: connecting to localhost using legacy security technology (TLS 1.0); see https://mercurial-scm.org/wiki/SecureConnections for more info (?)
   (the full certificate chain may not be available locally; see "hg help debugssl") (windows !)
   abort: error: *certificate verify failed* (glob)

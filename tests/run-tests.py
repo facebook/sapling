@@ -1594,6 +1594,10 @@ class TTest(Test):
                 return b'-glob'
             return True
         el = el.replace(b'$LOCALIP', b'*')
+        # $HGPORT might be changed in test. Do a fuzzy match.
+        el = el.replace(b'$HGPORT1', b'*')
+        el = el.replace(b'$HGPORT2', b'*')
+        el = el.replace(b'$HGPORT', b'*')
         i, n = 0, len(el)
         res = b''
         while i < n:

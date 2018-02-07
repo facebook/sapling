@@ -16,7 +16,8 @@ Set up a server
   $ touch bar
   $ hg -q commit -A -m 'add bar'
 
-  $ hg serve -d -p $HGPORT --pid-file hg.pid --accesslog access.log
+  $ hg serve -d -p 0 --port-file $TESTTMP/.port --pid-file hg.pid --accesslog access.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -63,7 +64,7 @@ Server is not running aborts
 
   $ echo "http://localhost:$HGPORT1/bundle.hg" > server/.hg/clonebundles.manifest
   $ hg clone http://localhost:$HGPORT server-not-runner
-  applying clone bundle from http://localhost:$HGPORT1/bundle.hg
+  applying clone bundle from http://localhost:$HGPORT1/bundle.hg (glob)
   error fetching bundle: (.* refused.*|Protocol not supported|(.* )?Cannot assign requested address) (re)
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
@@ -74,7 +75,7 @@ Server returns 404
   $ "$PYTHON" $TESTDIR/dumbhttp.py -p $HGPORT1 --pid http.pid
   $ cat http.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT running-404
-  applying clone bundle from http://localhost:$HGPORT1/bundle.hg
+  applying clone bundle from http://localhost:$HGPORT1/bundle.hg (glob)
   HTTP error fetching bundle: HTTP Error 404: File not found
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
@@ -83,7 +84,7 @@ Server returns 404
 We can override failure to fall back to regular clone
 
   $ hg --config ui.clonebundlefallback=true clone -U http://localhost:$HGPORT 404-fallback
-  applying clone bundle from http://localhost:$HGPORT1/bundle.hg
+  applying clone bundle from http://localhost:$HGPORT1/bundle.hg (glob)
   HTTP error fetching bundle: HTTP Error 404: File not found
   falling back to normal clone
   requesting all changes
@@ -119,7 +120,7 @@ changes. If this output changes, we could break old clients.
 
   $ echo "http://localhost:$HGPORT1/partial.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT partial-bundle
-  applying clone bundle from http://localhost:$HGPORT1/partial.hg
+  applying clone bundle from http://localhost:$HGPORT1/partial.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -143,7 +144,7 @@ Incremental pull doesn't fetch bundle
 
   $ cd partial-clone
   $ hg pull
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -192,7 +193,7 @@ by old clients.
 
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT full-bundle
-  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  applying clone bundle from http://localhost:$HGPORT1/full.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -204,7 +205,7 @@ by old clients.
 Feature works over SSH
 
   $ hg clone -U -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/server ssh-full-clone
-  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  applying clone bundle from http://localhost:$HGPORT1/full.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -223,7 +224,7 @@ Entry with unknown BUNDLESPEC is filtered and not used
   > EOF
 
   $ hg clone -U http://localhost:$HGPORT filter-unknown-type
-  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  applying clone bundle from http://localhost:$HGPORT1/full.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -260,7 +261,7 @@ URLs requiring SNI are filtered in Python <2.7.9
 Python 2.7.9+ support SNI
 
   $ hg clone -U http://localhost:$HGPORT sni-supported
-  applying clone bundle from http://localhost:$HGPORT1/sni.hg
+  applying clone bundle from http://localhost:$HGPORT1/sni.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -272,7 +273,7 @@ Python 2.7.9+ support SNI
 Python <2.7.9 will filter SNI URLs
 
   $ hg clone -U http://localhost:$HGPORT sni-unsupported
-  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  applying clone bundle from http://localhost:$HGPORT1/full.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -295,7 +296,7 @@ No bundle spec should work
   > EOF
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-no-spec
-  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
@@ -309,7 +310,7 @@ Bundle spec without parameters should work
   > EOF
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-vanilla-spec
-  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
@@ -323,7 +324,7 @@ Bundle spec with format requirements should work
   > EOF
 
   $ hg clone -U http://localhost:$HGPORT stream-clone-supported-requirements
-  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in *.* seconds (*) (glob)
   finished applying clone bundle
@@ -364,7 +365,7 @@ important)
 Preferring an undefined attribute will take first entry
 
   $ hg --config ui.clonebundleprefers=foo=bar clone -U http://localhost:$HGPORT prefer-foo
-  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
+  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -376,7 +377,7 @@ Preferring an undefined attribute will take first entry
 Preferring bz2 type will download first entry of that type
 
   $ hg --config ui.clonebundleprefers=COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-bz
-  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
+  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -388,7 +389,7 @@ Preferring bz2 type will download first entry of that type
 Preferring multiple values of an option works
 
   $ hg --config ui.clonebundleprefers=COMPRESSION=unknown,COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-multiple-bz
-  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
+  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -400,7 +401,7 @@ Preferring multiple values of an option works
 Sorting multiple values should get us back to original first entry
 
   $ hg --config ui.clonebundleprefers=BUNDLESPEC=unknown,BUNDLESPEC=gzip-v2,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-multiple-gz
-  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
+  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -412,7 +413,7 @@ Sorting multiple values should get us back to original first entry
 Preferring multiple attributes has correct order
 
   $ hg --config ui.clonebundleprefers=extra=b,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-separate-attributes
-  applying clone bundle from http://localhost:$HGPORT1/bz2-b.hg
+  applying clone bundle from http://localhost:$HGPORT1/bz2-b.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -431,7 +432,7 @@ Test where attribute is missing from some entries
   > EOF
 
   $ hg --config ui.clonebundleprefers=extra=b clone -U http://localhost:$HGPORT prefer-partially-defined-attribute
-  applying clone bundle from http://localhost:$HGPORT1/gz-b.hg
+  applying clone bundle from http://localhost:$HGPORT1/gz-b.hg (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -480,7 +481,7 @@ A manifest with a gzip bundle and a stream clone
   > EOF
 
   $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed
-  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
   finished applying clone bundle
@@ -495,7 +496,7 @@ A manifest with a gzip bundle and stream clone with supported requirements
   > EOF
 
   $ hg clone -U --stream http://localhost:$HGPORT uncompressed-gzip-packed-requirements
-  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg (glob)
   4 files to transfer, 613 bytes of data
   transferred 613 bytes in * seconds (*) (glob)
   finished applying clone bundle

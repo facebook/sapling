@@ -29,7 +29,7 @@
 expect ssl error
 
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: HTTP Error 403: ssl required
   % serve errors
@@ -40,7 +40,7 @@ expect authorization error
   $ echo '[web]' > .hg/hgrc
   $ echo 'push_ssl = false' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -50,7 +50,7 @@ expect authorization error: must have authorized user
 
   $ echo 'allow_push = unperson' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -70,7 +70,7 @@ expect success
   > txnclose-phase.test = sh $TESTTMP/hook.sh 
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -88,7 +88,7 @@ expect success, server lacks the httpheader capability
   $ CAP=httpheader
   $ . "$TESTDIR/notcapable"
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -106,7 +106,7 @@ expect success, server lacks the unbundlehash capability
   $ CAP=unbundlehash
   $ . "$TESTDIR/notcapable"
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -131,7 +131,7 @@ expect push success, phase change failure
   > legacy.exchange=phases
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -153,7 +153,7 @@ expect phase change success
   > legacy.exchange=
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -169,7 +169,7 @@ expect authorization error: all users denied
   $ echo 'push_ssl = false' >> .hg/hgrc
   $ echo 'deny_push = *' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -179,7 +179,7 @@ expect authorization error: some users denied, users must be authenticated
 
   $ echo 'deny_push = unperson' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -193,7 +193,7 @@ expect authorization error: some users denied, users must be authenticated
   > httppostargs=true
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests

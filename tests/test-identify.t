@@ -94,7 +94,8 @@ other local repo
 with remote http repo
 
   $ cd test
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg id http://localhost:$HGPORT1/
   cb9a9f314b8b

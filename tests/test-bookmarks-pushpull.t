@@ -509,7 +509,8 @@ update a bookmark in the middle of a client pulling changes
 We want to use http because it is stateless and therefore more susceptible to
 race conditions
 
-  $ hg serve -R pull-race -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ hg serve -R pull-race -p 0 --port-file $TESTTMP/.port -d --pid-file=pull-race.pid -E main-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat pull-race.pid >> $DAEMON_PIDS
 
   $ cat <<EOF > $TESTTMP/out_makecommit.sh
@@ -537,7 +538,8 @@ race conditions
 
   $ cd ..
   $ killdaemons.py
-  $ hg serve -R pull-race -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ hg serve -R pull-race -p 0 --port-file $TESTTMP/.port -d --pid-file=pull-race.pid -E main-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat pull-race.pid >> $DAEMON_PIDS
   $ cd pull-race2
   $ hg -R $TESTTMP/pull-race book
@@ -545,8 +547,8 @@ race conditions
      X                         1:0d2164f0ce0d
    * Y                         4:b0a5eff05604
      Z                         1:0d2164f0ce0d
-  $ hg pull
-  pulling from http://localhost:$HGPORT/
+  $ hg pull http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -584,7 +586,8 @@ Update a bookmark right after the initial lookup -B (issue4689)
 (new config need server restart)
 
   $ killdaemons.py
-  $ hg serve -R ../pull-race -p $HGPORT -d --pid-file=../pull-race.pid -E main-error.log
+  $ hg serve -R ../pull-race -p 0 --port-file $TESTTMP/.port -d --pid-file=../pull-race.pid -E main-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../pull-race.pid >> $DAEMON_PIDS
 
   $ hg -R $TESTTMP/pull-race book
@@ -595,8 +598,8 @@ Update a bookmark right after the initial lookup -B (issue4689)
   $ hg update -r Y
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark Y)
-  $ hg pull -B .
-  pulling from http://localhost:$HGPORT/
+  $ hg pull -B . http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -646,11 +649,12 @@ diverging a remote bookmark fails
   > allow_push = *
   > EOF
 
-  $ hg serve -R ../a -p $HGPORT2 -d --pid-file=../hg2.pid
+  $ hg serve -R ../a -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg2.pid
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat ../hg2.pid >> $DAEMON_PIDS
 
   $ hg push http://localhost:$HGPORT2/
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -666,7 +670,7 @@ Unrelated marker does not alter the decision
 
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ hg push http://localhost:$HGPORT2/
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   abort: push creates new remote head c922c0139ca0 with bookmark 'Y'!
   (merge or see 'hg help push' for details about pushing new heads)
@@ -689,7 +693,7 @@ Update to a successor works
   obsoleted 1 changesets
   $ hg debugobsolete cccccccccccccccccccccccccccccccccccccccc 4efff6d98829d9c824c621afd6e3f01865f5439f
   $ hg push http://localhost:$HGPORT2/
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -712,7 +716,8 @@ hgweb
   > allow_push = *
   > EOF
 
-  $ hg serve -p $HGPORT -d --pid-file=../hg.pid -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ cd ../a
 
@@ -729,7 +734,7 @@ hgweb
   foo	0000000000000000000000000000000000000000
   foobar	9b140be1080824d768c5a4691a564088eede71f9
   $ hg out -B http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changed bookmarks
      @                         0d2164f0ce0d
      X                         0d2164f0ce0d
@@ -737,14 +742,14 @@ hgweb
      foo                                   
      foobar                                
   $ hg push -B Z http://localhost:$HGPORT/
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   updating bookmark Z
   [1]
   $ hg book -d Z
   $ hg in -B http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changed bookmarks
      @                         9b140be10808
      X                         9b140be10808
@@ -752,7 +757,7 @@ hgweb
      foo                       000000000000
      foobar                    9b140be10808
   $ hg pull -B Z http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   no changes found
   divergent bookmark @ stored as @1
   divergent bookmark X stored as X@1
@@ -921,7 +926,7 @@ bookmark, not all outgoing changes:
 Note: this push *must* push only a single changeset, as that's the point
 of this test.
   $ hg push -B add-foo --traceback
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -936,7 +941,7 @@ pushing a new bookmark on a new head does not require -f if -B is specified
   $ echo c5 > f2
   $ hg ci -Am5
   $ hg push -B .
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -1032,7 +1037,8 @@ Check hook preventing push (issue4455)
   > allow_push = *
   > EOF
   $ killdaemons.py
-  $ hg serve -R ../issue4455-dest -p $HGPORT -d --pid-file=../issue4455.pid -E ../issue4455-error.log
+  $ hg serve -R ../issue4455-dest -p 0 --port-file $TESTTMP/.port -d --pid-file=../issue4455.pid -E ../issue4455-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../issue4455.pid >> $DAEMON_PIDS
 
 Local push
@@ -1107,8 +1113,8 @@ Using http
 ----------
 
 #if b2-pushkey
-  $ hg push -B @ http # bundle2+
-  pushing to http://localhost:$HGPORT/
+  $ hg push -B @ http://localhost:$HGPORT/ # bundle2+
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   remote: pushkey-abort: prepushkey hook exited with status 1
@@ -1118,8 +1124,8 @@ Using http
   $ hg -R ../issue4455-dest/ bookmarks
   no bookmarks set
 
-  $ hg push -B @ http --config devel.legacy.exchange=bundle1
-  pushing to http://localhost:$HGPORT/
+  $ hg push -B @ http://localhost:$HGPORT/ --config devel.legacy.exchange=bundle1
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   remote: pushkey-abort: prepushkey hook exited with status 1
@@ -1130,7 +1136,7 @@ Using http
 
 #if b2-binary
 
-  $ hg push -B @ ssh # bundle2+
+  $ hg push -B @ ssh://user@dummy/issue4455-dest # bundle2+
   pushing to ssh://user@dummy/issue4455-dest
   searching for changes
   no changes found

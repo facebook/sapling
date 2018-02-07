@@ -13,7 +13,8 @@
   crosschecking files in changesets and manifests
   checking files
   1 files, 9 changesets, 9 total revisions
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -22,7 +23,7 @@
 http incoming
 
   $ hg -R new incoming http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -70,7 +71,7 @@ http incoming
   summary:     8
   
   $ hg -R new incoming -r 4 http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -223,7 +224,7 @@ limit to 2 changesets, test with -p --git
 test with --bundle
 
   $ hg -R new incoming --bundle test.hg http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   changeset:   0:00a43fa82f62
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -432,7 +433,7 @@ limit to 3 changesets
   summary:     11
   
   $ hg -R test-dev outgoing http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   changeset:   9:d89d4abea5bc
   user:        test
@@ -461,7 +462,7 @@ limit to 3 changesets
   summary:     13
   
   $ hg -R test-dev outgoing -r 11 http://localhost:$HGPORT/
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   changeset:   9:d89d4abea5bc
   user:        test

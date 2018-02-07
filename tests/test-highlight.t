@@ -57,7 +57,8 @@ create random Python file to exercise Pygments
 
 hg serve
 
-  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 hgweb filerevision, html
@@ -906,7 +907,8 @@ Change the pygments style
 
 hg serve again
 
-  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 hgweb highlightcss fruity
@@ -933,7 +935,8 @@ only highlight C source files
 
 hg serve again
 
-  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 test that fileset in highlightfiles works and primes.py is not highlighted
@@ -993,7 +996,8 @@ We attempt to highlight unknown files by default
   $ hg add unknownfile
   $ hg commit -m unknown unknownfile
 
-  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -n test --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT 'file/tip/unknownfile' | grep l2
@@ -1009,7 +1013,8 @@ detection mode
   > EOF
 
   $ killdaemons.py
-  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -n test --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT 'file/tip/unknownfile' | grep l2
   <span id="l2">def foo():</span><a href="#l2"></a>

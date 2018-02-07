@@ -111,7 +111,8 @@ check in shared clone
 
 hg serve shared clone
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT 'raw-file/'
   200 Script output follows

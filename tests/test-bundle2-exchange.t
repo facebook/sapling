@@ -299,11 +299,12 @@ pull over ssh
 
 pull over http
 
-  $ hg serve -R main -p $HGPORT -d --pid-file=main.pid -E main-error.log
+  $ hg serve -R main -p 0 --port-file $TESTTMP/.port -d --pid-file=main.pid -E main-error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat main.pid >> $DAEMON_PIDS
 
   $ hg -R other pull http://localhost:$HGPORT/ -r 42ccdea3bb16 --bookmark book_42cc
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -315,7 +316,7 @@ pull over http
   new changesets 42ccdea3bb16
   postclose-tip:42ccdea3bb16 draft book_42cc
   txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull
-  http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/
+  http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/ (glob)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
   $ hg -R other debugobsolete
@@ -368,7 +369,8 @@ push over ssh
 
 push over http
 
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main phase --public 32af7686d403
@@ -376,7 +378,7 @@ push over http
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=phase
   $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403 --bookmark book_32af
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -390,7 +392,7 @@ push over http
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_SOURCE=push-response HG_TXNID=TXN:$ID$ HG_TXNNAME=push-response
-  http://localhost:$HGPORT2/ HG_URL=http://localhost:$HGPORT2/
+  http://localhost:$HGPORT2/ HG_URL=http://localhost:$HGPORT2/ (glob)
   $ cat other-error.log
 
 Check final content.
@@ -497,7 +499,8 @@ Setting up
   > EOF
 
   $ killdaemons.py
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
 Doing the actual push: Abort error
@@ -523,7 +526,7 @@ Doing the actual push: Abort error
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: Abandon ship!
   remote: (don't panic)
@@ -551,7 +554,7 @@ Doing the actual push: unknown mandatory parts
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   abort: missing support for test:unknown
   [255]
@@ -578,7 +581,7 @@ Doing the actual push: race
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   abort: push failed:
   'repository changed while pushing - please try again'
@@ -595,7 +598,8 @@ Doing the actual push: hook abort
   > EOF
 
   $ killdaemons.py
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
@@ -630,7 +634,7 @@ Doing the actual push: hook abort
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -660,7 +664,8 @@ Check error from hook during the unbundling process itself
   > pretxnchangegroup = sh -c "echo 'Fail early!'; false"
   > EOF
   $ killdaemons.py # reload http config
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
@@ -691,7 +696,7 @@ Check error from hook during the unbundling process itself
   abort: push failed on remote
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -742,7 +747,7 @@ Check output capture control.
   abort: push failed on remote
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -784,7 +789,8 @@ Check abort from mandatory pushkey
   > mandatorypart=$TESTTMP/mandatorypart.py
   > EOF
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
 (Failure from a hook)
@@ -818,7 +824,7 @@ Check abort from mandatory pushkey
   abort: Correct phase push failed (because hooks)
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -856,7 +862,8 @@ Check abort from mandatory pushkey
   > prepushkey.failpush =
   > EOF
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
@@ -890,7 +897,7 @@ Check abort from mandatory pushkey
   abort: Clown phase push failed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -966,7 +973,8 @@ Servers can disable bundle1 for clone/pull operations
   $ touch foo
   $ hg -q commit -A -m initial
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
@@ -989,7 +997,8 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
 
   $ touch foo
   $ hg -q commit -A -m initial
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-1
@@ -1012,7 +1021,8 @@ bundle1 pull can be disabled for generaldelta repos only
   > bundle1gd.pull = false
   > EOF
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
   requesting all changes
@@ -1030,7 +1040,8 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1 = false
   > EOF
-  $ hg serve -R bundle2onlyserver -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -R bundle2onlyserver -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
   requesting all changes
@@ -1048,7 +1059,8 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg serve -R bundle2onlyserver -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -R bundle2onlyserver -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
@@ -1065,7 +1077,8 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-2
@@ -1091,7 +1104,8 @@ Verify bundle1 pushes can be disabled
   > push_ssl = false
   > EOF
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -1108,7 +1122,7 @@ Verify bundle1 pushes can be disabled
   $ echo commit > foo
   $ hg commit -m commit
   $ hg --config devel.legacy.exchange=bundle1 push
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: remote error:
   incompatible Mercurial client; bundle2 required
@@ -1125,7 +1139,7 @@ Verify bundle1 pushes can be disabled
   [1]
 
   $ hg push
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests

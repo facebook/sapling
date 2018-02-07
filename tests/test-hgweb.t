@@ -13,7 +13,8 @@ Some tests for hgweb. Tests static files, plain files and different 404's.
   $ hg bookmark -r0 '@'
   $ hg bookmark -r0 'a b c'
   $ hg bookmark -r0 'd/e/f'
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 manifest
@@ -328,7 +329,8 @@ try bad style
 stop and restart
 
   $ killdaemons.py
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 Test the access/error files are opened in append mode
@@ -857,7 +859,8 @@ errors
 Uncaught exceptions result in a logged error and canned HTTP response
 
   $ killdaemons.py
-  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT 'raiseerror' transfer-encoding content-type
@@ -873,7 +876,8 @@ Uncaught exceptions result in a logged error and canned HTTP response
 
 Uncaught exception after partial content sent
 
-  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT 'raiseerror?partialresponse=1' transfer-encoding content-type
   200 Script output follows

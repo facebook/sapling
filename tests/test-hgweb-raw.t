@@ -14,8 +14,9 @@ Test raw style of hgweb
   $ hg add 'sub/some text%.txt'
   $ hg commit -d "1 0" -m "Just some text"
 
-  $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -A access.log -E error.log -d --pid-file=hg.pid
 
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ (get-with-headers.py localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
 

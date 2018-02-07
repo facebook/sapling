@@ -52,7 +52,8 @@ fetches. This also serves to test the error handling for our batchable
 getfile RPC.
 
   $ cd shallow
-  $ hg serve -p $HGPORT1 -d --pid-file=../hg2.pid -E ../error2.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg2.pid -E ../error2.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cd ..
   $ cat hg2.pid >> $DAEMON_PIDS
 

@@ -5,8 +5,6 @@
   > schemes=
   > 
   > [schemes]
-  > l = http://localhost:$HGPORT/
-  > parts = http://{1}:$HGPORT/
   > z = file:\$PWD/
   > EOF
   $ hg init test
@@ -23,7 +21,12 @@ invalid scheme
 
 http scheme
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
+  $ cat <<EOF >> $HGRCPATH
+  > l = http://localhost:$HGPORT/
+  > parts = http://{1}:$HGPORT/
+  > EOF
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg incoming l://
   comparing with l://
@@ -34,7 +37,7 @@ http scheme
 check that {1} syntax works
 
   $ hg incoming --debug parts://localhost
-  using http://localhost:$HGPORT/
+  using http://localhost:$HGPORT/ (glob)
   sending capabilities command
   comparing with parts://localhost/
   query 1; heads

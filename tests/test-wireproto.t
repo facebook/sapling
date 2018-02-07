@@ -58,7 +58,8 @@ HTTP:
   * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:1033* (glob)
 
 HTTP without args-in-POST:
-  $ hg serve -R repo -p $HGPORT1 -d --pid-file=hg1.pid -E error.log -A access.log
+  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg1.pid -E error.log -A access.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg1.pid >> $DAEMON_PIDS
 
   $ hg debugwireargs http://localhost:$HGPORT1/ un deux trois quatre
@@ -119,7 +120,8 @@ HTTP without the httpheader capability:
   $ CAP=httpheader
   $ . "$TESTDIR/notcapable"
 
-  $ hg serve -R repo -p $HGPORT2 -d --pid-file=hg2.pid -E error2.log -A access2.log
+  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg2.pid -E error2.log -A access2.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg2.pid >> $DAEMON_PIDS
 
   $ hg debugwireargs http://localhost:$HGPORT2/ un deux trois quatre

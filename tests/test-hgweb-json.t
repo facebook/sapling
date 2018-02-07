@@ -102,7 +102,8 @@
 
   $ echo '[web]' >> .hg/hgrc
   $ echo 'allow_archive = bz2' >> .hg/hgrc
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E error.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 (Try to keep these in roughly the order they are defined in webcommands.py)

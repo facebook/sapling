@@ -12,7 +12,8 @@
   adding foo.d/bAr.hg.d/BaR
   adding foo.d/baR.d.hg/bAR
   adding foo.d/foo
-  $ hg serve -p $HGPORT -d --pid-file=../hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cd ..
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -36,7 +37,7 @@ add a commit to the clone
 
 verify that the branchheads are stored properly
   $ hg pull
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg log --graph

@@ -22,7 +22,8 @@ Produce a bundle to use
 
 Serve from a bundle file
 
-  $ hg serve -R .hg/strip-backup/ed602e697e0f-cc9fff6a-backup.hg -d -p $HGPORT --pid-file=hg.pid
+  $ hg serve -R .hg/strip-backup/ed602e697e0f-cc9fff6a-backup.hg -d -p 0 --port-file $TESTTMP/.port --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 Ensure we're serving from the bundle

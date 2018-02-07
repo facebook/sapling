@@ -12,7 +12,8 @@ setting up repo
 
 set up hgweb
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 revision

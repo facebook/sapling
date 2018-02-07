@@ -857,7 +857,8 @@ check hgweb does not explode
 
 #if serve
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 check changelog view
@@ -889,7 +890,8 @@ check that web.view config option:
   > view=all
   > EOF
   $ wait
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/67'
   200 Script output follows
   $ killdaemons.py hg.pid
@@ -1014,7 +1016,8 @@ test summary output
 
 #if serve
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 check obsolete changeset
@@ -1094,15 +1097,16 @@ This test issue 3805
 
 #if serve
 
-  $ hg serve -R ../repo-issue3805 -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -R ../repo-issue3805 -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg incoming http://localhost:$HGPORT
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   2:323a9c3ddd91 (draft) [tip ] A
   $ hg outgoing http://localhost:$HGPORT
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   1:29f0c6921ddd (draft) [tip ] A
 
@@ -1232,7 +1236,8 @@ Test issue 4506
   $ hg debugobsolete `hg log -r1 -T'{node}'` `hg log -r2 -T'{node}'`
   obsoleted 1 changesets
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py --headeronly localhost:$HGPORT 'rev/1'

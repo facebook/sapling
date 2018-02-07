@@ -35,7 +35,7 @@
   $ echo bar >> b/foo
   $ hg -R b ci -m bar
   $ hg --encoding utf-8 -R b push
-  pushing to http://localhost:$HGPORT1/
+  pushing to http://localhost:$HGPORT1/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests

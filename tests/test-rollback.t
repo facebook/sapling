@@ -125,7 +125,8 @@ test rollback on served repository
 
 #if serve
   $ hg commit -m "precious commit message"
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ hg clone http://localhost:$HGPORT u

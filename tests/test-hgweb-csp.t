@@ -11,7 +11,8 @@
   $ hg -q commit -A -m initial
   $ cd ..
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --web-conf web.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --web-conf web.conf
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 repo index should not send Content-Security-Policy header by default
@@ -39,7 +40,8 @@ Configure CSP without nonce
   > csp = script-src https://example.com/ 'unsafe-inline'
   > EOF
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --web-conf web.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --web-conf web.conf
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
 
 repo index should send Content-Security-Policy header when enabled
@@ -76,7 +78,8 @@ Configure CSP with nonce
   > csp = image-src 'self'; script-src https://example.com/ 'nonce-%nonce%'
   > EOF
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --web-conf web.conf
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --web-conf web.conf
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
 
 nonce should be substituted in CSP header
@@ -110,7 +113,8 @@ hgweb_mod w/o hgwebdir works as expected
 
   $ killdaemons.py
 
-  $ hg serve -R repo1 -p $HGPORT -d --pid-file=hg.pid --config "web.csp=image-src 'self'; script-src https://example.com/ 'nonce-%nonce%'"
+  $ hg serve -R repo1 -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --config "web.csp=image-src 'self'; script-src https://example.com/ 'nonce-%nonce%'"
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
 
 static page sends CSP

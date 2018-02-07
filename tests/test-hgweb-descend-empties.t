@@ -24,7 +24,8 @@ Set up the repo
   adding b1/b2/b3/c4/foo
   adding d1/d2/d3/d4/foo
   adding d1/d2/foo
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 manifest with descending (paper)

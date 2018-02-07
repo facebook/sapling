@@ -21,13 +21,14 @@ parts that are not bundle1/bundle2 specific.
   adding foo.d/bAr.hg.d/BaR
   adding foo.d/baR.d.hg/bAR
   adding foo.d/foo
-  $ hg serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg1.pid -E ../error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ hg serve --config server.uncompressed=False -p $HGPORT1 -d --pid-file=../hg2.pid
 
 Test server address cannot be reused
 
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at 'localhost:$HGPORT1': $EADDRINUSE$
+  abort: cannot start server at 'localhost:$HGPORT1': $EADDRINUSE$ (glob)
   [255]
 
   $ cd ..
@@ -139,7 +140,7 @@ incoming via HTTP
   $ touch LOCAL
   $ hg ci -qAm LOCAL
   $ hg incoming http://localhost:$HGPORT1/ --template '{desc}\n'
-  comparing with http://localhost:$HGPORT1/
+  comparing with http://localhost:$HGPORT1/ (glob)
   searching for changes
   2
   $ cd ..
@@ -152,14 +153,14 @@ pull
   > changegroup = sh -c "printenv.py changegroup"
   > EOF
   $ hg pull
-  pulling from http://localhost:$HGPORT1/
+  pulling from http://localhost:$HGPORT1/ (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 5fed3813f7f5
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_NODE_LAST=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT1/ (glob)
   (run 'hg update' to get a working copy)
   $ cd ..
 
@@ -199,13 +200,13 @@ test http authentication
   > EOF
 
   $ hg id http://localhost:$HGPORT2/
-  abort: http authorization required for http://localhost:$HGPORT2/
+  abort: http authorization required for http://localhost:$HGPORT2/ (glob)
   [255]
   $ hg id http://localhost:$HGPORT2/
-  abort: http authorization required for http://localhost:$HGPORT2/
+  abort: http authorization required for http://localhost:$HGPORT2/ (glob)
   [255]
   $ hg id --config ui.interactive=true --config extensions.getpass=get_pass.py http://user@localhost:$HGPORT2/
-  http authorization required for http://localhost:$HGPORT2/
+  http authorization required for http://localhost:$HGPORT2/ (glob)
   realm: mercurial
   user: user
   password: 5fed3813f7f5
@@ -242,7 +243,7 @@ test http authentication
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg id http://user2@localhost:$HGPORT2/
-  abort: http authorization required for http://localhost:$HGPORT2/
+  abort: http authorization required for http://localhost:$HGPORT2/ (glob)
   [255]
   $ hg id http://user:pass2@localhost:$HGPORT2/
   abort: HTTP Error 403: no
@@ -250,7 +251,7 @@ test http authentication
 
   $ hg -R dest tag -r tip top
   $ hg -R dest push http://user:pass@localhost:$HGPORT2/
-  pushing to http://user:***@localhost:$HGPORT2/
+  pushing to http://user:***@localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -361,7 +362,8 @@ check error log
 Check error reporting while pulling/cloning
 
   $ $RUNTESTDIR/killdaemons.py
-  $ hg serve -R test -p $HGPORT -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg3.pid -E error.log --config extensions.crash=${TESTDIR}/crashgetbundler.py
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg3.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ abort-clone
   requesting all changes
@@ -372,7 +374,8 @@ Check error reporting while pulling/cloning
 
 disable pull-based clones
 
-  $ hg serve -R test -p $HGPORT1 -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
+  $ hg serve -R test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg4.pid -E error.log --config server.disablefullbundle=True
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg4.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT1/ disable-pull-clone
   requesting all changes
@@ -399,7 +402,7 @@ disable pull-based clones
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg pull -R test-partial-clone
-  pulling from http://localhost:$HGPORT1/
+  pulling from http://localhost:$HGPORT1/ (glob)
   searching for changes
   adding changesets
   adding manifests

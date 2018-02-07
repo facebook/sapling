@@ -49,7 +49,7 @@ Clone main from hgweb
   added 1 changesets with 3 changes to 3 files
   new changesets fdfeeb3e979e
   updating to branch default
-  cloning subrepo sub from http://localhost:$HGPORT/sub
+  cloning subrepo sub from http://localhost:$HGPORT/sub (glob)
   requesting all changes
   adding changesets
   adding manifests

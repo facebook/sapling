@@ -371,7 +371,7 @@ Hash digest mismatch throws an error
   added 8 changesets with 7 changes to 7 files (+2 heads)
   transaction abort!
   rollback completed
-  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted:
+  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got 2c880cfec23cff7d8f80c2f12958d1563cbdaba6
   [255]
 
@@ -406,7 +406,7 @@ If either of the multiple hash digests mismatches, an error is thrown
   added 8 changesets with 7 changes to 7 files (+2 heads)
   transaction abort!
   rollback completed
-  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted:
+  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   md5 mismatch: expected 00000000000000000000000000000000, got e22172c2907ef88794b7bea6642c2394
   [255]
 
@@ -422,7 +422,7 @@ If either of the multiple hash digests mismatches, an error is thrown
   added 8 changesets with 7 changes to 7 files (+2 heads)
   transaction abort!
   rollback completed
-  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted:
+  abort: bundle at http://localhost:$HGPORT/bundle6.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got 2c880cfec23cff7d8f80c2f12958d1563cbdaba6
   [255]
 
@@ -457,7 +457,7 @@ Corruption tests
   added 2 changesets with 1 changes to 1 files
   transaction abort!
   rollback completed
-  abort: bundle at http://localhost:$HGPORT/bundle5.hg is corrupted:
+  abort: bundle at http://localhost:$HGPORT/bundle5.hg is corrupted: (glob)
   sha1 mismatch: expected 0000000000000000000000000000000000000000, got f29485d6bfd37db99983cfc95ecb52f8ca396106
   [255]
 
@@ -522,7 +522,7 @@ Size mismatch
   added 2 changesets with 2 changes to 2 files (+1 heads)
   transaction abort!
   rollback completed
-  abort: bundle at http://localhost:$HGPORT/bundle4.hg is corrupted:
+  abort: bundle at http://localhost:$HGPORT/bundle4.hg is corrupted: (glob)
   size mismatch: expected 42, got 581
   [255]
 
@@ -574,7 +574,7 @@ Not a bundle
   pulling from ssh://user@dummy/repo
   searching for changes
   remote: remote-changegroup
-  abort: http://localhost:$HGPORT/notbundle.hg: not a Mercurial bundle
+  abort: http://localhost:$HGPORT/notbundle.hg: not a Mercurial bundle (glob)
   [255]
 
 Not a bundle 1.0
@@ -589,7 +589,7 @@ Not a bundle 1.0
   pulling from ssh://user@dummy/repo
   searching for changes
   remote: remote-changegroup
-  abort: http://localhost:$HGPORT/notbundle10.hg: not a bundle version 1.0
+  abort: http://localhost:$HGPORT/notbundle10.hg: not a bundle version 1.0 (glob)
   [255]
 
   $ hg -R clone log -G

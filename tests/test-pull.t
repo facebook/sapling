@@ -15,7 +15,8 @@
   checking files
   1 files, 1 changesets, 1 total revisions
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -46,22 +47,22 @@
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 
   $ hg pull
-  pulling from http://foo@localhost:$HGPORT/
+  pulling from http://foo@localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
 
   $ hg rollback --dry-run --verbose
-  repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
+  repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/) (glob)
 
 Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
 not are encoded like a node:
 
   $ hg pull -r 'xxxxxxxxxxxxxxxxxxxy'
-  pulling from http://foo@localhost:$HGPORT/
+  pulling from http://foo@localhost:$HGPORT/ (glob)
   abort: unknown revision 'xxxxxxxxxxxxxxxxxxxy'!
   [255]
   $ hg pull -r 'xxxxxxxxxxxxxxxxxx y'
-  pulling from http://foo@localhost:$HGPORT/
+  pulling from http://foo@localhost:$HGPORT/ (glob)
   abort: unknown revision '7878787878787878787878787878787878782079'!
   [255]
 

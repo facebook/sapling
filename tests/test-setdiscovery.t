@@ -478,11 +478,12 @@ Test actual protocol when pulling one new head in addition to common heads
   $ hg -R c id -i
   e64a39e7da8b
 
-  $ hg serve -R c -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -R c -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ hg -R b incoming http://localhost:$HGPORT/ -T '{node|short}\n'
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   e64a39e7da8b
 

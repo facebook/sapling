@@ -159,7 +159,8 @@ check http return codes (with deprecated option)
   403 Archive type not allowed: bz2
 
   $ echo "allow_archive = gz bz2 zip" >> .hg/hgrc
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 check archive links' order

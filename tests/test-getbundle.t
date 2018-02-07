@@ -193,7 +193,8 @@ Get branch and merge:
 
 Get everything:
 
-  $ hg serve -R repo -p $HGPORT -d --pid-file=hg.pid -E error.log -A access.log
+  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E error.log -A access.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg debuggetbundle http://localhost:$HGPORT/ bundle
   $ hg debugbundle bundle

@@ -126,7 +126,8 @@
   @@ -0,0 +1,1 @@
   +b
   
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 tip - two revisions

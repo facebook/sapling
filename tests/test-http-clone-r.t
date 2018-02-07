@@ -16,7 +16,8 @@ creating 'remote
 
 Starting server
 
-  $ hg serve -p $HGPORT -E ../error.log -d --pid-file=../hg1.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -E ../error.log -d --pid-file=../hg1.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cd ..
   $ cat hg1.pid >> $DAEMON_PIDS
 
@@ -156,7 +157,7 @@ clone remote via stream
   $ cd ..
   $ cd test-1
   $ hg pull -r 4 http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -171,7 +172,7 @@ clone remote via stream
   checking files
   1 files, 3 changesets, 2 total revisions
   $ hg pull http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -182,7 +183,7 @@ clone remote via stream
   $ cd ..
   $ cd test-2
   $ hg pull -r 5 http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -197,7 +198,7 @@ clone remote via stream
   checking files
   1 files, 5 changesets, 3 total revisions
   $ hg pull http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests

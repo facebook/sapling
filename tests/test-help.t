@@ -2083,7 +2083,8 @@ Test the help pages in hgweb.
 Dish up an empty repo; serve it cold.
 
   $ hg init "$TESTTMP/test"
-  $ hg serve -R "$TESTTMP/test" -n test -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -R "$TESTTMP/test" -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py $LOCALIP:$HGPORT "help"

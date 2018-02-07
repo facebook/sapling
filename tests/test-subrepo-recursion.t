@@ -264,14 +264,14 @@ Status between revisions:
   added 3 changesets with 5 changes to 3 files
   new changesets 23376cbba0d8:1326fa26d0c0
   updating to branch default
-  cloning subrepo foo from http://localhost:$HGPORT/foo
+  cloning subrepo foo from http://localhost:$HGPORT/foo (glob)
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 7 changes to 3 files
   new changesets af048e97ade2:65903cebad86
-  cloning subrepo foo/bar from http://localhost:$HGPORT/foo/bar
+  cloning subrepo foo/bar from http://localhost:$HGPORT/foo/bar (glob)
   requesting all changes
   adding changesets
   adding manifests

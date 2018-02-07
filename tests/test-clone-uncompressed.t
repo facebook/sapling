@@ -12,7 +12,8 @@ the status call is to check for issue5130
   ...         fh.write(str(i))
   $ hg -q commit -A -m 'add a lot of files'
   $ hg st
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -37,7 +38,7 @@ Basic clone
 Clone with background file closing enabled
 
   $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U http://localhost:$HGPORT clone-background | grep -v adding
-  using http://localhost:$HGPORT/
+  using http://localhost:$HGPORT/ (glob)
   sending capabilities command
   sending branchmap command
   streaming all changes
@@ -75,7 +76,8 @@ Cannot stream clone when there are secret changesets
 Streaming of secrets can be overridden by server config
 
   $ cd server
-  $ hg serve --config server.uncompressedallowsecret=true -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.uncompressedallowsecret=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -91,7 +93,8 @@ Streaming of secrets can be overridden by server config
 Verify interaction between preferuncompressed and secret presence
 
   $ cd server
-  $ hg serve --config server.preferuncompressed=true -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.preferuncompressed=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -108,7 +111,8 @@ Verify interaction between preferuncompressed and secret presence
 Clone not allowed when full bundles disabled and can't serve secrets
 
   $ cd server
-  $ hg serve --config server.disablefullbundle=true -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.disablefullbundle=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid > $DAEMON_PIDS
   $ cd ..
 
@@ -157,7 +161,8 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
   $ touch repo/f1
   $ $TESTDIR/seq.py 50000 > repo/f2
   $ hg -R repo ci -Aqm "0"
-  $ hg serve -R repo -p $HGPORT1 -d --pid-file=hg.pid --config extensions.delayer=delayer.py
+  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --config extensions.delayer=delayer.py
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 clone while modifying the repo between stating file with write lock and

@@ -218,7 +218,8 @@ Create a few commits with flat manifest
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge of flat manifests to new flat manifest'
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 Create clone with tree manifests enabled
@@ -640,7 +641,8 @@ Verify reports missing dirlog entry
   $ cp -R .hg/store-newcopy/. .hg/store
 
 Test cloning a treemanifest repo over http.
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 We can clone even with the knob turned off and we'll get a treemanifest repo.
@@ -705,7 +707,8 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-basicstore
   $ grep store .hg/requires
   [1]
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ hg clone --config format.usefncache=False \
@@ -722,7 +725,8 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-encodedstore
   $ grep fncache .hg/requires
   [1]
-  $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 

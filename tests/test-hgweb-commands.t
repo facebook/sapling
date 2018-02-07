@@ -44,7 +44,8 @@ Set up the repo
   > append = s|(.*)|\1(websub)|
   > EOF
 
-  $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve --config server.uncompressed=False -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg log -G --template '{rev}:{node|short} {desc}\n'
   @  3:cad8025a2e87 branch commit with null character: \x00 (esc)

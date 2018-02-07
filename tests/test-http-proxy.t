@@ -5,7 +5,8 @@
   $ echo a > a
   $ hg ci -Ama -d '1123456789 0'
   adding a
-  $ hg serve --config server.uncompressed=True -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --config server.uncompressed=True -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ tinyproxy.py $HGPORT1 localhost 2>proxy.log >/dev/null </dev/null &

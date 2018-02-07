@@ -31,7 +31,8 @@ change permissions for git diffs
 
 set up hgweb
 
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 revision
@@ -326,7 +327,8 @@ patch header and diffstat
 set up hgweb with git diffs
 
   $ killdaemons.py
-  $ hg serve --config 'diff.git=1' -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config 'diff.git=1' -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 revision
@@ -1154,7 +1156,8 @@ raw revision with diff block numbers
   > fileline = '{line}'
   > diffblock = 'Block: {blockno}\n{lines}\n'
   > EOF
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
@@ -1176,7 +1179,8 @@ raw revision with diff block numbers
   $ killdaemons.py
   $ rm .hg/hgrc rawdiff/map
   $ rmdir rawdiff
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 errors

@@ -20,7 +20,8 @@
 
 Without -v
 
-  $ hg serve -a localhost -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -a localhost -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> "$DAEMON_PIDS"
   $ if [ -f access.log ]; then
   >     echo 'access log created - .hg/hgrc respected'

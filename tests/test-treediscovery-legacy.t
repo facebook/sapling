@@ -43,18 +43,18 @@ Both are empty:
   $ hg init empty2
   $ tstart empty2
   $ hg incoming -R empty1 $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   no changes found
   [1]
   $ hg outgoing -R empty1 $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   no changes found
   [1]
   $ hg pull -R empty1 $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   no changes found
   $ hg push -R empty1 $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   no changes found
   [1]
   $ tstop
@@ -99,21 +99,21 @@ Full clone:
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd full
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
@@ -123,11 +123,11 @@ Local is empty:
 
   $ cd empty1
   $ hg incoming $remote --rev name1
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   abort: cannot look up remote changes; remote repository does not support the 'changegroupsubset' capability!
   [255]
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   0 d57206cc072a: r0 
   1 0019a3b924fd: r1 
   2 a7892891da29: r2 name1
@@ -141,15 +141,15 @@ Local is empty:
   10 8b6bad1512e1: r10 both
   11 a19bfa7e7328: r11 both
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   no changes found
   [1]
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   no changes found
   [1]
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   requesting all changes
   adding changesets
   adding manifests
@@ -158,7 +158,7 @@ Local is empty:
   new changesets d57206cc072a:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
@@ -177,7 +177,7 @@ Local is subset:
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cp $HGRCPATH-nocap $HGRCPATH
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   6 a7892891da29: r2 name1
   7 2c8d5d5ec612: r3 name1
@@ -186,17 +186,17 @@ Local is subset:
   10 8b6bad1512e1: r10 both
   11 a19bfa7e7328: r11 both
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -205,7 +205,7 @@ Local is subset:
   new changesets a7892891da29:a19bfa7e7328
   (run 'hg update' to get a working copy)
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
@@ -216,12 +216,12 @@ Remote is empty:
   $ tstop ; tstart empty2
   $ cd main
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   0 d57206cc072a: r0 
   1 0019a3b924fd: r1 
@@ -236,18 +236,18 @@ Remote is empty:
   10 8b6bad1512e1: r10 both
   11 a19bfa7e7328: r11 both
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 12 changesets with 24 changes to 2 files
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
@@ -267,12 +267,12 @@ Local is superset:
   $ tstart subset2
   $ cd main
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   2 a7892891da29: r2 name1
   3 2c8d5d5ec612: r3 name1
@@ -281,24 +281,24 @@ Local is superset:
   10 8b6bad1512e1: r10 both
   11 a19bfa7e7328: r11 both
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: push creates new remote branches: both, name1!
   (use 'hg push --new-branch' to create new remote branches)
   [255]
   $ hg push $remote --new-branch
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 6 changesets with 12 changes to 2 files
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
@@ -312,11 +312,11 @@ Partial pull:
   [255]
   $ hg init partial; cd partial
   $ hg incoming $remote --rev name2
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   abort: cannot look up remote changes; remote repository does not support the 'changegroupsubset' capability!
   [255]
   $ hg pull $remote --rev name2
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   abort: partial pull cannot be done because other repository doesn't support changegroupsubset.
   [255]
   $ cd ..
@@ -344,27 +344,27 @@ Exercise pushing to server without branchmap capability
 
   $ cd rlocal
   $ hg incoming $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   1 27547f69f254: B 
   $ hg pull $remote
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   $ hg push $remote
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ hg outgoing $remote
-  comparing with http://localhost:$HGPORT/
+  comparing with http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   [1]

@@ -282,7 +282,8 @@ set up hgweb
   $ echo a > a
   $ hg ci -Am patch
   adding a
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ cd ../repo

@@ -153,7 +153,7 @@ test with old-style collection
 test --mq works and uses correct repository config
 
   $ hg --cwd d outgoing --mq
-  comparing with http://localhost:$HGPORT2/a/.hg/patches
+  comparing with http://localhost:$HGPORT2/a/.hg/patches (glob)
   searching for changes
   no changes found
   [1]

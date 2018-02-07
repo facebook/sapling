@@ -74,9 +74,11 @@ Need to use printf to avoid check-code complaining about trailing whitespace.
   o  0:b9c578134d72 commit 0
   
 
-  $ hg serve -p $HGPORT -d --pid-file hg.pid
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg serve --config annotate.ignorews=true -p $HGPORT1 -d --pid-file hg.pid
+  $ hg serve --config annotate.ignorews=true -p 0 --port-file $TESTTMP/.port -d --pid-file hg.pid
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 

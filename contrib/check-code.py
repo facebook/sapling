@@ -204,7 +204,7 @@ utestpats = [
   ],
   # warnings
   [
-    (r'^  (?!.*\$LOCALIP)[^*?/\n]* \(glob\)$',
+    (r'^  (?!.*\$LOCALIP|.*\$HGPORT)[^*?/\n]* \(glob\)$',
      "glob match with no glob string (?, *, /, and $LOCALIP)"),
   ]
 ]

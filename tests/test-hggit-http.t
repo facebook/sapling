@@ -12,7 +12,8 @@
   adding foo.d/bAr.hg.d/BaR
   adding foo.d/baR.d.hg/bAR
   adding foo.d/foo
-  $ hg serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg1.pid -E ../error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ hg --config server.uncompressed=False serve -p $HGPORT1 -d --pid-file=../hg2.pid
 
 Test server address cannot be reused
@@ -23,7 +24,7 @@ Test server address cannot be reused
   [255]
 #else
   $ hg serve -p $HGPORT1 2>&1
-  abort: cannot start server at 'localhost:$HGPORT1': $EADDRINUSE$
+  abort: cannot start server at 'localhost:$HGPORT1': $EADDRINUSE$ (glob)
   [255]
 #endif
   $ cd ..

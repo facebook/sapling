@@ -60,14 +60,14 @@ check for HTTP opener failures when cachefile does not exist
   > changegroup = sh -c "printenv.py changegroup"
   > EOF
   $ hg pull
-  pulling from static-http://localhost:$HGPORT/remote
+  pulling from static-http://localhost:$HGPORT/remote (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
   new changesets 4ac2e3648604
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_NODE_LAST=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT/remote
+  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_NODE_LAST=4ac2e3648604439c580c69b09ec9d93a88d93432 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=http://localhost:$HGPORT/remote (glob)
   (run 'hg update' to get a working copy)
 
 trying to push
@@ -77,7 +77,7 @@ trying to push
   $ echo more foo >> bar
   $ hg commit -m"test"
   $ hg push
-  pushing to static-http://localhost:$HGPORT/remote
+  pushing to static-http://localhost:$HGPORT/remote (glob)
   abort: destination does not support push
   [255]
 
@@ -116,7 +116,7 @@ test with "/" URI (issue747) and subrepo
   added 1 changesets with 3 changes to 3 files
   new changesets a9ebfbe8e587
   updating to branch default
-  cloning subrepo sub from static-http://localhost:$HGPORT/sub
+  cloning subrepo sub from static-http://localhost:$HGPORT/sub (glob)
   requesting all changes
   adding changesets
   adding manifests
@@ -135,7 +135,7 @@ test with "/" URI (issue747) and subrepo
   $ cat a
   a
   $ hg paths
-  default = static-http://localhost:$HGPORT/
+  default = static-http://localhost:$HGPORT/ (glob)
 
 test with empty repo (issue965)
 
@@ -153,14 +153,14 @@ test with empty repo (issue965)
   checking files
   0 files, 0 changesets, 0 total revisions
   $ hg paths
-  default = static-http://localhost:$HGPORT/remotempty
+  default = static-http://localhost:$HGPORT/remotempty (glob)
 
 test with non-repo
 
   $ cd ..
   $ mkdir notarepo
   $ hg clone static-http://localhost:$HGPORT/notarepo local3
-  abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!
+  abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository! (glob)
   [255]
 
 Clone with tags and branches works

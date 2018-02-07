@@ -66,14 +66,15 @@ should merge c into a
   a
   b
   c
-  $ hg serve --cwd a -a localhost -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --cwd a -a localhost -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat a/hg.pid >> "$DAEMON_PIDS"
 
 fetch over http, no auth
 (this also tests that editor is invoked if '--edit' is specified)
 
   $ HGEDITOR=cat hg --cwd d fetch --edit http://localhost:$HGPORT/
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -84,7 +85,7 @@ fetch over http, no auth
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   merging with 1:d36c0562f908
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  Automated merge with http://localhost:$HGPORT/
+  Automated merge with http://localhost:$HGPORT/ (glob)
   
   
   HG: Enter commit message.  Lines beginning with 'HG:' are removed.
@@ -96,7 +97,7 @@ fetch over http, no auth
   HG: changed c
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd d tip --template '{desc}\n'
-  Automated merge with http://localhost:$HGPORT/
+  Automated merge with http://localhost:$HGPORT/ (glob)
   $ hg --cwd d status --rev 'tip^1' --rev tip
   A c
   $ hg --cwd d status --rev 'tip^2' --rev tip
@@ -107,7 +108,7 @@ fetch over http with auth (should be hidden in desc)
 specified, even though commit message is not specified explicitly)
 
   $ HGEDITOR=cat hg --cwd e fetch http://user:password@localhost:$HGPORT/
-  pulling from http://user:***@localhost:$HGPORT/
+  pulling from http://user:***@localhost:$HGPORT/ (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -120,7 +121,7 @@ specified, even though commit message is not specified explicitly)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   new changeset 3:* merges remote changes with local (glob)
   $ hg --cwd e tip --template '{desc}\n'
-  Automated merge with http://localhost:$HGPORT/
+  Automated merge with http://localhost:$HGPORT/ (glob)
   $ hg clone a f
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

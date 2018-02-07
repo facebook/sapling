@@ -15,7 +15,8 @@
 
 Cloning with a password in the URL should not save the password in .hg/hgrc:
 
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg clone http://foo:xyzzy@localhost:$HGPORT/ test3
   requesting all changes
@@ -29,7 +30,7 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   $ cat test3/.hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = http://foo@localhost:$HGPORT/
+  default = http://foo@localhost:$HGPORT/ (glob)
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -47,7 +48,8 @@ expect error, cloning not allowed
 
   $ echo '[web]' > .hg/hgrc
   $ echo 'allowpull = false' >> .hg/hgrc
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT/ test4 # bundle2+
   requesting all changes
@@ -73,7 +75,7 @@ serve errors
 expect error, pulling not allowed
 
   $ req
-  pulling from http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors

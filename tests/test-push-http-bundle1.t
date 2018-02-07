@@ -39,7 +39,7 @@ which does not need to exist to keep bundle1 working.
 expect ssl error
 
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: HTTP Error 403: ssl required
   % serve errors
@@ -50,7 +50,7 @@ expect authorization error
   $ echo '[web]' > .hg/hgrc
   $ echo 'push_ssl = false' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -60,7 +60,7 @@ expect authorization error: must have authorized user
 
   $ echo 'allow_push = unperson' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -75,7 +75,7 @@ expect success
   > pushkey = sh -c "printenv.py pushkey 0"
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -91,7 +91,7 @@ expect success, server lacks the httpheader capability
   $ CAP=httpheader
   $ . "$TESTDIR/notcapable"
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -107,7 +107,7 @@ expect success, server lacks the unbundlehash capability
   $ CAP=unbundlehash
   $ . "$TESTDIR/notcapable"
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -136,7 +136,7 @@ has no parameter
   > notcapable-unbundleparam = `pwd`/notcapable-unbundleparam.py
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -158,7 +158,7 @@ expect push success, phase change failure
   > prepushkey = sh -c "printenv.py prepushkey 1"
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -172,7 +172,7 @@ expect phase change success
   > prepushkey = sh -c "printenv.py prepushkey 0"
   > EOF
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   no changes found
   % serve errors
@@ -186,7 +186,7 @@ expect authorization error: all users denied
   $ echo 'push_ssl = false' >> .hg/hgrc
   $ echo 'deny_push = *' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors
@@ -196,7 +196,7 @@ expect authorization error: some users denied, users must be authenticated
 
   $ echo 'deny_push = unperson' >> .hg/hgrc
   $ req
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   abort: authorization failed
   % serve errors

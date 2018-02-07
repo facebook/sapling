@@ -4,7 +4,8 @@ Some tests for hgweb in an empty repository
 
   $ hg init test
   $ cd test
-  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve -n test -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ (get-with-headers.py localhost:$HGPORT 'shortlog')
   200 Script output follows

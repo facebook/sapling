@@ -13,7 +13,8 @@ Test wire protocol unbundle with hashed heads (capability: unbundlehash)
 Create a remote repository.
 
   $ hg init remote
-  $ hg serve -R remote --config web.push_ssl=False --config web.allow_push=* -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
+  $ hg serve -R remote --config web.push_ssl=False --config web.allow_push=* -p 0 --port-file $TESTTMP/.port -d --pid-file=hg1.pid -E error.log -A access.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg1.pid >> $DAEMON_PIDS
 
 Clone the repository and push a change.
@@ -26,7 +27,7 @@ Clone the repository and push a change.
   $ hg ci -R local -A -m hoge
   adding README
   $ hg push -R local
-  pushing to http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
