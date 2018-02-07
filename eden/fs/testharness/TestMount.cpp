@@ -23,6 +23,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -163,8 +164,7 @@ void TestMount::initTestDirectory() {
   config_ = make_unique<ClientConfig>(mountPath, clientDirectory);
 
   // Create localStore_ and backingStore_
-  localStore_ =
-      make_shared<LocalStore>(testDirPath + PathComponentPiece("rocksdb"));
+  localStore_ = make_shared<MemoryLocalStore>();
   backingStore_ = make_shared<FakeBackingStore>(localStore_);
 }
 

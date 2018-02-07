@@ -35,6 +35,7 @@
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/takeover/TakeoverClient.h"
@@ -302,7 +303,7 @@ void EdenServer::prepare() {
 
   XLOG(DBG2) << "opening local RocksDB store";
   const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
-  localStore_ = make_shared<LocalStore>(rocksPath);
+  localStore_ = make_shared<RocksDbLocalStore>(rocksPath);
   XLOG(DBG2) << "done opening local RocksDB store";
 
   // Start listening for graceful takeover requests

@@ -208,7 +208,7 @@ class HgImporter {
   static void readManifestEntry(
       HgManifestImporter& importer,
       folly::io::Cursor& cursor,
-      LocalStore::WriteBatch& writeBatch);
+      LocalStore::WriteBatch* writeBatch);
   /**
    * Read a response chunk header from the helper process
    *
@@ -266,7 +266,7 @@ class HgImporter {
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
-      LocalStore::WriteBatch& writeBatch);
+      LocalStore::WriteBatch* writeBatch);
 
   folly::Subprocess helper_;
   const AbsolutePath repoPath_;

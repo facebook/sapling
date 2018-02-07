@@ -148,7 +148,7 @@ struct HgProxyHash {
   static Hash store(
       RelativePathPiece path,
       Hash hgRevHash,
-      LocalStore::WriteBatch& writeBatch) {
+      LocalStore::WriteBatch* writeBatch) {
     auto computedPair = prepareToStore(path, hgRevHash);
     HgProxyHash::store(computedPair, writeBatch);
     return computedPair.first;
@@ -182,8 +182,8 @@ struct HgProxyHash {
    */
   static void store(
       const std::pair<Hash, IOBuf>& computedPair,
-      LocalStore::WriteBatch& writeBatch) {
-    writeBatch.put(
+      LocalStore::WriteBatch* writeBatch) {
+    writeBatch->put(
         KeySpace::HgProxyHashFamily,
         computedPair.first,
         // Note that this depends on prepareToStore() having called
@@ -497,8 +497,8 @@ std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
       pathInfo.revHash(), // this is really the manifest node
       id,
       pathInfo.path(),
-      writeBatch);
-  writeBatch.flush();
+      writeBatch.get());
+  writeBatch->flush();
   return tree;
 }
 
@@ -506,7 +506,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path,
-    LocalStore::WriteBatch& writeBatch) {
+    LocalStore::WriteBatch* writeBatch) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -516,7 +516,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
   if (path.empty() && manifestNode == kZeroHash) {
     auto tree = std::make_unique<Tree>(std::vector<TreeEntry>{}, edenTreeID);
     auto serialized = LocalStore::serializeTree(tree.get());
-    writeBatch.put(
+    writeBatch->put(
         KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
     return tree;
   }
@@ -669,7 +669,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
   auto tree = std::make_unique<Tree>(std::move(entries), edenTreeID);
   auto serialized = LocalStore::serializeTree(tree.get());
-  writeBatch.put(
+  writeBatch->put(
       KeySpace::TreeFamily, edenTreeID, serialized.second.coalesce());
   return tree;
 }
@@ -695,11 +695,12 @@ Hash HgImporter::importTreeManifest(StringPiece revName) {
   RelativePathPiece path{};
   auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
   auto writeBatch = store_->beginWrite();
-  auto tree = importTreeImpl(manifestNode, proxyInfo.first, path, writeBatch);
+  auto tree =
+      importTreeImpl(manifestNode, proxyInfo.first, path, writeBatch.get());
   // Only write the proxy hash value for this once we've imported
   // the root.
-  HgProxyHash::store(proxyInfo, writeBatch);
-  writeBatch.flush();
+  HgProxyHash::store(proxyInfo, writeBatch.get());
+  writeBatch->flush();
 
   return tree->getHash();
 }
@@ -713,7 +714,7 @@ Hash HgImporter::importFlatManifest(StringPiece revName) {
 
 Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
   auto writeBatch = store->beginWrite(FLAGS_hgManifestImportBufferSize);
-  HgManifestImporter importer(store, writeBatch);
+  HgManifestImporter importer(store, writeBatch.get());
   size_t numPaths = 0;
 
   auto start = std::chrono::steady_clock::now();
@@ -735,7 +736,7 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
     // Now process the entries in the chunk
     Cursor cursor(&chunkData);
     while (!cursor.isAtEnd()) {
-      readManifestEntry(importer, cursor, writeBatch);
+      readManifestEntry(importer, cursor, writeBatch.get());
       ++numPaths;
     }
 
@@ -744,7 +745,7 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
     }
   }
 
-  writeBatch.flush();
+  writeBatch->flush();
 
   auto computeEnd = std::chrono::steady_clock::now();
   XLOG(DBG2) << "computed trees for " << numPaths << " manifest paths in "
@@ -801,7 +802,7 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
 void HgImporter::readManifestEntry(
     HgManifestImporter& importer,
     folly::io::Cursor& cursor,
-    LocalStore::WriteBatch& writeBatch) {
+    LocalStore::WriteBatch* writeBatch) {
   Hash::Storage hashBuf;
   cursor.pull(hashBuf.data(), hashBuf.size());
   Hash fileRevHash(hashBuf);

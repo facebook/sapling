@@ -21,7 +21,7 @@
 #include <sysexits.h>
 
 #include "eden/fs/model/Tree.h"
-#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
     revName = ".";
   }
 
-  LocalStore store(rocksPath);
+  RocksDbLocalStore store(rocksPath);
 
   int returnCode = EX_OK;
   if (!FLAGS_flat_import_file.empty()) {

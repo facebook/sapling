@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -29,8 +30,7 @@ class FakeBackingStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
-    auto path = AbsolutePathPiece{testDir_->path().string()};
-    localStore_ = std::make_shared<LocalStore>(path);
+    localStore_ = std::make_shared<MemoryLocalStore>();
     store_ = std::make_unique<FakeBackingStore>(localStore_);
   }
 

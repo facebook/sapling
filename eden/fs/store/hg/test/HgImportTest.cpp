@@ -19,6 +19,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/testharness/HgRepo.h"
@@ -56,7 +57,7 @@ class HgImportTest : public ::testing::Test {
   TemporaryDirectory testDir_{"eden_test"};
   AbsolutePath testPath_{testDir_.path().string()};
   HgRepo repo_{testPath_ + PathComponentPiece{"repo"}};
-  LocalStore localStore_{testPath_ + PathComponentPiece{"store"}};
+  MemoryLocalStore localStore_;
 };
 
 void HgImportTest::importTest(bool treemanifest) {

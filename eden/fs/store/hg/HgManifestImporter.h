@@ -28,7 +28,7 @@ class HgManifestImporter {
  public:
   explicit HgManifestImporter(
       LocalStore* store,
-      LocalStore::WriteBatch& writeBatch);
+      LocalStore::WriteBatch* writeBatch);
   virtual ~HgManifestImporter();
 
   /**
@@ -62,7 +62,7 @@ class HgManifestImporter {
 
   LocalStore* store_{nullptr};
   std::vector<PartialTree> dirStack_;
-  LocalStore::WriteBatch& writeBatch_;
+  LocalStore::WriteBatch* writeBatch_;
 };
 } // namespace eden
 } // namespace facebook

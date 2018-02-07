@@ -16,17 +16,12 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/lang/Bits.h>
-#include <rocksdb/db.h>
-#include <rocksdb/filter_policy.h>
-#include <rocksdb/table.h>
 #include <array>
 
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
-#include "eden/fs/rocksdb/RocksException.h"
-#include "eden/fs/rocksdb/RocksHandles.h"
 #include "eden/fs/store/StoreResult.h"
 
 using facebook::eden::Hash;
@@ -35,54 +30,11 @@ using folly::IOBuf;
 using folly::Optional;
 using folly::StringPiece;
 using folly::io::Cursor;
-using rocksdb::ReadOptions;
-using rocksdb::Slice;
-using rocksdb::SliceParts;
-using rocksdb::WriteBatch;
-using rocksdb::WriteOptions;
 using std::string;
 using std::unique_ptr;
 
 namespace {
 using namespace facebook::eden;
-
-rocksdb::ColumnFamilyOptions makeColumnOptions(uint64_t LRUblockCacheSizeMB) {
-  rocksdb::ColumnFamilyOptions options;
-
-  // We'll never perform range scans on any of the keys that we store.
-  // This enables bloom filters and a hash policy that improves our
-  // get/put performance.
-  options.OptimizeForPointLookup(LRUblockCacheSizeMB);
-
-  options.OptimizeLevelStyleCompaction();
-  return options;
-}
-
-/**
- * The different key spaces that we desire.
- * The ordering is coupled with the values of the LocalStore::KeySpace enum.
- */
-const std::vector<rocksdb::ColumnFamilyDescriptor>& columnFamilies() {
-  // Most of the column families will share the same cache.  We
-  // want the blob data to live in its own smaller cache; the assumption
-  // is that the vfs cache will compensate for that, together with the
-  // idea that we shouldn't need to materialize a great many files.
-  auto options = makeColumnOptions(64);
-  auto blobOptions = makeColumnOptions(8);
-
-  // Meyers singleton to avoid SIOF issues
-  static const std::vector<rocksdb::ColumnFamilyDescriptor> families{
-      rocksdb::ColumnFamilyDescriptor{rocksdb::kDefaultColumnFamilyName,
-                                      options},
-      rocksdb::ColumnFamilyDescriptor{"blob", blobOptions},
-      rocksdb::ColumnFamilyDescriptor{"blobmeta", options},
-      rocksdb::ColumnFamilyDescriptor{"tree", options},
-      rocksdb::ColumnFamilyDescriptor{"hgproxyhash", options},
-      rocksdb::ColumnFamilyDescriptor{"hgcommit2tree", options},
-  };
-  return families;
-}
-
 class SerializedBlobMetadata {
  public:
   explicit SerializedBlobMetadata(const BlobMetadata& metadata) {
@@ -92,8 +44,8 @@ class SerializedBlobMetadata {
     serialize(contentsHash, blobSize);
   }
 
-  Slice slice() const {
-    return Slice{reinterpret_cast<const char*>(data_.data()), data_.size()};
+  ByteRange slice() const {
+    return ByteRange{data_};
   }
 
   static BlobMetadata parse(Hash blobID, const StoreResult& result) {
@@ -131,61 +83,10 @@ class SerializedBlobMetadata {
    */
   std::array<uint8_t, SIZE> data_;
 };
-
-rocksdb::Slice _createSlice(folly::ByteRange bytes) {
-  return Slice(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-}
 } // namespace
 
 namespace facebook {
 namespace eden {
-
-LocalStore::LocalStore(AbsolutePathPiece pathToRocksDb)
-    : dbHandles_(pathToRocksDb.stringPiece(), columnFamilies()) {}
-
-LocalStore::~LocalStore() {
-#ifdef FOLLY_SANITIZE_ADDRESS
-  // RocksDB has some race conditions around setting up and tearing down
-  // the threads that it uses to maintain the database.  This manifests
-  // in our test harness, particularly in a test where we quickly mount
-  // and then unmount.  We see this as an abort with the message:
-  // "pthread lock: Invalid Argument".
-  // My assumption is that we're shutting things down before rocks has
-  // completed initializing.  This sleep call is present in the destructor
-  // to make it more likely that rocks is past that critical point and
-  // so that we can shutdown successfully.
-  /* sleep override */ sleep(1);
-#endif
-}
-
-void LocalStore::close() {
-  dbHandles_.columns.clear();
-  dbHandles_.db.reset();
-}
-
-StoreResult LocalStore::get(KeySpace keySpace, ByteRange key) const {
-  string value;
-  auto status = dbHandles_.db.get()->Get(
-      ReadOptions(),
-      dbHandles_.columns[keySpace].get(),
-      _createSlice(key),
-      &value);
-  if (!status.ok()) {
-    if (status.IsNotFound()) {
-      // Return an empty StoreResult
-      return StoreResult();
-    }
-
-    // TODO: RocksDB can return a "TryAgain" error.
-    // Should we try again for the user, rather than re-throwing the error?
-
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status, "failed to get ", folly::hexlify(key), " from local store");
-  }
-  return StoreResult(std::move(value));
-}
 
 StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
   return get(keySpace, id.getBytes());
@@ -238,45 +139,8 @@ std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
   return std::make_pair(id, treeBuf);
 }
 
-bool LocalStore::hasKey(KeySpace keySpace, folly::ByteRange key) const {
-  string value;
-  auto status = dbHandles_.db->Get(
-      ReadOptions(),
-      dbHandles_.columns[keySpace].get(),
-      _createSlice(key),
-      &value);
-  if (!status.ok()) {
-    if (status.IsNotFound()) {
-      return false;
-    }
-
-    // TODO: RocksDB can return a "TryAgain" error.
-    // Should we try again for the user, rather than re-throwing the error?
-
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status, "failed to get ", folly::hexlify(key), " from local store");
-  }
-  return true;
-}
-
 bool LocalStore::hasKey(KeySpace keySpace, const Hash& id) const {
   return hasKey(keySpace, id.getBytes());
-}
-
-LocalStore::WriteBatch LocalStore::beginWrite(size_t bufSize) {
-  return LocalStore::WriteBatch(dbHandles_, bufSize);
-}
-
-LocalStore::WriteBatch::WriteBatch(RocksHandles& dbHandles, size_t bufSize)
-    : dbHandles_(dbHandles), writeBatch_(bufSize), bufSize_(bufSize) {}
-
-LocalStore::WriteBatch::~WriteBatch() {
-  if (writeBatch_.Count() > 0) {
-    XLOG(ERR) << "WriteBatch being destroyed with " << writeBatch_.Count()
-              << " items pending flush";
-  }
 }
 
 Hash LocalStore::putTree(const Tree* tree) {
@@ -304,9 +168,23 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
   // needs to hold the blob content plus have room for a couple of
   // hashes for the keys, plus some padding.
   auto batch = beginWrite(blob->getContents().computeChainDataLength() + 64);
-  auto result = batch.putBlob(id, blob);
-  batch.flush();
+  auto result = batch->putBlob(id, blob);
+  batch->flush();
   return result;
+}
+
+void LocalStore::put(
+    LocalStore::KeySpace keySpace,
+    const Hash& id,
+    folly::ByteRange value) {
+  put(keySpace, id.getBytes(), value);
+}
+
+void LocalStore::WriteBatch::put(
+    LocalStore::KeySpace keySpace,
+    const Hash& id,
+    folly::ByteRange value) {
+  put(keySpace, id.getBytes(), value);
 }
 
 BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
@@ -317,16 +195,14 @@ BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
 
   SerializedBlobMetadata metadataBytes(metadata);
 
-  auto hashSlice = _createSlice(id.getBytes());
-  SliceParts keyParts(&hashSlice, 1);
-
+  auto hashSlice = id.getBytes();
   ByteRange bodyBytes;
 
   // Add a git-style blob prefix
   auto prefix = folly::to<string>("blob ", contents.computeChainDataLength());
   prefix.push_back('\0');
-  std::vector<Slice> bodySlices;
-  bodySlices.emplace_back(prefix);
+  std::vector<ByteRange> bodySlices;
+  bodySlices.emplace_back(StringPiece(prefix));
 
   // Add all of the IOBuf chunks
   Cursor cursor(&contents);
@@ -335,87 +211,19 @@ BlobMetadata LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
     if (bytes.empty()) {
       break;
     }
-    bodySlices.push_back(_createSlice(bytes));
+    bodySlices.push_back(bytes);
     cursor.skip(bytes.size());
   }
 
-  SliceParts bodyParts(bodySlices.data(), bodySlices.size());
-
-  writeBatch_.Put(
-      dbHandles_.columns[KeySpace::BlobFamily].get(), keyParts, bodyParts);
-
-  writeBatch_.Put(
-      dbHandles_.columns[KeySpace::BlobMetaDataFamily].get(),
+  put(LocalStore::KeySpace::BlobFamily, hashSlice, bodySlices);
+  put(LocalStore::KeySpace::BlobMetaDataFamily,
       hashSlice,
       metadataBytes.slice());
-  flushIfNeeded();
   return metadata;
 }
 
-void LocalStore::WriteBatch::flush() {
-  auto pending = writeBatch_.Count();
-  if (pending == 0) {
-    return;
-  }
-
-  XLOG(DBG5) << "Flushing " << pending << " entries with data size of "
-             << writeBatch_.GetDataSize();
-
-  auto status = dbHandles_.db->Write(WriteOptions(), &writeBatch_);
-  XLOG(DBG5) << "... Flushed";
-
-  if (!status.ok()) {
-    throw RocksException::build(
-        status, "error putting blob batch in local store");
-  }
-
-  writeBatch_.Clear();
-}
-
-void LocalStore::WriteBatch::flushIfNeeded() {
-  auto needFlush = bufSize_ > 0 && writeBatch_.GetDataSize() >= bufSize_;
-
-  if (needFlush) {
-    flush();
-  }
-}
-
-void LocalStore::put(
-    LocalStore::KeySpace keySpace,
-    const Hash& id,
-    folly::ByteRange value) {
-  put(keySpace, id.getBytes(), value);
-}
-
-void LocalStore::put(
-    LocalStore::KeySpace keySpace,
-    folly::ByteRange key,
-    folly::ByteRange value) {
-  dbHandles_.db->Put(
-      WriteOptions(),
-      dbHandles_.columns[keySpace].get(),
-      _createSlice(key),
-      _createSlice(value));
-}
-
-void LocalStore::WriteBatch::put(
-    LocalStore::KeySpace keySpace,
-    const Hash& id,
-    folly::ByteRange value) {
-  put(keySpace, id.getBytes(), value);
-}
-
-void LocalStore::WriteBatch::put(
-    LocalStore::KeySpace keySpace,
-    folly::ByteRange key,
-    folly::ByteRange value) {
-  writeBatch_.Put(
-      dbHandles_.columns[keySpace].get(),
-      _createSlice(key),
-      _createSlice(value));
-
-  flushIfNeeded();
-}
+LocalStore::WriteBatch::~WriteBatch() {}
+LocalStore::~LocalStore() {}
 
 } // namespace eden
 } // namespace facebook

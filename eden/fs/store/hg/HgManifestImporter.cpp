@@ -53,7 +53,7 @@ class HgManifestImporter::PartialTree {
   /** Record this node against the store.
    * May only be called after compute() has been called (this method
    * will check and assert on this). */
-  Hash record(LocalStore* store, LocalStore::WriteBatch& batch);
+  Hash record(LocalStore* store, LocalStore::WriteBatch* batch);
 
   /** Compute the serialized version of this tree.
    * Records the id and data ready to be stored by a later call
@@ -122,7 +122,7 @@ Hash HgManifestImporter::PartialTree::compute(LocalStore* store) {
 
 Hash HgManifestImporter::PartialTree::record(
     LocalStore* store,
-    LocalStore::WriteBatch& batch) {
+    LocalStore::WriteBatch* batch) {
   DCHECK(computed_) << "Must have computed PartialTree prior to recording";
   // If the store already has data on this node, then we don't need to
   // recurse into any of our children; we're done!
@@ -137,7 +137,7 @@ Hash HgManifestImporter::PartialTree::record(
     it.record(store, batch);
   }
 
-  batch.put(LocalStore::KeySpace::TreeFamily, id_, treeData_.coalesce());
+  batch->put(LocalStore::KeySpace::TreeFamily, id_, treeData_.coalesce());
 
   XLOG(DBG6) << "record tree: '" << path_ << "' --> " << id_.toString() << " ("
              << numPaths_ << " paths, " << trees_.size() << " trees)";
@@ -147,7 +147,7 @@ Hash HgManifestImporter::PartialTree::record(
 
 HgManifestImporter::HgManifestImporter(
     LocalStore* store,
-    LocalStore::WriteBatch& writeBatch)
+    LocalStore::WriteBatch* writeBatch)
     : store_(store), writeBatch_(writeBatch) {
   // Push the root directory onto the stack
   dirStack_.emplace_back(RelativePath(""));
@@ -217,7 +217,7 @@ Hash HgManifestImporter::finish() {
   dirStack_.pop_back();
   CHECK(dirStack_.empty());
 
-  writeBatch_.flush();
+  writeBatch_->flush();
 
   return rootHash;
 }

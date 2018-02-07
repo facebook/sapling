@@ -34,23 +34,26 @@ class Tree;
  * This is a content-addressed store, so objects can be only retrieved using
  * their hash.
  *
- * The LocalStore is only a cache.  If an object is not found in the LocalStore
- * then it will need to be retrieved from the BackingStore.
- *
- * LocalStore uses RocksDB for the underlying storage.
+ * The LocalStore was originally only a cache.  The intent was that If an
+ * object is not found in the LocalStore then it will need to be retrieved
+ * from the BackingStore.  The introduction of HgProxyHashFamily renders this
+ * comment a little inaccurate because we don't have a way to produce the
+ * required data if the proxy hash data has been removed.  We expect things
+ * to revert back to a more pure cache as we evolve our interfaces with
+ * Mercurial and Mononoke.
  *
  * LocalStore is thread-safe, and can be used from multiple threads without
  * requiring the caller to perform locking around accesses to the LocalStore.
  */
 class LocalStore {
  public:
-  explicit LocalStore(AbsolutePathPiece pathToRocksDb);
   virtual ~LocalStore();
 
   /**
-   * Which key space (and thus column family) should be used to store
-   * a specific key.  The values of these are coupled to the ordering
-   * of the columnFamilies descriptor in LocalStore.cpp. */
+   * Which key space (and thus column family for the RocksDbLocalStore)
+   * should be used to store a specific key.  The values of these are
+   * coupled to the ordering of the columnFamilies descriptor in
+   * RocksDbLocalStore.cpp. */
   enum KeySpace {
     /* 0 is the default column family, which we are not using */
     BlobFamily = 1,
@@ -58,12 +61,14 @@ class LocalStore {
     TreeFamily = 3,
     HgProxyHashFamily = 4,
     HgCommitToTreeFamily = 5,
+
+    End, // must be last!
   };
 
   /**
-   * Close the underlying RocksDB.
+   * Close the underlying store.
    */
-  void close();
+  virtual void close() = 0;
 
   /**
    * Get arbitrary unserialized data from the store.
@@ -73,7 +78,7 @@ class LocalStore {
    *
    * May throw exceptions on error.
    */
-  StoreResult get(KeySpace keySpace, folly::ByteRange key) const;
+  virtual StoreResult get(KeySpace keySpace, folly::ByteRange key) const = 0;
   StoreResult get(KeySpace keySpace, const Hash& id) const;
 
   /**
@@ -116,7 +121,7 @@ class LocalStore {
   /**
    * Test whether the key is stored.
    */
-  bool hasKey(KeySpace keySpace, folly::ByteRange key) const;
+  virtual bool hasKey(KeySpace keySpace, folly::ByteRange key) const = 0;
   bool hasKey(KeySpace keySpace, const Hash& id) const;
 
   /**
@@ -137,11 +142,12 @@ class LocalStore {
   /**
    * Put arbitrary data in the store.
    */
-  void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value);
+  virtual void
+  put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value) = 0;
   void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
 
   /*
-   * WriteBatch is a helper class that wraps RocksDB WriteBatch.
+   * WriteBatch is a helper class for facilitating a bulk store operation.
    *
    * The purpose of this class is to let multiple callers manage independent
    * write batches and flush them to the backing storage when its deemed
@@ -151,9 +157,9 @@ class LocalStore {
    *
    * Typical usage:
    * auto writer = localStore->beginWrite();
-   * writer.put(KeySpace::Meta, Key, Value);
-   * writer.put(KeySpace::Blob, Key, BlobValue);
-   * writer.flush();
+   * writer->put(KeySpace::Meta, Key, Value);
+   * writer->put(KeySpace::Blob, Key, BlobValue);
+   * writer->flush();
    */
   class WriteBatch {
    public:
@@ -175,31 +181,34 @@ class LocalStore {
     /**
      * Put arbitrary data in the store.
      */
-    void put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value);
+    virtual void
+    put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value) = 0;
     void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
+
+    /**
+     * Put arbitrary data in the store where the value is split across
+     * a set of sliced data.
+     */
+    virtual void put(
+        KeySpace keySpace,
+        folly::ByteRange key,
+        std::vector<folly::ByteRange> valueSlices) = 0;
 
     /**
      * Flush any pending data to the store.
      */
-    void flush();
+    virtual void flush() = 0;
 
     // Forbidden copy construction/assignment; allow only moves
     WriteBatch(const WriteBatch&) = delete;
     WriteBatch(WriteBatch&&) = default;
     WriteBatch& operator=(const WriteBatch&) = delete;
     WriteBatch& operator=(WriteBatch&&) = default;
-    ~WriteBatch();
+    virtual ~WriteBatch();
+    WriteBatch() = default;
 
    private:
     friend class LocalStore;
-    // Use LocalStore::beginWrite() to create a write batch
-    WriteBatch(RocksHandles& dbHandles, size_t bufferSize);
-
-    void flushIfNeeded();
-
-    RocksHandles& dbHandles_;
-    rocksdb::WriteBatch writeBatch_;
-    size_t bufSize_;
   };
 
   /**
@@ -208,13 +217,10 @@ class LocalStore {
    * the accumulated data exceeds bufSize.  Otherwise no implifict flushing
    * will occur.
    * Either way, the caller will typically want to finish up by calling
-   * writeBatch.flush() to complete the batch as there is no implicit flush on
+   * writeBatch->flush() to complete the batch as there is no implicit flush on
    * destruction either.
    */
-  WriteBatch beginWrite(size_t bufSize = 0);
-
- private:
-  RocksHandles dbHandles_;
+  virtual std::unique_ptr<WriteBatch> beginWrite(size_t bufSize = 0) = 0;
 };
 } // namespace eden
 } // namespace facebook

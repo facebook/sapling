@@ -18,6 +18,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;
@@ -33,8 +34,7 @@ class LocalStoreTest : public ::testing::Test {
  protected:
   void SetUp() override {
     testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
-    auto path = AbsolutePathPiece{testDir_->path().string()};
-    store_ = std::make_unique<LocalStore>(path);
+    store_ = std::make_unique<MemoryLocalStore>();
   }
 
   void TearDown() override {
@@ -159,22 +159,22 @@ TEST_F(LocalStoreTest, testMultipleBlobWriters) {
   StringPiece key3_2 = "damage";
 
   auto batch1 = store_->beginWrite(8192);
-  batch1.put(KeySpace::BlobFamily, key1_1, StringPiece{"hello world1_1"});
-  batch1.put(KeySpace::BlobFamily, key1_2, StringPiece{"hello world1_2"});
+  batch1->put(KeySpace::BlobFamily, key1_1, StringPiece{"hello world1_1"});
+  batch1->put(KeySpace::BlobFamily, key1_2, StringPiece{"hello world1_2"});
 
   auto batch2 = store_->beginWrite(1024);
-  batch2.put(KeySpace::BlobFamily, key2_1, StringPiece{"hello world2_1"});
-  batch2.put(KeySpace::BlobFamily, key2_2, StringPiece{"hello world2_2"});
+  batch2->put(KeySpace::BlobFamily, key2_1, StringPiece{"hello world2_1"});
+  batch2->put(KeySpace::BlobFamily, key2_2, StringPiece{"hello world2_2"});
 
   auto batch3 = store_->beginWrite();
-  batch3.put(KeySpace::BlobFamily, key3_1, StringPiece{"hello world3_1"});
-  batch3.put(KeySpace::BlobFamily, key3_2, StringPiece{"hello world3_2"});
+  batch3->put(KeySpace::BlobFamily, key3_1, StringPiece{"hello world3_1"});
+  batch3->put(KeySpace::BlobFamily, key3_2, StringPiece{"hello world3_2"});
 
-  batch1.put(KeySpace::BlobFamily, key1_3, StringPiece{"hello world1_3"});
-  batch1.put(KeySpace::BlobFamily, key1_4, StringPiece{"hello world1_4"});
+  batch1->put(KeySpace::BlobFamily, key1_3, StringPiece{"hello world1_3"});
+  batch1->put(KeySpace::BlobFamily, key1_4, StringPiece{"hello world1_4"});
 
-  batch1.flush();
-  batch2.flush();
+  batch1->flush();
+  batch2->flush();
 
   auto result1_1 = store_->get(KeySpace::BlobFamily, key1_1);
   auto result2_1 = store_->get(KeySpace::BlobFamily, key2_1);
@@ -183,7 +183,7 @@ TEST_F(LocalStoreTest, testMultipleBlobWriters) {
 
   EXPECT_FALSE(store_->get(KeySpace::BlobFamily, key3_1).isValid())
       << "key3_1 is not visible until flush";
-  batch3.flush();
+  batch3->flush();
   auto result3_1 = store_->get(KeySpace::BlobFamily, key3_1);
   EXPECT_EQ("hello world3_1", result3_1.piece())
       << "key3_1 visible after flush";
