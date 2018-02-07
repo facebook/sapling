@@ -103,7 +103,7 @@ class Client(object):
               query RevisionQuery(
                 $params: [DifferentialRevisionQueryParams!]!
               ) {
-                differential_revision_query(query_params: $params) {
+                query: differential_revision_query(query_params: $params) {
                   results {
                     nodes {
                       number
@@ -129,16 +129,14 @@ class Client(object):
                 'numbers': rev_numbers,
             }},
         )
-        revisions = ret['differential_revision_query'][0]['results'][
-            'nodes']
+        revisions = ret['query'][0]['results']['nodes']
         if revisions is None:
             return None
 
         infos = {}
         for revision in rev_numbers:
             info = {}
-            for node in ret['differential_revision_query'][0][
-                                        'results']['nodes']:
+            for node in ret['query'][0]['results']['nodes']:
                 if node['number'] != revision:
                     continue
 
