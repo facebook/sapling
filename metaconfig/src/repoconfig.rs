@@ -225,6 +225,7 @@ mod test {
 
     use std::sync::Arc;
 
+    use mercurial_types::Type;
     use mercurial_types_mocks::manifest::{make_file, MockManifest};
 
     #[test]
@@ -239,10 +240,26 @@ mod test {
             repotype="revlog"
         "#;
 
+        let my_path_manifest = MockManifest::with_content(vec![
+            ("my_files", Arc::new(|| unimplemented!()), Type::File),
+        ]);
+
+        let repos_manifest = MockManifest::with_content(vec![
+            ("fbsource", make_file(fbsource_content), Type::File),
+            ("www", make_file(www_content), Type::File),
+        ]);
+
         let repoconfig = RepoConfigs::read_manifest(&MockManifest::with_content(vec![
-            ("my_path/my_files", Arc::new(|| unimplemented!())),
-            ("repos/fbsource", make_file(fbsource_content)),
-            ("repos/www", make_file(www_content)),
+            (
+                "my_path",
+                Arc::new(move || Content::Tree(Box::new(my_path_manifest.clone()))),
+                Type::File,
+            ),
+            (
+                "repos",
+                Arc::new(move || Content::Tree(Box::new(repos_manifest.clone()))),
+                Type::Tree,
+            ),
         ])).wait()
             .expect("failed to read config from manifest");
 

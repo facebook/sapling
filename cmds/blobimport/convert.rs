@@ -19,7 +19,7 @@ use heads::Heads;
 use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
-use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
+use mercurial_types::{Changeset, MPath, Manifest, NodeHash, RepoPath};
 use mercurial_types::nodehash::{ChangesetId, EntryId};
 use stats::Timeseries;
 
@@ -209,14 +209,15 @@ where
                                     entry,
                                     revlog_repo.clone(),
                                     linkrev.clone(),
+                                    MPath::empty(),
                                 )
                             }
                         })
                         .flatten()
-                        .for_each(move |entry| {
+                        .for_each(move |(entry, repopath)| {
                             // All entries share the same linknode to the changelog.
                             let linknode_future = linknodes_store.add(
-                                entry.get_path().clone(),
+                                repopath,
                                 &entry.get_hash().into_nodehash(),
                                 &linknode,
                             );

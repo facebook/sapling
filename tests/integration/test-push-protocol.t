@@ -2,25 +2,7 @@
 
 setup configuration
 
-  $ hg init mononoke-config
-  $ cd mononoke-config
-  $ mkdir repos
-  $ cat > repos/repo <<CONFIG
-  > path="$TESTTMP/repo"
-  > repotype="blob:files"
-  > CONFIG
-  $ hg add repos
-  adding repos/repo
-  $ hg ci -ma
-  $ hg bookmark test-config
-  $ hg log
-  changeset:   0:* (glob)
-  bookmark:    test-config
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-  
+  $ setup_config_repo
 
   $ cd $TESTTMP
 

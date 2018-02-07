@@ -9,7 +9,7 @@ use futures::stream::{empty, iter_ok, once, Stream};
 use futures_ext::{BoxStream, StreamExt};
 use std::collections::VecDeque;
 
-use super::{Entry, MPath, Manifest};
+use super::{Entry, MPath, MPathElement, Manifest};
 use super::manifest::{Content, Type};
 
 use errors::*;
@@ -84,15 +84,18 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             let substream = if left.get_type() == Type::Tree {
                 let contents = left.get_content().join(right.get_content());
                 let path = changed_entry.path.clone();
-                let entry_path = left.get_mpath().clone();
+                let entry_path = left.get_name().clone();
 
                 let substream = contents
                     .map(move |(left_content, right_content)| {
                         let left_manifest = get_tree_content(left_content);
                         let right_manifest = get_tree_content(right_content);
 
-                        diff_manifests(path.join(&entry_path), left_manifest, right_manifest)
-                            .map(recursive_changed_entry_stream)
+                        diff_manifests(
+                            path.join_element(&entry_path),
+                            left_manifest,
+                            right_manifest,
+                        ).map(recursive_changed_entry_stream)
                     })
                     .flatten_stream()
                     .flatten();
@@ -115,15 +118,15 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
 /// Given an entry and path from the root of the repo to this entry, returns all subentries with
 /// their path from the root of the repo.
 /// For a non-tree entry returns a stream with a single (entry, path) pair.
-fn recursive_entry_stream(
+pub fn recursive_entry_stream(
     rootpath: MPath,
     entry: Box<Entry + Sync>,
 ) -> BoxStream<(MPath, Box<Entry + Sync>), Error> {
     let subentries = match entry.get_type() {
         Type::File | Type::Symlink | Type::Executable => empty().boxify(),
         Type::Tree => {
-            let entry_basename = entry.get_mpath().clone();
-            let path = rootpath.join(&entry_basename);
+            let entry_basename = entry.get_name();
+            let path = rootpath.join(entry_basename);
 
             entry
                 .get_content()
@@ -175,8 +178,14 @@ pub fn diff_sorted_vecs(
     loop {
         match (left.pop_front(), right.pop_front()) {
             (Some(left_entry), Some(right_entry)) => {
-                let left_path = left_entry.get_mpath().to_vec();
-                let right_path = right_entry.get_mpath().to_vec();
+                let left_path = left_entry
+                    .get_name()
+                    .clone()
+                    .unwrap_or(MPathElement::new(vec![]));
+                let right_path = right_entry
+                    .get_name()
+                    .clone()
+                    .unwrap_or(MPathElement::new(vec![]));
 
                 if left_path < right_path {
                     res.push(ChangedEntry::new_added(path.clone(), left_entry));

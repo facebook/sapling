@@ -15,7 +15,7 @@ use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
 use mercurial::RevlogRepo;
 use mercurial::revlog::RevIdx;
-use mercurial_types::{self, Blob, BlobHash, Entry, NodeHash, Parents, Type};
+use mercurial_types::{self, Blob, BlobHash, Entry, MPath, NodeHash, Parents, RepoPath, Type};
 
 use BlobstoreEntry;
 
@@ -73,8 +73,15 @@ pub(crate) fn get_entry_stream(
     entry: Box<Entry>,
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
-) -> Box<Stream<Item = Box<Entry>, Error = Error> + Send> {
-    let revlog = revlog_repo.get_path_revlog(entry.get_path());
+    basepath: MPath,
+) -> Box<Stream<Item = (Box<Entry>, RepoPath), Error = Error> + Send> {
+    let path = basepath.join_element(&entry.get_name());
+    let repopath = if entry.get_type() == Type::Tree {
+        RepoPath::DirectoryPath(path.clone())
+    } else {
+        RepoPath::FilePath(path.clone())
+    };
+    let revlog = revlog_repo.get_path_revlog(&repopath);
 
     let linkrev = revlog
         .and_then(|file_revlog| file_revlog.get_entry_by_id(&entry.get_hash()))
@@ -96,7 +103,9 @@ pub(crate) fn get_entry_stream(
     }
 
     match entry.get_type() {
-        Type::File | Type::Executable | Type::Symlink => futures::stream::once(Ok(entry)).boxify(),
+        Type::File | Type::Executable | Type::Symlink => {
+            futures::stream::once(Ok((entry, repopath))).boxify()
+        }
         Type::Tree => entry
             .get_content()
             .and_then(|content| match content {
@@ -105,11 +114,11 @@ pub(crate) fn get_entry_stream(
             })
             .flatten_stream()
             .map(move |entry| {
-                get_entry_stream(entry, revlog_repo.clone(), cs_rev.clone())
+                get_entry_stream(entry, revlog_repo.clone(), cs_rev.clone(), path.clone())
             })
             .map_err(Error::from)
             .flatten()
-            .chain(futures::stream::once(Ok(entry)))
+            .chain(futures::stream::once(Ok((entry, repopath))))
             .boxify(),
     }
 }

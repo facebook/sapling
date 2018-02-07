@@ -14,7 +14,7 @@ use blob::Blob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::EntryId;
-use path::{MPath, RepoPath};
+use path::{MPath, MPathElement};
 
 /// Interface for a manifest
 ///
@@ -155,15 +155,8 @@ pub trait Entry: Send + 'static {
     /// Get the identity of the object this entry refers to.
     fn get_hash(&self) -> &EntryId;
 
-    /// Get the full path of this entry (meaningless - see T25575327)
-    fn get_path(&self) -> &RepoPath;
-
-    fn get_mpath(&self) -> MPath {
-        match self.get_path() {
-            &RepoPath::RootPath => MPath::empty(),
-            &RepoPath::DirectoryPath(ref path) | &RepoPath::FilePath(ref path) => path.clone(),
-        }
-    }
+    /// Get the name of the entry. None means that this is a root entry
+    fn get_name(&self) -> &Option<MPathElement>;
 
     /// Return an Entry as a type-erased trait object.
     /// (Do we still need this as a trait method? T25577105)
@@ -222,12 +215,8 @@ where
         self.entry.get_hash()
     }
 
-    fn get_path(&self) -> &RepoPath {
-        self.entry.get_path()
-    }
-
-    fn get_mpath(&self) -> MPath {
-        self.entry.get_mpath()
+    fn get_name(&self) -> &Option<MPathElement> {
+        self.entry.get_name()
     }
 }
 
@@ -256,11 +245,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_hash()
     }
 
-    fn get_path(&self) -> &RepoPath {
-        (**self).get_path()
-    }
-
-    fn get_mpath(&self) -> MPath {
-        (**self).get_mpath()
+    fn get_name(&self) -> &Option<MPathElement> {
+        (**self).get_name()
     }
 }

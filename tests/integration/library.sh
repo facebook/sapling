@@ -16,6 +16,31 @@ function wait_for_mononoke {
   done
 }
 
+function setup_config_repo {
+  hg init mononoke-config
+  cd mononoke-config || exit
+  cat >> .hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+[treemanifest]
+server=True
+[remotefilelog]
+server=True
+shallowtrees=True
+EOF
+
+  mkdir repos
+  cat > repos/repo <<CONFIG
+path="$TESTTMP/repo"
+repotype="blob:files"
+CONFIG
+  hg add -q repos
+  hg ci -ma
+  hg bookmark test-config
+  hg backfilltree
+  cd ..
+}
 function blobimport {
   $MONONOKE_BLOBIMPORT "$@"
 }

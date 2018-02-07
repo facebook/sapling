@@ -4,7 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-
 use std::cmp;
 use std::convert::{From, TryFrom, TryInto};
 use std::ffi::OsStr;
@@ -201,6 +200,13 @@ impl MPath {
         );
         MPath {
             elements: newelements,
+        }
+    }
+
+    pub fn join_element(&self, element: &Option<MPathElement>) -> MPath {
+        match element {
+            &Some(ref element) => self.join(element),
+            &None => self.clone(),
         }
     }
 

@@ -26,7 +26,7 @@ use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
-                      Parents, Type, NULL_HASH};
+                      Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -510,14 +510,14 @@ impl HgCommands for RepoClient {
             .filter_map(move |entry_status| match entry_status.status {
                 EntryStatus::Added(entry) => {
                     if entry.get_type() == Type::Tree {
-                        Some(entry)
+                        Some((entry, entry_status.path))
                     } else {
                         None
                     }
                 }
                 EntryStatus::Modified(entry, _) => {
                     if entry.get_type() == Type::Tree {
-                        Some(entry)
+                        Some((entry, entry_status.path))
                     } else {
                         None
                     }
@@ -526,9 +526,9 @@ impl HgCommands for RepoClient {
             })
             .and_then({
                 let hgrepo = self.repo.hgrepo.clone();
-                move |val| fetch_linknode(hgrepo.clone(), val)
+                move |(entry, path)| fetch_linknode(hgrepo.clone(), entry, path)
             })
-            .map(|(entry, linknode)| (entry, linknode, MPath::empty()));
+            .map(|(entry, linknode, basepath)| (entry, linknode, basepath));
 
         // Append root manifest
         let root_entry_stream = Ok(self.repo
@@ -537,9 +537,9 @@ impl HgCommands for RepoClient {
             .into_future()
             .and_then({
                 let hgrepo = self.repo.hgrepo.clone();
-                move |val| fetch_linknode(hgrepo.clone(), val)
+                move |entry| fetch_linknode(hgrepo.clone(), entry, MPath::empty())
             })
-            .map(|(entry, linknode)| stream::once(Ok((entry, linknode, MPath::empty()))))
+            .map(|(entry, linknode, basepath)| stream::once(Ok((entry, linknode, basepath))))
             .flatten_stream();
 
         parts::treepack_part(changed_entries.chain(root_entry_stream))
@@ -557,8 +557,22 @@ impl HgCommands for RepoClient {
 fn fetch_linknode(
     repo: Arc<BlobRepo>,
     entry: Box<Entry + Sync>,
-) -> BoxFuture<(Box<Entry + Sync>, NodeHash), Error> {
-    let linknode_fut =
-        repo.get_linknode(entry.get_path().clone(), &entry.get_hash().into_nodehash());
-    linknode_fut.map(|linknode| (entry, linknode)).boxify()
+    basepath: MPath,
+) -> BoxFuture<(Box<Entry + Sync>, NodeHash, MPath), Error> {
+    let path = match entry.get_name() {
+        &Some(ref name) => {
+            let path = basepath.clone().join(name.clone().into_iter());
+            if entry.get_type() == Type::Tree {
+                RepoPath::DirectoryPath(path)
+            } else {
+                RepoPath::FilePath(path)
+            }
+        }
+        &None => RepoPath::RootPath,
+    };
+
+    let linknode_fut = repo.get_linknode(path, &entry.get_hash().into_nodehash());
+    linknode_fut
+        .map(|linknode| (entry, linknode, basepath))
+        .boxify()
 }

@@ -11,7 +11,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, MPath, ManifestId, NodeHash, Parents, RepoPath};
+use mercurial_types::{Blob, MPath, MPathElement, ManifestId, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
 
@@ -25,7 +25,7 @@ use utils::{get_node, RawNodeBlob};
 
 pub struct BlobEntry {
     blobstore: Arc<Blobstore>,
-    path: RepoPath,
+    name: Option<MPathElement>,
     id: EntryId,
     ty: Type,
 }
@@ -53,14 +53,15 @@ pub fn fetch_file_content_from_blobstore(
 }
 
 impl BlobEntry {
-    pub fn new(blobstore: Arc<Blobstore>, path: MPath, nodeid: NodeHash, ty: Type) -> Result<Self> {
-        let path = match ty {
-            Type::Tree => RepoPath::dir(path)?,
-            _ => RepoPath::file(path)?,
-        };
+    pub fn new(
+        blobstore: Arc<Blobstore>,
+        name: Option<MPathElement>,
+        nodeid: NodeHash,
+        ty: Type,
+    ) -> Result<Self> {
         Ok(Self {
             blobstore,
-            path,
+            name,
             id: EntryId::new(nodeid),
             ty,
         })
@@ -69,7 +70,7 @@ impl BlobEntry {
     pub fn new_root(blobstore: Arc<Blobstore>, manifestid: ManifestId) -> Self {
         Self {
             blobstore,
-            path: RepoPath::RootPath,
+            name: None,
             id: EntryId::new(manifestid.into_nodehash()),
             ty: Type::Tree,
         }
@@ -158,7 +159,7 @@ impl Entry for BlobEntry {
         &self.id
     }
 
-    fn get_path(&self) -> &RepoPath {
-        &self.path
+    fn get_name(&self) -> &Option<MPathElement> {
+        &self.name
     }
 }

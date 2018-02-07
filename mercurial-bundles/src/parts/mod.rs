@@ -110,7 +110,7 @@ where
                 .map(move |parents| (entry, parents, content, linknode, basepath))
         })
         .and_then(|(entry, parents, content, linknode, basepath)| {
-            let path = basepath.clone().join(&entry.get_mpath());
+            let path = basepath.join_element(entry.get_name());
             let path = if path.is_empty() {
                 Ok(RepoPath::RootPath)
             } else {

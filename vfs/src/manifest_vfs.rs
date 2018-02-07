@@ -9,9 +9,10 @@ use std::sync::Arc;
 
 use futures::{Future, Stream};
 
-use mercurial_types::{Entry, Manifest};
+use mercurial_types::{Entry, Manifest, Type};
 use mercurial_types::manifest::Content;
-use mercurial_types::path::{MPathElement, DOT, DOTDOT};
+use mercurial_types::manifest_utils::recursive_entry_stream;
+use mercurial_types::path::{MPath, MPathElement, DOT, DOTDOT};
 
 use node::{VfsDir, VfsFile, VfsNode};
 use tree::{TNodeId, Tree, TreeValue, ROOT_ID};
@@ -33,18 +34,23 @@ where
     manifest
         .list()
         .map_err(|err| {
-            err.context("failed while listing the manifest").into()
+            let error: Error = err.context("failed while listing the manifest").into();
+            error
         })
+        .map(|entry| recursive_entry_stream(MPath::empty(), entry))
+        .flatten()
+        .filter(|pathentry| pathentry.1.get_type() != Type::Tree)
         .collect()
-        .and_then(|entries| {
+        .and_then(|pathentries| {
             let mut path_tree = Tree::new();
-            for (entry_idx, entry) in entries.iter().enumerate() {
-                let mut path = entry.get_mpath().clone().into_iter();
-                let leaf_key = path.next_back().ok_or_else(|| {
-                    ErrorKind::ManifestInvalidPath("the path shouldn't be empty".into())
+            let mut entries = vec![];
+            for (entry_idx, (path, entry)) in pathentries.into_iter().enumerate() {
+                let name = entry.get_name().clone();
+                let name = name.ok_or_else(|| {
+                    ErrorKind::ManifestInvalidPath("name shouldn't be empty".into())
                 })?;
-
-                path_tree.insert(path, leaf_key, TEntryId(entry_idx))?;
+                path_tree.insert(path, name, TEntryId(entry_idx))?;
+                entries.push(entry);
             }
             Ok(ManifestVfsDir {
                 root: Arc::new(ManifestVfsRoot { entries, path_tree }),
@@ -180,6 +186,7 @@ mod test {
     use test::*;
 
     use mercurial_types::MPath;
+    use mercurial_types_mocks::manifest::MockManifest;
     use node::VfsWalker;
 
     fn unwrap_dir<TDir: VfsDir>(node: VfsNode<TDir, TDir::TFile>) -> TDir {
@@ -208,7 +215,49 @@ mod test {
     }
 
     fn example_vfs() -> ManifestVfsDir {
-        get_vfs(vec!["a/b", "a/ab", "c/d/e", "c/d/da", "c/ca/afsd", "f"])
+        let a_manifest = MockManifest::with_content(vec![
+            ("b", Arc::new(|| unimplemented!()), Type::File),
+            ("ab", Arc::new(|| unimplemented!()), Type::File),
+        ]);
+
+        let d_manifest = MockManifest::with_content(vec![
+            ("e", Arc::new(|| unimplemented!()), Type::File),
+            ("da", Arc::new(|| unimplemented!()), Type::File),
+        ]);
+
+        let ca_manifest =
+            MockManifest::with_content(vec![("afsd", Arc::new(|| unimplemented!()), Type::File)]);
+
+        let c_manifest = MockManifest::with_content(vec![
+            (
+                "d",
+                Arc::new(move || Content::Tree(Box::new(d_manifest.clone()))),
+                Type::Tree,
+            ),
+            (
+                "ca",
+                Arc::new(move || Content::Tree(Box::new(ca_manifest.clone()))),
+                Type::Tree,
+            ),
+        ]);
+
+        let root_manifest = MockManifest::with_content(vec![
+            (
+                "a",
+                Arc::new(move || Content::Tree(Box::new(a_manifest.clone()))),
+                Type::Tree,
+            ),
+            (
+                "c",
+                Arc::new(move || Content::Tree(Box::new(c_manifest.clone()))),
+                Type::Tree,
+            ),
+            ("f", Arc::new(|| unimplemented!()), Type::File),
+        ]);
+
+        vfs_from_manifest(&root_manifest)
+            .wait()
+            .expect("failed to get vfs")
     }
 
     #[test]

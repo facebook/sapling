@@ -62,11 +62,14 @@ impl BlobManifest {
 
 impl Manifest for BlobManifest {
     fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+        // Path is a single MPathElement. In t25575327 we'll change the type.
+        let name = path.clone().into_iter().next_back();
+
         let res = self.files.get(path).map({
             move |d| {
                 BlobEntry::new(
                     self.blobstore.clone(),
-                    path.clone(),
+                    name,
                     d.entryid().into_nodehash(),
                     d.flag(),
                 )
@@ -86,9 +89,10 @@ impl Manifest for BlobManifest {
             .map({
                 let blobstore = self.blobstore.clone();
                 move |(path, d)| {
+                    let name = path.clone().into_iter().next_back();
                     BlobEntry::new(
                         blobstore.clone(),
-                        path,
+                        name,
                         d.entryid().into_nodehash(),
                         d.flag(),
                     )

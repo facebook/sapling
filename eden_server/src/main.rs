@@ -65,7 +65,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::NodeHash;
+use mercurial_types::{MPathElement, NodeHash};
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
 use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
@@ -166,15 +166,21 @@ lazy_static! {
 struct TreeMetadata {
     hash: NodeHash,
     path: PathBuf,
-    #[serde(rename = "type")] ty: mercurial_types::Type,
+    #[serde(rename = "type")]
+    ty: mercurial_types::Type,
     size: Option<usize>,
 }
 
 impl TreeMetadata {
     fn new(size: Option<usize>, entry: Box<mercurial_types::Entry>) -> TreeMetadata {
+        let name = entry
+            .get_name()
+            .clone()
+            .unwrap_or(MPathElement::new(vec![]));
+
         TreeMetadata {
             hash: entry.get_hash().into_nodehash().clone(),
-            path: PathBuf::from(OsString::from_vec(entry.get_mpath().to_vec())),
+            path: PathBuf::from(OsString::from_vec(Vec::from(name.as_bytes()))),
             ty: entry.get_type(),
             size,
         }

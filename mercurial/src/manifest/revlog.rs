@@ -17,7 +17,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use errors::*;
 use failure;
 use file;
-use mercurial_types::{Blob, BlobNode, MPath, NodeHash, Parents, RepoPath};
+use mercurial_types::{Blob, BlobNode, MPath, MPathElement, NodeHash, Parents, RepoPath};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
 
@@ -200,6 +200,7 @@ where
 pub struct RevlogEntry {
     repo: RevlogRepo,
     path: RepoPath,
+    name: Option<MPathElement>,
     details: Details,
 }
 
@@ -247,17 +248,26 @@ impl Manifest for RevlogManifest {
 
 impl RevlogEntry {
     fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
+        let name = (&path).into_iter().next_back().map(|path| path.clone());
         let path = match details.flag() {
             Type::Tree => RepoPath::dir(path)
                 .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
             _ => RepoPath::file(path)
                 .with_context(|_| ErrorKind::Path("error while creating RepoPath".into()))?,
         };
+
+        // For revlog we still need to store full path, because full path is used to find revlog
+        // file
         Ok(RevlogEntry {
             repo,
             path,
+            name,
             details,
         })
+    }
+
+    fn get_path(&self) -> &RepoPath {
+        &self.path
     }
 }
 
@@ -351,8 +361,8 @@ impl Entry for RevlogEntry {
         &self.details.entryid
     }
 
-    fn get_path(&self) -> &RepoPath {
-        &self.path
+    fn get_name(&self) -> &Option<MPathElement> {
+        &self.name
     }
 }
 
@@ -424,8 +434,9 @@ mod test {
                     (
                         MPath::new(b"hello123").unwrap(),
                         Details {
-                            entryid : EntryId::new(
-                                "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap()),
+                            entryid: EntryId::new(
+                                "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
+                            ),
                             flag: Type::Symlink,
                         },
                     ),

@@ -10,7 +10,7 @@ use failure::Error;
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Blob, Entry, MPath, Manifest, RepoPath, Type};
+use mercurial_types::{Blob, Entry, MPath, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::EntryId;
@@ -22,6 +22,7 @@ pub fn make_file<C: AsRef<str>>(content: C) -> ContentFactory {
     Arc::new(move || Content::File(Blob::Dirty(content.clone())))
 }
 
+#[derive(Clone)]
 pub struct MockManifest {
     entries: Vec<MockEntry>,
 }
@@ -47,10 +48,14 @@ impl MockManifest {
         MockManifest { entries }
     }
 
-    pub fn with_content(content: Vec<(&'static str, ContentFactory)>) -> Self {
+    pub fn with_content(content: Vec<(&'static str, ContentFactory, Type)>) -> Self {
         let entries = content
             .into_iter()
-            .map(|(p, c)| MockEntry::new(Self::p(p), c))
+            .map(|(p, c, ty)| {
+                let mut mock_entry = MockEntry::new(Self::p(p), c);
+                mock_entry.set_type(ty);
+                mock_entry
+            })
             .collect();
         MockManifest { entries }
     }
@@ -67,6 +72,7 @@ impl Manifest for MockManifest {
 
 pub struct MockEntry {
     path: RepoPath,
+    name: Option<MPathElement>,
     content_factory: ContentFactory,
     ty: Option<Type>,
     hash: Option<EntryId>,
@@ -76,6 +82,7 @@ impl Clone for MockEntry {
     fn clone(&self) -> Self {
         MockEntry {
             path: self.path.clone(),
+            name: self.name.clone(),
             content_factory: self.content_factory.clone(),
             ty: self.ty.clone(),
             hash: self.hash.clone(),
@@ -85,8 +92,15 @@ impl Clone for MockEntry {
 
 impl MockEntry {
     pub fn new(path: RepoPath, content_factory: ContentFactory) -> Self {
+        let name = match path.clone() {
+            RepoPath::RootPath => None,
+            RepoPath::FilePath(path) | RepoPath::DirectoryPath(path) => {
+                path.clone().into_iter().next_back()
+            }
+        };
         MockEntry {
             path,
+            name,
             content_factory,
             ty: None,
             hash: None,
@@ -124,7 +138,7 @@ impl Entry for MockEntry {
             None => panic!("hash is not set!"),
         }
     }
-    fn get_path(&self) -> &RepoPath {
-        &self.path
+    fn get_name(&self) -> &Option<MPathElement> {
+        &self.name
     }
 }
