@@ -4681,6 +4681,8 @@ def root(ui, repo):
     ('', 'webdir-conf', '', _('name of the hgweb config file (DEPRECATED)'),
      _('FILE')),
     ('', 'pid-file', '', _('name of file to write process ID to'), _('FILE')),
+    ('', 'port-file', '',
+     _("name of file to write port to (useful with '-p 0')"), _('FILE')),
     ('', 'stdio', None, _('for remote clients (ADVANCED)')),
     ('', 'cmdserver', '', _('for remote clients (ADVANCED)'), _('MODE')),
     ('t', 'templates', '', _('web templates to use'), _('TEMPLATE')),

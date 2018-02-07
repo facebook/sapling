@@ -40,6 +40,9 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         # Signal child process startup with file removal
         lockfd, lockpath = tempfile.mkstemp(prefix='hg-service-')
         os.close(lockfd)
+        portpath = opts.get('port_file')
+        if portpath:
+            util.tryunlink(portpath)
         try:
             if not runargs:
                 runargs = util.hgcmd() + pycompat.sysargv[1:]
@@ -54,6 +57,8 @@ def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                     del runargs[i:i + 2]
                     break
             def condfn():
+                if portpath and not os.path.exists(portpath):
+                    return False
                 return not os.path.exists(lockpath)
             pid = util.rundetached(runargs, condfn)
             if pid < 0:

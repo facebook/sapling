@@ -54,7 +54,11 @@ class httpservice(object):
         util.setsignalhandler()
         self.httpd = server.create_server(self.ui, self.app)
 
-        if self.opts['port'] and not self.ui.verbose:
+        portfile = self.opts.get('port_file')
+        if portfile:
+            util.writefile(portfile, '%s' % self.httpd.port)
+
+        if (self.opts['port'] or portfile) and not self.ui.verbose:
             return
 
         if self.httpd.prefix:
@@ -75,7 +79,7 @@ class httpservice(object):
         fqaddr = self.httpd.fqaddr
         if r':' in fqaddr:
             fqaddr = r'[%s]' % fqaddr
-        if self.opts['port']:
+        if self.opts['port'] or portfile:
             write = self.ui.status
         else:
             write = self.ui.write
