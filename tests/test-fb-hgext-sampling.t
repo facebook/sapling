@@ -28,6 +28,10 @@ Create an extension that logs the call to commit
   >     return orig(repo, *args, **kwargs)
   > def extsetup(ui):
   >     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
+  >     @ui.atexit
+  >     def handler():
+  >       ui._blockedtimes['atexit_blocked'] += 7
+  >       ui.warn("atexit handler executed\n")
   > EOF
 
 
@@ -35,8 +39,11 @@ Set up the extension and set a log file
 We whitelist only the 'commit' key, only the events with that key will be
 logged
   $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > logblockedtimes=True
   > [sampling]
   > key.commit=commit_table
+  > key.uiblocked=uiblocked
   > [extensions]
   > sampling=
   > EOF
@@ -49,15 +56,26 @@ logged
 Do a couple of commits.  We expect to log two messages per call to repo.commit.
 
   $ mkcommit b
+  atexit handler executed
+  atexit handler executed
   $ mkcommit c
+  atexit handler executed
+  atexit handler executed
   >>> import json
   >>> with open("$LOGDIR/samplingpath.txt") as f:
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
-  ...     assert len(parsedrecord["data"]) == 4
+  ...     if parsedrecord['category'] == 'commit_table':
+  ...         print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
+  ...         assert len(parsedrecord["data"]) == 4
+  ...     elif parsedrecord['category'] == 'uiblocked':
+  ...         print('atexit_blocked: ', parsedrecord['data']['atexit_blocked'])
+  atexit_blocked:  7
   match filter commit_table
   message string commit_table
+  atexit_blocked:  7
+  atexit_blocked:  7
   match filter commit_table
   message string commit_table
+  atexit_blocked:  7
