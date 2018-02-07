@@ -35,6 +35,9 @@ class Client(object):
         if self._mock:
             with open(encoding.environ['HG_ARC_CONDUIT_MOCK'], 'r') as f:
                 self._mocked_responses = json.load(f)
+                # reverse since we want to use pop but still get items in
+                # original order
+                self._mocked_responses.reverse()
 
         self._host = None
         self._user = None
@@ -90,7 +93,7 @@ class Client(object):
     def getrevisioninfo(self, timeout, *revision_numbers):
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
         if self._mock:
-            response = self._mocked_responses.pop(0)
+            response = self._mocked_responses.pop()
             if 'error_info' in response:
                 raise ClientError(response.get('error_code', None),
                                   response['error_info'])
