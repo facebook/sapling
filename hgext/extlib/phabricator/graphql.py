@@ -134,10 +134,6 @@ class Client(object):
         except (KeyError, TypeError):
             pass
 
-        revisions = ret['data']['query'][0]['results']['nodes']
-        if revisions is None:
-            return None
-
         infos = {}
         for revision in rev_numbers:
             info = {}

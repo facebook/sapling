@@ -43,7 +43,9 @@ And now with bad responses:
   > [{"data": {"query": [{"results": {"nodes": null}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep Error
-  AttributeError: 'NoneType' object has no attribute 'get'
+  Error talking to phabricator. No diff information can be provided.
+  Error info: 'NoneType' object is not iterable
+  Error
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": null}]}}]
