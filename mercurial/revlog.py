@@ -1953,7 +1953,9 @@ class revlog(object):
         # full versions are inserted when the needed deltas
         # become comparable to the uncompressed text
         if rawtext is None:
-            textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
+            # need flags=0 rawtext size, which is the non-raw size
+            # use revlog explicitly, filelog.size would be wrong
+            textlen = mdiff.patchedsize(revlog.size(self, cachedelta[0]),
                                         cachedelta[1])
         else:
             textlen = len(rawtext)
