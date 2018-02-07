@@ -26,13 +26,13 @@ Configure arc...
 And now with bad responses:
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}], "result": {}}]
+  > [{}]
   > EOF
   $ OVERRIDE_GRAPHQL_URI=https://a.com HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   Error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}], "error_info": "failed, yo"}]
+  > [{"error_info": "failed, yo"}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
@@ -42,19 +42,17 @@ And now with bad responses:
 Missing status field is treated as an error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{
-  >     "number": 1,
-  >     "latest_active_diff": {
-  >       "local_commit_info": {
-  >         "nodes": [
-  >           {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >         ]
-  >       }
-  >     },
-  >     "differential_diffs": {"count": 3}
-  >   }]
-  > }]
+  > [[{
+  >   "number": 1,
+  >   "latest_active_diff": {
+  >     "local_commit_info": {
+  >       "nodes": [
+  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
+  >       ]
+  >     }
+  >   },
+  >   "differential_diffs": {"count": 3}
+  > }]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
   KeyError: 'diff_status_name'
@@ -62,19 +60,17 @@ Missing status field is treated as an error
 Missing count field is treated as an error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{
-  >     "number": 1,
-  >     "diff_status_name": "Approved",
-  >     "latest_active_diff": {
-  >       "local_commit_info": {
-  >         "nodes": [
-  >           {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >         ]
-  >       }
+  > [[{
+  >   "number": 1,
+  >   "diff_status_name": "Approved",
+  >   "latest_active_diff": {
+  >     "local_commit_info": {
+  >       "nodes": [
+  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
+  >       ]
   >     }
-  >   }]
-  > }]
+  >   }
+  > }]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
   KeyError: 'differential_diffs'
@@ -82,20 +78,18 @@ Missing count field is treated as an error
 Missing hash field is treated as unsync
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{
-  >     "number": 1,
-  >     "diff_status_name": "Approved",
-  >     "latest_active_diff": {
-  >       "local_commit_info": {
-  >         "nodes": [
-  >           {"property_value": "{\"lolwut\": {\"time\": 0}}"}
-  >         ]
-  >       }
-  >     },
-  >     "differential_diffs": {"count": 3}
-  >   }]
-  > }]
+  > [[{
+  >   "number": 1,
+  >   "diff_status_name": "Approved",
+  >   "latest_active_diff": {
+  >     "local_commit_info": {
+  >       "nodes": [
+  >         {"property_value": "{\"lolwut\": {\"time\": 0}}"}
+  >       ]
+  >     }
+  >   },
+  >   "differential_diffs": {"count": 3}
+  > }]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   unsync
@@ -103,20 +97,18 @@ Missing hash field is treated as unsync
 And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{
-  >     "number": 1,
-  >     "diff_status_name": "Committed",
-  >     "latest_active_diff": {
-  >       "local_commit_info": {
-  >         "nodes": [
-  >           {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
-  >         ]
-  >       }
-  >     },
-  >     "differential_diffs": {"count": 3}
-  >   }]
-  > }]
+  > [[{
+  >   "number": 1,
+  >   "diff_status_name": "Committed",
+  >   "latest_active_diff": {
+  >     "local_commit_info": {
+  >       "nodes": [
+  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
+  >       ]
+  >     }
+  >   },
+  >   "differential_diffs": {"count": 3}
+  > }]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
   committed

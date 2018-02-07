@@ -26,13 +26,13 @@ Configure arc...
 And now with bad responses:
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}], "result": {}}]
+  > [{}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}], "error_info": "failed, yo"}]
+  > [{"error_info": "failed, yo"}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
@@ -42,9 +42,7 @@ And now with bad responses:
 Missing status field is treated as an error
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{"number": 1}]
-  > }]
+  > [[{"number": 1}]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep KeyError
   KeyError: 'diff_status_name'
@@ -52,9 +50,7 @@ Missing status field is treated as an error
 And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{"number": 1, "diff_status_name": "Needs Review"}]
-  > }]
+  > [[{"number": 1, "diff_status_name": "Needs Review"}]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Needs Review
@@ -62,9 +58,7 @@ And finally, the success case
 Make sure the code works without the smartlog extensions
 
   $ cat > $TESTTMP/mockduit << EOF
-  > [{"cmd": ["differential.querydiffhashes", {"revisionIDs": ["1"]}],
-  >   "result": [{"number": 1, "diff_status_name": "Needs Review"}]
-  > }]
+  > [[{"number": 1, "diff_status_name": "Needs Review"}]]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg --config 'extensions.smartlog=!' log -T '{phabstatus}\n' -r .
   Needs Review

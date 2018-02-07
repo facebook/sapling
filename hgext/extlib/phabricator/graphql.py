@@ -95,9 +95,8 @@ class Client(object):
         if self._mock:
             response = self._mocked_responses.pop()
             if 'error_info' in response:
-                raise ClientError(response.get('error_code', None),
-                                  response['error_info'])
-            ret = {'query': {0: {'results': {'nodes': response['result']}}}}
+                raise ClientError(None, response['error_info'])
+            ret = {'query': {0: {'results': {'nodes': response}}}}
         else:
             params = { 'params': { 'numbers': rev_numbers } }
             ret = self._client.query(timeout, self._getquery(), params)
