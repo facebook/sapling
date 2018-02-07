@@ -35,8 +35,10 @@ Now progressively test the response handling for variations of missing data
   $ cat > $TESTTMP/mockduit << EOF
   > [{}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff 2>&1 | grep Error
-  KeyError: 'data'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
+  Error calling graphql: Unexpected graphql response format
+  abort: unable to determine previous changeset hash
+  [255]
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [{

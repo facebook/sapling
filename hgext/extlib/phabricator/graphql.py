@@ -97,7 +97,7 @@ class Client(object):
         else:
             params = { 'params': { 'numbers': rev_numbers } }
             ret = self._client.query(timeout, self._getquery(), params)
-        return self._processrevisioninfo(ret, rev_numbers)
+        return self._processrevisioninfo(ret)
 
     def _getquery(self):
         return '''
@@ -127,7 +127,7 @@ class Client(object):
         }
         '''
 
-    def _processrevisioninfo(self, ret, rev_numbers):
+    def _processrevisioninfo(self, ret):
         try:
             errormsg = ret['errors'][0]['message']
             raise ClientError(None, errormsg)
@@ -135,11 +135,11 @@ class Client(object):
             pass
 
         infos = {}
-        for revision in rev_numbers:
-            info = {}
-            for node in ret['data']['query'][0]['results']['nodes']:
-                if node['number'] != revision:
-                    continue
+        try:
+            nodes = ret['data']['query'][0]['results']['nodes']
+            for node in nodes:
+                info = {}
+                infos[str(node['number'])] = info
 
                 status = node['diff_status_name']
                 # GraphQL uses "Closed" but Conduit used "Committed" so let's
@@ -162,5 +162,8 @@ class Client(object):
                                           key=operator.itemgetter('time'),
                                           reverse=True)
                     info['hash'] = localcommits[0].get('commit', None)
-            infos[str(revision)] = info
+
+        except (TypeError, KeyError):
+            raise ClientError(None, 'Unexpected graphql response format')
+
         return infos

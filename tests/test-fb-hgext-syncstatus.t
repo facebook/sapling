@@ -28,8 +28,10 @@ And now with bad responses:
   $ cat > $TESTTMP/mockduit << EOF
   > [{}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
-  KeyError: 'data'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  Error talking to phabricator. No diff information can be provided.
+  Error info: Unexpected graphql response format
+  Error
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"errors": [{"message": "failed, yo"}]}]
@@ -54,8 +56,10 @@ Missing status field is treated as an error
   >   "differential_diffs": {"count": 3}
   > }]}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
-  KeyError: 'diff_status_name'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  Error talking to phabricator. No diff information can be provided.
+  Error info: Unexpected graphql response format
+  Error
 
 Missing count field is treated as an error
 
@@ -72,8 +76,10 @@ Missing count field is treated as an error
   >   }
   > }]}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r . 2>&1 | grep Error
-  KeyError: 'differential_diffs'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
+  Error talking to phabricator. No diff information can be provided.
+  Error info: Unexpected graphql response format
+  Error
 
 Missing hash field is treated as unsync
 

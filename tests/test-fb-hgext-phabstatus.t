@@ -28,8 +28,10 @@ And now with bad responses:
   $ cat > $TESTTMP/mockduit << EOF
   > [{}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep KeyError
-  KeyError: 'data'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Error talking to phabricator. No diff information can be provided.
+  Error info: Unexpected graphql response format
+  Error
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"errors": [{"message": "failed, yo"}]}]
@@ -42,17 +44,17 @@ And now with bad responses:
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": null}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep Error
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
-  Error info: 'NoneType' object is not iterable
+  Error info: Unexpected graphql response format
   Error
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": null}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep Error
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Error talking to phabricator. No diff information can be provided.
-  Error info: 'NoneType' object has no attribute '__getitem__'
+  Error info: Unexpected graphql response format
   Error
 
 Missing status field is treated as an error
@@ -61,8 +63,10 @@ Missing status field is treated as an error
   >   {"number": 1}
   > ]}}]}}]
   > EOF
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep KeyError
-  KeyError: 'diff_status_name'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Error talking to phabricator. No diff information can be provided.
+  Error info: Unexpected graphql response format
+  Error
 
 And finally, the success case
 
