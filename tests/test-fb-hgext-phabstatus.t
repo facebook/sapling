@@ -39,6 +39,20 @@ And now with bad responses:
   Error info: failed, yo
   Error
 
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": null}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep Error
+  AttributeError: 'NoneType' object has no attribute 'get'
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": null}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r . 2>&1 | grep Error
+  Error talking to phabricator. No diff information can be provided.
+  Error info: 'NoneType' object has no attribute '__getitem__'
+  Error
+
 Missing status field is treated as an error
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
