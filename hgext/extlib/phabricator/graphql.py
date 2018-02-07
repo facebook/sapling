@@ -88,16 +88,16 @@ class Client(object):
         return [int(x) for x in rev_numbers]
 
     def getrevisioninfo(self, timeout, *revision_numbers):
+        rev_numbers = self._normalizerevisionnumbers(revision_numbers)
         if self._mock:
             response = self._mocked_responses.pop(0)
             if 'error_info' in response:
                 raise ClientError(response.get('error_code', None),
                                   response['error_info'])
-            return response['result']
-
-        rev_numbers = self._normalizerevisionnumbers(revision_numbers)
-        params = { 'params': { 'numbers': rev_numbers } }
-        ret = self._client.query(timeout, self._getquery(), params)
+            ret = {'query': {0: {'results': {'nodes': response['result']}}}}
+        else:
+            params = { 'params': { 'numbers': rev_numbers } }
+            ret = self._client.query(timeout, self._getquery(), params)
         return self._processrevisioninfo(ret, rev_numbers)
 
     def _getquery(self):
@@ -147,9 +147,9 @@ class Client(object):
                     status = 'Committed'
                 info['status'] = status
 
-                active_diff = node['latest_active_diff']
-                if active_diff is None:
+                if 'latest_active_diff' not in node:
                     continue
+                active_diff = node['latest_active_diff']
 
                 info['count'] = node['differential_diffs']['count']
 
