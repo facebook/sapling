@@ -932,6 +932,16 @@ Test command with no help text
   
    nohelp (no help text available)
 
+Commands in disabled extensions gets suggested even if there is no help text
+for the module itself.
+
+  $ hg help --config 'extensions.helpext=!'`pwd`/helpext.py nohelp
+  'nohelp' is provided by the following extension:
+  
+      helpext       (no help text available)
+  
+  (use 'hg help extensions' for information on enabling extensions)
+
 Test that default list of commands omits extension commands
 
   $ hg help

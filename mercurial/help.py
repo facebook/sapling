@@ -566,7 +566,11 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
     def helpextcmd(name, subtopic=None):
         cmd, ext, mod = extensions.disabledcmd(ui, name,
                                                ui.configbool('ui', 'strict'))
-        doc = gettext(pycompat.getdoc(mod)).splitlines()[0]
+        doc = gettext(pycompat.getdoc(mod))
+        if doc is None:
+            doc = _('(no help text available)')
+        else:
+            doc = doc.splitlines()[0]
 
         rst = listexts(_("'%s' is provided by the following "
                               "extension:") % cmd, {ext: doc}, indent=4,
