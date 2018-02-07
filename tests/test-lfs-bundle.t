@@ -144,6 +144,9 @@ Apply bundles
   >     cp -R $TESTTMP/$j $TESTTMP/tmp-$i-$j
   >     cd $TESTTMP/tmp-$i-$j
   >     hg unbundle $TESTTMP/$i.bundle -q 2>/dev/null || echo 'CRASHED!' && hg debugfilerev -r 'all()-X'
+  >     if grep remotefilelog .hg/requires &>/dev/null; then :; else
+  >       hg verify --quiet
+  >     fi
   >   done
   > done
   ---- Applying src-shallow-normal.bundle to dst-shallow-normal ----
@@ -242,6 +245,10 @@ Apply bundles
    X: bin=0 lnk=0 flag=0 size=41 copied='Y' chain=5322d1c20036
    Y: bin=0 lnk=0 flag=0 size=41 copied='X' chain=78eb25c15608
    Z: bin=0 lnk=0 flag=0 size=7 copied='' chain=0ad6e257ad34
+   X@2: unpacked size is 103, 206 expected
+   Y@2: unpacked size is 103, 206 expected
+  2 integrity errors encountered!
+  (first damaged changeset appears to be 2)
   ---- Applying src-full-lfs.bundle to dst-shallow-normal ----
   9f4445d5e0fc: Y
    X: bin=0 lnk=0 flag=2000 size=42 copied='Y' chain=c6fdd3c3ab39
