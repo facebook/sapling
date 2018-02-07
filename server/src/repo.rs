@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use bytes::Bytes;
+use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use tokio_core::reactor::Remote;
@@ -24,10 +25,12 @@ use slog::Logger;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
-use mercurial_types::{percent_encode, BlobNode, Changeset, NodeHash, Parents, NULL_HASH};
+use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
+                      Parents, Type, NULL_HASH};
+use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
-use hgproto::{self, GetbundleArgs, HgCommandRes, HgCommands};
+use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 
 use blobrepo::BlobRepo;
 
@@ -460,4 +463,102 @@ impl HgCommands for RepoClient {
             .map_err(|(err, _)| err)
             .boxify()
     }
+
+    // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
+    fn gettreepack(&self, params: GettreepackArgs) -> HgCommandRes<Bytes> {
+        info!(self.logger, "gettreepack {:?}", params);
+
+        if !params.directories.is_empty() {
+            // This param is not used by core hg, don't worry about implementing it now
+            return Err(err_msg("directories param is not supported"))
+                .into_future()
+                .boxify();
+        }
+
+        if params.mfnodes.len() != 1 || params.basemfnodes.len() != 1 {
+            // For now, just 1 mfnode and 1 basenode
+            return Err(err_msg("only one mfnode and one basemfnode is supported"))
+                .into_future()
+                .boxify();
+        }
+        let manifest_id = params.mfnodes.get(0).unwrap();
+        let basemfnode = params.basemfnodes.get(0).unwrap();
+
+        if params.rootdir.len() != 0 {
+            // For now, only root repo
+            return Err(err_msg("only empty rootdir is supported"))
+                .into_future()
+                .boxify();
+        }
+
+        let writer = Cursor::new(Vec::new());
+        let mut bundle = Bundle2EncodeBuilder::new(writer);
+        // Mercurial currently hangs while trying to read compressed bundles over the wire:
+        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+        // TODO: possibly enable compression support once this is fixed.
+        bundle.set_compressor_type(None);
+
+        let manifest = self.repo.hgrepo.get_manifest_by_nodeid(manifest_id);
+        let basemanifest = self.repo.hgrepo.get_manifest_by_nodeid(basemfnode);
+
+        let changed_entries = manifest
+            .join(basemanifest)
+            .map(|(mf, basemf)| changed_entry_stream(mf, basemf, MPath::empty()))
+            .flatten_stream();
+
+        let changed_entries = changed_entries
+            .filter_map(move |entry_status| match entry_status.status {
+                EntryStatus::Added(entry) => {
+                    if entry.get_type() == Type::Tree {
+                        Some(entry)
+                    } else {
+                        None
+                    }
+                }
+                EntryStatus::Modified(entry, _) => {
+                    if entry.get_type() == Type::Tree {
+                        Some(entry)
+                    } else {
+                        None
+                    }
+                }
+                EntryStatus::Deleted(..) => None,
+            })
+            .and_then({
+                let hgrepo = self.repo.hgrepo.clone();
+                move |val| fetch_linknode(hgrepo.clone(), val)
+            })
+            .map(|(entry, linknode)| (entry, linknode, MPath::empty()));
+
+        // Append root manifest
+        let root_entry_stream = Ok(self.repo
+            .hgrepo
+            .get_root_entry(&ManifestId::new(*manifest_id)))
+            .into_future()
+            .and_then({
+                let hgrepo = self.repo.hgrepo.clone();
+                move |val| fetch_linknode(hgrepo.clone(), val)
+            })
+            .map(|(entry, linknode)| stream::once(Ok((entry, linknode, MPath::empty()))))
+            .flatten_stream();
+
+        parts::treepack_part(changed_entries.chain(root_entry_stream))
+            .into_future()
+            .and_then(|part| {
+                bundle.add_part(part);
+                bundle.build()
+            })
+            .map(|cursor| Bytes::from(cursor.into_inner()))
+            .from_err()
+            .boxify()
+    }
+}
+
+fn fetch_linknode(
+    repo: Arc<BlobRepo>,
+    entry: Box<Entry + Sync>,
+) -> BoxFuture<(Box<Entry + Sync>, NodeHash), Error> {
+    let linknode_fut =
+        repo.get_linknode(entry.get_path().clone(), &entry.get_hash().into_nodehash());
+    linknode_fut.map(|linknode| (entry, linknode)).boxify()
 }

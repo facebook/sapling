@@ -5,14 +5,18 @@
 // GNU General Public License version 2 or any later version.
 
 use bytes::Bytes;
+use failure::err_msg;
 use futures::{Future, Stream};
-use futures::stream::once;
+use futures::stream::{iter_ok, once};
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::changegroup::packer::Cg2Packer;
+use super::wirepack;
+use super::wirepack::packer::WirePackPacker;
 
 use errors::*;
-use mercurial_types::{BlobNode, Delta, MPath, NULL_HASH};
+use mercurial_types::{BlobNode, Delta, MPath, NodeHash, RepoPath, NULL_HASH};
+use mercurial_types::manifest::Entry;
 use part_encode::PartEncodeBuilder;
 use part_header::PartHeaderType;
 
@@ -80,6 +84,78 @@ where
 
     let cgdata = Cg2Packer::new(changelogentries);
     builder.set_data_generated(cgdata);
+
+    Ok(builder)
+}
+
+pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
+where
+    S: Stream<Item = (Box<Entry + Sync>, NodeHash, MPath), Error = Error> + Send + 'static,
+{
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xTreegroup2)?;
+    builder.add_mparam("version", "1")?;
+    builder.add_mparam("cache", "True")?;
+    builder.add_mparam("category", "manifests")?;
+
+    let wirepack_parts = entries
+        .and_then(|(entry, linknode, basepath)| {
+            entry
+                .get_raw_content()
+                .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
+                .map(move |content| (entry, content, linknode, basepath))
+        })
+        .and_then(|(entry, content, linknode, basepath)| {
+            entry
+                .get_parents()
+                .map(move |parents| (entry, parents, content, linknode, basepath))
+        })
+        .and_then(|(entry, parents, content, linknode, basepath)| {
+            let path = basepath.clone().join(&entry.get_mpath());
+            let path = if path.is_empty() {
+                Ok(RepoPath::RootPath)
+            } else {
+                RepoPath::dir(path)
+            };
+            path.map(|path| (entry, parents, content, linknode, path))
+        })
+        .map(|(entry, parents, content, linknode, path)| {
+            let history_meta = wirepack::Part::HistoryMeta {
+                path: path.clone(),
+                entry_count: 1,
+            };
+
+            let node: NodeHash = entry.get_hash().into_nodehash();
+            let (p1, p2) = parents.get_nodes();
+            let p1 = *p1.unwrap_or(&NULL_HASH);
+            let p2 = *p2.unwrap_or(&NULL_HASH);
+
+            let history = wirepack::Part::History(wirepack::HistoryEntry {
+                node: node.clone(),
+                p1,
+                p2,
+                linknode,
+                // No copies/renames for trees
+                copy_from: None,
+            });
+
+            let data_meta = wirepack::Part::DataMeta {
+                path,
+                entry_count: 1,
+            };
+
+            let data = wirepack::Part::Data(wirepack::DataEntry {
+                node,
+                delta_base: NULL_HASH,
+                delta: Delta::new_fulltext(content),
+            });
+
+            iter_ok(vec![history_meta, history, data_meta, data].into_iter())
+        })
+        .flatten()
+        .chain(once(Ok(wirepack::Part::End)));
+
+    let packer = WirePackPacker::new(wirepack_parts, wirepack::Kind::Tree);
+    builder.set_data_generated(packer);
 
     Ok(builder)
 }
