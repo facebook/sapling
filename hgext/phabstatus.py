@@ -77,15 +77,13 @@ def getdiffstatus(repo, *diffid):
         client = graphql.Client(
             repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
         statuses = client.getrevisioninfo(timeout, diffid)
-
     except arcconfig.ArcConfigError as ex:
         msg = _('arcconfig configuration problem. No diff information can be '
                 'provided.\n')
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
-
-    except (graphql.ClientError, TypeError) as ex:
+    except graphql.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '
                 'provided.\n')
         hint = _("Error info: %s\n") % str(ex)
