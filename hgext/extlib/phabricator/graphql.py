@@ -96,10 +96,12 @@ class Client(object):
             return response['result']
 
         rev_numbers = self._normalizerevisionnumbers(revision_numbers)
+        params = { 'params': { 'numbers': rev_numbers } }
+        ret = self._client.query(timeout, self._getquery(), params)
+        return self._processrevisioninfo(ret, rev_numbers)
 
-        ret = self._client.query(
-            timeout,
-            '''
+    def _getquery(self):
+        return '''
               query RevisionQuery(
                 $params: [DifferentialRevisionQueryParams!]!
               ) {
@@ -124,11 +126,9 @@ class Client(object):
                   }
                 }
               }
-            ''',
-            {'params': {
-                'numbers': rev_numbers,
-            }},
-        )
+        '''
+
+    def _processrevisioninfo(self, ret, rev_numbers):
         revisions = ret['query'][0]['results']['nodes']
         if revisions is None:
             return None
