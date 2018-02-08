@@ -130,10 +130,4 @@ A patch with other errors:
    This has no topic and ends with a period.
   7: don't add trailing period on summary line
    This has no topic and ends with a period.
-  19: adds double empty line
-   +
-  20: adds a function with foo_bar naming
-   + def blah_blah(x):
-  23: adds double empty line
-   +
   [1]
