@@ -103,7 +103,6 @@ Make a local tree-only draft commit
   \s*4 (re)
   $ echo t >> subdir/x
   $ hg commit -qm "tree only commit"
-  1 trees fetched over * (glob)
   $ hg debugdata -c 3
   7fdb5a91151d114ca83c30c5cb4a1029ef9700ef
   test
@@ -283,7 +282,6 @@ Test peer-to-peer push/pull of tree only commits
   $ clearcache
   $ hgcloneshallow ssh://user@dummy/master client2 -q --config treemanifest.treeonly=True --config extensions.treemanifest=
   2 trees fetched over * (glob)
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client2
   $ ls_l .hg/store
@@ -323,7 +321,6 @@ Test peer-to-peer push/pull of tree only commits
 # Test pushing to a treeonly peer
   $ echo y >> y
   $ hg commit -qm "modify y"
-  1 trees fetched over * (glob)
   $ hg push -f -r . ssh://user@dummy/client --debug 2>&1 | grep treegroup
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   $ cd ../client
@@ -461,3 +458,39 @@ Switch back to hybrid mode
   added 1 changesets with 0 changes to 0 files (+1 heads)
   new changesets 4f84204095e0
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ cd ..
+
+Test creating a treeonly repo from scratch
+  $ hg init treeonlyrepo
+  $ cd treeonlyrepo
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > fastmanifest=
+  > 
+  > [treemanifest]
+  > sendtrees=True
+  > treeonly=True
+  > 
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > 
+  > [remotefilelog]
+  > reponame=treeonlyrepo
+  > EOF
+  $ echo foo > a
+  $ hg commit -Aqm 'add a'
+  $ hg log -r . -p
+  changeset:   0:f87d03aef498
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a
+  
+  diff -r 000000000000 -r f87d03aef498 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +foo
+  

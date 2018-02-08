@@ -139,7 +139,6 @@ Test pushing tree-only commit with commit hooks
   $ mkdir subdir2
   $ echo >> subdir2/z
   $ hg commit -qAm 'add subdir2/z (treeonly)' --config treemanifest.treeonly=True
-  1 trees fetched over * (glob)
   $ hg push --to mybook -r .
   pushing to ssh://user@dummy/master
   searching for changes
@@ -229,7 +228,7 @@ Test fetching from the server populates the cache
   $ find ../master/.hg/cache/trees/v1/get -type f | wc -l
   \s*4 (re)
   $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
-  \s*5 (re)
+  \s*4 (re)
 
 - Move the revlogs away to show that the cache is answering prefetches
   $ mv ../master/.hg/store/meta ../master/.hg/store/meta.bak
@@ -249,11 +248,11 @@ Test fetching from the server populates the cache
   $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} cp {} {}3
   $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | xargs -n 1 -I{} mv {} {}4
   $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
-  \s*20 (re)
+  \s*16 (re)
   $ clearcache
   $ hg status --change tip
   2 trees fetched over * (glob)
   2 trees fetched over * (glob)
   A subdir2/z
   $ find ../master/.hg/cache/trees/v1/nodeinfo -type f | wc -l
-  \s*12 (re)
+  \s*8 (re)

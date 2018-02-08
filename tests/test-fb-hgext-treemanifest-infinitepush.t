@@ -51,7 +51,6 @@ Push a non-tree scratch branch from one client
 Push a tree-only scratch branch from another client
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
   1 trees fetched over * (glob)
-  1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ cd client1
   $ cat >> .hg/hgrc <<EOF

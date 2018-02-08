@@ -475,7 +475,10 @@ class treemanifestctx(object):
     def read(self):
         if self._data is None:
             store = self._manifestlog.datastore
-            self._data = cstore.treemanifest(store, self._node)
+            if self._node != nullid:
+                self._data = cstore.treemanifest(store, self._node)
+            else:
+                self._data = cstore.treemanifest(store)
         return self._data
 
     def node(self):
