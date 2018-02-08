@@ -11,6 +11,7 @@ import functools
 import imp
 import inspect
 import os
+import sys
 
 from .i18n import (
     _,
@@ -238,8 +239,11 @@ def load(ui, name, path):
     if shortname in _extensions:
         return _extensions[shortname]
     _extensions[shortname] = None
+    # If mercurial.main was imported, then hg is packed using a non-standard
+    # layout, be permissive to avoid false positives.
     strict = (util.safehasattr(ui, 'configbool')
-              and ui.configbool('devel', 'all-warnings'))
+              and ui.configbool('devel', 'all-warnings')
+              and 'mercurial.main' not in sys.modules)
     mod = _importext(name, path, bind(_reportimporterror, ui), strict)
 
     # Before we do anything with the extension, check against minimum stated
