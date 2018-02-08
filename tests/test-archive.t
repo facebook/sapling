@@ -102,8 +102,9 @@ hg subrepos are shared into existence on demand if the parent was shared
   >     test_archtype_run "$@"
   > }
   > test_archtype_run() {
-  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log \
+  >     hg serve -p 0 --port-file $TESTTMP/.p -d --pid-file=hg.pid -E errors.log \
   >         --config extensions.blackbox= --config blackbox.track=develwarn
+  >     HGPORT=`cat $TESTTMP/.p`
   >     cat hg.pid >> $DAEMON_PIDS
   >     echo % $1 allowed should give 200
   >     get-with-headers.py localhost:$HGPORT "archive/tip.$2" | head -n 1

@@ -22,14 +22,16 @@ Prep for test server without branchmap support
 
 Setup HTTP server control:
 
-  $ remote=http://localhost:$HGPORT/
-  $ export remote
   $ tstart() {
   >   echo '[web]' > $1/.hg/hgrc
   >   echo 'push_ssl = false' >> $1/.hg/hgrc
   >   echo 'allow_push = *' >> $1/.hg/hgrc
   >   cp $HGRCPATH-nocap $HGRCPATH
-  >   hg serve -R $1 -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >   hg serve -R $1 -p 0 --port-file .p -d --pid-file=hg.pid -E errors.log
+  >   HGPORT=`cat .p`
+  >   remote=http://localhost:$HGPORT/
+  >   export remote
+  >   rm .p
   >   cat hg.pid >> $DAEMON_PIDS
   > }
   $ tstop() {

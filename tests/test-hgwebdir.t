@@ -79,8 +79,8 @@ serve
   > a=$root/a
   > b=$root/b
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-1.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-1.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 should give a 404 - file does not exist
@@ -159,8 +159,8 @@ rss-log without basedir
   > starstar=**
   > astar=webdir/a/*
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-2.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-2.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 should succeed, slashy names
@@ -1139,8 +1139,8 @@ Test collapse = True
   > collapse=true
   > descend = true
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-3.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-3.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 'coll/?style=raw'
   200 Script output follows
@@ -1223,8 +1223,8 @@ Test descend = False
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-4.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-4.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 'coll/?style=raw'
   200 Script output follows
@@ -1287,8 +1287,8 @@ Test [paths] '*' in a repo root
   > t/b = $root/b
   > c = $root/c
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-5.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-5.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
   200 Script output follows
@@ -1313,8 +1313,8 @@ Test collapse = True
   > [web]
   > collapse=true
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-6.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-6.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
   200 Script output follows
@@ -1337,8 +1337,8 @@ test descend = False
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-7.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-7.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
   200 Script output follows
@@ -1359,8 +1359,8 @@ test descend = False
   > nostore = $root/nostore
   > inexistent = $root/inexistent
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-8.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf paths.conf -A access-paths.log -E error-paths-8.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 test inexistent and inaccessible repo should be ignored silently
@@ -1419,8 +1419,7 @@ test listening address/port specified by web-conf (issue4699):
   > address = localhost
   > port = $HGPORT1
   > EOF
-  $ hg serve -d --pid-file=hg.pid --web-conf paths.conf \
-  >     -A access-paths.log -E error-paths-9.log
+  $ hg serve -d --pid-file=hg.pid --web-conf paths.conf -A access-paths.log -E error-paths-9.log
   listening at http://*:$HGPORT1/ (bound to *$LOCALIP*:$HGPORT1) (glob) (?)
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
@@ -1431,9 +1430,9 @@ test listening address/port specified by web-conf (issue4699):
 test --port option overrides web.port:
 
   $ killdaemons.py
-  $ hg serve -p $HGPORT2 -d -v --pid-file=hg.pid --web-conf paths.conf \
-  >     -A access-paths.log -E error-paths-10.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d -v --pid-file=hg.pid --web-conf paths.conf -A access-paths.log -E error-paths-10.log
   listening at http://*:$HGPORT2/ (bound to *$LOCALIP*:$HGPORT2) (glob) (?)
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT2 '?style=raw'
   200 Script output follows
@@ -1446,9 +1445,8 @@ test --port option overrides web.port:
   > [collections]
   > $root=$root
   > EOF
-  $ hg serve --config web.baseurl=http://hg.example.com:8080/ -p $HGPORT2 -d \
-  >     --pid-file=hg.pid --webdir-conf collections.conf \
-  >     -A access-collections.log -E error-collections.log
+  $ hg serve --config web.baseurl=http://hg.example.com:8080/ -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections.conf -A access-collections.log -E error-collections.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 collections: should succeed
@@ -1489,9 +1487,8 @@ rss-log with basedir /
   $ get-with-headers.py localhost:$HGPORT2 'a/rss-log' | grep '<guid'
       <guid isPermaLink="true">http://hg.example.com:8080/a/rev/8580ff50825a</guid>
   $ killdaemons.py
-  $ hg serve --config web.baseurl=http://hg.example.com:8080/foo/ -p $HGPORT2 -d \
-  >     --pid-file=hg.pid --webdir-conf collections.conf \
-  >     -A access-collections-2.log -E error-collections-2.log
+  $ hg serve --config web.baseurl=http://hg.example.com:8080/foo/ -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections.conf -A access-collections-2.log -E error-collections-2.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 atom-log with basedir /foo/

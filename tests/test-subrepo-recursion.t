@@ -246,7 +246,7 @@ Status between revisions:
 
 #if serve
   $ cd ..
-  $ hg serve -R repo --debug -S -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
+  $ hg serve -R repo --debug -S -p 0 --port-file .p -d --pid-file=hg1.pid -E error.log -A access.log
   adding  = $TESTTMP/repo
   adding foo = $TESTTMP/repo/foo
   adding foo/bar = $TESTTMP/repo/foo/bar
@@ -254,6 +254,8 @@ Status between revisions:
   adding  = $TESTTMP/repo (?)
   adding foo = $TESTTMP/repo/foo (?)
   adding foo/bar = $TESTTMP/repo/foo/bar (?)
+  $ HGPORT=`cat .p`
+  $ rm .p
   $ cat hg1.pid >> $DAEMON_PIDS
 
   $ hg clone http://localhost:$HGPORT clone  --config progress.disable=True

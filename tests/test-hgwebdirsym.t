@@ -27,8 +27,8 @@ hide outer repo
   > [collections]
   > $root=$root
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --webdir-conf collections.conf \
-  >     -A access-collections.log -E error-collections.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections.conf -A access-collections.log -E error-collections.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 should succeed

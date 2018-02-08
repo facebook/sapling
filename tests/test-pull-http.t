@@ -64,7 +64,9 @@ serve errors
 
   $ cat errors.log
   $ req() {
-  >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  >     hg serve -p 0 --port-file .p -d --pid-file=hg.pid -E errors.log
+  >     HGPORT=`cat .p`
+  >     rm .p
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test pull http://localhost:$HGPORT/
   >     killdaemons.py hg.pid

@@ -36,9 +36,9 @@ Test raw style of hgweb
   $LOCALIP - - [*] "GET /?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw HTTP/1.1" 200 - (glob)
 
   $ rm access.log error.log
-  $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid \
-  > --config web.guessmime=True
+  $ hg serve -p 0 --port-file $TESTTMP/.port -A access.log -E error.log -d --pid-file=hg.pid --config web.guessmime=True
 
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ (get-with-headers.py localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
   $ killdaemons.py hg.pid

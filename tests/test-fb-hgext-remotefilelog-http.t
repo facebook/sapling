@@ -9,7 +9,8 @@
   > EOF
   $ echo x > x
   $ hg commit -qAm x
-  $ hg serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log -A ../access.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg1.pid -E ../error.log -A ../access.log
+  $ HGPORT=`cat $TESTTMP/.port`
 
 Build a query string for later use:
   $ GET=`hg debugdata -m 0 | python -c \

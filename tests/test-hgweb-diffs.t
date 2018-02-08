@@ -310,8 +310,8 @@ diff removed file
 set up hgweb with git diffs + noprefix
 
   $ killdaemons.py
-  $ hg serve --config 'diff.git=1' --config 'diff.noprefix=1' -p $HGPORT -d \
-  > --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config 'diff.git=1' --config 'diff.noprefix=1' -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 patch header and diffstat

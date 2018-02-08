@@ -450,14 +450,14 @@ Ports used by next test. Kill servers.
 Start servers running supported TLS versions
 
   $ cd test
-  $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
-  > --config devel.serverexactprotocol=tls1.0
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg0.pid --certificate=$PRIV --config devel.serverexactprotocol=tls1.0
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../hg0.pid >> $DAEMON_PIDS
-  $ hg serve -p $HGPORT1 -d --pid-file=../hg1.pid --certificate=$PRIV \
-  > --config devel.serverexactprotocol=tls1.1
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg1.pid --certificate=$PRIV --config devel.serverexactprotocol=tls1.1
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat ../hg1.pid >> $DAEMON_PIDS
-  $ hg serve -p $HGPORT2 -d --pid-file=../hg2.pid --certificate=$PRIV \
-  > --config devel.serverexactprotocol=tls1.2
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg2.pid --certificate=$PRIV --config devel.serverexactprotocol=tls1.2
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat ../hg2.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -608,20 +608,18 @@ Test https with cert problems through proxy
 
 Missing certificate file(s) are detected
 
-  $ hg serve -p $HGPORT --certificate=/missing/certificate \
-  > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
+  $ hg serve -p 0 --certificate=/missing/certificate --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
   abort: referenced certificate file (*/missing/certificate) does not exist (glob)
   [255]
 
-  $ hg serve -p $HGPORT --certificate=$PRIV \
-  > --config devel.servercafile=/missing/cafile --config devel.serverrequirecert=true
+  $ hg serve -p 0 --certificate=$PRIV --config devel.servercafile=/missing/cafile --config devel.serverrequirecert=true
   abort: referenced certificate file (*/missing/cafile) does not exist (glob)
   [255]
 
 Start hgweb that requires client certificates:
 
-  $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
-  > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg0.pid --certificate=$PRIV --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat ../hg0.pid >> $DAEMON_PIDS
   $ cd ..
 

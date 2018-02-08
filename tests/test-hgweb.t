@@ -828,8 +828,8 @@ no style can be loaded from directories other than the specified paths
   > EOF
 
   $ killdaemons.py
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log \
-  > --config web.style=fallback --config web.templates=x/templates
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log --config web.style=fallback --config web.templates=x/templates
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT "?style=`pwd`/x"

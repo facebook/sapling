@@ -33,8 +33,8 @@ test with recursive collection
   > [paths]
   > /=$root/**
   > EOF
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --webdir-conf collections.conf \
-  >     -A access-paths.log -E error-paths-1.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections.conf -A access-paths.log -E error-paths-1.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT '?style=raw'
   200 Script output follows
@@ -74,8 +74,8 @@ test with normal collection
   > [paths]
   > /=$root/*
   > EOF
-  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf collections1.conf \
-  >     -A access-paths.log -E error-paths-1.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections1.conf -A access-paths.log -E error-paths-1.log
+  $ HGPORT1=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
   200 Script output follows
@@ -115,8 +115,8 @@ test with old-style collection
   > [collections]
   > $root=$root
   > EOF
-  $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --webdir-conf collections2.conf \
-  >     -A access-paths.log -E error-paths-1.log
+  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --webdir-conf collections2.conf -A access-paths.log -E error-paths-1.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT2 '?style=raw'
   200 Script output follows

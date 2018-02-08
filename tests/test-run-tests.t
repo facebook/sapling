@@ -550,20 +550,23 @@ Verify that when a process fails to start we show a useful message
 
 Verify that we can try other ports
 ===================================
-  $ hg init inuse
-  $ hg serve -R inuse -p 0 --port-file $TESTTMP/.port -d --pid-file=blocks.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat blocks.pid >> $DAEMON_PIDS
-  $ cat > test-serve-inuse.t <<EOF
-  >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid
-  >   $ cat hg.pid >> \$DAEMON_PIDS
-  > EOF
-  $ rt test-serve-inuse.t
-  .
-  # Ran 1 tests, 0 skipped, 0 failed.
-  $ rm test-serve-inuse.t
-  $ killdaemons.py $DAEMON_PIDS
-  $ rm $DAEMON_PIDS
+This test is commented out since it could be flaky under stress run. Tests
+using "hg serve" has been changed to use "-p 0 --port-file X; HGPORT=`cat X`"
+to avoid race conditions between free port detection and actual usage.
+#  $ hg init inuse
+#  $ hg serve -R inuse -p 0 --port-file $TESTTMP/.port -d --pid-file=blocks.pid
+#  $ HGPORT=`cat $TESTTMP/.port`
+#  $ cat blocks.pid >> $DAEMON_PIDS
+#  $ cat > test-serve-inuse.t <<EOF
+#  >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid (glob)
+#  >   $ cat hg.pid >> \$DAEMON_PIDS
+#  > EOF
+#  $ rt test-serve-inuse.t
+#  .
+#  # Ran 1 tests, 0 skipped, 0 failed.
+#  $ rm test-serve-inuse.t
+#  $ killdaemons.py $DAEMON_PIDS
+#  $ rm $DAEMON_PIDS
 
 Running In Debug Mode
 ======================

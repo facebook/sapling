@@ -2018,8 +2018,8 @@ Commit message with null character
 Stop and restart with HGENCODING=cp932
 
   $ killdaemons.py
-  $ HGENCODING=cp932 hg serve -p $HGPORT -d --pid-file=hg.pid \
-  > -A access.log -E error.log
+  $ HGENCODING=cp932 hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E error.log
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 Test json escape of multibyte characters

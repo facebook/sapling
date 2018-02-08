@@ -23,7 +23,8 @@ parts that are not bundle1/bundle2 specific.
   adding foo.d/foo
   $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg1.pid -E ../error.log
   $ HGPORT=`cat $TESTTMP/.port`
-  $ hg serve --config server.uncompressed=False -p $HGPORT1 -d --pid-file=../hg2.pid
+  $ hg serve --config server.uncompressed=False -p 0 --port-file $TESTTMP/.port -d --pid-file=../hg2.pid
+  $ HGPORT1=`cat $TESTTMP/.port`
 
 Test server address cannot be reused
 
@@ -187,9 +188,8 @@ test http authentication
   > def extsetup():
   >     common.permhooks.insert(0, perform_authentication)
   > EOT
-  $ hg serve --config extensions.x=userpass.py -p $HGPORT2 -d --pid-file=pid \
-  >    --config server.preferuncompressed=True \
-  >    --config web.push_ssl=False --config web.allow_push=* -A ../access.log
+  $ hg serve --config extensions.x=userpass.py -p 0 --port-file $TESTTMP/.port -d --pid-file=pid --config server.preferuncompressed=True --config web.push_ssl=False --config web.allow_push=* -A ../access.log
+  $ HGPORT2=`cat $TESTTMP/.port`
   $ cat pid >> $DAEMON_PIDS
 
   $ cat << EOF > get_pass.py

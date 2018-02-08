@@ -35,8 +35,8 @@ hide outer repo
 Serving them both using hgweb
 
   $ printf '[paths]\n/main = main\nsub = sub\n' > webdir.conf
-  $ hg serve --webdir-conf webdir.conf -a localhost -p $HGPORT \
-  >    -A /dev/null -E /dev/null --pid-file hg.pid -d
+  $ hg serve --webdir-conf webdir.conf -a localhost -p 0 --port-file $TESTTMP/.port -A /dev/null -E /dev/null --pid-file hg.pid -d
+  $ HGPORT=`cat $TESTTMP/.port`
   $ cat hg.pid >> $DAEMON_PIDS
 
 Clone main from hgweb

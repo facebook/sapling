@@ -956,7 +956,9 @@ errors encountered
   $ hgserveget () {
   >     killdaemons.py
   >     echo % HGENCODING="$1" hg serve
-  >     HGENCODING="$1" hg serve -p $HGPORT -d -n test --pid-file=hg.pid -E errors.log
+  >     HGENCODING="$1" hg serve -p 0 --port-file .p -d -n test --pid-file=hg.pid -E errors.log
+  >     HGPORT=`cat .p`
+  >     rm .p
   >     cat hg.pid >> $DAEMON_PIDS
   > 
   >     echo % hgweb filerevision, html

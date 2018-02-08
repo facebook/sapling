@@ -1,11 +1,12 @@
 #require killdaemons
 
   $ hgserve() {
-  >     hg serve -a localhost -p $HGPORT1 -d --pid-file=hg.pid \
+  >     hg serve -a localhost -p 0 --port-file $TESTTMP/.p -d --pid-file=hg.pid \
   >       -E errors.log -v $@ > startup.log
   >     # Grepping hg serve stdout would hang on Windows
   >     grep -v 'listening at' startup.log
   >     cat hg.pid >> "$DAEMON_PIDS"
+  >     HGPORT1=`cat $TESTTMP/.p`
   > }
   $ hg init a
   $ hg --encoding utf-8 -R a branch æ
