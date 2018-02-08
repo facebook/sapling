@@ -301,3 +301,33 @@ class progbar(object):
                         self.show(now, topic, *self.topicstates[topic])
         finally:
             self._refreshlock.release()
+
+class spinner(object):
+    """context manager that add a spinner progress bar to slow operations"""
+    def __init__(self, ui, description):
+        self._ui = ui
+        self._description = description
+        self._cond = threading.Condition()
+
+    def _update(self):
+        self._cond.acquire()
+        while self._show:
+            self._cond.wait(0.1)
+            if self._show:
+                self._time += 0.1
+                self._ui.progress(self._description, self._time, unit="s")
+        self._ui.progress(self._description, None)
+        self._cond.release()
+
+    def __enter__(self):
+        self._show = True
+        self._time = 0
+        self._thread = threading.Thread(target=self._update)
+        self._thread.start()
+
+    def __exit__(self, type, value, traceback):
+        self._cond.acquire()
+        self._show = False
+        self._cond.notify_all()
+        self._cond.release()
+        self._thread.join()
