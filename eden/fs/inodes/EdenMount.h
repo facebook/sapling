@@ -424,8 +424,7 @@ class EdenMount {
       folly::Optional<fusell::FuseChannelData> takeoverData);
 
   /**
-   * Obtains a future that will complete once the state transitions to
-   * FUSE_DONE and the thread pool has been joined.
+   * Obtains a future that will complete once the fuse channel has wound down.
    */
   FOLLY_NODISCARD folly::Future<TakeoverData::MountInfo>
   getFuseCompletionFuture();
@@ -492,13 +491,6 @@ class EdenMount {
      * Encountered an error while starting fuse mount.
      */
     FUSE_ERROR,
-
-    /**
-     * Fuse session completed and the thread pools are stopping or stopped.
-     * fuseCompletionPromise_ is about to be fulfilled, which will cause
-     * someone else to call EdenMount::shutdown().
-     */
-    FUSE_DONE,
 
     /**
      * EdenMount::shutdown() has been called, but it is not complete yet.
@@ -646,8 +638,8 @@ class EdenMount {
 
   /**
    * A promise associated with the future returned from
-   * EdenMount::getFuseCompletionFuture() that completes when the state
-   * transitions to FUSE_DONE.
+   * EdenMount::getFuseCompletionFuture() that completes when the
+   * fuseChannel has no work remaining and can be torn down.
    * The future yields the underlying fuseDevice descriptor; it can
    * be passed on during graceful restart or simply closed if we're
    * unmounting and shutting down completely.  In the unmount scenario
@@ -673,7 +665,7 @@ class EdenMount {
 
   /**
    * The main eventBase of the program; this is used to join and dispatch
-   * promises when transitioning to FUSE_DONE.
+   * promises when waiting for the fuse channel to wind down.
    */
   folly::EventBase* eventBase_{nullptr};
 

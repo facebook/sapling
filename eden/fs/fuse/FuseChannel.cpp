@@ -462,10 +462,6 @@ folly::Future<folly::Unit> FuseChannel::getThreadsFinishedFuture() {
   return threadsFinishedPromise_.getFuture();
 }
 
-folly::Future<folly::Unit> FuseChannel::getThreadsStoppingFuture() {
-  return threadsStoppingPromise_.getFuture();
-}
-
 folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
   return sessionCompletePromise_.getFuture();
 }
@@ -473,13 +469,9 @@ folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
 void FuseChannel::requestSessionExit() {
   bool no = false;
   if (sessionFinished_.compare_exchange_strong(no, true)) {
-    // We transitioned it to stopping.  Let's notify potentially
-    // interested folks about this
-    threadsStoppingPromise_.setValue();
-
     // Knock our workers out of their blocking read() syscalls
     for (auto& thr : workerThreads_) {
-      if (thr.get_id() != std::this_thread::get_id()) {
+      if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
         pthread_kill(thr.native_handle(), SIGPIPE);
       }
     }

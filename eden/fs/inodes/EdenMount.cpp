@@ -293,8 +293,7 @@ void EdenMount::destroy() {
     }
     case State::RUNNING:
     case State::STARTING:
-    case State::FUSE_ERROR:
-    case State::FUSE_DONE: {
+    case State::FUSE_ERROR: {
       // Call shutdownImpl() to destroy all loaded inodes,
       // and delete ourselves when it completes.
       shutdownImpl(/*doTakeover=*/false).then([this] { delete this; });
@@ -323,7 +322,6 @@ Future<SerializedFileHandleMap> EdenMount::shutdown(bool doTakeover) {
   // SHUTTING_DOWN.
   if (!doStateTransition(State::RUNNING, State::SHUTTING_DOWN) &&
       !doStateTransition(State::STARTING, State::SHUTTING_DOWN) &&
-      !doStateTransition(State::FUSE_DONE, State::SHUTTING_DOWN) &&
       !doStateTransition(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "
                << "state was " << static_cast<uint32_t>(state_.load());
@@ -695,14 +693,6 @@ folly::Future<folly::Unit> EdenMount::startFuse(
             eventBase_,
             FLAGS_fuseNumThreads,
             dispatcher_.get());
-
-        channel_->getThreadsStoppingFuture().then([this] {
-          if (!doStateTransition(State::STARTING, State::FUSE_ERROR)) {
-            // If we were RUNNING and a thread stopped, then record
-            // that transition to FUSE_DONE.
-            doStateTransition(State::RUNNING, State::FUSE_DONE);
-          }
-        });
 
         channel_->getSessionCompleteFuture()
             .then([this] {
