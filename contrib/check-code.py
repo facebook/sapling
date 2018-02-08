@@ -382,11 +382,61 @@ pypats = [
   ]
 ]
 
+# XXX: Historic foo_bar naming. This is to make test-check-code clean, free
+# from line numbers. Avoid adding new methods here if possible.
+underscorenames = '''
+abort_report add_dirs add_files add_password annotate_highlight audit_git_path
+audit_hg_path auth_getkey auth_getuserpasswd build_opener call_conduit
+check_heads check_min_time check_perm clone_sparse close_all close_connection
+collect_children commit_octopus compare_range conduit_config connect_ftp
+convert_git_int_mode convert_rev create_server decode_guess del_all_files
+delete_path determine_wants dirs_of do_hgweb do_open do_relink do_update
+do_write exists_client export_commits export_git_objects export_hg_commit
+export_hg_tags extract_from_parent extract_hg_metadata fetch_pack
+filerevision_highlight filter_cset_known_bug_ids filter_min_date
+filter_real_bug_ids filter_refs find_bugs find_incoming find_spec
+find_stored_password find_sync_regions find_unconflicted find_user_password
+finish_report fix_newline fns_generator ftp_open generate_css
+generate_repo_subclass generate_ssh_vendor get_all get_bug_comments
+get_bugzilla_user get_changed_refs get_contact get_data get_exportable get_file
+get_filelogs_at_cl get_filelogs_to_sync get_files_changed get_git_author
+get_git_incoming get_git_message_and_extra get_git_parents get_heads
+get_latest_cl get_localname get_log_child get_longdesc_id get_matching_blocks
+get_method get_mtime get_path_tag get_ready_conn get_refs get_stat get_times
+get_transport_and_path get_ui get_unseen_commits get_user_id
+get_valid_git_username_email git_cleanup git_file_readlines handle_read
+has_automv has_section http_error_auth_reqed http_open http_request https_open
+https_request import_commits import_git_commit import_git_objects import_tags
+init_author_file is_octopus_part is_reachable layout_from_name link_path
+load_cert_chain load_default_certs load_map load_remote_refs load_state
+load_tags load_verify_locations log_error log_message log_request map_committer
+map_git_get map_hg_get map_set mark_not_wanted mark_wanted merge_groups
+merge_lines merge_regions monkeypatch_method offset_type open_connections
+open_local_file pack_dirstate parse_changes parse_cl parse_client
+parse_dirstate parse_filelist parse_filelist_at_cl parse_filelog parse_filelogs
+parse_fstat parse_gitmodules parse_hgsub parse_hgsubstate parse_info
+parse_subrepos parse_usermap parse_where print_time process_request proxy_open
+pull_shallow put_inmemory range_header_to_tuple range_tuple_normalize
+range_tuple_to_header read_allowed read_context_hunk read_pkt_refs
+read_unified_hunk remote_name remote_refs replacelines_vec reset_retry_count
+retry_http_basic_auth revset_fromgit revset_gitnode root_tree_sha run_command
+run_wsgi save_map save_state save_tags screen_size send_bug_modify_email
+send_cookies send_headers serialize_hgsub serialize_hgsubstate serve_cleanup
+serve_forever serve_one set_ciphers set_commiter_from_author set_data set_path
+set_ready set_ui setup_streamout show_changeset source_to_code
+split_remote_name sql_buglist start_response stream_in_shallow stream_out
+stream_out_shallow stream_wrap swap_out_encoding test_timeout transform_notgit
+tree_entry update_changeset update_hg_bookmarks update_references
+update_remote_branches upload_pack upstream_revs wrap_socket write_err
+write_rej zc_create_server
+'''.split()
+
 # ported from check-commit
 pycorepats = [
     [
     (r"\n\n\n", "use single blank line"),
-    (r"\bdef (?!cffi|http)[a-z]+_[a-z]\(", "use foobar, not foo_bar naming"),
+    (r"\bdef (?!cffi|%s)[a-z]+_[a-z][a-z_]*\(" % '|'.join(underscorenames),
+     "use foobar, not foo_bar naming"),
     ],
     # warnings
     [],
