@@ -9,4 +9,4 @@ if __name__ == '__main__':
     import hgdemandimport
     hgdemandimport.enable()
     from . import dispatch
-    dispatch.run()
+    dispatch.run(entrypoint='mercurial.main')

@@ -41,6 +41,7 @@ from . import (
 )
 
 unrecoverablewrite = registrar.command.unrecoverablewrite
+_entrypoint = None  # record who calls "run"
 
 class request(object):
     def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
@@ -78,8 +79,10 @@ class request(object):
             if exc is not None:
                 raise exc
 
-def run():
+def run(entrypoint='hg'):
     "run the command in sys.argv"
+    global _entrypoint
+    _entrypoint = entrypoint
     _initstdio()
     req = request(pycompat.sysargv[1:])
     err = None
@@ -100,6 +103,10 @@ def run():
                               encoding.strtolocal(err.strerror))
         req.ui.ferr.flush()
     sys.exit(status & 255)
+
+def getentrypoint():
+    global _entrypoint
+    return _entrypoint
 
 def _initstdio():
     for fp in (sys.stdin, sys.stdout, sys.stderr):
