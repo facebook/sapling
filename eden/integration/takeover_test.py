@@ -15,7 +15,7 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-class RestartTest:
+class TakeoverTest:
     def populate_repo(self):
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize
@@ -27,7 +27,7 @@ class RestartTest:
     def edenfs_logging_settings(self):
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
-    def test_restart(self):
+    def test_takeover(self):
         hello = os.path.join(self.mount, 'hello')
         deleted = os.path.join(self.mount, 'deleted')
         deleted_local = os.path.join(self.mount, 'deleted-local')
