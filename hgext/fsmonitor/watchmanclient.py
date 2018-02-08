@@ -9,7 +9,10 @@ from __future__ import absolute_import
 
 import getpass
 
-from mercurial import util
+from mercurial import (
+    progress,
+    util,
+)
 
 from . import pywatchman
 
@@ -94,16 +97,17 @@ class client(object):
             raise Unavailable(str(ex))
 
     def command(self, *args):
-        try:
+        with progress.spinner(self._ui, 'querying watchman'):
             try:
-                return self._command(*args)
-            except WatchmanNoRoot:
-                # this 'watch' command can also raise a WatchmanNoRoot if
-                # watchman refuses to accept this root
-                self._command('watch')
-                return self._command(*args)
-        except Unavailable:
-            # this is in an outer scope to catch Unavailable form any of the
-            # above _command calls
-            self._watchmanclient = None
-            raise
+                try:
+                    return self._command(*args)
+                except WatchmanNoRoot:
+                    # this 'watch' command can also raise a WatchmanNoRoot if
+                    # watchman refuses to accept this root
+                    self._command('watch')
+                    return self._command(*args)
+            except Unavailable:
+                # this is in an outer scope to catch Unavailable form any of the
+                # above _command calls
+                self._watchmanclient = None
+                raise
