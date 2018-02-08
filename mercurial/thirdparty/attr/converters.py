@@ -4,7 +4,6 @@ Commonly useful converters.
 
 from __future__ import absolute_import, division, print_function
 
-
 def optional(converter):
     """
     A converter that allows an attribute to be optional. An optional attribute

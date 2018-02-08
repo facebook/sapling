@@ -362,7 +362,6 @@ class HTTPResponse(httplib.HTTPResponse):
     # Both readline and readlines have been stolen with almost no
     # modification from socket.py
 
-
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
         extrakw = {}
         if not pycompat.ispy3:
@@ -590,11 +589,9 @@ class HTTPConnection(httplib.HTTPConnection):
     send = safesend
     getresponse = wrapgetresponse(httplib.HTTPConnection)
 
-
 #########################################################################
 #####   TEST FUNCTIONS
 #########################################################################
-
 
 def continuity(url):
     md5 = hashlib.md5
@@ -703,7 +700,6 @@ def test_timeout(url):
         print('  ERROR: DATA DIFFER')
 
     DEBUG = dbbackup
-
 
 def test(url, N=10):
     print("performing continuity test (making sure stuff isn't corrupted)")

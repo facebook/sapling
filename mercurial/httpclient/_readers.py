@@ -43,14 +43,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class ReadNotReady(Exception):
     """Raised when read() is attempted but not enough data is loaded."""
 
-
 class HTTPRemoteClosedError(httplib.HTTPException):
     """The server closed the remote socket in the middle of a response."""
-
 
 class AbstractReader(object):
     """Abstract base class for response readers.
@@ -151,7 +148,6 @@ class AbstractReader(object):
             raise HTTPRemoteClosedError(
                 'server appears to have closed the socket mid-response')
 
-
 class AbstractSimpleReader(AbstractReader):
     """Abstract base class for simple readers that require no response decoding.
 
@@ -166,7 +162,6 @@ class AbstractSimpleReader(AbstractReader):
                      self.name, len(data)) # pylint: disable=E1101
         self._addchunk(data)
 
-
 class CloseIsEndReader(AbstractSimpleReader):
     """Reader for responses that specify Connection: Close for length."""
     name = 'close-is-end'
@@ -174,7 +169,6 @@ class CloseIsEndReader(AbstractSimpleReader):
     def _close(self):
         logger.info('Marking close-is-end reader as closed.')
         self._finished = True
-
 
 class ContentLengthReader(AbstractSimpleReader):
     """Reader for responses that specify an exact content length."""
@@ -193,7 +187,6 @@ class ContentLengthReader(AbstractSimpleReader):
         if self._amount_seen >= self._amount:
             self._finished = True
             logger.debug('content-length read complete')
-
 
 class ChunkedReader(AbstractReader):
     """Reader for chunked transfer encoding responses."""

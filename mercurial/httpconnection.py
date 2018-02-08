@@ -128,7 +128,6 @@ class HTTPConnection(httpclient.HTTPConnection):
         httpclient.HTTPConnection.request(self, method, uri, body=body,
                                           headers=headers)
 
-
 _configuredlogging = False
 LOGFMT = '%(levelname)s:%(name)s:%(lineno)d:%(message)s'
 # Subclass BOTH of these because otherwise urllib2 "helpfully"

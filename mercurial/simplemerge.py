@@ -258,7 +258,6 @@ class Merge3Text(object):
             # if the same part of the base was deleted on both sides
             # that's OK, we can just skip it.
 
-
             if matchlen > 0:
                 assert ia == amatch
                 assert ib == bmatch

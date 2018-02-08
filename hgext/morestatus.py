@@ -34,7 +34,6 @@ def prefixlines(raw):
     commentedlines = ['# %s' % line for line in lines]
     return '\n'.join(commentedlines) + '\n'
 
-
 def conflictsmsg(repo, ui):
     mergestate = mergemod.mergestate.read(repo)
     if not mergestate.active():
@@ -118,7 +117,6 @@ STATES = (
     ('merge', mergepredicate, mergemsg),
     ('update', fileexistspredicate('updatestate'), updatemsg),
 )
-
 
 def extsetup(ui):
     if ui.configbool('morestatus', 'show') and not ui.plain():

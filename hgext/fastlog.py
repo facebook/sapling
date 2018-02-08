@@ -285,7 +285,6 @@ def getfastlogrevs(orig, repo, pats, opts):
 
     return orig(repo, pats, opts)
 
-
 class readonlychangelog(object):
     def __init__(self, opener):
         self._changelog = changelog.changelog(opener)
@@ -298,7 +297,6 @@ class readonlychangelog(object):
 
     def rev(self, node):
         return self._changelog.rev(node)
-
 
 class LocalIteratorThread(Thread):
     """Class which reads from an iterator and sends results to a queue.
@@ -367,7 +365,6 @@ class LocalIteratorThread(Thread):
             queue.put((self.id, False, str(e)))
         finally:
             queue.put((self.id, True, None))
-
 
 class FastLogThread(Thread):
     """Class which talks to a remote SCMQuery

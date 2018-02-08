@@ -778,7 +778,6 @@ def gcclient(ui, cachepath):
     elif not filesrepacked:
         ui.warn(_("warning: no valid repos in repofile\n"))
 
-
 def log(orig, ui, repo, *pats, **opts):
     if shallowrepo.requirement not in repo.requirements:
         return orig(ui, repo, *pats, **opts)

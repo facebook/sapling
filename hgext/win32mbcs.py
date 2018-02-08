@@ -111,7 +111,6 @@ def appendsep(s):
         s += pycompat.ossep
     return s
 
-
 def basewrapper(func, argtype, enc, dec, args, kwds):
     # check check already converted, then call original
     for arg in args:
@@ -128,7 +127,6 @@ def basewrapper(func, argtype, enc, dec, args, kwds):
 
 def wrapper(func, args, kwds):
     return basewrapper(func, unicode, encode, decode, args, kwds)
-
 
 def reversewrapper(func, args, kwds):
     return basewrapper(func, str, decode, encode, args, kwds)

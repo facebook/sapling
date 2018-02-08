@@ -20,7 +20,6 @@ def profile(f, *args, **kwds):
         p.disable()
     return Stats(p.getstats())
 
-
 class Stats(object):
     """XXX docstring"""
 
@@ -107,7 +106,6 @@ def label(code):
             mname = _fn2mod[code.co_filename] = '<%s>' % code.co_filename
 
     return '%s:%d(%s)' % (mname, code.co_firstlineno, code.co_name)
-
 
 if __name__ == '__main__':
     import os

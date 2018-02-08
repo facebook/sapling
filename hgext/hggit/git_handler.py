@@ -33,7 +33,6 @@ import hg2git
 import util
 from overlay import overlayrepo
 
-
 RE_GIT_AUTHOR = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
 
 RE_GIT_SANITIZE_AUTHOR = re.compile('[<>\n]')

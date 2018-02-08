@@ -97,7 +97,6 @@ def countrate(ui, repo, amap, *pats, **opts):
 
     return rate
 
-
 @command('churn',
     [('r', 'rev', [],
      _('count rate for the specified revision or revset'), _('REV')),

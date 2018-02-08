@@ -18,7 +18,6 @@ import svnexternals
 import verify
 import svnmeta
 
-
 def updatemeta(ui, repo, args, **opts):
     """Do a partial rebuild of the subversion metadata.
 
@@ -29,7 +28,6 @@ def updatemeta(ui, repo, args, **opts):
     """
 
     return _buildmeta(ui, repo, args, partial=True)
-
 
 def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
@@ -273,7 +271,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     # save off branch info
     util.dump(branchinfo, meta.branch_info_file)
 
-
 def help_(ui, args=None, **opts):
     """show help for a given subcommands or a help overview
     """
@@ -295,7 +292,6 @@ def help_(ui, args=None, **opts):
         ui.status(doc.strip(), '\n')
         return
     commands.help_(ui, 'svn')
-
 
 def update(ui, args, repo, clean=False, **opts):
     """update to a specified Subversion revision number
@@ -330,7 +326,6 @@ def update(ui, args, repo, clean=False, **opts):
         ui.status('\n'.join(revs))
     return 1
 
-
 def genignore(ui, repo, force=False, **opts):
     """generate .hgignore from svn:ignore properties.
     """
@@ -362,7 +357,6 @@ def genignore(ui, repo, force=False, **opts):
         ignorelines += [dir and (dir + '/' + prop) or prop for prop in lines if prop.strip()]
 
     repo.wvfs('.hgignore', 'w').write('\n'.join(ignorelines) + '\n')
-
 
 def info(ui, repo, **opts):
     """show Subversion details similar to `svn info'
@@ -409,7 +403,6 @@ Last Changed Date: %(date)s\n''' %
                                       '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
               })
 
-
 def listauthors(ui, args, authors=None, **opts):
     """list all authors in a Subversion repository
     """
@@ -429,7 +422,6 @@ def listauthors(ui, args, authors=None, **opts):
         authorfile.close()
     else:
         ui.write('%s\n' % '\n'.join(sorted(author_set)))
-
 
 def _helpgen():
     ret = ['subcommands for Subversion integration', '',

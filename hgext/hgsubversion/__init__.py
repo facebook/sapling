@@ -336,7 +336,6 @@ configitem('hgsubversion', 'sqlitepragmas', default=list)
 # real default is False
 configitem('hgsubversion', 'failonmissing', default=configitem.dynamicdefault)
 
-
 def _templatehelper(ctx, kw):
     '''
     Helper function for displaying information about converted changesets.

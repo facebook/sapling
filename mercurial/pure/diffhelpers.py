@@ -50,7 +50,6 @@ def fix_newline(hunk, a, b):
     hunk[-1] = hline
     return 0
 
-
 def testhunk(a, b, bstart):
     alen = len(a)
     blen = len(b)

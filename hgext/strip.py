@@ -234,7 +234,6 @@ def stripcmd(ui, repo, *revs, **opts):
 
             update = False
 
-
         strip(ui, repo, revs, backup=backup, update=update,
               force=opts.get('force'), bookmarks=bookmarks)
 

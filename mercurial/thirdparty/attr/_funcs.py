@@ -6,7 +6,6 @@ from ._compat import iteritems
 from ._make import NOTHING, fields, _obj_setattr
 from .exceptions import AttrsAttributeNotFoundError
 
-
 def asdict(inst, recurse=True, filter=None, dict_factory=dict,
            retain_collection_types=False):
     """
@@ -65,7 +64,6 @@ def asdict(inst, recurse=True, filter=None, dict_factory=dict,
         else:
             rv[a.name] = v
     return rv
-
 
 def astuple(inst, recurse=True, filter=None, tuple_factory=tuple,
             retain_collection_types=False):
@@ -138,7 +136,6 @@ def astuple(inst, recurse=True, filter=None, tuple_factory=tuple,
             rv.append(v)
     return rv if tuple_factory is list else tuple_factory(rv)
 
-
 def has(cls):
     """
     Check whether *cls* is a class with ``attrs`` attributes.
@@ -149,7 +146,6 @@ def has(cls):
     :rtype: :class:`bool`
     """
     return getattr(cls, "__attrs_attrs__", None) is not None
-
 
 def assoc(inst, **changes):
     """
@@ -182,7 +178,6 @@ def assoc(inst, **changes):
             )
         _obj_setattr(new, k, v)
     return new
-
 
 def evolve(inst, **changes):
     """

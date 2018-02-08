@@ -228,7 +228,6 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             if dirstate[mirrorpath] in '?r':
                 dirstate.add(mirrorpath)
 
-
             if action == 'a':
                 # For adds, detect copy data as well
                 copysource = dirstate.copied(sourcepath)

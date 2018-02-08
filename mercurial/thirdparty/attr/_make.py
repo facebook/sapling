@@ -13,14 +13,12 @@ from .exceptions import (
     NotAnAttrsClassError,
 )
 
-
 # This is used at least twice, so cache it here.
 _obj_setattr = object.__setattr__
 _init_convert_pat = "__attr_convert_{}"
 _init_factory_pat = "__attr_factory_{}"
 _tuple_property_pat = "    {attr_name} = property(itemgetter({index}))"
 _empty_metadata_singleton = metadata_proxy({})
-
 
 class _Nothing(object):
     """
@@ -46,12 +44,10 @@ class _Nothing(object):
     def __hash__(self):
         return 0xdeadbeef
 
-
 NOTHING = _Nothing()
 """
 Sentinel to indicate the lack of a value when ``None`` is ambiguous.
 """
-
 
 def attr(default=NOTHING, validator=None,
          repr=True, cmp=True, hash=None, init=True,
@@ -138,7 +134,6 @@ def attr(default=NOTHING, validator=None,
         metadata=metadata,
     )
 
-
 def _make_attr_tuple_class(cls_name, attr_names):
     """
     Create a tuple subclass to hold `Attribute`s for an `attrs` class.
@@ -165,7 +160,6 @@ def _make_attr_tuple_class(cls_name, attr_names):
     globs = {"itemgetter": itemgetter}
     eval(compile("\n".join(attr_class_template), "", "exec"), globs)
     return globs[attr_class_name]
-
 
 def _transform_attrs(cls, these):
     """
@@ -219,20 +213,17 @@ def _transform_attrs(cls, these):
                 a.init is not False:
             had_default = True
 
-
 def _frozen_setattrs(self, name, value):
     """
     Attached to frozen classes as __setattr__.
     """
     raise FrozenInstanceError()
 
-
 def _frozen_delattrs(self, name):
     """
     Attached to frozen classes as __delattr__.
     """
     raise FrozenInstanceError()
-
 
 def attributes(maybe_cls=None, these=None, repr_ns=None,
                repr=True, cmp=True, hash=None, init=True,
@@ -390,7 +381,6 @@ def attributes(maybe_cls=None, these=None, repr_ns=None,
     else:
         return wrap(maybe_cls)
 
-
 if PY2:
     def _has_frozen_superclass(cls):
         """
@@ -411,13 +401,11 @@ else:
         """
         return cls.__setattr__ == _frozen_setattrs
 
-
 def _attrs_to_tuple(obj, attrs):
     """
     Create a tuple of all values of *obj*'s *attrs*.
     """
     return tuple(getattr(obj, a.name) for a in attrs)
-
 
 def _add_hash(cls, attrs=None):
     """
@@ -436,7 +424,6 @@ def _add_hash(cls, attrs=None):
 
     cls.__hash__ = hash_
     return cls
-
 
 def _add_cmp(cls, attrs=None):
     """
@@ -515,7 +502,6 @@ def _add_cmp(cls, attrs=None):
 
     return cls
 
-
 def _add_repr(cls, ns=None, attrs=None):
     """
     Add a repr method to *cls*.
@@ -544,7 +530,6 @@ def _add_repr(cls, ns=None, attrs=None):
         )
     cls.__repr__ = repr_
     return cls
-
 
 def _add_init(cls, frozen):
     """
@@ -590,7 +575,6 @@ def _add_init(cls, frozen):
     cls.__init__ = init
     return cls
 
-
 def _add_pickle(cls):
     """
     Add pickle helpers, needed for frozen and slotted classes
@@ -612,7 +596,6 @@ def _add_pickle(cls):
     cls.__getstate__ = _slots_getstate__
     cls.__setstate__ = _slots_setstate__
     return cls
-
 
 def fields(cls):
     """
@@ -641,7 +624,6 @@ def fields(cls):
         )
     return attrs
 
-
 def validate(inst):
     """
     Validate all attributes on *inst* that have a validator.
@@ -657,7 +639,6 @@ def validate(inst):
         v = a.validator
         if v is not None:
             v(inst, a, getattr(inst, a.name))
-
 
 def _attrs_to_script(attrs, frozen, post_init):
     """
@@ -814,7 +795,6 @@ def __init__(self, {args}):
         lines="\n    ".join(lines) if lines else "pass",
     ), names_for_globals
 
-
 class Attribute(object):
     """
     *Read-only* representation of an attribute.
@@ -881,7 +861,6 @@ class Attribute(object):
                 bound_setattr(name, metadata_proxy(value) if value else
                               _empty_metadata_singleton)
 
-
 _a = [Attribute(name=name, default=NOTHING, validator=None,
                 repr=True, cmp=True, hash=(name != "metadata"), init=True)
       for name in Attribute.__slots__]
@@ -890,7 +869,6 @@ Attribute = _add_hash(
     _add_cmp(_add_repr(Attribute, attrs=_a), attrs=_a),
     attrs=[a for a in _a if a.hash]
 )
-
 
 class _CountingAttr(object):
     """
@@ -961,9 +939,7 @@ class _CountingAttr(object):
 
         return meth
 
-
 _CountingAttr = _add_cmp(_add_repr(_CountingAttr))
-
 
 @attributes(slots=True, init=False)
 class Factory(object):
@@ -990,7 +966,6 @@ class Factory(object):
         """
         self.factory = factory
         self.takes_self = takes_self
-
 
 def make_class(name, attrs, bases=(object,), **attributes_arguments):
     """
@@ -1021,10 +996,8 @@ def make_class(name, attrs, bases=(object,), **attributes_arguments):
 
     return attributes(**attributes_arguments)(type(name, bases, cls_dict))
 
-
 # These are required by whithin this module so we define them here and merely
 # import into .validators.
-
 
 @attributes(slots=True, hash=True)
 class _AndValidator(object):
@@ -1036,7 +1009,6 @@ class _AndValidator(object):
     def __call__(self, inst, attr, value):
         for v in self._validators:
             v(inst, attr, value)
-
 
 def and_(*validators):
     """

@@ -243,7 +243,6 @@ class FileRangeHandler(urlreq.filehandler):
             (mtype or 'text/plain', size, modified))
         return urlreq.addinfourl(fo, headers, 'file:'+file)
 
-
 # FTP Range Support
 # Unfortunately, a large amount of base FTP code had to be copied
 # from urllib and urllib2 in order to insert the FTP REST command.
@@ -391,7 +390,6 @@ class ftpwrapper(urlreq.ftpwrapper):
         # Pass back both a suitably decorated object and a retrieval length
         return (addclosehook(conn[0].makefile('rb'),
                             self.endtransfer), conn[1])
-
 
 ####################################################################
 # Range Tuple Functions

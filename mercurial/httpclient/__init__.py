@@ -144,7 +144,6 @@ class _CompatMessage(email.message.Message):
     def getheader(self, key, default=None):
         return self.get(key, failobj=default)
 
-
 class HTTPResponse(object):
     """Response from an HTTP server.
 
@@ -890,18 +889,14 @@ class HTTPConnection(object):
             self._current_response_taken = True
         return r
 
-
 class HTTPTimeoutException(httplib.HTTPException):
     """A timeout occurred while waiting on the server."""
-
 
 class BadRequestData(httplib.HTTPException):
     """Request body object has neither __len__ nor read."""
 
-
 class HTTPProxyConnectFailedException(httplib.HTTPException):
     """Connecting to the HTTP proxy failed."""
-
 
 class HTTPStateError(httplib.HTTPException):
     """Invalid internal state encountered."""

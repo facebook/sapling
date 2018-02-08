@@ -532,7 +532,6 @@ def smartlogrevset(repo, subset, x):
 
     return subset & revs
 
-
 @command('^smartlog|slog', [
     ('', 'master', '', _('master bookmark'), _('BOOKMARK')),
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),

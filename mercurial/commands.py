@@ -1242,7 +1242,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
     if complevel is not None:
         compopts['level'] = complevel
 
-
     contentopts = {'cg.version': cgversion}
     if repo.ui.configbool('experimental', 'evolution.bundle-obsmarker'):
         contentopts['obsolescence'] = True
@@ -2665,7 +2664,6 @@ def help_(ui, name=None, **opts):
     ui.pager('help')
     ui.write(formatted)
 
-
 @command('identify|id',
     [('r', 'rev', '',
      _('identify the specified revision'), _('REV')),
@@ -3000,7 +2998,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     msgs = []
     ret = 0
 
-
     try:
         wlock = repo.wlock()
 
@@ -3155,7 +3152,6 @@ def incoming(ui, repo, source="default", **opts):
         return hg.incoming(ui, repo, source, opts)
     finally:
         del repo._subtoppath
-
 
 @command('^init', remoteopts, _('[-e CMD] [--remotecmd CMD] [DEST]'),
          norepo=True)
@@ -3964,7 +3960,6 @@ def pull(ui, repo, source="default", **opts):
     try:
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
-
 
         pullopargs = {}
         if opts.get('bookmark'):

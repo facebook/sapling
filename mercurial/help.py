@@ -405,7 +405,6 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
 
         return rst
 
-
     def helplist(select=None, **opts):
         # list of commands
         if name == "shortlist":
@@ -579,7 +578,6 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
         rst.append(_("(use 'hg help extensions' for information on enabling "
                    "extensions)\n"))
         return rst
-
 
     rst = []
     kw = opts.get('keyword')

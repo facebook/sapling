@@ -716,7 +716,6 @@ class patchfile(object):
         else:
             self.ui.note(s)
 
-
     def findlines(self, l, linenum):
         # looks through the hash and finds candidate lines.  The
         # result is a list of line numbers sorted based on distance

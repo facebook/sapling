@@ -13,7 +13,6 @@
 
 This module implements most phase logic in mercurial.
 
-
 Basic Concept
 =============
 
@@ -86,7 +85,6 @@ Legend:
           way of recording the phase.)
 
     passive = only pushes
-
 
     A cell here can be read like this:
 
@@ -647,7 +645,6 @@ def newheads(repo, heads, roots):
     revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
                       heads, roots, roots, heads)
     return [c.node() for c in revset]
-
 
 def newcommitphase(ui):
     """helper to get the target phase of new commit

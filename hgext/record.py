@@ -29,7 +29,6 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
-
 @command("record",
          # same options as commit + white space diff options
         [c for c in commands.table['^commit|ci'][1][:]
@@ -124,7 +123,6 @@ def qnew(origfn, ui, repo, patch, *args, **opts):
     if opts[r'interactive']:
         return _qrecord(None, ui, repo, patch, *args, **opts)
     return origfn(ui, repo, patch, *args, **opts)
-
 
 def uisetup(ui):
     try:

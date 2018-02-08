@@ -2376,7 +2376,6 @@ class revlog(object):
                 if not cachedelta:
                     rawtext = self.revision(rev, raw=True)
 
-
                 if deltareuse == self.DELTAREUSEFULLADD:
                     destrevlog.addrevision(rawtext, tr, linkrev, p1, p2,
                                            cachedelta=cachedelta,

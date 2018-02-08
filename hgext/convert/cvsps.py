@@ -525,7 +525,6 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
     return log
 
-
 class changeset(object):
     '''Class changeset has the following attributes:
         .id        - integer identifying this changeset (list index)
@@ -848,7 +847,6 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     hook.hook(ui, None, "cvschangesets", True, changesets=changesets)
 
     return changesets
-
 
 def debugcvsps(ui, *args, **opts):
     '''Read CVS rlog for current directory or named path in

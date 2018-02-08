@@ -383,7 +383,6 @@ class remotefilelog(object):
                     parents.append(p2)
                     allparents.add(p2)
 
-
         # Breadth first traversal to build linkrev graph
         parentrevs = collections.defaultdict(list)
         revmap = {}

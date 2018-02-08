@@ -316,14 +316,12 @@ def readfile(path):
     finally:
         f.close()
 
-
 def unlinkfile(filepath):
     if pycompat.iswindows:
         # On Windows, os.unlink cannnot delete readonly files
         os.chmod(filepath, stat.S_IWUSR)
 
     util.unlink(filepath)
-
 
 def renamefile(source, destination):
     if pycompat.iswindows:
@@ -335,7 +333,6 @@ def renamefile(source, destination):
             os.unlink(destination)
 
     os.rename(source, destination)
-
 
 def writefile(path, content, readonly=False):
     dirname, filename = os.path.split(path)

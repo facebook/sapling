@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 from ._make import attr, attributes, and_, _AndValidator
 
-
 __all__ = [
     "and_",
     "in_",
@@ -14,7 +13,6 @@ __all__ = [
     "optional",
     "provides",
 ]
-
 
 @attributes(repr=False, slots=True, hash=True)
 class _InstanceOfValidator(object):
@@ -39,7 +37,6 @@ class _InstanceOfValidator(object):
             .format(type=self.type)
         )
 
-
 def instance_of(type):
     """
     A validator that raises a :exc:`TypeError` if the initializer is called
@@ -54,7 +51,6 @@ def instance_of(type):
         got.
     """
     return _InstanceOfValidator(type)
-
 
 @attributes(repr=False, slots=True, hash=True)
 class _ProvidesValidator(object):
@@ -78,7 +74,6 @@ class _ProvidesValidator(object):
             .format(interface=self.interface)
         )
 
-
 def provides(interface):
     """
     A validator that raises a :exc:`TypeError` if the initializer is called
@@ -93,7 +88,6 @@ def provides(interface):
         value it got.
     """
     return _ProvidesValidator(interface)
-
 
 @attributes(repr=False, slots=True, hash=True)
 class _OptionalValidator(object):
@@ -110,7 +104,6 @@ class _OptionalValidator(object):
             "<optional validator for {what} or None>"
             .format(what=repr(self.validator))
         )
-
 
 def optional(validator):
     """
@@ -129,7 +122,6 @@ def optional(validator):
         return _OptionalValidator(_AndValidator(validator))
     return _OptionalValidator(validator)
 
-
 @attributes(repr=False, slots=True, hash=True)
 class _InValidator(object):
     options = attr()
@@ -146,7 +138,6 @@ class _InValidator(object):
             "<in_ validator with options {options!r}>"
             .format(options=self.options)
         )
-
 
 def in_(options):
     """

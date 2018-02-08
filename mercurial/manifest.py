@@ -696,7 +696,6 @@ def _checkforbidden(l):
             raise error.RevlogError(
                 _("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
-
 # apply the changes collected during the bisect loop to our addlist
 # return a delta suitable for addrevision
 def _addlistdelta(addlist, x):

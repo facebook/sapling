@@ -10,7 +10,6 @@ import compathacks
 import svnexternals
 import util
 
-
 class MissingPlainTextError(Exception):
     """Exception raised when the repo lacks a source file required for replaying
     a txdelta.

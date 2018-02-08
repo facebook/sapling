@@ -61,7 +61,6 @@ def read_pkt_refs(proto):
         return None, set([])
     return refs, set(server_capabilities)
 
-
 CONFIG_DEFAULTS = {
     'git': {
         'authors': None,

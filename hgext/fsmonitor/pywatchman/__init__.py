@@ -55,7 +55,6 @@ from . import (
     load,
 )
 
-
 if os.name == 'nt':
     import ctypes
     import ctypes.wintypes
@@ -178,7 +177,6 @@ else:
     def log(fmt, *args):
         pass
 
-
 def _win32_strerror(err):
     """ expand a win32 error code into a human readable message """
 
@@ -191,7 +189,6 @@ def _win32_strerror(err):
         return buf.value
     finally:
         LocalFree(buf)
-
 
 class WatchmanError(Exception):
     def __init__(self, msg=None, cmd=None):
@@ -206,13 +203,11 @@ class WatchmanError(Exception):
             return '%s, while executing %s' % (self.msg, self.cmd)
         return self.msg
 
-
 class WatchmanEnvironmentError(WatchmanError):
     def __init__(self, msg, errno, errmsg, cmd=None):
         super(WatchmanEnvironmentError, self).__init__(
             '{0}: errno={1} errmsg={2}'.format(msg, errno, errmsg),
             cmd)
-
 
 class SocketConnectError(WatchmanError):
     def __init__(self, sockpath, exc):
@@ -220,7 +215,6 @@ class SocketConnectError(WatchmanError):
             'unable to connect to %s: %s' % (sockpath, exc))
         self.sockpath = sockpath
         self.exc = exc
-
 
 class SocketTimeout(WatchmanError):
     """A specialized exception raised for socket timeouts during communication to/from watchman.
@@ -230,7 +224,6 @@ class SocketTimeout(WatchmanError):
        Note that catching WatchmanError will also catch this as it is a super-class, so backwards
        compatibility in exception handling is preserved.
     """
-
 
 class CommandError(WatchmanError):
     """error returned by watchman
@@ -242,7 +235,6 @@ class CommandError(WatchmanError):
             'watchman command error: %s' % (msg, ),
             cmd,
         )
-
 
 class Transport(object):
     """ communication transport to the watchman server """
@@ -287,7 +279,6 @@ class Transport(object):
                 return result + line
             self.buf.append(b)
 
-
 class Codec(object):
     """ communication encoding for the watchman server """
     transport = None
@@ -303,7 +294,6 @@ class Codec(object):
 
     def setTimeout(self, value):
         self.transport.setTimeout(value)
-
 
 class UnixSocketTransport(Transport):
     """ local unix domain socket transport """
@@ -345,7 +335,6 @@ class UnixSocketTransport(Transport):
         except socket.timeout:
             raise SocketTimeout('timed out sending query command')
 
-
 def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
     """ Windows 7 and earlier does not support GetOverlappedResultEx. The
     alternative is to use GetOverlappedResult and wait for read or write
@@ -384,7 +373,6 @@ def _get_overlapped_result_ex_impl(pipe, olap, nbytes, millis, alertable):
             return False
 
     return GetOverlappedResult(pipe, olap, nbytes, False)
-
 
 class WindowsNamedPipeTransport(Transport):
     """ connect to a named pipe """
@@ -532,7 +520,6 @@ class WindowsNamedPipeTransport(Transport):
         self._raise_win_err('error while waiting for write of %d bytes' %
                             len(data), err)
 
-
 class CLIProcessTransport(Transport):
     """ open a pipe to the cli to talk to the service
     This intended to be used only in the test harness!
@@ -602,7 +589,6 @@ class CLIProcessTransport(Transport):
         self.closed = True
         return res
 
-
 class BserCodec(Codec):
     """ use the BSER encoding.  This is the default, preferred codec """
 
@@ -632,14 +618,12 @@ class BserCodec(Codec):
         cmd = bser.dumps(*args) # Defaults to BSER v1
         self.transport.write(cmd)
 
-
 class ImmutableBserCodec(BserCodec):
     """ use the BSER encoding, decoding values using the newer
         immutable object support """
 
     def _loads(self, response):
         return bser.loads(response, False) # Defaults to BSER v1
-
 
 class Bser2WithFallbackCodec(BserCodec):
     """ use BSER v2 encoding """
@@ -697,7 +681,6 @@ class Bser2WithFallbackCodec(BserCodec):
             cmd = bser.dumps(*args)
         self.transport.write(cmd)
 
-
 class JsonCodec(Codec):
     """ Use json codec.  This is here primarily for testing purposes """
     json = None
@@ -731,7 +714,6 @@ class JsonCodec(Codec):
         if compat.PYTHON3:
             cmd = cmd.encode('ascii')
         self.transport.write(cmd + b"\n")
-
 
 class client(object):
     """ Handles the communication with the watchman service """

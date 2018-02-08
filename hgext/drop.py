@@ -50,14 +50,12 @@ command = registrar.command(cmdtable)
 
 testedwith = 'ships-with-fb-hgext'
 
-
 def _checkextension(name, ui):
     try:
         return extensions.find(name)
     except KeyError:
         ui.warn(_('extension %s not found\n') % name)
         return None
-
 
 def _showrev(ui, repo, revid):
     """pretty print the changeset to drop"""
@@ -69,11 +67,9 @@ def _showrev(ui, repo, revid):
     displayer = cmdutil.show_changeset(ui, repo, showopts)
     displayer.show(repo[revid])
 
-
 def extsetup(ui):
     global rebasemod
     rebasemod = _checkextension('rebase', ui)
-
 
 @command('drop',
          [('r', 'rev', [], _("revision to drop"))],

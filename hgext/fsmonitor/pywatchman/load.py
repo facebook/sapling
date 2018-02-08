@@ -40,7 +40,6 @@ import ctypes
 
 EMPTY_HEADER = b"\x00\x01\x05\x00\x00\x00\x00"
 
-
 def _read_bytes(fp, buf):
     """Read bytes from a file-like object
 
@@ -63,7 +62,6 @@ def _read_bytes(fp, buf):
         offset += l
         remaining -= l
     return offset
-
 
 def load(fp, mutable=True, value_encoding=None, value_errors=None):
     """Deserialize a BSER-encoded blob.

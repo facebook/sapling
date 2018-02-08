@@ -8,7 +8,6 @@ from mercurial import (
 class SSHVendor(object):
     """Parent class for ui-linked Vendor classes."""
 
-
 def generate_ssh_vendor(ui):
     """
     Allows dulwich to use hg's ui.ssh config. The dulwich.client.get_ssh_vendor

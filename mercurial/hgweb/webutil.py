@@ -123,7 +123,6 @@ class revnav(object):
             if 0 < rev < pos:
                 navbefore.append(("-%d" % abs(rev - pos), self.hex(rev)))
 
-
         navafter.append(("tip", "tip"))
 
         data = lambda i: {"label": i[0], "node": i[1]}

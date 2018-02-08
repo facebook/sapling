@@ -80,7 +80,6 @@ except AttributeError:
     # baseset was added in hg 3.0
     pass
 
-
 demandimport.ignore.extend([
     'collections',
 ])
@@ -166,7 +165,6 @@ def _url(orig, path, **kwargs):
     return orig(path, **kwargs)
 
 extensions.wrapfunction(hgutil, 'url', _url)
-
 
 def _httpgitwrapper(orig):
     # we should probably test the connection but for now, we just keep it

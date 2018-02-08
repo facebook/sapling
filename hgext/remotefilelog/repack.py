@@ -87,7 +87,6 @@ def fullrepack(repo, options=None):
         _runrepack(repo, datasource, historysource, lpackpath,
                    constants.TREEPACK_CATEGORY, options=options)
 
-
 def incrementalrepack(repo, options=None):
     """This repacks the repo by looking at the distribution of pack files in the
     repo and performing the most minimal repack to keep the repo in good shape.

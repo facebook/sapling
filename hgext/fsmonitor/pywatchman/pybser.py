@@ -128,7 +128,6 @@ class _bser_buffer(object):
             raise RuntimeError('Cannot represent this long value')
         self.wpos += to_write
 
-
     def append_string(self, s):
         if isinstance(s, unicode):
             s = s.encode('utf-8')
@@ -151,7 +150,6 @@ class _bser_buffer(object):
         else:
             raise RuntimeError('Cannot represent this string value')
         self.wpos += to_write
-
 
     def append_recursive(self, val):
         if isinstance(val, bool):
@@ -230,7 +228,6 @@ class _bser_buffer(object):
                 self.append_recursive(v)
         else:
             raise RuntimeError('Cannot represent unknown value type')
-
 
 def dumps(obj, version=1, capabilities=0):
     bser_buf = _bser_buffer(version=version)
@@ -418,7 +415,6 @@ class Bunser(object):
             raise ValueError('unhandled bser opcode 0x%s' %
                              binascii.hexlify(val_type).decode('ascii'))
 
-
 def _pdu_info_helper(buf):
     bser_version = -1
     if buf[0:2] == EMPTY_HEADER[0:2]:
@@ -436,16 +432,13 @@ def _pdu_info_helper(buf):
 
     return bser_version, bser_capabilities, expected_len, pos2
 
-
 def pdu_info(buf):
     info = _pdu_info_helper(buf)
     return info[0], info[1], info[2] + info[3]
 
-
 def pdu_len(buf):
     info = _pdu_info_helper(buf)
     return info[2] + info[3]
-
 
 def loads(buf, mutable=True, value_encoding=None, value_errors=None):
     """Deserialize a BSER-encoded blob.
@@ -477,7 +470,6 @@ def loads(buf, mutable=True, value_encoding=None, value_errors=None):
                     value_errors=value_errors)
 
     return bunser.loads_recursive(buf, pos)[0]
-
 
 def load(fp, mutable=True, value_encoding=None, value_errors=None):
     from . import load

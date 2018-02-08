@@ -104,7 +104,6 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
         return version, params
 
-
     if strict and '-' not in spec:
         raise error.InvalidBundleSpecification(
                 _('invalid bundle specification; '
@@ -413,7 +412,6 @@ bookmsgmap = {'update': (_("updating bookmark %s\n"),
               'delete': (_("deleting remote bookmark %s\n"),
                          _('deleting remote bookmark %s failed!\n')),
               }
-
 
 def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
          opargs=None):
@@ -1397,7 +1395,6 @@ def _pullbookmarkbundle1(pullop):
         return
     books = pullop.remote.listkeys('bookmarks')
     pullop.remotebookmarks = bookmod.unhexlifybookmarks(books)
-
 
 @pulldiscovery('changegroup')
 def _pulldiscoverychangegroup(pullop):

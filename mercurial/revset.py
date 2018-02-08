@@ -2037,7 +2037,6 @@ def orphan(repo, subset, x):
     orphan = obsmod.getrevs(repo, 'orphan')
     return subset & orphan
 
-
 @predicate('user(string)', safe=True, weight=10)
 def user(repo, subset, x):
     """User name contains string. The match is case-insensitive.

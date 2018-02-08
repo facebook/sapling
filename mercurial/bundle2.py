@@ -10,7 +10,6 @@ The goal of bundle2 is to act as an atomically packet to transmit a set of
 payloads in an application agnostic way. It consist in a sequence of "parts"
 that will be handed to and processed by the application layer.
 
-
 General format architecture
 ===========================
 
@@ -685,7 +684,6 @@ class bundle20(object):
         outdebug(self.ui, 'end of bundle')
         yield _pack(_fpartheadersize, 0)
 
-
     def salvageoutput(self):
         """return a list with a copy of all output parts in the bundle
 
@@ -696,7 +694,6 @@ class bundle20(object):
             if part.type.startswith('output'):
                 salvaged.append(part.copy())
         return salvaged
-
 
 class unpackermixin(object):
     """A mixin to extract bytes and struct data from a stream"""
@@ -783,7 +780,6 @@ class unbundle20(unpackermixin):
             params[p[0]] = p[1]
         return params
 
-
     def _processparam(self, name, value):
         """process a parameter, applying its effect if needed
 
@@ -846,7 +842,6 @@ class unbundle20(unpackermixin):
             elif size < 0:
                 raise error.BundleValueError('negative chunk size: %i')
             yield self._readexact(size)
-
 
     def iterparts(self, seekable=False):
         """yield all parts contained in the stream"""
@@ -1120,7 +1115,6 @@ class bundlepart(object):
                 chunk = buff.read(preferedchunksize)
         elif len(self.data):
             yield self.data
-
 
 flaginterrupt = -1
 
@@ -2068,7 +2062,6 @@ def handleobsmarker(op, inpart):
         rpart.addparam(
             'in-reply-to', pycompat.bytestr(inpart.id), mandatory=False)
         rpart.addparam('new', '%i' % new, mandatory=False)
-
 
 @parthandler('reply:obsmarkers', ('new', 'in-reply-to'))
 def handleobsmarkerreply(op, inpart):

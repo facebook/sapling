@@ -9,7 +9,6 @@ This extension adds fastmanifest, a treemanifest disk cache for speeding up
 manifest comparison. It also contains utilities to investigate manifest access
 patterns.
 
-
 Configuration options and default value:
 
 [fastmanifest]
@@ -97,15 +96,28 @@ from __future__ import absolute_import
 
 import sys
 
-from mercurial import bookmarks, dispatch, error, extensions
-from mercurial import localrepo, manifest, registrar
-from mercurial import revset as revsetmod
 from mercurial.i18n import _
+from mercurial import (
+    bookmarks,
+    dispatch,
+    error,
+    extensions,
+    localrepo,
+    manifest,
+    registrar,
+    revset as revsetmod,
+)
 
-from . import cachemanager
-from .metrics import metricscollector
-from . import debug
-from .implementation import manifestfactory, fastmanifestcache
+from . import (
+    cachemanager,
+    debug,
+    implementation,
+    metrics,
+)
+
+metricscollector = metrics.metricscollector
+manifestfactory = implementation.manifestfactory
+fastmanifestcache = implementation.fastmanifestcache
 
 cmdtable = {}
 command = registrar.command(cmdtable)

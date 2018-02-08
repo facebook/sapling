@@ -411,7 +411,6 @@ class histeditstate(object):
     def inprogress(self):
         return self.repo.vfs.exists('histedit-state')
 
-
 class histeditaction(object):
     def __init__(self, state, node):
         self.state = state
@@ -708,7 +707,6 @@ class fold(histeditaction):
         if not c.mutable():
             raise error.ParseError(
                 _("cannot fold into public change %s") % node.short(c.node()))
-
 
     def continuedirty(self):
         repo = self.repo

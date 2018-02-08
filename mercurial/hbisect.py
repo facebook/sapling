@@ -145,7 +145,6 @@ def load_state(repo):
         state[kind].append(node)
     return state
 
-
 def save_state(repo, state):
     f = repo.vfs("bisect.state", "w", atomictemp=True)
     with repo.wlock():

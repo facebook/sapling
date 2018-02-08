@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-
 """yet another annotate implementation that might be faster
 
 The fastannotate extension provides a 'fastannotate' command that makes

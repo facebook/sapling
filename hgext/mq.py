@@ -140,7 +140,6 @@ strip = stripext.strip
 checksubstate = stripext.checksubstate
 checklocalchanges = stripext.checklocalchanges
 
-
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
@@ -2298,7 +2297,6 @@ def applied(ui, repo, patch=None, **opts):
     q.qseries(repo, length=end, start=start, status='A',
               summary=opts.get('summary'))
 
-
 @command("qunapplied",
          [('1', 'first', None, _('show only the first patch'))] + seriesopts,
          _('hg qunapplied [-1] [-s] [PATCH]'))
@@ -3113,7 +3111,6 @@ def save(ui, repo, **opts):
         q.applieddirty = True
         q.savedirty()
     return 0
-
 
 @command("qselect",
          [('n', 'none', None, _('disable all guards')),

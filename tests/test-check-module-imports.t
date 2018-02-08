@@ -55,13 +55,6 @@ outputs, which should be fixed later.
   hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.node
   hgext/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
   hgext/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
-  hgext/fastmanifest/__init__.py:103: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fastmanifest/__init__.py:106: direct symbol import metricscollector from hgext.fastmanifest.metrics
-  hgext/fastmanifest/__init__.py:106: symbol import follows non-symbol import: hgext.fastmanifest.metrics
-  hgext/fastmanifest/__init__.py:107: multiple "from . import" statements
-  hgext/fastmanifest/__init__.py:108: direct symbol import manifestfactory, fastmanifestcache from hgext.fastmanifest.implementation
-  hgext/fastmanifest/__init__.py:108: symbol import follows non-symbol import: hgext.fastmanifest.implementation
-  hgext/fastmanifest/__init__.py:108: imports from hgext.fastmanifest.implementation not lexically sorted: fastmanifestcache < manifestfactory
   hgext/fastmanifest/cachemanager.py:10: imports not lexically sorted: errno < os
   hgext/fastmanifest/cachemanager.py:22: imports from hgext.fastmanifest not lexically sorted: concurrency < constants
   hgext/fastmanifest/cachemanager.py:23: direct symbol import metricscollector from hgext.fastmanifest.metrics

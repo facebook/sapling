@@ -15,7 +15,6 @@ import layouts
 import editor
 import svnwrap
 
-
 class SVNMeta(object):
 
     def __init__(self, repo, uuid=None, subdir=None, skiperrorcheck=False):

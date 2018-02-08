@@ -319,7 +319,6 @@ class cacher(object):
 class triggers(object):
     repos_to_update = set()
 
-
     @staticmethod
     def runcommandtrigger(orig, *args, **kwargs):
         result = orig(*args, **kwargs)

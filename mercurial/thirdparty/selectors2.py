@@ -60,9 +60,7 @@ _DEFAULT_SELECTOR = None
 _SYSCALL_SENTINEL = object()  # Sentinel in case a system call returns None.
 _ERROR_TYPES = (OSError, IOError, socket.error)
 
-
 SelectorKey = namedtuple('SelectorKey', ['fileobj', 'fd', 'events', 'data'])
-
 
 class _SelectorMapping(Mapping):
     """ Mapping of file objects to selector keys """
@@ -83,7 +81,6 @@ class _SelectorMapping(Mapping):
     def __iter__(self):
         return iter(self._selector._fd_to_key)
 
-
 def _fileobj_to_fd(fileobj):
     """ Return a file descriptor from a file object. If
     given an integer will simply return that integer back. """
@@ -97,7 +94,6 @@ def _fileobj_to_fd(fileobj):
     if fd < 0:
         raise ValueError("Invalid file descriptor: {0}".format(fd))
     return fd
-
 
 class BaseSelector(object):
     """ Abstract Selector class
@@ -233,7 +229,6 @@ class BaseSelector(object):
     def __exit__(self, *_):
         self.close()
 
-
 # Almost all platforms have select.select()
 if hasattr(select, "select"):
     class SelectSelector(BaseSelector):
@@ -366,7 +361,6 @@ if hasattr(select, "select"):
         __all__.append('JythonSelectSelector')
         SelectSelector = JythonSelectSelector  # Override so the wrong selector isn't used.
 
-
 if hasattr(select, "poll"):
     class PollSelector(BaseSelector):
         """ Poll-based selector """
@@ -489,7 +483,6 @@ if hasattr(select, "epoll"):
 
     __all__.append('EpollSelector')
 
-
 if hasattr(select, "devpoll"):
     class DevpollSelector(BaseSelector):
         """Solaris /dev/poll selector."""
@@ -551,7 +544,6 @@ if hasattr(select, "devpoll"):
             super(DevpollSelector, self).close()
 
     __all__.append('DevpollSelector')
-
 
 if hasattr(select, "kqueue"):
     class KqueueSelector(BaseSelector):
@@ -637,7 +629,6 @@ if hasattr(select, "kqueue"):
 
     __all__.append('KqueueSelector')
 
-
 def _can_allocate(struct):
     """ Checks that select structs can be allocated by the underlying
     operating system, not just advertised by the select module. We don't
@@ -655,7 +646,6 @@ def _can_allocate(struct):
         return True
     except (OSError, AttributeError):
         return False
-
 
 # Python 3.5 uses a more direct route to wrap system calls to increase speed.
 if sys.version_info >= (3, 5):
@@ -715,7 +705,6 @@ else:
                     continue
                 raise
         return result
-
 
 # Choose the best implementation, roughly:
 # kqueue == devpoll == epoll > poll > select

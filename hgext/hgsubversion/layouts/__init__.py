@@ -28,7 +28,6 @@ NAME_TO_CLASS = {
     "standard": standard.StandardLayout,
 }
 
-
 def layout_from_name(name, meta):
     """Returns a layout module given the layout name
 

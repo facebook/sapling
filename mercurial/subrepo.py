@@ -19,7 +19,6 @@ import sys
 import tarfile
 import xml.dom.minidom
 
-
 from .i18n import _
 from . import (
     cmdutil,
@@ -1454,7 +1453,6 @@ class svnsubrepo(abstractsubrepo):
     def filedata(self, name, decode):
         return self._svncommand(['cat'], name)[0]
 
-
 class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state, allowcreate):
         super(gitsubrepo, self).__init__(ctx, path)
@@ -1970,7 +1968,6 @@ class gitsubrepo(abstractsubrepo):
         self.ui.progress(_('archiving (%s)') % relpath, None)
         return total
 
-
     @annotatesubrepoerror
     def cat(self, match, fm, fntemplate, prefix, **opts):
         rev = self._state[1]
@@ -1989,7 +1986,6 @@ class gitsubrepo(abstractsubrepo):
             fp.write(output)
             fp.close()
         return 0
-
 
     @annotatesubrepoerror
     def status(self, rev2, **opts):

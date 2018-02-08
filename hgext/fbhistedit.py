@@ -325,7 +325,6 @@ def _rebase(orig, ui, repo, **opts):
     if not opts.get('interactive'):
         return orig(ui, repo, **opts)
 
-
     # the argument parsing has as lot of copy-paste from rebase.py
     # Validate input and define rebasing points
     destf = opts.get('dest', None)

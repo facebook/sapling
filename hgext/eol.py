@@ -310,7 +310,6 @@ def extsetup(ui):
     except KeyError:
         pass
 
-
 def reposetup(ui, repo):
     uisetup(repo.ui)
 

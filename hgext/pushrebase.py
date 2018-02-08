@@ -174,7 +174,6 @@ def _peerorrepo(orig, ui, path, create=False, **kwargs):
         else:
             repo = orig(ui, bundlepath, create=create, **kwargs)
 
-
         # Add hook pack paths to the store
         if packpaths:
             bundledatastores = []
@@ -667,7 +666,6 @@ def _graft(op, rev, mapping, lastdestnode):
         else:
             return None
 
-
     # If the incoming commit has no parents, but requested a rebase,
     # allow it only for the first commit. The null/null commit will always
     # be the first commit since we only allow a nullid->nonnullid mapping if the
@@ -710,7 +708,6 @@ def _graft(op, rev, mapping, lastdestnode):
         files = rev.manifest().diff(bundlerepo[oldp1].manifest()).keys()
     else:
         files = rev.files()
-
 
     date = rev.date()
     if repo.ui.configbool('pushrebase', 'rewritedates'):

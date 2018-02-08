@@ -6,7 +6,6 @@ This is the simplest layout to use if your layout is just plain weird.
 Also useful if your layout is pretty normal, but you personally only
 want a couple of branches.
 
-
 """
 
 import base
@@ -108,7 +107,6 @@ class CustomLayout(base.BaseLayout):
 
         if len(children) == 1:
             return children[0], ''
-
 
         # this splits on the rightmost '/' but considers the entire
         # string to be the branch component of the path if there is no '/'

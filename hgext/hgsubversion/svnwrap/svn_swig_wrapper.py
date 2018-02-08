@@ -53,7 +53,6 @@ def create_and_load(repopath, dumpfd):
 
         pool.destroy()
 
-
 # exported values
 ERR_FS_ALREADY_EXISTS = core.SVN_ERR_FS_ALREADY_EXISTS
 ERR_FS_CONFLICT = core.SVN_ERR_FS_CONFLICT

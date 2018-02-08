@@ -544,7 +544,6 @@ class transaction(util.transactional):
             undobackupfile.write("%s\0%s\0%s\0%d\n" % (l, f, u, c))
         undobackupfile.close()
 
-
     def _abort(self):
         self.count = 0
         self.usages = 0

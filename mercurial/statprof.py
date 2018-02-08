@@ -91,7 +91,6 @@ Right now the profiler is quite simplistic.  I cannot provide
 call-graphs or other higher level information.  What you see in the
 table is pretty much all there is. Patches are welcome :-)
 
-
 Threading
 ---------
 
@@ -142,7 +141,6 @@ def clock():
     times = os.times()
     return times[0] + times[1]
 
-
 ###########################################################################
 ## Collection data structures
 
@@ -177,7 +175,6 @@ class ProfileState(object):
         return self.accumulated_time / len(self.samples)
 
 state = ProfileState()
-
 
 class CodeSite(object):
     cache = {}
@@ -359,7 +356,6 @@ def load_data(path):
         state.samples.append(Sample(sites, time))
 
 
-
 def reset(frequency=None):
     '''Clear out the state of the profiler.  Do not call while the
     profiler is running.
@@ -370,7 +366,6 @@ def reset(frequency=None):
     CodeSite.cache.clear()
     state.reset(frequency)
 
-
 @contextmanager
 def profile():
     start()
@@ -379,7 +374,6 @@ def profile():
     finally:
         stop()
         display()
-
 
 ###########################################################################
 ## Reporting API

@@ -38,7 +38,6 @@ header_re = re.compile(r'^diff --git .* b\/(.*)', re.MULTILINE)
 newfile_devnull_re = re.compile(r'^--- /dev/null\n\+\+\+ b/([^\n]*)',
                                 re.MULTILINE)
 
-
 def formatrev(rev):
     if rev == -1:
         return '\t(working copy)'
@@ -103,7 +102,6 @@ def parentrev(ui, repo, meta, hashes):
         workingctx = repo[outrev[-1]].parents()[0]
     return workingctx
 
-
 def islocalrepo(url):
     path = str(url) # convert once up front
     if path.startswith('file:///'):
@@ -132,7 +130,6 @@ def strip(ui, repo, changesets, *args , **opts):
         for changeset in changesets:
             repair.strip(ui, repo, changeset, *args, **opts)
 
-
 def version(ui):
     """Return version information if available."""
     try:
@@ -146,7 +143,6 @@ def version(ui):
             return node.hex(ver)[:12]
         except:
             return 'unknown'
-
 
 def normalize_url(url):
     if not url:
@@ -231,7 +227,6 @@ def parseurl(url, heads=None):
         checkout = heads[0]
     return svn_url, heads, checkout
 
-
 class PrefixMatch(object):
     def __init__(self, prefix):
         self.p = prefix
@@ -295,7 +290,6 @@ def outgoing_common_and_heads(repo, reverse_map, sourcerev):
 
 def describe_commit(ui, h, b):
     ui.note(' committed to "%s" as %s\n' % ((b or 'default'), node.short(h)))
-
 
 def swap_out_encoding(new_encoding="UTF-8"):
     from mercurial import encoding

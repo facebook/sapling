@@ -30,7 +30,6 @@ HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
-
 def ismember(ui, username, userlist):
     """Check if username is a member of userlist.
 
@@ -87,7 +86,6 @@ def checkauthz(hgweb, req, op):
 # It is possible to do both authentication and authorization through
 # this.
 permhooks = [checkauthz]
-
 
 class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=None):

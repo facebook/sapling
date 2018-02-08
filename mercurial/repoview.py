@@ -46,7 +46,6 @@ def pinnedrevs(repo):
         pinned.update(rev(t[0]) for t in tags.values() if t[0] in nodemap)
     return pinned
 
-
 def _revealancestors(pfunc, hidden, revs):
     """reveals contiguous chains of hidden ancestors of 'revs' by removing them
     from 'hidden'

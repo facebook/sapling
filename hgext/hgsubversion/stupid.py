@@ -118,7 +118,6 @@ def parsediff(diff):
                     f.executable = bool(p[2])
     return files
 
-
 class BadPatchApply(Exception):
     pass
 
@@ -151,7 +150,6 @@ def mempatchproxy(parentctx, files):
             files[fname] = None
 
     return mempatch
-
 
 def filteriterhunks(meta):
     iterhunks = patch.iterhunks
@@ -489,7 +487,6 @@ def fetch_externals(ui, svn, branchpath, r, parentctx):
         except IOError:
             externals[dir] = ''
     return externals
-
 
 def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
     """Extract all 'branch' content at a given revision.

@@ -84,7 +84,6 @@ class basedag(object):
             return set(ixs)
         return list(ixs)
 
-
 class genericdag(basedag):
     '''generic implementations for DAGs'''
 
@@ -111,7 +110,6 @@ class genericdag(basedag):
                 hds.discard(p)
         assert hds
         return hds
-
 
 class revlogbaseddag(basedag):
     '''generic dag interface to a revlog'''
@@ -149,7 +147,6 @@ class revlogbaseddag(basedag):
                         and r != nullrev
                         and r not in rl.filteredrevs)]
         return [self._internalize(i) for i in ids]
-
 
 class revlogdag(revlogbaseddag):
     '''dag interface to a revlog'''
@@ -243,7 +240,6 @@ class revlogdag(revlogbaseddag):
                           if p in ixs and p not in finished]
         assert len(sorted) == len(ixs)
         return sorted
-
 
 class inverserevlogdag(revlogbaseddag, genericdag):
     '''inverse of an existing revlog dag; see revlogdag.inverse()'''

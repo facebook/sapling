@@ -1043,7 +1043,6 @@ def _computecontentdivergentset(repo):
             toprocess.update(obsstore.predecessors.get(prec, ()))
     return divergent
 
-
 def createmarkers(repo, relations, flag=0, date=None, metadata=None,
                   operation=None):
     """Add obsolete markers between changesets in a repo

@@ -1150,7 +1150,6 @@ def archive(web, req, tmpl):
                      subrepos=web.configbool("web", "archivesubrepos"))
     return []
 
-
 @webcommand('static')
 def static(web, req, tmpl):
     fname = req.form['file'][0]

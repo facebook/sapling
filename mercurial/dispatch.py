@@ -18,7 +18,6 @@ import sys
 import time
 import traceback
 
-
 from .i18n import _
 
 from . import (

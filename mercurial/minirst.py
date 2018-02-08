@@ -413,7 +413,6 @@ def prunecomments(blocks):
             i += 1
     return blocks
 
-
 def findadmonitions(blocks, admonitions=None):
     """
     Makes the type of the block an admonition block if

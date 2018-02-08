@@ -285,7 +285,6 @@ class DNSQuestion(DNSEntry):
         """String representation"""
         return DNSEntry.toString(self, "question", None)
 
-
 class DNSRecord(DNSEntry):
     """A DNS record - like a DNS entry, but has a TTL"""
 
@@ -645,7 +644,6 @@ class DNSIncoming(object):
 
         return result
 
-
 class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
 
@@ -807,7 +805,6 @@ class DNSOutgoing(object):
                 self.insertShort(0, self.id)
         return ''.join(self.data)
 
-
 class DNSCache(object):
     """A cache of DNS entries"""
 
@@ -858,7 +855,6 @@ class DNSCache(object):
             return list(itertools.chain.from_iterable(self.cache.values()))
         except Exception:
             return []
-
 
 class Engine(threading.Thread):
     """An engine wraps read access to sockets, allowing objects that
@@ -964,7 +960,6 @@ class Listener(object):
         else:
             self.zeroconf.handleResponse(msg)
 
-
 class Reaper(threading.Thread):
     """A Reaper is used by this module to remove cache entries that
     have expired."""
@@ -984,7 +979,6 @@ class Reaper(threading.Thread):
                 if record.isExpired(now):
                     self.zeroconf.updateRecord(now, record)
                     self.zeroconf.cache.remove(record)
-
 
 class ServiceBrowser(threading.Thread):
     """Used to browse for a service of a specific type.
@@ -1066,7 +1060,6 @@ class ServiceBrowser(threading.Thread):
 
             if event is not None:
                 event(self.zeroconf)
-
 
 class ServiceInfo(object):
     """Service information"""
@@ -1295,7 +1288,6 @@ class ServiceInfo(object):
                 result += self.text[:17] + "..."
         result += "]"
         return result
-
 
 class Zeroconf(object):
     """Implementation of Zeroconf Multicast DNS Service Discovery

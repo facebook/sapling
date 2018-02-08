@@ -24,7 +24,6 @@ def parse_subrepos(ctx):
             ctx['.hgsubstate'].data().splitlines())
     return sub, substate
 
-
 def audit_git_path(ui, path):
     r"""Check for path components that case-fold to .git.
 
@@ -66,7 +65,6 @@ def audit_git_path(ui, path):
                 'It may not be legal to check out in Git.\n'
                 'It may also be rejected by some git server configurations.\n')
                 % path)
-
 
 class IncrementalChangesetExporter(object):
     """Incrementally export Mercurial changesets to Git trees.

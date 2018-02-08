@@ -40,7 +40,6 @@ def parse_url(url, user=None, passwd=None):
     url = urlparse.urlunparse((scheme, netloc, path, params, query, fragment))
     return (user or None, passwd or None, url)
 
-
 class Revision(tuple):
     """Wrapper for a Subversion revision.
 
@@ -78,9 +77,7 @@ class Revision(tuple):
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
 
-
 _svn_config_dir = None
-
 
 class AutoPropsConfig(object):
     """Provides the subversion auto-props functionality
@@ -107,7 +104,6 @@ class AutoPropsConfig(object):
         and self.config.getboolean( 'miscellany', 'enable-auto-props')
         and self.config.has_section('auto-props'))
 
-
 def config_file_path(config_dir):
     if config_dir == None:
         global _svn_config_dir
@@ -118,7 +114,6 @@ def config_file_path(config_dir):
         else:
             config_dir = os.path.join(os.environ['HOME'], '.subversion')
     return os.path.join(config_dir, 'config')
-
 
 def parse_autoprops(prop_list):
     """Parses a string of autoprops and returns a dictionary of

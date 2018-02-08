@@ -219,7 +219,6 @@ class requestcontext(object):
                                                defaults=defaults)
         return tmpl
 
-
 class hgweb(object):
     """HTTP server for individual repositories.
 

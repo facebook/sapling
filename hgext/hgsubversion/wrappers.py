@@ -45,7 +45,6 @@ revmeta = [
     ('message', 'message'),
 ]
 
-
 def version(orig, ui, *args, **opts):
     svn = opts.pop('svn', None)
     orig(ui, *args, **opts)
@@ -55,7 +54,6 @@ def version(orig, ui, *args, **opts):
         ui.status('hgsubversion: %s\n' % util.version(ui))
         ui.status('Subversion: %s\n' % svnversion)
         ui.status('bindings: %s\n' % bindings)
-
 
 def parents(orig, ui, repo, *args, **opts):
     """show Mercurial & Subversion parents of the working dir or revision
@@ -70,7 +68,6 @@ def parents(orig, ui, repo, *args, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
     displayer.show(ha)
     return 0
-
 
 def getpeer(ui, opts, source):
     # Since 2.3 (1ac628cd7113)
@@ -125,7 +122,6 @@ def incoming(orig, ui, repo, origsource='default', **opts):
             ui.status('%s%s\n' % (l1.ljust(13), val))
     return ret
 
-
 def findcommonoutgoing(repo, other, onlyheads=None, force=False,
                        commoninc=None, portable=False):
     assert other.capable('subversion')
@@ -147,7 +143,6 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     # Mercurial 2.0 and earlier
     return common, heads
 
-
 def findoutgoing(repo, dest=None, heads=None, force=False):
     """show changesets not found in the Subversion repository
     """
@@ -159,7 +154,6 @@ def findoutgoing(repo, dest=None, heads=None, force=False):
     parent = repo[None].parents()[0].node()
     hashes = meta.revmap.hashes()
     return util.outgoing_revisions(repo, hashes, parent)
-
 
 def diff(orig, ui, repo, *args, **opts):
     """show a diff of the most recent revision against its parent from svn
@@ -344,7 +338,6 @@ def push(repo, dest, force, revs):
                     finally:
                         os.chdir(saved_path)
                         util.swap_out_encoding()
-
 
         util.swap_out_encoding(old_encoding)
         try:
@@ -609,7 +602,6 @@ def rebase(orig, ui, repo, **opts):
                 base=node.hex(sourcerev),
                 extrafn=extrafn)
 
-
 optionmap = {
     'tagpaths': ('hgsubversion', 'tagpaths'),
     'authors': ('hgsubversion', 'authormap'),
@@ -629,7 +621,6 @@ optionmap = {
 }
 
 extrasections = set(['hgsubversionbranch'])
-
 
 dontretain = {
     'hgsubversion': set(['authormap', 'filemap', 'layout', ]),
@@ -699,7 +690,6 @@ def clone(orig, ui, source, dest=None, **opts):
             if config:
                 fd.write('\n[%s]\n' % section)
                 map(fd.write, ('%s = %s\n' % p for p in config.iteritems()))
-
 
 def generic(orig, ui, repo, *args, **opts):
     """

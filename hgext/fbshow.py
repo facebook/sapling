@@ -18,14 +18,12 @@ For example, 'hg show' prints something like
   description:
   longer
 
-
   diff -r 852a8d467a01 -r b73358b94785 x
   --- a/x	Thu Jan 01 00:00:00 1970 +0000
   +++ b/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,2 @@
    show
   +more
-
 
 and 'hg show --stat' prints something like:
 
@@ -37,7 +35,6 @@ and 'hg show --stat' prints something like:
   files:       x
   description:
   longer
-
 
    x |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)

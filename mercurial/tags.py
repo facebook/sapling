@@ -449,7 +449,6 @@ def _readtagcache(ui, repo):
         # potentially expensive search.
         return ([], {}, valid, None, True)
 
-
     # Now we have to lookup the .hgtags filenode for every new head.
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
@@ -648,7 +647,6 @@ class hgtagsfnodescache(object):
         # Only for reporting purposes.
         self.lookupcount = 0
         self.hitcount = 0
-
 
         try:
             data = repo.cachevfs.read(_fnodescachefile)

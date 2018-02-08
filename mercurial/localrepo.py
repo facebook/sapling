@@ -131,7 +131,6 @@ class filteredpropertycache(util.propertycache):
     def cachevalue(self, obj, value):
         object.__setattr__(obj, self.name, value)
 
-
 def hasunfilteredcache(repo, name):
     """check if a repo has an unfilteredpropertycache value for <name>"""
     return name in vars(repo.unfiltered())
@@ -872,7 +871,6 @@ class localrepository(object):
         # Should each extension invent its own tag type?  Should there
         # be one tagtype for all such "virtual" tags?  Or is the status
         # quo fine?
-
 
         # map tag name to (node, hist)
         alltags = tagsmod.findglobaltags(self.ui, self)

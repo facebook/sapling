@@ -44,7 +44,6 @@ if subversion_version[:3] < subversion_required:
                       % (_versionstr(subversion_required),
                          _versionstr(subversion_version[:3])))
 
-
 def version():
     svnvers = _versionstr(subversion_version[:3])
     if subversion_version[3]:
@@ -121,7 +120,6 @@ class PathAdapter(object):
     def __repr__(self):
         return '%s(%r, %r, %r)' % (type(self).__name__, self.action,
                                      self.copyfrom_path, self.copyfrom_rev)
-
 
 class BaseEditor(object):
     __slots__ = ('editor', 'baton')
@@ -461,7 +459,6 @@ class SubversionRepo(object):
                             new_text = 'link %s' % new_text
                         for p, v in props[path].iteritems():
                             fileeditor.change_prop(p, v)
-
 
                     handler = fileeditor.apply_textdelta()
                     delta.send_stream(cStringIO.StringIO(new_text), handler)

@@ -611,7 +611,6 @@ class remotenames(dict):
                     self._node2branch[node] = [name]
         return self._node2branch
 
-
 def reposetup(ui, repo):
     if not repo.local():
         return

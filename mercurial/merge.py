@@ -1384,7 +1384,6 @@ def batchget(repo, mctx, wctx, actions):
     if i > 0:
         yield i, f
 
-
 def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """apply the merge action list to the working directory
 

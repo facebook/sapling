@@ -277,7 +277,6 @@ class AuthorMap(BaseMap):
             # Mercurial incorrectly splits at e.g. '.', so we roll our own.
             return author.rsplit('@', 1)[0]
 
-
 class Tags(dict):
     """Map tags to converted node identifier.
 
@@ -342,7 +341,6 @@ class Tags(dict):
         f.write('%s %s %s\n' % (hex(ha), revision, tag))
         f.close()
         dict.__setitem__(self, tag, ha)
-
 
 class RevMap(dict):
 
@@ -488,7 +486,6 @@ class RevMap(dict):
             setattr(cls, name, wrap(orig))
 
 RevMap._wrapitermethods()
-
 
 class SqliteRevMap(collections.MutableMapping):
     """RevMap backed by sqlite3.
@@ -786,7 +783,6 @@ class SqliteRevMap(collections.MutableMapping):
             for row in self._query('SELECT rev, branch, hash FROM revmap'):
                 rev, br, ha = row
                 f.write('%s %s %s\n' % (rev, hex(ha), br))
-
 
 class FileMap(object):
 

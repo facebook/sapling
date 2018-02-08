@@ -7,7 +7,6 @@ from __future__ import absolute_import, division, print_function
 from ._compat import isclass
 from ._make import Attribute
 
-
 def _split_what(what):
     """
     Returns a tuple of `frozenset`s of classes and attributes.
@@ -16,7 +15,6 @@ def _split_what(what):
         frozenset(cls for cls in what if isclass(cls)),
         frozenset(cls for cls in what if isinstance(cls, Attribute)),
     )
-
 
 def include(*what):
     """
@@ -33,7 +31,6 @@ def include(*what):
         return value.__class__ in cls or attribute in attrs
 
     return include_
-
 
 def exclude(*what):
     """

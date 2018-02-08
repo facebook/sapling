@@ -173,7 +173,6 @@ def resolvedots(url):
     return '/'.join(fixed)
 
 
-
 def resolvesource(ui, svnroot, source):
     """ Resolve the source as either matching the scheme re or by resolving
     relative URLs which start with ^ and my include relative .. references.

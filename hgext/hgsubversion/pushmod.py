@@ -10,7 +10,6 @@ class NoFilesException(Exception):
     """Exception raised when you try and commit without files.
     """
 
-
 def _isdir(svn, branchpath, svndir):
     try:
         path = ''
@@ -20,7 +19,6 @@ def _isdir(svn, branchpath, svndir):
         return True
     except svnwrap.SubversionException:
         return False
-
 
 def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
     """Compute directories to add or delete when moving from parentctx
@@ -93,7 +91,6 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
             deleted.append(d)
 
     return added, deleted
-
 
 def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     """Build and send a commit from Mercurial to Subversion.

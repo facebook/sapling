@@ -26,7 +26,6 @@ from . import filters
 from . import converters
 from . import validators
 
-
 __version__ = "17.2.0"
 
 __title__ = "attrs"
@@ -39,7 +38,6 @@ __email__ = "hs@ox.cx"
 
 __license__ = "MIT"
 __copyright__ = "Copyright (c) 2015 Hynek Schlawack"
-
 
 s = attrs = attributes
 ib = attrib = attr
