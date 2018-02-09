@@ -338,9 +338,11 @@ class basepack(versionmixin):
         # TODO: use an opener/vfs to access these paths
         with util.posixfile(self.indexpath, PACKOPENMODE) as indexfp:
             # memory-map the file, size 0 means whole file
-            self._index = litemmap.mmap(indexfp.fileno(), 0)
+            self._index = litemmap.mmap(indexfp.fileno(), 0,
+                                        access=litemmap.pymmap.ACCESS_READ)
         with util.posixfile(self.packpath, PACKOPENMODE) as datafp:
-            self._data = litemmap.mmap(datafp.fileno(), 0)
+            self._data = litemmap.mmap(datafp.fileno(), 0,
+                                       access=litemmap.pymmap.ACCESS_READ)
 
         self._pagedin = 0
         return True
