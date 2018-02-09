@@ -343,17 +343,21 @@ class EdenServer : private TakeoverHandler {
   std::unique_ptr<TakeoverServer> takeoverServer_;
   folly::Promise<TakeoverData> takeoverPromise_;
 
-  enum class State {
+  enum class RunState {
     STARTING,
     RUNNING,
     SHUTTING_DOWN,
   };
-  struct StateData {
-    State state{State::STARTING};
+  /**
+   * Information about whether the EdenServer is starting, running, or shutting
+   * down, including whether it is performing a graceful restart.
+   */
+  struct RunStateData {
+    RunState state{RunState::STARTING};
     bool takeoverShutdown{false};
     folly::File takeoverThriftSocket;
   };
-  folly::Synchronized<StateData> state_;
+  folly::Synchronized<RunStateData> runningState_;
 
   /**
    * Common state shared by all of the EdenMount objects.

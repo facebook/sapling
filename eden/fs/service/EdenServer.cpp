@@ -366,18 +366,18 @@ void EdenServer::run() {
   takeoverServer_->start();
 
   // Run the thrift server
-  state_.wlock()->state = State::RUNNING;
+  runningState_.wlock()->state = RunState::RUNNING;
   runServer(*this);
 
   bool takeover;
   folly::File thriftSocket;
   {
-    auto state = state_.wlock();
+    auto state = runningState_.wlock();
     takeover = state->takeoverShutdown;
     if (takeover) {
       thriftSocket = std::move(state->takeoverThriftSocket);
     }
-    state->state = State::SHUTTING_DOWN;
+    state->state = RunState::SHUTTING_DOWN;
   }
   auto shutdownFuture = takeover
       ? performTakeoverShutdown(std::move(thriftSocket))
@@ -814,8 +814,8 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
   // to indicate that we should perform mount point takeover shutdown
   // once runServer() returns.
   {
-    auto state = state_.wlock();
-    if (state->state != State::RUNNING) {
+    auto state = runningState_.wlock();
+    if (state->state != RunState::RUNNING) {
       // We are either still in the process of starting,
       // or already shutting down.
       return makeFuture<TakeoverData>(std::runtime_error(folly::to<string>(
