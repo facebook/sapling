@@ -19,6 +19,8 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;
@@ -30,11 +32,30 @@ using folly::test::TemporaryDirectory;
 using std::string;
 using KeySpace = facebook::eden::LocalStore::KeySpace;
 
-class LocalStoreTest : public ::testing::Test {
+enum class StoreImpl {
+  Memory,
+  RocksDB,
+  Sqlite,
+};
+
+class LocalStoreTest : public ::testing::TestWithParam<StoreImpl> {
  protected:
   void SetUp() override {
-    testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
-    store_ = std::make_unique<MemoryLocalStore>();
+    switch (GetParam()) {
+      case StoreImpl::Memory:
+        store_ = std::make_unique<MemoryLocalStore>();
+        break;
+      case StoreImpl::RocksDB:
+        testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+        store_ = std::make_unique<RocksDbLocalStore>(
+            AbsolutePathPiece{testDir_->path().string()});
+        break;
+      case StoreImpl::Sqlite:
+        testDir_ = std::make_unique<TemporaryDirectory>("eden_test");
+        store_ = std::make_unique<SqliteLocalStore>(
+            AbsolutePathPiece{testDir_->path().string()} +
+            PathComponentPiece("sqlite"));
+    }
   }
 
   void TearDown() override {
@@ -46,7 +67,7 @@ class LocalStoreTest : public ::testing::Test {
   std::unique_ptr<LocalStore> store_;
 };
 
-TEST_F(LocalStoreTest, testReadAndWriteBlob) {
+TEST_P(LocalStoreTest, testReadAndWriteBlob) {
   Hash hash("3a8f8eb91101860fd8484154885838bf322964d0");
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
@@ -67,14 +88,14 @@ TEST_F(LocalStoreTest, testReadAndWriteBlob) {
   EXPECT_EQ(contents.size(), retreivedMetadata.value().size);
 }
 
-TEST_F(LocalStoreTest, testReadNonexistent) {
+TEST_P(LocalStoreTest, testReadNonexistent) {
   Hash hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   EXPECT_TRUE(nullptr == store_->getBlob(hash));
   auto retreivedMetadata = store_->getBlobMetadata(hash);
   EXPECT_FALSE(retreivedMetadata.hasValue());
 }
 
-TEST_F(LocalStoreTest, testReadsAndWriteTree) {
+TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   Hash hash(folly::StringPiece{"8e073e366ed82de6465d1209d3f07da7eebabb93"});
 
   auto gitTreeObject = folly::to<string>(
@@ -128,7 +149,7 @@ TEST_F(LocalStoreTest, testReadsAndWriteTree) {
   EXPECT_EQ(0b0110, readmeEntry.getOwnerPermissions());
 }
 
-TEST_F(LocalStoreTest, testGetResult) {
+TEST_P(LocalStoreTest, testGetResult) {
   StringPiece key1 = "foo";
   StringPiece key2 = "bar";
 
@@ -145,7 +166,7 @@ TEST_F(LocalStoreTest, testGetResult) {
   EXPECT_THROW(result2.piece(), std::domain_error);
 }
 
-TEST_F(LocalStoreTest, testMultipleBlobWriters) {
+TEST_P(LocalStoreTest, testMultipleBlobWriters) {
   StringPiece key1_1 = "foo";
   StringPiece key1_2 = "bar";
 
@@ -192,3 +213,18 @@ TEST_F(LocalStoreTest, testMultipleBlobWriters) {
   EXPECT_EQ("hello world2_1", result2_1.piece());
   EXPECT_EQ("hello world1_4", result1_4.piece());
 }
+
+INSTANTIATE_TEST_CASE_P(
+    Memory,
+    LocalStoreTest,
+    ::testing::Values(StoreImpl::Memory));
+
+INSTANTIATE_TEST_CASE_P(
+    RocksDB,
+    LocalStoreTest,
+    ::testing::Values(StoreImpl::RocksDB));
+
+INSTANTIATE_TEST_CASE_P(
+    Sqlite,
+    LocalStoreTest,
+    ::testing::Values(StoreImpl::Sqlite));
