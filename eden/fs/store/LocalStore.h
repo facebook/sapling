@@ -53,7 +53,7 @@ class LocalStore {
    * Which key space (and thus column family for the RocksDbLocalStore)
    * should be used to store a specific key.  The values of these are
    * coupled to the ordering of the columnFamilies descriptor in
-   * RocksDbLocalStore.cpp. */
+   * RocksDbLocalStore.cpp and tableNames in SqliteLocalStore.cpp */
   enum KeySpace {
     /* 0 is the default column family, which we are not using */
     BlobFamily = 1,

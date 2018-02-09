@@ -34,8 +34,10 @@
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
+#include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/git/GitBackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/takeover/TakeoverClient.h"
@@ -52,6 +54,15 @@ DEFINE_bool(
     false,
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
+
+DEFINE_string(
+    local_storage_engine_unsafe,
+    "rocksdb",
+    "Select storage engine. rocksdb is the default. "
+    "possible choices are (rocksdb|sqlite|memory). "
+    "memory is currently very dangerous as you will "
+    "lose state across restarts and graceful restarts! "
+    "It is unsafe to change this between edenfs invocations!");
 
 DEFINE_int32(
     thrift_num_workers,
@@ -93,6 +104,7 @@ constexpr StringPiece kLockFileName{"lock"};
 constexpr StringPiece kThriftSocketName{"socket"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
+constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 } // namespace
 
 namespace facebook {
@@ -300,10 +312,23 @@ void EdenServer::prepare() {
     prepareThriftAddress();
   }
 
-  XLOG(DBG2) << "opening local RocksDB store";
-  const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
-  localStore_ = make_shared<RocksDbLocalStore>(rocksPath);
-  XLOG(DBG2) << "done opening local RocksDB store";
+  if (FLAGS_local_storage_engine_unsafe == "memory") {
+    XLOG(DBG2) << "Creating new memory store";
+    localStore_ = make_shared<MemoryLocalStore>();
+  } else if (FLAGS_local_storage_engine_unsafe == "sqlite") {
+    const auto path = edenDir_ + RelativePathPiece{kSqlitePath};
+    XLOG(DBG2) << "opening local Sqlite store " << path;
+    localStore_ = make_shared<SqliteLocalStore>(path);
+    XLOG(DBG2) << "done opening local Sqlite store";
+  } else if (FLAGS_local_storage_engine_unsafe == "rocksdb") {
+    XLOG(DBG2) << "opening local RocksDB store";
+    const auto rocksPath = edenDir_ + RelativePathPiece{kRocksDBPath};
+    localStore_ = make_shared<RocksDbLocalStore>(rocksPath);
+    XLOG(DBG2) << "done opening local RocksDB store";
+  } else {
+    XLOG(FATAL) << "invalid load_storage_engine flag: "
+                << FLAGS_local_storage_engine_unsafe;
+  }
 
   // Start listening for graceful takeover requests
   takeoverServer_.reset(
