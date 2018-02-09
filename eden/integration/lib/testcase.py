@@ -176,7 +176,8 @@ class EdenTestCase(TestParent):
         self.eden = edenclient.EdenFS(self.eden_dir,
                                       etc_eden_dir=self.etc_eden_dir,
                                       home_dir=self.home_dir,
-                                      logging_settings=logging_settings)
+                                      logging_settings=logging_settings,
+                                      storage_engine=self.select_storage_engine())
         self.eden.start()
         self.report_time('eden daemon started')
 
@@ -288,6 +289,13 @@ class EdenTestCase(TestParent):
         '''Unlink the file at the specified path relative to the clone.'''
         os.unlink(self.get_path(path))
 
+    def select_storage_engine(self):
+        '''
+        Prefer to use memory in the integration tests, but allow
+        the tests that restart to override this and pick something else.
+        '''
+        return 'memory'
+
 
 class EdenRepoTestBase(EdenTestCase):
     '''
@@ -312,7 +320,6 @@ class EdenRepoTestBase(EdenTestCase):
     def populate_repo(self):
         raise NotImplementedError('individual test classes must implement '
                                   'populate_repo()')
-
 
 class EdenHgTest(EdenRepoTestBase):
     '''

@@ -20,6 +20,10 @@ class RemountTest:
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
+    def select_storage_engine(self):
+        ''' we need to persist data across restarts '''
+        return 'sqlite'
+
     def test_remount_basic(self):
         # Mount multiple clients
         for i in range(5):

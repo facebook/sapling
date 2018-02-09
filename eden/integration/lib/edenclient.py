@@ -31,11 +31,13 @@ class EdenFS(object):
         eden_dir: Optional[str] = None,
         etc_eden_dir: Optional[str] = None,
         home_dir: Optional[str] = None,
-        logging_settings: Optional[Dict[str, str]] = None
+        logging_settings: Optional[Dict[str, str]] = None,
+        storage_engine: str = 'memory'
     ) -> None:
         if eden_dir is None:
             eden_dir = tempfile.mkdtemp(prefix='eden_test.')
         self._eden_dir = eden_dir
+        self._storage_engine = storage_engine
 
         self._process: Optional[subprocess.Popen] = None
         self._etc_eden_dir = etc_eden_dir
@@ -201,10 +203,7 @@ class EdenFS(object):
             # Defaulting to 8 import processes is excessive when the test
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
-            # Use the sqlite engine for integration tests as it is
-            # cheaper to configure in our CI environment and results
-            # in the test suite running much faster.
-            '--local_storage_engine_unsafe', 'sqlite',
+            '--local_storage_engine_unsafe', self._storage_engine,
         ]
         if 'SANDCASTLE' in os.environ:
             extra_daemon_args.append('--allowRoot')

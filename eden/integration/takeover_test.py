@@ -24,6 +24,10 @@ class TakeoverTest:
         self.repo.write_file('deleted', self.page1 + self.page2)
         self.repo.commit('Initial commit.')
 
+    def select_storage_engine(self):
+        ''' we need to persist data across restarts '''
+        return 'sqlite'
+
     def edenfs_logging_settings(self):
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
