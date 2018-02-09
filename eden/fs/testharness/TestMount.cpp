@@ -84,11 +84,7 @@ void TestMount::initialize(
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_),
-      std::move(objectStore),
-      AbsolutePathPiece(),
-      &stats_,
-      clock_);
+      std::move(config_), std::move(objectStore), &serverState_, clock_);
   edenMount_->initialize().get();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
@@ -101,11 +97,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_),
-      std::move(objectStore),
-      AbsolutePathPiece(),
-      &stats_,
-      clock_);
+      std::move(config_), std::move(objectStore), &serverState_, clock_);
   edenMount_->initialize().get();
 }
 
@@ -127,11 +119,7 @@ void TestMount::initialize(
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
   edenMount_ = EdenMount::create(
-      std::move(config_),
-      std::move(objectStore),
-      AbsolutePathPiece(),
-      &stats_,
-      clock_);
+      std::move(config_), std::move(objectStore), &serverState_, clock_);
   edenMount_->initialize().get();
 }
 
@@ -184,11 +172,7 @@ void TestMount::remount() {
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
-      std::move(config),
-      std::move(objectStore),
-      AbsolutePathPiece(),
-      &stats_,
-      clock_);
+      std::move(config), std::move(objectStore), &serverState_, clock_);
   edenMount_->initialize().get();
 }
 

@@ -16,6 +16,7 @@
 #include <vector>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeClock.h"
@@ -283,7 +284,7 @@ class TestMount {
 
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
 
-  fusell::ThreadLocalEdenStats stats_;
+  ServerState serverState_;
 };
 } // namespace eden
 } // namespace facebook

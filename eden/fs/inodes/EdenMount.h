@@ -53,9 +53,10 @@ class DiffContext;
 class EdenDispatcher;
 class InodeDiffCallback;
 class InodeMap;
+class Journal;
 class ObjectStore;
 class Overlay;
-class Journal;
+class ServerState;
 class Tree;
 class UnboundedQueueThreadPool;
 
@@ -100,8 +101,7 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats,
+      ServerState* serverState,
       std::shared_ptr<Clock> clock);
 
   /**
@@ -376,8 +376,6 @@ class EdenMount {
    */
   SharedRenameLock acquireSharedRenameLock();
 
-  const AbsolutePath& getSocketPath() const;
-
   /**
    * Returns a pointer to a stats instance associated with this mountpoint.
    * Today this is the global stats instance, but in the future it will be
@@ -531,8 +529,7 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      AbsolutePathPiece socketPath,
-      fusell::ThreadLocalEdenStats* globalStats,
+      ServerState* serverState,
       std::shared_ptr<Clock> clock);
 
   // Forbidden copy constructor and assignment operator
@@ -556,12 +553,12 @@ class EdenMount {
   static constexpr int kMaxSymlinkChainDepth = 40; // max depth of symlink chain
 
   /**
-   * The stats instance associated with this mount point.
-   * This is just a reference to a global stats instance today, but we'd
-   * like to make this its own child instance that aggregates up into
-   * the global instance in the future.
+   * Eden server state shared across multiple mount points.
+   *
+   * Our creator owns this object, and ensures that it exists for longer than
+   * our EdenMount object does.
    */
-  fusell::ThreadLocalEdenStats* globalEdenStats_{nullptr};
+  ServerState* serverState_;
 
   std::unique_ptr<ClientConfig> config_;
   std::unique_ptr<InodeMap> inodeMap_;

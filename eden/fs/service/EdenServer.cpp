@@ -139,12 +139,14 @@ class EdenServer::ThriftServerEventHandler
 };
 
 EdenServer::EdenServer(
+    UserInfo userInfo,
     AbsolutePathPiece edenDir,
     AbsolutePathPiece etcEdenDir,
     AbsolutePathPiece configPath)
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
+      serverState_(std::move(userInfo)),
       threadPool_(std::make_shared<EdenCPUThreadPool>()) {}
 
 EdenServer::~EdenServer() {}
@@ -556,8 +558,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
       std::move(objectStore),
-      getSocketPath(),
-      getStats(),
+      &serverState_,
       std::make_shared<UnixClock>());
 
   if (optionalTakeover) {
@@ -760,7 +761,11 @@ void EdenServer::createThriftServer() {
 
   handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
-  server_->setAddress(getThriftAddress(FLAGS_thrift_address, edenDir_));
+  auto thriftAddress = getThriftAddress(FLAGS_thrift_address, edenDir_);
+  server_->setAddress(thriftAddress);
+
+  CHECK_EQ(thriftAddress.getFamily(), AF_UNIX);
+  serverState_.setSocketPath(AbsolutePath{thriftAddress.getPath()});
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
@@ -781,14 +786,6 @@ bool EdenServer::acquireEdenLock() {
   folly::writeNoInt(fd, pidContents.data(), pidContents.size());
 
   return true;
-}
-
-AbsolutePath EdenServer::getSocketPath() const {
-  const auto& addr = server_->getAddress();
-  CHECK_EQ(addr.getFamily(), AF_UNIX);
-  // Need to make a copy rather than a Piece here because getPath returns
-  // a temporary std::string instance.
-  return AbsolutePath{addr.getPath()};
 }
 
 void EdenServer::prepareThriftAddress() {
@@ -868,8 +865,8 @@ void EdenServer::shutdownSubscribers() const {
   }
 }
 
-void EdenServer::flushStatsNow() const {
-  for (auto& stats : edenStats_.accessAllThreads()) {
+void EdenServer::flushStatsNow() {
+  for (auto& stats : serverState_.getStats().accessAllThreads()) {
     stats.aggregate();
   }
 }
@@ -886,8 +883,8 @@ folly::SocketAddress getThriftAddress(
     AbsolutePathPiece edenDir) {
   folly::SocketAddress addr;
 
-  // If the argument is empty, default to a Unix socket placed next
-  // to the mount point
+  // If the argument is empty, default to a Unix socket placed inside
+  // the eden directory.
   if (argument.empty()) {
     addr.setFromPath(
         (edenDir + PathComponentPiece{kThriftSocketName}).stringPiece());

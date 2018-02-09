@@ -33,6 +33,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -159,24 +160,20 @@ static std::atomic<uint16_t> mountGeneration{0};
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats,
+    ServerState* serverState,
     std::shared_ptr<Clock> clock) {
-  return std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
-                                                  std::move(objectStore),
-                                                  socketPath,
-                                                  globalStats,
-                                                  clock},
-                                    EdenMountDeleter{}};
+  return std::shared_ptr<EdenMount>{
+      new EdenMount{
+          std::move(config), std::move(objectStore), serverState, clock},
+      EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    AbsolutePathPiece socketPath,
-    fusell::ThreadLocalEdenStats* globalStats,
+    ServerState* serverState,
     std::shared_ptr<Clock> clock)
-    : globalEdenStats_(globalStats),
+    : serverState_(serverState),
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
@@ -184,7 +181,6 @@ EdenMount::EdenMount(
       overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
-      socketPath_(socketPath),
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{clock->getRealtime()},
       path_(config_->getMountPath()),
@@ -243,7 +239,8 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         dotEdenInode->symlink(
             PathComponentPiece{"root"}, config_->getMountPath().stringPiece());
         dotEdenInode->symlink(
-            PathComponentPiece{"socket"}, getSocketPath().stringPiece());
+            PathComponentPiece{"socket"},
+            serverState_->getSocketPath().stringPiece());
         dotEdenInode->symlink(
             PathComponentPiece{"client"},
             config_->getClientDirectory().stringPiece());
@@ -356,12 +353,8 @@ const AbsolutePath& EdenMount::getPath() const {
   return path_;
 }
 
-const AbsolutePath& EdenMount::getSocketPath() const {
-  return socketPath_;
-}
-
 fusell::ThreadLocalEdenStats* EdenMount::getStats() const {
-  return globalEdenStats_;
+  return &serverState_->getStats();
 }
 
 const vector<BindMount>& EdenMount::getBindMounts() const {

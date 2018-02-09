@@ -27,6 +27,7 @@
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -68,6 +69,7 @@ class EdenServer : private TakeoverHandler {
   using DirstateMap = folly::StringKeyedMap<std::shared_ptr<Dirstate>>;
 
   EdenServer(
+      UserInfo userInfo,
       AbsolutePathPiece edenDir,
       AbsolutePathPiece etcEdenDir,
       AbsolutePathPiece configPath);
@@ -150,8 +152,6 @@ class EdenServer : private TakeoverHandler {
     return server_;
   }
 
-  AbsolutePath getSocketPath() const;
-
   MountList getMountPoints() const;
 
   /**
@@ -191,8 +191,11 @@ class EdenServer : private TakeoverHandler {
     return edenDir_;
   }
 
-  fusell::ThreadLocalEdenStats* getStats() const {
-    return &edenStats_;
+  ServerState* getServerState() {
+    return &serverState_;
+  }
+  fusell::ThreadLocalEdenStats* getStats() {
+    return &serverState_.getStats();
   }
 
   /**
@@ -206,7 +209,7 @@ class EdenServer : private TakeoverHandler {
    * they see up-to-date counter information without waiting for the normal
    * flush interval.
    */
-  void flushStatsNow() const;
+  void flushStatsNow();
 
   /**
    * Get the main thread's EventBase.
@@ -331,7 +334,6 @@ class EdenServer : private TakeoverHandler {
   folly::Synchronized<BackingStoreMap> backingStores_;
 
   folly::Synchronized<MountMap> mountPoints_;
-  mutable fusell::ThreadLocalEdenStats edenStats_;
 
   /**
    * A server that waits on a new edenfs process to attempt
@@ -351,6 +353,11 @@ class EdenServer : private TakeoverHandler {
     folly::File takeoverThriftSocket;
   };
   folly::Synchronized<StateData> state_;
+
+  /**
+   * Common state shared by all of the EdenMount objects.
+   */
+  ServerState serverState_;
 
   /**
    * The EventBase driving the main thread loop.

@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
       ? identity.getHomeDirectory() + PathComponentPiece{".edenrc"}
       : normalizeBestEffort(configPathStr);
 
-  EdenServer server(edenDir, etcEdenDir, configPath);
+  EdenServer server(std::move(identity), edenDir, etcEdenDir, configPath);
   server.run();
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;
