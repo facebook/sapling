@@ -454,6 +454,7 @@ class EdenMount {
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
+  class JournalDiffCallback;
 
   /**
    * The current running state of the EdenMount.
@@ -540,6 +541,10 @@ class EdenMount {
       const ParentCommits& parentCommits);
   folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
   folly::Future<SerializedFileHandleMap> shutdownImpl(bool doTakeover);
+
+  std::unique_ptr<DiffContext> createDiffContext(
+      InodeDiffCallback* callback,
+      bool listIgnored) const;
 
   /**
    * Private destructor.

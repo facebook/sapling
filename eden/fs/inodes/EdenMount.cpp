@@ -62,7 +62,6 @@ DEFINE_int32(fuseNumThreads, 16, "how many fuse dispatcher threads to spawn");
 namespace facebook {
 namespace eden {
 
-namespace {
 /**
  * Helper for computing unclean paths when changing parents
  *
@@ -70,7 +69,7 @@ namespace {
  * of unclean files before and after actions that change the
  * current commit hash of the mount point.
  */
-class JournalDiffCallback : public InodeDiffCallback {
+class EdenMount::JournalDiffCallback : public InodeDiffCallback {
  public:
   explicit JournalDiffCallback()
       : data_{folly::in_place, make_unique<JournalDelta>()} {}
@@ -100,12 +99,10 @@ class JournalDiffCallback : public InodeDiffCallback {
   }
 
   FOLLY_NODISCARD Future<folly::Unit> performDiff(
-      ObjectStore* objectStore,
+      EdenMount* mount,
       TreeInodePtr rootInode,
       std::shared_ptr<const Tree> rootTree) {
-    auto diffContext =
-        make_unique<DiffContext>(this, /* listIgnored = */ false, objectStore);
-
+    auto diffContext = mount->createDiffContext(this, /* listIgnored */ false);
     auto rawContext = diffContext.get();
 
     return rootInode
@@ -136,7 +133,6 @@ class JournalDiffCallback : public InodeDiffCallback {
   };
   folly::Synchronized<Data> data_;
 };
-} // namespace
 
 constexpr int EdenMount::kMaxSymlinkChainDepth;
 static constexpr folly::StringPiece kEdenStracePrefix = "eden.strace.";
@@ -490,8 +486,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         if (ctx->isDryRun()) {
           journalDiffFuture = makeFuture();
         } else {
-          journalDiffFuture = journalDiffCallback->performDiff(
-              getObjectStore(), getRootInode(), fromTree);
+          journalDiffFuture =
+              journalDiffCallback->performDiff(this, getRootInode(), fromTree);
         }
 
         // Perform the requested checkout operation after the journal diff
@@ -538,6 +534,13 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
       });
 }
 
+std::unique_ptr<DiffContext> EdenMount::createDiffContext(
+    InodeDiffCallback* callback,
+    bool listIgnored) const {
+  return make_unique<DiffContext>(
+      callback, listIgnored, getObjectStore(), serverState_->getUserInfo());
+}
+
 Future<Unit> EdenMount::diff(const DiffContext* ctxPtr) const {
   auto rootInode = getRootInode();
   return getRootTreeFuture().then([ctxPtr, rootInode = std::move(rootInode)](
@@ -554,8 +557,7 @@ Future<Unit> EdenMount::diff(const DiffContext* ctxPtr) const {
 Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
     const {
   // Create a DiffContext object for this diff operation.
-  auto context =
-      make_unique<DiffContext>(callback, listIgnored, getObjectStore());
+  auto context = createDiffContext(callback, listIgnored);
   const DiffContext* ctxPtr = context.get();
 
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
@@ -572,8 +574,7 @@ folly::Future<folly::Unit> EdenMount::diffRevisions(
   auto fromTreeFuture = objectStore_->getTreeForCommit(fromHash);
   auto toTreeFuture = objectStore_->getTreeForCommit(toHash);
 
-  auto context = make_unique<DiffContext>(
-      callback, /*listIgnored=*/false, getObjectStore());
+  auto context = createDiffContext(callback, /*listIgnored=*/false);
   const DiffContext* ctxPtr = context.get();
   // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
   // exists until the diff completes.

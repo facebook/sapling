@@ -19,6 +19,7 @@ namespace eden {
 
 class InodeDiffCallback;
 class ObjectStore;
+class UserInfo;
 
 /**
  * A small helper class to store parameters for a TreeInode::diff() operation.
@@ -32,7 +33,11 @@ class DiffContext {
  public:
   // Loads the system-wide ignore settings and user-specific
   // ignore settings into top level git ignore stack
-  DiffContext(InodeDiffCallback* cb, bool listIgnored, const ObjectStore* os);
+  DiffContext(
+      InodeDiffCallback* cb,
+      bool listIgnored,
+      const ObjectStore* os,
+      const UserInfo& userInfo);
 
   // this constructor is primarily intended for testing
   DiffContext(
@@ -57,8 +62,8 @@ class DiffContext {
   bool const listIgnored;
 
  private:
-  static AbsolutePath constructUserIgnoreFileName();
-  static std::string tryIngestFile(folly::StringPiece fileName);
+  static AbsolutePath constructUserIgnoreFileName(const UserInfo& userInfo);
+  static std::string tryIngestFile(AbsolutePathPiece fileName);
   void initOwnedIgnores(
       folly::StringPiece systemWideIgnoreFileContents,
       folly::StringPiece userIgnoreFileContents);
@@ -66,7 +71,6 @@ class DiffContext {
 
   static constexpr folly::StringPiece kSystemWideIgnoreFileName =
       "/etc/eden/ignore";
-  const AbsolutePath userIgnoreFileName_;
   std::vector<std::unique_ptr<GitIgnoreStack>> ownedIgnores_;
 };
 } // namespace eden

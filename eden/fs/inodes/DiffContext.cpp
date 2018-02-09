@@ -26,14 +26,12 @@ constexpr folly::StringPiece DiffContext::kSystemWideIgnoreFileName;
 DiffContext::DiffContext(
     InodeDiffCallback* cb,
     bool listIgnored,
-    const ObjectStore* os)
-    : callback{cb},
-      store{os},
-      listIgnored{listIgnored},
-      userIgnoreFileName_{constructUserIgnoreFileName()} {
+    const ObjectStore* os,
+    const UserInfo& userInfo)
+    : callback{cb}, store{os}, listIgnored{listIgnored} {
   initOwnedIgnores(
-      tryIngestFile(kSystemWideIgnoreFileName),
-      tryIngestFile(userIgnoreFileName_.c_str()));
+      tryIngestFile(AbsolutePathPiece{kSystemWideIgnoreFileName}),
+      tryIngestFile(constructUserIgnoreFileName(userInfo)));
 }
 
 DiffContext::DiffContext(
@@ -42,24 +40,22 @@ DiffContext::DiffContext(
     const ObjectStore* os,
     folly::StringPiece systemWideIgnoreFileContents,
     folly::StringPiece userIgnoreFileContents)
-    : callback{cb},
-      store{os},
-      listIgnored{listIgnored},
-      userIgnoreFileName_{constructUserIgnoreFileName()} {
+    : callback{cb}, store{os}, listIgnored{listIgnored} {
   // Load the system-wide ignore settings and user-specific
   // ignore settings into rootIgnore_.
   initOwnedIgnores(systemWideIgnoreFileContents, userIgnoreFileContents);
 }
 
-AbsolutePath DiffContext::constructUserIgnoreFileName() {
-  return UserInfo::lookup().getHomeDirectory() +
-      PathComponentPiece{".gitignore"};
+AbsolutePath DiffContext::constructUserIgnoreFileName(
+    const UserInfo& userInfo) {
+  return userInfo.getHomeDirectory() + PathComponentPiece{".gitignore"};
 }
 
-std::string DiffContext::tryIngestFile(folly::StringPiece fileName) {
+std::string DiffContext::tryIngestFile(AbsolutePathPiece fileName) {
   std::string contents;
   try {
-    auto in = folly::File(fileName); // throws if file does not exist
+    auto in =
+        folly::File(fileName.stringPiece()); // throws if file does not exist
     if (!folly::readFile(in.fd(), contents)) {
       contents.clear();
     }
