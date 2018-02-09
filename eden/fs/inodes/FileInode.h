@@ -366,6 +366,11 @@ class FileInode : public InodeBase {
   void fsync(bool datasync);
 
   /**
+   * Update the st_blocks field in a stat structure based on the st_size value.
+   */
+  static void updateBlockCount(struct stat& st);
+
+  /**
    * Helper function used in setattr to perform FileInode specific operations
    * during setattr.
    */

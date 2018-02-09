@@ -199,13 +199,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
   return stat().then(
-      [nodeId = getNodeId(),
-       initStat = getMount()->initStatData()](const struct stat& st) {
-        auto attr = fusell::Dispatcher::Attr{initStat};
-        attr.st = st;
-        attr.st.st_ino = nodeId;
-        return attr;
-      });
+      [](const struct stat& st) { return fusell::Dispatcher::Attr{st}; });
 }
 
 folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
@@ -249,13 +243,16 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     // when FATTR_SIZE flag is set but when the flag is not set we
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
-    checkUnixError(fstat(file.fd(), &result.st));
+    struct stat overlayStat;
+    checkUnixError(fstat(file.fd(), &overlayStat));
     result.st.st_ino = self->getNodeId();
-    result.st.st_size -= Overlay::kHeaderLength;
+    result.st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
     result.st.st_atim = state->timeStamps.atime;
     result.st.st_ctim = state->timeStamps.ctime;
     result.st.st_mtim = state->timeStamps.mtime;
     result.st.st_mode = state->mode;
+    result.st.st_nlink = 1;
+    updateBlockCount(result.st);
 
     state->checkInvariants();
 
@@ -464,21 +461,22 @@ folly::Future<struct stat> FileInode::stat() {
   return ensureDataLoaded().then([self = inodePtrFromThis()]() {
     auto st = self->getMount()->initStatData();
     st.st_nlink = 1;
+    st.st_ino = self->getNodeId();
 
     auto state = self->state_.wlock();
 
     if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
       auto file = self->getFile(*state);
       // We are calling fstat only to get the size of the file.
-      checkUnixError(fstat(file.fd(), &st));
+      struct stat overlayStat;
+      checkUnixError(fstat(file.fd(), &overlayStat));
 
-      if (st.st_size < Overlay::kHeaderLength) {
+      if (overlayStat.st_size < Overlay::kHeaderLength) {
         auto filePath = self->getLocalPath();
         EDEN_BUG() << "Overlay file " << filePath
-                   << " is too short for header: size=" << st.st_size;
+                   << " is too short for header: size=" << overlayStat.st_size;
       }
-      st.st_size -= Overlay::kHeaderLength;
-      st.st_rdev = 0; // Eden does not support device files.
+      st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
     } else {
       // blob is guaranteed set because ensureDataLoaded() returns a FileHandle
       // so openCount > 0.
@@ -500,9 +498,18 @@ folly::Future<struct stat> FileInode::stat() {
     st.st_ctime = state->timeStamps.ctime.tv_sec;
 #endif
     st.st_mode = state->mode;
+    updateBlockCount(st);
 
     return st;
   });
+}
+
+void FileInode::updateBlockCount(struct stat& st) {
+  // Compute a value to store in st_blocks based on st_size.
+  // Note that st_blocks always refers to 512 byte blocks, regardless of the
+  // value we report in st.st_blksize.
+  static constexpr off_t kBlockSize = 512;
+  st.st_blocks = ((st.st_size + kBlockSize - 1) / kBlockSize);
 }
 
 void FileInode::flush(uint64_t /* lock_owner */) {

@@ -116,6 +116,20 @@ void basicAttrChecks(
   EXPECT_GT(attr.st.st_atime, 0);
   EXPECT_GT(attr.st.st_mtime, 0);
   EXPECT_GT(attr.st.st_ctime, 0);
+  EXPECT_GT(attr.st.st_blksize, 0);
+
+  // Note that st_blocks always refers to 512B blocks, and is not related to
+  // the block size reported in st_blksize.
+  //
+  // Eden doesn't really store data in blocks internally, and instead simply
+  // computes the value in st_blocks based on st_size.  This is mainly so that
+  // applications like "du" will report mostly sane results.
+  if (attr.st.st_size == 0) {
+    EXPECT_EQ(0, attr.st.st_blocks);
+  } else {
+    EXPECT_GE(512 * attr.st.st_blocks, attr.st.st_size);
+    EXPECT_LT(512 * (attr.st.st_blocks - 1), attr.st.st_size);
+  }
 }
 
 /**
@@ -180,6 +194,7 @@ TEST_F(FileInodeTest, getattrFromBlob) {
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(15, attr.st.st_size);
+  EXPECT_EQ(1, attr.st.st_blocks);
 }
 
 TEST_F(FileInodeTest, getattrFromOverlay) {
@@ -192,6 +207,7 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(12, attr.st.st_size);
+  EXPECT_EQ(1, attr.st.st_blocks);
   EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_atim), start);
   EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_mtim), start);
   EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_ctim), start);
@@ -206,6 +222,7 @@ TEST_F(FileInodeTest, setattrTruncateAll) {
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(0, attr.st.st_size);
+  EXPECT_EQ(0, attr.st.st_blocks);
 
   EXPECT_FILE_INODE(inode, "", 0644);
 }
