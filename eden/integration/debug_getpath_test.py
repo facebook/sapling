@@ -61,7 +61,7 @@ class DebugGetPathTest:
 
     def test_getpath_unloaded_inode(self):
         '''
-        Test that calling `eden debug getpath` one an unloaded inode returns the
+        Test that calling `eden debug getpath` on an unloaded inode returns the
         correct path and indicates that it is unloaded
         '''
         # Create the file
