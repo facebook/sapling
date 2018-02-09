@@ -152,56 +152,6 @@ class ThriftTest:
             'Number of loaded inodes should reduce after unload'
         )
 
-    # Checks if unloadInodeForPath unloads inodes based on the age
-    def test_unload_free_inodes_age(self):
-        age_to_unload = 10
-        old_timestamp = time.time() - (age_to_unload * 2)
-
-        # Load 100 inodes and set their atime to a very old value.
-        for i in range(100):
-            filename = os.path.join(self.mount, 'testfile_old%d.txt' % i)
-            self.write_file(filename, 'unload test case')
-            os.utime(filename, (old_timestamp, old_timestamp))
-
-        # Load another 100 inodes whose atime is close to current time.
-        for i in range(100):
-            self.write_file('testfile_new%d.txt' % i, 'unload test case')
-
-        inode_count_before_unload = self.get_loaded_inodes_count('')
-        self.assertGreater(
-            inode_count_before_unload, 200, 'Number of loaded inodes should increase'
-        )
-        age = TimeSpec()
-        age.seconds = age_to_unload
-        age.nanoSeconds = 0
-        unloaded_inode_count = self.client.unloadInodeForPath(self.mount, '', age)
-        result = self.client.debugInodeStatus(self.mount, '')
-
-        # Check if the inodes we are expecting to be unloaded are actually unloading.
-        for item in result:
-            for inode in item.entries:
-                if inode.loaded:
-                    # If a file is loaded check that it is not old file (not all the
-                    # ones that are loaded are new files, there can be other files too).
-                    self.assertFalse(
-                        str(inode.name).find('testfile_old') != -1,
-                        'old inodes should not be loaded'
-                    )
-                else:
-                    # check that the inodes that are unloaded are not the new ones
-                    # (not all the files that are unloaded are new ones).
-                    self.assertFalse(
-                        str(inode.name).find('testfile_new') != -1,
-                        'new inodes should not be unloaded'
-                    )
-
-        self.assertGreaterEqual(
-            unloaded_inode_count, 100, 'At least the old batch of inodes should unload'
-        )
-        self.assertLess(
-            unloaded_inode_count, 200, 'Not all unodes should unload'
-        )
-
     def read_file(self, filename):
         with open(filename, 'r') as f:
             f.read()
