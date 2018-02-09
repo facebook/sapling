@@ -403,6 +403,7 @@ test bundle and description:
 with a specific bundle type
 (binary part must be different)
 
+#if common-zlib
   $ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
   >  -c bar -s test -r tip -b --desc description \
   > --config patchbomb.bundletype=gzip-v1 | $FILTERBOUNDARY
@@ -441,6 +442,8 @@ with a specific bundle type
   zXYS3BoGxdrJDIYmlimJJiZpRokmqYYmaSYWFknmSSkmhqbmliamiZYWxuYmBhbJBgZcUBNZQe5K
   Epm7xF/LT+RLx/a9juFTomaYO/Rgsx4rwBN+IMCUDLOKAQBrsmti
   --===============*==-- (glob)
+
+#endif
 
 utf-8 patch:
   $ $PYTHON -c 'fp = open("utf", "wb"); fp.write("h\xC3\xB6mma!\n"); fp.close();'

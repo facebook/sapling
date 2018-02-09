@@ -21,8 +21,8 @@ Basic clone
 
   $ hg clone --stream -U http://localhost:$HGPORT clone1
   streaming all changes
-  1027 files to transfer, 96.3 KB of data
-  transferred 96.3 KB in * seconds (*/sec) (glob)
+  1027 files to transfer, * of data (glob)
+  transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
 
@@ -30,8 +30,8 @@ Basic clone
 
   $ hg clone --uncompressed -U http://localhost:$HGPORT clone1-uncompressed
   streaming all changes
-  1027 files to transfer, 96.3 KB of data
-  transferred 96.3 KB in * seconds (*/sec) (glob)
+  1027 files to transfer, * of data (glob)
+  transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
 
@@ -43,9 +43,9 @@ Clone with background file closing enabled
   sending branchmap command
   streaming all changes
   sending stream_out command
-  1027 files to transfer, 96.3 KB of data
+  1027 files to transfer, * of data (glob)
   starting 4 threads for background file closing
-  transferred 96.3 KB in * seconds (*/sec) (glob)
+  transferred * in * seconds (*) (glob)
   query 1; heads
   sending batch command
   searching for changes
@@ -83,8 +83,8 @@ Streaming of secrets can be overridden by server config
 
   $ hg clone --stream -U http://localhost:$HGPORT secret-allowed
   streaming all changes
-  1027 files to transfer, 96.3 KB of data
-  transferred 96.3 KB in * seconds (*/sec) (glob)
+  1027 files to transfer, * of data (glob)
+  transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
 

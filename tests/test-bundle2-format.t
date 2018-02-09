@@ -1062,6 +1062,7 @@ Simple case where it just work: GZ
 ----------------------------------
 
   $ hg bundle2 --compress GZ --rev '8+7+5+4' ../rev.hg2.bz
+#if common-zlib
   $ f --hexdump ../rev.hg2.bz
   ../rev.hg2.bz:
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
@@ -1120,6 +1121,7 @@ Simple case where it just work: GZ
   0350: b8 0a 5a 43 34 3a b3 3a d6 77 ff 5c b6 fa ad f9 |..ZC4:.:.w.\....|
   0360: db fb 6a 33 df c1 7d 99 cf ef d4 d5 6d da 77 7c |..j3..}.....m.w||
   0370: 3b 19 fd af c5 3f f1 60 c3 17                   |;....?.`..|
+#endif
   $ hg debugbundle ../rev.hg2.bz
   Stream params: {Compression: GZ}
   changegroup -- {}

@@ -149,13 +149,17 @@ Compression level can be adjusted for bundle2 bundles
 
   $ hg bundle -a -t gzip-v2 gzip-v2.hg
   1 changesets found
+#if common-zlib
   $ f --size gzip-v2.hg
   gzip-v2.hg: size=427
+#endif
 
   $ hg --config experimental.bundlecomplevel=1 bundle -a -t gzip-v2 gzip-v2-level1.hg
   1 changesets found
+#if common-zlib
   $ f --size gzip-v2-level1.hg
   gzip-v2-level1.hg: size=435
+#endif
 
   $ cd ..
 

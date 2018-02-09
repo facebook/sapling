@@ -138,6 +138,7 @@ Merge creates 2-parent revision of directory revlog
   5
   $ cat dir1/b
   6
+#if common-zlib
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      54     -1       1 8b3ffd73f901 000000000000 000000000000
@@ -146,6 +147,7 @@ Merge creates 2-parent revision of directory revlog
        3       134      55      1       5 44844058ccce 68e9d057c5a8 000000000000
        4       189      55      1       6 bf3d9b744927 68e9d057c5a8 000000000000
        5       244      55      4       7 dde7c0af2a03 bf3d9b744927 44844058ccce
+#endif
 
 Merge keeping directory from parent 1 does not create revlog entry. (Note that
 dir1's manifest does change, but only because dir1/a's filelog changes.)
@@ -281,6 +283,7 @@ Merge of two trees
 
 Parent of tree root manifest should be flat manifest, and two for merge
 
+#if common-zlib
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      80     -1       0 40536115ed9e 000000000000 000000000000
@@ -289,7 +292,7 @@ Parent of tree root manifest should be flat manifest, and two for merge
        3       252      83      2       3 d17d663cbd8a 5d9b9da231a2 f3376063c255
        4       335     124      1       4 51e32a8c60ee f3376063c255 000000000000
        5       459     126      2       5 cc5baa78b230 5d9b9da231a2 f3376063c255
-
+#endif
 
 Status across flat/tree boundary should work
 
@@ -301,17 +304,21 @@ Status across flat/tree boundary should work
 
 Turning off treemanifest config has no effect
 
+#if common-zlib
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
+#endif
   $ echo 2 > dir1/a
   $ hg --config experimental.treemanifest=False ci -qm 'modify dir1/a'
+#if common-zlib
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
        2       238      55      1       6 5b16163a30c6 25ecb8cb8618 000000000000
+#endif
 
 Stripping and recovering changes should work
 
@@ -320,10 +327,12 @@ Stripping and recovering changes should work
   $ hg --config extensions.strip= strip tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg
+#if common-zlib
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
+#endif
   $ hg incoming .hg/strip-backup/*
   comparing with .hg/strip-backup/*-backup.hg (glob)
   searching for changes
@@ -345,11 +354,13 @@ Stripping and recovering changes should work
   $ hg --config extensions.strip= strip tip
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/*-backup.hg (glob)
   $ hg unbundle -q .hg/strip-backup/*
+#if common-zlib
   $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
        2       238      55      1       6 5b16163a30c6 25ecb8cb8618 000000000000
+#endif
   $ hg st --change tip
   M dir1/a
 
@@ -810,7 +821,7 @@ Stream clone with fncachestore
 
 Packed bundle
   $ hg -R deeprepo debugcreatestreamclonebundle repo-packed.hg
-  writing 5330 bytes for 18 files
+  writing * bytes for 18 files (glob)
   bundle requirements: generaldelta, revlogv1, treemanifest
   $ hg debugbundle --spec repo-packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Crevlogv1%2Ctreemanifest

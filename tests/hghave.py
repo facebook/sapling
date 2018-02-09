@@ -133,6 +133,22 @@ def has_bzr_range(v):
 def has_chg():
     return 'CHGHG' in os.environ
 
+_zlibsamples = {
+    'c7667dad766d': '789c4b363733334f494c01522900160b036e',
+    '36a25358b7f16835db5a8e4ecc68328f42': '789c33364b34323536b548324f3'
+    '334b330364d49324db44835494d4e06f28c2cd24c8c009b180907',
+    '1e0ed22dfcf821b7368535f0d41099f35a139451aec6dfde551a4808c8fc5f':
+    '789c0dc6c901c0300803b095b89cc23829e0fd4768f592aeec980d9b69fa3e'
+    '7e120eca844a151d57bd027ab7cf70167f23253bd9e007160f1121',
+}
+
+@check("common-zlib", "common zlib that produces consistent result")
+def has_common_zlib():
+    import binascii
+    import zlib
+    return all(zlib.compress(k) == binascii.unhexlify(v)
+               for k, v in _zlibsamples.items())
+
 @check("cvs", "cvs client/server")
 def has_cvs():
     re = br'Concurrent Versions System.*?server'

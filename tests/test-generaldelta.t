@@ -97,6 +97,7 @@ delta coming from the server base delta server are not recompressed.
   new changesets 0ea3fcf9d01d:bba78d330d9c
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#if common-zlib
   $ hg -R repo debugindex -m
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0     104      0       0 cef96823c800 000000000000 000000000000
@@ -115,6 +116,7 @@ delta coming from the server base delta server are not recompressed.
        1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
        2       161      57      0       2 134fdc6fd680 cef96823c800 000000000000
        3       218      57      0       3 723508934dad cef96823c800 000000000000
+#endif
 
 Test format.aggressivemergedeltas
 
@@ -133,11 +135,13 @@ Test format.aggressivemergedeltas
 - Verify non-aggressive merge uses p1 (commit 1) as delta parent
   $ hg merge -q 0
   $ hg commit -q -m merge
+#if common-zlib
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
        1        59      61      0       1 315c023f341d 000000000000 000000000000
        2       120      65      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
+#endif
 
   $ hg strip -q -r . --config extensions.strip=
 
@@ -145,11 +149,13 @@ Test format.aggressivemergedeltas
   $ hg up -q -C 1
   $ hg merge -q 0
   $ hg commit -q -m merge --config format.aggressivemergedeltas=True
+#if common-zlib
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
        1        59      61      0       1 315c023f341d 000000000000 000000000000
        2       120      62      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
+#endif
 
 Test that strip bundle use bundle2
   $ hg --config extensions.strip= strip .

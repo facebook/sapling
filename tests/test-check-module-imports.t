@@ -283,7 +283,7 @@ outputs, which should be fixed later.
   hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
   hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
-  tests/hghave.py:261: relative import of stdlib module
+  tests/hghave.py:277: relative import of stdlib module
   tests/test-fb-hgext-cstore-datapackstore.py:13: direct symbol import datapackstore from hgext.extlib.cstore
   tests/test-fb-hgext-cstore-datapackstore.py:17: direct symbol import fastdatapack, mutabledatapack from hgext.remotefilelog.datapack
   tests/test-fb-hgext-cstore-datapackstore.py:23: imports not lexically sorted: mercurial.ui < silenttestrunner

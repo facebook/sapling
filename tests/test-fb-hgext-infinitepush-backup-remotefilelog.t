@@ -38,8 +38,8 @@ Pull changes client-side
   $ hg pull
   pulling from ssh://user@dummy/repo
   streaming all changes
-  5 files to transfer, 1.06 KB of data
-  transferred 1.06 KB in [\d.]+ seconds \([\d.]+ .*\) (re)
+  5 files to transfer, * KB of data (glob)
+  transferred .* in [\d.]+ seconds \([\d.]+ .*\) (re)
   searching for changes
   no changes found
 

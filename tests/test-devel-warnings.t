@@ -127,7 +127,7 @@ Stripping from a transaction
   devel-warn: foorbar is deprecated, go shopping
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
 
-#if no-chg
+#if no-chg normal-layout
   $ hg blackbox -l 7
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
@@ -151,7 +151,9 @@ Stripping from a transaction
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 7
-#else
+#endif
+
+#if chg normal-layout
   $ hg blackbox -l 7
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
@@ -268,8 +270,8 @@ Test warning on config option access and registration
   > EOF
 
   $ hg --config "extensions.buggyconfig=${TESTTMP}/buggyconfig.py" buggyconfig
-  devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at: */mercurial/extensions.py:* (_loadextra) (glob)
-  devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at: */mercurial/extensions.py:* (_loadextra) (glob)
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.interactive' at:*mercurial/extensions.py:* (_loadextra) (glob)
+  devel-warn: extension 'buggyconfig' overwrite config item 'ui.quiet' at:*mercurial/extensions.py:* (_loadextra) (glob)
   devel-warn: specifying a mismatched default value for a registered config item: 'ui.quiet' 'True' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a mismatched default value for a registered config item: 'ui.interactive' 'False' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)
   devel-warn: specifying a mismatched default value for a registered config item: 'test.some' 'bar' at: $TESTTMP/buggyconfig.py:* (cmdbuggyconfig) (glob)

@@ -102,6 +102,7 @@ Bundle with partial content works
 We verify exact bundle content as an extra check against accidental future
 changes. If this output changes, we could break old clients.
 
+#if common-zlib
   $ f --size --hexdump partial.hg
   partial.hg: size=207
   0000: 48 47 31 30 47 5a 78 9c 63 60 60 98 17 ac 12 93 |HG10GZx.c``.....|
@@ -117,6 +118,7 @@ changes. If this output changes, we could break old clients.
   00a0: 26 59 a6 25 5a 98 a5 18 a6 24 71 41 35 b1 43 dc |&Y.%Z....$qA5.C.|
   00b0: 16 b2 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a |.....E..V....R..|
   00c0: 78 ed fc d5 76 f1 36 35 dc 05 00 36 ed 5e c7    |x...v.65...6.^.|
+#endif
 
   $ echo "http://localhost:$HGPORT1/partial.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT partial-bundle
@@ -163,6 +165,7 @@ Again, we perform an extra check against bundle content changes. If this content
 changes, clone bundles produced by new Mercurial versions may not be readable
 by old clients.
 
+#if common-zlib
   $ f --size --hexdump full.hg
   full.hg: size=396
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
@@ -190,6 +193,7 @@ by old clients.
   0160: 21 01 9a b1 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 |!......E..V....R|
   0170: d7 8a 78 ed fc d5 76 f1 36 25 81 89 c7 ad ec 90 |..x...v.6%......|
   0180: 54 47 75 2b 89 49 b1 00 d2 8a eb 92             |TGu+.I......|
+#endif
 
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT full-bundle

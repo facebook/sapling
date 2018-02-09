@@ -216,7 +216,7 @@ test http authentication
   5fed3813f7f5
   $ hg clone http://user:pass@localhost:$HGPORT2/ dest 2>&1
   streaming all changes
-  7 files to transfer, 916 bytes of data
+  7 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
