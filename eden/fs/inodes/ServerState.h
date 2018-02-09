@@ -16,6 +16,8 @@
 namespace facebook {
 namespace eden {
 
+class PrivHelper;
+
 /**
  * ServerState contains state shared across multiple mounts.
  *
@@ -24,8 +26,9 @@ namespace eden {
  */
 class ServerState {
  public:
-  ServerState() : userInfo_{UserInfo::lookup()} {}
-  explicit ServerState(UserInfo userInfo) : userInfo_{std::move(userInfo)} {}
+  ServerState();
+  ServerState(UserInfo userInfo, std::unique_ptr<PrivHelper> privHelper);
+  ~ServerState();
 
   /**
    * Set the path to the server's thrift socket.
@@ -60,13 +63,19 @@ class ServerState {
     return userInfo_;
   }
 
- private:
-  ServerState(ServerState const&) = delete;
-  ServerState& operator=(ServerState const&) = delete;
+  /**
+   * Get the PrivHelper object used to perform operations that require
+   * elevated privileges.
+   */
+  PrivHelper* getPrivHelper() {
+    return privHelper_.get();
+  }
 
+ private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   fusell::ThreadLocalEdenStats edenStats_;
+  std::unique_ptr<PrivHelper> privHelper_;
 };
 } // namespace eden
 } // namespace facebook

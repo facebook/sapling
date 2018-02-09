@@ -24,28 +24,44 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
 using folly::checkUnixError;
+using folly::StringPiece;
+using std::make_unique;
 using std::string;
+using std::unique_ptr;
+using std::vector;
+
+using facebook::eden::fusell::PrivHelperConn;
+using facebook::eden::fusell::PrivHelperServer;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 namespace {
 
 /**
- * PrivHelper contains the client-side logic (in the parent process)
+ * PrivHelperClientImpl contains the client-side logic (in the parent process)
  * for talking to the remote privileged process.
  */
-class PrivHelper {
+class PrivHelperClientImpl : public PrivHelper {
  public:
-  PrivHelper(PrivHelperConn&& conn, pid_t helperPid)
+  PrivHelperClientImpl(PrivHelperConn&& conn, pid_t helperPid)
       : conn_(std::move(conn)), helperPid_(helperPid) {}
-  ~PrivHelper() {
+  ~PrivHelperClientImpl() {
     if (!conn_.isClosed()) {
       cleanup();
     }
   }
 
+  folly::File fuseMount(folly::StringPiece mountPath) override;
+  void fuseUnmount(StringPiece mountPath) override;
+  void bindMount(StringPiece clientPath, StringPiece mountPath) override;
+  void fuseTakeoverShutdown(StringPiece mountPath) override;
+  void fuseTakeoverStartup(
+      StringPiece mountPath,
+      const vector<string>& bindMounts) override;
+  int stop() override;
+
+ private:
   /**
    * Close the socket to the privhelper server, and wait for it to exit.
    *
@@ -135,20 +151,77 @@ class PrivHelper {
   uint32_t nextXid_{1};
 };
 
-// The global PrivHelper for use in the parent (non-privileged) process
-std::unique_ptr<PrivHelper> gPrivHelper;
+folly::File PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeMountRequest(&msg, mountPath);
+
+  folly::File file;
+  sendAndRecv(&msg, &file);
+  PrivHelperConn::parseEmptyResponse(&msg);
+  CHECK(file) << "no file descriptor received in privhelper mount response";
+  return file;
+}
+
+void PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeUnmountRequest(&msg, mountPath);
+
+  sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
+void PrivHelperClientImpl::bindMount(
+    StringPiece clientPath,
+    StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeBindMountRequest(&msg, clientPath, mountPath);
+
+  sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
+void PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
+
+  sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
+void PrivHelperClientImpl::fuseTakeoverStartup(
+    StringPiece mountPath,
+    const vector<string>& bindMounts) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeTakeoverStartupRequest(&msg, mountPath, bindMounts);
+
+  sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
+int PrivHelperClientImpl::stop() {
+  if (conn_.isClosed()) {
+    throw std::runtime_error(
+        "attempted to stop the privhelper process when it was not running");
+  }
+  const auto result = cleanup();
+  if (result.hasError()) {
+    folly::throwSystemErrorExplicit(
+        result.error(), "error shutting down privhelper process");
+  }
+  return result.value();
+}
 
 } // unnamed namespace
 
-void startPrivHelper(const UserInfo& userInfo) {
+unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
   CHECK_EQ(geteuid(), 0) << "must be root in order to start the privhelper";
   PrivHelperServer server;
-  startPrivHelper(&server, userInfo);
+  return startPrivHelper(&server, userInfo);
 }
 
-void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo) {
-  CHECK(!gPrivHelper) << "privhelper already initialized";
-
+unique_ptr<PrivHelper> startPrivHelper(
+    PrivHelperServer* server,
+    const UserInfo& userInfo) {
   PrivHelperConn clientConn;
   PrivHelperConn serverConn;
   PrivHelperConn::createConnPair(clientConn, serverConn);
@@ -158,9 +231,8 @@ void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo) {
   if (pid > 0) {
     // Parent
     serverConn.close();
-    gPrivHelper.reset(new PrivHelper(std::move(clientConn), pid));
     XLOG(DBG1) << "Forked mount helper process: pid=" << pid;
-    return;
+    return make_unique<PrivHelperClientImpl>(std::move(clientConn), pid);
   }
 
   // Child
@@ -178,66 +250,5 @@ void startPrivHelper(PrivHelperServer* server, const UserInfo& userInfo) {
   _exit(rc);
 }
 
-int stopPrivHelper() {
-  if (!gPrivHelper) {
-    throw std::runtime_error(
-        "attempted to stop the privhelper process when it was not running");
-  }
-  const auto result = gPrivHelper->cleanup();
-  gPrivHelper.reset();
-  if (result.hasError()) {
-    folly::throwSystemErrorExplicit(
-        result.error(), "error shutting down privhelper process");
-  }
-  return result.value();
-}
-
-folly::File privilegedFuseMount(folly::StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  PrivHelperConn::serializeMountRequest(&msg, mountPath);
-
-  folly::File file;
-  gPrivHelper->sendAndRecv(&msg, &file);
-  PrivHelperConn::parseEmptyResponse(&msg);
-  CHECK(file) << "no file descriptor received in privhelper mount response";
-  return file;
-}
-
-void privilegedFuseUnmount(folly::StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  PrivHelperConn::serializeUnmountRequest(&msg, mountPath);
-
-  gPrivHelper->sendAndRecv(&msg, nullptr);
-  PrivHelperConn::parseEmptyResponse(&msg);
-}
-
-void privilegedFuseTakeoverShutdown(folly::StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  PrivHelperConn::serializeTakeoverShutdownRequest(&msg, mountPath);
-
-  gPrivHelper->sendAndRecv(&msg, nullptr);
-  PrivHelperConn::parseEmptyResponse(&msg);
-}
-
-void privilegedFuseTakeoverStartup(
-    folly::StringPiece mountPath,
-    const std::vector<std::string>& bindMounts) {
-  PrivHelperConn::Message msg;
-  PrivHelperConn::serializeTakeoverStartupRequest(&msg, mountPath, bindMounts);
-
-  gPrivHelper->sendAndRecv(&msg, nullptr);
-  PrivHelperConn::parseEmptyResponse(&msg);
-}
-
-void privilegedBindMount(
-    folly::StringPiece clientPath,
-    folly::StringPiece mountPath) {
-  PrivHelperConn::Message msg;
-  PrivHelperConn::serializeBindMountRequest(&msg, clientPath, mountPath);
-
-  gPrivHelper->sendAndRecv(&msg, nullptr);
-  PrivHelperConn::parseEmptyResponse(&msg);
-}
-} // namespace fusell
 } // namespace eden
 } // namespace facebook

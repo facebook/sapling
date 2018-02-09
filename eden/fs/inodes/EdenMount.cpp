@@ -253,7 +253,7 @@ void EdenMount::performBindMounts() {
       // the bind mount is performed.
       boost::filesystem::create_directories(pathInMountDir);
 
-      fusell::privilegedBindMount(
+      serverState_->getPrivHelper()->bindMount(
           bindMount.pathInClientDir.c_str(), pathInMountDir);
     } catch (const std::exception& ex) {
       // Consider recording all failed bind mounts in a way that can be
@@ -678,7 +678,8 @@ folly::Future<folly::Unit> EdenMount::startFuse(
           fuseDevice = std::move(channelData.fd);
           connInfo = channelData.connInfo;
         } else {
-          fuseDevice = fusell::privilegedFuseMount(path_.stringPiece());
+          fuseDevice =
+              serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
         }
 
         channel_ = std::make_unique<fusell::FuseChannel>(

@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
   // parsing command line arguments.  The downside would be that we then
   // shouldn't really use glog in the privhelper process, since it won't have
   // been set up and configured based on the command line flags.)
-  fusell::startPrivHelper(identity);
+  auto privHelper = startPrivHelper(identity);
   identity.dropPrivileges();
 
   folly::initLogging(FLAGS_logging);
@@ -104,7 +104,12 @@ int main(int argc, char** argv) {
       ? identity.getHomeDirectory() + PathComponentPiece{".edenrc"}
       : normalizeBestEffort(configPathStr);
 
-  EdenServer server(std::move(identity), edenDir, etcEdenDir, configPath);
+  EdenServer server(
+      std::move(identity),
+      std::move(privHelper),
+      edenDir,
+      etcEdenDir,
+      configPath);
   server.run();
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;

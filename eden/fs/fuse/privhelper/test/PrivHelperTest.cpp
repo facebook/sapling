@@ -283,14 +283,11 @@ TEST(PrivHelper, ServerShutdownTest) {
   auto other = otherDir.string();
 
   {
-    startPrivHelper(&server, UserInfo::lookup());
-    SCOPE_EXIT {
-      stopPrivHelper();
-    };
+    auto privHelper = startPrivHelper(&server, UserInfo::lookup());
 
     // Create a few mount points
-    privilegedFuseMount(foo);
-    privilegedFuseMount(bar);
+    privHelper->fuseMount(foo);
+    privHelper->fuseMount(bar);
     EXPECT_TRUE(server.isMounted(foo));
     EXPECT_TRUE(server.isMounted(bar));
     EXPECT_FALSE(server.isMounted(other));
@@ -298,7 +295,7 @@ TEST(PrivHelper, ServerShutdownTest) {
     // Create a bind mount.
     EXPECT_FALSE(boost::filesystem::exists(mountedBuckOut));
     TemporaryDirectory realBuckOut;
-    privilegedBindMount(realBuckOut.path().c_str(), mountedBuckOut.c_str());
+    privHelper->bindMount(realBuckOut.path().c_str(), mountedBuckOut.c_str());
     EXPECT_TRUE(server.isBindMounted(mountedBuckOut.c_str()));
     EXPECT_TRUE(boost::filesystem::exists(mountedBuckOut))
         << "privilegedBindMount() should create the bind mount directory for "

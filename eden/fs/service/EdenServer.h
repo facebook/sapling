@@ -70,6 +70,7 @@ class EdenServer : private TakeoverHandler {
 
   EdenServer(
       UserInfo userInfo,
+      std::unique_ptr<PrivHelper> privHelper,
       AbsolutePathPiece edenDir,
       AbsolutePathPiece etcEdenDir,
       AbsolutePathPiece configPath);

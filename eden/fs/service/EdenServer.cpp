@@ -135,13 +135,14 @@ class EdenServer::ThriftServerEventHandler
 
 EdenServer::EdenServer(
     UserInfo userInfo,
+    std::unique_ptr<PrivHelper> privHelper,
     AbsolutePathPiece edenDir,
     AbsolutePathPiece etcEdenDir,
     AbsolutePathPiece configPath)
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
-      serverState_(std::move(userInfo)),
+      serverState_{std::move(userInfo), std::move(privHelper)},
       threadPool_(std::make_shared<EdenCPUThreadPool>()) {}
 
 EdenServer::~EdenServer() {}
@@ -159,15 +160,16 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
           info.takeoverPromise.emplace();
           auto future = info.takeoverPromise->getFuture();
           info.edenMount->getFuseChannel()->requestSessionExit();
-          futures.emplace_back(future.then(
-              [edenMount = info.edenMount](TakeoverData::MountInfo takeover) {
-                fusell::privilegedFuseTakeoverShutdown(
+          futures.emplace_back(
+              future.then([self = this, edenMount = info.edenMount](
+                              TakeoverData::MountInfo takeover) {
+                self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
                     edenMount->getPath().stringPiece());
                 takeover.inodeMap = edenMount->getInodeMap()->save();
                 return takeover;
               }));
         } else {
-          fusell::privilegedFuseUnmount(mountPath);
+          serverState_.getPrivHelper()->fuseUnmount(mountPath);
           futures.push_back(info.unmountPromise.getFuture().then(
               [] { return Optional<TakeoverData::MountInfo>{}; }));
         }
@@ -434,7 +436,7 @@ Future<Unit> EdenServer::performNormalShutdown() {
 void EdenServer::shutdownPrivhelper() {
   // Explicitly stop the privhelper process so we can verify that it
   // exits normally.
-  const auto privhelperExitCode = fusell::stopPrivHelper();
+  const auto privhelperExitCode = serverState_.getPrivHelper()->stop();
   if (privhelperExitCode != 0) {
     if (privhelperExitCode > 0) {
       XLOG(ERR) << "privhelper process exited with unexpected code "
@@ -494,7 +496,7 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
   for (const auto& bindMount : info.bindMounts) {
     bindMounts.emplace_back(bindMount.value());
   }
-  fusell::privilegedFuseTakeoverStartup(
+  serverState_.getPrivHelper()->fuseTakeoverStartup(
       info.mountPath.stringPiece(), bindMounts);
 
   // (re)open file handles for each entry in info.fileHandleMap
@@ -627,7 +629,7 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
       future = it->second.unmountPromise.getFuture();
     }
 
-    fusell::privilegedFuseUnmount(mountPath);
+    serverState_.getPrivHelper()->fuseUnmount(mountPath);
     return future;
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
