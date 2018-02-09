@@ -53,7 +53,6 @@ DEFINE_bool(
     "If another edenfs process is already running, "
     "attempt to gracefully takeover its mount points.");
 
-DEFINE_string(thrift_address, "", "The address for the thrift server socket");
 DEFINE_int32(
     thrift_num_workers,
     std::thread::hardware_concurrency(),
@@ -94,10 +93,6 @@ constexpr StringPiece kLockFileName{"lock"};
 constexpr StringPiece kThriftSocketName{"socket"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
-
-folly::SocketAddress getThriftAddress(
-    StringPiece argument,
-    AbsolutePathPiece edenDir);
 } // namespace
 
 namespace facebook {
@@ -761,11 +756,13 @@ void EdenServer::createThriftServer() {
 
   handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
-  auto thriftAddress = getThriftAddress(FLAGS_thrift_address, edenDir_);
-  server_->setAddress(thriftAddress);
 
-  CHECK_EQ(thriftAddress.getFamily(), AF_UNIX);
-  serverState_.setSocketPath(AbsolutePath{thriftAddress.getPath()});
+  // Get the path to the thrift socket.
+  auto thriftSocketPath = edenDir_ + PathComponentPiece{kThriftSocketName};
+  folly::SocketAddress thriftAddress;
+  thriftAddress.setFromPath(thriftSocketPath.stringPiece());
+  server_->setAddress(thriftAddress);
+  serverState_.setSocketPath(thriftSocketPath);
 
   serverEventHandler_ = make_shared<ThriftServerEventHandler>(this);
   server_->setServerEventHandler(serverEventHandler_);
@@ -872,43 +869,3 @@ void EdenServer::flushStatsNow() {
 }
 } // namespace eden
 } // namespace facebook
-
-namespace {
-
-/*
- * Parse the --thrift_address argument, and return a SocketAddress object
- */
-folly::SocketAddress getThriftAddress(
-    StringPiece argument,
-    AbsolutePathPiece edenDir) {
-  folly::SocketAddress addr;
-
-  // If the argument is empty, default to a Unix socket placed inside
-  // the eden directory.
-  if (argument.empty()) {
-    addr.setFromPath(
-        (edenDir + PathComponentPiece{kThriftSocketName}).stringPiece());
-    return addr;
-  }
-
-  // Check to see if the argument looks like a port number
-  uint16_t port;
-  bool validPort{true};
-  try {
-    port = folly::to<uint16_t>(argument);
-  } catch (const std::range_error& ex) {
-    validPort = false;
-  }
-  if (validPort) {
-    addr.setFromLocalPort(port);
-    return addr;
-  }
-
-  // TODO: also support IPv4:PORT or [IPv6]:PORT
-
-  // Otherwise assume the address refers to a local unix socket path
-  addr.setFromPath(argument);
-  return addr;
-}
-
-} // unnamed namespace
