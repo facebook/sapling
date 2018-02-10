@@ -168,8 +168,8 @@ def do_relink(src, dst, files, ui):
         source = os.path.join(src, f)
         tgt = os.path.join(dst, f)
         # Binary mode, so that read() works correctly, especially on Windows
-        sfp = file(source, 'rb')
-        dfp = file(tgt, 'rb')
+        sfp = file(source, 'rb') # noqa
+        dfp = file(tgt, 'rb') # noqa
         sin = sfp.read(CHUNKLEN)
         while sin:
             din = dfp.read(CHUNKLEN)

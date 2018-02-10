@@ -28,6 +28,11 @@ patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
     lines = [l + '\n' for l in text.split('\n')]

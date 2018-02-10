@@ -75,6 +75,11 @@ patchextension = 'patch'
 # generic user for all shelve operations
 shelveuser = 'shelve@localhost'
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class shelvedfile(object):
     """Helper for the file storing a single shelve
 

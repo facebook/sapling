@@ -25,7 +25,7 @@ def gettype(q):
     return int(q & 0xFFFF)
 
 def offset_type(offset, type):
-    return long(long(offset) << 16 | type)
+    return long(long(offset) << 16 | type) # noqa
 
 indexformatng = ">Qiiiiii20s12x"
 

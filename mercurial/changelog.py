@@ -26,6 +26,11 @@ from . import (
 
 _defaultextra = {'branch': 'default'}
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _string_escape(text):
     """
     >>> from .pycompat import bytechr as chr

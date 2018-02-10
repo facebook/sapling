@@ -73,6 +73,9 @@ command = registrar.command(cmdtable)
 
 newfile = {'new fi', 'rename', 'copy f', 'copy t'}
 
+if sys.version_info.major >= 3:
+    xrange = range
+
 def zerodict():
     return collections.defaultdict(lambda: 0)
 

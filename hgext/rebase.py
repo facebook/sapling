@@ -1535,7 +1535,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
 def isagitpatch(repo, patchname):
     'Return true if the given patch is in git format'
     mqpatch = os.path.join(repo.mq.path, patchname)
-    for line in patch.linereader(file(mqpatch, 'rb')):
+    for line in patch.linereader(file(mqpatch, 'rb')): # noqa
         if line.startswith('diff --git'):
             return True
     return False

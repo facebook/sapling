@@ -29,6 +29,11 @@ from hgext.remotefilelog import constants
 from mercurial.node import nullid
 import mercurial.ui
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class datapacktestsbase(object):
     def __init__(self, datapackreader, paramsavailable, iscdatapack):
         self.datapackreader = datapackreader

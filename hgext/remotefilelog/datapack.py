@@ -10,6 +10,11 @@ from mercurial.i18n import _
 from . import basepack, constants, shallowutil
 from .lz4wrapper import lz4compress, lz4decompress
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     from ..extlib import cstore
     cstore.datapack
 except ImportError:

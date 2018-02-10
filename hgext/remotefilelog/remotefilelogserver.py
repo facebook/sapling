@@ -22,6 +22,11 @@ from .  import (
 import errno, stat, os, time
 
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     from mercurial import streamclone
     streamclone._walkstreamfiles
     hasstreamclone = True

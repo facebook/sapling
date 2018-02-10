@@ -21,7 +21,7 @@ select =
  F707, # an except: block as not the last exception handler
  F811, # redefinition of unused name from line N
  F812, # list comprehension redefines name from line N
- # F821, # undefined name name
+ F821, # undefined name name
  F822, # undefined name name in __all__
  F823, # local variable name … referenced before assignment
  F831, # duplicate argument name in function definition

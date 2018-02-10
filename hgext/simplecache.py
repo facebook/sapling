@@ -44,6 +44,11 @@ UNCACHEABLE_NODES = [
     wdirid
 ]
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def extsetup(ui):
     extensions.wrapfunction(copies, 'pathcopies', pathcopiesui(ui))
     extensions.wrapfunction(context.basectx, '_buildstatus', buildstatusui(ui))

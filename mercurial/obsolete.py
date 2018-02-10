@@ -98,6 +98,11 @@ createmarkersopt = 'createmarkers'
 allowunstableopt = 'allowunstable'
 exchangeopt = 'exchange'
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _getoptionvalue(repo, option):
     """Returns True if the given repository has the given obsolete option
     enabled.

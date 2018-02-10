@@ -52,6 +52,11 @@ SMALLFANOUTCUTOFF = 2**16 / 8
 # loaded the pack list.
 REFRESHRATE = 0.1
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if pycompat.isposix:
     # With glibc 2.7+ the 'e' flag uses O_CLOEXEC when opening.
     # The 'e' flag will be ignored on older versions of glibc.

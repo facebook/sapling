@@ -19,6 +19,11 @@ from . import (
     tags as tagsmod,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def hideablerevs(repo):
     """Revision candidates to be hidden
 

@@ -74,6 +74,11 @@ urlreq = util.urlreq
 # - '' for svfs relative paths
 _cachedfiles = set()
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class _basefilecache(scmutil.filecache):
     """All filecache usage on repo are done for logic that should be unfiltered
     """

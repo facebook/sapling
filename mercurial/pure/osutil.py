@@ -17,6 +17,11 @@ from .. import (
     pycompat,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _mode_to_kind(mode):
     if statmod.S_ISREG(mode):
         return statmod.S_IFREG

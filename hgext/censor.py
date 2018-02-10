@@ -48,6 +48,11 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @command('censor',
     [('r', 'rev', '', _('censor file from specified revision'), _('REV')),
      ('t', 'tombstone', '', _('replacement tombstone data'), _('TEXT'))],

@@ -18,6 +18,11 @@ from . import (
     error,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, fetch, heads) used to identify the common
     subset of nodes between repo and remote.

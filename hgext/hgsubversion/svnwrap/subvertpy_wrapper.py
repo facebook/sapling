@@ -17,6 +17,11 @@ subvertpy_required = (0, 7, 4)
 subversion_required = (1, 5, 0)
 
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     from subvertpy import client
     from subvertpy import delta
     from subvertpy import properties

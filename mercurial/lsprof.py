@@ -114,6 +114,6 @@ if __name__ == '__main__':
         print("usage: lsprof.py <script> <arguments...>", file=sys.stderr)
         sys.exit(2)
     sys.path.insert(0, os.path.abspath(os.path.dirname(sys.argv[0])))
-    stats = profile(execfile, sys.argv[0], globals(), locals())
+    stats = profile(execfile, sys.argv[0], globals(), locals()) # noqa
     stats.sort()
     stats.pprint()

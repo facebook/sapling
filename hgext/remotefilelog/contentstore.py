@@ -11,6 +11,11 @@ from . import (
 from mercurial import mdiff, revlog, util
 from mercurial.node import hex, nullid
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class ChainIndicies(object):
     """A static class for easy reference to the delta chain indicies.
     """

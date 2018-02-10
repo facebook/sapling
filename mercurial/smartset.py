@@ -12,6 +12,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _formatsetrepr(r):
     """Format an optional printable representation of a set
 

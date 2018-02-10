@@ -9,6 +9,11 @@ sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
 from hgext.fastannotate import error, revmap
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def genhsh(i):
     return chr(i) + b'\0' * 19
 

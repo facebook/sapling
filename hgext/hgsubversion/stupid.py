@@ -32,6 +32,11 @@ import util
 # ## -0,0 +1 ##
 # +*
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class ParseError(Exception):
     pass
 

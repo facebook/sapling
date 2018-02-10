@@ -243,6 +243,11 @@ configitem('acl', 'sources',
     default=lambda: ['serve'],
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _getusers(ui, group):
 
     # First, try to use group definition from section [acl.groups]

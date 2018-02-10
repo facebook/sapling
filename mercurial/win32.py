@@ -45,6 +45,11 @@ _ERROR_INSUFFICIENT_BUFFER = 122
 
 # WPARAM is defined as UINT_PTR (unsigned type)
 # LPARAM is defined as LONG_PTR (signed type)
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if ctypes.sizeof(ctypes.c_long) == ctypes.sizeof(ctypes.c_void_p):
     _WPARAM = ctypes.c_ulong
     _LPARAM = ctypes.c_long

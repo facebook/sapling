@@ -30,6 +30,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def section(s):
     return "%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s))
 

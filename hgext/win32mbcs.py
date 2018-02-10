@@ -90,7 +90,7 @@ def decode(arg):
     return arg
 
 def encode(arg):
-    if isinstance(arg, unicode):
+    if isinstance(arg, unicode): # noqa
         return arg.encode(_encoding)
     elif isinstance(arg, tuple):
         return tuple(map(encode, arg))
@@ -126,7 +126,7 @@ def basewrapper(func, argtype, enc, dec, args, kwds):
                          " %s encoding\n") % (_encoding))
 
 def wrapper(func, args, kwds):
-    return basewrapper(func, unicode, encode, decode, args, kwds)
+    return basewrapper(func, unicode, encode, decode, args, kwds) # noqa
 
 def reversewrapper(func, args, kwds):
     return basewrapper(func, str, decode, encode, args, kwds)

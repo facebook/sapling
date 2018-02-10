@@ -11,6 +11,11 @@ from mercurial import (
 )
 atomictempfile = util.atomictempfile
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class testatomictempfile(unittest.TestCase):
     def setUp(self):
         self._testdir = tempfile.mkdtemp('atomictempfiletest')

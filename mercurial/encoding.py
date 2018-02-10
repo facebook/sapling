@@ -31,6 +31,11 @@ _jsonescapeu8fast = charencode.jsonescapeu8fast
 
 _sysstr = pycompat.sysstr
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if pycompat.ispy3:
     unichr = chr
 

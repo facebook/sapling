@@ -72,7 +72,7 @@ def _handlecommandexception(orig, ui):
         p = subprocess.Popen(script, shell=shell, stdin=subprocess.PIPE,
                              env=env)
         p.communicate(trace)
-    except StandardError:
+    except Exception:
         # The binary cannot be executed, or some other issues. For example,
         # "script" is not in PATH, and shell is False; or the peer closes the
         # pipe early. Fallback to the plain error reporting.

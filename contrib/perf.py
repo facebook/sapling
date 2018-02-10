@@ -64,6 +64,9 @@ try:
 except ImportError:
     pass
 
+if sys.version_info.major >= 3:
+    xrange = range
+
 # for "historical portability":
 # define util.safehasattr forcibly, because util.safehasattr has been
 # available since 1.9.3 (or 94b200a11cf7)

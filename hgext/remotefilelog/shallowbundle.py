@@ -19,6 +19,11 @@ AllFiles = 2
 
 requirement = "remotefilelog"
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
     if not isinstance(rlog, remotefilelog.remotefilelog):
         for c in super(cls, self).group(nodelist, rlog, lookup,
@@ -431,7 +436,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
         # "rawtext" will be the original LFS rawtext, and base should be
         # an empty string in this case.
         rawtext = mdiff.patch(base, delta)
-        if isinstance(rawtext, buffer):
+        if isinstance(rawtext, buffer): # noqa
             rawtext = bytes(rawtext)
 
         meta, text = shallowutil.parsemeta(rawtext, flags)

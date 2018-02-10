@@ -5,6 +5,11 @@ import socket
 import sys
 import time
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     import SocketServer
 except ImportError:
     # Python 3

@@ -23,6 +23,11 @@ generatorset = smartset.generatorset
 # possible maximum depth between null and wdir()
 _maxlogdepth = 0x80000000
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
     """Walk DAG using 'pfunc' from the given 'revs' nodes
 

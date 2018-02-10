@@ -52,6 +52,11 @@ propertycache = util.propertycache
 
 nonascii = re.compile(r'[^\x21-\x7f]').search
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class basectx(object):
     """A basectx object represents the common logic for its children:
     changectx: read-only context that is already present in the repo,
@@ -461,7 +466,7 @@ class changectx(basectx):
                 self._node = repo.changelog.node(changeid)
                 self._rev = changeid
                 return
-            if not pycompat.ispy3 and isinstance(changeid, long):
+            if not pycompat.ispy3 and isinstance(changeid, long): # noqa
                 changeid = str(changeid)
             if changeid == 'null':
                 self._node = nullid

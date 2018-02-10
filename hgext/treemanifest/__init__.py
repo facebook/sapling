@@ -175,6 +175,11 @@ RECEIVEDNODE_RECORD = 'receivednodes'
 # prefetches, this constant defines how far back we should search.
 BASENODESEARCHMAX = 25000
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def treeenabled(ui):
     return ui.config('extensions', 'treemanifest') not in (None, '!')
 

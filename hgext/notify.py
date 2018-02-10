@@ -231,6 +231,11 @@ deftemplates = {
     'changegroup': multiple_template,
 }
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class notifier(object):
     '''email notification class.'''
 

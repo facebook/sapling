@@ -7,6 +7,11 @@
 
 from __future__ import absolute_import
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def addlines(fp, hunk, lena, lenb, a, b):
     while True:
         todoa = lena - len(a)

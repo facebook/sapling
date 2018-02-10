@@ -71,6 +71,11 @@ colortable = {
 
 defaultdict = collections.defaultdict
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class nullui(object):
     """blank ui object doing nothing"""
     debugflag = False

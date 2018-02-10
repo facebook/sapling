@@ -18,6 +18,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def canperformstreamclone(pullop, bailifbundle2supported=False):
     """Whether it is possible to perform a streaming clone as part of pull.
 

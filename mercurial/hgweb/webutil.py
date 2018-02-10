@@ -36,6 +36,11 @@ from .. import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def up(p):
     if p[0] != "/":
         p = "/" + p

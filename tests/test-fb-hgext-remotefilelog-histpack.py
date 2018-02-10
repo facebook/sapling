@@ -22,6 +22,11 @@ from hgext.remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class histpacktests(unittest.TestCase):
     def setUp(self):
         self.tempdirs = []

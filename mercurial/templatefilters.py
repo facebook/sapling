@@ -26,6 +26,11 @@ from . import (
 urlerr = util.urlerr
 urlreq = util.urlreq
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if pycompat.ispy3:
     long = int
 
@@ -146,7 +151,7 @@ def fill(text, width, initindent='', hangindent=''):
         while True:
             m = para_re.search(text, start)
             if not m:
-                uctext = unicode(text[start:], encoding.encoding)
+                uctext = unicode(text[start:], encoding.encoding) # noqa
                 w = len(uctext)
                 while 0 < w and uctext[w - 1].isspace():
                     w -= 1
@@ -267,7 +272,7 @@ def obfuscate(text):
     """Any text. Returns the input text rendered as a sequence of
     XML entities.
     """
-    text = unicode(text, encoding.encoding, 'replace')
+    text = unicode(text, encoding.encoding, 'replace') # noqa
     return ''.join(['&#%d;' % ord(c) for c in text])
 
 @templatefilter('permissions')

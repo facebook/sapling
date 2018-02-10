@@ -80,6 +80,11 @@ urlreq = urllibcompat.urlreq
 # workaround for win32mbcs
 _filenamebytestr = pycompat.bytestr
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def isatty(fp):
     try:
         return fp.isatty()
@@ -2596,7 +2601,7 @@ if (pyplatform.python_implementation() == 'CPython' and
 
     def iterfile(fp):
         fastpath = True
-        if type(fp) is file:
+        if type(fp) is file: # noqa
             fastpath = stat.S_ISREG(os.fstat(fp.fileno()).st_mode)
         if fastpath:
             return fp

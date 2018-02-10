@@ -15,6 +15,11 @@ from mercurial import (
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
         """Creates a remotefilelog store object for the given repo name.

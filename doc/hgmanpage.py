@@ -263,7 +263,7 @@ class Translator(nodes.NodeVisitor):
             # ensure we get a ".TH" as viewers require it.
             self.head.append(self.header())
         # filter body
-        for i in xrange(len(self.body) - 1, 0, -1):
+        for i in range(len(self.body) - 1, 0, -1):
             # remove superfluous vertical gaps.
             if self.body[i] == '.sp\n':
                 if self.body[i - 1][:4] in ('.BI ','.IP '):

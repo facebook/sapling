@@ -273,7 +273,7 @@ class transplanter(object):
                                     },
                            onerr=error.Abort, errprefix=_('filter failed'),
                            blockedtag='transplant_filter')
-            user, date, msg = self.parselog(file(headerfile))[1:4]
+            user, date, msg = self.parselog(file(headerfile))[1:4] # noqa
         finally:
             os.unlink(headerfile)
 

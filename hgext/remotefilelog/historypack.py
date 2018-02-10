@@ -33,6 +33,11 @@ ANC_P2NODE = 2
 ANC_LINKNODE = 3
 ANC_COPYFROM = 4
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class historypackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX

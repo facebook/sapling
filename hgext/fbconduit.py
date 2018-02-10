@@ -27,6 +27,11 @@ connection = None
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 3
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class ConduitError(Exception):
     pass
 
@@ -78,13 +83,14 @@ def call_conduit(method, timeout=DEFAULT_TIMEOUT, **kwargs):
         'Connection': 'Keep-Alive',
         'Content-Type': 'application/x-www-form-urlencoded',
     }
+    e = None
     for attempt in xrange(MAX_CONNECT_RETRIES):
         try:
             connection.request('POST', path, args, headers)
             break
         except httplib.HTTPException as e:
             connection.connect()
-    else:
+    if e:
         raise e
 
     # read http response

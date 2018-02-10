@@ -51,6 +51,11 @@ keywords = {'and', 'or', 'not'}
 
 symbols = {}
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 _quoteletters = {'"', "'"}
 _simpleopletters = set(pycompat.iterbytestr("()[]#:=,-|&+!~^%"))
 

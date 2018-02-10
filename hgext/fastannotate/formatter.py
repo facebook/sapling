@@ -14,6 +14,11 @@ from mercurial import (
 
 # imitating mercurial.commands.annotate, not using the vanilla formatter since
 # the data structures are a bit different, and we have some fast paths.
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class defaultformatter(object):
     """the default formatter that does leftpad and support some common flags"""
 

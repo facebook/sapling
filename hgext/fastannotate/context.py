@@ -29,6 +29,11 @@ from . import (
 )
 
 # given path, get filelog, cached
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @util.lrucachefunc
 def _getflog(repo, path):
     return repo.file(path)

@@ -72,6 +72,11 @@ re_single_lf = re.compile('(^|[^\r])\n', re.MULTILINE)
 newlinestr = {'\r\n': 'CRLF', '\r': 'CR'}
 filterstr = {'\r\n': 'clever', '\r': 'mac'}
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def checknewline(s, newline, ui=None, repo=None, filename=None):
     # warn if already has 'newline' in repository.
     # it might cause unexpected eol conversion.

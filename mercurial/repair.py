@@ -27,6 +27,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     """create a bundle with the specified revisions as a backup"""
 

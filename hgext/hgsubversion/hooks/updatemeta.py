@@ -13,6 +13,11 @@ import hgext.hgsubversion
 import hgext.hgsubversion.util
 import hgext.hgsubversion.svncommands
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def hook(ui, repo, **kwargs):
     updatemeta = False
     startrev = repo[node.bin(kwargs["node"])].rev()

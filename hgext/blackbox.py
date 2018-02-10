@@ -79,6 +79,11 @@ configitem('blackbox', 'track',
 
 lastui = None
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _openlogfile(ui, vfs):
     def rotate(oldpath, newpath):
         try:

@@ -128,6 +128,11 @@ configitem('eol', 'only-consistent',
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def inconsistenteol(data):
     return '\r\n' in data and singlelf.search(data)
 

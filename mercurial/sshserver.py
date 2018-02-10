@@ -19,6 +19,11 @@ from . import (
     wireproto,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class sshserver(wireproto.abstractserverproto):
     def __init__(self, ui, repo):
         self.ui = ui

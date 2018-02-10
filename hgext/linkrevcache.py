@@ -70,6 +70,11 @@ command = registrar.command(cmdtable)
 
 _chosendbm = None
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _choosedbm():
     """return (name, module)"""
     global _chosendbm

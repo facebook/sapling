@@ -122,6 +122,11 @@ debugrevlogopts = cmdutil.debugrevlogopts
 
 # Commands start here, listed alphabetically
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @command('^add',
     walkopts + subrepoopts + dryrunopts,
     _('[OPTION]... [FILE]...'),

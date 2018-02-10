@@ -45,7 +45,7 @@ if __name__ == '__main__':
         # Make it use this script as the interpreter again
         sys.executable = argv[0]
         sys.argv = argv[1:]
-        execfile(argv[1], globalvars)
+        exec(open(argv[1]).read(), globalvars)
     elif len(argv) == 3 and argv[1] == '-m':
         # python -m MODULE ...
         # This includes cases like "-m heredoctest" used by run-tests.py

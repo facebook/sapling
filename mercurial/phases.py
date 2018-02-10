@@ -125,6 +125,11 @@ allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
 phasenames = ['public', 'draft', 'secret']
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _readroots(repo, phasedefaults=None):
     """Read phase roots from disk
 

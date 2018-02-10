@@ -69,6 +69,11 @@ configitem('hgk', 'path',
     default='hgk',
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @command('debug-diff-tree',
     [('p', 'patch', None, _('generate patch')),
     ('r', 'recursive', None, _('recursive')),

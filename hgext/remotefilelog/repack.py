@@ -29,6 +29,11 @@ import time
 
 osutil = policy.importmod(r'osutil')
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class RepackAlreadyRunning(error.Abort):
     pass
 

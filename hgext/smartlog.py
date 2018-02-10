@@ -61,6 +61,11 @@ hiddenchanges = 0
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @contextlib.contextmanager
 def ancestorcache(path):
     # simple cache to speed up revlog.ancestors

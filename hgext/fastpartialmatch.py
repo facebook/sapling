@@ -90,6 +90,11 @@ _tip = 'run `hg debugrebuildpartialindex` to fix the issue'
 _unsortedthreshold = 1000
 _needrebuildfile = 'partialindexneedrebuild'
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def extsetup(ui):
     extensions.wrapfunction(changelog.changelog, '_partialmatch', _partialmatch)
     extensions.wrapfunction(localrepo.localrepository, 'commit',

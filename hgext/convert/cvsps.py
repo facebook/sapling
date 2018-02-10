@@ -20,6 +20,11 @@ from mercurial import (
 
 pickle = util.pickle
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class logentry(object):
     '''Class logentry has the following attributes:
         .author    - author name as CVS knows it

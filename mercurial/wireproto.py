@@ -41,6 +41,11 @@ bundle2requiredhint = _('see https://www.mercurial-scm.org/wiki/'
                         'IncompatibleClient')
 bundle2required = '%s\n(%s)\n' % (bundle2requiredmain, bundle2requiredhint)
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
 

@@ -52,6 +52,11 @@ PatchError = error.PatchError
 
 # public functions
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def split(stream):
     '''return an iterator of individual patches from a stream'''
     def isheader(line, inheader):

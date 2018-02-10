@@ -44,6 +44,11 @@ wrapfunction = extensions.wrapfunction
 
 # mysql.connector does not import nicely with the demandimporter, so temporarily
 # disable it.
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 with demandimport.deactivated():
     import mysql.connector
 

@@ -25,6 +25,11 @@ parsers = policy.importmod(r'parsers')
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _encodedir(path):
     '''
     >>> _encodedir(b'data/foo.i')

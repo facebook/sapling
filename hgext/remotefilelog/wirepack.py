@@ -16,6 +16,11 @@ from collections import defaultdict
 from .shallowutil import readexactly, readunpack, mkstickygroupdir, readpath
 from . import datapack, historypack, shallowutil
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def sendpackpart(filename, history, data):
     """A wirepack is formatted as follows:
 

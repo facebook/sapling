@@ -22,6 +22,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def runservice(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                runargs=None, appendpid=False):
     '''Run a command as a service.'''

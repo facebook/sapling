@@ -1438,7 +1438,7 @@ def activepath(ui, remote):
                     uri = url.getauthinfo(uri)[0]
         uri = uri.rstrip('/')
         # guard against hgsubversion nonsense
-        if not isinstance(rpath, basestring):
+        if not isinstance(rpath, basestring): # noqa
             continue
         rpath = rpath.rstrip('/')
         if uri == rpath:

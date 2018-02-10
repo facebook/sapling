@@ -47,6 +47,11 @@ from . import (
 __all__ = []
 commands = {}
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class webcommand(object):
     """Decorator used to register a web command handler.
 

@@ -63,6 +63,11 @@ _vecbytes = _bytes - _depthbytes
 _vecbits = _vecbytes * 8
 _radius = (_vecbits - 30) / 2 # high probability vectors are related
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def _bin(bs):
     '''convert a bytestring to a long'''
     v = 0

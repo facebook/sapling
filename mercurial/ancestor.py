@@ -12,6 +12,11 @@ import heapq
 
 from .node import nullrev
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def commonancestorsheads(pfunc, *nodes):
     """Returns a set with the heads of all common ancestors of all nodes,
     heads(::nodes[0] and ::nodes[1] and ...) .

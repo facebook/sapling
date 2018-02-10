@@ -43,6 +43,11 @@ renameflag = 2
 # len(mercurial.node.nullid)
 _hshlen = 20
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class revmap(object):
     """trivial hg bin hash - linelog rev bidirectional map
 

@@ -16,6 +16,11 @@ from mercurial.i18n import _
 from . import constants
 from ..lfs import pointer
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if not pycompat.iswindows:
     import grp
 
@@ -177,8 +182,8 @@ def _buildpackmeta(metadict):
     return metabuf
 
 _metaitemtypes = {
-    constants.METAKEYFLAG: (int, long),
-    constants.METAKEYSIZE: (int, long),
+    constants.METAKEYFLAG: (int, long), # noqa
+    constants.METAKEYSIZE: (int, long), # noqa
 }
 
 def buildpackmeta(metadict):

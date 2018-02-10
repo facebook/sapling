@@ -162,6 +162,11 @@ debugrevlogopts = [
 # editor text
 _linebelow = "^HG: ------------------------ >8 ------------------------$"
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
     return isinstance(x, hunkclasses)

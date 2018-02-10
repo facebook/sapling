@@ -89,6 +89,11 @@ _flagprocessors = {
     REVIDX_ISCENSORED: None,
 }
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def addflagprocessor(flag, processor):
     """Register a flag processor on a revision data flag.
 

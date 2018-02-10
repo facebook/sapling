@@ -11,6 +11,11 @@ from mercurial.context import (
     _annotatepair,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class AnnotateTests(unittest.TestCase):
     """Unit tests for annotate code."""
 

@@ -36,6 +36,11 @@ MISSINGPARENT = 'M'
 # (so making N negative) and all but the first N characters use that style.
 EDGES = {PARENT: '|', GRANDPARENT: ':', MISSINGPARENT: None}
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def dagwalker(repo, revs):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentinfo]) tuples
 

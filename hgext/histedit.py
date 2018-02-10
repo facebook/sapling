@@ -245,6 +245,11 @@ secondaryactions = set()
 tertiaryactions = set()
 internalactions = set()
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def geteditcomment(ui, first, last):
     """ construct the editor comment
     The comment includes::

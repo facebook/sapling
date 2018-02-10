@@ -78,6 +78,11 @@ release = lockmod.release
 
 command = registrar.command()
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 @command('debugancestor', [], _('[INDEX] REV1 REV2'), optionalrepo=True)
 def debugancestor(ui, repo, *args):
     """find the ancestor revision of two revisions in a given index"""
@@ -162,7 +167,8 @@ def debugbuilddag(ui, repo, text=None,
     if mergeable_file:
         linesperrev = 2
         # make a file with k lines per rev
-        initialmergedlines = [str(i) for i in xrange(0, total * linesperrev)]
+        initialmergedlines = [str(i)
+                              for i in xrange(0, total * linesperrev)]
         initialmergedlines.append("")
 
     tags = []

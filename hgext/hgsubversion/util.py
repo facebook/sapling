@@ -14,6 +14,11 @@ from mercurial import repair
 from mercurial import util as hgutil
 
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     from collections import deque
 except:
     from mercurial.util import deque

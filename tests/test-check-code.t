@@ -17,7 +17,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   > -X fb/facebook-hg-rpms \
   > -X fb/packaging \
   > | sed 's-\\-/-g' | "$check_code" --warnings --per-file=0 - || false
-  fb/tests/sqldirstate_benchmark.py:95:
+  fb/tests/sqldirstate_benchmark.py:100:
    >             hg.next()
    don't use .next(), use next(...)
   fb/tests/test-hg-rsh.t:2:

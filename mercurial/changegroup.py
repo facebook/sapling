@@ -32,6 +32,11 @@ _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
 _CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
     s = stream.read(n)

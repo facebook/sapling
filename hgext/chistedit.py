@@ -41,6 +41,11 @@ import functools
 import os
 
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     import curses
 except ImportError:
     curses = None

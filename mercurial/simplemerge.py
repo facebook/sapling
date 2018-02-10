@@ -26,6 +26,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 class CantReprocessAndShowBase(Exception):
     pass
 

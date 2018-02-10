@@ -315,7 +315,7 @@ else:
     stringio = cStringIO.StringIO
     maplist = map
     ziplist = zip
-    rawinput = raw_input
+    rawinput = raw_input # noqa
 
 isjython = sysplatform.startswith('java')
 

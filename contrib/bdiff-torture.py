@@ -8,6 +8,9 @@ from mercurial import (
     mdiff,
 )
 
+if sys.version_info.major >= 3:
+    xrange = range
+
 def reducetest(a, b):
     tries = 0
     reductions = 0
@@ -53,8 +56,7 @@ def testwrap(a, b):
         test1(a, b)
         return
     except Exception as inst:
-        pass
-    print("exception:", inst)
+        print("exception:", inst)
     reducetest(a, b)
 
 def test(a, b):

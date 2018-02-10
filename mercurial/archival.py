@@ -143,7 +143,7 @@ class tarit(object):
             if fname:
                 flags = gzip.FNAME
             self.fileobj.write(chr(flags))
-            gzip.write32u(self.fileobj, long(self.timestamp))
+            gzip.write32u(self.fileobj, long(self.timestamp)) # noqa
             self.fileobj.write('\002')
             self.fileobj.write('\377')
             if fname:

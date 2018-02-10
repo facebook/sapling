@@ -41,6 +41,11 @@ from . import (
     vfs,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if pycompat.iswindows:
     from . import scmwindows as scmplatform
 else:
@@ -185,7 +190,7 @@ def callcatch(ui, func):
             ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError as inst:
         ui.warn(_("abort: %s") % inst.args[0])
-        if not isinstance(inst.args[1], basestring):
+        if not isinstance(inst.args[1], basestring): # noqa
             ui.warn(" %r\n" % (inst.args[1],))
         elif not inst.args[1]:
             ui.warn(_(" empty string\n"))
@@ -222,7 +227,7 @@ def callcatch(ui, func):
             except (AttributeError, IndexError):
                 # it might be anything, for example a string
                 reason = inst.reason
-            if isinstance(reason, unicode):
+            if isinstance(reason, unicode): # noqa
                 # SSLError of Python 2.7.9 contains a unicode
                 reason = encoding.unitolocal(reason)
             ui.warn(_("abort: error: %s\n") % reason)

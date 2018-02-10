@@ -256,14 +256,14 @@ class _BaseFile(list):
         ret = '\n'.join(ret)
 
         if type(ret) != types.UnicodeType:
-            return unicode(ret, self.encoding)
+            return unicode(ret, self.encoding) # noqa
         return ret
 
     def __str__(self):
         """
         Returns the string representation of the file.
         """
-        return unicode(self).encode(self.encoding)
+        return unicode(self).encode(self.encoding) # noqa
 
     def __contains__(self, entry):
         """
@@ -280,7 +280,7 @@ class _BaseFile(list):
         return self.find(entry.msgid, by='msgid') is not None
 
     def __eq__(self, other):
-        return unicode(self) == unicode(other)
+        return unicode(self) == unicode(other) # noqa
 
     def append(self, entry):
         """
@@ -547,7 +547,7 @@ class POFile(_BaseFile):
                 ret += '# %s\n' % header
 
         if type(ret) != types.UnicodeType:
-            ret = unicode(ret, self.encoding)
+            ret = unicode(ret, self.encoding) # noqa
 
         return ret + _BaseFile.__unicode__(self)
 
@@ -774,17 +774,17 @@ class _BaseEntry(object):
         ret = '\n'.join(ret)
 
         if type(ret) != types.UnicodeType:
-            return unicode(ret, self.encoding)
+            return unicode(ret, self.encoding) # noqa
         return ret
 
     def __str__(self):
         """
         Returns the string representation of the entry.
         """
-        return unicode(self).encode(self.encoding)
+        return unicode(self).encode(self.encoding) # noqa
 
     def __eq__(self, other):
-        return unicode(self) == unicode(other)
+        return unicode(self) == unicode(other) # noqa
 
     def _str_field(self, fieldname, delflag, plural_index, field, wrapwidth=78):
         lines = field.splitlines(True)
@@ -927,7 +927,7 @@ class POEntry(_BaseEntry):
         ret = '\n'.join(ret)
 
         if type(ret) != types.UnicodeType:
-            return unicode(ret, self.encoding)
+            return unicode(ret, self.encoding) # noqa
         return ret
 
     def __cmp__(self, other):
@@ -1237,7 +1237,7 @@ class _POFileParser(object):
                     if key is not None:
                         self.instance.metadata[key] += '\n'+ msg.strip()
         # close opened file
-        if isinstance(self.fhandle, file):
+        if isinstance(self.fhandle, file): # noqa
             self.fhandle.close()
         return self.instance
 

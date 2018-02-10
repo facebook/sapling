@@ -127,6 +127,11 @@ configitem('mq', 'secret',
 
 # force load strip extension formerly included in mq and import some utility
 try:
+    xrange(0)
+except NameError:
+    xrange = range
+
+try:
     stripext = extensions.find('strip')
 except KeyError:
     # note: load is lazy so we could avoid the try-except,
@@ -275,7 +280,7 @@ class patchheader(object):
         nodeid = None
         diffstart = 0
 
-        for line in file(pf):
+        for line in file(pf): # noqa
             line = line.rstrip()
             if (line.startswith('diff --git')
                 or (diffstart and line.startswith('+++ '))):

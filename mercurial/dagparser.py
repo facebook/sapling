@@ -17,6 +17,11 @@ from . import (
     util,
 )
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
 

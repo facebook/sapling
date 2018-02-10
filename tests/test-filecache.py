@@ -3,6 +3,11 @@ import os
 import subprocess
 import sys
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
                     'cacheable']):
     sys.exit(80)

@@ -32,6 +32,11 @@ httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
 
+try:
+    xrange(0)
+except NameError:
+    xrange = range
+
 def encodevalueinheaders(value, header, limit):
     """Encode a string value into multiple HTTP headers.
 
