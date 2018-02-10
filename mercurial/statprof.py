@@ -622,7 +622,9 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
             if len(stack) > 1:
                 i = 1
                 # Skip boiler plate parts of the stack
-                while i < len(stack) and '%s:%s' % (stack[i].filename(), stack[i].function) in skips:
+                while (i < len(stack) and
+                       '%s:%s' % (stack[i].filename(), stack[i].function)
+                       in skips):
                     i += 1
                 if i < len(stack):
                     child.add(stack[i:], time)
@@ -885,8 +887,9 @@ def main(argv=None):
 
     # process options
     try:
-        opts, args = pycompat.getoptb(sys.argv[optstart:], "hl:f:o:p:",
-                                   ["help", "limit=", "file=", "output-file=", "script-path="])
+        opts, args = pycompat.getoptb(
+            sys.argv[optstart:], "hl:f:o:p:",
+            ["help", "limit=", "file=", "output-file=", "script-path="])
     except getopt.error as msg:
         print(msg)
         printusage()

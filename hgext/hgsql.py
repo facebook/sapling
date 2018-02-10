@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 #
 # no-check-code
+# flake8: noqa
 
 from __future__ import absolute_import
 

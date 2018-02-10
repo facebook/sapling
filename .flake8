@@ -37,10 +37,10 @@ select =
  E273, # tab after keyword
  E274, # tab before keyword
  E304, # blank lines found after function decorator
- # E501, # line too long (82 > 79 characters)
+ E501, # line too long (82 > 79 characters)
  E703, # statement ends with a semicolon
  E704, # multiple statements on one line (def)
- # E711, # comparison to None should be ‘if cond is None:’
+ E711, # comparison to None should be ‘if cond is None:’
  E712, # comparison to True should be ‘if cond is True:’ or ‘if cond:’
  E714, # test for object identity should be ‘is not’
  E742, # do not define classes named ‘l’, ‘O’, or ‘I’

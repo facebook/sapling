@@ -1,4 +1,5 @@
 # no-check-code -- see T24862348
+# flake8: noqa
 
 import difflib
 import errno
