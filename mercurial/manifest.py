@@ -165,7 +165,7 @@ def unhexlify(data, extra, pos, length):
 def _cmp(a, b):
     return (a > b) - (a < b)
 
-class _lazymanifest(object):
+class purelazymanifest(object):
     def __init__(self, data, positions=None, extrainfo=None, extradata=None):
         if positions is None:
             self.positions = self.findlines(data)
@@ -410,7 +410,7 @@ class _lazymanifest(object):
 try:
     _lazymanifest = parsers.lazymanifest
 except AttributeError:
-    pass
+    _lazymanifest = purelazymanifest
 
 class manifestdict(object):
     def __init__(self, data=''):

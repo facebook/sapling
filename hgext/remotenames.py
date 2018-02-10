@@ -54,14 +54,12 @@ except ImportError:
 
 configtable = {}
 try:
-    from mercurial import registrar
     if not util.safehasattr(registrar, 'configitem'):
         raise ImportError()
     # Supported in 4.3+
     configitem = registrar.configitem(configtable)
 except ImportError:
     # Support older releases that didn't register config defaults
-    registrar = None
     def configitem(section, name, default=None):
         configtable[(section, name)] = default
 

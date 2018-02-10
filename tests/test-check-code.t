@@ -144,7 +144,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   hgext/undo.py:127:
    >                 del os.environ['_undologactive']
    use encoding.environ instead (py3)
-  Skipping hgsubversion/setup.py it has no-che?k-code (glob)
   Skipping i18n/polib.py it has no-che?k-code (glob)
   Skipping lib/clib/buffer.c it has no-che?k-code (glob)
   Skipping lib/clib/buffer.h it has no-che?k-code (glob)

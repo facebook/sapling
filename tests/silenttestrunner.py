@@ -3,7 +3,7 @@ import os
 import sys
 import unittest
 
-def main(modulename):
+def _main(modulename):
     '''run the tests found in module, printing nothing when all tests pass'''
     module = sys.modules[modulename]
     suite = unittest.defaultTestLoader.loadTestsFromModule(module)
@@ -22,3 +22,5 @@ def main(modulename):
 
 if os.environ.get('SILENT_BE_NOISY'):
     main = unittest.main
+else:
+    main = _main

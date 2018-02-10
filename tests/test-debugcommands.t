@@ -285,6 +285,7 @@ Test cache warming command
 
   $ cd ..
 
+#if normal-layout
 Test internal debugstacktrace command
 
   $ cat > debugstacktrace.py << EOF
@@ -312,6 +313,7 @@ Test internal debugstacktrace command
   from h hidden in g at:
    debugstacktrace.py:6*in f (glob)
    debugstacktrace.py:9*in g (glob)
+#endif
 
 Test debugcapabilities command:
 

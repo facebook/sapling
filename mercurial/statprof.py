@@ -564,9 +564,9 @@ def display_about_method(data, fp, function=None, **kwargs):
                 else:
                     children[site] = 1
 
-    parents = [(parent, count) for parent, count in parents.iteritems()]
-    parents.sort(reverse=True, key=lambda x: x[1])
-    for parent, count in parents:
+    parentlist = [(p, count) for p, count in parents.iteritems()]
+    parentlist.sort(reverse=True, key=lambda x: x[1])
+    for parent, count in parentlist:
         print('%6.2f%%   %s:%s   line %s: %s' %
             (count / relevant_samples * 100, parent.filename(),
             parent.function, parent.lineno, parent.getsource(50)), file=fp)

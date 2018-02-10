@@ -15,7 +15,7 @@ To disable that warning, set ``backups.warnobsolescence`` to False.
 
 from mercurial import cmdutil, commands, error, bundlerepo
 from mercurial import hg, exchange, obsolete, registrar
-from mercurial import bundle2, registrar
+from mercurial import bundle2
 from mercurial import lock as lockmod
 from mercurial import pycompat
 from . import pager

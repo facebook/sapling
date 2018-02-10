@@ -26,12 +26,12 @@ if not ispy3:
     import SocketServer as socketserver
     import xmlrpclib
 else:
-    import http.cookiejar as cookielib
-    import http.client as httplib
-    import pickle
+    import http.cookiejar as cookielib # noqa: F401
+    import http.client as httplib # noqa: F401
+    import pickle # noqa: F401
     import queue as _queue
-    import socketserver
-    import xmlrpc.client as xmlrpclib
+    import socketserver # noqa: F401
+    import xmlrpc.client as xmlrpclib # noqa: F401
 
 empty = _queue.Empty
 queue = _queue.Queue

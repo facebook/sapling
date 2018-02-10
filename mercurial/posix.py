@@ -164,7 +164,7 @@ def copymode(src, dst, mode=None):
         st_mode &= 0o666
     os.chmod(dst, st_mode)
 
-def checkexec(path):
+def _checkexec(path):
     """
     Check whether the given path is on a filesystem with UNIX-like exec flags
 
@@ -231,7 +231,7 @@ def checkexec(path):
         # we don't care, the user probably won't be able to commit anyway
         return False
 
-def checklink(path):
+def _checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
@@ -323,15 +323,6 @@ def samedevice(fpath1, fpath2):
     st2 = os.lstat(fpath2)
     return st1.st_dev == st2.st_dev
 
-# os.path.normcase is a no-op, which doesn't help us on non-native filesystems
-def normcase(path):
-    return path.lower()
-
-# what normcase does to ASCII strings
-normcasespec = encoding.normcasespecs.lower
-# fallback normcase function for non-ASCII strings
-normcasefallback = normcase
-
 if pycompat.isdarwin:
 
     def normcase(path):
@@ -383,7 +374,10 @@ if pycompat.isdarwin:
         # drop HFS+ ignored characters
         return encoding.hfsignoreclean(enc)
 
-if pycompat.sysplatform == 'cygwin':
+    checkexec = _checkexec
+    checklink = _checklink
+
+elif pycompat.sysplatform == 'cygwin':
     # workaround for cygwin, in which mount point part of path is
     # treated as case sensitive, even though underlying NTFS is case
     # insensitive.
@@ -430,6 +424,20 @@ if pycompat.sysplatform == 'cygwin':
     # Windows, with other native tools, or on shared volumes
     def checklink(path):
         return False
+
+else:
+    # os.path.normcase is a no-op, which doesn't help us on non-native
+    # filesystems
+    def normcase(path):
+        return path.lower()
+
+    # what normcase does to ASCII strings
+    normcasespec = encoding.normcasespecs.lower
+    # fallback normcase function for non-ASCII strings
+    normcasefallback = normcase
+
+    checkexec = _checkexec
+    checklink = _checklink
 
 _needsshellquote = None
 def shellquote(s):

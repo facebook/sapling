@@ -29,6 +29,7 @@ from mercurial import extensions
 from hgext.hgsubversion import compathacks
 from hgext.hgsubversion import svnrepo
 from hgext.hgsubversion import svnwrap
+from hgext.hgsubversion import util
 
 try:
     from mercurial import obsolete
@@ -43,10 +44,6 @@ except AttributeError:
         SkipTest = sys.modules['nose'].SkipTest
     else:
         SkipTest = None
-
-from hgext.hgsubversion import svnwrap
-from hgext.hgsubversion import util
-from hgext.hgsubversion import svnwrap
 
 # Documentation for Subprocess.Popen() says:
 #   "Note that on Windows, you cannot set close_fds to true and

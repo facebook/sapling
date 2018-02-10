@@ -962,7 +962,7 @@ pushing an existing but divergent bookmark with -B still requires -f
   $ hg up -q X
   $ echo 2 > f2
   $ hg ci -qAmr
-  $ hg push -B X
+  $ hg push -B X --config ui.traceback=0
   pushing to $TESTTMP/addmarks
   searching for changes
   remote has heads on branch 'default' that are not known locally: a2a606d9ff1b

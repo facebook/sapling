@@ -143,18 +143,6 @@ class ctreemanifesttests(unittest.TestCase):
         out = a.find("abc/def/ghi/jkl2")
         self.assertEquals((h, f), out)
 
-    def testDeeplyNested(self):
-        a = cstore.treemanifest(FakeDataStore())
-        h, f = hashflags()
-        a.set("abc/def/ghi/jkl", h, f)
-        out = a.find("abc/def/ghi/jkl")
-        self.assertEquals((h, f), out)
-
-        h, f = hashflags()
-        a.set("abc/def/ghi/jkl2", h, f)
-        out = a.find("abc/def/ghi/jkl2")
-        self.assertEquals((h, f), out)
-
     def testBushyTrees(self):
         a = cstore.treemanifest(FakeDataStore())
         nodes = {}

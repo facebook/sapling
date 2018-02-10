@@ -1048,7 +1048,7 @@ def always(fn):
 def never(fn):
     return False
 
-def nogc(func):
+def _nogc(func):
     """disable garbage collector
 
     Python's garbage collector triggers a GC each time a certain number of
@@ -1074,6 +1074,8 @@ def nogc(func):
 if pycompat.ispypy:
     # PyPy runs slower with gc disabled
     nogc = lambda x: x
+else:
+    nogc = _nogc
 
 def pathto(root, n1, n2):
     '''return the relative path from one place to another.
@@ -3181,7 +3183,7 @@ def debugstacktrace(msg='stacktrace', skip=0,
         f.write(line)
     f.flush()
 
-class dirs(object):
+class puredirs(object):
     '''a multiset of directory names from a dirstate or manifest'''
 
     def __init__(self, map, skip=None):
@@ -3217,8 +3219,7 @@ class dirs(object):
     def __contains__(self, d):
         return d in self._dirs
 
-if safehasattr(parsers, 'dirs'):
-    dirs = parsers.dirs
+dirs = getattr(parsers, 'dirs', puredirs)
 
 def finddirs(path):
     pos = path.rfind('/')

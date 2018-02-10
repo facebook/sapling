@@ -1,4 +1,4 @@
-from mercurial import util, cmdutil, registrar, scmutil, util
+from mercurial import cmdutil, registrar, scmutil, util
 from mercurial.i18n import _
 import os
 

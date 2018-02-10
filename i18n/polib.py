@@ -25,7 +25,6 @@ import codecs
 import os
 import re
 import struct
-import sys
 import textwrap
 import types
 
@@ -1278,7 +1277,7 @@ class _POFileParser(object):
             (action, state) = self.transitions[(symbol, self.current_state)]
             if action():
                 self.current_state = state
-        except Exception as exc:
+        except Exception:
             raise IOError('Syntax error in po file (line %s)' % linenum)
 
     # state handlers
@@ -1401,30 +1400,30 @@ class _POFileParser(object):
         """Handle a msgid or msgstr continuation line."""
         token = unescape(self.current_token[1:-1])
         if self.current_state == 'CT':
-            typ = 'msgctxt'
+            # typ = 'msgctxt'
             self.current_entry.msgctxt += token
         elif self.current_state == 'MI':
-            typ = 'msgid'
+            # typ = 'msgid'
             self.current_entry.msgid += token
         elif self.current_state == 'MP':
-            typ = 'msgid_plural'
+            # typ = 'msgid_plural'
             self.current_entry.msgid_plural += token
         elif self.current_state == 'MS':
-            typ = 'msgstr'
+            # typ = 'msgstr'
             self.current_entry.msgstr += token
         elif self.current_state == 'MX':
-            typ = 'msgstr[%s]' % self.msgstr_index
+            # typ = 'msgstr[%s]' % self.msgstr_index
             self.current_entry.msgstr_plural[self.msgstr_index] += token
         elif self.current_state == 'PP':
-            typ = 'previous_msgid_plural'
+            # typ = 'previous_msgid_plural'
             token = token[3:]
             self.current_entry.previous_msgid_plural += token
         elif self.current_state == 'PM':
-            typ = 'previous_msgid'
+            # typ = 'previous_msgid'
             token = token[3:]
             self.current_entry.previous_msgid += token
         elif self.current_state == 'PC':
-            typ = 'previous_msgctxt'
+            # typ = 'previous_msgctxt'
             token = token[3:]
             self.current_entry.previous_msgctxt += token
         # don't change the current state

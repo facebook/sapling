@@ -87,8 +87,6 @@ repo[None].forget(['bar-r'])
 #   R bar-r
 #   C foo
 
-from mercurial import scmutil
-
 print('== checking workingctx.status:')
 
 wctx = repo[None]

@@ -34,7 +34,7 @@ class ExtutilTests(unittest.TestCase):
             self.fail('runbgcommand() took took %s seconds, should have '
                       'returned immediately' % (end - start))
 
-    def testbgcommandfailure(self):
+    def testbgcommandfailure1(self):
         '''runbgcommand() should throw if executing the process fails.'''
         env = os.environ.copy()
         try:
@@ -43,7 +43,7 @@ class ExtutilTests(unittest.TestCase):
         except OSError as ex:
             self.assertEqual(ex.errno, errno.ENOENT)
 
-    def testbgcommandfailure(self):
+    def testbgcommandfailure2(self):
         '''runbgcommand() should throw if executing the process fails.'''
         env = os.environ.copy()
         try:
