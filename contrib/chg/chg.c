@@ -63,7 +63,6 @@ static size_t testsensitiveflag(const char *arg)
 		{"--cwd", 1},
 		{"--repo", 1},
 		{"--repository", 1},
-		{"--traceback", 0},
 		{"-R", 1},
 	};
 	size_t i;
