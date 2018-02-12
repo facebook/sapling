@@ -19,6 +19,8 @@ from . import (
     util,
 )
 
+_missing_newline_marker = "\\ No newline at end of file\n"
+
 bdiff = policy.importmod(r'bdiff')
 mpatch = policy.importmod(r'mpatch')
 
@@ -272,18 +274,13 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
     fn1 = util.pconvert(fn1)
     fn2 = util.pconvert(fn2)
 
-    def checknonewline(lines):
-        for text in lines:
-            if text[-1:] != '\n':
-                text += "\n\ No newline at end of file\n"
-            yield text
-
     if not opts.text and check_binary and (util.binary(a) or util.binary(b)):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
         hunks = (None, ['Binary file %s has changed\n' % fn1]),
     elif not a:
+        without_newline = b[-1] != '\n'
         b = splitnewlines(b)
         if a is None:
             l1 = '--- /dev/null%s' % datetag(epoch)
@@ -294,8 +291,12 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         size = len(b)
         hunkrange = (0, 0, 1, size)
         hunklines = ["@@ -0,0 +1,%d @@\n" % size] + ["+" + e for e in b]
-        hunks = (hunkrange, checknonewline(hunklines)),
+        if without_newline:
+            hunklines[-1] += '\n'
+            hunklines.append(_missing_newline_marker)
+        hunks = (hunkrange, hunklines),
     elif not b:
+        without_newline = a[-1] != '\n'
         a = splitnewlines(a)
         l1 = "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1))
         if b is None:
@@ -306,7 +307,10 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         size = len(a)
         hunkrange = (1, size, 0, 0)
         hunklines = ["@@ -1,%d +0,0 @@\n" % size] + ["-" + e for e in a]
-        hunks = (hunkrange, checknonewline(hunklines)),
+        if without_newline:
+            hunklines[-1] += '\n'
+            hunklines.append(_missing_newline_marker)
+        hunks = (hunkrange, hunklines),
     else:
         diffhunks = _unidiff(a, b, opts=opts)
         try:
@@ -319,9 +323,9 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
         ]
         def rewindhunks():
-            yield hunkrange, checknonewline(hunklines)
+            yield hunkrange, hunklines
             for hr, hl in diffhunks:
-                yield hr, checknonewline(hl)
+                yield hr, hl
 
         hunks = rewindhunks()
 
@@ -335,6 +339,8 @@ def _unidiff(t1, t2, opts=defaultopts):
     form the '@@ -s1,l1 +s2,l2 @@' header and `hunklines` is a list of lines
     of the hunk combining said header followed by line additions and
     deletions.
+
+    The hunks are prefixed with a bool.
     """
     l1 = splitnewlines(t1)
     l2 = splitnewlines(t2)
@@ -385,6 +391,26 @@ def _unidiff(t1, t2, opts=defaultopts):
             + delta
             + [' ' + l1[x] for x in xrange(a2, aend)]
         )
+        # If either file ends without a newline and the last line of
+        # that file is part of a hunk, a marker is printed. If the
+        # last line of both files is identical and neither ends in
+        # a newline, print only one marker. That's the only case in
+        # which the hunk can end in a shared line without a newline.
+        skip = False
+        if t1[-1] != '\n' and astart + alen == len(l1) + 1:
+            for i in xrange(len(hunklines) - 1, -1, -1):
+                if hunklines[i][0] in ('-', ' '):
+                    if hunklines[i][0] == ' ':
+                        skip = True
+                    hunklines[i] += '\n'
+                    hunklines.insert(i + 1, _missing_newline_marker)
+                    break
+        if not skip and t2[-1] != '\n' and bstart + blen == len(l2) + 1:
+            for i in xrange(len(hunklines) - 1, -1, -1):
+                if hunklines[i][0] == '+':
+                    hunklines[i] += '\n'
+                    hunklines.insert(i + 1, _missing_newline_marker)
+                    break
         yield hunkrange, hunklines
 
     # bdiff.blocks gives us the matching sequences in the files.  The loop
