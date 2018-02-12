@@ -2701,8 +2701,13 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             if opts.git or losedatafn:
                 flag2 = ctx2.flags(f2)
         # if binary is True, output "summary" or "base85", but not "text diff"
-        binary = not opts.text and any(f.isbinary()
-                                       for f in [fctx1, fctx2] if f is not None)
+        if opts.text:
+            check_binary = True
+            binary = False
+        else:
+            check_binary = any(f.isbinary()
+                               for f in [fctx1, fctx2] if f is not None)
+            binary = check_binary
 
         if losedatafn and not opts.git:
             if (binary or
@@ -2792,7 +2797,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
             uheaders, hunks = mdiff.unidiff(content1, date1,
                                             content2, date2,
-                                            path1, path2, opts=opts)
+                                            path1, path2, opts=opts,
+                                            check_binary=check_binary)
             header.extend(uheaders)
         yield fctx1, fctx2, header, hunks
 
