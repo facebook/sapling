@@ -72,47 +72,6 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def _wait_for_healthy(
-        self, timeout: float, exclude_pid: Optional[int]=None
-    ) -> None:
-        '''Wait for edenfs to start and report that it is healthy.
-
-        Throws an error if it doesn't come up within the specified time.
-
-        If exclude_pid, wait until edenfs reports a process ID different than
-        the one specified by exclude_pid.  This allows us to wait until the
-        edenfs process changes when performing graceful restart.
-        '''
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            try:
-                with self.get_thrift_client() as client:
-                    if client.getStatus() == fb_status.ALIVE:
-                        if exclude_pid is None:
-                            return
-                        # Also wait until the PID is different
-                        pid = client.getPid()
-                        if pid == exclude_pid:
-                            print('healthy, but wrong pid (%d)' % exclude_pid,
-                                  file=sys.stderr)
-                        else:
-                            return
-            except eden.thrift.EdenNotRunningError as ex:
-                pass
-
-            assert self._process is not None
-            status = self._process.poll()
-            if status is not None:
-                if status < 0:
-                    msg = 'terminated with signal {}'.format(-status)
-                else:
-                    msg = 'exit status {}'.format(status)
-                raise Exception('edenfs exited before becoming healthy: ' +
-                                msg)
-
-            time.sleep(0.1)
-        raise Exception("edenfs didn't start within timeout of %s" % timeout)
-
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self._eden_dir)
 
@@ -186,7 +145,12 @@ class EdenFS(object):
         takeover = (takeover_from is not None)
         self._spawn(gdb=use_gdb, takeover=takeover)
 
-        self._wait_for_healthy(timeout, exclude_pid=takeover_from)
+        util.wait_for_daemon_healthy(
+            proc=self._process,
+            config_dir=self._eden_dir,
+            get_client=lambda: self.get_thrift_client(),
+            timeout=timeout,
+            exclude_pid=takeover_from)
 
     def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
         if self._process is not None:

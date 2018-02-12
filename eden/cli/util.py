@@ -14,11 +14,33 @@ import subprocess
 import sys
 import time
 import typing
+
+import eden.thrift
+from thrift import Thrift
+from fb303.ttypes import fb_status
 from typing import Any, Callable, Optional, Tuple, TypeVar
+
+
+# These paths are relative to the user's client directory.
+LOCK_FILE = 'lock'
 
 
 class TimeoutError(Exception):
     pass
+
+
+class EdenStartError(Exception):
+    pass
+
+
+class HealthStatus(object):
+    def __init__(self, status: int, pid: Optional[int], detail: str) -> None:
+        self.status = status
+        self.pid = pid  # The process ID, or None if not running
+        self.detail = detail  # a human-readable message
+
+    def is_healthy(self):
+        return self.status == fb_status.ALIVE
 
 
 T = TypeVar('T')
@@ -52,6 +74,117 @@ def poll_until(
                 function.__name__))
 
         time.sleep(interval)
+
+
+def _check_health_using_lockfile(config_dir: str) -> HealthStatus:
+    '''Make a best-effort to produce a HealthStatus based on the PID in the
+    Eden lockfile.
+    '''
+    lockfile = os.path.join(config_dir, LOCK_FILE)
+    try:
+        with open(lockfile, 'r') as f:
+            lockfile_contents = f.read()
+        pid = lockfile_contents.rstrip()
+        int(pid)  # Throw if this does not parse as an integer.
+    except Exception:
+        # If we cannot read the PID from the lockfile for any reason, return
+        # DEAD.
+        return _create_dead_health_status()
+
+    try:
+        stdout = subprocess.check_output(['ps', '-p', pid, '-o', 'comm='])
+    except subprocess.CalledProcessError:
+        # If there is no process with the specified id, return DEAD.
+        return _create_dead_health_status()
+
+    # Use heuristics to determine that the PID in the lockfile is associated
+    # with an edenfs process as it is possible that edenfs is no longer
+    # running and the PID in the lockfile has been assigned to a new process
+    # unrelated to Eden.
+    comm = stdout.rstrip().decode('utf8')
+    # Note that the command may be just "edenfs" rather than a path, but it
+    # works out fine either way.
+    if os.path.basename(comm) == 'edenfs':
+        return HealthStatus(fb_status.STOPPED, int(pid),
+                            'Eden\'s Thrift server does not appear to be '
+                            'running, but the process is still alive ('
+                            'PID=%s).' % pid)
+    else:
+        return _create_dead_health_status()
+
+
+def _create_dead_health_status() -> HealthStatus:
+    return HealthStatus(fb_status.DEAD, pid=None,
+                        detail='edenfs not running')
+
+
+def check_health(
+    get_client: Callable[[], eden.thrift.EdenClient],
+    config_dir: str
+) -> HealthStatus:
+    '''
+    Get the status of the edenfs daemon.
+
+    Returns a HealthStatus object containing health information.
+    '''
+    pid = None
+    status = fb_status.DEAD
+    try:
+        with get_client() as client:
+            pid = client.getPid()
+            status = client.getStatus()
+    except eden.thrift.EdenNotRunningError:
+        # It is possible that the edenfs process is running, but the Thrift
+        # server is not running. This could be during the startup, shutdown,
+        # or takeover of the edenfs process. As a backup to requesting the
+        # PID from the Thrift server, we read it from the lockfile and try
+        # to deduce the current status of Eden.
+        return _check_health_using_lockfile(config_dir)
+    except Thrift.TException as ex:
+        detail = 'error talking to edenfs: ' + str(ex)
+        return HealthStatus(status, pid, detail)
+
+    status_name = fb_status._VALUES_TO_NAMES.get(status)
+    detail = 'edenfs running (pid {}); status is {}'.format(
+        pid, status_name)
+    return HealthStatus(status, pid, detail)
+
+
+def wait_for_daemon_healthy(
+    proc: subprocess.Popen,
+    config_dir: str,
+    get_client: Callable[[], eden.thrift.EdenClient],
+    timeout: float,
+    exclude_pid: Optional[int]=None
+) -> HealthStatus:
+    '''
+    Wait for edenfs to become healthy.
+    '''
+    def check_daemon_health() -> Optional[HealthStatus]:
+        # Check the thrift status
+        health_info = check_health(get_client, config_dir)
+        if health_info.is_healthy():
+            if (exclude_pid is None) or (health_info.pid != exclude_pid):
+                return health_info
+
+        # Make sure that edenfs is still running
+        status = proc.poll()
+        if status is not None:
+            if status < 0:
+                msg = 'terminated with signal {}'.format(-status)
+            else:
+                msg = 'exit status {}'.format(status)
+            raise EdenStartError('edenfs exited before becoming healthy: ' +
+                                    msg)
+
+        # Still starting
+        return None
+
+    timeout_ex = EdenStartError('timed out waiting for edenfs to become '
+                                'healthy')
+    return poll_until(check_daemon_health,
+                      timeout=timeout,
+                      timeout_ex=timeout_ex)
 
 
 def get_home_dir() -> str:
