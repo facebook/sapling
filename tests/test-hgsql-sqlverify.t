@@ -31,7 +31,8 @@ Run with incorrect local revlogs
 
   $ hg log -r tip --forcesync -T '{desc}\n'
   add b
-  $ hg sqlverify 2>&1 | grep Corruption
+  $ hg sqlverify >$TESTTMP/sqlverify.out 2>&1 || true
+  $ grep Corruption $TESTTMP/sqlverify.out || cat $TESTTMP/sqlverify.out
   hgext.hgsql.CorruptionException: '*' with linkrev *, disk does not match mysql (glob)
 
   $ hg strip -q -r 1: --config hgsql.bypass=True --no-backup
