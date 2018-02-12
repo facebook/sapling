@@ -312,22 +312,14 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
             hunklines.append(_missing_newline_marker)
         hunks = (hunkrange, hunklines),
     else:
-        diffhunks = _unidiff(a, b, opts=opts)
-        try:
-            hunkrange, hunklines = next(diffhunks)
-        except StopIteration:
+        hunks = _unidiff(a, b, opts=opts)
+        if not next(hunks):
             return sentinel
 
         headerlines = [
             "--- %s%s%s" % (aprefix, fn1, datetag(ad, fn1)),
             "+++ %s%s%s" % (bprefix, fn2, datetag(bd, fn2)),
         ]
-        def rewindhunks():
-            yield hunkrange, hunklines
-            for hr, hl in diffhunks:
-                yield hr, hl
-
-        hunks = rewindhunks()
 
     return headerlines, hunks
 
@@ -419,6 +411,7 @@ def _unidiff(t1, t2, opts=defaultopts):
     #
     hunk = None
     ignoredlines = 0
+    has_hunks = False
     for s, stype in allblocks(t1, t2, opts, l1, l2):
         a1, a2, b1, b2 = s
         if stype != '!':
@@ -445,6 +438,9 @@ def _unidiff(t1, t2, opts=defaultopts):
                 astart = hunk[1]
                 bstart = hunk[3]
             else:
+                if not has_hunks:
+                    has_hunks = True
+                    yield True
                 for x in yieldhunk(hunk):
                     yield x
         if prev:
@@ -461,8 +457,13 @@ def _unidiff(t1, t2, opts=defaultopts):
         delta[len(delta):] = ['+' + x for x in new]
 
     if hunk:
+        if not has_hunks:
+            has_hunks = True
+            yield True
         for x in yieldhunk(hunk):
             yield x
+    elif not has_hunks:
+        yield False
 
 def b85diff(to, tn):
     '''print base85-encoded binary diff'''
