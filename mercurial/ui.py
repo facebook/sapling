@@ -917,8 +917,7 @@ class ui(object):
         # opencode timeblockedsection because this is a critical path
         starttime = util.timer()
         try:
-            for a in msgs:
-                self.fout.write(a)
+            self.fout.write(''.join(msgs))
         except IOError as err:
             raise error.StdioError(err)
         finally:
