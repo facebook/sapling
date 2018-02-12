@@ -43,8 +43,6 @@ def _obsoletedrevs(repo):
 
 def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
                     date=None, metadata=None, ui=None):
-    # make "prec in succs" in-marker cycle check a no-op
-    succs = _nocontainslist(succs)
     # we need to resolve default date
     if date is None:
         if ui is not None:
@@ -62,11 +60,6 @@ def _obsstorecreate(orig, self, tr, prec, succs=(), flag=0, parents=None,
             date = maxdate
     return orig(self, tr, prec, succs, flag, parents, date, metadata, ui)
 
-class _nocontainslist(list):
-    # like "list", but __contains__ returns False, used by _obsstorecreate
-    def __contains__(self, x):
-        return False
-
 def _createmarkers(orig, repo, rels, *args, **kwargs):
     # make predecessor context unfiltered so parents() won't raise
     unfi = repo.unfiltered()
@@ -81,18 +74,13 @@ def _createmarkers(orig, repo, rels, *args, **kwargs):
 
 def revive(ctxlist, operation='revive'):
     """un-obsolete revisions (public API used by other extensions)"""
-    torevive = [c for c in ctxlist if c.obsolete()]
-    if not torevive:
+    rels = [(ctx, (ctx,)) for ctx in ctxlist if ctx.obsolete()]
+    if not rels:
         return
     # revive it by creating a self cycle marker
-    repo = torevive[0].repo()
-    with repo.lock(), repo.transaction(operation) as tr:
-        meta = {'user': repo.ui.username(), 'operation': operation}
-        for ctx in torevive:
-            node = ctx.node()
-            # use low-level API instead of obsolete.createmarkers since its
-            # cycle check is problematic
-            repo.obsstore.create(tr, node, (node,), metadata=meta, ui=repo.ui)
+    repo = rels[0][0].repo()
+    with repo.lock():
+        obsolete.createmarkers(repo, rels, operation=operation)
 
 def uisetup(ui):
     revsets = obsolete.cachefuncs

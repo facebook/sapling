@@ -625,8 +625,6 @@ class obsstore(object):
         for succ in succs:
             if len(succ) != 20:
                 raise ValueError(succ)
-        if prec in succs:
-            raise ValueError(_('in-marker cycle with %s') % node.hex(prec))
 
         metadata = tuple(sorted(metadata.iteritems()))
 
@@ -1100,9 +1098,6 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
             npare = None
             if not nsucs:
                 npare = tuple(p.node() for p in prec.parents())
-            if nprec in nsucs:
-                raise error.Abort(_("changeset %s cannot obsolete itself")
-                                  % prec)
 
             # Creating the marker causes the hidden cache to become invalid,
             # which causes recomputation when we ask for prec.parents() above.
