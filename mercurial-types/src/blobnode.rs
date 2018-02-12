@@ -87,7 +87,7 @@ where
         BlobNode {
             blob: blob,
             parents: Parents::new(p1, p2),
-            maybe_copied: p2.is_some(),
+            maybe_copied: p1.is_none(),
         }
     }
 
@@ -148,6 +148,7 @@ mod test {
     fn test_node_one() {
         let blob = Blob::from(&[0; 10][..]);
         let p = &BlobNode::new(blob.clone(), None, None);
+        assert!(p.maybe_copied);
         {
             let pid: Option<NodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), None);
@@ -164,7 +165,7 @@ mod test {
             let pid: Option<NodeHash> = p.nodeid();
             let n = BlobNode::new(blob.clone(), pid.as_ref(), pid.as_ref());
             assert_eq!(n.parents, Parents::One(pid.unwrap()));
-            assert!(n.maybe_copied);
+            assert!(!n.maybe_copied);
         }
     }
 
@@ -173,6 +174,8 @@ mod test {
         use std::mem;
         let mut p1 = BlobNode::new(Blob::from(&b"foo1"[..]), None, None);
         let mut p2 = BlobNode::new(Blob::from(&b"foo2"[..]), None, None);
+        assert!(p1.maybe_copied);
+        assert!(p2.maybe_copied);
 
         if p1 > p2 {
             mem::swap(&mut p1, &mut p2);
@@ -184,13 +187,13 @@ mod test {
         let node1 = {
             let n = BlobNode::new(Blob::from(&b"bar"[..]), pid1.as_ref(), pid2.as_ref());
             assert_eq!(n.parents, Parents::Two(pid1.unwrap(), pid2.unwrap()));
-            assert!(n.maybe_copied);
+            assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 1")
         };
         let node2 = {
             let n = BlobNode::new(Blob::from(&b"bar"[..]), pid2.as_ref(), pid1.as_ref());
             assert_eq!(n.parents, Parents::Two(pid2.unwrap(), pid1.unwrap()));
-            assert!(n.maybe_copied);
+            assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 2")
         };
         assert_eq!(node1, node2);
