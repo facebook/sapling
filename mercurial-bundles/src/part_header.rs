@@ -17,11 +17,23 @@ use utils::BytesExt;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum PartHeaderType {
+    /// Responsible for sending Changesets and Filelogs during a push. In Mercurial it also sends
+    /// flat Manifests, but with Mononoke we support only TreeManifests.
     Changegroup,
+    /// When responding for bundle2 this part contains the response for the corresponding
+    /// Changegroup.
     ReplyChangegroup,
+    /// The bundle2 sender describes his own capabilities to handle the bundle2 that will be send
+    /// in response for this one.
     Replycaps,
+    /// Contains keys that are being used in this bundle2, f.e. bookmarks
     Listkeys,
+    /// Contains wirepacks that are encoded TreeManifests required in the push.
     B2xTreegroup2,
+    /// In Mercurial this is used to verify that during the push the heads did not change. In
+    /// Mononoke this parameter will be ignored, because it does not provide transaction during
+    /// push
+    CheckHeads,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -51,6 +63,7 @@ impl PartHeaderType {
             "replycaps" => Ok(Replycaps),
             "listkeys" => Ok(Listkeys),
             "b2x:treegroup2" => Ok(B2xTreegroup2),
+            "check:heads" => Ok(CheckHeads),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -63,6 +76,7 @@ impl PartHeaderType {
             Replycaps => "replycaps",
             Listkeys => "listkeys",
             B2xTreegroup2 => "b2x:treegroup2",
+            CheckHeads => "check:heads",
         }
     }
 }
@@ -368,6 +382,7 @@ impl Arbitrary for PartHeaderType {
             Replycaps,
             Listkeys,
             B2xTreegroup2,
+            CheckHeads,
         ]).expect("empty choice provided")
             .clone()
     }
