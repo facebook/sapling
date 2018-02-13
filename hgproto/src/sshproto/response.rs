@@ -118,6 +118,8 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
 
         &Getfiles(ref res) => res.clone(),
 
+        &Lookup(ref res) => res.clone(),
+
         r => panic!("Response for {:?} unimplemented", r),
     }
 }

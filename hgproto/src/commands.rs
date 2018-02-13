@@ -535,7 +535,7 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('lookup', 'key')
-    fn lookup(&self, _key: String) -> HgCommandRes<NodeHash> {
+    fn lookup(&self, _key: String) -> HgCommandRes<Bytes> {
         unimplemented("lookup")
     }
 

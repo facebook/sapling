@@ -186,7 +186,7 @@ pub enum SingleResponse {
     Heads(HashSet<NodeHash>),
     Hello(HashMap<String, Vec<String>>),
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
-    Lookup(NodeHash),
+    Lookup(Bytes),
     Known(Vec<bool>),
     Pushkey,
     Streamout, /* (BoxStream<Vec<u8>, Error>) */

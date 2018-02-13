@@ -138,17 +138,11 @@ start mononoke
   one two three None None
 
   $ cd repo2
-  $ hg up 0
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgmn pull ssh://user@dummy/repo --traceback
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 9 changesets with 0 changes to 0 files (+1 heads)
-  new changesets af6aa0dfdf3d:28468743616e
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up -q 0
+Test a pull of one specific revision
+  $ hgmn pull ssh://user@dummy/repo -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+Pull the rest
+  $ hgmn pull ssh://user@dummy/repo -q
 
   $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
   o  329b10223740 modify file

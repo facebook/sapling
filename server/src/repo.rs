@@ -11,9 +11,10 @@ use std::fmt::{self, Debug};
 use std::io::{BufRead, Cursor, Write};
 use std::mem;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
 
-use bytes::Bytes;
+use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -27,7 +28,7 @@ use bundle2_resolver;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
 use mercurial_bundles::bundle2::{self, Bundle2Stream};
-use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
+use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId, NodeHash,
                       Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
@@ -357,6 +358,38 @@ impl HgCommands for RepoClient {
             .collect()
             .from_err()
             .and_then(|v| Ok(v.into_iter().collect()))
+            .boxify()
+    }
+
+    // @wireprotocommand('lookup', 'key')
+    fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
+        // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
+        let repo = self.repo.hgrepo.clone();
+        NodeHash::from_str(&key)
+            .into_future()
+            .and_then(move |node| {
+                let csid = ChangesetId::new(node);
+                repo.changeset_exists(&csid)
+                    .map(move |exists| (node, exists))
+            })
+            .and_then(|(node, exists)| {
+                if exists {
+                    let mut buf = BytesMut::with_capacity(node.to_hex().len() + 3);
+                    buf.put(b'1');
+                    buf.put(b' ');
+                    buf.extend_from_slice(node.to_hex().as_bytes());
+                    buf.put(b'\n');
+                    Ok(buf.freeze())
+                } else {
+                    let err_msg = format!("{} not found", node);
+                    let mut buf = BytesMut::with_capacity(err_msg.len() + 3);
+                    buf.put(b'0');
+                    buf.put(b' ');
+                    buf.extend_from_slice(err_msg.as_bytes());
+                    buf.put(b'\n');
+                    Ok(buf.freeze())
+                }
+            })
             .boxify()
     }
 
