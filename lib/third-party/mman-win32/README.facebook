@@ -1,0 +1,7 @@
+Project: mman-win32
+Version: f5ff813c53935c3078f48e1f03a6944c4e7b459c
+Release date: 24-11-2017
+Website: https://github.com/witwall/mman-win32
+License: MIT
+Description: A light implementation of the mmap functions for MinGW.
+Changes: Removed Git files (.git, .gitignore), Visual Studio files (.vs, mman.sln, mman.vcxproj, mman.vcxproj.filters, mman.vcxproj.user), other build files (CMakeLists.txt, Makefile, configure, mman-win32.pro)
