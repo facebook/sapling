@@ -328,6 +328,47 @@ class datapacktestsbase(object):
 
             self.assertEquals(randomchain.index(revision) + 1, len(chain))
 
+    def testReadingMutablePack(self):
+        """Tests that the data written into a mutabledatapack can be read out
+        before it has been finalized."""
+        packdir = self.makeTempDir()
+        packer = mutabledatapack(mercurial.ui.ui(), packdir, version=1)
+
+        # Add some unused first revision for noise
+        packer.add('qwert', self.getFakeHash(), self.getFakeHash(),
+                'qwertcontent')
+
+        filename = 'filename1'
+        node = self.getFakeHash()
+        base = self.getFakeHash()
+        content = 'asdf'
+        meta = {constants.METAKEYFLAG: 1,
+                constants.METAKEYSIZE: len(content),
+                'Z': 'random_string',
+                '_': '\0' * 40}
+        packer.add(filename, node, base, content, metadata=meta)
+
+        # Add some unused third revision for noise
+        packer.add('zxcv', self.getFakeHash(), self.getFakeHash(),
+                'zcxvcontent')
+
+        # Test getmissing
+        missing = ('', self.getFakeHash())
+        value = packer.getmissing([missing, (filename, node)])
+        self.assertEquals(value, [missing])
+
+        # Test getmeta
+        value = packer.getmeta(filename, node)
+        self.assertEquals(value, meta)
+
+        # Test getdelta
+        value = packer.getdelta(filename, node)
+        self.assertEquals(value, (content, filename, base, meta))
+
+        # Test getdeltachain
+        value = packer.getdeltachain(filename, node)
+        self.assertEquals(value, [(filename, node, filename, base, content)])
+
     # perf test off by default since it's slow
     def _testIndexPerf(self):
         random.seed(0)

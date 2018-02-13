@@ -1,14 +1,12 @@
 from __future__ import absolute_import
 
+import os
 import struct
-from mercurial import (
-    error,
-    util,
-)
-from mercurial.node import nullid, hex
+
+from .lz4wrapper import lz4compress, lz4decompress
+from mercurial.node import hex, nullid
 from mercurial.i18n import _
 from . import basepack, constants, shallowutil
-from .lz4wrapper import lz4compress, lz4decompress
 try:
     xrange(0)
 except NameError:
@@ -20,6 +18,10 @@ try:
 except ImportError:
     cstore = None
 
+from mercurial import (
+    error,
+    util,
+)
 NODELENGTH = 20
 
 # The indicator value in the index for a fulltext entry.
@@ -543,3 +545,56 @@ class mutabledatapack(basepack.mutablebasepack):
             rawindex += entry
 
         return rawindex
+
+    def get(self, name, node):
+        raise RuntimeError("must use getdeltachain with mutabledatapack")
+
+    def getmeta(self, name, node):
+        delta, deltaname, deltabasenode, meta = self.getdelta(name, node)
+        return meta
+
+    def getdelta(self, name, node):
+        value = self.entries.get(node)
+        if value is None:
+            raise KeyError(name, hex(node))
+
+        deltabasenode, offset, size = self.entries[node]
+
+        try:
+            # Seek to data
+            self.packfp.seek(offset, os.SEEK_SET)
+            data = self.packfp.read(size)
+        finally:
+            # Seek back to the end
+            self.packfp.seek(0, os.SEEK_END)
+
+        entry = _readdataentry(data, self.VERSION, getmeta=True)
+        filename, node, deltabasenode, delta, meta = entry
+        return delta, filename, deltabasenode, meta
+
+    def getdeltachain(self, name, node):
+        deltachain = []
+        while node != nullid:
+            try:
+                value = self.getdelta(name, node)
+                delta, deltaname, deltabasenode, meta = value
+                deltachain.append((name, node, deltaname, deltabasenode, delta))
+                name = deltaname
+                node = deltabasenode
+            except KeyError:
+                # If we don't even have the first entry, throw. Otherwise return
+                # what we have
+                if not deltachain:
+                    raise
+                break
+
+        return deltachain
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            value = self.entries.get(node)
+            if value is None:
+                missing.append((name, node))
+
+        return missing

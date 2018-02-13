@@ -165,11 +165,7 @@ outputs, which should be fixed later.
   hgext/remotefilelog/cacheclient.py:15: multiple imported names: os, sys
   hgext/remotefilelog/constants.py:4: stdlib import "struct" follows local import: mercurial.i18n
   hgext/remotefilelog/contentstore.py:12: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/datapack.py:8: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/datapack.py:8: imports from mercurial.node not lexically sorted: hex < nullid
-  hgext/remotefilelog/datapack.py:9: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/datapack.py:11: direct symbol import lz4compress, lz4decompress from hgext.remotefilelog.lz4wrapper
-  hgext/remotefilelog/datapack.py:11: symbol import follows non-symbol import: hgext.remotefilelog.lz4wrapper
+  hgext/remotefilelog/datapack.py:6: direct symbol import lz4compress, lz4decompress from hgext.remotefilelog.lz4wrapper
   hgext/remotefilelog/debugcommands.py:10: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/debugcommands.py:11: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/debugcommands.py:12: import should be relative: hgext
