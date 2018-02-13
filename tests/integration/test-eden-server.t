@@ -114,8 +114,8 @@ Add commit with a directory
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
-  $ blobimport --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo --postpone-compaction -d 2> out.txt
-  $ grep changeset < out.txt
+  $ blobimport --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo --postpone-compaction -d
+  $ grep changeset < $TESTTMP/blobimport.out
   D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
   D* 2: changeset 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
@@ -124,11 +124,11 @@ Add commit with a directory
   D* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
-  $ grep "head " < out.txt | sort -k 6
+  $ grep "head " < $TESTTMP/blobimport.out | sort -k 6
   D* head 533267b0e203537fa53d2aec834b062f0b2249cd (glob)
   D* head 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
   D* head 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
-  $ grep compaction < out.txt
+  $ grep compaction < $TESTTMP/blobimport.out
   I* compaction started (glob)
   I* compaction finished (glob)
 Temporary hack because blobimport doesn't import bookmarks yet

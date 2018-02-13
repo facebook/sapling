@@ -98,7 +98,7 @@ setup repo2
   summary:     a
   
   $ cd ..
-  $ blobimport --blobstore files --linknodes repo-hg repo > /dev/null 2>&1
+  $ blobimport --blobstore files --linknodes repo-hg repo
 
 blobimport currently doesn't handle bookmarks, but server requires the directory.
   $ mkdir -p repo/books

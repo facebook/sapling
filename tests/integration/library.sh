@@ -2,7 +2,7 @@
 # Library routines and initial setup for Mononoke-related tests.
 
 function mononoke {
-  $MONONOKE_SERVER "$@" >> "$TESTTMP/mononoke.out" 2>&1 &
+  $MONONOKE_SERVER "$@" --debug >> "$TESTTMP/mononoke.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
 }
 
@@ -41,8 +41,9 @@ CONFIG
   hg backfilltree
   cd ..
 }
+
 function blobimport {
-  $MONONOKE_BLOBIMPORT "$@"
+  $MONONOKE_BLOBIMPORT "$@" >> "$TESTTMP/blobimport.out" 2>&1
 }
 
 function edenserver {
@@ -68,5 +69,38 @@ reponame=master
 datapackversion=1
 [phases]
 publish=False
+EOF
+}
+
+function hginit_treemanifest() {
+  hg init "$@"
+  cat >> "$1"/.hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+[treemanifest]
+server=True
+sendtrees=True
+[remotefilelog]
+reponame=$1
+cachepath=$TESTTMP/hgcache
+server=True
+shallowtrees=True
+EOF
+}
+
+function hgclone_treemanifest() {
+  hg clone "$@"
+  cat >> "$2"/.hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+fastmanifest=
+[treemanifest]
+sendtrees=True
+[remotefilelog]
+reponame=$2
+cachepath=$TESTTMP/hgcache
+shallowtrees=True
 EOF
 }

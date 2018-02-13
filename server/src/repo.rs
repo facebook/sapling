@@ -107,15 +107,15 @@ fn wireprotocaps() -> Vec<String> {
 }
 
 fn bundle2caps() -> String {
-    let caps = hashmap! {
-        "HG20" => vec![],
-        "listkeys" => vec![],
-        "changegroup" => vec!["02"],
-    };
+    let caps = vec![
+        ("HG20", vec![]),
+        ("listkeys", vec![]),
+        ("changegroup", vec!["02"]),
+    ];
 
     let mut encodedcaps = vec![];
 
-    for (key, value) in &caps {
+    for &(ref key, ref value) in &caps {
         let encodedkey = key.to_string();
         if value.len() > 0 {
             let encodedvalue = value.join(",");
