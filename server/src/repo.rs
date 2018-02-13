@@ -592,11 +592,10 @@ fn get_file_history(
     repo: Arc<BlobRepo>,
     startnode: NodeHash,
     path: MPath,
-) -> BoxStream<(NodeHash, Parents, NodeHash), Error> {
+) -> BoxStream<(NodeHash, Parents, NodeHash, Option<(MPath, NodeHash)>), Error> {
     if startnode == NULL_HASH {
         return stream::empty().boxify();
     }
-    // TODO(stash): handle renames
     let mut startstate = VecDeque::new();
     startstate.push_back(startnode);
     let seen_nodes: HashSet<_> = [startnode].iter().cloned().collect();
@@ -608,14 +607,21 @@ fn get_file_history(
             let node = nodes.pop_front()?;
 
             let parents = repo.get_parents(&node);
+            let copy = repo.get_file_copy(&node);
+
             let linknode = RepoPath::file(path.clone()).into_future().and_then({
                 let repo = repo.clone();
                 move |path| repo.get_linknode(path, &node)
             });
 
-            Some(parents.join(linknode).map(move |(parents, linknode)| {
+            let joined = parents
+                .join(linknode)
+                .join(copy)
+                .map(|(pl, c)| (pl.0, pl.1, c));
+
+            Some(joined.map(move |(parents, linknode, copy)| {
                 nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
-                ((node, parents, linknode), (nodes, seen_nodes))
+                ((node, parents, linknode, copy), (nodes, seen_nodes))
             }))
         },
     ).boxify()
@@ -648,7 +654,6 @@ fn create_remotefilelog_blob(
         res.and_then(|_| writer.write_all(&raw_content))
             .map_err(Error::from)
             .map(|_| writer.into_inner())
-        // TODO(stash): add copy-rename information
     });
 
     let file_history_bytes = get_file_history(repo, node, path)
@@ -659,17 +664,31 @@ fn create_remotefilelog_blob(
                 history.len() * approximate_history_entry_size,
             ));
 
-            for (node, parents, linknode) in history {
+            for (node, parents, linknode, copy) in history {
                 let (p1, p2) = match parents {
                     Parents::None => (NULL_HASH, NULL_HASH),
                     Parents::One(p) => (p, NULL_HASH),
                     Parents::Two(p1, p2) => (p1, p2),
                 };
 
+                let (p1, p2, copied_from) = if let Some((copied_from, copied_rev)) = copy {
+                    // Mercurial has a complicated copy/renames logic.
+                    // If (path1, filenode1) is copied/renamed from (path2, filenode2),
+                    // filenode1's p1 is set to filenode2, and copy_from path is set to path2
+                    // filenode1's p2 is null for non-merge commits. It might be non-null for merges.
+                    (copied_rev, p1, Some(copied_from))
+                } else {
+                    (p1, p2, None)
+                };
+
                 writer.write_all(node.sha1().as_ref())?;
                 writer.write_all(p1.sha1().as_ref())?;
                 writer.write_all(p2.sha1().as_ref())?;
                 writer.write_all(linknode.sha1().as_ref())?;
+                if let Some(copied_from) = copied_from {
+                    writer.write_all(&copied_from.to_vec())?;
+                }
+
                 write!(writer, "\0")?;
             }
             Ok(writer.into_inner())

@@ -91,6 +91,8 @@ setup repo2
   $ echo cc > c
   $ hg addremove
   $ hg ci -m 'modify file'
+  $ hg mv dir/1 dir/rename
+  $ hg ci -m 'rename'
   $ hg debugdrawdag <<'EOS'
   >   D  # D/D=1\n2\n
   >  /|  # B/D=1\n
@@ -107,7 +109,9 @@ setup repo2
   |/
   o  af6aa0dfdf3d A
   
-  @  329b10223740 modify file
+  @  28468743616e rename
+  |
+  o  329b10223740 modify file
   |
   o  a42a44555d7c new directory
   |
@@ -142,8 +146,8 @@ start mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 0 changes to 0 files (+1 heads)
-  new changesets af6aa0dfdf3d:329b10223740
+  added 9 changesets with 0 changes to 0 files (+1 heads)
+  new changesets af6aa0dfdf3d:28468743616e
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
@@ -159,7 +163,7 @@ start mononoke
   
   $ ls
   a
-  $ hgmn --config paths.default=ssh://user@dummy/repo up a42a44555d7c
+  $ hgmn --config paths.default=ssh://user@dummy/repo up 28468743616e
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   a
@@ -167,24 +171,31 @@ start mononoke
   c
   dir
   $ cat c
-  content
-  $ hgmn --config paths.default=ssh://user@dummy/repo up 329b10223740
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  cc
+  $ hgmn --config paths.default=ssh://user@dummy/repo up 28468743616e
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log c -T '{node|short} {desc}\n'
   warning: file log can be slow on large repos - use -f to speed it up
   329b10223740 modify file
   3e19bf519e9a c
-  $ cat dir/1
+  $ cat dir/rename
   1
   $ cat dir/2
   2
+  $ hg log dir/rename -f -T '{node|short} {desc}\n'
+  
+  $ hg st --change 28468743616e -C
+  A dir/rename
+    dir/1
+  R dir/1
+
   $ hgmn --config paths.default=ssh://user@dummy/repo up e635b24c95f7
   4 files updated, 0 files merged, 5 files removed, 0 files unresolved
 Sort the output because the output is unpredictable because of merges
   $ hg log D --follow -T '{node|short} {desc}\n' | sort
   e635b24c95f7 D
-  9a827afb7e25 B
   d351044ef463 C
+  9a827afb7e25 B
   af6aa0dfdf3d A
 
 Create a new bookmark and try and send it over the wire
