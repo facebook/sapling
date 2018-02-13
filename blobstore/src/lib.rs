@@ -17,7 +17,8 @@ use std::sync::Arc;
 use bytes::Bytes;
 
 use failure::Error;
-use futures_ext::BoxFuture;
+use futures::Future;
+use futures_ext::{BoxFuture, FutureExt};
 
 /// Basic trait for the Blob Store interface
 ///
@@ -84,7 +85,14 @@ use futures_ext::BoxFuture;
 // - range get/put? (how does range put work? put-put-put-commit?)
 pub trait Blobstore: Send + Sync + 'static {
     fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error>;
+    // The underlying implementation is allowed to assume that the value for a given key is always
+    // the same. Thus, it's legitimate for an implementation to do
+    // "self.assert_present(key).or_else()" and never upload the same key twice.
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error>;
+    // Allows the underlying Blobstore to skip the download phase
+    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
+        self.get(key).map(|_| {}).boxify()
+    }
 }
 
 impl Blobstore for Arc<Blobstore> {
@@ -94,14 +102,19 @@ impl Blobstore for Arc<Blobstore> {
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
     }
+    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
+        self.as_ref().assert_present(key)
+    }
 }
 
 impl Blobstore for Box<Blobstore> {
     fn get(&self, key: String) -> BoxFuture<Option<Bytes>, Error> {
         self.as_ref().get(key)
     }
-
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
+    }
+    fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
+        self.as_ref().assert_present(key)
     }
 }
