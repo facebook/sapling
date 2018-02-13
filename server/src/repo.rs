@@ -22,9 +22,10 @@ use tokio_io::AsyncRead;
 
 use slog::Logger;
 
+use bundle2_resolver;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder};
-use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
+use mercurial_bundles::bundle2::{self, Bundle2Stream};
 use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
                       Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
@@ -452,20 +453,12 @@ impl HgCommands for RepoClient {
     where
         R: AsyncRead + BufRead + 'static + Send,
     {
-        info!(self.logger, "unbundle heads {:?}", heads);
-        let logger = self.logger.new(o!("command" => "unbundle"));
-        stream
-            .filter_map(move |event| match event {
-                StreamEvent::Done(remainder) => Some(remainder),
-                StreamEvent::Next(item) => {
-                    debug!(logger, "bundle2 item: {:?}", item);
-                    None
-                }
-            })
-            .into_future()
-            .map(|(remainder, _)| remainder.expect("No remainder left"))
-            .map_err(|(err, _)| err)
-            .boxify()
+        bundle2_resolver::resolve(
+            self.repo.hgrepo.clone(),
+            self.logger.new(o!("command" => "unbundle")),
+            heads,
+            stream,
+        )
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')

@@ -32,6 +32,7 @@ extern crate maplit;
 
 extern crate async_compression;
 extern crate blobrepo;
+extern crate bundle2_resolver;
 extern crate bytes;
 extern crate hgproto;
 #[cfg(test)]
