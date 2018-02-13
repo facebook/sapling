@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug};
-use std::io::{BufRead, Cursor};
+use std::io::{BufRead, Cursor, Write};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -17,6 +17,7 @@ use bytes::Bytes;
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use pylz4;
 use tokio_core::reactor::Remote;
 use tokio_io::AsyncRead;
 
@@ -40,6 +41,9 @@ use errors::*;
 use repoinfo::RepoGenCache;
 use revset::{AncestorsNodeStream, IntersectNodeStream, NodeStream, SetDifferenceNodeStream,
              SingleNodeHash, UnionNodeStream};
+
+const METAKEYFLAG: &str = "f";
+const METAKEYSIZE: &str = "s";
 
 pub fn init_repo(
     parent_logger: &Logger,
@@ -552,8 +556,12 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(&self, _params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
-        unimplemented!("getfiles")
+    fn getfiles(&self, params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+        info!(self.logger, "getfiles");
+        let repo = self.repo.hgrepo.clone();
+        params
+            .and_then(move |(node, path)| create_remotefilelog_blob(repo.clone(), node, path))
+            .boxify()
     }
 }
 
@@ -577,5 +585,87 @@ fn fetch_linknode(
     let linknode_fut = repo.get_linknode(path, &entry.get_hash().into_nodehash());
     linknode_fut
         .map(|linknode| (entry, linknode, basepath))
+        .boxify()
+}
+
+fn get_file_history(
+    repo: Arc<BlobRepo>,
+    node: NodeHash,
+    path: MPath,
+) -> BoxStream<(NodeHash, Parents, NodeHash), Error> {
+    let parents = repo.get_parents(&node);
+    let linknode = RepoPath::file(path)
+        .into_future()
+        .and_then(move |path| repo.get_linknode(path, &node));
+
+    parents
+        .join(linknode)
+        .map(move |(parents, linknode)| stream::once(Ok((node, parents, linknode))))
+        .flatten_stream()
+        .boxify()
+}
+
+fn create_remotefilelog_blob(
+    repo: Arc<BlobRepo>,
+    node: NodeHash,
+    path: MPath,
+) -> BoxFuture<Bytes, Error> {
+    // raw_content includes copy information
+    let raw_content_bytes = repo.get_file_content(&node).and_then(move |raw_content| {
+        // requires digit counting to know for sure, use reasonable approximation
+        let approximate_header_size = 12;
+        let mut writer = Cursor::new(Vec::with_capacity(
+            approximate_header_size + raw_content.len(),
+        ));
+
+        // Write header
+        // TODO(stash): support LFS files using METAKEYFLAG
+        let res = write!(
+            writer,
+            "v1\n{}{}\n{}{}\0",
+            METAKEYSIZE,
+            raw_content.len(),
+            METAKEYFLAG,
+            0,
+        );
+
+        res.and_then(|_| writer.write_all(&raw_content))
+            .map_err(Error::from)
+            .map(|_| writer.into_inner())
+        // TODO(stash): add copy-rename information
+    });
+
+    let file_history_bytes = get_file_history(repo, node, path)
+        .collect()
+        .and_then(|history| {
+            let approximate_history_entry_size = 81;
+            let mut writer = Cursor::new(Vec::with_capacity(
+                history.len() * approximate_history_entry_size,
+            ));
+
+            for (node, parents, linknode) in history {
+                let (p1, p2) = match parents {
+                    Parents::None => (NULL_HASH, NULL_HASH),
+                    Parents::One(p) => (p, NULL_HASH),
+                    Parents::Two(p1, p2) => (p1, p2),
+                };
+
+                writer.write_all(node.sha1().as_ref())?;
+                writer.write_all(p1.sha1().as_ref())?;
+                writer.write_all(p2.sha1().as_ref())?;
+                writer.write_all(linknode.sha1().as_ref())?;
+                write!(writer, "\0")?;
+            }
+            Ok(writer.into_inner())
+        });
+
+    raw_content_bytes
+        .join(file_history_bytes)
+        .map(|(mut raw_content, file_history)| {
+            raw_content.extend(file_history);
+            raw_content
+        })
+        .and_then(|content| pylz4::compress(&content))
+        .map(|bytes| Bytes::from(bytes))
         .boxify()
 }

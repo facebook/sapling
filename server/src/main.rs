@@ -27,6 +27,7 @@ extern crate slog_logview;
 extern crate slog_stats;
 extern crate slog_term;
 
+extern crate lz4;
 #[macro_use]
 extern crate maplit;
 
@@ -43,6 +44,7 @@ extern crate mercurial_types;
 #[cfg(test)]
 extern crate mercurial_types_mocks;
 extern crate metaconfig;
+extern crate pylz4;
 extern crate repoinfo;
 extern crate revset;
 extern crate services;

@@ -144,11 +144,14 @@ start mononoke
   
   $ ls
   a
-  $ hg up 0e067c57feba
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn --config paths.default=ssh://user@dummy/repo up 3e19bf519e9a
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   a
   b
+  c
+  $ cat c
+  content
 
 Create a new bookmark and try and send it over the wire
 Test commented while we have no bookmark support in blobimport or easy method
