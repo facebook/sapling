@@ -21,14 +21,16 @@ pub struct RawNodeBlob {
     pub blob: BlobHash,
 }
 
+pub fn get_node_key(nodeid: NodeHash) -> String {
+    format!("node-{}.bincode", nodeid)
+}
+
 pub fn get_node(blobstore: &Blobstore, nodeid: NodeHash) -> BoxFuture<RawNodeBlob, Error> {
-    let key = format!("node-{}.bincode", nodeid);
+    let key = get_node_key(nodeid);
 
     blobstore
         .get(key)
         .and_then(move |got| got.ok_or(ErrorKind::NodeMissing(nodeid).into()))
-        .and_then(move |blob| {
-            bincode::deserialize(blob.as_ref()).into_future().from_err()
-        })
+        .and_then(move |blob| bincode::deserialize(blob.as_ref()).into_future().from_err())
         .boxify()
 }

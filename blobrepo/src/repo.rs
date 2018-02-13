@@ -9,6 +9,8 @@ use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 
+use bincode;
+use bytes::Bytes;
 use failure::ResultExt;
 use futures::{Async, Poll};
 use futures::future::Future;
@@ -28,7 +30,9 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Changeset, Entry, MPath, Manifest, NodeHash, Parents, RepoPath};
+use mercurial_types::{Blob, BlobNode, Changeset, Entry, MPath, Manifest, NodeHash, Parents,
+                      RepoPath};
+use mercurial_types::manifest;
 use mercurial_types::nodehash::{ChangesetId, ManifestId};
 use rocksblob::Rocksblob;
 use storage_types::Version;
@@ -38,7 +42,7 @@ use BlobChangeset;
 use BlobManifest;
 use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, BlobEntry};
-use utils::get_node;
+use utils::{get_node, get_node_key, RawNodeBlob};
 
 pub struct BlobRepo {
     blobstore: Arc<Blobstore>,
@@ -200,6 +204,72 @@ impl BlobRepo {
 
     pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
         self.linknodes.get(path, node)
+    }
+
+    // Given content, ensure that there is a matching BlobEntry in the repo. This may not upload
+    // the entry or the data blob if the repo is aware of that data already existing in the
+    // underlying store.
+    // Note that the BlobEntry may not be consistent - parents do not have to be uploaded at this
+    // point, as long as you know their NodeHashes; this is also given to you as part of the
+    // result type, so that you can parallelise uploads. Consistency will be verified when
+    // adding the entries to a changeset.
+    pub fn upload_entry(
+        &self,
+        raw_content: Blob<Bytes>,
+        content_type: manifest::Type,
+        p1: Option<&NodeHash>,
+        p2: Option<&NodeHash>,
+        path: RepoPath,
+    ) -> Result<(NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)> {
+        let raw_content = raw_content.clean();
+        let parents = Parents::new(p1, p2);
+
+        let blob_hash = raw_content
+            .hash()
+            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
+
+        let raw_node = RawNodeBlob {
+            parents,
+            blob: blob_hash,
+        };
+
+        let nodeid = BlobNode::new(raw_content.clone(), p1, p2)
+            .nodeid()
+            .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?;
+
+        let blob_entry = BlobEntry::new(
+            self.blobstore.clone(),
+            path.mpath()
+                .and_then(|m| m.into_iter().last())
+                .map(|m| m.clone()),
+            nodeid,
+            content_type,
+        )?;
+
+        // Ensure that content is in the blobstore
+        let content_upload = self.blobstore.put(
+            format!("sha1-{}", blob_hash.sha1()),
+            raw_content
+                .clone()
+                .into_inner()
+                .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?,
+        );
+
+        // Upload the new node
+        let node_upload = self.blobstore.put(
+            get_node_key(nodeid),
+            bincode::serialize(&raw_node, bincode::Infinite)
+                .map_err(|err| Error::from(ErrorKind::SerializationFailed(nodeid, err)))?
+                .into(),
+        );
+
+        Ok((
+            nodeid,
+            content_upload
+                .join(node_upload)
+                .map(|_| (blob_entry, path))
+                .boxify(),
+        ))
     }
 }
 

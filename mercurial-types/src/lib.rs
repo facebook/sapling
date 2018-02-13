@@ -52,6 +52,7 @@ extern crate ascii;
 #[macro_use]
 extern crate assert_matches;
 extern crate bincode;
+extern crate bytes;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;

@@ -5,6 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use ascii::{AsciiStr, AsciiString};
+use bytes::Bytes;
 
 use super::NodeHash;
 use hash::Sha1;
@@ -100,6 +101,13 @@ where
         }
     }
 
+    pub fn hash(&self) -> Option<BlobHash> {
+        match self {
+            &Blob::Clean(_, hash) | &Blob::Extern(hash) => Some(hash),
+            &Blob::Dirty(..) | &Blob::NodeId(..) => None,
+        }
+    }
+
     pub fn into_inner(self) -> Option<T> {
         match self {
             Blob::Dirty(data) => Some(data),
@@ -126,6 +134,12 @@ impl<'a> From<&'a [u8]> for Blob<Vec<u8>> {
 
 impl From<Vec<u8>> for Blob<Vec<u8>> {
     fn from(data: Vec<u8>) -> Self {
+        Blob::Dirty(data)
+    }
+}
+
+impl From<Bytes> for Blob<Bytes> {
+    fn from(data: Bytes) -> Self {
         Blob::Dirty(data)
     }
 }
