@@ -11,7 +11,7 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, MPath, MPathElement, ManifestId, NodeHash, Parents};
+use mercurial_types::{Blob, BlobNode, MPath, MPathElement, ManifestId, NodeHash, Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
 
@@ -30,21 +30,30 @@ pub struct BlobEntry {
     ty: Type,
 }
 
-pub fn fetch_file_content_from_blobstore(
+pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
     nodeid: NodeHash,
-) -> BoxFuture<Vec<u8>, Error> {
+) -> BoxFuture<(Vec<u8>, Option<(MPath, NodeHash)>), Error> {
     get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
             move |node| {
                 let key = format!("sha1-{}", node.blob.sha1());
+                let parents = node.parents;
 
                 blobstore.get(key).and_then(move |blob| {
                     blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                        .map(|blob| {
-                            let (_, off) = file::File::extract_meta(blob.as_ref());
-                            Vec::from(&blob.as_ref()[off..])
+                        .and_then(|blob| {
+                            let blob = blob.as_ref();
+                            let (p1, p2) = parents.get_nodes();
+                            let blobnode = BlobNode::new(blob, p1, p2);
+                            let file = file::File::new(blobnode);
+
+                            file.copied_from().and_then(|from| {
+                                file.content()
+                                    .ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                                    .map(|content| (Vec::from(content), from))
+                            })
                         })
                 })
             }

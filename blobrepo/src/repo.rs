@@ -28,7 +28,7 @@ use memblob::Memblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Changeset, Entry, Manifest, NodeHash, RepoPath};
+use mercurial_types::{Changeset, Entry, MPath, Manifest, NodeHash, Parents, RepoPath};
 use mercurial_types::nodehash::{ChangesetId, ManifestId};
 use rocksblob::Rocksblob;
 use storage_types::Version;
@@ -37,7 +37,8 @@ use tokio_core::reactor::Remote;
 use BlobChangeset;
 use BlobManifest;
 use errors::*;
-use file::{fetch_file_content_from_blobstore, BlobEntry};
+use file::{fetch_file_content_and_renames_from_blobstore, BlobEntry};
+use utils::get_node;
 
 pub struct BlobRepo {
     blobstore: Arc<Blobstore>,
@@ -125,7 +126,21 @@ impl BlobRepo {
     }
 
     pub fn get_file_content(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
-        fetch_file_content_from_blobstore(&self.blobstore, *key)
+        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
+            .map(|contentrename| contentrename.0)
+            .boxify()
+    }
+
+    pub fn get_parents(&self, key: &NodeHash) -> BoxFuture<Parents, Error> {
+        get_node(&self.blobstore, *key)
+            .map(|rawnode| rawnode.parents)
+            .boxify()
+    }
+
+    pub fn get_file_copy(&self, key: &NodeHash) -> BoxFuture<Option<(MPath, NodeHash)>, Error> {
+        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
+            .map(|contentrename| contentrename.1)
+            .boxify()
     }
 
     pub fn get_changesets(&self) -> BoxStream<NodeHash, Error> {
