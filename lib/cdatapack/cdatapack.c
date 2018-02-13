@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
-#include <sys/mman.h>
 
 #define ntoh_data_offset ntohll
 
@@ -46,6 +45,7 @@
 
 #include "lib/clib/buffer.h"
 #include "lib/clib/portability/inet.h"
+#include "lib/clib/portability/mman.h"
 #include "lib/clib/portability/unistd.h"
 
 #define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)

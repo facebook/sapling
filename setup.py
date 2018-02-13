@@ -1079,17 +1079,19 @@ extmodules += cythonize([
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
 ], compiler_directives=cythonopts)
 
+libraries = [
+    ("datapack", {
+        "sources" : ["lib/cdatapack/cdatapack.c"],
+        "include_dirs" : ["."] + include_dirs,
+        "libraries" : ["lz4", SHA1_LIBRARY],
+        "extra_args" : filter(None,
+            [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
+    }),
+]
 if iswindows:
-    libraries = []
+    libraries += []
 else:
-    libraries = [
-        ("datapack", {
-            "sources" : ["lib/cdatapack/cdatapack.c"],
-            "include_dirs" : ["."] + include_dirs,
-            "libraries" : ["lz4", SHA1_LIBRARY],
-            "extra_args" : filter(None,
-                [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
-        }),
+    libraries += [
         ('mpatch', {
             "sources": ["hgext/extlib/cstore/mpatch.c"],
             "include_dirs" : ["."] + include_dirs,
