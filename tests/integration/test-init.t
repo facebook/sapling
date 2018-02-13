@@ -183,7 +183,8 @@ start mononoke
   $ cat dir/2
   2
   $ hg log dir/rename -f -T '{node|short} {desc}\n'
-  
+  28468743616e rename
+  a42a44555d7c new directory
   $ hg st --change 28468743616e -C
   A dir/rename
     dir/1
@@ -193,10 +194,10 @@ start mononoke
   4 files updated, 0 files merged, 5 files removed, 0 files unresolved
 Sort the output because the output is unpredictable because of merges
   $ hg log D --follow -T '{node|short} {desc}\n' | sort
-  e635b24c95f7 D
-  d351044ef463 C
   9a827afb7e25 B
   af6aa0dfdf3d A
+  d351044ef463 C
+  e635b24c95f7 D
 
 Create a new bookmark and try and send it over the wire
 Test commented while we have no bookmark support in blobimport or easy method
