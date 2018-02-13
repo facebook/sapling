@@ -453,6 +453,11 @@ static inline int platform_madvise_away(void *ptr, size_t len) {
 #if defined(__APPLE__)
   return madvise(ptr, len, MADVISE_FREE_CODE);
 #endif /* #if defined(__APPLE__) */
+#if defined(_MSC_VER)
+  // There's no madvise in mman-win32
+  errno = EINVAL;
+  return -1;
+#endif /* #if defined(_MSC_VER) */
 }
 
 const get_delta_chain_link_result_t getdeltachainlink(
