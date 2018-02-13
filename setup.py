@@ -1087,25 +1087,20 @@ libraries = [
         "extra_args" : filter(None,
             [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
     }),
+    ("sha1detectcoll", {
+        "sources" : [
+            "lib/third-party/sha1dc/sha1.c",
+            "lib/third-party/sha1dc/ubc_check.c",
+        ],
+        "include_dirs" : ["lib/third-party"] + include_dirs,
+        "extra_args" : filter(None,
+            [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
+    }),
+    ('mpatch', {
+        "sources": ["hgext/extlib/cstore/mpatch.c"],
+        "include_dirs" : ["."] + include_dirs,
+    }),
 ]
-if iswindows:
-    libraries += []
-else:
-    libraries += [
-        ('mpatch', {
-            "sources": ["hgext/extlib/cstore/mpatch.c"],
-            "include_dirs" : ["."] + include_dirs,
-        }),
-        ("sha1detectcoll", {
-            "sources" : [
-                "lib/third-party/sha1dc/sha1.c",
-                "lib/third-party/sha1dc/ubc_check.c",
-            ],
-            "include_dirs" : ["lib/third-party"] + include_dirs,
-            "extra_args" : filter(None,
-                [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
-        }),
-    ]
 
 sys.path.insert(0, 'contrib/python-zstandard')
 import setup_zstd

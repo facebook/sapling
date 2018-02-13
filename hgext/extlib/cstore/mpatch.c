@@ -25,7 +25,6 @@
 #include <string.h>
 
 #include "hgext/extlib/cstore/bitmanipulation.h"
-#include "hgext/extlib/cstore/compat.h"
 
 static struct mpatch_flist *lalloc(ssize_t size)
 {
