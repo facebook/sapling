@@ -58,10 +58,10 @@ Changelog corruption
   $ hg debugfixcorrupt --no-dryrun
   changelog: corrupted at rev 2 (linkrev=2)
   manifest: marked corrupted at rev 2 (linkrev=2)
-  changelog: will lose 2 revisions
+  changelog: will lose 3 revisions
   truncating 00changelog.d from 275 to 110 bytes
   truncating 00changelog.i from 320 to 128 bytes
-  manifest: will lose 2 revisions
+  manifest: will lose 3 revisions
   truncating 00manifest.d from 264 to 99 bytes
   truncating 00manifest.i from 320 to 128 bytes
   fix completed. re-run to check more revisions.
@@ -76,10 +76,10 @@ Manifest corruption
   $ hg debugfixcorrupt --no-dryrun
   changelog looks okay
   manifest: corrupted at rev 2 (linkrev=2)
-  changelog: will lose 2 revisions
+  changelog: will lose 3 revisions
   truncating 00changelog.d from 275 to 110 bytes
   truncating 00changelog.i from 320 to 128 bytes
-  manifest: will lose 2 revisions
+  manifest: will lose 3 revisions
   truncating 00manifest.d from 264 to 99 bytes
   truncating 00manifest.i from 320 to 128 bytes
   fix completed. re-run to check more revisions.
@@ -119,3 +119,15 @@ Verify backups
   00changelog.d: before fix: 873f2076, restored from backup: 873f2076
   00manifest.i: before fix: 1fbd16af, restored from backup: 1fbd16af
   00manifest.d: before fix: 46207222, restored from backup: 46207222
+
+Changelog.i ends with 0s
+  $ rebuildrepo
+  >>> with open('.hg/store/00changelog.i', 'ab') as f:
+  ...     f.write(b'\0' * 128)
+  $ hg debugfixcorrupt
+  changelog: corrupted at rev 5 (linkrev=0)
+  manifest looks okay
+  changelog: will lose 2 revisions
+  truncating 00changelog.i from 448 to 320 bytes
+  re-run with --no-dryrun to fix.
+

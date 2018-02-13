@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import time
 
 from mercurial.i18n import _
+from mercurial.node import nullid
 from mercurial import (
     encoding,
     error,
@@ -37,13 +38,19 @@ def quickchecklog(ui, log, name, knownbroken):
     while rev < len(log):
         numchecked += 1
         ui.progress(topic, numchecked, item=rev)
-        linkrev = log.linkrev(rev)
+        startflags, clen, ulen, baserev, linkrev, p1, p2, node = log.index[rev]
         if linkrev in knownbroken:
             ui.write(_('%s: marked corrupted at rev %d (linkrev=%d)\n')
                      % (name, rev, linkrev))
             return rev, linkrev
         try:
             log.revision(rev, raw=True)
+            if rev != 0:
+                if (startflags == 0 or linkrev == 0 or (p1 == 0 and p2 == 0) or
+                    clen == 0 or ulen == 0 or node == nullid):
+                    # In theory no 100% correct. But those fields being 0 is
+                    # almost always a corruption practically.
+                    raise ValueError('suspected bad revision data')
             seengood = True
             rev += 1
         except Exception: #  RevlogError, mpatchError, ValueError, etc
@@ -131,6 +138,9 @@ def fixcorrupt(ui, repo, *args, **opts):
         # sanity check
         if rev >= len(log):
             raise error.Abort(_('%s index is corrupted') % name)
+        # do not trust 0 being the linkrev
+        if linkrev == 0:
+            linkrev = rev
         # save the rev numbers
         badrevs[name] = (rev, linkrev)
         knownbadrevs.add(linkrev)
@@ -149,13 +159,19 @@ def fixcorrupt(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock():
         repo.destroying()
         for name, log in logs:
+            if name not in badrevs:
+                continue
             rev, linkrev = badrevs[name]
-            ui.write(_('%s: will lose %d revisions\n')
-                     % (name, len(log) - 1 - rev))
-            truncate(ui, repo, log.datafile, log.start(rev), dryrun,
-                     backupprefix)
-            truncate(ui, repo, log.indexfile, rev * 64, dryrun,
-                     backupprefix)
+            if len(log) != rev:
+                ui.write(_('%s: will lose %d revisions\n')
+                         % (name, len(log) - rev))
+            # rev is broken, so log.start(rev) won't work.
+            if rev > 0:
+                start = log.length(rev - 1) + log.start(rev - 1)
+            else:
+                start = 0
+            truncate(ui, repo, log.datafile, start, dryrun, backupprefix)
+            truncate(ui, repo, log.indexfile, rev * 64, dryrun, backupprefix)
         if dryrun:
             ui.write(_('re-run with --no-dryrun to fix.\n'))
         else:
