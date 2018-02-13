@@ -154,6 +154,10 @@ class TreeInode : public InodeBase {
       return mode_to_dtype(mode_);
     }
 
+    bool isDir() const {
+      return dtype_t::Dir == getDtype();
+    }
+
     /**
      * Check if the entry is a directory or not.
      *

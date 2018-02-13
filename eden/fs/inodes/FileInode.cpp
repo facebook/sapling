@@ -263,15 +263,9 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
 }
 
 folly::Future<std::string> FileInode::readlink() {
-  {
-    // TODO: Since the type component of the mode is immutable, it could be
-    // moved out of the locked state, obviating the need to acquire a lock
-    // here.
-    auto state = state_.rlock();
-    if (!S_ISLNK(state->mode)) {
-      // man 2 readlink says:  EINVAL The named file is not a symbolic link.
-      throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
-    }
+  if (dtype_t::Symlink != getType()) {
+    // man 2 readlink says:  EINVAL The named file is not a symbolic link.
+    throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
   }
 
   // The symlink contents are simply the file contents!
@@ -361,21 +355,14 @@ folly::Optional<Hash> FileInode::getBlobHash() const {
 }
 
 folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(int flags) {
-  {
-    // TODO: Since the type component of the mode is immutable, it could be
-    // moved out of the locked state, obviating the need to acquire a lock
-    // here.
-    auto state = state_.rlock();
-
-    if (S_ISLNK(state->mode)) {
-      // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
-      // Since it isn't clear whether FUSE will allow this to happen, this
-      // is a speculative defense against that happening; the O_PATH flag
-      // does allow a file handle to be opened on a symlink on Linux,
-      // but does not allow it to be used for real IO operations.  We're
-      // punting on handling those situations here for now.
-      throw InodeError(ELOOP, inodePtrFromThis(), "is a symlink");
-    }
+  if (dtype_t::Symlink == getType()) {
+    // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
+    // Since it isn't clear whether FUSE will allow this to happen, this
+    // is a speculative defense against that happening; the O_PATH flag
+    // does allow a file handle to be opened on a symlink on Linux,
+    // but does not allow it to be used for real IO operations.  We're
+    // punting on handling those situations here for now.
+    throw InodeError(ELOOP, inodePtrFromThis(), "is a symlink");
   }
 
   auto fileHandle = state_.withWLock([&](auto& state) {
@@ -412,12 +399,8 @@ Future<vector<string>> FileInode::listxattr() {
   // Currently, we only return a non-empty vector for regular files, and we
   // assume that the SHA-1 is present without checking the ObjectStore.
   vector<string> attributes;
-
-  {
-    auto state = state_.rlock();
-    if (S_ISREG(state->mode)) {
-      attributes.emplace_back(kXattrSha1.str());
-    }
+  if (dtype_t::Regular == getType()) {
+    attributes.emplace_back(kXattrSha1.str());
   }
   return attributes;
 }

@@ -518,7 +518,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
              << " / \"" << name << "\"";
   DCHECK(entry.getInode() == nullptr);
-  if (!S_ISDIR(entry.getMode())) {
+  if (!entry.isDir()) {
     // If this is a file we can just go ahead and create it now;
     // we don't need to load anything else.
     //
