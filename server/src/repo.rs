@@ -16,7 +16,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use tokio_core::reactor::Remote;
 use tokio_io::AsyncRead;
 
@@ -103,6 +103,7 @@ fn wireprotocaps() -> Vec<String> {
         "getbundle".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
         "gettreepack".to_string(),
+        "remotefilelog".to_string(),
     ]
 }
 
@@ -548,6 +549,11 @@ impl HgCommands for RepoClient {
             .map(|cursor| Bytes::from(cursor.into_inner()))
             .from_err()
             .boxify()
+    }
+
+    // @wireprotocommand('getfiles', 'files*')
+    fn getfiles(&self, _params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+        unimplemented!("getfiles")
     }
 }
 

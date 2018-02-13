@@ -118,6 +118,7 @@ pub enum SingleRequest {
         heads: Vec<String>,
     },
     Gettreepack(GettreepackArgs),
+    Getfiles,
 }
 
 /// The arguments that `getbundle` accepts, in a separate struct for
@@ -192,6 +193,7 @@ pub enum SingleResponse {
     ReadyForStream,
     Unbundle,
     Gettreepack(Bytes),
+    Getfiles(Bytes),
 }
 
 impl SingleResponse {

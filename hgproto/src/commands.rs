@@ -10,23 +10,30 @@
 //! connections.
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
+use std::mem;
+use std::str::FromStr;
 
 use slog::Logger;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
+use failure::err_msg;
+use futures::IntoFuture;
 use futures::future::{self, err, ok, Either, Future};
-use futures::stream::{futures_ordered, Stream};
+use futures::stream::{self, futures_ordered, once, Stream};
 use futures::sync::oneshot;
 
 use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
 use mercurial_bundles::bundle2::{self, Bundle2Stream};
-use mercurial_types::NodeHash;
+use mercurial_types::{MPath, NodeHash};
 use tokio_io::AsyncRead;
+use tokio_io::codec::Decoder;
 
 use {BranchRes, GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
 use errors::*;
+
+const HASH_SIZE: usize = 40;
 
 pub struct HgCommandHandler<H> {
     commands: H,
@@ -255,6 +262,17 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
+            SingleRequest::Getfiles => {
+                let (reqs, instream) = decode_getfiles_arg_stream(instream);
+                (
+                    hgcmds
+                        .getfiles(reqs)
+                        .map(SingleResponse::Getfiles)
+                        .map_err(self::Error::into)
+                        .boxify(),
+                    instream,
+                )
+            }
         }
     }
 
@@ -285,6 +303,151 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
 }
 
 const NONE: &[u8] = b"None";
+
+struct GetfilesArgDecoder {}
+
+// Parses one (hash, path) pair
+impl Decoder for GetfilesArgDecoder {
+    // If None has been decoded, then that means that client has sent all the data
+    type Item = Option<(NodeHash, MPath)>;
+    type Error = Error;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
+        let maybeindex = src.iter()
+            .enumerate()
+            .find(|item| item.1 == &b'\n')
+            .map(|(index, _)| index);
+
+        let index = match maybeindex {
+            Some(index) => index,
+            None => {
+                // Need more bytes
+                return Ok(None);
+            }
+        };
+
+        // Consume input and \n
+        let mut buf = src.split_to(index + 1);
+        debug_assert!(buf.len() > 0);
+        let new_len = buf.len() - 1;
+        buf.truncate(new_len);
+
+        if buf.is_empty() {
+            // Finished parsing the stream
+            // 'Ok' means no error, 'Some' means that no more bytes needed,
+            // None means that getfiles stream has finished
+            Ok(Some(None))
+        } else {
+            if buf.len() < HASH_SIZE {
+                Err(err_msg("Expected node hash"))
+            } else {
+                let nodehashbytes = buf.split_to(HASH_SIZE);
+                if buf.is_empty() {
+                    Err(err_msg("Expected non-empty file"))
+                } else {
+                    let nodehashstr = String::from_utf8(nodehashbytes.to_vec())?;
+                    let nodehash = NodeHash::from_str(&nodehashstr)?;
+                    // Some here means that new entry has been parsed
+                    let parsed_res = Some((nodehash, MPath::new(&buf)?));
+                    // 'Ok' means no error, 'Some' means that no more bytes needed.
+                    Ok(Some(parsed_res))
+                }
+            }
+        }
+    }
+}
+
+// getfiles args format:
+// (nodepath\n)*\n
+// nodepath := node path
+// node = hex hash
+// Example:
+// 1111111111111111111111111111111111111111path1\n2222222222222222222222222222222222222222path2\n\n
+fn decode_getfiles_arg_stream<S>(
+    input: BytesStream<S>,
+) -> (
+    BoxStream<(NodeHash, MPath), Error>,
+    BoxFuture<BytesStream<S>, Error>,
+)
+where
+    S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+{
+    let (send, recv) = oneshot::channel();
+
+    // stream::unfold() requires us to to return None if it's finished, or Some(Future) if not.
+    // We can't say if node file stream is finished before we parse the entry, that means that
+    // we can't stop unfolding by returning None. Instead we return a "fake" error. This fake
+    // error is a Result. If this fake error is Ok(...) then no real error happened.
+    // Note that fake error also contains input stream that will be send back to the future that
+    // waits for it.
+    let entry_stream: BoxStream<_, ::std::result::Result<BytesStream<S>, (_, BytesStream<S>)>> =
+        stream::unfold(input, move |input| {
+            let fut_decode = input.into_future_decode(GetfilesArgDecoder {});
+            let fut = fut_decode
+                .map_err(|err| Err(err)) // Real error happened, wrap it in result
+                .and_then(|(maybe_item, instream)| match maybe_item {
+                    None => {
+                        // None here means we hit EOF, but that shouldn't happen
+                        Err(Err((err_msg("unexpected EOF"), instream)))
+                            .into_future()
+                            .boxify()
+                    }
+                    Some(maybe_nodehash) => {
+                        match maybe_nodehash {
+                            None => {
+                                // None here means that we've read all the node-file pairs
+                                // that client has sent us. Return fake error that means that
+                                // we've successfully parsed the stream.
+                                Err(Ok(instream)).into_future().boxify()
+                            }
+                            Some(nodehash) => {
+                                // Parsed one more entry - continue
+                                Ok((nodehash, instream)).into_future().boxify()
+                            }
+                        }
+                    }
+                });
+
+            Some(fut)
+        }).boxify();
+
+    let try_send_instream =
+        |wrapped_send: &mut Option<oneshot::Sender<_>>, instream: BytesStream<S>| -> Result<()> {
+            let send = mem::replace(wrapped_send, None);
+            let send = send.ok_or(err_msg("internal error: tried to send input stream twice"))?;
+            match send.send(instream) {
+                Ok(_) => Ok(()), // Finished
+                Err(_) => Err(err_msg("internal error while sending input stream back")),
+            }
+        };
+
+    // We are parsing errors (both fake and real), and sending instream to the future
+    // that awaits it. Note: instream should be send only once!
+    let entry_stream = entry_stream.then({
+        let mut wrapped_send = Some(send);
+        move |val| {
+            match val {
+                Ok(nodefile) => Ok(Some(nodefile)),
+                Err(Ok(instream)) => try_send_instream(&mut wrapped_send, instream).map(|_| None),
+                Err(Err((err, instream))) => {
+                    match try_send_instream(&mut wrapped_send, instream) {
+                        // TODO(stash): if send fails, then Mononoke is deadlocked
+                        // ignore send errors
+                        Ok(_) => Err(err),
+                        Err(_) => Err(err),
+                    }
+                }
+            }
+        }
+    });
+
+    // Finally, filter out last None value
+    let entry_stream = entry_stream.filter_map(|val| val);
+    (
+        entry_stream.boxify(),
+        recv.map_err(|err| Error::from(err)).boxify(),
+    )
+}
 
 #[inline]
 fn get_or_none<'a>(map: &'a HashMap<Vec<u8>, Vec<u8>>, key: &'a [u8]) -> &'a [u8] {
@@ -414,6 +577,11 @@ pub trait HgCommands {
     fn gettreepack(&self, _params: GettreepackArgs) -> HgCommandRes<Bytes> {
         unimplemented("gettreepack")
     }
+
+    // @wireprotocommand('getfiles', 'files*')
+    fn getfiles(&self, _params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("getfiles".into()).into())).boxify()
+    }
 }
 
 #[cfg(test)]
@@ -436,6 +604,14 @@ mod test {
     fn assert_one<T>(vs: Vec<T>) -> T {
         assert_eq!(vs.len(), 1);
         vs.into_iter().next().unwrap()
+    }
+
+    fn hash_ones() -> NodeHash {
+        "1111111111111111111111111111111111111111".parse().unwrap()
+    }
+
+    fn hash_twos() -> NodeHash {
+        "2222222222222222222222222222222222222222".parse().unwrap()
     }
 
     #[test]
@@ -469,5 +645,73 @@ mod test {
             Err(ref err) => println!("got expected error {:?}", err),
             bad => panic!("Bad result {:?}", bad),
         }
+    }
+
+    #[test]
+    fn getfilesdecoder() {
+        let mut decoder = GetfilesArgDecoder {};
+        let mut input = BytesMut::from(format!("{}path\n", hash_ones()).as_bytes());
+        let res = decoder
+            .decode(&mut input)
+            .expect("unexpected error")
+            .expect("empty result");
+        assert_eq!(Some((hash_ones(), MPath::new("path").unwrap())), res);
+
+        let mut input = BytesMut::from(format!("{}path", hash_ones()).as_bytes());
+        assert!(
+            decoder
+                .decode(&mut input)
+                .expect("unexpected error")
+                .is_none()
+        );
+
+        let mut input =
+            BytesMut::from(format!("{}path\n{}path2\n", hash_ones(), hash_twos()).as_bytes());
+
+        let res = decoder
+            .decode(&mut input)
+            .expect("unexpected error")
+            .expect("empty result");
+        assert_eq!(Some((hash_ones(), MPath::new("path").unwrap())), res);
+
+        let res = decoder
+            .decode(&mut input)
+            .expect("unexpected error")
+            .expect("empty result");
+        assert_eq!(Some((hash_twos(), MPath::new("path2").unwrap())), res);
+
+        let mut input = BytesMut::from(format!("{}\n", hash_ones()).as_bytes());
+        assert!(decoder.decode(&mut input).is_err());
+
+        let mut input = BytesMut::from(format!("{}", hash_ones()).as_bytes());
+        assert!(
+            decoder
+                .decode(&mut input)
+                .expect("unexpected error")
+                .is_none()
+        );
+
+        let mut input = BytesMut::from("11111path\n".as_bytes());
+        assert!(decoder.decode(&mut input).is_err());
+    }
+
+    #[test]
+    fn getfilesargs() {
+        let input = format!("{}path\n{}path2\n\n", hash_ones(), hash_twos());
+        let (paramstream, _input) =
+            decode_getfiles_arg_stream(BytesStream::new(stream::once(Ok(Bytes::from(input)))));
+
+        let res = paramstream.collect().wait().unwrap();
+        assert_eq!(
+            res,
+            vec![
+                (hash_ones(), MPath::new("path").unwrap()),
+                (hash_twos(), MPath::new("path2").unwrap()),
+            ]
+        );
+
+        // Unexpected end of file
+        let (paramstream, _input) = decode_getfiles_arg_stream(BytesStream::new(stream::empty()));
+        assert!(paramstream.collect().wait().is_err());
     }
 }

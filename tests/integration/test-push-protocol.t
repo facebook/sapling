@@ -80,8 +80,8 @@ push to Mononoke TODO(T25252425) make this work
   running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 122
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack bundle2=HG20%0Alistkeys%0Achangegroup%3D02
+  remote: 136
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=HG20%0Alistkeys%0Achangegroup%3D02
   remote: 1
   abort: missing gettreepack capability on remote
   [255]

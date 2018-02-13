@@ -512,6 +512,7 @@ fn parse_with_params(
                 basemfnodes: parseval(&kv, "basemfnodes", hashlist)?,
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
             })))
+        | command!("getfiles", Getfiles, parse_params, {})
     )
 }
 
