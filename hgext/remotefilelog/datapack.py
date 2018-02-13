@@ -190,38 +190,7 @@ class datapack(basepack.basepack):
     def _readentry(self, offset, size, getmeta=False):
         rawentry = self._data[offset:offset + size]
         self._pagedin += len(rawentry)
-
-        # <2 byte len> + <filename>
-        lengthsize = 2
-        filenamelen = struct.unpack('!H', rawentry[:2])[0]
-        filename = rawentry[lengthsize:lengthsize + filenamelen]
-
-        # <20 byte node> + <20 byte deltabase>
-        nodestart = lengthsize + filenamelen
-        deltabasestart = nodestart + NODELENGTH
-        node = rawentry[nodestart:deltabasestart]
-        deltabasenode = rawentry[deltabasestart:deltabasestart + NODELENGTH]
-
-        # <8 byte len> + <delta>
-        deltastart = deltabasestart + NODELENGTH
-        rawdeltalen = rawentry[deltastart:deltastart + 8]
-        deltalen = struct.unpack('!Q', rawdeltalen)[0]
-
-        delta = rawentry[deltastart + 8:deltastart + 8 + deltalen]
-        delta = lz4decompress(delta)
-
-        if getmeta:
-            if self.VERSION == 0:
-                meta = {}
-            else:
-                metastart = deltastart + 8 + deltalen
-                metalen = struct.unpack_from('!I', rawentry, metastart)[0]
-
-                rawmeta = rawentry[metastart + 4:metastart + 4 + metalen]
-                meta = shallowutil.parsepackmeta(rawmeta)
-            return filename, node, deltabasenode, delta, meta
-        else:
-            return filename, node, deltabasenode, delta
+        return _readdataentry(rawentry, self.VERSION, getmeta=getmeta)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
@@ -335,6 +304,39 @@ class datapack(basepack.basepack):
             self._pagedin += offset - oldoffset
             if self.freememory():
                 data = self._data
+
+def _readdataentry(rawentry, version, getmeta=False):
+    # <2 byte len> + <filename>
+    lengthsize = 2
+    filenamelen = struct.unpack('!H', rawentry[:2])[0]
+    filename = rawentry[lengthsize:lengthsize + filenamelen]
+
+    # <20 byte node> + <20 byte deltabase>
+    nodestart = lengthsize + filenamelen
+    deltabasestart = nodestart + NODELENGTH
+    node = rawentry[nodestart:deltabasestart]
+    deltabasenode = rawentry[deltabasestart:deltabasestart + NODELENGTH]
+
+    # <8 byte len> + <delta>
+    deltastart = deltabasestart + NODELENGTH
+    rawdeltalen = rawentry[deltastart:deltastart + 8]
+    deltalen = struct.unpack('!Q', rawdeltalen)[0]
+
+    delta = rawentry[deltastart + 8:deltastart + 8 + deltalen]
+    delta = lz4decompress(delta)
+
+    if getmeta:
+        if version == 0:
+            meta = {}
+        else:
+            metastart = deltastart + 8 + deltalen
+            metalen = struct.unpack_from('!I', rawentry, metastart)[0]
+
+            rawmeta = rawentry[metastart + 4:metastart + 4 + metalen]
+            meta = shallowutil.parsepackmeta(rawmeta)
+        return filename, node, deltabasenode, delta, meta
+    else:
+        return filename, node, deltabasenode, delta
 
 class fastdatapack(basepack.basepack):
     INDEXSUFFIX = INDEXSUFFIX
