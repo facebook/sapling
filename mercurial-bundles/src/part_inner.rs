@@ -18,6 +18,7 @@ use bytes::Bytes;
 use futures::stream::Map;
 use tokio_io::AsyncRead;
 
+use capabilities;
 use changegroup;
 use errors::*;
 use futures_ext::{BoxStreamWrapper, StreamExt, StreamLayeredExt, TakeWhile};
@@ -32,6 +33,7 @@ lazy_static! {
         let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
         m.insert(PartHeaderType::Changegroup, hashset!{"version", "nbchanges", "treemanifest"});
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
+        m.insert(PartHeaderType::Replycaps, hashset!{});
         m
     };
 }
@@ -64,6 +66,7 @@ pub type BoxInnerStream<'a, T> =
 pub enum InnerPart {
     Cg2(changegroup::Part),
     WirePack(wirepack::Part),
+    Caps(capabilities::Capabilities),
 }
 
 impl InnerPart {
@@ -144,6 +147,9 @@ pub fn inner_stream<'a, R: AsyncRead + BufRead + 'a + Send>(
                 wirepack::Kind::Tree,
             ));
             Box::new(wirepack_stream)
+        }
+        &PartHeaderType::Replycaps => {
+            Box::new(wrapped_stream.decode(capabilities::CapabilitiesUnpacker))
         }
         _ => panic!("TODO: make this an error"),
     }

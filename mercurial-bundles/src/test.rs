@@ -159,7 +159,7 @@ fn unknown_part(ct: Option<CompressorType>) {
 
     builder.set_compressor_type(ct);
 
-    let unknown_part = PartEncodeBuilder::mandatory(PartHeaderType::Replycaps).unwrap();
+    let unknown_part = PartEncodeBuilder::mandatory(PartHeaderType::Listkeys).unwrap();
 
     builder.add_part(unknown_part);
     let encode_fut = builder.build();
@@ -199,7 +199,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     assert_eq!(app_errors.len(), 1);
     assert_matches!(&app_errors[0],
                     &ErrorKind::BundleUnknownPart(ref header)
-                    if header.part_type() == &PartHeaderType::Replycaps && header.mandatory());
+                    if header.part_type() == &PartHeaderType::Listkeys && header.mandatory());
 }
 
 fn parse_bundle(

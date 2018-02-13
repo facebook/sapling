@@ -453,10 +453,14 @@ impl HgCommands for RepoClient {
         R: AsyncRead + BufRead + 'static + Send,
     {
         info!(self.logger, "unbundle heads {:?}", heads);
+        let logger = self.logger.new(o!("command" => "unbundle"));
         stream
-            .filter_map(|event| match event {
+            .filter_map(move |event| match event {
                 StreamEvent::Done(remainder) => Some(remainder),
-                StreamEvent::Next(_) => None,
+                StreamEvent::Next(item) => {
+                    debug!(logger, "bundle2 item: {:?}", item);
+                    None
+                }
             })
             .into_future()
             .map(|(remainder, _)| remainder.expect("No remainder left"))

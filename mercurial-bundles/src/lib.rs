@@ -53,6 +53,7 @@ extern crate partial_io;
 pub mod bundle2;
 pub mod bundle2_encode;
 pub mod changegroup;
+mod capabilities;
 mod chunk;
 mod delta;
 pub mod parts;
