@@ -8,7 +8,7 @@
 """extends the existing commit amend functionality
 
 Adds an hg amend command that amends the current parent changeset with the
-changes in the working copy.  Similiar to the existing hg commit --amend
+changes in the working copy.  Similar to the existing hg commit --amend
 except it doesn't prompt for the commit message unless --edit is provided.
 
 Allows amending changesets that have children and can automatically rebase
@@ -35,6 +35,11 @@ To automatically update the commit date, enable the following config option::
 
     [fbamend]
     date = implicitupdate
+
+To stop fbamend from automatically rebasing stacked changes::
+
+    [commands]
+    amend.autorebase = false
 
 Note that if --date is specified on the command line, it takes precedence.
 
@@ -101,6 +106,7 @@ configitem('fbamend', 'date', default=None)
 configitem('fbamend', 'education', default=None)
 configitem('fbamend', 'safestrip', default=True)
 configitem('fbamend', 'userestack', default=False)
+configitem('commands', 'amend.autorebase', default=True)
 
 testedwith = 'ships-with-fb-hgext'
 
@@ -275,9 +281,14 @@ def amend(ui, repo, *pats, **opts):
             # restacked.
             if (old.manifestnode() == newcommit.manifestnode() and
                 not repo[None].dirty()):
-                ui.status(_('(auto-rebasing descendants, use --no-rebase '
-                            'to disable this)\n'))
-                rebase = True
+                if ui.configbool('commands', 'amend.autorebase'):
+                    ui.status(_('(auto-rebasing descendants, use --no-rebase'
+                            ' or set [commands] amend.autorebase=False in hgrc'
+                            ' to disable this)\n'))
+
+                    rebase = True
+                else :
+                    rebase = False
 
         if haschildren and not rebase:
             msg = _("warning: the changeset's children were left behind\n")

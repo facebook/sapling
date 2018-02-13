@@ -68,10 +68,10 @@ outputs, which should be fixed later.
   hgext/fastmanifest/implementation.py:23: direct symbol import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES from hgext.fastmanifest.constants
   hgext/fastmanifest/implementation.py:23: symbol import follows non-symbol import: hgext.fastmanifest.constants
   hgext/fastmanifest/implementation.py:30: import should be relative: hgext
-  hgext/fbamend/__init__.py:58: symbol import follows non-symbol import: mercurial.node
-  hgext/fbamend/__init__.py:60: symbol import follows non-symbol import: mercurial.i18n
-  hgext/fbamend/__init__.py:62: import should be relative: hgext
-  hgext/fbamend/__init__.py:81: stdlib import "tempfile" follows local import: hgext.fbamend
+  hgext/fbamend/__init__.py:63: symbol import follows non-symbol import: mercurial.node
+  hgext/fbamend/__init__.py:65: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/__init__.py:67: import should be relative: hgext
+  hgext/fbamend/__init__.py:86: stdlib import "tempfile" follows local import: hgext.fbamend
   hgext/fbamend/common.py:10: relative import of stdlib module
   hgext/fbamend/common.py:10: direct symbol import defaultdict from collections
   hgext/fbamend/common.py:12: import should be relative: hgext

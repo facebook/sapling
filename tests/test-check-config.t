@@ -59,6 +59,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: fastmanifest.silent (bool)
   undocumented: fastmanifest.usecache (bool)
   undocumented: fastmanifest.usetree (bool)
+  undocumented: fbamend.education (str)
   undocumented: fbconduit.backingrepos (list) [[reponame]]
   undocumented: fbconduit.gitcallsigns (list)
   undocumented: fbconduit.host (str)
