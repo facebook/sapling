@@ -137,6 +137,9 @@ lib/clib/portability/inet.h
 lib/clib/portability/portability.h
 lib/clib/portability/unistd.h
 lib/clib/sha1.h
+lib/third-party/mman-win32/mman.c
+lib/third-party/mman-win32/mman.h
+lib/third-party/mman-win32/test.c
 lib/third-party/sha1dc/sha1.c
 lib/third-party/sha1dc/sha1.h
 lib/third-party/sha1dc/ubc_check.c
