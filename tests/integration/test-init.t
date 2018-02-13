@@ -80,22 +80,42 @@ setup repo2
   $ echo content > c
   $ hg add c
   $ hg ci -mc
-  $ hg log
-  changeset:   2:3e19bf519e9a
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c
+  $ mkdir dir
+  $ echo 1 > dir/1
+  $ mkdir dir2
+  $ echo 2 > dir/2
+  $ hg addremove
+  adding dir/1
+  adding dir/2
+  $ hg ci -m 'new directory'
+  $ echo cc > c
+  $ hg addremove
+  $ hg ci -m 'modify file'
+  $ hg debugdrawdag <<'EOS'
+  >   D  # D/D=1\n2\n
+  >  /|  # B/D=1\n
+  > B C  # C/D=2\n
+  > |/   # A/D=x\n
+  > A
+  > EOS
+  $ hg log --graph -T '{node|short} {desc}'
+  o    e635b24c95f7 D
+  |\
+  | o  d351044ef463 C
+  | |
+  o |  9a827afb7e25 B
+  |/
+  o  af6aa0dfdf3d A
   
-  changeset:   1:0e067c57feba
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     b
-  
-  changeset:   0:3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
+  @  329b10223740 modify file
+  |
+  o  a42a44555d7c new directory
+  |
+  o  3e19bf519e9a c
+  |
+  o  0e067c57feba b
+  |
+  o  3903775176ed a
   
   $ cd ..
   $ blobimport --blobstore files --linknodes repo-hg repo
@@ -122,36 +142,50 @@ start mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
-  new changesets 0e067c57feba:3e19bf519e9a
-  (run 'hg update' to get a working copy)
-  $ hg log -r '::3e19bf519e9a'
-  changeset:   0:3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
-  
-  changeset:   1:0e067c57feba
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     b
-  
-  changeset:   2:3e19bf519e9a
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c
+  added 8 changesets with 0 changes to 0 files (+1 heads)
+  new changesets af6aa0dfdf3d:329b10223740
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+  $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
+  o  329b10223740 modify file
+  |
+  o  a42a44555d7c new directory
+  |
+  o  3e19bf519e9a c
+  |
+  o  0e067c57feba b
+  |
+  @  3903775176ed a
   
   $ ls
   a
-  $ hgmn --config paths.default=ssh://user@dummy/repo up 3e19bf519e9a
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn --config paths.default=ssh://user@dummy/repo up a42a44555d7c
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   a
   b
   c
+  dir
   $ cat c
   content
+  $ hgmn --config paths.default=ssh://user@dummy/repo up 329b10223740
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log c -T '{node|short} {desc}\n'
+  warning: file log can be slow on large repos - use -f to speed it up
+  329b10223740 modify file
+  3e19bf519e9a c
+  $ cat dir/1
+  1
+  $ cat dir/2
+  2
+  $ hgmn --config paths.default=ssh://user@dummy/repo up e635b24c95f7
+  4 files updated, 0 files merged, 5 files removed, 0 files unresolved
+Sort the output because the output is unpredictable because of merges
+  $ hg log D --follow -T '{node|short} {desc}\n' | sort
+  e635b24c95f7 D
+  9a827afb7e25 B
+  d351044ef463 C
+  af6aa0dfdf3d A
 
 Create a new bookmark and try and send it over the wire
 Test commented while we have no bookmark support in blobimport or easy method

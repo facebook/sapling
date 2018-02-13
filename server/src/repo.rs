@@ -6,7 +6,7 @@
 
 //! State for a single source control Repo
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{self, Debug};
 use std::io::{BufRead, Cursor, Write};
 use std::mem;
@@ -590,19 +590,35 @@ fn fetch_linknode(
 
 fn get_file_history(
     repo: Arc<BlobRepo>,
-    node: NodeHash,
+    startnode: NodeHash,
     path: MPath,
 ) -> BoxStream<(NodeHash, Parents, NodeHash), Error> {
-    let parents = repo.get_parents(&node);
-    let linknode = RepoPath::file(path)
-        .into_future()
-        .and_then(move |path| repo.get_linknode(path, &node));
+    if startnode == NULL_HASH {
+        return stream::empty().boxify();
+    }
+    // TODO(stash): handle renames
+    let mut startstate = VecDeque::new();
+    startstate.push_back(startnode);
+    let seen_nodes: HashSet<_> = [startnode].iter().cloned().collect();
 
-    parents
-        .join(linknode)
-        .map(move |(parents, linknode)| stream::once(Ok((node, parents, linknode))))
-        .flatten_stream()
-        .boxify()
+    stream::unfold(
+        (startstate, seen_nodes),
+        move |cur_data: (VecDeque<NodeHash>, HashSet<NodeHash>)| {
+            let (mut nodes, mut seen_nodes) = cur_data;
+            let node = nodes.pop_front()?;
+
+            let parents = repo.get_parents(&node);
+            let linknode = RepoPath::file(path.clone()).into_future().and_then({
+                let repo = repo.clone();
+                move |path| repo.get_linknode(path, &node)
+            });
+
+            Some(parents.join(linknode).map(move |(parents, linknode)| {
+                nodes.extend(parents.into_iter().filter(|p| seen_nodes.insert(*p)));
+                ((node, parents, linknode), (nodes, seen_nodes))
+            }))
+        },
+    ).boxify()
 }
 
 fn create_remotefilelog_blob(
