@@ -49,6 +49,8 @@
 #include "lib/clib/portability/unistd.h"
 
 #define MAX_PAGED_IN_DATAPACK  (1024 * 1024 * 1024)
+#define VERSION 0
+#define LARGE_FANOUT 0x80
 
 /**
  * This is an exact representation of an index entry on disk.  Do not consume
@@ -96,10 +98,7 @@ typedef struct _pack_chain_t {
  * consume the fields directly, as they may need processing.
  */
 PACKEDSTRUCT(typedef struct _disk_index_header_t {
-#define VERSION 0
   uint8_t version;
-
-#define LARGE_FANOUT 0x80
   uint8_t config;
 }) disk_index_header_t;
 
