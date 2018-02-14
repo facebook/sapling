@@ -163,7 +163,13 @@ class _gitlfsremote(object):
         useragent = ui.config('experimental', 'lfs.user-agent')
         if not useragent:
             useragent = 'mercurial/%s git/2.15.1' % util.version()
-        self.urlopener = urlmod.opener(ui, authinfo, useragent)
+        try:
+            self.urlopener = urlmod.opener(ui, authinfo, useragent)
+        except TypeError:
+            # System hg can have old version of opener() which does not require
+            # user agent.
+            self.urlopener = urlmod.opener(ui, authinfo)
+
         self.retry = ui.configint('lfs', 'retry')
 
     def writebatch(self, pointers, fromstore):
