@@ -17,6 +17,7 @@ use delta;
 use errors::*;
 use utils::BytesExt;
 
+mod converter;
 pub mod packer;
 #[cfg(test)]
 mod quickcheck_types;
