@@ -86,7 +86,7 @@ mod test {
     #[test]
     fn invalid_node() {
         let repo = Arc::new(linear::getrepo());
-        let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
+        let nodehash = string_to_nodehash("1000000000000000000000000000000000000000");
         let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
         let repo_generation = RepoGenCache::new(10);
 
