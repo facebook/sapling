@@ -89,9 +89,7 @@ impl Decoder for Cg2Unpacker {
                     let msg = format!(
                         "incomplete changegroup: {} bytes remaining in \
                          buffer. State: {:?}, First 128 bytes: {:?}",
-                        len,
-                        self.state,
-                        bytes,
+                        len, self.state, bytes,
                     );
                     bail_err!(ErrorKind::Cg2Decode(msg));
                 }
@@ -121,10 +119,9 @@ impl Cg2Unpacker {
         match state {
             State::Changeset => match Self::decode_chunk(buf)? {
                 None => Ok((None, State::Changeset)),
-                Some(CgChunk::Empty) => Ok((
-                    Some(Part::SectionEnd(Section::Changeset)),
-                    State::Manifest,
-                )),
+                Some(CgChunk::Empty) => {
+                    Ok((Some(Part::SectionEnd(Section::Changeset)), State::Manifest))
+                }
                 Some(CgChunk::Delta(chunk)) => Ok((
                     Some(Part::CgChunk(Section::Changeset, chunk)),
                     State::Changeset,
@@ -157,10 +154,9 @@ impl Cg2Unpacker {
     fn decode_filelog_chunk(buf: &mut BytesMut, f: MPath) -> Result<(Option<Part>, State)> {
         match Self::decode_chunk(buf)? {
             None => Ok((None, State::Filelog(f))),
-            Some(CgChunk::Empty) => Ok((
-                Some(Part::SectionEnd(Section::Filelog(f))),
-                State::Filename,
-            )),
+            Some(CgChunk::Empty) => {
+                Ok((Some(Part::SectionEnd(Section::Filelog(f))), State::Filename))
+            }
             Some(CgChunk::Delta(chunk)) => Ok((
                 Some(Part::CgChunk(Section::Filelog(f.clone()), chunk)),
                 State::Filelog(f),
@@ -184,8 +180,7 @@ impl Cg2Unpacker {
         if chunk_len < CHUNK_HEADER_LEN {
             let msg = format!(
                 "invalid chunk: length >= {} required, found {}",
-                CHUNK_HEADER_LEN,
-                chunk_len
+                CHUNK_HEADER_LEN, chunk_len
             );
             bail_err!(ErrorKind::Cg2Decode(msg));
         }

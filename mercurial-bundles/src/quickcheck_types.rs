@@ -155,15 +155,13 @@ impl Arbitrary for Cg2PartSequence {
                 self.manifests.clone(),
                 self.filelogs.clone(),
             ).shrink()
-                .map(|(c, m, f)| {
-                    Cg2PartSequence {
-                        changesets: c,
-                        changesets_end: Part::SectionEnd(Section::Changeset),
-                        manifests: m,
-                        manifests_end: Part::SectionEnd(Section::Manifest),
-                        filelogs: f,
-                        end: Part::End,
-                    }
+                .map(|(c, m, f)| Cg2PartSequence {
+                    changesets: c,
+                    changesets_end: Part::SectionEnd(Section::Changeset),
+                    manifests: m,
+                    manifests_end: Part::SectionEnd(Section::Manifest),
+                    filelogs: f,
+                    end: Part::End,
                 }),
         )
     }
@@ -217,15 +215,17 @@ impl Arbitrary for changegroup::CgDeltaChunk {
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
         // Don't bother trying to shrink node hashes -- the meat is in the delta.
         let clone = self.clone();
-        Box::new(self.delta.shrink().map(move |delta| {
-            changegroup::CgDeltaChunk {
-                node: clone.node.clone(),
-                p1: clone.p1.clone(),
-                p2: clone.p2.clone(),
-                base: clone.base.clone(),
-                linknode: clone.linknode.clone(),
-                delta: delta,
-            }
-        }))
+        Box::new(
+            self.delta
+                .shrink()
+                .map(move |delta| changegroup::CgDeltaChunk {
+                    node: clone.node.clone(),
+                    p1: clone.p1.clone(),
+                    p2: clone.p2.clone(),
+                    base: clone.base.clone(),
+                    linknode: clone.linknode.clone(),
+                    delta: delta,
+                }),
+        )
     }
 }

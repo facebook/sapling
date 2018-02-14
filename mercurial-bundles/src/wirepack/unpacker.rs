@@ -55,9 +55,7 @@ impl Decoder for WirePackUnpacker {
                     let msg = format!(
                         "incomplete wirepack: {} bytes remaining in \
                          buffer. State: {:?}, First 128 bytes: {:?}",
-                        len,
-                        self.state,
-                        bytes,
+                        len, self.state, bytes,
                     );
                     bail_err!(ErrorKind::WirePackDecode(msg));
                 }
