@@ -8,6 +8,7 @@
 #![feature(never_type)]
 
 #[cfg(test)]
+#[macro_use]
 extern crate assert_matches;
 extern crate bytes;
 #[macro_use]
@@ -20,6 +21,7 @@ extern crate tokio_io;
 
 use bytes::Bytes;
 use futures::{Async, Future, IntoFuture, Poll, Sink, Stream};
+use futures::sync::oneshot;
 use tokio_io::codec::{Decoder, Encoder};
 
 mod bytes_stream;
@@ -162,6 +164,16 @@ pub trait StreamExt: Stream {
         Enumerate::new(self)
     }
 
+    /// Creates a stream wrapper and a future. The future will resolve into the wrapped stream when
+    /// the stream wrapper returns None. It uses ConservativeReceiver to ensure that deadlocks are
+    /// easily caught when one tries to poll on the receiver before consuming the stream.
+    fn return_remainder(self) -> (ReturnRemainder<Self>, ConservativeReceiver<Self>)
+    where
+        Self: Sized,
+    {
+        ReturnRemainder::new(self)
+    }
+
     /// Create a `Send`able boxed version of this `Stream`.
     #[inline]
     fn boxify(self) -> BoxStream<Self::Item, Self::Error>
@@ -240,6 +252,70 @@ impl<In: Stream> Stream for Enumerate<In> {
     }
 }
 
+/// This is a wrapper around oneshot::Receiver that will return error when the receiver was polled
+/// and the result was not ready. This is a very strict way of preventing deadlocks in code when
+/// receiver is polled before the sender has send the result
+pub struct ConservativeReceiver<T>(oneshot::Receiver<T>);
+
+impl<T> ConservativeReceiver<T> {
+    pub fn new(recv: oneshot::Receiver<T>) -> Self {
+        ConservativeReceiver(recv)
+    }
+}
+
+impl<T> Future for ConservativeReceiver<T> {
+    type Item = T;
+    type Error = oneshot::Canceled;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        match self.0.poll()? {
+            Async::Ready(item) => Ok(Async::Ready(item)),
+            Async::NotReady => Err(oneshot::Canceled),
+        }
+    }
+}
+
+pub struct ReturnRemainder<In> {
+    inner: Option<In>,
+    send: Option<oneshot::Sender<In>>,
+}
+
+impl<In> ReturnRemainder<In> {
+    fn new(inner: In) -> (Self, ConservativeReceiver<In>) {
+        let (send, recv) = oneshot::channel();
+        (
+            Self {
+                inner: Some(inner),
+                send: Some(send),
+            },
+            ConservativeReceiver::new(recv),
+        )
+    }
+}
+
+impl<In: Stream> Stream for ReturnRemainder<In> {
+    type Item = In::Item;
+    type Error = In::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let maybe_item = match self.inner {
+            Some(ref mut inner) => try_ready!(inner.poll()),
+            None => return Ok(Async::Ready(None)),
+        };
+
+        if maybe_item.is_none() {
+            let inner = self.inner
+                .take()
+                .expect("inner was just polled, should be some");
+            let send = self.send.take().expect("send is None iff inner is None");
+            // The Receiver will handle errors
+            let _ = send.send(inner);
+        }
+
+        Ok(Async::Ready(maybe_item))
+    }
+}
+
 /// A convenience macro for working with `io::Result<T>` from the `Read` and
 /// `Write` traits.
 ///
@@ -264,6 +340,7 @@ mod test {
     use futures::Stream;
     use futures::stream;
     use futures::sync::mpsc;
+    use tokio_core::reactor::Core;
 
     #[derive(Debug)]
     struct MyErr;
@@ -274,11 +351,9 @@ mod test {
         }
     }
 
-
     #[test]
     fn discard() {
         use futures::sync::mpsc;
-        use tokio_core::reactor::Core;
 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
@@ -302,5 +377,37 @@ mod test {
         let v = es.collect().wait();
 
         assert_eq!(v, Ok(vec![(0, "hello"), (1, "there"), (2, "world")]));
+    }
+
+    #[test]
+    fn return_remainder() {
+        use futures::future::poll_fn;
+
+        let s = stream::iter_ok::<_, ()>(vec!["hello", "there", "world"]).fuse();
+        let (mut s, mut remainder) = s.return_remainder();
+
+        let mut core = Core::new().unwrap();
+        let res: Result<(), ()> = core.run(poll_fn(move || {
+            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+
+            assert_eq!(s.poll(), Ok(Async::Ready(Some("hello"))));
+            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+
+            assert_eq!(s.poll(), Ok(Async::Ready(Some("there"))));
+            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+
+            assert_eq!(s.poll(), Ok(Async::Ready(Some("world"))));
+            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+
+            assert_eq!(s.poll(), Ok(Async::Ready(None)));
+            match remainder.poll() {
+                Ok(Async::Ready(s)) => assert!(s.is_done()),
+                bad => panic!("unexpected result: {:?}", bad),
+            }
+
+            Ok(Async::Ready(()))
+        }));
+
+        assert_matches!(res, Ok(()));
     }
 }
