@@ -201,7 +201,7 @@ fn arbitrary_frag_content<G: Gen>(g: &mut G) -> Vec<u8> {
 }
 
 /// Apply a Delta to an input text, returning the result.
-pub fn apply(text: &[u8], delta: Delta) -> Vec<u8> {
+pub fn apply(text: &[u8], delta: &Delta) -> Vec<u8> {
     let mut chunks = Vec::with_capacity(delta.frags.len() * 2);
     let mut off = 0;
 
@@ -231,7 +231,7 @@ pub fn apply(text: &[u8], delta: Delta) -> Vec<u8> {
 pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Vec<u8> {
     let mut res = Vec::from(text);
     for delta in deltas {
-        res = apply(&res, delta);
+        res = apply(&res, &delta);
     }
     res
 }
@@ -356,7 +356,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"aaaa\nxxxx\ncccc\n");
     }
 
@@ -378,7 +378,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"aaaabbbb\ncccc\ndddd\n");
     }
 
@@ -395,7 +395,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
@@ -422,7 +422,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"zzzz\nyyyy\nxxxx\n");
     }
 
@@ -439,7 +439,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"aaaa\nbbbbcccc");
     }
 
@@ -456,7 +456,7 @@ mod tests {
             ],
         };
 
-        let res = apply(text, delta);
+        let res = apply(text, &delta);
         assert_eq!(&res[..], b"aaaa\ncccc\n");
     }
 }

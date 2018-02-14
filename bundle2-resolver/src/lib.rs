@@ -7,6 +7,8 @@
 #![deny(warnings)]
 #![feature(conservative_impl_trait)]
 
+extern crate bytes;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -16,8 +18,10 @@ extern crate tokio_io;
 
 extern crate blobrepo;
 extern crate mercurial_bundles;
+extern crate mercurial_types;
 
 pub mod errors;
 mod resolver;
+mod wirepackparser;
 
 pub use resolver::resolve;

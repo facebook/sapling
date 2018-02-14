@@ -5,3 +5,8 @@
 // GNU General Public License version 2 or any later version.
 
 pub use failure::{Error, Result, ResultExt};
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "Malformed treemanifest part: {}", _0)] MalformedTreemanifestPart(String),
+}
