@@ -512,14 +512,9 @@ impl HgCommands for RepoClient {
                 .boxify();
         }
 
-        if params.mfnodes.len() != 1 || params.basemfnodes.len() != 1 {
-            // For now, just 1 mfnode and 1 basenode
-            return Err(err_msg("only one mfnode and one basemfnode is supported"))
-                .into_future()
-                .boxify();
-        }
-        let manifest_id = params.mfnodes.get(0).unwrap();
-        let basemfnode = params.basemfnodes.get(0).unwrap();
+        // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
+        // already has can be sent to the client.
+        let basemfnode = params.basemfnodes.get(0).unwrap_or(&NULL_HASH);
 
         if params.rootdir.len() != 0 {
             // For now, only root repo
@@ -535,51 +530,23 @@ impl HgCommands for RepoClient {
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
 
-        let manifest = self.repo.hgrepo.get_manifest_by_nodeid(manifest_id);
-        let basemanifest = self.repo.hgrepo.get_manifest_by_nodeid(basemfnode);
+        // TODO(stash): T25850889 same entries will be generated over and over again.
+        // Potentially it can be very inefficient.
+        let changed_entries = params.mfnodes.iter().fold(
+            stream::empty().boxify(),
+            |cur_stream, manifest_id| {
+                let new_stream =
+                    get_changed_entry_stream(self.repo.hgrepo.clone(), manifest_id, basemfnode);
+                cur_stream.select(new_stream).boxify()
+            },
+        );
 
-        let changed_entries = manifest
-            .join(basemanifest)
-            .map(|(mf, basemf)| changed_entry_stream(mf, basemf, MPath::empty()))
-            .flatten_stream();
+        let changed_entries = changed_entries.filter({
+            let mut used_hashes = HashSet::new();
+            move |entry| used_hashes.insert(*entry.0.get_hash())
+        });
 
-        let changed_entries = changed_entries
-            .filter_map(move |entry_status| match entry_status.status {
-                EntryStatus::Added(entry) => {
-                    if entry.get_type() == Type::Tree {
-                        Some((entry, entry_status.path))
-                    } else {
-                        None
-                    }
-                }
-                EntryStatus::Modified(entry, _) => {
-                    if entry.get_type() == Type::Tree {
-                        Some((entry, entry_status.path))
-                    } else {
-                        None
-                    }
-                }
-                EntryStatus::Deleted(..) => None,
-            })
-            .and_then({
-                let hgrepo = self.repo.hgrepo.clone();
-                move |(entry, path)| fetch_linknode(hgrepo.clone(), entry, path)
-            })
-            .map(|(entry, linknode, basepath)| (entry, linknode, basepath));
-
-        // Append root manifest
-        let root_entry_stream = Ok(self.repo
-            .hgrepo
-            .get_root_entry(&ManifestId::new(*manifest_id)))
-            .into_future()
-            .and_then({
-                let hgrepo = self.repo.hgrepo.clone();
-                move |entry| fetch_linknode(hgrepo.clone(), entry, MPath::empty())
-            })
-            .map(|(entry, linknode, basepath)| stream::once(Ok((entry, linknode, basepath))))
-            .flatten_stream();
-
-        parts::treepack_part(changed_entries.chain(root_entry_stream))
+        parts::treepack_part(changed_entries)
             .into_future()
             .and_then(|part| {
                 bundle.add_part(part);
@@ -598,6 +565,56 @@ impl HgCommands for RepoClient {
             .and_then(move |(node, path)| create_remotefilelog_blob(repo.clone(), node, path))
             .boxify()
     }
+}
+
+fn get_changed_entry_stream(
+    repo: Arc<BlobRepo>,
+    mfid: &NodeHash,
+    basemfid: &NodeHash,
+) -> BoxStream<(Box<Entry + Sync>, NodeHash, MPath), Error> {
+    let manifest = repo.get_manifest_by_nodeid(mfid);
+    let basemanifest = repo.get_manifest_by_nodeid(basemfid);
+
+    let changed_entries = manifest
+        .join(basemanifest)
+        .map(|(mf, basemf)| changed_entry_stream(mf, basemf, MPath::empty()))
+        .flatten_stream();
+
+    let changed_entries = changed_entries
+        .filter_map(move |entry_status| match entry_status.status {
+            EntryStatus::Added(entry) => {
+                if entry.get_type() == Type::Tree {
+                    Some((entry, entry_status.path))
+                } else {
+                    None
+                }
+            }
+            EntryStatus::Modified(entry, _) => {
+                if entry.get_type() == Type::Tree {
+                    Some((entry, entry_status.path))
+                } else {
+                    None
+                }
+            }
+            EntryStatus::Deleted(..) => None,
+        })
+        .and_then({
+            let hgrepo = repo.clone();
+            move |(entry, path)| fetch_linknode(hgrepo.clone(), entry, path)
+        })
+        .map(|(entry, linknode, basepath)| (entry, linknode, basepath));
+
+    // Append root manifest
+    let root_entry_stream = Ok(repo.get_root_entry(&ManifestId::new(*mfid)))
+        .into_future()
+        .and_then({
+            let hgrepo = repo.clone();
+            move |entry| fetch_linknode(hgrepo.clone(), entry, MPath::empty())
+        })
+        .map(|(entry, linknode, basepath)| stream::once(Ok((entry, linknode, basepath))))
+        .flatten_stream();
+
+    changed_entries.chain(root_entry_stream).boxify()
 }
 
 fn fetch_linknode(

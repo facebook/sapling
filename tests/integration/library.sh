@@ -16,6 +16,18 @@ function wait_for_mononoke {
   done
 }
 
+function setup_common_config {
+    setup_config_repo
+  cat >> "$HGRCPATH" <<EOF
+[ui]
+ssh="$DUMMYSSH"
+[extensions]
+remotefilelog=
+[remotefilelog]
+cachepath=$TESTTMP/cachepath
+EOF
+}
+
 function setup_config_repo {
   hg init mononoke-config
   cd mononoke-config || exit
@@ -53,7 +65,7 @@ function edenserver {
 
 # Run an hg binary configured with the settings required to talk to Mononoke.
 function hgmn {
-  hg --config ui.ssh="$DUMMYSSH" --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
+  hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/repo --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
 }
 
 hgcloneshallow() {
@@ -102,5 +114,32 @@ sendtrees=True
 reponame=$2
 cachepath=$TESTTMP/hgcache
 shallowtrees=True
+EOF
+}
+
+function setup_hg_server() {
+  cat >> .hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+[treemanifest]
+server=True
+[remotefilelog]
+server=True
+shallowtrees=True
+EOF
+}
+
+function setup_hg_client() {
+  cat >> .hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+[treemanifest]
+server=False
+treeonly=True
+[remotefilelog]
+server=False
+reponame=repo
 EOF
 }

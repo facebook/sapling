@@ -10,13 +10,13 @@ use std::sync::Arc;
 
 use bincode;
 use failure;
-use futures::future::{Future, IntoFuture};
+use futures::future::{Either, Future, IntoFuture};
 
 use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{Blob, BlobNode, Changeset, MPath, Parents, Time};
-use mercurial_types::nodehash::{ChangesetId, ManifestId};
+use mercurial_types::nodehash::{ChangesetId, ManifestId, NULL_HASH};
 
 use errors::*;
 
@@ -55,22 +55,32 @@ impl BlobChangeset {
         changesetid: &ChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = changesetid.clone();
-        let key = cskey(&changesetid);
+        if changesetid == ChangesetId::new(NULL_HASH) {
+            let revlogcs = RevlogChangeset::new_null();
+            let cs = BlobChangeset {
+                changesetid,
+                revlogcs,
+            };
+            Either::A(Ok(Some(cs)).into_future())
+        } else {
+            let key = cskey(&changesetid);
 
-        blobstore.get(key).and_then(move |got| match got {
-            None => Ok(None),
-            Some(blob) => {
-                let RawCSBlob { parents, blob } = bincode::deserialize(blob.as_ref())?;
-                let (p1, p2) = parents.get_nodes();
-                let blob = Blob::from(blob.into_owned());
-                let node = BlobNode::new(blob, p1, p2);
-                let cs = BlobChangeset {
-                    changesetid: changesetid,
-                    revlogcs: RevlogChangeset::new(node)?,
-                };
-                Ok(Some(cs))
-            }
-        })
+            let fut = blobstore.get(key).and_then(move |got| match got {
+                None => Ok(None),
+                Some(blob) => {
+                    let RawCSBlob { parents, blob } = bincode::deserialize(blob.as_ref())?;
+                    let (p1, p2) = parents.get_nodes();
+                    let blob = Blob::from(blob.into_owned());
+                    let node = BlobNode::new(blob, p1, p2);
+                    let cs = BlobChangeset {
+                        changesetid: changesetid,
+                        revlogcs: RevlogChangeset::new(node)?,
+                    };
+                    Ok(Some(cs))
+                }
+            });
+            Either::B(fut)
+        }
     }
 
     pub fn save(

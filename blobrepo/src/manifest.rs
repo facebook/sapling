@@ -15,7 +15,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::{self, Details};
 use mercurial_types::{Entry, MPath, Manifest};
-use mercurial_types::nodehash::ManifestId;
+use mercurial_types::nodehash::{ManifestId, NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -34,22 +34,30 @@ impl BlobManifest {
         manifestid: &ManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
-        get_node(blobstore, nodehash)
-            .and_then({
-                let blobstore = blobstore.clone();
-                move |nodeblob| {
-                    let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-                    blobstore.get(blobkey)
-                }
-            })
-            .and_then({
-                let blobstore = blobstore.clone();
-                move |got| match got {
-                    None => Ok(None),
-                    Some(blob) => Ok(Some(Self::parse(blobstore, blob)?)),
-                }
-            })
-            .boxify()
+        if nodehash == NULL_HASH {
+            Ok(Some(BlobManifest {
+                blobstore: blobstore.clone(),
+                files: BTreeMap::new(),
+            })).into_future()
+                .boxify()
+        } else {
+            get_node(blobstore, nodehash)
+                .and_then({
+                    let blobstore = blobstore.clone();
+                    move |nodeblob| {
+                        let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
+                        blobstore.get(blobkey)
+                    }
+                })
+                .and_then({
+                    let blobstore = blobstore.clone();
+                    move |got| match got {
+                        None => Ok(None),
+                        Some(blob) => Ok(Some(Self::parse(blobstore, blob)?)),
+                    }
+                })
+                .boxify()
+        }
     }
 
     pub fn parse<D: AsRef<[u8]>>(blobstore: Arc<Blobstore>, data: D) -> Result<Self> {

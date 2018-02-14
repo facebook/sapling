@@ -14,12 +14,13 @@ use std::sync::Arc;
 use std::usize;
 
 use failure::Error;
-use futures::future::{self, Future};
+use futures::IntoFuture;
+use futures::future::{self, Either, Future};
 use futures::stream::{self, Stream};
 
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
-use mercurial_types::NodeHash;
+use mercurial_types::{NodeHash, NULL_HASH};
 
 use nodehashkey::Key;
 
@@ -59,7 +60,11 @@ impl RepoGenCache {
         repo: &Arc<BlobRepo>,
         nodeid: NodeHash,
     ) -> impl Future<Item = Generation, Error = Error> + Send {
-        self.cache.get((repo, nodeid))
+        if nodeid == NULL_HASH {
+            Either::A(Ok(Generation(0)).into_future())
+        } else {
+            Either::B(self.cache.get((repo, nodeid.clone())))
+        }
     }
 }
 

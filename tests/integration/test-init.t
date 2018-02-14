@@ -140,9 +140,9 @@ start mononoke
   $ cd repo2
   $ hg up -q 0
 Test a pull of one specific revision
-  $ hgmn pull ssh://user@dummy/repo -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
+  $ hgmn pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
 Pull the rest
-  $ hgmn pull ssh://user@dummy/repo -q
+  $ hgmn pull -q
 
   $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
   o  329b10223740 modify file
@@ -157,8 +157,7 @@ Pull the rest
   
   $ ls
   a
-  $ hgmn --config paths.default=ssh://user@dummy/repo up 28468743616e
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn up 28468743616e -q
   $ ls
   a
   b
@@ -166,8 +165,7 @@ Pull the rest
   dir
   $ cat c
   cc
-  $ hgmn --config paths.default=ssh://user@dummy/repo up 28468743616e
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgmn up 28468743616e -q
   $ hg log c -T '{node|short} {desc}\n'
   warning: file log can be slow on large repos - use -f to speed it up
   329b10223740 modify file
@@ -184,9 +182,9 @@ Pull the rest
     dir/1
   R dir/1
 
-  $ hgmn --config paths.default=ssh://user@dummy/repo up e635b24c95f7
-  4 files updated, 0 files merged, 5 files removed, 0 files unresolved
-Sort the output because the output is unpredictable because of merges
+  $ hgmn up -q e635b24c95f7
+
+Sort the output because it may be unpredictable because of the merge
   $ hg log D --follow -T '{node|short} {desc}\n' | sort
   9a827afb7e25 B
   af6aa0dfdf3d A

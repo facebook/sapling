@@ -157,6 +157,18 @@ impl RevlogChangeset {
         Self::parse(node)
     }
 
+    pub fn new_null() -> Self {
+        Self {
+            parents: Parents::new(None, None),
+            manifestid: ManifestId::new(NULL_HASH),
+            user: Vec::new(),
+            time: Time { time: 0, tz: 0 },
+            extra: Extra(BTreeMap::new()),
+            files: Vec::new(),
+            comments: Vec::new(),
+        }
+    }
+
     // format used:
     // nodeid\n        : manifest node in ascii
     // user\n          : user, no \n or \r allowed
