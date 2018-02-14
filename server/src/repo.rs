@@ -117,6 +117,8 @@ fn bundle2caps() -> String {
         ("HG20", vec![]),
         ("listkeys", vec![]),
         ("changegroup", vec!["02"]),
+        ("b2x:infinitepush", vec![]),
+        ("b2x:infinitepushscratchbookmarks", vec![]),
     ];
 
     let mut encodedcaps = vec![];
