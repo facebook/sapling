@@ -100,7 +100,6 @@
   hgext/nointerrupt.py not using absolute_import
   hgext/ownercheck.py not using absolute_import
   hgext/p4fastimport/filetransaction.py not using absolute_import
-  hgext/patchpython.py not using absolute_import
   hgext/perftweaks.py not using absolute_import
   hgext/phabdiff.py not using absolute_import
   hgext/phabstatus.py not using absolute_import
@@ -134,7 +133,6 @@
   tests/test-fb-hgext-extutil.py not using absolute_import
   tests/test-fb-hgext-fastmanifest.py not using absolute_import
   tests/test-fb-hgext-generic-bisect.py not using absolute_import
-  tests/test-fb-hgext-patchpython.py not using absolute_import
   tests/test-fb-hgext-sshaskpass.py not using absolute_import
   tests/test-hggit-url-parsing.py not using absolute_import
   tests/test-hggit-url-parsing.py requires print_function
