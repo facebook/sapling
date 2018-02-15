@@ -154,10 +154,6 @@ class TreeInode : public InodeBase {
       return mode_to_dtype(mode_);
     }
 
-    bool isDir() const {
-      return dtype_t::Dir == getDtype();
-    }
-
     /**
      * Check if the entry is a directory or not.
      *
@@ -165,7 +161,7 @@ class TreeInode : public InodeBase {
      * loaded.  The file type for an existing entry never changes.
      */
     bool isDirectory() const {
-      return getDtype() == dtype_t::Dir;
+      return dtype_t::Dir == getDtype();
     }
 
     InodeBase* getInode() const {
@@ -183,7 +179,9 @@ class TreeInode : public InodeBase {
     }
 
    private:
-    /** The complete st_mode value for this entry */
+    /**
+     * The initial entry type for this entry.
+     */
     mode_t mode_{0};
 
     /**
