@@ -414,8 +414,16 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
    y |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-Switch back to hybrid mode
+
+Test prefetch
   $ cd ../client
+  $ clearcache
+  $ hg prefetch -r 0
+  2 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ clearcache
+
+Switch back to hybrid mode
   $ cat >> .hg/hgrc <<EOF
   > [treemanifest]
   > treeonly=False

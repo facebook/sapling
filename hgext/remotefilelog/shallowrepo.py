@@ -217,7 +217,6 @@ def wraprepo(repo):
                 localrevs = repo
 
             mfl = repo.manifestlog
-            mfrevlog = mfl._revlog
             if base is not None:
                 mfdict = mfl[repo[base].manifestnode()].read()
                 skip = set(mfdict.iteritems())
@@ -229,7 +228,7 @@ def wraprepo(repo):
             files = skip.copy()
             serverfiles = skip.copy()
             visited = set()
-            visited.add(nullrev)
+            visited.add(nullid)
             revnum = 0
             revcount = len(revs)
             self.ui.progress(_prefetching, revnum, total=revcount)
@@ -240,11 +239,11 @@ def wraprepo(repo):
                 sparsematch = repo.maybesparsematch(rev)
 
                 mfnode = ctx.manifestnode()
-                mfrev = mfrevlog.rev(mfnode)
+                mfctx = mfl[mfnode]
 
                 # Decompressing manifests is expensive.
                 # When possible, only read the deltas.
-                p1, p2 = mfrevlog.parentrevs(mfrev)
+                p1, p2 = mfctx.parents
                 if p1 in visited and p2 in visited:
                     mfdict = mfl[mfnode].readfast()
                 else:
@@ -260,7 +259,7 @@ def wraprepo(repo):
                 else:
                     files.update(diff)
 
-                visited.add(mfrev)
+                visited.add(mfctx.node())
                 revnum += 1
                 self.ui.progress(_prefetching, revnum, total=revcount)
 
