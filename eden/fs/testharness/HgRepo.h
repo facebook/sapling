@@ -92,8 +92,6 @@ class HgRepo {
   void symlink(folly::StringPiece contents, RelativePathPiece path);
 
  private:
-  void initHg();
-
   void buildHgArgs(std::vector<std::string>& /* cmd */) {}
   template <typename... Args>
   void buildHgArgs(
