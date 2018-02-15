@@ -26,6 +26,7 @@ import mercurial.hg
 import mercurial.node
 import mercurial.scmutil
 import mercurial.txnutil
+import mercurial.util
 import mercurial.ui
 
 # remotefilelog is available just as "remotefilelog" in older mercurial
@@ -436,8 +437,15 @@ class HgServer(object):
         # background.  Unfortunately the wire protocol API does not support a
         # mechanism to do this yet.  In the future it's probably worth adding a
         # "depth" parameter requesting data only down to a specific depth.
-        self.treemanifest._prefetchtrees(self.repo, path, mfnodes,
-                                         base_mfnodes, directories)
+
+        # Newer mercurial releases have self.repo.prefetchtrees()
+        # Older mercurial releases have self.treemanifest._prefetchtrees()
+        if mercurial.util.safehasattr(self.repo, 'prefetchtrees'):
+            # TODO: repo.prefetchtrees() does not accept a path
+            self.repo.prefetchtrees(mfnodes)
+        else:
+            self.treemanifest._prefetchtrees(self.repo, path, mfnodes,
+                                             base_mfnodes, directories)
 
     def send_chunk(self, request, data, is_last=True):
         flags = 0
