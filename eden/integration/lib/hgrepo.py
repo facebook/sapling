@@ -10,13 +10,16 @@
 import configparser
 import datetime
 import distutils.spawn
+import logging
 import os
 import shlex
 import subprocess
+import sys
 import tempfile
 from typing import Any, List, Optional
 
 from . import repobase
+from libfb.py import pathutils
 
 
 class HgError(subprocess.CalledProcessError):
@@ -63,7 +66,7 @@ class HgRepository(repobase.Repository):
         # Set HGRCPATH to make sure we aren't affected by the local system's
         # mercurial settings from /etc/mercurial/
         self.hg_environment['HGRCPATH'] = ''
-        self.hg_bin = find_hg_bin()
+        self.hg_bin = get_hg_bin_path()
 
     def hg(
         self,
@@ -219,34 +222,49 @@ class HgRepository(repobase.Repository):
 _hg_bin = None
 
 
-def find_hg_bin() -> str:
+def get_hg_bin_path() -> str:
     global _hg_bin
     if _hg_bin:
         return _hg_bin
+
+    _hg_bin = find_hg_bin()
+    logging.info('Found hg binary: %r', _hg_bin)
+    return _hg_bin
+
+
+def find_hg_bin() -> str:
+    # If EDEN_HG_BINARY is set in the environment, use that.
+    hg_bin = os.environ.get('EDEN_HG_BINARY')
+    if hg_bin:
+        return hg_bin
+
+    start_path = os.path.abspath(sys.argv[0])
+    hg_bin = pathutils.get_build_rule_output_path(
+        '//scm/hg:hg',
+        pathutils.BuildRuleTypes.PYTHON_BINARY,
+        start_path=start_path,
+    )
+    if hg_bin:
+        return hg_bin
 
     # TODO(T25533322): Once we are sure that `hg status` is a read-only
     # operation in stock Hg (or at least when the Eden extension is enabled),
     # go back to using the Rust wrapper for Hg by default.
     if False:
-        try:
-            from libfb.py import pathutils
-            _hg_bin = pathutils.get_build_rule_output_path(
-                '@/scm/telemetry/hg:hg',
-                pathutils.BuildRuleTypes.RUST_BINARY,
-                start_path=__file__
-            )
-            if _hg_bin:
-                return _hg_bin
-        except ImportError:
-            # Code to load the custom Hg wrapper was not available.
-            pass
+        hg_bin = pathutils.get_build_rule_output_path(
+            '//scm/telemetry/hg:hg',
+            pathutils.BuildRuleTypes.RUST_BINARY,
+            start_path=start_path,
+        )
+        if hg_bin:
+            return hg_bin
 
-    _hg_bin = distutils.spawn.find_executable('hg.real')
-    if _hg_bin:
-        return _hg_bin
+    hg_bin = distutils.spawn.find_executable('hg.real')
+    if hg_bin:
+        return hg_bin
 
-    _hg_bin = distutils.spawn.find_executable('hg')
-    if _hg_bin:
-        return _hg_bin
+    hg_bin = distutils.spawn.find_executable('hg')
+    if hg_bin:
+        return hg_bin
 
     raise Exception('No hg binary found!')
