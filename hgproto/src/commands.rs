@@ -565,7 +565,7 @@ pub trait HgCommands {
     fn unbundle<R>(
         &self,
         _heads: Vec<String>,
-        _stream: Bundle2Stream<'static, R>,
+        _stream: Bundle2Stream<R>,
     ) -> HgCommandRes<bundle2::Remainder<R>>
     where
         R: AsyncRead + BufRead + 'static + Send,

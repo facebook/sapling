@@ -20,7 +20,7 @@ pub fn resolve<R>(
     _repo: Arc<BlobRepo>,
     logger: Logger,
     heads: Vec<String>,
-    bundle2: Bundle2Stream<'static, R>,
+    bundle2: Bundle2Stream<R>,
 ) -> BoxFuture<bundle2::Remainder<R>, Error>
 where
     R: AsyncRead + BufRead + 'static + Send,

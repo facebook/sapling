@@ -235,10 +235,10 @@ fn parse_bundle(
     assert!(res.is_none());
 }
 
-fn verify_cg2<'a, R: AsyncRead + BufRead + 'a + Send>(
+fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     core: &mut Core,
-    stream: Bundle2Stream<'a, R>,
-) -> Bundle2Stream<'a, R> {
+    stream: Bundle2Stream<R>,
+) -> Bundle2Stream<R> {
     let (res, stream) = next_cg2_part(core, stream);
     assert_eq!(*res.section(), changegroup::Section::Changeset);
     let chunk = res.chunk();
@@ -470,11 +470,11 @@ fn path(bytes: &[u8]) -> MPath {
     MPath::new(bytes).unwrap()
 }
 
-fn parse_stream_start<'a, R: AsyncRead + BufRead + 'a + Send>(
+fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
     core: &mut Core,
     reader: R,
     compression: Option<&str>,
-) -> Result<Bundle2Stream<'a, R>> {
+) -> Result<Bundle2Stream<R>> {
     let mut m_stream_params = HashMap::new();
     let a_stream_params = HashMap::new();
     if let Some(compression) = compression {
@@ -503,10 +503,10 @@ fn make_root_logger() -> Logger {
     Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
 }
 
-fn next_cg2_part<'a, R: AsyncRead + BufRead + 'a + Send>(
+fn next_cg2_part<R: AsyncRead + BufRead + 'static + Send>(
     core: &mut Core,
-    stream: Bundle2Stream<'a, R>,
-) -> (changegroup::Part, Bundle2Stream<'a, R>) {
+    stream: Bundle2Stream<R>,
+) -> (changegroup::Part, Bundle2Stream<R>) {
     let (res, stream) = core.next_stream(stream);
     (
         res.unwrap()

@@ -488,7 +488,7 @@ impl HgCommands for RepoClient {
     fn unbundle<R>(
         &self,
         heads: Vec<String>,
-        stream: Bundle2Stream<'static, R>,
+        stream: Bundle2Stream<R>,
     ) -> HgCommandRes<bundle2::Remainder<R>>
     where
         R: AsyncRead + BufRead + 'static + Send,
