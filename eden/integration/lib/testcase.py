@@ -195,7 +195,10 @@ class EdenTestCase(TestParent):
             self.old_home = None
 
         if self.tmp_dir is not None:
-            shutil.rmtree(self.tmp_dir, ignore_errors=True)
+            if os.environ.get('EDEN_TEST_NO_CLEANUP'):
+                print('Leaving behind eden test directory %r' % self.tmp_dir)
+            else:
+                shutil.rmtree(self.tmp_dir, ignore_errors=True)
             self.tmp_dir = None
 
         self.report_time('tear down done')
