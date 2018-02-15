@@ -1,6 +1,9 @@
 from __future__ import absolute_import
-from . import basestore, shallowutil
+
 from mercurial.node import hex, nullid
+from mercurial import util
+
+from . import basestore, shallowutil
 
 class unionmetadatastore(object):
     def __init__(self, *args, **kwargs):
@@ -104,6 +107,11 @@ class unionmetadatastore(object):
     def getmetrics(self):
         metrics = [s.getmetrics() for s in self.stores]
         return shallowutil.sumdicts(*metrics)
+
+    def markforrefresh(self):
+        for store in self.stores:
+            if util.safehasattr(store, 'markforrefresh'):
+                store.markforrefresh()
 
 class remotefilelogmetadatastore(basestore.basestore):
     def getancestors(self, name, node, known=None):

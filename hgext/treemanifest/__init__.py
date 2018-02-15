@@ -370,6 +370,8 @@ def setuptreestores(repo, mfl):
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                                  PACK_CATEGORY)
 
+    demanddownload = ui.configbool('treemanifest', 'demanddownload', True)
+    remotestore = remotetreestore(repo)
     # Data store
     if ui.configbool('treemanifest', 'usecunionstore'):
         datastore = cstore.datapackstore(packpath)
@@ -381,14 +383,12 @@ def setuptreestores(repo, mfl):
         datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
         localdatastore = datapackstore(ui, localpackpath,
                                        usecdatapack=usecdatapack)
-        stores = [datastore, localdatastore]
-        remotedatastore = remotetreedatastore(repo)
-        if ui.configbool('treemanifest', 'demanddownload', True):
-            stores.append(remotedatastore)
+        datastores = [datastore, localdatastore]
+        if demanddownload:
+            datastores.append(remotestore)
 
-        mfl.datastore = unioncontentstore(*stores,
+        mfl.datastore = unioncontentstore(*datastores,
                                           writestore=localdatastore)
-        remotedatastore.setshared(mfl.datastore)
 
     mfl.shareddatastores = [datastore]
     mfl.localdatastores = [localdatastore]
@@ -403,13 +403,18 @@ def setuptreestores(repo, mfl):
     mfl.localhistorystores = [
         localhistorystore,
     ]
+
+    histstores = [sharedhistorystore, localhistorystore]
+    if demanddownload:
+        histstores.append(remotestore)
+
     mfl.historystore = unionmetadatastore(
-        sharedhistorystore,
-        localhistorystore,
-        writestore=localhistorystore,
-    )
+        *histstores,
+        writestore=localhistorystore)
     shallowutil.reportpackmetrics(ui, 'treestore', mfl.datastore,
         mfl.historystore)
+
+    remotestore.setshared(mfl.datastore, mfl.historystore)
 
 class treemanifestlog(manifest.manifestlog):
     def __init__(self, opener, treemanifest=False):
@@ -1613,15 +1618,16 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
 
     yield wirepack.closepart()
 
-class remotetreedatastore(object):
+class remotetreestore(object):
     def __init__(self, repo):
         self._repo = repo
-        self._shared = None
+        self._shareddata = None
 
-    def setshared(self, shared):
-        self._shared = shared
+    def setshared(self, shareddata, sharedhistory):
+        self._shareddata = shareddata
+        self._sharedhistory = sharedhistory
 
-    def get(self, name, node):
+    def _fetch(self, name, node):
         # Only look at the server if not root or is public
         basemfnodes = []
         if name == '':
@@ -1639,8 +1645,12 @@ class remotetreedatastore(object):
             basemfnodes = _findrecenttree(self._repo, linkrev)
 
         self._repo._prefetchtrees(name, [node], basemfnodes, [])
-        self._shared.markforrefresh()
-        return self._shared.get(name, node)
+        self._shareddata.markforrefresh()
+        self._sharedhistory.markforrefresh()
+
+    def get(self, name, node):
+        self._fetch(name, node)
+        return self._shareddata.get(name, node)
 
     def getdeltachain(self, name, node):
         # Since our remote content stores just contain full texts, we return a
@@ -1661,6 +1671,14 @@ class remotetreedatastore(object):
 
     def getmetrics(self):
         return {}
+
+    def getancestors(self, name, node, known=None):
+        self._fetch(name, node)
+        return self._sharedhistory.getancestors(name, node, known=known)
+
+    def getnodeinfo(self, name, node):
+        self._fetch(name, node)
+        return self._sharedhistory.getnodeinfo(name, node)
 
 def serverrepack(repo, incremental=False, options=None):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)

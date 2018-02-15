@@ -188,7 +188,6 @@ outputs, which should be fixed later.
   hgext/remotefilelog/lz4wrapper.py:3: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/lz4wrapper.py:5: stdlib import "lz4" follows local import: mercurial.i18n
   hgext/remotefilelog/lz4wrapper.py:15: relative import of stdlib module
-  hgext/remotefilelog/metadatastore.py:3: symbol import follows non-symbol import: mercurial.node
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: ancestor < error
   hgext/remotefilelog/remotefilectx.py:13: imports from mercurial not lexically sorted: extensions < phases
