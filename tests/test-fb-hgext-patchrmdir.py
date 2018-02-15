@@ -3,9 +3,6 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-# make it runnable directly without run-tests.py
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
-
 if not sys.platform.startswith('linux'):
     sys.stderr.write('skipped: linux required\n')
     sys.exit(80)

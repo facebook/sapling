@@ -2,7 +2,6 @@
 
 import errno
 import os
-import sys
 import time
 import unittest
 
@@ -14,10 +13,7 @@ from mercurial import (
     worker,
 )
 
-if __name__ == '__main__':
-    sys.path.insert(0, os.path.join(os.environ["TESTDIR"], "..", "hgext"))
-
-import extutil
+from hgext import extutil
 
 locktimeout = 25
 locksuccess = 24

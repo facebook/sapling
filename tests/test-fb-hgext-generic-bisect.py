@@ -1,7 +1,5 @@
 import unittest
-import os
 import silenttestrunner
-import sys
 
 class BisectTests(unittest.TestCase):
     def testSimple(self):
@@ -51,6 +49,5 @@ class BisectTests(unittest.TestCase):
         self.assertEqual(bisect(0, len(array) - 1, comp, value), result)
 
 if __name__ == '__main__':
-    sys.path.insert(0, os.path.join(os.environ["TESTDIR"], "..", "hgext"))
-    from generic_bisect import bisect
+    from hgext.generic_bisect import bisect
     silenttestrunner.main(__name__)

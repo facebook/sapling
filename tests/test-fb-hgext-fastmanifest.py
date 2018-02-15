@@ -1,7 +1,6 @@
 import silenttestrunner
 import unittest
 import os
-import sys
 import time
 
 from mercurial import error
@@ -174,6 +173,5 @@ class HybridManifest(unittest.TestCase):
                               lambda: vfs.lstat("lock"))
 
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.join(os.environ["TESTDIR"], ".."))
     from hgext import fastmanifest
     silenttestrunner.main(__name__)

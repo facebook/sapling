@@ -4,9 +4,6 @@ import os
 import sys
 import tempfile
 
-# make it runnable using python directly without run-tests.py
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
-
 from hgext.fastannotate import error, revmap
 
 try:

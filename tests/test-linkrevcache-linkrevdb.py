@@ -1,11 +1,6 @@
 from __future__ import absolute_import, print_function
 
-import os
-import sys
 import tempfile
-
-# make it runnable using python directly without run-tests.py
-sys.path[0:0] = [os.path.join(os.path.dirname(__file__), '..')]
 
 from hgext import linkrevcache
 
