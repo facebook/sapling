@@ -52,6 +52,8 @@ Configs:
     for it to be considered for an incremental history repack.
     ``remotefilelog.history.repacksizelimit`` the maximum total size of pack
     files to include in an incremental history repack.
+    ``remotefilelog.dolfsprefetch`` means that fileserverclient's prefetch
+    will also cause lfs prefetch to happen. This is True by default.
 """
 from __future__ import absolute_import
 
@@ -75,7 +77,6 @@ from mercurial import (
     changelog,
     cmdutil,
     commands,
-    context,
     context,
     copies,
     debugcommands as hgdebugcommands,

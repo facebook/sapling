@@ -40,6 +40,7 @@ from mercurial import (
     bundle2,
     changegroup,
     context,
+    error,
     exchange,
     extensions,
     filelog,
@@ -49,6 +50,7 @@ from mercurial import (
     revlog,
     scmutil,
     upgrade,
+    util,
     vfs as vfsmod,
 )
 
@@ -235,3 +237,56 @@ def debuglfsreceive(ui, oid, size, url=None):
     remote.readbatch(pointers, local)
 
     ui.write((local.read(oid)))
+
+@command('debuglfsdownload', [
+         ('r', 'rev', [], _('revision'), _('REV')),
+         ('', 'sparse', True, _('respect sparse profile, '
+                                        '(otherwise check all files)')),
+         ], _('hg debuglfsdownload -r REV1 -r REV2'), norepo=False)
+def debuglfsdownload(ui, repo, *pats, **opts):
+    """calculate the LFS download size when updating between REV1 and REV2
+
+    If --no-sparse is provided, this operation would ignore any sparse
+    profile that might be present and report data for the full checkout.
+
+    With -v also prints which files are to be downloaded and the size of
+    each file."""
+    revs = opts.get('rev')
+
+    node1, node2 = scmutil.revpair(repo, revs)
+    match = lambda s: True
+    if not opts.get('sparse'):
+        ui.debug('will ignore sparse profile in this repo\n')
+    else:
+        if not util.safehasattr(repo, 'sparsematch'):
+            raise error.Abort(_('--ignore-sparse makes no sense in a non-sparse'
+                                ' repository'))
+        match = repo.sparsematch(node2)
+
+    with ui.configoverride({('remotefilelog', 'dolfsprefetch'): False}):
+        ctx1, ctx2 = repo[node1], repo[node2]
+        mfdiff = ctx2.manifest().diff(ctx1.manifest())
+        lfsflogs = util.sortdict()  # LFS filelogs
+        for fname in mfdiff:
+            if not match(fname):
+                continue
+            flog = repo.file(fname)
+            try:
+                node = ctx2.filenode(fname)
+            except error.ManifestLookupError:
+                continue
+            if wrapper._islfs(flog, node=node):
+                lfsflogs[fname] = flog
+
+        totalsize = 0
+        presentsize = 0
+        for fname, flog in lfsflogs.items():
+            rawtext = flog.revision(ctx2.filenode(fname), raw=True)
+            p = pointer.deserialize(rawtext)
+            present = repo.svfs.lfslocalblobstore.has(p.oid())
+            lfssize = int(p['size'])
+            ui.note(_("%s: %i (present=%r)\n") % (fname, lfssize, present))
+            totalsize += lfssize
+            presentsize += lfssize if present else 0
+        ui.status(_("Total size: %i, to download: %i, already exists: %r\n") %
+                  (totalsize, totalsize - presentsize, presentsize))

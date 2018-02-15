@@ -152,13 +152,13 @@ outputs, which should be fixed later.
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: hex < nullid
   hgext/pushrebase.py:50: imports from mercurial.node not lexically sorted: bin < hex
   hgext/pushrebase.py:51: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:70: symbol import follows non-symbol import: mercurial.node
-  hgext/remotefilelog/__init__.py:71: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/__init__.py:72: direct symbol import wrapfunction from mercurial.extensions
-  hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.extensions
-  hgext/remotefilelog/__init__.py:102: stdlib import "os" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:103: stdlib import "time" follows local import: mercurial
-  hgext/remotefilelog/__init__.py:104: stdlib import "traceback" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:72: symbol import follows non-symbol import: mercurial.node
+  hgext/remotefilelog/__init__.py:73: symbol import follows non-symbol import: mercurial.i18n
+  hgext/remotefilelog/__init__.py:74: direct symbol import wrapfunction from mercurial.extensions
+  hgext/remotefilelog/__init__.py:74: symbol import follows non-symbol import: mercurial.extensions
+  hgext/remotefilelog/__init__.py:103: stdlib import "os" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:104: stdlib import "time" follows local import: mercurial
+  hgext/remotefilelog/__init__.py:105: stdlib import "traceback" follows local import: mercurial
   hgext/remotefilelog/basestore.py:3: multiple imported names: errno, hashlib, os, shutil, stat, time
   hgext/remotefilelog/basestore.py:15: symbol import follows non-symbol import: mercurial.i18n
   hgext/remotefilelog/basestore.py:16: symbol import follows non-symbol import: mercurial.node

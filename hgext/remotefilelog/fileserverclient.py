@@ -618,7 +618,8 @@ class fileserverclient(object):
                 raise error.Abort(_("unable to download %d files") %
                                   len(missingids))
             fetchcost += time.time() - start
-            self._lfsprefetch(fileids)
+            if self.ui.configbool('remotefilelog', 'dolfsprefetch', True):
+                self._lfsprefetch(fileids)
 
     def _lfsprefetch(self, fileids):
         if not _lfsmod or not util.safehasattr(
