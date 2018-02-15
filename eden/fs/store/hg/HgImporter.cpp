@@ -585,6 +585,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     }
 
     // Now try loading it again (third time's the charm?).
+    unionStore_->markForRefresh();
     content = unionStore_->get(
         Key(path.stringPiece().data(),
             path.stringPiece().size(),
