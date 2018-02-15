@@ -53,8 +53,10 @@ def _handlecommandexception(orig, ui):
 
     # let blackbox log it (if it is configured to do so)
     ui.log("commandexception", "%s\n%s\n", warning, trace)
+    exctype = sys.exc_info()[0]
+    exctypename = 'None' if exctype is None else exctype.__name__
     ui.log("hgerrors", "exception has occurred: %s",
-           warning, type=str(sys.exc_type.__name__), traceback=trace)
+           warning, type=exctypename, traceback=trace)
 
     script = ui.config('errorredirect', 'script')
     if not script:
