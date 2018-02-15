@@ -79,13 +79,15 @@ if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
   exit 80
 fi
 
-if [[ ! -f "$TESTDIR/../fb/tests/getdb.sh" ]]; then
-  echo "skipped: fb/tests/getdb.sh missing"
+GETDB_PATH="$TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
+
+if [[ ! -f "$GETDB_PATH" ]]; then
+  echo "skipped: getdb.sh missing"
   exit 80
 fi
 
 # shellcheck source=/dev/null
-source "$TESTDIR/../fb/tests/getdb.sh" >/dev/null
+source "$GETDB_PATH" >/dev/null
 
 if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
     # Assuming they are set using the legacy way: $DBHOSTPORT

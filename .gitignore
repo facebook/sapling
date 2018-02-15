@@ -30,7 +30,7 @@ tests/annotated
 tests/exceptions
 tests/*.err
 tests/htmlcov
-tests/hgsql/getdb.sh
+tests/getdb.sh
 contrib/chg/chg
 contrib/hgsh/hgsh
 contrib/vagrant/.vagrant

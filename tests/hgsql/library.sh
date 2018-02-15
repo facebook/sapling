@@ -1,5 +1,7 @@
 TESTDIR=${TESTDIR:-.}
-if [[ ! -f "$TESTDIR/hgsql/getdb.sh" ]]; then
+GETDB_PATH="$TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
+
+if [[ ! -f "$GETDB_PATH" ]]; then
   echo "skipped: getdb.sh missing. copy from getdb.sh.example and edit it"
   exit 80
 fi
@@ -9,7 +11,7 @@ if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
   exit 80
 fi
 
-source "$TESTDIR/hgsql/getdb.sh" >/dev/null
+source "$GETDB_PATH" >/dev/null
 
 # Convert legacy fields from legacy getdb.sh implementation
 if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
