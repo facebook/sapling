@@ -232,14 +232,14 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
 
 void Overlay::saveOverlayDir(
     fusell::InodeNumber inodeNumber,
-    const TreeInode::Dir* dir) {
+    const TreeInode::Dir& dir) {
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
-  DCHECK(dir->isMaterialized());
-  for (auto& entIter : dir->entries) {
+  DCHECK(dir.isMaterialized());
+  for (auto& entIter : dir.entries) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
 
@@ -265,7 +265,7 @@ void Overlay::saveOverlayDir(
 
   // Add header to the overlay directory.
   auto header =
-      createHeader(kHeaderIdentifierDir, kHeaderVersion, dir->timeStamps);
+      createHeader(kHeaderIdentifierDir, kHeaderVersion, dir.timeStamps);
 
   auto iov = header.getIov();
   iov.push_back(

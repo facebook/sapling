@@ -50,7 +50,7 @@ class Overlay {
 
   void saveOverlayDir(
       fusell::InodeNumber inodeNumber,
-      const TreeInode::Dir* dir);
+      const TreeInode::Dir& dir);
   folly::Optional<TreeInode::Dir> loadOverlayDir(
       fusell::InodeNumber inodeNumber) const;
 

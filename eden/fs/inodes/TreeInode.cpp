@@ -609,7 +609,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
         return;
       }
       contents->setMaterialized();
-      getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+      getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
     }
 
     // Mark ourself materialized in our parent directory (if we have one)
@@ -645,7 +645,7 @@ void TreeInode::childMaterialized(
 
     childEntry.setMaterialized(childNodeId);
     contents->setMaterialized();
-    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+    getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
   }
 
   // If we have a parent directory, ask our parent to materialize itself
@@ -688,7 +688,7 @@ void TreeInode::childDematerialized(
     // saveOverlayPostCheckout() on this directory, and here we will check to
     // see if we can dematerialize ourself.
     contents->setMaterialized();
-    getOverlay()->saveOverlayDir(this->getNodeId(), &*contents);
+    getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
   }
 
   // We are materialized now.
@@ -788,7 +788,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     auto now = getNow();
     contents->timeStamps.ctime = now;
     contents->timeStamps.mtime = now;
-    this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
   getMount()->getJournal().addDelta(
@@ -893,7 +893,7 @@ FileInodePtr TreeInode::symlink(
     contents->timeStamps.mtime = now;
     contents->timeStamps.ctime = now;
 
-    this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
   getMount()->getJournal().addDelta(
@@ -970,7 +970,7 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
     contents->timeStamps.mtime = currentTime;
     contents->timeStamps.ctime = currentTime;
 
-    this->getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
   getMount()->getJournal().addDelta(
@@ -1023,7 +1023,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     contents->timeStamps.mtime = now;
     contents->timeStamps.ctime = now;
 
-    overlay->saveOverlayDir(childNumber, &emptyDir);
+    overlay->saveOverlayDir(childNumber, emptyDir);
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
@@ -1038,7 +1038,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     inodeMap->inodeCreated(newChild);
 
     // Save our updated overlay data
-    overlay->saveOverlayDir(getNodeId(), &*contents);
+    overlay->saveOverlayDir(getNodeId(), *contents);
   }
 
   getMount()->getJournal().addDelta(
@@ -1219,7 +1219,7 @@ int TreeInode::tryRemoveChild(
 
     // Update the on-disk overlay
     auto overlay = this->getOverlay();
-    overlay->saveOverlayDir(getNodeId(), &*contents);
+    overlay->saveOverlayDir(getNodeId(), *contents);
   }
   deletedInode.reset();
 
@@ -1541,12 +1541,12 @@ Future<Unit> TreeInode::doRename(
 
   // Save the overlay data
   const auto& overlay = getOverlay();
-  overlay->saveOverlayDir(getNodeId(), locks.srcContents());
+  overlay->saveOverlayDir(getNodeId(), *locks.srcContents());
   if (destParent.get() != this) {
     // We have already verified that destParent is not unlinked, and we are
     // holding the rename lock which prevents it from being renamed or unlinked
     // while we are operating, so getPath() must have a value here.
-    overlay->saveOverlayDir(destParent->getNodeId(), locks.destContents());
+    overlay->saveOverlayDir(destParent->getNodeId(), *locks.destContents());
   }
 
   // Release the TreeInode locks before we write a journal entry.
@@ -2667,7 +2667,7 @@ void TreeInode::saveOverlayPostCheckout(
       // If we are materialized, write out our state to the overlay.
       // (It's possible our state is unchanged from what's already on disk,
       // but for now we can't detect this, and just always write it out.)
-      getOverlay()->saveOverlayDir(getNodeId(), &*contents);
+      getOverlay()->saveOverlayDir(getNodeId(), *contents);
     } else {
       // If we are not materialized now, but we were before we'll need to
       // remove ourself from the overlay.  However, we wait to do this until
