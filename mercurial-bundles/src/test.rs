@@ -12,6 +12,7 @@ use std::iter::Iterator;
 use std::str::FromStr;
 
 use futures::stream::Stream;
+use futures_ext::BoxStream;
 use slog::{Drain, Logger};
 use slog_term;
 use tokio_core::reactor::Core;
@@ -19,14 +20,13 @@ use tokio_io::AsyncRead;
 
 use async_compression::{Bzip2Compression, CompressorType, FlateCompression};
 use async_compression::membuf::MemBuf;
-use futures_ext::StreamExt;
 use mercurial_types::{MPath, NodeHash, RepoPath, NULL_HASH};
 use partial_io::{GenWouldBlock, PartialAsyncRead, PartialWithErrors};
 use quickcheck::{QuickCheck, StdGen};
 use rand;
 
 use Bundle2Item;
-use bundle2::{self, Bundle2Stream, StreamEvent};
+use bundle2::{Bundle2Stream, StreamEvent};
 use bundle2_encode::Bundle2EncodeBuilder;
 use changegroup;
 use errors::*;
@@ -186,9 +186,9 @@ fn unknown_part(ct: Option<CompressorType>) {
     };
 
     let mut parts = parts.into_iter();
-    assert_eq!(
+    assert_matches!(
         parts.next().unwrap().into_next().unwrap(),
-        Bundle2Item::Start(expected)
+        Bundle2Item::Start(ref header) if header == &expected
     );
     assert_matches!(parts.next(), Some(StreamEvent::Done(_)));
     assert!(parts.next().is_none());
@@ -213,16 +213,23 @@ fn parse_bundle(
     let partial_read = BufReader::new(PartialAsyncRead::new(bundle2_buf, read_ops));
     let stream = parse_stream_start(&mut core, partial_read, compression).unwrap();
 
-    let (res, stream) = core.next_stream(stream);
-    let res = res.unwrap();
+    let (stream, cg2s) = {
+        let (res, stream) = core.next_stream(stream);
+        let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, true).unwrap();
+        header.add_mparam("version", "02").unwrap();
+        header.add_aparam("nbchanges", "2").unwrap();
+        let header = header.build(0);
+        let cg2s = match res.unwrap().into_next().unwrap() {
+            Bundle2Item::Changegroup(h, cg2s) => {
+                assert_eq!(h, header);
+                cg2s
+            }
+            bad => panic!("Unexpected bundle2 item: {:?}", bad),
+        };
+        (stream, cg2s)
+    };
 
-    let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, true).unwrap();
-    header.add_mparam("version", "02").unwrap();
-    header.add_aparam("nbchanges", "2").unwrap();
-    let header = header.build(0);
-    assert_eq!(res.into_next().unwrap(), Bundle2Item::Header(header));
-
-    let stream = verify_cg2(&mut core, stream);
+    verify_cg2(&mut core, cg2s);
 
     let (res, stream) = core.next_stream(stream);
     assert_matches!(res, Some(StreamEvent::Done(_)));
@@ -231,15 +238,16 @@ fn parse_bundle(
     assert!(res.is_none());
 
     // Make sure the stream is fused.
-    let (res, _) = core.next_stream(stream);
+    let (res, stream) = core.next_stream(stream);
     assert!(res.is_none());
+
+    assert!(stream.app_errors().is_empty());
 }
 
-fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
-    core: &mut Core,
-    stream: Bundle2Stream<R>,
-) -> Bundle2Stream<R> {
-    let (res, stream) = next_cg2_part(core, stream);
+fn verify_cg2(core: &mut Core, stream: BoxStream<changegroup::Part, Error>) {
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Changeset);
     let chunk = res.chunk();
 
@@ -256,7 +264,9 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(frags[0].end, 0);
     assert_eq!(frags[0].content.len(), 98);
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Changeset);
     let chunk = res.chunk();
 
@@ -272,14 +282,18 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(frags[0].end, 0);
     assert_eq!(frags[0].content.len(), 102);
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_matches!(
         res,
         changegroup::Part::SectionEnd(changegroup::Section::Changeset)
     );
 
     // Verify basic properties of manifests.
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Manifest);
     let chunk = res.chunk();
 
@@ -290,7 +304,9 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(chunk.base, NULL_HASH);
     assert_eq!(chunk.linknode, changeset1_hash);
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Manifest);
     let chunk = res.chunk();
 
@@ -301,14 +317,18 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(chunk.base, manifest1_hash); // In this case there's a delta.
     assert_eq!(chunk.linknode, changeset2_hash);
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_matches!(
         res,
         changegroup::Part::SectionEnd(changegroup::Section::Manifest)
     );
 
     // Filelog section
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Filelog(path(b"abc")));
     let chunk = res.chunk();
 
@@ -320,12 +340,16 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(chunk.linknode, changeset1_hash);
     assert_eq!(chunk.delta.fragments().len(), 0); // empty file
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_matches!(res,
                     changegroup::Part::SectionEnd(ref section)
                     if *section == changegroup::Section::Filelog(path(b"abc")));
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_eq!(*res.section(), changegroup::Section::Filelog(path(b"def")));
     let chunk = res.chunk();
 
@@ -338,15 +362,23 @@ fn verify_cg2<R: AsyncRead + BufRead + 'static + Send>(
     assert_eq!(chunk.delta.fragments().len(), 1);
 
     // That's it, wrap this up.
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_matches!(res,
                     changegroup::Part::SectionEnd(ref section)
                     if *section == changegroup::Section::Filelog(path(b"def")));
 
-    let (res, stream) = next_cg2_part(core, stream);
+    let (res, stream) = core.next_stream(stream);
+    let res = res.expect("expected part");
+
     assert_matches!(res, changegroup::Part::End);
 
-    stream
+    let (res, _) = core.next_stream(stream);
+    assert!(
+        res.is_none(),
+        "after the End part this stream should be empty"
+    );
 }
 
 #[test]
@@ -363,32 +395,35 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let partial_read = BufReader::new(PartialAsyncRead::new(cursor, read_ops));
 
     let stream = parse_stream_start(&mut core, partial_read, None).unwrap();
-    let collect_fut = stream.collect_no_consume();
-    let (parts, stream) = core.run(collect_fut).unwrap();
 
-    assert!(stream.app_errors().is_empty());
-
-    // The bundle has a changegroup as well, which we skip over.
-    let mut parts = parts.into_iter().skip_while(|part| match *part {
-        StreamEvent::Next(Bundle2Item::Header(ref header))
-            if header.part_type() == &PartHeaderType::B2xTreegroup2 && header.mandatory() =>
-        {
-            false
+    let stream = {
+        let (res, stream) = core.next_stream(stream);
+        match res {
+            Some(StreamEvent::Next(Bundle2Item::Changegroup(_, cg2s))) => {
+                core.run(cg2s.for_each(|_| Ok(()))).unwrap();
+            }
+            bad => panic!("Unexpected Bundle2Item: {:?}", bad),
         }
-        _ => true,
-    });
+        stream
+    };
 
-    // Header
-    let mut header = PartHeaderBuilder::new(PartHeaderType::B2xTreegroup2, true).unwrap();
-    header.add_mparam("version", "1").unwrap();
-    header.add_mparam("cache", "False").unwrap();
-    header.add_mparam("category", "manifests").unwrap();
-    let header = header.build(1);
-
-    assert_eq!(
-        parts.next().unwrap().into_next().unwrap(),
-        Bundle2Item::Header(header)
-    );
+    let (stream, wirepacks) = {
+        let (res, stream) = core.next_stream(stream);
+        // Header
+        let mut header = PartHeaderBuilder::new(PartHeaderType::B2xTreegroup2, true).unwrap();
+        header.add_mparam("version", "1").unwrap();
+        header.add_mparam("cache", "False").unwrap();
+        header.add_mparam("category", "manifests").unwrap();
+        let header = header.build(1);
+        let wirepacks = match res.unwrap().into_next().unwrap() {
+            Bundle2Item::B2xTreegroup2(h, wirepacks) => {
+                assert_eq!(h, header);
+                wirepacks
+            }
+            bad => panic!("Unexpected bundle2 item: {:?}", bad),
+        };
+        (stream, wirepacks)
+    };
 
     // These are a few identifiers present in the bundle.
     let baz_dir = RepoPath::dir("baz").unwrap();
@@ -396,36 +431,35 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let root_hash = NodeHash::from_str("7d315c7a04cce5404f7ef16bf55eb7f4e90d159f").unwrap();
     let root_p1 = NodeHash::from_str("e313fc172615835d205f5881f8f34dd9bb0f0092").unwrap();
 
-    fn unwrap_wirepack<It, R>(parts: &mut It) -> wirepack::Part
-    where
-        It: Iterator<Item = StreamEvent<Bundle2Item, bundle2::Remainder<R>>>,
-    {
-        parts
-            .next()
-            .unwrap()
-            .into_next()
-            .unwrap()
-            .unwrap_inner()
-            .unwrap_wirepack()
-    };
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
 
     // First entries received are for the directory "baz".
-    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_history_meta();
+    let (path, entry_count) = res.unwrap_history_meta();
     assert_eq!(path, baz_dir);
     assert_eq!(entry_count, 1);
 
-    let history_entry = unwrap_wirepack(&mut parts).unwrap_history();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let history_entry = res.unwrap_history();
     assert_eq!(history_entry.node, baz_hash);
     assert_eq!(history_entry.p1, NULL_HASH);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_data_meta();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let (path, entry_count) = res.unwrap_data_meta();
     assert_eq!(path, baz_dir);
     assert_eq!(entry_count, 1);
 
-    let data_entry = unwrap_wirepack(&mut parts).unwrap_data();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let data_entry = res.unwrap_data();
     assert_eq!(path, baz_dir);
     assert_eq!(data_entry.node, baz_hash);
     assert_eq!(data_entry.delta_base, NULL_HASH);
@@ -435,23 +469,35 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(fragments[0].end, 0);
     assert_eq!(fragments[0].content.len(), 46);
 
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
     // Next entries received are for the root manifest.
-    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_history_meta();
+    let (path, entry_count) = res.unwrap_history_meta();
     assert_eq!(path, RepoPath::root());
     assert_eq!(entry_count, 1);
 
-    let history_entry = unwrap_wirepack(&mut parts).unwrap_history();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let history_entry = res.unwrap_history();
     assert_eq!(history_entry.node, root_hash);
     assert_eq!(history_entry.p1, root_p1);
     assert_eq!(history_entry.p2, NULL_HASH);
     assert_eq!(history_entry.linknode, NULL_HASH);
     assert_eq!(history_entry.copy_from, None);
 
-    let (path, entry_count) = unwrap_wirepack(&mut parts).unwrap_data_meta();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let (path, entry_count) = res.unwrap_data_meta();
     assert_eq!(path, RepoPath::root());
     assert_eq!(entry_count, 1);
 
-    let data_entry = unwrap_wirepack(&mut parts).unwrap_data();
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
+    let data_entry = res.unwrap_data();
     assert_eq!(data_entry.node, root_hash);
     assert_eq!(data_entry.delta_base, NULL_HASH);
     let fragments = data_entry.delta.fragments();
@@ -460,10 +506,20 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     assert_eq!(fragments[0].end, 0);
     assert_eq!(fragments[0].content.len(), 136);
 
+    let (res, wirepacks) = core.next_stream(wirepacks);
+    let res = res.expect("expected part");
+
     // Finally the end.
-    assert_eq!(unwrap_wirepack(&mut parts), wirepack::Part::End);
-    assert_matches!(parts.next(), Some(StreamEvent::Done(_)));
-    assert!(parts.next().is_none());
+    assert_eq!(res, wirepack::Part::End);
+    let (res, _) = core.next_stream(wirepacks);
+    assert!(
+        res.is_none(),
+        "after the End part this stream should be empty"
+    );
+
+    let (res, stream) = core.next_stream(stream);
+    assert_matches!(res, Some(StreamEvent::Done(_)));
+    assert!(stream.app_errors().is_empty());
 }
 
 fn path(bytes: &[u8]) -> MPath {
@@ -501,21 +557,6 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
 fn make_root_logger() -> Logger {
     let plain = slog_term::PlainSyncDecorator::new(io::stdout());
     Logger::root(slog_term::FullFormat::new(plain).build().fuse(), o!())
-}
-
-fn next_cg2_part<R: AsyncRead + BufRead + 'static + Send>(
-    core: &mut Core,
-    stream: Bundle2Stream<R>,
-) -> (changegroup::Part, Bundle2Stream<R>) {
-    let (res, stream) = core.next_stream(stream);
-    (
-        res.unwrap()
-            .into_next()
-            .unwrap()
-            .unwrap_inner()
-            .unwrap_cg2(),
-        stream,
-    )
 }
 
 trait CoreExt {

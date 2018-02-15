@@ -74,29 +74,25 @@ mod errors;
 pub use errors::*;
 mod utils;
 
+use std::fmt;
+
+use futures_ext::{BoxFuture, BoxStream};
+
 pub use bundle2_encode::Bundle2EncodeBuilder;
-pub use part_header::PartHeader;
-pub use part_inner::InnerPart;
+pub use part_header::{PartHeader, PartHeaderType};
 pub use types::StreamHeader;
 
-#[derive(Debug, Eq, PartialEq)]
 pub enum Bundle2Item {
     Start(StreamHeader),
-    Header(PartHeader),
-    Inner(InnerPart),
+    Changegroup(PartHeader, BoxStream<changegroup::Part, Error>),
+    B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
+    Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
 }
 
 impl Bundle2Item {
     pub fn is_start(&self) -> bool {
         match self {
             &Bundle2Item::Start(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_inner(&self) -> bool {
-        match self {
-            &Bundle2Item::Inner(_) => true,
             _ => false,
         }
     }
@@ -108,12 +104,18 @@ impl Bundle2Item {
             other => panic!("expected item to be Start, was {:?}", other),
         }
     }
+}
 
-    #[cfg(test)]
-    pub(crate) fn unwrap_inner(self) -> InnerPart {
+impl fmt::Debug for Bundle2Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use Bundle2Item::*;
         match self {
-            Bundle2Item::Inner(inner_part) => inner_part,
-            other => panic!("expected item to be Inner, was {:?}", other),
+            &Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
+            &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
+            &B2xTreegroup2(ref header, _) => {
+                write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)
+            }
+            &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
         }
     }
 }

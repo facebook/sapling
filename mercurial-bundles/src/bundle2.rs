@@ -14,14 +14,14 @@ use bytes::BytesMut;
 use futures::{Async, Poll, Stream};
 use slog;
 
-use futures_ext::StreamWrapper;
+use futures_ext::BoxFuture;
 use futures_ext::io::Either;
 use tokio_io::AsyncRead;
 use tokio_io::codec::{Framed, FramedParts};
 
 use Bundle2Item;
 use errors::*;
-use part_inner::{inner_stream, BoxInnerStream};
+use part_inner::inner_stream;
 use part_outer::{outer_stream, OuterFrame, OuterStream};
 use stream_start::StartDecoder;
 
@@ -72,7 +72,7 @@ where
 {
     Start(Framed<R, StartDecoder>),
     Outer(OuterStream<Chain<Cursor<BytesMut>, R>>),
-    Inner(BoxInnerStream<Chain<Cursor<BytesMut>, R>>),
+    Inner(BoxFuture<OuterStream<Chain<Cursor<BytesMut>, R>>, Error>),
     Invalid,
     End,
 }
@@ -229,13 +229,10 @@ impl Bundle2StreamInner {
                         (Ok(Async::Ready(None)), CurrentStream::Outer(stream))
                     }
                     Ok(Async::Ready(Some(OuterFrame::Header(header)))) => {
-                        let inner_stream =
-                            CurrentStream::Inner(inner_stream(&header, stream, &self.logger));
+                        let (bundle2item, remainder) = inner_stream(header, stream, &self.logger);
                         (
-                            Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Header(
-                                header,
-                            ))))),
-                            inner_stream,
+                            Ok(Async::Ready(Some(StreamEvent::Next(bundle2item)))),
+                            CurrentStream::Inner(remainder),
                         )
                     }
                     Ok(Async::Ready(Some(OuterFrame::Discard))) => {
@@ -270,22 +267,11 @@ impl Bundle2StreamInner {
                     _ => panic!("Expected a header or StreamEnd!"),
                 }
             }
-            CurrentStream::Inner(mut stream) => {
-                match stream.poll() {
-                    Err(e) => (Err(e), CurrentStream::Inner(stream)),
-                    Ok(Async::NotReady) => (Ok(Async::NotReady), CurrentStream::Inner(stream)),
-                    Ok(Async::Ready(Some(v))) => (
-                        Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Inner(v))))),
-                        CurrentStream::Inner(stream),
-                    ),
-                    Ok(Async::Ready(None)) => {
-                        // This part is now parsed -- go back to the outer stream.
-                        let outer =
-                            CurrentStream::Outer(stream.into_inner().into_inner().into_inner());
-                        self.poll_next(outer)
-                    }
-                }
-            }
+            CurrentStream::Inner(mut remainder) => match remainder.poll() {
+                Err(e) => (Err(e), CurrentStream::Invalid),
+                Ok(Async::NotReady) => (Ok(Async::NotReady), CurrentStream::Inner(remainder)),
+                Ok(Async::Ready(remainder)) => self.poll_next(CurrentStream::Outer(remainder)),
+            },
             CurrentStream::Invalid => (
                 Err(ErrorKind::Bundle2Decode("corrupt byte stream".into()).into()),
                 CurrentStream::Invalid,

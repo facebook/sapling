@@ -16,7 +16,6 @@ use tokio_io::codec::Decoder;
 
 use mercurial_types::MPath;
 
-use InnerPart;
 use delta;
 use errors::*;
 use utils::BytesExt;
@@ -61,10 +60,10 @@ impl Part {
 const CHUNK_HEADER_LEN: usize = 20 + 20 + 20 + 20 + 20 + 4;
 
 impl Decoder for Cg2Unpacker {
-    type Item = InnerPart;
+    type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<InnerPart>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match Self::decode_next(buf, self.state.take()) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -74,13 +73,13 @@ impl Decoder for Cg2Unpacker {
                 self.state = state;
                 match ret {
                     None => Ok(None),
-                    Some(v) => Ok(Some(InnerPart::Cg2(v))),
+                    Some(v) => Ok(Some(v)),
                 }
             }
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<InnerPart>> {
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {

@@ -14,7 +14,6 @@ use tokio_io::codec::Decoder;
 use url::percent_encoding::percent_decode;
 
 use errors::*;
-use part_inner::InnerPart;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Capabilities {
@@ -34,7 +33,7 @@ pub struct Capabilities {
 pub struct CapabilitiesUnpacker;
 
 impl Decoder for CapabilitiesUnpacker {
-    type Item = InnerPart;
+    type Item = Capabilities;
     type Error = Error;
 
     fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
@@ -66,6 +65,6 @@ impl Decoder for CapabilitiesUnpacker {
 
         buf.clear(); // all buf was consumed
 
-        Ok(Some(InnerPart::Caps(Capabilities { caps })))
+        Ok(Some(Capabilities { caps }))
     }
 }

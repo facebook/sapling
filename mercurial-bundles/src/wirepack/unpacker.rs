@@ -17,7 +17,6 @@ use mercurial_types::RepoPath;
 
 use super::{DataEntry, HistoryEntry, Kind, Part, WIREPACK_END};
 use errors::*;
-use part_inner::InnerPart;
 use utils::BytesExt;
 
 #[derive(Debug)]
@@ -27,10 +26,10 @@ pub struct WirePackUnpacker {
 }
 
 impl Decoder for WirePackUnpacker {
-    type Item = InnerPart;
+    type Item = Part;
     type Error = Error;
 
-    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<InnerPart>> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.inner.decode_next(buf, self.state.take()) {
             Err(e) => {
                 self.state = State::Invalid;
@@ -40,13 +39,13 @@ impl Decoder for WirePackUnpacker {
                 self.state = state;
                 match ret {
                     None => Ok(None),
-                    Some(v) => Ok(Some(InnerPart::WirePack(v))),
+                    Some(v) => Ok(Some(v)),
                 }
             }
         }
     }
 
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<InnerPart>> {
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>> {
         match self.decode(buf)? {
             None => {
                 if !buf.is_empty() {
@@ -277,7 +276,7 @@ mod test {
         let collect_fut = stream.collect();
 
         let parts = core.run(collect_fut).unwrap();
-        assert_eq!(parts, vec![InnerPart::WirePack(Part::End)]);
+        assert_eq!(parts, vec![Part::End]);
 
         // A file with no entries:
         // - filename b"\0\x03foo"
@@ -294,15 +293,15 @@ mod test {
         assert_eq!(
             parts,
             vec![
-                InnerPart::WirePack(Part::HistoryMeta {
+                Part::HistoryMeta {
                     path: foo_dir.clone(),
                     entry_count: 0,
-                }),
-                InnerPart::WirePack(Part::DataMeta {
+                },
+                Part::DataMeta {
                     path: foo_dir,
                     entry_count: 0,
-                }),
-                InnerPart::WirePack(Part::End),
+                },
+                Part::End,
             ]
         );
     }

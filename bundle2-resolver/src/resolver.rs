@@ -7,13 +7,14 @@
 use std::io::BufRead;
 use std::sync::Arc;
 
-use futures::{Future, Stream};
+use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use slog::Logger;
 use tokio_io::AsyncRead;
 
 use blobrepo::BlobRepo;
 use errors::*;
+use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 
 pub fn resolve<R>(
@@ -27,13 +28,43 @@ where
 {
     info!(logger, "unbundle heads {:?}", heads);
     bundle2
-        .filter_map(move |event| match event {
-            StreamEvent::Done(remainder) => Some(remainder),
+        .and_then(move |event| match event {
             StreamEvent::Next(item) => {
                 debug!(logger, "bundle2 item: {:?}", item);
-                None
+                match item {
+                    Bundle2Item::Start(_) => Ok(None).into_future().boxify(),
+                    Bundle2Item::Changegroup(_, parts) => parts
+                        .for_each({
+                            let logger = logger.clone();
+                            move |p| {
+                                debug!(logger, "changegroup part: {:?}", p);
+                                Ok(())
+                            }
+                        })
+                        .map(|()| None)
+                        .boxify(),
+                    Bundle2Item::B2xTreegroup2(_, parts) => parts
+                        .for_each({
+                            let logger = logger.clone();
+                            move |p| {
+                                debug!(logger, "b2xtreegroup2 part: {:?}", p);
+                                Ok(())
+                            }
+                        })
+                        .map(|()| None)
+                        .boxify(),
+                    Bundle2Item::Replycaps(_, part) => part.map({
+                        let logger = logger.clone();
+                        move |p| {
+                            debug!(logger, "replycaps part: {:?}", p);
+                            None
+                        }
+                    }).boxify(),
+                }
             }
+            StreamEvent::Done(remainder) => Ok(Some(remainder)).into_future().boxify(),
         })
+        .filter_map(|x| x)
         .into_future()
         .map(|(remainder, _)| remainder.expect("No remainder left"))
         .map_err(|(err, _)| err)
