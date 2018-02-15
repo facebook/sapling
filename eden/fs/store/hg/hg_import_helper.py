@@ -205,6 +205,15 @@ class HgServer(object):
         local_ui.readconfig(hgrc, self.repo_path)
         mercurial.extensions.loadall(local_ui)
 
+        self.repo = self._open_repo()
+
+        try:
+            self.treemanifest = mercurial.extensions.find('treemanifest')
+        except KeyError:
+            # The treemanifest extension is not present
+            self.treemanifest = None
+
+    def _open_repo(self):
         # Create the repository using the original clean UI object that has not
         # loaded the repo config yet.  This is required to ensure that
         # secondary repository objects end up with the correct configuration,
@@ -214,14 +223,9 @@ class HgServer(object):
         # extension.  In general the repository we are pointing at should
         # should not itself point to another shared repo, but it seems safest
         # to exactly mimic mercurial's own start-up behavior here.
-        repo = mercurial.hg.repository(self.ui, self.repo_path)
-        self.repo = repo.unfiltered()
-
-        try:
-            self.treemanifest = mercurial.extensions.find('treemanifest')
-        except KeyError:
-            # The treemanifest extension is not present
-            self.treemanifest = None
+        repo_ui = self.ui.copy()
+        repo = mercurial.hg.repository(repo_ui, self.repo_path)
+        return repo.unfiltered()
 
     def serve(self):
         try:
@@ -425,6 +429,20 @@ class HgServer(object):
         if self.treemanifest is None:
             raise Exception('treemanifest not enabled in this repository')
 
+        try:
+            self._fetch_tree_impl(path, manifest_node)
+        except Exception:
+            # Ugh.  Mercurial sometimes throws spurious KeyErrors
+            # if this tree was created since we first initialized our
+            # connection to the server.
+            #
+            # These errors come from the server-side; there doesn't seem to be
+            # a good way to force the server to re-read the data other than
+            # recreating our repo object.
+            self.repo = self._open_repo()
+            self._fetch_tree_impl(path, manifest_node)
+
+    def _fetch_tree_impl(self, path, manifest_node):
         mfnodes = set([manifest_node])
         base_mfnodes = set()
 
@@ -547,7 +565,21 @@ class HgServer(object):
         except Exception:
             self.repo.invalidate()
             fctx = self.repo.filectx(path, fileid=rev_hash)
-        return fctx.data()
+
+        try:
+            return fctx.data()
+        except Exception:
+            # Ugh.  The server-side remotefilelog code can sometimes
+            # incorrectly fail to return data here.  I believe this occurs if
+            # the file data is new since we first opened our connection to the
+            # server.
+            #
+            # Completely re-initialize our repo object and try again, in hopes
+            # that this will make the server return data correctly when we
+            # retry.
+            self.repo = self._open_repo()
+            fctx = self.repo.filectx(path, fileid=rev_hash)
+            return fctx.data()
 
     def prefetch(self, rev):
         if not hasattr(self.repo, 'prefetch'):
