@@ -76,7 +76,7 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(
       Hash("3a8f8eb91101860fd8484154885838bf322964d0"), babelrc.getHash());
   EXPECT_EQ(".babelrc", babelrc.getName());
-  EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, babelrc.getType());
+  EXPECT_EQ(false, babelrc.isTree());
   EXPECT_EQ(facebook::eden::FileType::REGULAR_FILE, babelrc.getFileType());
   EXPECT_EQ(
       babelrc.getName(),
@@ -88,7 +88,7 @@ TEST(GitTree, testDeserialize) {
       Hash("006babcf5734d028098961c6f4b6b6719656924b"),
       nuclideStartServer.getHash());
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.getName());
-  EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, nuclideStartServer.getType());
+  EXPECT_EQ(false, nuclideStartServer.isTree());
   EXPECT_EQ(
       facebook::eden::FileType::EXECUTABLE_FILE,
       nuclideStartServer.getFileType());
@@ -100,7 +100,7 @@ TEST(GitTree, testDeserialize) {
   auto lib = tree->getEntryAt(3);
   EXPECT_EQ(Hash("e95798e17f694c227b7a8441cc5c7dae50a187d0"), lib.getHash());
   EXPECT_EQ("lib", lib.getName());
-  EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
+  EXPECT_EQ(true, lib.isTree());
   EXPECT_EQ(facebook::eden::FileType::DIRECTORY, lib.getFileType());
   EXPECT_EQ(
       lib.getName(), tree->getEntryAt(PathComponentPiece("lib")).getName());
@@ -146,7 +146,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ(
       Hash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"), contributing.getHash());
   EXPECT_EQ("contributing.md", contributing.getName());
-  EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, contributing.getType());
+  EXPECT_EQ(false, contributing.isTree());
   EXPECT_EQ(facebook::eden::FileType::SYMLINK, contributing.getFileType());
 }
 

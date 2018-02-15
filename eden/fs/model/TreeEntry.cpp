@@ -53,17 +53,6 @@ std::ostream& operator<<(std::ostream& os, FileType type) {
   return os << "FileType::" << int(type);
 }
 
-std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
-  switch (type) {
-    case TreeEntryType::TREE:
-      return os << "TREE";
-    case TreeEntryType::BLOB:
-      return os << "BLOB";
-  }
-
-  return os << "TreeEntryType::" << int(type);
-}
-
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
   return (entry1.getHash() == entry2.getHash()) &&
       (entry1.getFileType() == entry2.getFileType()) &&

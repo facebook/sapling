@@ -23,12 +23,9 @@ namespace eden {
 
 class Hash;
 
-enum class TreeEntryType : uint8_t {
-  BLOB,
-  TREE,
-};
-
+// TODO: rename to TreeEntryType
 enum class FileType : uint8_t {
+  // TODO: rename to TREE
   DIRECTORY,
   REGULAR_FILE,
   EXECUTABLE_FILE,
@@ -51,9 +48,8 @@ class TreeEntry {
     return name_;
   }
 
-  TreeEntryType getType() const {
-    return fileType_ == FileType::DIRECTORY ? TreeEntryType::TREE
-                                            : TreeEntryType::BLOB;
+  bool isTree() const {
+    return fileType_ == FileType::DIRECTORY;
   }
 
   FileType getFileType() const {
@@ -83,7 +79,6 @@ class TreeEntry {
 };
 
 std::ostream& operator<<(std::ostream& os, FileType type);
-std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2);
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2);
 } // namespace eden

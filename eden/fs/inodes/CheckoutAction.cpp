@@ -125,7 +125,7 @@ Future<Unit> CheckoutAction::run(
   try {
     // Load the Blob or Tree for the old TreeEntry.
     if (oldScmEntry_.hasValue()) {
-      if (oldScmEntry_.value().getType() == TreeEntryType::TREE) {
+      if (oldScmEntry_.value().isTree()) {
         store->getTree(oldScmEntry_.value().getHash())
             .then([rc = LoadingRefcount(this)](
                       std::shared_ptr<const Tree> oldTree) {
@@ -149,7 +149,7 @@ Future<Unit> CheckoutAction::run(
     // If we have a new TreeEntry, load the corresponding Blob or Tree
     if (newScmEntry_.hasValue()) {
       const auto& newEntry = newScmEntry_.value();
-      if (newEntry.getType() == TreeEntryType::TREE) {
+      if (newEntry.isTree()) {
         store->getTree(newEntry.getHash())
             .then([rc = LoadingRefcount(this)](
                       std::shared_ptr<const Tree> newTree) {

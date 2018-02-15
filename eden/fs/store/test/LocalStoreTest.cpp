@@ -144,7 +144,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   EXPECT_EQ(
       Hash("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"), readmeEntry.getHash());
   EXPECT_EQ("README.md", readmeEntry.getName());
-  EXPECT_EQ(TreeEntryType::BLOB, readmeEntry.getType());
+  EXPECT_EQ(false, readmeEntry.isTree());
   EXPECT_EQ(FileType::REGULAR_FILE, readmeEntry.getFileType());
 }
 

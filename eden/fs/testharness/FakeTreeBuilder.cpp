@@ -126,7 +126,7 @@ void FakeTreeBuilder::setAllReady() {
 void FakeTreeBuilder::setAllReadyUnderTree(StoredTree* tree) {
   tree->setReady();
   for (const auto& entry : tree->get().getTreeEntries()) {
-    if (entry.getType() == TreeEntryType::TREE) {
+    if (entry.isTree()) {
       auto* child = store_->getStoredTree(entry.getHash());
       setAllReadyUnderTree(child);
     } else {

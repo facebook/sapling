@@ -20,7 +20,6 @@ using facebook::eden::Hash;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::Tree;
 using facebook::eden::TreeEntry;
-using facebook::eden::TreeEntryType;
 using std::string;
 using std::vector;
 
@@ -45,7 +44,7 @@ TEST(Tree, testGetEntryPtr) {
   auto entry = tree.getEntryPtr(existentPath);
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ("a_file", entry->getName());
-  EXPECT_EQ(TreeEntryType::BLOB, entry->getType());
+  EXPECT_EQ(false, entry->isTree());
   EXPECT_EQ(FileType::REGULAR_FILE, entry->getFileType());
 
   // Verify non-existent path.

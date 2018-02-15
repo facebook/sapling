@@ -1949,7 +1949,7 @@ Future<Unit> TreeInode::computeDiff(
     };
 
     auto processRemoved = [&](const TreeEntry& scmEntry) {
-      if (scmEntry.getType() == TreeEntryType::TREE) {
+      if (scmEntry.isTree()) {
         deferredEntries.emplace_back(DeferredDiffEntry::createRemovedEntry(
             context, currentPath + scmEntry.getName(), scmEntry));
       } else {
@@ -1967,9 +1967,7 @@ Future<Unit> TreeInode::computeDiff(
       // is always included since it is already tracked in source control.
       bool entryIgnored = isIgnored;
       auto entryPath = currentPath + scmEntry.getName();
-      if (!isIgnored &&
-          (inodeEntry->isDirectory() ||
-           scmEntry.getType() == TreeEntryType::TREE)) {
+      if (!isIgnored && (inodeEntry->isDirectory() || scmEntry.isTree())) {
         auto ignoreStatus = ignore->match(entryPath, GitIgnore::TYPE_DIR);
         if (ignoreStatus == GitIgnore::HIDDEN) {
           // This is rather unexpected.  We don't expect to find entries in
@@ -2024,7 +2022,7 @@ Future<Unit> TreeInode::computeDiff(
                 std::move(inodeFuture),
                 ignore.get(),
                 entryIgnored));
-      } else if (scmEntry.getType() == TreeEntryType::TREE) {
+      } else if (scmEntry.isTree()) {
         // This used to be a directory in the source control state,
         // but is now a file or symlink.  Report the new file, then add a
         // deferred entry to report the entire source control Tree as
@@ -2519,7 +2517,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     // TODO: Also apply permissions changes to the entry.
 
     CHECK(newScmEntry.hasValue());
-    CHECK_EQ(TreeEntryType::TREE, newScmEntry->getType());
+    CHECK(newScmEntry->isTree());
     return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree));
   }
 
@@ -2558,7 +2556,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
 
         // Add the new entry
         auto contents = parentInode->contents_.wlock();
-        DCHECK_EQ(TreeEntryType::BLOB, newScmEntry->getType());
+        DCHECK(!newScmEntry->isTree());
         auto ret = contents->entries.emplace(
             name, newScmEntry->getMode(), newScmEntry->getHash());
         if (!ret.second) {

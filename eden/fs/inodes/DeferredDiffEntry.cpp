@@ -121,7 +121,7 @@ folly::Future<folly::Unit> diffRemovedTree(
     const DiffContext* context,
     RelativePath currentPath,
     const TreeEntry& entry) {
-  DCHECK_EQ(TreeEntryType::TREE, entry.getType());
+  DCHECK(entry.isTree());
   return context->store->getTree(entry.getHash())
       .then([context, currentPath = RelativePath{std::move(currentPath)}](
                 shared_ptr<const Tree>&& tree) {
@@ -135,7 +135,7 @@ folly::Future<folly::Unit> diffRemovedTree(
     const Tree* tree) {
   vector<Future<Unit>> subFutures;
   for (const auto& entry : tree->getTreeEntries()) {
-    if (entry.getType() == TreeEntryType::TREE) {
+    if (entry.isTree()) {
       auto f = diffRemovedTree(context, currentPath + entry.getName(), entry);
       subFutures.emplace_back(std::move(f));
     } else {
@@ -177,7 +177,7 @@ class RemovedDiffEntry : public DeferredDiffEntry {
       : DeferredDiffEntry{context, std::move(path)}, scmEntry_{scmEntry} {
     // We only need to defer processing for removed directories;
     // we never create RemovedDiffEntry objects for removed files.
-    DCHECK_EQ(TreeEntryType::TREE, scmEntry_.getType());
+    DCHECK(scmEntry_.isTree());
   }
 
   folly::Future<folly::Unit> run() override {
@@ -229,7 +229,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       });
     }
 
-    if (scmEntry_.getType() == TreeEntryType::TREE) {
+    if (scmEntry_.isTree()) {
       return runForScmTree();
     } else {
       return runForScmBlob();
