@@ -251,10 +251,6 @@ outputs, which should be fixed later.
   hgext/remotefilelog/wirepack.py:16: symbol import follows non-symbol import: hgext.remotefilelog.shallowutil
   hgext/remotefilelog/wirepack.py:16: imports from hgext.remotefilelog.shallowutil not lexically sorted: mkstickygroupdir < readunpack
   hgext/remotefilelog/wirepack.py:17: multiple "from . import" statements
-  hgext/smartlog.py:29: imports not lexically sorted: anydbm < contextlib
-  hgext/smartlog.py:30: relative import of stdlib module
-  hgext/smartlog.py:30: direct symbol import chain from itertools
-  hgext/smartlog.py:53: symbol import follows non-symbol import: mercurial.i18n
   hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog (glob)
   hgext/treemanifest/__init__.py:*: direct symbol import manifestrevlogstore, unioncontentstore from hgext.remotefilelog.contentstore (glob)
   hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.contentstore (glob)

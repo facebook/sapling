@@ -26,10 +26,10 @@ to the user.
 from __future__ import absolute_import
 
 import contextlib
-import anydbm
-from itertools import chain
+import itertools
 import re
 
+from mercurial.i18n import _
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -38,6 +38,7 @@ from mercurial import (
     error,
     extensions,
     graphmod,
+    node as nodemod,
     obsutil,
     phases,
     registrar,
@@ -49,8 +50,14 @@ from mercurial import (
     templatekw,
     util,
 )
-from mercurial import node as nodemod
-from mercurial.i18n import _
+
+try:
+    # gdbm is preferred for its performance
+    import gdbm as dbm
+    dbm.open
+except ImportError:
+    # fallback to anydbm
+    import anydbm as dbm
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -70,8 +77,8 @@ except NameError:
 def ancestorcache(path):
     # simple cache to speed up revlog.ancestors
     try:
-        db = anydbm.open(path, 'c')
-    except anydbm.error:
+        db = dbm.open(path, 'c')
+    except dbm.error:
         # database locked, fail gracefully
         yield
     else:
@@ -173,7 +180,8 @@ def singlepublicsuccessor(repo, ctx, templ, **args):
     in `hg sl` output."""
     successorssets = obsutil.successorssets(repo, ctx.node())
     unfiltered = repo.unfiltered()
-    ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
+    ctxs = (unfiltered[n]
+            for n in itertools.chain.from_iterable(successorssets))
     public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
     first = next(public, '')
     second = next(public, '')
@@ -557,7 +565,7 @@ Excludes:
 - All changesets under @/master/tip that aren't related to your changesets.
 - Your local heads that are older than 2 weeks.'''
     if ui.configbool('smartlog', 'useancestorcache'):
-        with ancestorcache(repo.vfs.join('cache/smartlog-ancestor')):
+        with ancestorcache(repo.vfs.join('cache/smartlog-ancestor.db')):
             return _smartlog(ui, repo, *pats, **opts)
     else:
         return _smartlog(ui, repo, *pats, **opts)
