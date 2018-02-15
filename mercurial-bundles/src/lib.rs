@@ -61,12 +61,10 @@ pub mod part_encode;
 mod part_header;
 mod part_inner;
 mod part_outer;
-#[cfg(test)]
 mod quickcheck_types;
 mod stream_start;
 mod types;
 pub mod wirepack;
-
 #[cfg(test)]
 mod test;
 

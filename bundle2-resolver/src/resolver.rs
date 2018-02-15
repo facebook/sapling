@@ -13,6 +13,7 @@ use slog::Logger;
 use tokio_io::AsyncRead;
 
 use blobrepo::BlobRepo;
+use changegroup::split_changegroup;
 use errors::*;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
@@ -33,16 +34,24 @@ where
                 debug!(logger, "bundle2 item: {:?}", item);
                 match item {
                     Bundle2Item::Start(_) => Ok(None).into_future().boxify(),
-                    Bundle2Item::Changegroup(_, parts) => parts
-                        .for_each({
+                    Bundle2Item::Changegroup(_, parts) => {
+                        let (c, f) = split_changegroup(logger.clone(), parts);
+                        c.for_each({
                             let logger = logger.clone();
                             move |p| {
                                 debug!(logger, "changegroup part: {:?}", p);
                                 Ok(())
                             }
-                        })
-                        .map(|()| None)
-                        .boxify(),
+                        }).join(f.for_each({
+                                let logger = logger.clone();
+                                move |p| {
+                                    debug!(logger, "changegroup part: {:?}", p);
+                                    Ok(())
+                                }
+                            }))
+                            .map(|((), ())| None)
+                            .boxify()
+                    }
                     Bundle2Item::B2xTreegroup2(_, parts) => parts
                         .for_each({
                             let logger = logger.clone();

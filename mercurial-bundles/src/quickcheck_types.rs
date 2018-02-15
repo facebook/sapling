@@ -9,16 +9,20 @@
 
 use std::convert::From;
 use std::iter;
+#[cfg(test)]
 use std::result;
+#[cfg(test)]
 use std::vec::IntoIter;
 
 use bytes::Bytes;
+#[cfg(test)]
 use futures::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use mercurial_types::{Delta, MPath, NodeHash};
 
 use changegroup;
+#[cfg(test)]
 use errors::*;
 
 #[derive(Clone, Debug)]
@@ -82,6 +86,7 @@ impl Cg2PartSequence {
     ///
     /// This returns a clone of everything because streams can't really return
     /// references at the moment.
+    #[cfg(test)]
     pub fn to_stream(
         &self,
     ) -> stream::IterOk<IntoIter<result::Result<changegroup::Part, Error>>, Error> {
