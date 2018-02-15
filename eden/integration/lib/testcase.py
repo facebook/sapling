@@ -348,6 +348,18 @@ class EdenGitTest(EdenRepoTestBase):
         return gitrepo.GitRepository
 
 
+def _replicate_test(caller_scope, replicate, test_class, args, kwargs):
+    for suffix, new_class in replicate(test_class, *args, **kwargs):
+        # Set the name and module information on our new subclass
+        name = test_class.__name__ + suffix
+        new_class.__name__ = name
+        new_class.__qualname__ = name
+        new_class.__module__ = test_class.__module__
+
+        # Add the class to our caller's scope
+        caller_scope[name] = new_class
+
+
 def test_replicator(replicate):
     '''
     A helper function for implementing decorators that replicate TestCase
@@ -356,23 +368,23 @@ def test_replicator(replicate):
 
     See the @eden_repo_test decorator for an example of how this is used.
     '''
-    def decorator(test_class):
+    def decorator(*args, **kwargs):
         # We do some rather hacky things here to define new test class types
         # in our caller's scope.  This is needed so that the unittest TestLoader
         # will find the subclasses we define.
         caller_scope = inspect.currentframe().f_back.f_locals
 
-        for suffix, new_class in replicate(test_class):
-            # Set the name and module information on our new subclass
-            name = test_class.__name__ + suffix
-            new_class.__name__ = name
-            new_class.__qualname__ = name
-            new_class.__module__ = test_class.__module__
-
-            # Add the class to our caller's scope
-            caller_scope[name] = new_class
-
-        return None
+        if len(args) == 1 and not kwargs and isinstance(args[0], type):
+            # The decorator was invoked directly with the test class,
+            # with no arguments or keyword arguments
+            _replicate_test(caller_scope, replicate, args[0],
+                            args=(), kwargs={})
+            return
+        else:
+            def inner_decorator(test_class):
+                _replicate_test(caller_scope, replicate, test_class,
+                                args, kwargs)
+            return inner_decorator
 
     return decorator
 

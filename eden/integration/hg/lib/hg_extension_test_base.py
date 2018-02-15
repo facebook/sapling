@@ -365,19 +365,21 @@ def _apply_treeonly_config(test, config):
     }
 
 
-def _replicate_hg_test(test_class):
-    configs = {
-        'Flatmanifest': _apply_flatmanifest_config,
-        'Treemanifest': _apply_treemanifest_config,
-        # TODO: The treemanifest-only tests are currently disabled.
-        # The treeonly code in mercurial currently has bugs causing
-        # "hg commit" to fail when trying to create the initial root commit in
-        # a repository.  We should enable this once the treeonly code is fixed.
-        # 'TreeOnly': _apply_treeonly_config,
-    }
+ALL_CONFIGS = {
+    'Flatmanifest': _apply_flatmanifest_config,
+    'Treemanifest': _apply_treemanifest_config,
+    'TreeOnly': _apply_treeonly_config,
+}
 
-    for name, config_fn in configs.items():
+
+def _replicate_hg_test(test_class, *variants):
+    if not variants:
+        variants = ('Flatmanifest', 'Treemanifest')
+
+    for name in variants:
+        config_fn = ALL_CONFIGS[name]
         class HgTestVariant(test_class):
+            config_variant_name = name
             apply_hg_config_variant = config_fn
 
         yield name, HgTestVariant
