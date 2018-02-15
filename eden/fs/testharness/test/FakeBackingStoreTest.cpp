@@ -140,7 +140,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
       makeTestHash("abc"),
       {
           {"foo", foo},
-          {"runme", runme, 0755},
+          {"runme", runme, FakeBlobType::EXECUTABLE_FILE},
       });
   EXPECT_EQ(makeTestHash("abc"), dir1->get().getHash());
   auto* dir2 = store_->putTree({{"README", store_->putBlob("docs go here")}});
@@ -149,9 +149,9 @@ TEST_F(FakeBackingStoreTest, getTree) {
   auto* rootDir = store_->putTree(
       rootHash,
       {
-          {"zzz", foo, 0444},
+          {"zzz", foo, FakeBlobType::REGULAR_FILE},
           {"dir1", dir1},
-          {"readonly", dir2, 0500},
+          {"readonly", dir2},
           {"bar", bar},
       });
 
@@ -183,12 +183,12 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(S_IFDIR | 0755, tree2->getEntryAt(1).getMode());
   EXPECT_EQ(PathComponentPiece{"readonly"}, tree2->getEntryAt(2).getName());
   EXPECT_EQ(dir2->get().getHash(), tree2->getEntryAt(2).getHash());
-  // TreeEntry objects only track owner permissions, so even though we input
-  // the permissions as 0500 above this really ends up returning 0555
-  EXPECT_EQ(S_IFDIR | 0555, tree2->getEntryAt(2).getMode());
+  // TreeEntry objects only tracking the owner executable bit, so even though we
+  // input the permissions as 0500 above this really ends up returning 0755
+  EXPECT_EQ(S_IFDIR | 0755, tree2->getEntryAt(2).getMode());
   EXPECT_EQ(PathComponentPiece{"zzz"}, tree2->getEntryAt(3).getName());
   EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
-  EXPECT_EQ(S_IFREG | 0444, tree2->getEntryAt(3).getMode());
+  EXPECT_EQ(S_IFREG | 0644, tree2->getEntryAt(3).getMode());
 
   EXPECT_EQ(rootHash, future3.get()->getHash());
 

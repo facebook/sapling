@@ -78,7 +78,6 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(".babelrc", babelrc.getName());
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, babelrc.getType());
   EXPECT_EQ(facebook::eden::FileType::REGULAR_FILE, babelrc.getFileType());
-  EXPECT_EQ(0b0110, babelrc.getOwnerPermissions());
   EXPECT_EQ(
       babelrc.getName(),
       tree->getEntryAt(PathComponentPiece(".babelrc")).getName());
@@ -91,8 +90,8 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.getName());
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, nuclideStartServer.getType());
   EXPECT_EQ(
-      facebook::eden::FileType::REGULAR_FILE, nuclideStartServer.getFileType());
-  EXPECT_EQ(0b0111, nuclideStartServer.getOwnerPermissions());
+      facebook::eden::FileType::EXECUTABLE_FILE,
+      nuclideStartServer.getFileType());
   EXPECT_EQ(
       nuclideStartServer.getName(),
       tree->getEntryAt(PathComponentPiece("nuclide-start-server")).getName());
@@ -103,7 +102,6 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ("lib", lib.getName());
   EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
   EXPECT_EQ(facebook::eden::FileType::DIRECTORY, lib.getFileType());
-  EXPECT_EQ(0b0111, lib.getOwnerPermissions());
   EXPECT_EQ(
       lib.getName(), tree->getEntryAt(PathComponentPiece("lib")).getName());
 
@@ -150,7 +148,6 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ("contributing.md", contributing.getName());
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, contributing.getType());
   EXPECT_EQ(facebook::eden::FileType::SYMLINK, contributing.getFileType());
-  EXPECT_EQ(0b0111, contributing.getOwnerPermissions());
 }
 
 TEST(GitTree, deserializeEmpty) {
@@ -226,40 +223,35 @@ TEST(GitTree, serializeTree) {
   serializer.addEntry(TreeEntry(
       Hash("c66788d87933862e2111a86304b705dd90bbd427"),
       "README.md",
-      FileType::REGULAR_FILE,
-      0b110));
+      FileType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
       Hash("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
-      "apm-rest-api.md",
-      FileType::REGULAR_FILE,
-      0b110));
+      "run-tests.sh",
+      FileType::EXECUTABLE_FILE));
   serializer.addEntry(TreeEntry(
       Hash("de0b8287939193ed239834991be65b96cbfc4508"),
       "build-instructions",
-      FileType::DIRECTORY,
-      0b111));
+      FileType::DIRECTORY));
   serializer.addEntry(TreeEntry(
       Hash("4576635ff317960be244b1c4adfe2a6eb2eb024d"),
       "contributing-to-packages.md",
-      FileType::REGULAR_FILE,
-      0b110));
+      FileType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
       Hash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       "contributing.md",
-      FileType::SYMLINK,
-      0b111));
+      FileType::SYMLINK));
 
   auto buf = serializer.finalize();
 
   // Make sure the tree hash is what we expect
   auto treeHash = Hash::sha1(&buf);
-  EXPECT_EQ(Hash("013b7865a6da317bc8d82c7225eb93615f1b1eca"), treeHash);
+  EXPECT_EQ(Hash("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
 
   // Make sure we can deserialize it and get back the expected entries.
   auto tree = deserializeGitTree(treeHash, &buf);
   EXPECT_EQ(5, tree->getTreeEntries().size());
   EXPECT_EQ("README.md", tree->getEntryAt(0).getName());
-  EXPECT_EQ("apm-rest-api.md", tree->getEntryAt(1).getName());
+  EXPECT_EQ("run-tests.sh", tree->getEntryAt(1).getName());
   EXPECT_EQ("build-instructions", tree->getEntryAt(2).getName());
   EXPECT_EQ("contributing-to-packages.md", tree->getEntryAt(3).getName());
   EXPECT_EQ("contributing.md", tree->getEntryAt(4).getName());
@@ -274,8 +266,7 @@ TEST(GitTree, moveSerializer) {
     serializer1.addEntry(TreeEntry(
         Hash("3b18e512dba79e4c8300dd08aeb37f8e728b8dad"),
         "README.md",
-        FileType::REGULAR_FILE,
-        0b110));
+        FileType::REGULAR_FILE));
 
     serializer2 = std::move(serializer1);
   }
@@ -283,8 +274,7 @@ TEST(GitTree, moveSerializer) {
   serializer2.addEntry(TreeEntry(
       Hash("43b71c903ff52b9885bd36f3866324ef60e27b9b"),
       "eden",
-      FileType::DIRECTORY,
-      0b111));
+      FileType::DIRECTORY));
 
   // Make sure the tree hash is what we expect
   auto buf = serializer2.finalize();

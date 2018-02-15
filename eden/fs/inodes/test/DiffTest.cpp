@@ -483,7 +483,7 @@ void testResetFileModeChanged(bool loadInodes) {
 
   DiffTest t;
   auto b2 = t.getBuilder().clone();
-  b2.replaceFile("src/1.txt", "This is src/1.txt.\n", 0755);
+  b2.replaceFile("src/1.txt", "This is src/1.txt.\n", true);
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());

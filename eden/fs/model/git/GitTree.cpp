@@ -28,9 +28,6 @@ using std::vector;
 namespace facebook {
 namespace eden {
 
-const int RWX = 0b111;
-const int RW_ = 0b110;
-
 enum GitModeMask {
   DIRECTORY = 040000,
   GIT_LINK = 0160000,
@@ -80,19 +77,14 @@ std::unique_ptr<Tree> deserializeGitTree(
 
     // Determine the individual fields from the mode.
     FileType fileType;
-    uint8_t ownerPermissions;
     if (mode == GitModeMask::DIRECTORY) {
       fileType = FileType::DIRECTORY;
-      ownerPermissions = RWX;
     } else if (mode == GitModeMask::REGULAR_FILE) {
       fileType = FileType::REGULAR_FILE;
-      ownerPermissions = RW_;
     } else if (mode == GitModeMask::REGULAR_EXECUTABLE_FILE) {
-      fileType = FileType::REGULAR_FILE;
-      ownerPermissions = RWX;
+      fileType = FileType::EXECUTABLE_FILE;
     } else if (mode == GitModeMask::SYMLINK) {
       fileType = FileType::SYMLINK;
-      ownerPermissions = RWX;
     } else if (mode == GitModeMask::GIT_LINK) {
       throw std::domain_error(folly::sformat(
           "Gitlinks are not currently supported: {:o} in object {}",
@@ -105,8 +97,7 @@ std::unique_ptr<Tree> deserializeGitTree(
           hash.toString()));
     }
 
-    entries.emplace_back(
-        Hash(hashBytes), std::move(name), fileType, ownerPermissions);
+    entries.emplace_back(Hash(hashBytes), std::move(name), fileType);
   }
 
   return std::make_unique<Tree>(std::move(entries), hash);
@@ -166,12 +157,10 @@ void GitTreeSerializer::addEntry(const TreeEntry& entry) {
   // affect the final tree hash.)
 
   mode_t mode = 0;
-  if (entry.getFileType() == FileType::REGULAR_FILE) {
-    if (entry.getOwnerPermissions() & 0001) {
-      mode = GitModeMask::REGULAR_EXECUTABLE_FILE;
-    } else {
-      mode = GitModeMask::REGULAR_FILE;
-    }
+  if (entry.getFileType() == FileType::EXECUTABLE_FILE) {
+    mode = GitModeMask::REGULAR_EXECUTABLE_FILE;
+  } else if (entry.getFileType() == FileType::REGULAR_FILE) {
+    mode = GitModeMask::REGULAR_FILE;
   } else if (entry.getFileType() == FileType::DIRECTORY) {
     mode = GitModeMask::DIRECTORY;
   } else if (entry.getFileType() == FileType::SYMLINK) {

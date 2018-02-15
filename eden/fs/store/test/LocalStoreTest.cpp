@@ -146,7 +146,6 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   EXPECT_EQ("README.md", readmeEntry.getName());
   EXPECT_EQ(TreeEntryType::BLOB, readmeEntry.getType());
   EXPECT_EQ(FileType::REGULAR_FILE, readmeEntry.getFileType());
-  EXPECT_EQ(0b0110, readmeEntry.getOwnerPermissions());
 }
 
 TEST_P(LocalStoreTest, testGetResult) {

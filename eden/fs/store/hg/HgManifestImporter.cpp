@@ -231,9 +231,7 @@ void HgManifestImporter::popCurrentDir() {
 
   auto dirHash = back.compute(store_);
 
-  uint8_t ownerPermissions = 0111;
-  TreeEntry dirEntry(
-      dirHash, entryName.stringPiece(), FileType::DIRECTORY, ownerPermissions);
+  TreeEntry dirEntry{dirHash, entryName.stringPiece(), FileType::DIRECTORY};
   dirStack_.back().addEntry(std::move(dirEntry));
   dirStack_.back().addPartialTree(std::move(back));
 }

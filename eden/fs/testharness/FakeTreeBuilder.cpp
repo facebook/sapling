@@ -45,8 +45,7 @@ void FakeTreeBuilder::setFiles(
         arg.path,
         folly::ByteRange{folly::StringPiece{arg.contents}},
         false,
-        FileType::REGULAR_FILE,
-        arg.permissions);
+        arg.executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
   }
 }
 
@@ -60,14 +59,13 @@ void FakeTreeBuilder::setFileImpl(
     RelativePathPiece path,
     folly::ByteRange contents,
     bool replace,
-    FileType type,
-    int permissions) {
+    FileType type) {
   CHECK(!finalizedRoot_);
 
   auto dir = getDirEntry(path.dirname(), true);
   auto name = path.basename();
 
-  auto info = EntryInfo{type, TreeEntry::modeToOwnerPermissions(permissions)};
+  auto info = EntryInfo{type};
   info.contents = folly::StringPiece{contents}.str();
 
   if (replace) {
@@ -199,8 +197,7 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
         throw std::runtime_error(folly::to<string>(
             "tried to look up non-existent directory ", path));
       }
-      auto ret =
-          parent->entries->emplace(name, EntryInfo{FileType::DIRECTORY, 0b111});
+      auto ret = parent->entries->emplace(name, EntryInfo{FileType::DIRECTORY});
       CHECK(ret.second);
       parent = &ret.first->second;
     } else {
@@ -240,17 +237,14 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
   return current;
 }
 
-FakeTreeBuilder::EntryInfo::EntryInfo(FileType fileType, uint8_t perms)
-    : type(fileType), ownerPermissions(perms) {
+FakeTreeBuilder::EntryInfo::EntryInfo(FileType fileType) : type(fileType) {
   if (type == FileType::DIRECTORY) {
     entries = make_unique<PathMap<EntryInfo>>();
   }
 }
 
 FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
-    : type(orig.type),
-      ownerPermissions(orig.ownerPermissions),
-      contents(orig.contents) {
+    : type(orig.type), contents(orig.contents) {
   if (orig.entries) {
     entries = make_unique<PathMap<EntryInfo>>();
     for (const auto& e : *orig.entries) {
@@ -276,11 +270,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto* storedBlob = entryInfo.finalizeBlob(builder, setReady);
       hash = storedBlob->get().getHash();
     }
-    treeEntries.emplace_back(
-        hash,
-        e.first.stringPiece(),
-        entryInfo.type,
-        entryInfo.ownerPermissions);
+    treeEntries.emplace_back(hash, e.first.stringPiece(), entryInfo.type);
   }
 
   auto* storedTree = builder->store_->maybePutTree(treeEntries).first;

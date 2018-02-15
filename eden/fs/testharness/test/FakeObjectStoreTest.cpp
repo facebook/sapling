@@ -34,8 +34,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
   // Test getTree().
   vector<TreeEntry> entries1;
-  uint8_t rw_ = 0b110;
-  entries1.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE, rw_);
+  entries1.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE);
   Tree tree1(std::move(entries1), tree1Hash);
   store.addTree(std::move(tree1));
   auto foundTree = store.getTree(tree1Hash).get();
@@ -52,7 +51,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
   // Test getTreeForCommit().
   vector<TreeEntry> entries2;
-  entries2.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE, rw_);
+  entries2.emplace_back(fileHash, "a_file", FileType::REGULAR_FILE);
   Tree tree2(std::move(entries2), tree2Hash);
   store.setTreeForCommit(commHash, std::move(tree2));
   auto foundTreeForCommit = store.getTreeForCommit(commHash).get();

@@ -36,9 +36,8 @@ Hash testHash(testHashHex);
 } // namespace
 
 TEST(Tree, testGetEntryPtr) {
-  uint8_t mode = 0b110;
   vector<TreeEntry> entries;
-  entries.emplace_back(testHash, "a_file", FileType::REGULAR_FILE, mode);
+  entries.emplace_back(testHash, "a_file", FileType::REGULAR_FILE);
   Tree tree(std::move(entries));
 
   // Verify existent path.
@@ -48,7 +47,6 @@ TEST(Tree, testGetEntryPtr) {
   EXPECT_EQ("a_file", entry->getName());
   EXPECT_EQ(TreeEntryType::BLOB, entry->getType());
   EXPECT_EQ(FileType::REGULAR_FILE, entry->getFileType());
-  EXPECT_EQ(mode, entry->getOwnerPermissions());
 
   // Verify non-existent path.
   PathComponentPiece nonExistentPath("not_a_file");

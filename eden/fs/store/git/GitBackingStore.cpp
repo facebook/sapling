@@ -98,19 +98,14 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
     auto entryMode = git_tree_entry_filemode(gitEntry);
     StringPiece entryName(git_tree_entry_name(gitEntry));
     FileType fileType;
-    uint8_t ownerPerms;
     if (entryMode == GIT_FILEMODE_TREE) {
       fileType = FileType::DIRECTORY;
-      ownerPerms = 0b111;
     } else if (entryMode == GIT_FILEMODE_BLOB_EXECUTABLE) {
-      fileType = FileType::REGULAR_FILE;
-      ownerPerms = 0b111;
+      fileType = FileType::EXECUTABLE_FILE;
     } else if (entryMode == GIT_FILEMODE_LINK) {
       fileType = FileType::SYMLINK;
-      ownerPerms = 0b111;
     } else if (entryMode == GIT_FILEMODE_BLOB) {
       fileType = FileType::REGULAR_FILE;
-      ownerPerms = 0b110;
     } else {
       // TODO: We currently don't handle GIT_FILEMODE_COMMIT
       throw std::runtime_error(folly::to<string>(
@@ -122,7 +117,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
           id));
     }
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
-    entries.emplace_back(entryHash, entryName, fileType, ownerPerms);
+    entries.emplace_back(entryHash, entryName, fileType);
   }
   auto tree = make_unique<Tree>(std::move(entries), id);
   auto hash = localStore_->putTree(tree.get());

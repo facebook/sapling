@@ -620,7 +620,6 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
     StringPiece entryName(entry->filename, entry->filenamelen);
 
     FileType fileType;
-    uint8_t ownerPermissions;
 
     StringPiece entryFlag;
     if (entry->flag) {
@@ -635,16 +634,13 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
     if (entry->isdirectory()) {
       fileType = FileType::DIRECTORY;
-      ownerPermissions = 0b111;
     } else if (entry->flag) {
       switch (*entry->flag) {
         case 'x':
-          fileType = FileType::REGULAR_FILE;
-          ownerPermissions = 0b111;
+          fileType = FileType::EXECUTABLE_FILE;
           break;
         case 'l':
           fileType = FileType::SYMLINK;
-          ownerPermissions = 0b111;
           break;
         default:
           throw std::runtime_error(folly::to<string>(
@@ -657,13 +653,12 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
       }
     } else {
       fileType = FileType::REGULAR_FILE;
-      ownerPermissions = 0b110;
     }
 
     auto proxyHash = HgProxyHash::store(
         path + RelativePathPiece(entryName), entryHash, writeBatch);
 
-    entries.emplace_back(proxyHash, entryName, fileType, ownerPermissions);
+    entries.emplace_back(proxyHash, entryName, fileType);
 
     iter.next();
   }
@@ -827,16 +822,12 @@ void HgImporter::readManifestEntry(
   auto pathStr = cursor.readTerminatedString();
 
   FileType fileType;
-  uint8_t ownerPermissions;
   if (flag == ' ') {
     fileType = FileType::REGULAR_FILE;
-    ownerPermissions = 0b110;
   } else if (flag == 'x') {
-    fileType = FileType::REGULAR_FILE;
-    ownerPermissions = 0b111;
+    fileType = FileType::EXECUTABLE_FILE;
   } else if (flag == 'l') {
     fileType = FileType::SYMLINK;
-    ownerPermissions = 0b111;
   } else {
     throw std::runtime_error(folly::to<string>(
         "unsupported file flags for ", pathStr, ": ", static_cast<int>(flag)));
@@ -847,8 +838,7 @@ void HgImporter::readManifestEntry(
   // Generate a blob hash from the mercurial (path, fileRev) information
   auto blobHash = HgProxyHash::store(path, fileRevHash, writeBatch);
 
-  auto entry =
-      TreeEntry(blobHash, path.basename().value(), fileType, ownerPermissions);
+  auto entry = TreeEntry(blobHash, path.basename().value(), fileType);
   importer.processEntry(path.dirname(), std::move(entry));
 }
 

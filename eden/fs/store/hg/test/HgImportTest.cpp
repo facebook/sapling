@@ -94,7 +94,6 @@ void HgImportTest::importTest(bool treemanifest) {
   // importer.importTree().
   auto fooEntry = rootTree->getEntryAt(PathComponentPiece{"foo"});
   ASSERT_EQ(FileType::DIRECTORY, fooEntry.getFileType());
-  EXPECT_EQ(0b111, fooEntry.getOwnerPermissions());
   auto fooTree = treemanifest ? importer.importTree(fooEntry.getHash())
                               : localStore_.getTree(fooEntry.getHash());
   ASSERT_TRUE(fooTree);
@@ -111,10 +110,8 @@ void HgImportTest::importTest(bool treemanifest) {
 
   auto barEntry = fooTree->getEntryAt(PathComponentPiece{"bar.txt"});
   ASSERT_EQ(FileType::REGULAR_FILE, barEntry.getFileType());
-  EXPECT_EQ(0b110, barEntry.getOwnerPermissions());
   auto testEntry = fooTree->getEntryAt(PathComponentPiece{"test.txt"});
   ASSERT_EQ(FileType::REGULAR_FILE, testEntry.getFileType());
-  EXPECT_EQ(0b110, testEntry.getOwnerPermissions());
 
   // The blobs should not have been imported yet, though
   EXPECT_FALSE(localStore_.getBlob(barEntry.getHash()));
@@ -123,7 +120,6 @@ void HgImportTest::importTest(bool treemanifest) {
   // Get the "src" tree from the LocalStore.
   auto srcEntry = rootTree->getEntryAt(PathComponentPiece{"src"});
   ASSERT_EQ(FileType::DIRECTORY, srcEntry.getFileType());
-  EXPECT_EQ(0b111, srcEntry.getOwnerPermissions());
   auto srcTree = treemanifest ? importer.importTree(srcEntry.getHash())
                               : localStore_.getTree(srcEntry.getHash());
   ASSERT_TRUE(srcTree);
@@ -138,12 +134,10 @@ void HgImportTest::importTest(bool treemanifest) {
 
   auto somelinkEntry = srcTree->getEntryAt(PathComponentPiece{"somelink"});
   ASSERT_EQ(FileType::SYMLINK, somelinkEntry.getFileType());
-  EXPECT_EQ(0b111, somelinkEntry.getOwnerPermissions());
 
   // Get the "src/eden" tree from the LocalStore
   auto edenEntry = srcTree->getEntryAt(PathComponentPiece{"eden"});
   ASSERT_EQ(FileType::DIRECTORY, edenEntry.getFileType());
-  EXPECT_EQ(0b111, edenEntry.getOwnerPermissions());
   auto edenTree = treemanifest ? importer.importTree(edenEntry.getHash())
                                : localStore_.getTree(edenEntry.getHash());
   ASSERT_TRUE(edenTree);
@@ -156,8 +150,7 @@ void HgImportTest::importTest(bool treemanifest) {
   }
 
   auto mainEntry = edenTree->getEntryAt(PathComponentPiece{"main.py"});
-  ASSERT_EQ(FileType::REGULAR_FILE, mainEntry.getFileType());
-  EXPECT_EQ(0b111, mainEntry.getOwnerPermissions());
+  ASSERT_EQ(FileType::EXECUTABLE_FILE, mainEntry.getFileType());
 
   // Import and check the blobs
   auto barBuf = importer.importFileContents(barEntry.getHash());

@@ -69,26 +69,30 @@ class FakeTreeBuilder {
   void setFile(
       folly::StringPiece path,
       folly::StringPiece contents,
-      int permissions = 0644) {
-    setFile(RelativePathPiece{path}, folly::ByteRange{contents}, permissions);
+      bool executable = false) {
+    setFile(RelativePathPiece{path}, folly::ByteRange{contents}, executable);
   }
   void setFile(
       folly::StringPiece path,
       folly::ByteRange contents,
-      int permissions = 0644) {
-    setFile(RelativePathPiece{path}, contents, permissions);
+      bool executable = false) {
+    setFile(RelativePathPiece{path}, contents, executable);
   }
   void setFile(
       RelativePathPiece path,
       folly::StringPiece contents,
-      int permissions = 0644) {
-    setFile(path, folly::ByteRange{contents}, permissions);
+      bool executable = false) {
+    setFile(path, folly::ByteRange{contents}, executable);
   }
   void setFile(
       RelativePathPiece path,
       folly::ByteRange contents,
-      int permissions = 0644) {
-    setFileImpl(path, contents, false, FileType::REGULAR_FILE, permissions);
+      bool executable = false) {
+    setFileImpl(
+        path,
+        contents,
+        false,
+        executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
   }
 
   void setFiles(const std::initializer_list<FileInfo>& fileArgs);
@@ -99,27 +103,31 @@ class FakeTreeBuilder {
   void replaceFile(
       folly::StringPiece path,
       folly::StringPiece contents,
-      int permissions = 0644) {
+      bool executable = false) {
     replaceFile(
-        RelativePathPiece{path}, folly::ByteRange{contents}, permissions);
+        RelativePathPiece{path}, folly::ByteRange{contents}, executable);
   }
   void replaceFile(
       folly::StringPiece path,
       folly::ByteRange contents,
-      int permissions = 0644) {
-    replaceFile(RelativePathPiece{path}, contents, permissions);
+      bool executable = false) {
+    replaceFile(RelativePathPiece{path}, contents, executable);
   }
   void replaceFile(
       RelativePathPiece path,
       folly::StringPiece contents,
-      int permissions = 0644) {
-    replaceFile(path, folly::ByteRange{contents}, permissions);
+      bool executable = false) {
+    replaceFile(path, folly::ByteRange{contents}, executable);
   }
   void replaceFile(
       RelativePathPiece path,
       folly::ByteRange contents,
-      int permissions = 0644) {
-    setFileImpl(path, contents, true, FileType::REGULAR_FILE, permissions);
+      bool executable = false) {
+    setFileImpl(
+        path,
+        contents,
+        true,
+        executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
   }
 
   /**
@@ -129,7 +137,7 @@ class FakeTreeBuilder {
     setSymlink(RelativePathPiece{path}, contents);
   }
   void setSymlink(RelativePathPiece path, folly::StringPiece contents) {
-    setFileImpl(path, contents, false, FileType::SYMLINK, 0644);
+    setFileImpl(path, contents, false, FileType::SYMLINK);
   }
 
   /**
@@ -139,7 +147,7 @@ class FakeTreeBuilder {
     replaceSymlink(RelativePathPiece{path}, contents);
   }
   void replaceSymlink(RelativePathPiece path, folly::StringPiece contents) {
-    setFileImpl(path, contents, true, FileType::SYMLINK, 0644);
+    setFileImpl(path, contents, true, FileType::SYMLINK);
   }
 
   /**
@@ -225,7 +233,7 @@ class FakeTreeBuilder {
   FakeTreeBuilder(ExplicitClone, const FakeTreeBuilder* orig);
 
   struct EntryInfo {
-    EntryInfo(FileType fileType, uint8_t perms);
+    explicit EntryInfo(FileType fileType);
 
     EntryInfo(EntryInfo&& other) = default;
     EntryInfo& operator=(EntryInfo&& other) = default;
@@ -239,7 +247,6 @@ class FakeTreeBuilder {
     StoredBlob* finalizeBlob(FakeTreeBuilder* builder, bool setReady) const;
 
     FileType type;
-    uint8_t ownerPermissions;
     std::unique_ptr<PathMap<EntryInfo>> entries;
     std::string contents;
   };
@@ -251,24 +258,23 @@ class FakeTreeBuilder {
       RelativePathPiece path,
       folly::ByteRange contents,
       bool replace,
-      FileType type,
-      int permissions);
+      FileType type);
   EntryInfo* getEntry(RelativePathPiece path);
   EntryInfo* getDirEntry(RelativePathPiece path, bool create);
   StoredTree* getStoredTree(RelativePathPiece path);
 
   std::shared_ptr<FakeBackingStore> store_{nullptr};
-  EntryInfo root_{FileType::DIRECTORY, 0b111};
+  EntryInfo root_{FileType::DIRECTORY};
   StoredTree* finalizedRoot_{nullptr};
 };
 
 struct FakeTreeBuilder::FileInfo {
   RelativePath path;
   std::string contents;
-  int permissions = 0644;
+  bool executable;
 
-  FileInfo(folly::StringPiece p, folly::StringPiece c, int perms = 0644)
-      : path(p), contents(c.str()), permissions(perms) {}
+  FileInfo(folly::StringPiece p, folly::StringPiece c, bool exec = false)
+      : path(p), contents(c.str()), executable(exec) {}
 };
 } // namespace eden
 } // namespace facebook

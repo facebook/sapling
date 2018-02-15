@@ -74,7 +74,7 @@ TEST(InodeMap, simpleLookups) {
 TEST(InodeMap, asyncLookup) {
   auto builder = FakeTreeBuilder();
   builder.setFile("README", "docs go here\n");
-  builder.setFile("src/runme.sh", "#!/bin/sh\necho hello world\n", 0755);
+  builder.setFile("src/runme.sh", "#!/bin/sh\necho hello world\n", true);
   builder.setFile("src/test.txt", "this is a test file");
   TestMount testMount{builder, false};
 
@@ -100,7 +100,7 @@ TEST(InodeMap, asyncLookup) {
 TEST(InodeMap, asyncError) {
   auto builder = FakeTreeBuilder();
   builder.setFile("README", "docs go here\n");
-  builder.setFile("src/runme.sh", "#!/bin/sh\necho hello world\n", 0755);
+  builder.setFile("src/runme.sh", "#!/bin/sh\necho hello world\n", true);
   builder.setFile("src/test.txt", "this is a test file");
   TestMount testMount{builder, false};
 

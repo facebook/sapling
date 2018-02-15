@@ -26,44 +26,47 @@ std::string TreeEntry::toLogString() const {
     case FileType::REGULAR_FILE:
       fileTypeChar = 'f';
       break;
+    case FileType::EXECUTABLE_FILE:
+      fileTypeChar = 'x';
+      break;
     case FileType::SYMLINK:
       fileTypeChar = 'l';
       break;
   }
-  std::array<char, 4> modeStr;
-  modeStr[0] = fileTypeChar;
-  modeStr[1] = (ownerPermissions_ & 0b100) ? 'r' : '-';
-  modeStr[2] = (ownerPermissions_ & 0b010) ? 'w' : '-';
-  modeStr[3] = (ownerPermissions_ & 0b001) ? 'x' : '-';
 
   return folly::to<std::string>(
-      "(",
-      name_,
-      ", ",
-      hash_.toString(),
-      ", ",
-      folly::StringPiece{modeStr},
-      ")");
+      "(", name_, ", ", hash_.toString(), ", ", fileTypeChar, ")");
+}
+
+std::ostream& operator<<(std::ostream& os, FileType type) {
+  switch (type) {
+    case FileType::DIRECTORY:
+      return os << "DIRECTORY";
+    case FileType::REGULAR_FILE:
+      return os << "REGULAR_FILE";
+    case FileType::EXECUTABLE_FILE:
+      return os << "EXECUTABLE_FILE";
+    case FileType::SYMLINK:
+      return os << "SYMLINK";
+  }
+
+  return os << "FileType::" << int(type);
 }
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
   switch (type) {
     case TreeEntryType::TREE:
-      os << "TREE";
-      return os;
+      return os << "TREE";
     case TreeEntryType::BLOB:
-      os << "BLOB";
-      return os;
+      return os << "BLOB";
   }
 
-  os << "TreeEntryType::" << int(type);
-  return os;
+  return os << "TreeEntryType::" << int(type);
 }
 
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
   return (entry1.getHash() == entry2.getHash()) &&
       (entry1.getFileType() == entry2.getFileType()) &&
-      (entry1.getOwnerPermissions() == entry2.getOwnerPermissions()) &&
       (entry1.getName() == entry2.getName());
 }
 

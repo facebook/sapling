@@ -144,6 +144,12 @@ class FakeBackingStore : public BackingStore {
   folly::Synchronized<Data> data_;
 };
 
+enum class FakeBlobType {
+  REGULAR_FILE,
+  EXECUTABLE_FILE,
+  SYMLINK,
+};
+
 /**
  * A small helper struct for use with FakeBackingStore::putTree()
  *
@@ -151,16 +157,18 @@ class FakeBackingStore : public BackingStore {
  * initialier-list arguments.
  */
 struct FakeBackingStore::TreeEntryData {
-  TreeEntryData(folly::StringPiece name, const Blob& blob, mode_t mode = 0644);
+  TreeEntryData(
+      folly::StringPiece name,
+      const Blob& blob,
+      FakeBlobType type = FakeBlobType::REGULAR_FILE);
   TreeEntryData(
       folly::StringPiece name,
       const StoredBlob* blob,
-      mode_t mode = 0644);
-  TreeEntryData(folly::StringPiece name, const Tree& tree, mode_t mode = 0755);
-  TreeEntryData(
-      folly::StringPiece name,
-      const StoredTree* tree,
-      mode_t mode = 0755);
+      FakeBlobType type = FakeBlobType::REGULAR_FILE);
+  // tree
+  TreeEntryData(folly::StringPiece name, const Tree& tree);
+  // tree
+  TreeEntryData(folly::StringPiece name, const StoredTree* tree);
 
   TreeEntry entry;
 };

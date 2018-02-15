@@ -18,13 +18,13 @@
 /**
  * Check that a FileInode has the expected contents and permissions.
  */
-#define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)         \
-  do {                                                                    \
-    EXPECT_EQ(                                                            \
-        expectedData,                                                     \
-        folly::StringPiece{                                               \
-            fileInode->readAll().get(std::chrono::milliseconds(20000))}); \
-    EXPECT_EQ(                                                            \
-        folly::sformat("{:#o}", (expectedPerms)),                         \
-        folly::sformat("{:#o}", (fileInode)->getPermissions()));          \
+#define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)   \
+  do {                                                              \
+    EXPECT_EQ(                                                      \
+        expectedData,                                               \
+        folly::StringPiece{                                         \
+            (fileInode)->readAll().get(std::chrono::seconds(20))}); \
+    EXPECT_EQ(                                                      \
+        folly::sformat("{:#o}", (expectedPerms)),                   \
+        folly::sformat("{:#o}", (fileInode)->getPermissions()));    \
   } while (0)

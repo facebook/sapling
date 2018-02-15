@@ -171,22 +171,18 @@ std::unique_ptr<Tree> convertBufToTree(
     auto hash = Hash(i->at("hash").asString());
     auto str_type = i->at("type").asString();
     FileType file_type;
-    uint8_t owner_permissions = 0b110;
     if (str_type == "File") {
       file_type = FileType::REGULAR_FILE;
     } else if (str_type == "Tree") {
       file_type = FileType::DIRECTORY;
-      owner_permissions = 0b111;
     } else if (str_type == "Executable") {
-      file_type = FileType::REGULAR_FILE;
-      owner_permissions = 0b111;
+      file_type = FileType::EXECUTABLE_FILE;
     } else if (str_type == "Symlink") {
       file_type = FileType::SYMLINK;
-      owner_permissions = 0b111;
     } else {
       throw std::runtime_error("unknown file type");
     }
-    entries.push_back(TreeEntry(hash, path_elem, file_type, owner_permissions));
+    entries.push_back(TreeEntry(hash, path_elem, file_type));
   }
   return std::make_unique<Tree>(std::move(entries), id);
 }

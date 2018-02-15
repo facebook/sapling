@@ -14,6 +14,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
+#include <folly/experimental/logging/xlog.h>
+#include <sys/stat.h>
 #include <iosfwd>
 
 namespace facebook {
@@ -21,19 +23,16 @@ namespace eden {
 
 class Hash;
 
-enum class TreeEntryType {
+enum class TreeEntryType : uint8_t {
   BLOB,
   TREE,
 };
 
-enum class FileType {
-  // The values for these enum entries correspond to the ones we would expect to
-  // find in <sys/stat.h>. We hardcode them just in case the values in the
-  // users's <sys/stat.h> are different. Note that Git performs a similar check:
-  // https://github.com/git/git/blob/v2.7.4/configure.ac#L912-L917
-  DIRECTORY = 0040,
-  REGULAR_FILE = 0100,
-  SYMLINK = 0120,
+enum class FileType : uint8_t {
+  DIRECTORY,
+  REGULAR_FILE,
+  EXECUTABLE_FILE,
+  SYMLINK,
 };
 
 class TreeEntry {
@@ -41,12 +40,8 @@ class TreeEntry {
   explicit TreeEntry(
       const Hash& hash,
       folly::StringPiece name,
-      FileType fileType,
-      uint8_t ownerPermissions)
-      : fileType_(fileType),
-        ownerPermissions_(ownerPermissions),
-        hash_(hash),
-        name_(PathComponentPiece(name)) {}
+      FileType fileType)
+      : fileType_(fileType), hash_(hash), name_(PathComponentPiece(name)) {}
 
   const Hash& getHash() const {
     return hash_;
@@ -65,40 +60,29 @@ class TreeEntry {
     return fileType_;
   }
 
-  uint8_t getOwnerPermissions() const {
-    return ownerPermissions_;
-  }
-
   mode_t getMode() const {
-    mode_t mode = static_cast<mode_t>(fileType_) << 9;
-    // We should always honor the explicit owner permissions.
-    mode |= ownerPermissions_ << 6;
-
-    // We propagate the 'r' and 'x' values for the owner to group and other.
-    mode |= (ownerPermissions_ & 0b101) << 3;
-    mode |= (ownerPermissions_ & 0b101);
-    return mode;
-  }
-
-  /**
-   * Extract the owner permissions from a mode_t value.
-   *
-   * This can be used to construct the ownerPermissions parameter needed for
-   * the TreeEntry constructor.
-   */
-  static uint8_t modeToOwnerPermissions(mode_t mode) {
-    return (mode >> 6) & 0b111;
+    switch (fileType_) {
+      case FileType::DIRECTORY:
+        return S_IFDIR | 0755;
+      case FileType::REGULAR_FILE:
+        return S_IFREG | 0644;
+      case FileType::EXECUTABLE_FILE:
+        return S_IFREG | 0755;
+      case FileType::SYMLINK:
+        return S_IFLNK | 0755;
+    }
+    XLOG(FATAL) << "illegal file type " << int(fileType_);
   }
 
   std::string toLogString() const;
 
  private:
   FileType fileType_;
-  uint8_t ownerPermissions_;
   Hash hash_;
   PathComponent name_;
 };
 
+std::ostream& operator<<(std::ostream& os, FileType type);
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2);
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2);

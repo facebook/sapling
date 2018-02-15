@@ -67,6 +67,10 @@ inline void PrintTo(
 
 namespace {
 
+bool isExecutable(int perms) {
+  return perms & S_IXUSR;
+}
+
 /**
  * An enum to control behavior for many of the checkout tests.
  *
@@ -230,7 +234,8 @@ void testAddFile(
 
   // Prepare a second tree, by starting with builder1 then adding the new file
   auto builder2 = builder1.clone();
-  builder2.setFile(newFilePath, "this is the new file contents\n", perms);
+  builder2.setFile(
+      newFilePath, "this is the new file contents\n", isExecutable(perms));
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
@@ -258,7 +263,6 @@ void runAddFileTests(folly::StringPiece path) {
   for (auto loadType : kAddLoadTypes) {
     SCOPED_TRACE(folly::to<string>("add ", path, " load type ", loadType));
     testAddFile(path, loadType);
-    testAddFile(path, loadType, 0444);
     testAddFile(path, loadType, 0755);
   }
 }
@@ -332,13 +336,13 @@ void testModifyFile(
   builder1.setFile("a/test.txt", "test contents\n");
   builder1.setFile("a/b/dddd.c", "this is dddd.c\n");
   builder1.setFile("a/b/tttt.c", "this is tttt.c\n");
-  builder1.setFile(path, contents1, perms1);
+  builder1.setFile(path, contents1, isExecutable(perms1));
   TestMount testMount{builder1};
   testMount.getClock().advance(9876min);
 
   // Prepare the second tree
   auto builder2 = builder1.clone();
-  builder2.replaceFile(path, contents2, perms2);
+  builder2.replaceFile(path, contents2, isExecutable(perms2));
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
@@ -450,12 +454,12 @@ void testModifyConflict(
   workingDirBuilder.setFile("a/test.txt", "test contents\n");
   workingDirBuilder.setFile("a/b/dddd.c", "this is dddd.c\n");
   workingDirBuilder.setFile("a/b/tttt.c", "this is tttt.c\n");
-  workingDirBuilder.setFile(path, currentContents, currentPerms);
+  workingDirBuilder.setFile(path, currentContents, isExecutable(currentPerms));
   TestMount testMount{workingDirBuilder};
 
   // Prepare the "before" tree
   auto builder1 = workingDirBuilder.clone();
-  builder1.replaceFile(path, contents1, perms1);
+  builder1.replaceFile(path, contents1, isExecutable(perms1));
   builder1.finalize(testMount.getBackingStore(), true);
   // Reset the EdenMount to point at the tree from builder1, even though the
   // contents are still from workingDirBuilder.  This lets us trigger the
@@ -471,7 +475,7 @@ void testModifyConflict(
 
   // Prepare the destination tree
   auto builder2 = builder1.clone();
-  builder2.replaceFile(path, contents2, perms2);
+  builder2.replaceFile(path, contents2, isExecutable(perms2));
   builder2.replaceFile("a/b/dddd.c", "new dddd contents\n");
   builder2.finalize(testMount.getBackingStore(), true);
   auto commit2 = testMount.getBackingStore()->putCommit("b", builder2);

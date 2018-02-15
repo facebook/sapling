@@ -137,41 +137,39 @@ std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
   }
 }
 
+static FileType fileTypeFromBlobType(FakeBlobType type) {
+  switch (type) {
+    case FakeBlobType::REGULAR_FILE:
+      return FileType::REGULAR_FILE;
+    case FakeBlobType::EXECUTABLE_FILE:
+      return FileType::EXECUTABLE_FILE;
+    case FakeBlobType::SYMLINK:
+      return FileType::SYMLINK;
+  }
+  XLOG(FATAL) << "Unknown fake blob type " << static_cast<int>(type);
+}
+
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Blob& blob,
-    mode_t mode)
-    : entry{blob.getHash(),
-            name,
-            FileType::REGULAR_FILE,
-            TreeEntry::modeToOwnerPermissions(mode)} {}
+    FakeBlobType type)
+    : entry{blob.getHash(), name, fileTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredBlob* blob,
-    mode_t mode)
-    : entry{blob->get().getHash(),
-            name,
-            FileType::REGULAR_FILE,
-            TreeEntry::modeToOwnerPermissions(mode)} {}
+    FakeBlobType type)
+    : entry{blob->get().getHash(), name, fileTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
-    const Tree& tree,
-    mode_t mode)
-    : entry{tree.getHash(),
-            name,
-            FileType::DIRECTORY,
-            TreeEntry::modeToOwnerPermissions(mode)} {}
+    const Tree& tree)
+    : entry{tree.getHash(), name, FileType::DIRECTORY} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
-    const StoredTree* tree,
-    mode_t mode)
-    : entry{tree->get().getHash(),
-            name,
-            FileType::DIRECTORY,
-            TreeEntry::modeToOwnerPermissions(mode)} {}
+    const StoredTree* tree)
+    : entry{tree->get().getHash(), name, FileType::DIRECTORY} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {
