@@ -330,7 +330,7 @@ Show all commands + options
   tags: template
   tip: patch, git, style, template
   unbundle: update
-  verify: 
+  verify: rev
   version: template
 
   $ hg init a

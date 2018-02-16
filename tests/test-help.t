@@ -643,6 +643,10 @@ Test command without options
         [verify]
             skipmanifests = true
   
+  options ([+] can be repeated):
+  
+   -r --rev REV [+] verify the specified revision or revset
+  
   (some details hidden, use --verbose to show complete help)
 
   $ hg help diff
