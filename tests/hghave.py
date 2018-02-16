@@ -480,7 +480,8 @@ def has_root():
 
 @check("pyflakes", "Pyflakes python linter")
 def has_pyflakes():
-    return matchoutput("sh -c \"echo 'import re' 2>&1 | pyflakes\"",
+    pyflakespath = os.environ.get('HGTEST_PYFLAKES_PATH', 'pyflakes')
+    return matchoutput("sh -c \"echo 'import re' 2>&1 | %s\"" % pyflakespath,
                        br"<stdin>:1: 're' imported but unused",
                        True)
 
