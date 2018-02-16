@@ -24,12 +24,6 @@ setup repo
   $ cd $TESTTMP
   $ blobimport --blobstore files --linknodes repo-hg repo
 
-blobimport currently doesn't handle bookmarks, but server requires the directory.
-  $ mkdir -p repo/books
-
-Need a place for the socket to live
-  $ mkdir -p repo/.hg
-
 setup repo2
 
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2

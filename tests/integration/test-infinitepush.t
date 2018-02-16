@@ -47,13 +47,7 @@ Init treemanifest and remotefilelog
 setup repo2
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate
 
-  $ blobimport --blobstore files --linknodes repo-hg repo > /dev/null 2>&1
-
-blobimport currently doesn't handle bookmarks, but server requires the directory.
-  $ mkdir -p repo/books
-
-Need a place for the socket to live
-  $ mkdir -p repo/.hg
+  $ blobimport --blobstore files --linknodes repo-hg repo
 
 start mononoke
 

@@ -56,6 +56,9 @@ CONFIG
 
 function blobimport {
   $MONONOKE_BLOBIMPORT "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  reponame=$_
+  mkdir -p "$reponame"/.hg
+  mkdir -p "$reponame"/books
 }
 
 function edenserver {

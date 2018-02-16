@@ -114,7 +114,7 @@ Add commit with a directory
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
-  $ blobimport --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo --postpone-compaction -d
+  $ blobimport --postpone-compaction -d --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo
   $ grep changeset < $TESTTMP/blobimport.out
   D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
@@ -131,8 +131,6 @@ Heads output order is unpredictable, let's sort them by commit hash
   $ grep compaction < $TESTTMP/blobimport.out
   I* compaction started (glob)
   I* compaction finished (glob)
-Temporary hack because blobimport doesn't import bookmarks yet
-  $ mkdir $TESTTMP/blobrepo/books
   $ edenserver --config-file $TESTTMP/config
 
 Temporary hack to make sure server is ready

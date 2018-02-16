@@ -106,12 +106,6 @@ setup repo2
   $ cd ..
   $ blobimport --blobstore files --linknodes repo-hg repo
 
-blobimport currently doesn't handle bookmarks, but server requires the directory.
-  $ mkdir -p repo/books
-
-Need a place for the socket to live
-  $ mkdir -p repo/.hg
-
 start mononoke
 
   $ mononoke -P $TESTTMP/mononoke-config -B test-config
