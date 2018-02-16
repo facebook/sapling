@@ -234,7 +234,7 @@ def rage(ui, repo, *pats, **opts):
         ('hg version', _failsafe(
             lambda: __import__('mercurial.__version__').__version__.version)),
         ('obsstore size', _failsafe(
-            lambda: str(repo.vfs.stat('store/obsstore').st_size))),
+            lambda: str(srcrepo.vfs.stat('store/obsstore').st_size))),
     ]
 
     ui._colormode = None
