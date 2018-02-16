@@ -361,8 +361,6 @@ def parseargs(args, parser):
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
-        if os.path.basename(options.with_hg) not in [b'hg', b'hg.exe']:
-            sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
         testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
         reporootdir = os.path.dirname(testdir)
@@ -1189,8 +1187,6 @@ class TTest(Test):
 
         if self._debug:
             script.append(b'set -x\n')
-        if self._hgcommand != b'hg':
-            script.append(b'alias hg="%s"\n' % self._hgcommand)
         if os.getenv('MSYSTEM'):
             script.append(b'alias pwd="pwd -W"\n')
 
@@ -2260,7 +2256,8 @@ class TestRunner(object):
             whg = self.options.with_hg
             self._bindir = os.path.dirname(os.path.realpath(whg))
             assert isinstance(self._bindir, bytes)
-            self._hgcommand = os.path.basename(whg)
+            # use full path, since _hgcommand will also be used as ui.remotecmd
+            self._hgcommand = os.path.realpath(whg)
             self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
             os.makedirs(self._tmpbindir)
 
@@ -2273,7 +2270,7 @@ class TestRunner(object):
         else:
             self._installdir = os.path.join(self._hgtmp, b"install")
             self._bindir = os.path.join(self._installdir, b"bin")
-            self._hgcommand = b'hg'
+            self._hgcommand = os.path.join(self._bindir, b'hg')
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
@@ -2447,6 +2444,8 @@ class TestRunner(object):
                     assert self._installdir
                     self._installchg()
 
+                self._usecorrecthg()
+
                 result = runner.run(suite)
 
             if result.failures:
@@ -2564,6 +2563,25 @@ class TestRunner(object):
             os.environ['PATH'] = os.pathsep.join([exedir] + path)
             if not self._findprogram(pyexename):
                 print("WARNING: Cannot find %s in search path" % pyexename)
+
+    def _usecorrecthg(self):
+        """Configure the environment to use the appropriate hg in tests."""
+        if os.path.basename(self._hgcommand) in ('hg', 'hg.exe'):
+            # No correction is needed
+            return
+        if getattr(os, 'symlink', None):
+            tmphgpath = os.path.join(self._tmpbindir, b'hg')
+            vlog("# Symlink %s to %s" % (self._hgcommand, tmphgpath))
+            try:
+                os.symlink(self._hgcommand, tmphgpath)
+                self._createdfiles.append(tmphgpath)
+            except OSError as err:
+                # child processes may race, which is harmless
+                if err.errno != errno.EEXIST:
+                    raise
+        else:
+            raise SystemExit('%s could not be put in search path'
+                             % self._hgcommand)
 
     def _installhg(self):
         """Install hg into the test environment.

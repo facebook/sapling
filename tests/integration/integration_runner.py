@@ -8,6 +8,7 @@
 """Runner for Mononoke/Mercurial integration tests."""
 
 import contextlib
+import multiprocessing
 import os
 import shutil
 import sys
@@ -24,6 +25,7 @@ TESTDIR_PATH = 'scm/mononoke/tests/integration'
 MONONOKE_BLOBIMPORT_TARGET = '//scm/mononoke:blobimport'
 MONONOKE_EDEN_SERVER_TARGET = '//scm/mononoke/eden_server:eden_server'
 DUMMYSSH_TARGET = '//scm/mononoke/tests/integration:dummyssh'
+BINARY_HG_TARGET = '//scm/hg:hg'
 MONONOKE_HGCLI_TARGET = '//scm/mononoke/hgcli:hgcli'
 MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
 
@@ -70,7 +72,7 @@ def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
     # Use hg.real to avoid going through the wrapper and incurring slowdown
     # from subprocesses.
     # XXX is this the right thing to do?
-    args = ['--with-hg', shutil.which('hg.real')]
+    args = ['--with-hg', get_hg_binary()]
     if dry_run:
         args.append('--list-tests')
     if interactive:
@@ -81,6 +83,7 @@ def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
         args.append('--debug')
     if keep_tmpdir:
         args.append('--keep-tmpdir')
+    args.extend(['-j', '%d' % multiprocessing.cpu_count()])
     if tests:
         args.extend(tests)
 
@@ -128,6 +131,12 @@ def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
 
 def add_to_environ(var, target, rule_type=pathutils.BuildRuleTypes.RUST_BINARY):
     os.environ[var] = pathutils.get_build_rule_output_path(target, rule_type)
+
+
+def get_hg_binary():
+    return pathutils.get_build_rule_output_path(
+        BINARY_HG_TARGET, pathutils.BuildRuleTypes.PYTHON_BINARY
+    )
 
 
 if __name__ == '__main__':
