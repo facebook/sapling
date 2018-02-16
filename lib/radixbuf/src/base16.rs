@@ -82,6 +82,8 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(feature="nobench"))]
     use test::Bencher;
 
     quickcheck! {
@@ -123,6 +125,7 @@ mod tests {
         assert_eq!(v, vec![6, 5, 4]);
     }
 
+    #[cfg(not(feature="nobench"))]
     #[bench]
     fn bench_key_base64(b: &mut Bencher) {
         let x = [4u8; 20];

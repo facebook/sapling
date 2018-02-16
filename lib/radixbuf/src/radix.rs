@@ -383,7 +383,11 @@ mod tests {
     use std::collections::HashSet;
     use std::mem::transmute;
     use key::{VariantKey, FixedKey};
+
+    #[cfg(not(feature="nobench"))]
     use rand::{ChaChaRng, Rng};
+
+    #[cfg(not(feature="nobench"))]
     use test::Bencher;
 
     #[test]
@@ -545,14 +549,17 @@ mod tests {
         })
     }
 
+    #[cfg(not(feature="nobench"))]
     const COUNT: usize = 51200;
 
+    #[cfg(not(feature="nobench"))]
     #[bench]
     fn bench_insert(b: &mut Bencher) {
         let key_buf = randomized_key_buf(COUNT);
         b.iter(|| { batch_insert_radix_buf(&key_buf, COUNT); })
     }
 
+    #[cfg(not(feature="nobench"))]
     #[bench]
     fn bench_unchecked_lookups(b: &mut Bencher) {
         let key_buf = randomized_key_buf(COUNT);
@@ -564,6 +571,7 @@ mod tests {
         })
     }
 
+    #[cfg(not(feature="nobench"))]
     #[bench]
     fn bench_lookups(b: &mut Bencher) {
         let key_buf = randomized_key_buf(COUNT);
@@ -575,6 +583,7 @@ mod tests {
         })
     }
 
+    #[cfg(not(feature="nobench"))]
     fn randomized_key_buf(count: usize) -> Vec<u8> {
         let mut key_buf = vec![0u8; count * 20];
         // Using an unseeded rng so benchmarks are more stable across multiple runs
@@ -582,6 +591,7 @@ mod tests {
         key_buf
     }
 
+    #[cfg(not(feature="nobench"))]
     fn batch_insert_radix_buf(key_buf: &Vec<u8>, count: usize) -> Vec<u32> {
         let mut radix_buf = vec![0u32; 16];
         for i in 0..count {

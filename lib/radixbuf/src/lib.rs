@@ -13,6 +13,7 @@ extern crate quickcheck;
 #[cfg(test)]
 extern crate rand;
 
+#[cfg(not(feature="nobench"))]
 #[cfg(test)]
 extern crate test;
 
