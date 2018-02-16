@@ -6,27 +6,29 @@
 
 use futures::{Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
-use slog::Logger;
 
-use errors::*;
 use mercurial_bundles::changegroup::{CgDeltaChunk, Part, Section};
 use mercurial_types::MPath;
 
+use errors::*;
+
 #[derive(Debug, Eq, PartialEq)]
-pub struct Changeset {
+pub struct ChangesetDeltaed {
     chunk: CgDeltaChunk,
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Filelog {
+pub struct FilelogDeltaed {
     path: MPath,
     chunk: CgDeltaChunk,
 }
 
 pub fn split_changegroup<S>(
-    _logger: Logger,
     cg2s: S,
-) -> (BoxStream<Changeset, Error>, BoxStream<Filelog, Error>)
+) -> (
+    BoxStream<ChangesetDeltaed, Error>,
+    BoxStream<FilelogDeltaed, Error>,
+)
 where
     S: Stream<Item = Part, Error = Error> + Send + 'static,
 {
@@ -40,7 +42,7 @@ where
 
     let changesets = changesets
         .and_then(|part| match part {
-            Part::CgChunk(Section::Changeset, chunk) => Ok(Changeset { chunk }),
+            Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
             bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
         })
         .boxify();
@@ -67,7 +69,7 @@ where
                     None => match part {
                         Part::CgChunk(Section::Filelog(path), chunk) => {
                             seen_filelog = Some(path.clone());
-                            Ok(Some(Filelog { path, chunk }))
+                            Ok(Some(FilelogDeltaed { path, chunk }))
                         }
                         Part::End => Ok(None), // this is covered by CheckEnd wrapper
                         bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
@@ -137,27 +139,17 @@ mod tests {
 
     use futures::stream::iter_ok;
     use itertools::{assert_equal, equal};
-    use slog::Discard;
-
-    pub fn split_changegroup_no_logger<S>(
-        cg2s: S,
-    ) -> (BoxStream<Changeset, Error>, BoxStream<Filelog, Error>)
-    where
-        S: Stream<Item = Part, Error = Error> + Send + 'static,
-    {
-        split_changegroup(Logger::root(Discard, o!()), cg2s)
-    }
 
     fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> bool
     where
         S: Stream<Item = Part, Error = Error> + Send + 'static,
-        I: IntoIterator<Item = Changeset>,
-        J: IntoIterator<Item = Filelog>,
+        I: IntoIterator<Item = ChangesetDeltaed>,
+        J: IntoIterator<Item = FilelogDeltaed>,
     {
-        let (cs, fs) = split_changegroup_no_logger(cg2s);
+        let (cs, fs) = split_changegroup(cg2s);
 
-        let cs: Vec<Changeset> = cs.collect().wait().expect("error in changesets");
-        let fs: Vec<Filelog> = fs.collect().wait().expect("error in changesets");
+        let cs = cs.collect().wait().expect("error in changesets");
+        let fs = fs.collect().wait().expect("error in changesets");
 
         equal(cs, exp_cs) && equal(fs, exp_fs)
     }
@@ -188,7 +180,7 @@ mod tests {
                         Part::End,
                     ].into_iter(),
                 ),
-                vec![Changeset { chunk: c.clone() }],
+                vec![ChangesetDeltaed { chunk: c.clone() }],
                 vec![],
             ) && check_splitting(
                 iter_ok(
@@ -202,7 +194,7 @@ mod tests {
                 ),
                 vec![],
                 vec![
-                    Filelog {
+                    FilelogDeltaed {
                         path: f_p.clone(),
                         chunk: f.clone(),
                     },
@@ -218,9 +210,9 @@ mod tests {
                         Part::End,
                     ].into_iter(),
                 ),
-                vec![Changeset { chunk: c.clone() }],
+                vec![ChangesetDeltaed { chunk: c.clone() }],
                 vec![
-                    Filelog {
+                    FilelogDeltaed {
                         path: f_p.clone(),
                         chunk: f.clone(),
                     },
@@ -250,13 +242,13 @@ mod tests {
                         Part::End,
                     ].into_iter(),
                 ),
-                vec![Changeset { chunk: c1 }, Changeset { chunk: c2 }],
+                vec![ChangesetDeltaed { chunk: c1 }, ChangesetDeltaed { chunk: c2 }],
                 vec![
-                    Filelog {
+                    FilelogDeltaed {
                         path: f1_p,
                         chunk: f1,
                     },
-                    Filelog {
+                    FilelogDeltaed {
                         path: f2_p,
                         chunk: f2,
                     },
@@ -266,7 +258,7 @@ mod tests {
 
         fn splitting_error_filelog_end(f: CgDeltaChunk, f1_p: MPath, f2_p: MPath) -> bool {
             {
-                let (cs, fs) = split_changegroup_no_logger(iter_ok(
+                let (cs, fs) = split_changegroup(iter_ok(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
@@ -280,7 +272,7 @@ mod tests {
             }
 
             {
-                let (cs, fs) = split_changegroup_no_logger(iter_ok(
+                let (cs, fs) = split_changegroup(iter_ok(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
@@ -294,7 +286,7 @@ mod tests {
             }
 
             {
-                let (cs, fs) = split_changegroup_no_logger(iter_ok(
+                let (cs, fs) = split_changegroup(iter_ok(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
@@ -317,7 +309,7 @@ mod tests {
             f: CgDeltaChunk,
             f_p: MPath
         ) -> bool {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![
                     Part::CgChunk(Section::Changeset, c.clone()),
                     Part::SectionEnd(Section::Changeset),
@@ -329,7 +321,7 @@ mod tests {
                 ].into_iter(),
             ));
 
-            equal(cs.collect().wait().unwrap(), vec![Changeset { chunk: c }])
+            equal(cs.collect().wait().unwrap(), vec![ChangesetDeltaed { chunk: c }])
                 && fs.collect().wait().is_err()
         }
     }
@@ -337,7 +329,7 @@ mod tests {
     #[test]
     fn splitting_error_two_ends() {
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![
                     Part::SectionEnd(Section::Changeset),
                     Part::SectionEnd(Section::Changeset),
@@ -351,7 +343,7 @@ mod tests {
         }
 
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![
                     Part::SectionEnd(Section::Changeset),
                     Part::SectionEnd(Section::Manifest),
@@ -365,7 +357,7 @@ mod tests {
         }
 
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![
                     Part::SectionEnd(Section::Changeset),
                     Part::SectionEnd(Section::Manifest),
@@ -382,7 +374,7 @@ mod tests {
     #[test]
     fn splitting_error_missing_end() {
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![Part::SectionEnd(Section::Manifest), Part::End].into_iter(),
             ));
 
@@ -391,7 +383,7 @@ mod tests {
         }
 
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![Part::SectionEnd(Section::Changeset), Part::End].into_iter(),
             ));
 
@@ -400,7 +392,7 @@ mod tests {
         }
 
         {
-            let (cs, fs) = split_changegroup_no_logger(iter_ok(
+            let (cs, fs) = split_changegroup(iter_ok(
                 vec![
                     Part::SectionEnd(Section::Changeset),
                     Part::SectionEnd(Section::Manifest),

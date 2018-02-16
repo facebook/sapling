@@ -35,7 +35,7 @@ where
                 match item {
                     Bundle2Item::Start(_) => Ok(None).into_future().boxify(),
                     Bundle2Item::Changegroup(_, parts) => {
-                        let (c, f) = split_changegroup(logger.clone(), parts);
+                        let (c, f) = split_changegroup(parts);
                         c.for_each({
                             let logger = logger.clone();
                             move |p| {
