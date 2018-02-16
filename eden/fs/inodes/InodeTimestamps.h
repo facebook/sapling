@@ -9,6 +9,9 @@
  */
 #pragma once
 
+#include "eden/fs/utils/TimeUtil.h"
+
+#include <stdint.h>
 #include <time.h>
 
 struct fuse_setattr_in;
@@ -19,11 +22,83 @@ namespace eden {
 class Clock;
 
 /**
+ * For space efficiency, store timestamps in a single 64-bit value as
+ * nanoseconds from 1901-12-13 (-0x80000000 seconds before unix epoch) through
+ * 2446.  This range is similar to ext4's timestamp range, though slightly
+ * larger.
+ *
+ * https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout#Inode_Timestamps
+ */
+class EdenTimestamp {
+ public:
+  constexpr static struct Clamp {
+  } clamp{};
+  constexpr static struct ThrowIfOutOfRange {
+  } throwIfOutOfRange{};
+
+  /**
+   * Default construction produces a timestamp at EdenTimestamp's earliest
+   * representable value.
+   */
+  EdenTimestamp() = default;
+
+  EdenTimestamp(const EdenTimestamp&) = default;
+
+  /**
+   * Constructs an EdenTimestamp given a raw uint64_t in nanoseconds since
+   * the earliest representable ext4 timestamp.
+   */
+  explicit EdenTimestamp(uint64_t nsec) : nsec_(nsec) {}
+
+  /**
+   * Converts a timespec to an EdenTimestamp.
+   *
+   * If the timespec is out of range, it is clamped.
+   */
+  explicit EdenTimestamp(timespec ts, Clamp = clamp);
+
+  /**
+   * Converts a timespec to an EdenTimestamp.
+   *
+   * If the timespec is out of range, std::overflow_error or
+   * std::underflow_error is thrown.
+   */
+  EdenTimestamp(timespec ts, ThrowIfOutOfRange);
+
+  EdenTimestamp& operator=(const EdenTimestamp&) = default;
+
+  EdenTimestamp& operator=(timespec ts) {
+    return *this = EdenTimestamp{ts};
+  }
+
+  bool operator<(EdenTimestamp ts) const {
+    return nsec_ < ts.nsec_;
+  }
+
+  bool operator<(timespec ts) const {
+    return toTimespec() < ts;
+  }
+
+  /**
+   * Returns a timespec representing duration since the unix epoch.
+   */
+  timespec toTimespec() const;
+
+  /**
+   * Returns the raw representation -- should be for testing only.  :)
+   */
+  uint64_t asRawRepresentation() const {
+    return nsec_;
+  }
+
+ private:
+  uint64_t nsec_{0};
+};
+
+/**
  * Structure for wrapping atime,ctime,mtime
  */
 struct InodeTimestamps {
-  // TODO: As a future optimization, each of these could be packed into 64-bit
-  // nanoseconds from UNIX epoch to year 2500 or something.
   timespec atime{};
   timespec mtime{};
   timespec ctime{};
