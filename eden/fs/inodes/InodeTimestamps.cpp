@@ -121,16 +121,20 @@ void InodeTimestamps::setattrTimes(
 
   // Set atime for TreeInode.
   if (attr.valid & FATTR_ATIME) {
-    atime.tv_sec = attr.atime;
-    atime.tv_nsec = attr.atimensec;
+    timespec attr_atime;
+    attr_atime.tv_sec = attr.atime;
+    attr_atime.tv_nsec = attr.atimensec;
+    atime = attr_atime;
   } else if (attr.valid & FATTR_ATIME_NOW) {
     atime = now;
   }
 
   // Set mtime for TreeInode.
   if (attr.valid & FATTR_MTIME) {
-    mtime.tv_sec = attr.mtime;
-    mtime.tv_nsec = attr.mtimensec;
+    timespec attr_mtime;
+    attr_mtime.tv_sec = attr.mtime;
+    attr_mtime.tv_nsec = attr.mtimensec;
+    mtime = attr_mtime;
   } else if (attr.valid & FATTR_MTIME_NOW) {
     mtime = now;
   }

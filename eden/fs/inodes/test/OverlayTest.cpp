@@ -42,8 +42,10 @@ class OverlayTest : public ::testing::Test {
 
   // Helper method to check if two timestamps are same or not.
   static void expectTimeSpecsEqual(
-      const struct timespec& a,
-      const struct timespec& b) {
+      const EdenTimestamp& at,
+      const EdenTimestamp& bt) {
+    auto a = at.toTimespec();
+    auto b = bt.toTimespec();
     EXPECT_EQ(a.tv_sec, b.tv_sec);
     EXPECT_EQ(a.tv_nsec, b.tv_nsec);
   }

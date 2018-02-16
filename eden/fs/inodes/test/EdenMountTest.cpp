@@ -227,22 +227,22 @@ TEST(EdenMount, testLastCheckoutTime) {
   // Check if FileInode is updating lastCheckoutTime correctly
   auto fileInode = testMount.getFileInode("dir/foo.txt");
   auto stFile = fileInode->getTimestamps();
-  EXPECT_EQ(sec.count(), stFile.atime.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.atime.tv_nsec);
-  EXPECT_EQ(sec.count(), stFile.ctime.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.ctime.tv_nsec);
-  EXPECT_EQ(sec.count(), stFile.mtime.tv_sec);
-  EXPECT_EQ(nsec.count(), stFile.mtime.tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.atime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.atime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.ctime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.ctime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stFile.mtime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stFile.mtime.toTimespec().tv_nsec);
 
   // Check if TreeInode is updating lastCheckoutTime correctly
   auto treeInode = testMount.getTreeInode("dir");
   auto stDir = treeInode->getTimestamps();
-  EXPECT_EQ(sec.count(), stDir.atime.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.atime.tv_nsec);
-  EXPECT_EQ(sec.count(), stDir.ctime.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.ctime.tv_nsec);
-  EXPECT_EQ(sec.count(), stDir.mtime.tv_sec);
-  EXPECT_EQ(nsec.count(), stDir.mtime.tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.atime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.atime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.ctime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.ctime.toTimespec().tv_nsec);
+  EXPECT_EQ(sec.count(), stDir.mtime.toTimespec().tv_sec);
+  EXPECT_EQ(nsec.count(), stDir.mtime.toTimespec().tv_nsec);
 }
 
 TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
@@ -270,11 +270,14 @@ TEST(EdenMount, testCreatingFileSetsTimestampsToNow) {
   auto fileInode = testMount.getFileInode("newfile.txt");
   auto timestamps = fileInode->getTimestamps();
   EXPECT_EQ(
-      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.atime));
+      clock.getTimePoint(),
+      folly::to<FakeClock::time_point>(timestamps.atime.toTimespec()));
   EXPECT_EQ(
-      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.ctime));
+      clock.getTimePoint(),
+      folly::to<FakeClock::time_point>(timestamps.ctime.toTimespec()));
   EXPECT_EQ(
-      clock.getTimePoint(), folly::to<FakeClock::time_point>(timestamps.mtime));
+      clock.getTimePoint(),
+      folly::to<FakeClock::time_point>(timestamps.mtime.toTimespec()));
 }
 } // namespace eden
 } // namespace facebook

@@ -410,12 +410,15 @@ folly::IOBuf Overlay::createHeader(
   folly::io::Appender appender(&header, 0);
   appender.push(identifier);
   appender.writeBE(version);
-  appender.writeBE<uint64_t>(timestamps.atime.tv_sec);
-  appender.writeBE<uint64_t>(timestamps.atime.tv_nsec);
-  appender.writeBE<uint64_t>(timestamps.ctime.tv_sec);
-  appender.writeBE<uint64_t>(timestamps.ctime.tv_nsec);
-  appender.writeBE<uint64_t>(timestamps.mtime.tv_sec);
-  appender.writeBE<uint64_t>(timestamps.mtime.tv_nsec);
+  auto atime = timestamps.atime.toTimespec();
+  auto ctime = timestamps.ctime.toTimespec();
+  auto mtime = timestamps.mtime.toTimespec();
+  appender.writeBE<uint64_t>(atime.tv_sec);
+  appender.writeBE<uint64_t>(atime.tv_nsec);
+  appender.writeBE<uint64_t>(ctime.tv_sec);
+  appender.writeBE<uint64_t>(ctime.tv_nsec);
+  appender.writeBE<uint64_t>(mtime.tv_sec);
+  appender.writeBE<uint64_t>(mtime.tv_nsec);
   auto paddingSize = kHeaderLength - header.length();
   appender.ensure(paddingSize);
   memset(appender.writableData(), 0, paddingSize);
@@ -477,7 +480,7 @@ folly::File Overlay::createOverlayFile(
 void Overlay::parseHeader(
     folly::StringPiece header,
     folly::StringPiece headerId,
-    InodeTimestamps& timeStamps) {
+    InodeTimestamps& timestamps) {
   folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{header});
   folly::io::Cursor cursor(&buf);
 
@@ -496,32 +499,39 @@ void Overlay::parseHeader(
   if (version != kHeaderVersion) {
     folly::throwSystemError(EIO, "Unexpected overlay version :", version);
   }
-  timeStamps.atime.tv_sec = cursor.readBE<uint64_t>();
-  timeStamps.atime.tv_nsec = cursor.readBE<uint64_t>();
-  timeStamps.ctime.tv_sec = cursor.readBE<uint64_t>();
-  timeStamps.ctime.tv_nsec = cursor.readBE<uint64_t>();
-  timeStamps.mtime.tv_sec = cursor.readBE<uint64_t>();
-  timeStamps.mtime.tv_nsec = cursor.readBE<uint64_t>();
+  timespec atime, ctime, mtime;
+  atime.tv_sec = cursor.readBE<uint64_t>();
+  atime.tv_nsec = cursor.readBE<uint64_t>();
+  ctime.tv_sec = cursor.readBE<uint64_t>();
+  ctime.tv_nsec = cursor.readBE<uint64_t>();
+  mtime.tv_sec = cursor.readBE<uint64_t>();
+  mtime.tv_nsec = cursor.readBE<uint64_t>();
+  timestamps.atime = atime;
+  timestamps.ctime = ctime;
+  timestamps.mtime = mtime;
 }
 // Helper function to update timestamps into overlay file
 void Overlay::updateTimestampToHeader(
     int fd,
-    const InodeTimestamps& timeStamps) {
+    const InodeTimestamps& timestamps) {
   // Create a string piece with timestamps
   std::array<uint64_t, 6> buf;
-  folly::IOBuf timestamps(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
-  timestamps.clear();
+  folly::IOBuf iobuf(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
+  iobuf.clear();
 
-  folly::io::Appender appender(&timestamps, 0);
-  appender.writeBE<uint64_t>(timeStamps.atime.tv_sec);
-  appender.writeBE<uint64_t>(timeStamps.atime.tv_nsec);
-  appender.writeBE<uint64_t>(timeStamps.ctime.tv_sec);
-  appender.writeBE<uint64_t>(timeStamps.ctime.tv_nsec);
-  appender.writeBE<uint64_t>(timeStamps.mtime.tv_sec);
-  appender.writeBE<uint64_t>(timeStamps.mtime.tv_nsec);
+  folly::io::Appender appender(&iobuf, 0);
+  auto atime = timestamps.atime.toTimespec();
+  auto ctime = timestamps.ctime.toTimespec();
+  auto mtime = timestamps.mtime.toTimespec();
+  appender.writeBE<uint64_t>(atime.tv_sec);
+  appender.writeBE<uint64_t>(atime.tv_nsec);
+  appender.writeBE<uint64_t>(ctime.tv_sec);
+  appender.writeBE<uint64_t>(ctime.tv_nsec);
+  appender.writeBE<uint64_t>(mtime.tv_sec);
+  appender.writeBE<uint64_t>(mtime.tv_nsec);
 
   // replace the timestamps of current header with the new timestamps
-  auto newHeader = timestamps.coalesce();
+  auto newHeader = iobuf.coalesce();
   auto wrote = folly::pwriteNoInt(
       fd,
       newHeader.data(),

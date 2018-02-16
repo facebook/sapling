@@ -164,13 +164,13 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
   attr.st.st_ino = getNodeId();
 #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-  attr.st.st_atim = contents->timeStamps.atime;
-  attr.st.st_ctim = contents->timeStamps.ctime;
-  attr.st.st_mtim = contents->timeStamps.mtime;
+  attr.st.st_atim = contents->timeStamps.atime.toTimespec();
+  attr.st.st_ctim = contents->timeStamps.ctime.toTimespec();
+  attr.st.st_mtim = contents->timeStamps.mtime.toTimespec();
 #else
-  attr.st.st_atime = contents->timeStamps.atime.tv_sec;
-  attr.st.st_mtime = contents->timeStamps.mtime.tv_sec;
-  attr.st.st_ctime = contents->timeStamps.ctime.tv_sec;
+  attr.st.st_atime = contents->timeStamps.atime.toTimespec().tv_sec;
+  attr.st.st_mtime = contents->timeStamps.mtime.toTimespec().tv_sec;
+  attr.st.st_ctime = contents->timeStamps.ctime.toTimespec().tv_sec;
 #endif
 
   // For directories, nlink is the number of entries including the
@@ -3104,9 +3104,9 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
   contents->timeStamps.setattrTimes(getClock(), attr);
-  result.st.st_atim = contents->timeStamps.atime;
-  result.st.st_ctim = contents->timeStamps.ctime;
-  result.st.st_mtim = contents->timeStamps.mtime;
+  result.st.st_atim = contents->timeStamps.atime.toTimespec();
+  result.st.st_ctim = contents->timeStamps.ctime.toTimespec();
+  result.st.st_mtim = contents->timeStamps.mtime.toTimespec();
 
   // Update Journal
   updateJournal();

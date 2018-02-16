@@ -99,9 +99,9 @@ class EdenTimestamp {
  * Structure for wrapping atime,ctime,mtime
  */
 struct InodeTimestamps {
-  timespec atime{};
-  timespec mtime{};
-  timespec ctime{};
+  EdenTimestamp atime{};
+  EdenTimestamp mtime{};
+  EdenTimestamp ctime{};
 
   /**
    * Initializes all timestamps to zero.

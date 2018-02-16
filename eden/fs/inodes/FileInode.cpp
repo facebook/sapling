@@ -247,9 +247,9 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     checkUnixError(fstat(file.fd(), &overlayStat));
     result.st.st_ino = self->getNodeId();
     result.st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
-    result.st.st_atim = state->timeStamps.atime;
-    result.st.st_ctim = state->timeStamps.ctime;
-    result.st.st_mtim = state->timeStamps.mtime;
+    result.st.st_atim = state->timeStamps.atime.toTimespec();
+    result.st.st_ctim = state->timeStamps.ctime.toTimespec();
+    result.st.st_mtim = state->timeStamps.mtime.toTimespec();
     result.st.st_mode = state->mode;
     result.st.st_nlink = 1;
     updateBlockCount(result.st);
@@ -472,13 +472,13 @@ folly::Future<struct stat> FileInode::stat() {
     }
 #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
-    st.st_atim = state->timeStamps.atime;
-    st.st_ctim = state->timeStamps.ctime;
-    st.st_mtim = state->timeStamps.mtime;
+    st.st_atim = state->timeStamps.atime.toTimespec();
+    st.st_ctim = state->timeStamps.ctime.toTimespec();
+    st.st_mtim = state->timeStamps.mtime.toTimespec();
 #else
-    st.st_atime = state->timeStamps.atime.tv_sec;
-    st.st_mtime = state->timeStamps.mtime.tv_sec;
-    st.st_ctime = state->timeStamps.ctime.tv_sec;
+    st.st_atime = state->timeStamps.atime.toTimespec().tv_sec;
+    st.st_mtime = state->timeStamps.mtime.toTimespec().tv_sec;
+    st.st_ctime = state->timeStamps.ctime.toTimespec().tv_sec;
 #endif
     st.st_mode = state->mode;
     updateBlockCount(st);
