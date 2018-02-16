@@ -414,7 +414,7 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
   if (tree != nullptr) {
     auto entry = tree->getEntryPtr(filename.basename());
     if (entry != nullptr && !entry->isTree()) {
-      return entry->getMode();
+      return modeFromTreeEntryType(entry->getType());
     }
   }
 
@@ -472,7 +472,7 @@ void EdenServiceHandler::debugGetScmTree(
     entries.emplace_back();
     auto& out = entries.back();
     out.name = entry.getName().stringPiece().str();
-    out.mode = entry.getMode();
+    out.mode = modeFromTreeEntryType(entry.getType());
     out.id = thriftHash(entry.getHash());
   }
 }

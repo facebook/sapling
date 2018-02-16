@@ -9,13 +9,28 @@
  */
 #include "eden/fs/model/TreeEntry.h"
 
-#include <ostream>
-
 #include <folly/Conv.h>
 #include <folly/Range.h>
+#include <folly/experimental/logging/xlog.h>
+#include <sys/stat.h>
+#include <ostream>
 
 namespace facebook {
 namespace eden {
+
+mode_t modeFromTreeEntryType(TreeEntryType ft) {
+  switch (ft) {
+    case TreeEntryType::TREE:
+      return S_IFDIR | 0755;
+    case TreeEntryType::REGULAR_FILE:
+      return S_IFREG | 0644;
+    case TreeEntryType::EXECUTABLE_FILE:
+      return S_IFREG | 0755;
+    case TreeEntryType::SYMLINK:
+      return S_IFLNK | 0755;
+  }
+  XLOG(FATAL) << "illegal file type " << static_cast<int>(ft);
+}
 
 std::string TreeEntry::toLogString() const {
   char fileTypeChar = '?';

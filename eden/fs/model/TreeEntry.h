@@ -9,13 +9,10 @@
  */
 #pragma once
 
-#include "Hash.h"
-#include "TreeEntry.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
-#include <folly/experimental/logging/xlog.h>
-#include <sys/stat.h>
 #include <iosfwd>
 
 namespace facebook {
@@ -29,6 +26,11 @@ enum class TreeEntryType : uint8_t {
   EXECUTABLE_FILE,
   SYMLINK,
 };
+
+/**
+ * Computes an initial mode_t, including permission bits, from a FileType.
+ */
+mode_t modeFromTreeEntryType(TreeEntryType ft);
 
 class TreeEntry {
  public:
@@ -52,20 +54,6 @@ class TreeEntry {
 
   TreeEntryType getType() const {
     return type_;
-  }
-
-  mode_t getMode() const {
-    switch (type_) {
-      case TreeEntryType::TREE:
-        return S_IFDIR | 0755;
-      case TreeEntryType::REGULAR_FILE:
-        return S_IFREG | 0644;
-      case TreeEntryType::EXECUTABLE_FILE:
-        return S_IFREG | 0755;
-      case TreeEntryType::SYMLINK:
-        return S_IFLNK | 0755;
-    }
-    XLOG(FATAL) << "illegal file type " << static_cast<int>(type_);
   }
 
   std::string toLogString() const;

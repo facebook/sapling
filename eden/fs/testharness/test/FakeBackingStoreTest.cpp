@@ -14,7 +14,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
-#include <sys/stat.h>
 
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
@@ -177,18 +176,18 @@ TEST_F(FakeBackingStoreTest, getTree) {
   // about order here
   EXPECT_EQ(PathComponentPiece{"bar"}, tree2->getEntryAt(0).getName());
   EXPECT_EQ(bar->get().getHash(), tree2->getEntryAt(0).getHash());
-  EXPECT_EQ(S_IFREG | 0644, tree2->getEntryAt(0).getMode());
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(0).getType());
   EXPECT_EQ(PathComponentPiece{"dir1"}, tree2->getEntryAt(1).getName());
   EXPECT_EQ(dir1->get().getHash(), tree2->getEntryAt(1).getHash());
-  EXPECT_EQ(S_IFDIR | 0755, tree2->getEntryAt(1).getMode());
+  EXPECT_EQ(TreeEntryType::TREE, tree2->getEntryAt(1).getType());
   EXPECT_EQ(PathComponentPiece{"readonly"}, tree2->getEntryAt(2).getName());
   EXPECT_EQ(dir2->get().getHash(), tree2->getEntryAt(2).getHash());
   // TreeEntry objects only tracking the owner executable bit, so even though we
   // input the permissions as 0500 above this really ends up returning 0755
-  EXPECT_EQ(S_IFDIR | 0755, tree2->getEntryAt(2).getMode());
+  EXPECT_EQ(TreeEntryType::TREE, tree2->getEntryAt(2).getType());
   EXPECT_EQ(PathComponentPiece{"zzz"}, tree2->getEntryAt(3).getName());
   EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
-  EXPECT_EQ(S_IFREG | 0644, tree2->getEntryAt(3).getMode());
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(3).getType());
 
   EXPECT_EQ(rootHash, future3.get()->getHash());
 

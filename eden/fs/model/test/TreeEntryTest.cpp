@@ -17,7 +17,9 @@ using namespace facebook::eden;
 TEST(TreeEntry, modeAndLogString) {
   TreeEntry rwFile(
       makeTestHash("faceb00c"), "file.txt", TreeEntryType::REGULAR_FILE);
-  EXPECT_EQ(S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, rwFile.getMode());
+  EXPECT_EQ(
+      S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+      modeFromTreeEntryType(rwFile.getType()));
   EXPECT_EQ(
       "(file.txt, 00000000000000000000000000000000faceb00c, f)",
       rwFile.toLogString());
@@ -26,7 +28,7 @@ TEST(TreeEntry, modeAndLogString) {
       makeTestHash("789"), "file.exe", TreeEntryType::EXECUTABLE_FILE);
   EXPECT_EQ(
       S_IFREG | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH,
-      rwxFile.getMode());
+      modeFromTreeEntryType(rwxFile.getType()));
   EXPECT_EQ(
       "(file.exe, 0000000000000000000000000000000000000789, x)",
       rwxFile.toLogString());
@@ -34,7 +36,7 @@ TEST(TreeEntry, modeAndLogString) {
   TreeEntry rwxLink(makeTestHash("b"), "to-file.exe", TreeEntryType::SYMLINK);
   EXPECT_EQ(
       S_IFLNK | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH,
-      rwxLink.getMode());
+      modeFromTreeEntryType(rwxLink.getType()));
   EXPECT_EQ(
       "(to-file.exe, 000000000000000000000000000000000000000b, l)",
       rwxLink.toLogString());
@@ -42,7 +44,7 @@ TEST(TreeEntry, modeAndLogString) {
   TreeEntry directory(makeTestHash("abc"), "src", TreeEntryType::TREE);
   EXPECT_EQ(
       S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH,
-      directory.getMode());
+      modeFromTreeEntryType(directory.getType()));
   EXPECT_EQ(
       "(src, 0000000000000000000000000000000000000abc, d)",
       directory.toLogString());

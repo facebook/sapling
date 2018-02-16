@@ -291,7 +291,9 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
       return treeInode->diff(context_, getPath(), nullptr, ignore_, isIgnored_);
     }
 
-    return fileInode->isSameAs(scmEntry_.getHash(), scmEntry_.getMode())
+    return fileInode
+        ->isSameAs(
+            scmEntry_.getHash(), modeFromTreeEntryType(scmEntry_.getType()))
         .then([this](bool isSame) {
           if (!isSame) {
             XLOG(DBG5) << "modified file: " << getPath();

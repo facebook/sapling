@@ -10,6 +10,7 @@
 #include "FakeBackingStore.h"
 
 #include <folly/Format.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/ssl/OpenSSLHash.h>
 
@@ -240,7 +241,7 @@ Hash FakeBackingStore::computeTreeHash(
   for (const auto& entry : sortedEntries) {
     digest.hash_update(ByteRange{entry.getName().stringPiece()});
     digest.hash_update(entry.getHash().getBytes());
-    mode_t mode = entry.getMode();
+    mode_t mode = modeFromTreeEntryType(entry.getType());
     digest.hash_update(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
   }

@@ -712,7 +712,9 @@ TreeInode::Dir TreeInode::buildDirFromTree(
   dir.treeHash = tree->getHash();
   for (const auto& treeEntry : tree->getTreeEntries()) {
     dir.entries.emplace(
-        treeEntry.getName(), treeEntry.getMode(), treeEntry.getHash());
+        treeEntry.getName(),
+        modeFromTreeEntryType(treeEntry.getType()),
+        treeEntry.getHash());
   }
   dir.timeStamps.setAll(lastCheckoutTime);
   return dir;
@@ -2005,7 +2007,7 @@ Future<Unit> TreeInode::computeDiff(
                 ignore.get(),
                 entryIgnored));
       } else if (
-          inodeEntry->getMode() == scmEntry.getMode() &&
+          inodeEntry->getMode() == modeFromTreeEntryType(scmEntry.getType()) &&
           inodeEntry->getHash() == scmEntry.getHash()) {
         // This file or directory is unchanged.  We can skip it.
         XLOG(DBG9) << "diff: unchanged unloaded file: " << entryPath;
@@ -2052,7 +2054,8 @@ Future<Unit> TreeInode::computeDiff(
         // TODO: Once we build a new backing store and can replace our
         // janky hashing scheme for mercurial data, we should be able just
         // immediately assume the file is different here, without checking.
-        if (inodeEntry->getMode() != scmEntry.getMode()) {
+        if (inodeEntry->getMode() !=
+            modeFromTreeEntryType(scmEntry.getType())) {
           // The mode is definitely modified
           XLOG(DBG5) << "diff: file modified due to mode change: " << entryPath;
           context->callback->modifiedFile(entryPath, scmEntry);
@@ -2337,7 +2340,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // revert them to the desired state if they were modified in the local
   // filesystem.
   if (!ctx->forceUpdate() && oldScmEntry && newScmEntry &&
-      oldScmEntry->getMode() == newScmEntry->getMode() &&
+      oldScmEntry->getType() == newScmEntry->getType() &&
       oldScmEntry->getHash() == newScmEntry->getHash()) {
     // TODO: Should we perhaps fall through anyway to report conflicts for
     // locally modified files?
@@ -2356,7 +2359,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       if (!ctx->isDryRun()) {
         contents.entries.emplace(
             newScmEntry->getName(),
-            newScmEntry->getMode(),
+            modeFromTreeEntryType(newScmEntry->getType()),
             newScmEntry->getHash());
       }
     } else if (!newScmEntry) {
@@ -2375,7 +2378,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         DCHECK(!ctx->isDryRun());
         contents.entries.emplace(
             newScmEntry->getName(),
-            newScmEntry->getMode(),
+            modeFromTreeEntryType(newScmEntry->getType()),
             newScmEntry->getHash());
       }
     }
@@ -2442,7 +2445,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (!newScmEntry) {
     contents.entries.erase(it);
   } else {
-    entry = Entry{newScmEntry->getMode(), newScmEntry->getHash()};
+    entry = Entry{modeFromTreeEntryType(newScmEntry->getType()),
+                  newScmEntry->getHash()};
   }
 
   // Note that we intentionally don't bother calling
@@ -2494,7 +2498,9 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
     deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
     if (newScmEntry) {
       DCHECK_EQ(newScmEntry->getName(), name);
-      it->second = Entry(newScmEntry->getMode(), newScmEntry->getHash());
+      it->second = Entry(
+          modeFromTreeEntryType(newScmEntry->getType()),
+          newScmEntry->getHash());
     } else {
       contents->entries.erase(it);
     }
@@ -2558,7 +2564,9 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         auto contents = parentInode->contents_.wlock();
         DCHECK(!newScmEntry->isTree());
         auto ret = contents->entries.emplace(
-            name, newScmEntry->getMode(), newScmEntry->getHash());
+            name,
+            modeFromTreeEntryType(newScmEntry->getType()),
+            newScmEntry->getHash());
         if (!ret.second) {
           // Hmm.  Someone else already created a new entry in this location
           // before we had a chance to add our new entry.  We don't block new
