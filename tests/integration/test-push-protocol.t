@@ -2,7 +2,7 @@
 
 setup configuration
 
-  $ setup_config_repo
+  $ setup_common_config
 
   $ cd $TESTTMP
 
@@ -32,9 +32,7 @@ Need a place for the socket to live
 
 setup repo2
 
-  $ hgclone_treemanifest repo-hg repo2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
   $ cd repo2
   $ hg pull ../repo-hg
   pulling from ../repo-hg
@@ -83,11 +81,20 @@ push to Mononoke TODO(T25252425) make this work
   remote: 194
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=HG20%0Alistkeys%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks
   remote: 1
-  running */scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*/scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
-  sending hello command
-  sending between command
-  remote: 194
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=HG20%0Alistkeys%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks
-  remote: 1
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  query 1; heads
+  sending batch command
+  searching for changes
+  all remote heads known locally
+  checking for updated bookmarks
+  1 changesets found
+  list of changesets:
+  0e067c57feba1a5694ca4844f05588bb1bf82342
+  sending unbundle command
+  bundle2-output-bundle: "HG20", 4 parts total
+  bundle2-output-part: "replycaps" 196 bytes payload
+  bundle2-output-part: "check:heads" streamed payload
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  error: invalid magic: '2\n' (version '0\n'), should be 'HG'
+  abort: not a Mercurial bundle
   [255]

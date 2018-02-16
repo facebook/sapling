@@ -102,7 +102,7 @@ EOF
 }
 
 function hgclone_treemanifest() {
-  hg clone "$@"
+  hg clone -q --shallow --config remotefilelog.reponame=master "$@"
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=
@@ -110,6 +110,7 @@ remotefilelog=
 fastmanifest=
 [treemanifest]
 sendtrees=True
+treeonly=True
 [remotefilelog]
 reponame=$2
 cachepath=$TESTTMP/hgcache
