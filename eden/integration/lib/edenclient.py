@@ -33,6 +33,7 @@ class EdenFS(object):
         etc_eden_dir: Optional[str] = None,
         home_dir: Optional[str] = None,
         logging_settings: Optional[Dict[str, str]] = None,
+        extra_args: Optional[List[str]] = None,
         storage_engine: str = 'memory'
     ) -> None:
         if eden_dir is None:
@@ -44,6 +45,7 @@ class EdenFS(object):
         self._etc_eden_dir = etc_eden_dir
         self._home_dir = home_dir
         self._logging_settings = logging_settings
+        self._extra_args = extra_args
 
     @property
     def eden_dir(self) -> str:
@@ -170,6 +172,14 @@ class EdenFS(object):
             '--num_hg_import_threads', '2',
             '--local_storage_engine_unsafe', self._storage_engine,
             '--hgImportHelper', EDEN_HG_IMPORT_HELPER,
+            # Disable falling back to importing mercurial data using
+            # flatmanifest when the repository supports treemanifest.
+            # If an error occurs importing treemanifest data in a test this is
+            # probably a legitimate bug, and we don't want to mask it by
+            # falling back to flatmanifest.  Unit tests that do explicitly want
+            # to exercise the fallback behavior can override this in their
+            # edenfs_extra_args() method.
+            '--allow_flatmanifest_fallback=no',
         ]
         if 'SANDCASTLE' in os.environ:
             extra_daemon_args.append('--allowRoot')
@@ -206,6 +216,8 @@ class EdenFS(object):
                                    for module, level in sorted(
                                        self._logging_settings.items()))
             extra_daemon_args.extend(['--logging=' + logging_arg])
+        if self._extra_args:
+            extra_daemon_args.extend(self._extra_args)
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 

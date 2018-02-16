@@ -9,6 +9,7 @@
 
 import configparser
 import os
+from typing import List, Optional
 
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase,
@@ -24,6 +25,12 @@ class FlatmanifestFallbackUpdateTest(EdenHgTestCase):
         # Do nothing here for now.
         # Keep treemanifest disabled initially during populate_backing_repo()
         pass
+
+    def edenfs_extra_args(self) -> Optional[List[str]]:
+        # Explicitly allow eden to fallback to flatmanifest import
+        # if it fails to import treemanifest data, since that is what
+        # we are trying to test.
+        return ['--allow_flatmanifest_fallback=yes']
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
         # Create a couple commits in flatmanifest mode

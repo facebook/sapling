@@ -72,6 +72,12 @@ DEFINE_bool(
     "Set this parameter to \"no\" to disable fetching missing treemanifest "
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
+DEFINE_bool(
+    allow_flatmanifest_fallback,
+    true,
+    "In mercurial repositories that support treemanifest, allow importing "
+    "commit information using flatmanifest if tree if an error occurs trying "
+    "to get treemanifest data.");
 
 DEFINE_int32(
     hgManifestImportBufferSize,
@@ -675,8 +681,13 @@ Hash HgImporter::importManifest(StringPiece revName) {
     try {
       return importTreeManifest(revName);
     } catch (const MissingKeyError&) {
+      if (!FLAGS_allow_flatmanifest_fallback) {
+        throw;
+      }
       // We don't have a tree manifest available for the target rev,
       // so let's fall through to the full flat manifest importer.
+      XLOG(INFO) << "no treemanifest data available for revision " << revName
+                 << ": falling back to slower flatmanifest import";
     }
   }
 

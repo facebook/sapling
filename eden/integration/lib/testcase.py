@@ -23,6 +23,7 @@ from hypothesis.internal.detection import is_hypothesis_test
 from hypothesis.configuration import (
     set_hypothesis_home_dir,
     hypothesis_home_dir)
+from typing import Dict, List, Optional
 
 from . import edenclient
 from . import hgrepo
@@ -173,11 +174,14 @@ class EdenTestCase(TestParent):
         self.report_time('temporary directory creation done')
 
         logging_settings = self.edenfs_logging_settings()
+        extra_args = self.edenfs_extra_args()
+        storage_engine = self.select_storage_engine()
         self.eden = edenclient.EdenFS(self.eden_dir,
                                       etc_eden_dir=self.etc_eden_dir,
                                       home_dir=self.home_dir,
                                       logging_settings=logging_settings,
-                                      storage_engine=self.select_storage_engine())
+                                      extra_args=extra_args,
+                                      storage_engine=storage_engine)
         self.eden.start()
         self.report_time('eden daemon started')
 
@@ -214,7 +218,7 @@ class EdenTestCase(TestParent):
         '''
         return self.eden.get_thrift_client()
 
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Optional[Dict[str, str]]:
         '''
         Get the log settings to pass to edenfs via the --logging argument.
 
@@ -225,6 +229,12 @@ class EdenTestCase(TestParent):
 
         You can return None if you do not want any extra verbose logging
         enabled.
+        '''
+        return None
+
+    def edenfs_extra_args(self) -> Optional[List[str]]:
+        '''
+        Get additional arguments to pass to edenfs
         '''
         return None
 
