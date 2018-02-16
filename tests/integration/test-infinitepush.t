@@ -45,14 +45,7 @@ Init treemanifest and remotefilelog
   $ cd $TESTTMP
 
 setup repo2
-  $ hgcloneshallow ssh://user@dummy/repo-hg repo2 --noupdate
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  new changesets 3903775176ed
-
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate
 
   $ blobimport --blobstore files --linknodes repo-hg repo > /dev/null 2>&1
 
@@ -96,9 +89,10 @@ start mononoke
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 2 parts total
-  bundle2-output-part: "replycaps" 232 bytes payload
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
+  bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   * unknown header type b2x:infinitepush, backtrace:* (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -120,9 +114,10 @@ Pushbackup fails too
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
   sending unbundle command
-  bundle2-output-bundle: "HG20", (1 params) 3 parts total
-  bundle2-output-part: "replycaps" 232 bytes payload
+  bundle2-output-bundle: "HG20", (1 params) 4 parts total
+  bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 456 bytes payload
   * unknown header type b2x:infinitepush, backtrace:* (glob)
   finished in * seconds (glob)

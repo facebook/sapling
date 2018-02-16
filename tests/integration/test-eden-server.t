@@ -1,5 +1,5 @@
 
-  $ CACHEDIR=$PWD/hgcache
+  $ CACHEDIR=$PWD/cachepath
   $ . $TESTDIR/library.sh
 
   $ cat >> $TESTTMP/json_pretty_print.py <<EOF

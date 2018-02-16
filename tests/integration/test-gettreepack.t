@@ -14,7 +14,7 @@ setup hg server repo
   $ cd $TESTTMP
 
 setup client repo2
-  $ hgcloneshallow ssh://user@dummy/repo-hg repo2 --noupdate -q
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate -q
   $ cd repo2
   $ setup_hg_client
 

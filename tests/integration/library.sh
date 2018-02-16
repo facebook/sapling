@@ -68,22 +68,6 @@ function hgmn {
   hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/repo --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
 }
 
-hgcloneshallow() {
-  local dest
-  orig=$1
-  shift
-  dest=$1
-  shift
-  hg clone --shallow --config remotefilelog.reponame=master "$orig" "$dest" "$@"
-  cat >> "$dest"/.hg/hgrc <<EOF
-[remotefilelog]
-reponame=master
-datapackversion=1
-[phases]
-publish=False
-EOF
-}
-
 function hginit_treemanifest() {
   hg init "$@"
   cat >> "$1"/.hg/hgrc <<EOF
@@ -95,7 +79,7 @@ server=True
 sendtrees=True
 [remotefilelog]
 reponame=$1
-cachepath=$TESTTMP/hgcache
+cachepath=$TESTTMP/cachepath
 server=True
 shallowtrees=True
 EOF
@@ -113,7 +97,7 @@ sendtrees=True
 treeonly=True
 [remotefilelog]
 reponame=$2
-cachepath=$TESTTMP/hgcache
+cachepath=$TESTTMP/cachepath
 shallowtrees=True
 EOF
 }

@@ -47,26 +47,8 @@ setup repo2
   > [remotefilelog]
   > cachepath=$TESTTMP/cachepath
   > EOF
-  $ hgcloneshallow ssh://user@dummy/repo-hg repo2 --noupdate
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  new changesets 3903775176ed
-
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate
   $ cd repo2
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > treemanifest=
-  > remotefilelog=
-  > [treemanifest]
-  > server=False
-  > treeonly=True
-  > [remotefilelog]
-  > server=False
-  > reponame=repo
-  > EOF
   $ hg pull
   pulling from ssh://user@dummy/repo-hg
   searching for changes
