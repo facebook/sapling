@@ -23,6 +23,7 @@ extern crate slog;
 extern crate tokio_io;
 
 extern crate blobrepo;
+extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
 

@@ -10,12 +10,8 @@ use futures_ext::{BoxStream, StreamExt};
 use mercurial_bundles::changegroup::{CgDeltaChunk, Part, Section};
 use mercurial_types::MPath;
 
+use changegroup::changeset::ChangesetDeltaed;
 use errors::*;
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct ChangesetDeltaed {
-    chunk: CgDeltaChunk,
-}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {

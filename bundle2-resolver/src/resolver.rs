@@ -13,7 +13,7 @@ use slog::Logger;
 use tokio_io::AsyncRead;
 
 use blobrepo::BlobRepo;
-use changegroup::split_changegroup;
+use changegroup::{convert_to_revlog_changesets, split_changegroup};
 use errors::*;
 use mercurial_bundles::Bundle2Item;
 use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
@@ -36,13 +36,15 @@ where
                     Bundle2Item::Start(_) => Ok(None).into_future().boxify(),
                     Bundle2Item::Changegroup(_, parts) => {
                         let (c, f) = split_changegroup(parts);
-                        c.for_each({
-                            let logger = logger.clone();
-                            move |p| {
-                                debug!(logger, "changegroup part: {:?}", p);
-                                Ok(())
-                            }
-                        }).join(f.for_each({
+                        convert_to_revlog_changesets(c)
+                            .for_each({
+                                let logger = logger.clone();
+                                move |p| {
+                                    debug!(logger, "changegroup part: {:?}", p);
+                                    Ok(())
+                                }
+                            })
+                            .join(f.for_each({
                                 let logger = logger.clone();
                                 move |p| {
                                     debug!(logger, "changegroup part: {:?}", p);
