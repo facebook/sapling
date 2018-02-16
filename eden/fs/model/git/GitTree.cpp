@@ -76,15 +76,16 @@ std::unique_ptr<Tree> deserializeGitTree(
     cursor.pull(hashBytes.data(), hashBytes.size());
 
     // Determine the individual fields from the mode.
-    FileType fileType;
+
+    TreeEntryType fileType;
     if (mode == GitModeMask::DIRECTORY) {
-      fileType = FileType::DIRECTORY;
+      fileType = TreeEntryType::TREE;
     } else if (mode == GitModeMask::REGULAR_FILE) {
-      fileType = FileType::REGULAR_FILE;
+      fileType = TreeEntryType::REGULAR_FILE;
     } else if (mode == GitModeMask::REGULAR_EXECUTABLE_FILE) {
-      fileType = FileType::EXECUTABLE_FILE;
+      fileType = TreeEntryType::EXECUTABLE_FILE;
     } else if (mode == GitModeMask::SYMLINK) {
-      fileType = FileType::SYMLINK;
+      fileType = TreeEntryType::SYMLINK;
     } else if (mode == GitModeMask::GIT_LINK) {
       throw std::domain_error(folly::sformat(
           "Gitlinks are not currently supported: {:o} in object {}",
@@ -157,18 +158,24 @@ void GitTreeSerializer::addEntry(const TreeEntry& entry) {
   // affect the final tree hash.)
 
   mode_t mode = 0;
-  if (entry.getFileType() == FileType::EXECUTABLE_FILE) {
-    mode = GitModeMask::REGULAR_EXECUTABLE_FILE;
-  } else if (entry.getFileType() == FileType::REGULAR_FILE) {
-    mode = GitModeMask::REGULAR_FILE;
-  } else if (entry.getFileType() == FileType::DIRECTORY) {
-    mode = GitModeMask::DIRECTORY;
-  } else if (entry.getFileType() == FileType::SYMLINK) {
-    mode = GitModeMask::SYMLINK;
-  } else {
+  switch (entry.getType()) {
+    case TreeEntryType::EXECUTABLE_FILE:
+      mode = GitModeMask::REGULAR_EXECUTABLE_FILE;
+      break;
+    case TreeEntryType::REGULAR_FILE:
+      mode = GitModeMask::REGULAR_FILE;
+      break;
+    case TreeEntryType::TREE:
+      mode = GitModeMask::DIRECTORY;
+      break;
+    case TreeEntryType::SYMLINK:
+      mode = GitModeMask::SYMLINK;
+      break;
+  }
+  if (!mode) {
     throw std::runtime_error(folly::to<string>(
-        "unsupported file type ",
-        static_cast<int>(entry.getFileType()),
+        "unsupported entry type ",
+        static_cast<int>(entry.getType()),
         " for ",
         entry.getName().stringPiece()));
   }

@@ -137,14 +137,14 @@ std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
   }
 }
 
-static FileType fileTypeFromBlobType(FakeBlobType type) {
+static TreeEntryType treeEntryTypeFromBlobType(FakeBlobType type) {
   switch (type) {
     case FakeBlobType::REGULAR_FILE:
-      return FileType::REGULAR_FILE;
+      return TreeEntryType::REGULAR_FILE;
     case FakeBlobType::EXECUTABLE_FILE:
-      return FileType::EXECUTABLE_FILE;
+      return TreeEntryType::EXECUTABLE_FILE;
     case FakeBlobType::SYMLINK:
-      return FileType::SYMLINK;
+      return TreeEntryType::SYMLINK;
   }
   XLOG(FATAL) << "Unknown fake blob type " << static_cast<int>(type);
 }
@@ -153,23 +153,23 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Blob& blob,
     FakeBlobType type)
-    : entry{blob.getHash(), name, fileTypeFromBlobType(type)} {}
+    : entry{blob.getHash(), name, treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredBlob* blob,
     FakeBlobType type)
-    : entry{blob->get().getHash(), name, fileTypeFromBlobType(type)} {}
+    : entry{blob->get().getHash(), name, treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Tree& tree)
-    : entry{tree.getHash(), name, FileType::DIRECTORY} {}
+    : entry{tree.getHash(), name, TreeEntryType::TREE} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
-    : entry{tree->get().getHash(), name, FileType::DIRECTORY} {}
+    : entry{tree->get().getHash(), name, TreeEntryType::TREE} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {

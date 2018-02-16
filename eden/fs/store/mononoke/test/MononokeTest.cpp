@@ -237,23 +237,23 @@ TEST_F(MononokeBackingStoreTest, testGetTree) {
         TreeEntry(
             Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
             "a",
-            FileType::REGULAR_FILE),
+            TreeEntryType::REGULAR_FILE),
         TreeEntry(
             Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
             "b",
-            FileType::REGULAR_FILE),
+            TreeEntryType::REGULAR_FILE),
         TreeEntry(
             Hash("3333333333333333333333333333333333333333"),
             "dir",
-            FileType::DIRECTORY),
+            TreeEntryType::TREE),
         TreeEntry(
             Hash("4444444444444444444444444444444444444444"),
             "exec",
-            FileType::EXECUTABLE_FILE),
+            TreeEntryType::EXECUTABLE_FILE),
         TreeEntry(
             Hash("5555555555555555555555555555555555555555"),
             "link",
-            FileType::SYMLINK),
+            TreeEntryType::SYMLINK),
     };
 
     Tree expected_tree(std::move(expected_entries), treehash);
@@ -295,23 +295,23 @@ TEST_F(MononokeBackingStoreTest, testGetTreeForCommit) {
         TreeEntry(
             Hash("b80de5d138758541c5f05265ad144ab9fa86d1db"),
             "a",
-            FileType::REGULAR_FILE),
+            TreeEntryType::REGULAR_FILE),
         TreeEntry(
             Hash("b8e02f6433738021a065f94175c7cd23db5f05be"),
             "b",
-            FileType::REGULAR_FILE),
+            TreeEntryType::REGULAR_FILE),
         TreeEntry(
             Hash("3333333333333333333333333333333333333333"),
             "dir",
-            FileType::DIRECTORY),
+            TreeEntryType::TREE),
         TreeEntry(
             Hash("4444444444444444444444444444444444444444"),
             "exec",
-            FileType::EXECUTABLE_FILE),
+            TreeEntryType::EXECUTABLE_FILE),
         TreeEntry(
             Hash("5555555555555555555555555555555555555555"),
             "link",
-            FileType::SYMLINK),
+            TreeEntryType::SYMLINK),
     };
 
     Tree expected_tree(std::move(expected_entries), treehash);

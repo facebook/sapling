@@ -92,7 +92,8 @@ class FakeTreeBuilder {
         path,
         contents,
         false,
-        executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
+        executable ? TreeEntryType::EXECUTABLE_FILE
+                   : TreeEntryType::REGULAR_FILE);
   }
 
   void setFiles(const std::initializer_list<FileInfo>& fileArgs);
@@ -127,7 +128,8 @@ class FakeTreeBuilder {
         path,
         contents,
         true,
-        executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
+        executable ? TreeEntryType::EXECUTABLE_FILE
+                   : TreeEntryType::REGULAR_FILE);
   }
 
   /**
@@ -137,7 +139,7 @@ class FakeTreeBuilder {
     setSymlink(RelativePathPiece{path}, contents);
   }
   void setSymlink(RelativePathPiece path, folly::StringPiece contents) {
-    setFileImpl(path, contents, false, FileType::SYMLINK);
+    setFileImpl(path, contents, false, TreeEntryType::SYMLINK);
   }
 
   /**
@@ -147,7 +149,7 @@ class FakeTreeBuilder {
     replaceSymlink(RelativePathPiece{path}, contents);
   }
   void replaceSymlink(RelativePathPiece path, folly::StringPiece contents) {
-    setFileImpl(path, contents, true, FileType::SYMLINK);
+    setFileImpl(path, contents, true, TreeEntryType::SYMLINK);
   }
 
   /**
@@ -233,7 +235,7 @@ class FakeTreeBuilder {
   FakeTreeBuilder(ExplicitClone, const FakeTreeBuilder* orig);
 
   struct EntryInfo {
-    explicit EntryInfo(FileType fileType);
+    explicit EntryInfo(TreeEntryType fileType);
 
     EntryInfo(EntryInfo&& other) = default;
     EntryInfo& operator=(EntryInfo&& other) = default;
@@ -246,7 +248,7 @@ class FakeTreeBuilder {
     StoredTree* finalizeTree(FakeTreeBuilder* builder, bool setReady) const;
     StoredBlob* finalizeBlob(FakeTreeBuilder* builder, bool setReady) const;
 
-    FileType type;
+    TreeEntryType type;
     std::unique_ptr<PathMap<EntryInfo>> entries;
     std::string contents;
   };
@@ -258,13 +260,13 @@ class FakeTreeBuilder {
       RelativePathPiece path,
       folly::ByteRange contents,
       bool replace,
-      FileType type);
+      TreeEntryType type);
   EntryInfo* getEntry(RelativePathPiece path);
   EntryInfo* getDirEntry(RelativePathPiece path, bool create);
   StoredTree* getStoredTree(RelativePathPiece path);
 
   std::shared_ptr<FakeBackingStore> store_{nullptr};
-  EntryInfo root_{FileType::DIRECTORY};
+  EntryInfo root_{TreeEntryType::TREE};
   StoredTree* finalizedRoot_{nullptr};
 };
 

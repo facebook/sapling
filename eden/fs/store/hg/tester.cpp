@@ -101,7 +101,7 @@ void importTreeRecursive(
     RelativePathPiece path,
     const Tree* tree) {
   for (const auto& entry : tree->getTreeEntries()) {
-    if (entry.getFileType() == FileType::DIRECTORY) {
+    if (entry.isTree()) {
       auto entryPath = path + entry.getName();
       std::unique_ptr<Tree> subtree;
       try {
@@ -140,7 +140,7 @@ int importTree(
       printf("%s: not found\n", component.stringPiece().str().c_str());
       return EX_DATAERR;
     }
-    if (entry->getFileType() != FileType::DIRECTORY) {
+    if (!entry->isTree()) {
       printf("%s: not a tree\n", component.stringPiece().str().c_str());
       return EX_DATAERR;
     }

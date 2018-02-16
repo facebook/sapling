@@ -170,15 +170,15 @@ std::unique_ptr<Tree> convertBufToTree(
     auto path_elem = i->at("path").asString();
     auto hash = Hash(i->at("hash").asString());
     auto str_type = i->at("type").asString();
-    FileType file_type;
+    TreeEntryType file_type;
     if (str_type == "File") {
-      file_type = FileType::REGULAR_FILE;
+      file_type = TreeEntryType::REGULAR_FILE;
     } else if (str_type == "Tree") {
-      file_type = FileType::DIRECTORY;
+      file_type = TreeEntryType::TREE;
     } else if (str_type == "Executable") {
-      file_type = FileType::EXECUTABLE_FILE;
+      file_type = TreeEntryType::EXECUTABLE_FILE;
     } else if (str_type == "Symlink") {
-      file_type = FileType::SYMLINK;
+      file_type = TreeEntryType::SYMLINK;
     } else {
       throw std::runtime_error("unknown file type");
     }

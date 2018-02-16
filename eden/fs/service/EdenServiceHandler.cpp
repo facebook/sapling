@@ -404,7 +404,7 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
   auto objectStore = mount->getObjectStore();
   for (auto piece : parentDirectory.components()) {
     auto entry = tree->getEntryPtr(piece);
-    if (entry != nullptr && entry->getFileType() == FileType::DIRECTORY) {
+    if (entry != nullptr && entry->isTree()) {
       tree = objectStore->getTree(entry->getHash()).get();
     } else {
       return folly::none;
@@ -413,7 +413,7 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
 
   if (tree != nullptr) {
     auto entry = tree->getEntryPtr(filename.basename());
-    if (entry != nullptr && entry->getFileType() != FileType::DIRECTORY) {
+    if (entry != nullptr && !entry->isTree()) {
       return entry->getMode();
     }
   }

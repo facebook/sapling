@@ -360,7 +360,7 @@ bool CheckoutAction::hasConflict() {
 
   auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
   if (localIsFile) {
-    auto remoteIsFile = newScmEntry_->getFileType() != FileType::DIRECTORY;
+    auto remoteIsFile = !newScmEntry_->isTree();
     if (remoteIsFile) {
       // This entry is a file that did not exist in the old source control tree,
       // but it exists as a tracked file in the new tree.

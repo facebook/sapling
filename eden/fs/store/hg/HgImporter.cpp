@@ -625,7 +625,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
 
     StringPiece entryName(entry->filename, entry->filenamelen);
 
-    FileType fileType;
+    TreeEntryType fileType;
 
     StringPiece entryFlag;
     if (entry->flag) {
@@ -639,14 +639,14 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
                << " node: " << node << " flag: " << entryFlag;
 
     if (entry->isdirectory()) {
-      fileType = FileType::DIRECTORY;
+      fileType = TreeEntryType::TREE;
     } else if (entry->flag) {
       switch (*entry->flag) {
         case 'x':
-          fileType = FileType::EXECUTABLE_FILE;
+          fileType = TreeEntryType::EXECUTABLE_FILE;
           break;
         case 'l':
-          fileType = FileType::SYMLINK;
+          fileType = TreeEntryType::SYMLINK;
           break;
         default:
           throw std::runtime_error(folly::to<string>(
@@ -658,7 +658,7 @@ std::unique_ptr<Tree> HgImporter::importTreeImpl(
               entryFlag));
       }
     } else {
-      fileType = FileType::REGULAR_FILE;
+      fileType = TreeEntryType::REGULAR_FILE;
     }
 
     auto proxyHash = HgProxyHash::store(
@@ -832,13 +832,13 @@ void HgImporter::readManifestEntry(
 
   auto pathStr = cursor.readTerminatedString();
 
-  FileType fileType;
+  TreeEntryType fileType;
   if (flag == ' ') {
-    fileType = FileType::REGULAR_FILE;
+    fileType = TreeEntryType::REGULAR_FILE;
   } else if (flag == 'x') {
-    fileType = FileType::EXECUTABLE_FILE;
+    fileType = TreeEntryType::EXECUTABLE_FILE;
   } else if (flag == 'l') {
-    fileType = FileType::SYMLINK;
+    fileType = TreeEntryType::SYMLINK;
   } else {
     throw std::runtime_error(folly::to<string>(
         "unsupported file flags for ", pathStr, ": ", static_cast<int>(flag)));

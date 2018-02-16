@@ -19,17 +19,17 @@ namespace eden {
 
 std::string TreeEntry::toLogString() const {
   char fileTypeChar = '?';
-  switch (fileType_) {
-    case FileType::DIRECTORY:
+  switch (type_) {
+    case TreeEntryType::TREE:
       fileTypeChar = 'd';
       break;
-    case FileType::REGULAR_FILE:
+    case TreeEntryType::REGULAR_FILE:
       fileTypeChar = 'f';
       break;
-    case FileType::EXECUTABLE_FILE:
+    case TreeEntryType::EXECUTABLE_FILE:
       fileTypeChar = 'x';
       break;
-    case FileType::SYMLINK:
+    case TreeEntryType::SYMLINK:
       fileTypeChar = 'l';
       break;
   }
@@ -38,24 +38,24 @@ std::string TreeEntry::toLogString() const {
       "(", name_, ", ", hash_.toString(), ", ", fileTypeChar, ")");
 }
 
-std::ostream& operator<<(std::ostream& os, FileType type) {
+std::ostream& operator<<(std::ostream& os, TreeEntryType type) {
   switch (type) {
-    case FileType::DIRECTORY:
-      return os << "DIRECTORY";
-    case FileType::REGULAR_FILE:
+    case TreeEntryType::TREE:
+      return os << "TREE";
+    case TreeEntryType::REGULAR_FILE:
       return os << "REGULAR_FILE";
-    case FileType::EXECUTABLE_FILE:
+    case TreeEntryType::EXECUTABLE_FILE:
       return os << "EXECUTABLE_FILE";
-    case FileType::SYMLINK:
+    case TreeEntryType::SYMLINK:
       return os << "SYMLINK";
   }
 
-  return os << "FileType::" << int(type);
+  return os << "TreeEntryType::" << int(type);
 }
 
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2) {
   return (entry1.getHash() == entry2.getHash()) &&
-      (entry1.getFileType() == entry2.getFileType()) &&
+      (entry1.getType() == entry2.getType()) &&
       (entry1.getName() == entry2.getName());
 }
 

@@ -45,7 +45,8 @@ void FakeTreeBuilder::setFiles(
         arg.path,
         folly::ByteRange{folly::StringPiece{arg.contents}},
         false,
-        arg.executable ? FileType::EXECUTABLE_FILE : FileType::REGULAR_FILE);
+        arg.executable ? TreeEntryType::EXECUTABLE_FILE
+                       : TreeEntryType::REGULAR_FILE);
   }
 }
 
@@ -59,7 +60,7 @@ void FakeTreeBuilder::setFileImpl(
     RelativePathPiece path,
     folly::ByteRange contents,
     bool replace,
-    FileType type) {
+    TreeEntryType type) {
   CHECK(!finalizedRoot_);
 
   auto dir = getDirEntry(path.dirname(), true);
@@ -111,7 +112,7 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
 
   auto* parent = getStoredTree(path.dirname());
   const auto& entry = parent->get().getEntryAt(path.basename());
-  if (entry.getFileType() == FileType::DIRECTORY) {
+  if (entry.isTree()) {
     store_->getStoredTree(entry.getHash())->setReady();
   } else {
     store_->getStoredBlob(entry.getHash())->setReady();
@@ -148,7 +149,7 @@ void FakeTreeBuilder::triggerError(
 
   auto* parent = getStoredTree(path.dirname());
   const auto& entry = parent->get().getEntryAt(path.basename());
-  if (entry.getFileType() == FileType::DIRECTORY) {
+  if (entry.isTree()) {
     store_->getStoredTree(entry.getHash())->triggerError(std::move(ew));
   } else {
     store_->getStoredBlob(entry.getHash())->triggerError(std::move(ew));
@@ -197,12 +198,12 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
         throw std::runtime_error(folly::to<string>(
             "tried to look up non-existent directory ", path));
       }
-      auto ret = parent->entries->emplace(name, EntryInfo{FileType::DIRECTORY});
+      auto ret = parent->entries->emplace(name, EntryInfo{TreeEntryType::TREE});
       CHECK(ret.second);
       parent = &ret.first->second;
     } else {
       parent = &iter->second;
-      if (parent->type != FileType::DIRECTORY) {
+      if (parent->type != TreeEntryType::TREE) {
         throw std::runtime_error(folly::to<string>(
             "tried to look up directory ",
             path,
@@ -222,7 +223,7 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
   StoredTree* current = finalizedRoot_;
   for (auto name : path.components()) {
     const auto& entry = current->get().getEntryAt(name);
-    if (entry.getFileType() != FileType::DIRECTORY) {
+    if (!entry.isTree()) {
       throw std::runtime_error(folly::to<string>(
           "tried to look up stored tree ",
           path,
@@ -237,8 +238,8 @@ StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
   return current;
 }
 
-FakeTreeBuilder::EntryInfo::EntryInfo(FileType fileType) : type(fileType) {
-  if (type == FileType::DIRECTORY) {
+FakeTreeBuilder::EntryInfo::EntryInfo(TreeEntryType fileType) : type(fileType) {
+  if (type == TreeEntryType::TREE) {
     entries = make_unique<PathMap<EntryInfo>>();
   }
 }
@@ -257,13 +258,13 @@ FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
 StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
     FakeTreeBuilder* builder,
     bool setReady) const {
-  CHECK(type == FileType::DIRECTORY);
+  CHECK(type == TreeEntryType::TREE);
 
   std::vector<TreeEntry> treeEntries;
   for (const auto& e : *entries) {
     const auto& entryInfo = e.second;
     Hash hash;
-    if (entryInfo.type == FileType::DIRECTORY) {
+    if (entryInfo.type == TreeEntryType::TREE) {
       auto* storedTree = entryInfo.finalizeTree(builder, setReady);
       hash = storedTree->get().getHash();
     } else {
@@ -283,7 +284,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
 StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
     FakeTreeBuilder* builder,
     bool setReady) const {
-  CHECK(type != FileType::DIRECTORY);
+  CHECK(type != TreeEntryType::TREE);
   auto* storedBlob = builder->store_->maybePutBlob(contents).first;
   if (setReady) {
     storedBlob->setReady();

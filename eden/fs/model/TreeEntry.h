@@ -23,10 +23,8 @@ namespace eden {
 
 class Hash;
 
-// TODO: rename to TreeEntryType
-enum class FileType : uint8_t {
-  // TODO: rename to TREE
-  DIRECTORY,
+enum class TreeEntryType : uint8_t {
+  TREE,
   REGULAR_FILE,
   EXECUTABLE_FILE,
   SYMLINK,
@@ -37,8 +35,8 @@ class TreeEntry {
   explicit TreeEntry(
       const Hash& hash,
       folly::StringPiece name,
-      FileType fileType)
-      : fileType_(fileType), hash_(hash), name_(PathComponentPiece(name)) {}
+      TreeEntryType type)
+      : type_(type), hash_(hash), name_(PathComponentPiece(name)) {}
 
   const Hash& getHash() const {
     return hash_;
@@ -49,36 +47,36 @@ class TreeEntry {
   }
 
   bool isTree() const {
-    return fileType_ == FileType::DIRECTORY;
+    return type_ == TreeEntryType::TREE;
   }
 
-  FileType getFileType() const {
-    return fileType_;
+  TreeEntryType getType() const {
+    return type_;
   }
 
   mode_t getMode() const {
-    switch (fileType_) {
-      case FileType::DIRECTORY:
+    switch (type_) {
+      case TreeEntryType::TREE:
         return S_IFDIR | 0755;
-      case FileType::REGULAR_FILE:
+      case TreeEntryType::REGULAR_FILE:
         return S_IFREG | 0644;
-      case FileType::EXECUTABLE_FILE:
+      case TreeEntryType::EXECUTABLE_FILE:
         return S_IFREG | 0755;
-      case FileType::SYMLINK:
+      case TreeEntryType::SYMLINK:
         return S_IFLNK | 0755;
     }
-    XLOG(FATAL) << "illegal file type " << int(fileType_);
+    XLOG(FATAL) << "illegal file type " << static_cast<int>(type_);
   }
 
   std::string toLogString() const;
 
  private:
-  FileType fileType_;
+  TreeEntryType type_;
   Hash hash_;
   PathComponent name_;
 };
 
-std::ostream& operator<<(std::ostream& os, FileType type);
+std::ostream& operator<<(std::ostream& os, TreeEntryType type);
 bool operator==(const TreeEntry& entry1, const TreeEntry& entry2);
 bool operator!=(const TreeEntry& entry1, const TreeEntry& entry2);
 } // namespace eden

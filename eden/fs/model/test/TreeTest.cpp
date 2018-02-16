@@ -15,11 +15,11 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::FileType;
 using facebook::eden::Hash;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::Tree;
 using facebook::eden::TreeEntry;
+using facebook::eden::TreeEntryType;
 using std::string;
 using std::vector;
 
@@ -36,7 +36,7 @@ Hash testHash(testHashHex);
 
 TEST(Tree, testGetEntryPtr) {
   vector<TreeEntry> entries;
-  entries.emplace_back(testHash, "a_file", FileType::REGULAR_FILE);
+  entries.emplace_back(testHash, "a_file", TreeEntryType::REGULAR_FILE);
   Tree tree(std::move(entries));
 
   // Verify existent path.
@@ -45,7 +45,7 @@ TEST(Tree, testGetEntryPtr) {
   EXPECT_NE(nullptr, entry);
   EXPECT_EQ("a_file", entry->getName());
   EXPECT_EQ(false, entry->isTree());
-  EXPECT_EQ(FileType::REGULAR_FILE, entry->getFileType());
+  EXPECT_EQ(TreeEntryType::REGULAR_FILE, entry->getType());
 
   // Verify non-existent path.
   PathComponentPiece nonExistentPath("not_a_file");

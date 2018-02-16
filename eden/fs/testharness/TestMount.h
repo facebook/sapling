@@ -44,7 +44,7 @@ struct TestMountFile {
   RelativePath path;
   std::string contents;
   uint8_t rwx = 0b110;
-  FileType type = FileType::REGULAR_FILE;
+  TreeEntryType type = TreeEntryType::REGULAR_FILE;
 
   /** Performs a structural equals comparison. */
   bool operator==(const TestMountFile& other) const;

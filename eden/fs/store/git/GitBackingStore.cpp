@@ -97,15 +97,15 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
     auto gitEntry = git_tree_entry_byindex(gitTree, i);
     auto entryMode = git_tree_entry_filemode(gitEntry);
     StringPiece entryName(git_tree_entry_name(gitEntry));
-    FileType fileType;
+    TreeEntryType fileType;
     if (entryMode == GIT_FILEMODE_TREE) {
-      fileType = FileType::DIRECTORY;
+      fileType = TreeEntryType::TREE;
     } else if (entryMode == GIT_FILEMODE_BLOB_EXECUTABLE) {
-      fileType = FileType::EXECUTABLE_FILE;
+      fileType = TreeEntryType::EXECUTABLE_FILE;
     } else if (entryMode == GIT_FILEMODE_LINK) {
-      fileType = FileType::SYMLINK;
+      fileType = TreeEntryType::SYMLINK;
     } else if (entryMode == GIT_FILEMODE_BLOB) {
-      fileType = FileType::REGULAR_FILE;
+      fileType = TreeEntryType::REGULAR_FILE;
     } else {
       // TODO: We currently don't handle GIT_FILEMODE_COMMIT
       throw std::runtime_error(folly::to<string>(
