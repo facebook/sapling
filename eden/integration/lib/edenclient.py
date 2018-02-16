@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import logging
 import os
 import shlex
 import shutil
@@ -20,7 +21,7 @@ from eden.cli import util
 
 import eden.thrift
 from fb303.ttypes import fb_status
-from .find_executables import EDEN_CLI, EDEN_DAEMON
+from .find_executables import EDEN_CLI, EDEN_DAEMON, EDEN_HG_IMPORT_HELPER
 
 
 class EdenFS(object):
@@ -168,6 +169,7 @@ class EdenFS(object):
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
             '--local_storage_engine_unsafe', self._storage_engine,
+            '--hgImportHelper', EDEN_HG_IMPORT_HELPER,
         ]
         if 'SANDCASTLE' in os.environ:
             extra_daemon_args.append('--allowRoot')
@@ -207,7 +209,10 @@ class EdenFS(object):
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
-        self._process = subprocess.Popen(args + extra_daemon_args)
+        full_args = args + extra_daemon_args
+        logging.info('Invoking eden daemon: %s',
+                     ' '.join(shlex.quote(arg) for arg in full_args))
+        self._process = subprocess.Popen(full_args)
 
     def shutdown(self) -> None:
         '''

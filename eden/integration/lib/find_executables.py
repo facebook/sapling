@@ -79,6 +79,26 @@ def _find_daemon():
 EDEN_DAEMON = _find_daemon()
 
 
+def _find_hg_import_helper():
+    import_helper = os.environ.get('EDENFS_HG_IMPORT_HELPER')
+    if import_helper and not os.access(import_helper, os.X_OK):
+        raise Exception(f'unable to find hg_import_helper script for '
+                        'integration testing: {import_helper!r}')
+
+    candidates = (
+        os.path.join(BUCK_OUT, 'gen/eden/fs/store/hg/hg_import_helper.par'),
+        os.path.join(REPO_ROOT, 'eden/fs/store/hg/hg_import_helper.py'),
+    )
+    for path in candidates:
+        if os.access(path, os.X_OK):
+            return path
+
+    raise Exception(f'unable to find hg_import_helper script for integration '
+                    'testing: checked paths {candidates!r}')
+
+EDEN_HG_IMPORT_HELPER = _find_hg_import_helper()
+
+
 def _find_fsattr():
     fsattr = os.environ.get('EDENFS_FSATTR_BIN')
     if not fsattr:
