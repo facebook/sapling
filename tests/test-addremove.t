@@ -50,6 +50,7 @@
   $ hg addremove
   adding dir/a.py
   $ cd ..
+  $ cd ..
 
   $ hg init sim
   $ cd sim
@@ -91,4 +92,13 @@
 
   $ hg st
   ! c
+
+  $ hg forget c
+  $ touch foo
+  $ hg addremove
+  adding foo
+  $ rm foo
+  $ hg addremove
+  removing foo
+
   $ cd ..

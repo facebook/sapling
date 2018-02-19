@@ -385,8 +385,10 @@ def onetimeclientsetup(ui):
         if shallowrepo.requirement in repo.requirements:
             files = []
             parentctx = repo['.']
+            m1 = parentctx.manifest()
             for f in removed:
-                files.append((f, hex(parentctx.filenode(f))))
+                if f in m1:
+                    files.append((f, hex(parentctx.filenode(f))))
             # batch fetch the needed files from the server
             repo.fileservice.prefetch(files)
         return orig(repo, matcher, added, removed, *args, **kwargs)
