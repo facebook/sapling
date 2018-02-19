@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{self, Debug};
-use std::io::{BufRead, Cursor, Write};
+use std::io::{Cursor, Write};
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -20,16 +20,14 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use pylz4;
 use tokio_core::reactor::Remote;
-use tokio_io::AsyncRead;
 
 use slog::Logger;
 
 use bundle2_resolver;
 use mercurial;
-use mercurial_bundles::{parts, Bundle2EncodeBuilder};
-use mercurial_bundles::bundle2::{self, Bundle2Stream};
-use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId, NodeHash,
-                      Parents, RepoPath, Type, NULL_HASH};
+use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
+use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId,
+                      NodeHash, Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -485,14 +483,11 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle<R>(
+    fn unbundle(
         &self,
         heads: Vec<String>,
-        stream: Bundle2Stream<R>,
-    ) -> HgCommandRes<bundle2::Remainder<R>>
-    where
-        R: AsyncRead + BufRead + 'static + Send,
-    {
+        stream: BoxStream<Bundle2Item, Error>,
+    ) -> HgCommandRes<()> {
         bundle2_resolver::resolve(
             self.repo.hgrepo.clone(),
             self.logger.new(o!("command" => "unbundle")),

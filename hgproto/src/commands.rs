@@ -24,7 +24,8 @@ use futures::sync::oneshot;
 
 use dechunker::Dechunker;
 use futures_ext::{BoxFuture, BoxStream, BytesStream, FutureExt, StreamExt};
-use mercurial_bundles::bundle2::{self, Bundle2Stream};
+use mercurial_bundles::Bundle2Item;
+use mercurial_bundles::bundle2::{self, Bundle2Stream, StreamEvent};
 use mercurial_types::{MPath, NodeHash};
 use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
@@ -212,46 +213,47 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ok(instream).boxify(),
             ),
             SingleRequest::Unbundle { heads } => {
-                let (send, recv) = oneshot::channel();
+                let bundle2stream =
+                    Bundle2Stream::new(Dechunker::new(instream), self.logger.new(o!()));
+                let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
+
+                let remainder = remainder
+                    .then(|rest| {
+                        let (bytes, remainder) = match rest {
+                            Err(e) => return Either::A(err(e)),
+                            Ok(rest) => rest,
+                        };
+                        if !bytes.is_empty() {
+                            Either::A(err(ErrorKind::UnconsumedData(
+                                String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                            ).into()))
+                        } else {
+                            Either::B(remainder.check_is_done().from_err())
+                        }
+                    })
+                    .then(
+                        |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
+                            Ok((true, remainder)) => ok(remainder.into_inner()),
+                            Ok((false, mut remainder)) => match remainder.fill_buf() {
+                                Err(e) => err(e.into()),
+                                Ok(buf) => err(ErrorKind::UnconsumedData(
+                                    String::from_utf8_lossy(buf).into_owned(),
+                                ).into()),
+                            },
+                            Err(e) => err(e.into()),
+                        },
+                    )
+                    .boxify();
+
                 let resps = futures_ordered(vec![
                     Either::A(ok(SingleResponse::ReadyForStream)),
                     Either::B(
                         hgcmds
-                            .unbundle(
-                                heads,
-                                Bundle2Stream::new(Dechunker::new(instream), self.logger.new(o!())),
-                            )
-                            .then(|rest| {
-                                let (bytes, remainder) = match rest {
-                                    Err(e) => return Either::A(err(e)),
-                                    Ok(rest) => rest,
-                                };
-                                if !bytes.is_empty() {
-                                    Either::A(err(ErrorKind::UnconsumedData(
-                                        String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                                    ).into()))
-                                } else {
-                                    Either::B(remainder.check_is_done().from_err())
-                                }
-                            })
-                            .then(
-                                |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
-                                    Ok((true, remainder)) => {
-                                        let _ = send.send(remainder.into_inner());
-                                        ok(SingleResponse::Unbundle)
-                                    }
-                                    Ok((false, mut remainder)) => match remainder.fill_buf() {
-                                        Err(e) => err(e.into()),
-                                        Ok(buf) => err(ErrorKind::UnconsumedData(
-                                            String::from_utf8_lossy(buf).into_owned(),
-                                        ).into()),
-                                    },
-                                    Err(e) => err(e.into()),
-                                },
-                            ),
+                            .unbundle(heads, bundle2stream)
+                            .map(|_| SingleResponse::Unbundle),
                     ),
                 ]);
-                (resps.boxify(), recv.from_err().boxify())
+                (resps.boxify(), remainder)
             }
             SingleRequest::Gettreepack(args) => (
                 hgcmds
@@ -449,6 +451,37 @@ where
     )
 }
 
+fn extract_remainder_from_bundle2<R>(
+    bundle2: Bundle2Stream<R>,
+) -> (
+    BoxStream<Bundle2Item, Error>,
+    BoxFuture<bundle2::Remainder<R>, Error>,
+)
+where
+    R: AsyncRead + BufRead + 'static + Send,
+{
+    let (send, recv) = oneshot::channel();
+    let mut send = Some(send);
+
+    let bundle2items = bundle2
+        .then(move |res_stream_event| match res_stream_event {
+            Ok(StreamEvent::Next(bundle2item)) => Ok(Some(bundle2item)),
+            Ok(StreamEvent::Done(remainder)) => {
+                let send = send.take().ok_or(ErrorKind::Bundle2Invalid(
+                    "stream remainder was sent twice".into(),
+                ))?;
+                // Receiving end will deal with failures
+                let _ = send.send(remainder);
+                Ok(None)
+            }
+            Err(err) => Err(err),
+        })
+        .filter_map(|val| val)
+        .boxify();
+
+    (bundle2items, recv.from_err().boxify())
+}
+
 #[inline]
 fn get_or_none<'a>(map: &'a HashMap<Vec<u8>, Vec<u8>>, key: &'a [u8]) -> &'a [u8] {
     match map.get(key) {
@@ -562,14 +595,11 @@ pub trait HgCommands {
     }
 
     // @wireprotocommand('unbundle', 'heads')
-    fn unbundle<R>(
+    fn unbundle(
         &self,
         _heads: Vec<String>,
-        _stream: Bundle2Stream<R>,
-    ) -> HgCommandRes<bundle2::Remainder<R>>
-    where
-        R: AsyncRead + BufRead + 'static + Send,
-    {
+        _stream: BoxStream<Bundle2Item, Error>,
+    ) -> HgCommandRes<()> {
         unimplemented("unbundle")
     }
 
