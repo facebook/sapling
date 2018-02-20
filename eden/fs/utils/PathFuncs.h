@@ -1417,19 +1417,19 @@ AbsolutePathBase<Storage>::rsuffixes() const {
 
 // Allow boost to compute hash values
 template <typename A>
-std::size_t hash_value(const detail::PathComponentBase<A>& path) {
+size_t hash_value(const detail::PathComponentBase<A>& path) {
   auto s = path.stringPiece();
   return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
 }
 
 template <typename A>
-std::size_t hash_value(const detail::RelativePathBase<A>& path) {
+size_t hash_value(const detail::RelativePathBase<A>& path) {
   auto s = path.stringPiece();
   return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
 }
 
 template <typename A>
-std::size_t hash_value(const detail::AbsolutePathBase<A>& path) {
+size_t hash_value(const detail::AbsolutePathBase<A>& path) {
   auto s = path.stringPiece();
   return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
 }
@@ -1644,7 +1644,7 @@ namespace std {
 
 template <typename A>
 struct hash<facebook::eden::detail::PathComponentBase<A>> {
-  std::size_t operator()(
+  size_t operator()(
       const facebook::eden::detail::PathComponentBase<A>& s) const {
     return facebook::eden::detail::hash_value(s);
   }
@@ -1652,7 +1652,7 @@ struct hash<facebook::eden::detail::PathComponentBase<A>> {
 
 template <typename A>
 struct hash<facebook::eden::detail::RelativePathBase<A>> {
-  std::size_t operator()(
+  size_t operator()(
       const facebook::eden::detail::RelativePathBase<A>& s) const {
     return facebook::eden::detail::hash_value(s);
   }
@@ -1660,7 +1660,7 @@ struct hash<facebook::eden::detail::RelativePathBase<A>> {
 
 template <typename A>
 struct hash<facebook::eden::detail::AbsolutePathBase<A>> {
-  std::size_t operator()(
+  size_t operator()(
       const facebook::eden::detail::AbsolutePathBase<A>& s) const {
     return facebook::eden::detail::hash_value(s);
   }
