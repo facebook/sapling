@@ -66,7 +66,7 @@ hginit() {
   local name
   name=$1
   shift
-  hg init $name $@
+  hg init $name $@ --config remotefilelog.reponame=master
 }
 
 clearcache() {
