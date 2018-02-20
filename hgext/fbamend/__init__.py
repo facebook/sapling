@@ -341,12 +341,7 @@ def fixupamend(ui, repo):
         # Use obsolescence information to fix up the amend instead of relying
         # on the preamend bookmark if the user enables this feature.
         if ui.configbool('fbamend', 'userestack'):
-            with repo.transaction('fixupamend') as tr:
-                try:
-                    common.restackonce(ui, repo, current.rev())
-                except error.InterventionRequired:
-                    tr.close()
-                    raise
+            common.restackonce(ui, repo, current.rev())
             return
 
         preamendname = _preamendname(repo, current.node())
