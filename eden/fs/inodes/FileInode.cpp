@@ -304,13 +304,11 @@ AbsolutePath FileInode::getLocalPath() const {
   return getMount()->getOverlay()->getFilePath(getNodeId());
 }
 
-folly::Optional<bool> FileInode::isSameAsFast(const Hash& blobID, mode_t mode) {
-  // When comparing mode bits, we only care about the
-  // file type and owner permissions.
-  auto relevantModeBits = [](mode_t m) { return (m & (S_IFMT | S_IRWXU)); };
-
+folly::Optional<bool> FileInode::isSameAsFast(
+    const Hash& blobID,
+    TreeEntryType entryType) {
   auto state = state_.rlock();
-  if (relevantModeBits(state->mode) != relevantModeBits(mode)) {
+  if (entryType != treeEntryTypeFromMode(state->mode)) {
     return false;
   }
 
@@ -321,8 +319,8 @@ folly::Optional<bool> FileInode::isSameAsFast(const Hash& blobID, mode_t mode) {
   return folly::none;
 }
 
-bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
-  auto result = isSameAsFast(blob.getHash(), mode);
+bool FileInode::isSameAs(const Blob& blob, TreeEntryType entryType) {
+  auto result = isSameAsFast(blob.getHash(), entryType);
   if (result.hasValue()) {
     return result.value();
   }
@@ -330,8 +328,10 @@ bool FileInode::isSameAs(const Blob& blob, mode_t mode) {
   return getSha1().value() == Hash::sha1(&blob.getContents());
 }
 
-folly::Future<bool> FileInode::isSameAs(const Hash& blobID, mode_t mode) {
-  auto result = isSameAsFast(blobID, mode);
+folly::Future<bool> FileInode::isSameAs(
+    const Hash& blobID,
+    TreeEntryType entryType) {
+  auto result = isSameAsFast(blobID, entryType);
   if (result.hasValue()) {
     return makeFuture(result.value());
   }

@@ -337,8 +337,7 @@ bool CheckoutAction::hasConflict() {
     }
 
     // Check that the file contents are the same as the old source control entry
-    if (!fileInode->isSameAs(
-            *oldBlob_, modeFromTreeEntryType(oldScmEntry_.value().getType()))) {
+    if (!fileInode->isSameAs(*oldBlob_, oldScmEntry_.value().getType())) {
       // The file contents or mode bits are different:
       // - If the file exists in the new tree but differs from what is currently
       //   in the working copy, then this is a MODIFIED_MODIFIED conflict.

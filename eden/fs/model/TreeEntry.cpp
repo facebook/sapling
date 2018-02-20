@@ -32,6 +32,19 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
   XLOG(FATAL) << "illegal file type " << static_cast<int>(ft);
 }
 
+folly::Optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
+  if (S_ISREG(mode)) {
+    return mode & S_IXUSR ? TreeEntryType::EXECUTABLE_FILE
+                          : TreeEntryType::REGULAR_FILE;
+  } else if (S_ISLNK(mode)) {
+    return TreeEntryType::SYMLINK;
+  } else if (S_ISDIR(mode)) {
+    return TreeEntryType::TREE;
+  } else {
+    return folly::none;
+  }
+}
+
 std::string TreeEntry::toLogString() const {
   char fileTypeChar = '?';
   switch (type_) {

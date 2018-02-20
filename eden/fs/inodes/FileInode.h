@@ -102,13 +102,13 @@ class FileInode : public InodeBase {
 
   /**
    * Check to see if the file has the same contents as the specified blob
-   * and the same mode.
+   * and the same tree entry type.
    *
    * This is more efficient than manually comparing the contents, as it can
    * perform a simple hash check if the file is not materialized.
    */
-  bool isSameAs(const Blob& blob, mode_t mode);
-  folly::Future<bool> isSameAs(const Hash& blobID, mode_t mode);
+  bool isSameAs(const Blob& blob, TreeEntryType entryType);
+  folly::Future<bool> isSameAs(const Hash& blobID, TreeEntryType entryType);
 
   /**
    * Get the file mode_t value.
@@ -328,7 +328,9 @@ class FileInode : public InodeBase {
    * folly::none if the contents need to be checked against sha1 of file
    * contents.
    */
-  folly::Optional<bool> isSameAsFast(const Hash& blobID, mode_t mode);
+  folly::Optional<bool> isSameAsFast(
+      const Hash& blobID,
+      TreeEntryType entryType);
 
   /**
    * Recompute the SHA1 content hash of the open file.

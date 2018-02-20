@@ -20,6 +20,11 @@ namespace eden {
 
 class Hash;
 
+/**
+ * Represents the allowed types of entries in version control trees.
+ *
+ * Currently missing from this list: git submodules.
+ */
 enum class TreeEntryType : uint8_t {
   TREE,
   REGULAR_FILE,
@@ -31,6 +36,12 @@ enum class TreeEntryType : uint8_t {
  * Computes an initial mode_t, including permission bits, from a FileType.
  */
 mode_t modeFromTreeEntryType(TreeEntryType ft);
+
+/**
+ * Converts an arbitrary mode_t to the appropriate TreeEntryType if the file
+ * can be tracked by version control.  If not, returns folly::none.
+ */
+folly::Optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 class TreeEntry {
  public:
