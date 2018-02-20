@@ -533,8 +533,8 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   $ hg resolve --tool=internal:dumpjson --all
   [
    {
-    "command": "update",
-    "command_details": {"cmd": "update", "to_abort": "update --clean", "to_continue": "update"},
+    "command": "rebase",
+    "command_details": {"cmd": "rebase", "to_abort": "rebase --abort", "to_continue": "rebase --continue"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": null, "exists": false, "isexec": null, "issymlink": null}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": null, "exists": false, "isexec": null, "issymlink": null, "path": "$TESTTMP/cornercases/foo/foo/foo/foo/file"}, "path": "file"}],
     "pathconflicts": []
    }
@@ -704,6 +704,45 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
     "command": "rebase",
     "command_details": {"cmd": "rebase", "to_abort": "rebase --abort", "to_continue": "rebase --continue"},
     "conflicts": [{"base": {"contents": "base\n", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "somepath", "exists": true, "isexec": false, "issymlink": true}, "other": {"contents": "change\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "somepath", "exists": true, "isexec": false, "issymlink": true, "path": "$TESTTMP/cornercases/foo/foo/foo/foo/file"}, "path": "file"}],
+    "pathconflicts": []
+   }
+  ]
+  $ cd ..
+
+command_details works correctly with commands that drop both a statefile and a
+mergestate (like shelve):
+  $ hg init command_details
+  $ cd command_details
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > shelve=
+  > EOF
+  $ hg debugdrawdag <<'EOS'
+  > b c
+  > |/
+  > a
+  > EOS
+  $ hg up -q c
+  $ echo 'state' > b
+  $ hg add -q
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up -q b
+  $ hg unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 3:91906e06e40b "changes to: c" (tip)
+  merging b
+  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ hg resolve --tool=internal:dumpjson --all
+  [
+   {
+    "command": "unshelve",
+    "command_details": {"cmd": "unshelve", "to_abort": "unshelve --abort", "to_continue": "unshelve --continue"},
+    "conflicts": [{"base": {"contents": "", "exists": true, "isexec": false, "issymlink": false}, "local": {"contents": "b", "exists": true, "isexec": false, "issymlink": false}, "other": {"contents": "state\n", "exists": true, "isexec": false, "issymlink": false}, "output": {"contents": "<<<<<<< dest:   488e1b7e7341 b - test: b\nb=======\nstate\n>>>>>>> source: 91906e06e40b - shelve: changes to: c\n", "exists": true, "isexec": false, "issymlink": false, "path": "$TESTTMP/cornercases/foo/foo/foo/command_details/b"}, "path": "b"}],
     "pathconflicts": []
    }
   ]

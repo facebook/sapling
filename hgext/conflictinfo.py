@@ -49,21 +49,28 @@ CONFLICTSTATES = [
     ['graftstate', {'cmd': 'graft',
                     'to_continue': 'graft --continue',
                     'to_abort': 'graft --abort'}],
-    ['updatestate', {'cmd': 'update',
-                     'to_continue': 'update',
-                     'to_abort': 'update --clean'}],
     ['rebasestate', {'cmd': 'rebase',
                      'to_continue': 'rebase --continue',
                      'to_abort': 'rebase --abort'}],
-    ['merge/state', {'cmd': 'merge',
-                    'to_continue': 'merge --continue',
-                    'to_abort': 'update --clean'}],
     ['shelvedstate', {'cmd': 'unshelve',
                       'to_continue': 'unshelve --continue',
                       'to_abort': 'unshelve --abort'}],
     ['histedit-state', {'cmd': 'histedit',
                         'to_continue': 'histedit --continue',
                         'to_abort': 'histedit --abort'}],
+    # updatestate should be after all other commands, but before mergestate,
+    # since some of the above commands run updates which concievably could be
+    # interrupted. See coment for mergestate.
+    ['updatestate', {'cmd': 'update',
+                     'to_continue': 'update',
+                     'to_abort': 'update --clean'}],
+    # Check for mergestate last, since other commands (shelve, rebase, histedit,
+    # etc.) will leave a statefile of their own, as well as a mergestate, if
+    # there were conflicts. The command-level statefile should be considered
+    # first.
+    ['merge/state', {'cmd': 'merge',
+                     'to_continue': 'merge --continue',
+                     'to_abort': 'update --clean'}],
 ]
 
 def extsetup(ui):
