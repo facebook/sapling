@@ -16,12 +16,13 @@ extern crate mercurial_types_mocks;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use mercurial_types::{Entry, MPath, Manifest, RepoPath, Type};
+use mercurial_types::{Entry, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};
 use mercurial_types::nodehash::{EntryId, NodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
+use mercurial_types_mocks::nodehash;
 use std::convert::TryFrom;
 use std::iter::repeat;
 use std::str::FromStr;
@@ -370,5 +371,17 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
         expected_added,
         expected_deleted,
         vec![],
+    );
+}
+
+#[test]
+fn nodehash_option() {
+    assert_eq!(NULL_HASH.into_option(), None);
+    assert_eq!(NodeHash::from(None), NULL_HASH);
+
+    assert_eq!(nodehash::ONES_HASH.into_option(), Some(nodehash::ONES_HASH));
+    assert_eq!(
+        NodeHash::from(Some(nodehash::ONES_HASH)),
+        nodehash::ONES_HASH
     );
 }

@@ -45,6 +45,24 @@ impl NodeHash {
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()
     }
+
+    #[inline]
+    pub fn into_option(self) -> Option<Self> {
+        if self == NULL_HASH {
+            None
+        } else {
+            Some(self)
+        }
+    }
+}
+
+impl From<Option<NodeHash>> for NodeHash {
+    fn from(h: Option<NodeHash>) -> Self {
+        match h {
+            None => NULL_HASH,
+            Some(h) => h,
+        }
+    }
 }
 
 struct StringVisitor;
