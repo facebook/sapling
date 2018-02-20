@@ -8,8 +8,6 @@ Set up test environment.
   > tweakdefaults=
   > [experimental]
   > evolution = createmarkers
-  > [fbamend]
-  > userestack=true
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"

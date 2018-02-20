@@ -47,24 +47,24 @@ Note that if --date is specified on the command line, it takes precedence.
 
 from __future__ import absolute_import
 
+import tempfile
+
+from mercurial.node import hex
+from mercurial.i18n import _
+
 from mercurial import (
     bookmarks,
     cmdutil,
     commands,
     error,
     extensions,
-    merge,
-    obsolete,
+    lock as lockmod,
     phases,
     registrar,
-    repair,
     scmutil,
 )
-from mercurial.node import hex
-from mercurial import lock as lockmod
-from mercurial.i18n import _
 
-from hgext import (
+from .. import (
     histedit,
     rebase as rebasemod,
 )
@@ -82,8 +82,6 @@ from . import (
     split,
     unamend,
 )
-
-import tempfile
 
 revsetpredicate = revsets.revsetpredicate
 
@@ -105,7 +103,6 @@ configitem('fbamend', 'alwaysnewest', default=False)
 configitem('fbamend', 'date', default=None)
 configitem('fbamend', 'education', default=None)
 configitem('fbamend', 'safestrip', default=True)
-configitem('fbamend', 'userestack', default=False)
 configitem('commands', 'amend.autorebase', default=True)
 
 testedwith = 'ships-with-fb-hgext'
@@ -247,7 +244,6 @@ def amend(ui, repo, *pats, **opts):
         else:
             commitdate = old.date()
 
-    active = bmactive(repo)
     oldbookmarks = old.bookmarks()
     tr = None
     wlock = None
@@ -305,18 +301,6 @@ def amend(ui, repo, *pats, **opts):
         for bm in oldbookmarks:
             changes.append((bm, node))
 
-        userestack = ui.configbool('fbamend', 'userestack')
-        if not _histediting(repo) and not userestack:
-            preamendname = _preamendname(repo, node)
-            if haschildren:
-                changes.append((preamendname, old.node()))
-            elif not active:
-                # update bookmark if it isn't based on the active bookmark name
-                oldname = _preamendname(repo, old.node())
-                if oldname in repo._bookmarks:
-                    changes.append((preamendname, repo._bookmarks[oldname]))
-                    changes.append((oldname, None)) # delete the old name
-
         tr = repo.transaction('fixupamend')
         repo._bookmarks.applychanges(repo, tr, changes)
         tr.close()
@@ -338,53 +322,8 @@ def fixupamend(ui, repo):
         lock = repo.lock()
         current = repo['.']
 
-        # Use obsolescence information to fix up the amend instead of relying
-        # on the preamend bookmark if the user enables this feature.
-        if ui.configbool('fbamend', 'userestack'):
-            common.restackonce(ui, repo, current.rev())
-            return
-
-        preamendname = _preamendname(repo, current.node())
-        if not preamendname in repo._bookmarks:
-            raise error.Abort(_('no bookmark %s') % preamendname,
-                             hint=_('check if your bookmark is active'))
-
-        old = repo[preamendname]
-        if old == current:
-            hint = _('please examine smartlog and rebase your changsets '
-                     'manually')
-            err = _('cannot automatically determine what to rebase '
-                    'because bookmark "%s" points to the current changset') % \
-                   preamendname
-            raise error.Abort(err, hint=hint)
-        oldbookmarks = old.bookmarks()
-
-        ui.status(_("rebasing the children of %s\n") % (preamendname))
-
-        active = bmactive(repo)
-        opts = {
-            'rev' : [str(c.rev()) for c in old.descendants()],
-            'dest' : current.rev()
-        }
-
-        if opts['rev'] and opts['rev'][0]:
-            rebasemod.rebase(ui, repo, **opts)
-
-        changes = []
-        for bookmark in oldbookmarks:
-            changes.append((bookmark, None)) # delete the bookmark
-        tr = repo.transaction('fixupamend')
-        repo._bookmarks.applychanges(repo, tr, changes)
-
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            tr.close()
-        else:
-            tr.close()
-            repair.strip(ui, repo, old.node(), topic='preamend-backup')
-
-        merge.update(repo, current.node(), False, True, False)
-        if active:
-            bmactivate(repo, active)
+        # Use obsolescence information to fix up the amend.
+        common.restackonce(ui, repo, current.rev())
     finally:
         lockmod.release(wlock, lock, tr)
 

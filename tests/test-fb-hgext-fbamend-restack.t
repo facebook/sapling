@@ -9,9 +9,6 @@ Set up test environment.
   > [experimental]
   > evolution.allowdivergence = True
   > evolution = createmarkers, allowunstable
-  > [fbamend]
-  > # do not write preamend bookmarks
-  > userestack = True
   > EOF
   $ mkcommit() {
   >   echo "$1" > "$1"

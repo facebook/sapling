@@ -25,7 +25,7 @@ with the inhibit extension enabled.
   | |
   | o  2
   | |
-  | x  1 59cf2bc6d22f.preamend
+  | x  1
   |/
   o  0
   
@@ -36,7 +36,5 @@ with the inhibit extension enabled.
   o  3 test
   |
   @  2
-  |
-  o  1 59cf2bc6d22f.preamend
   |
   ~

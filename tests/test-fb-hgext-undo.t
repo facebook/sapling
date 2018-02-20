@@ -1269,7 +1269,7 @@ Obsmarkers for instack amend
   | | o  27:21   28dfc398cab7   1970-01-01 00:00 +0000   test
   | | |    afile
   | | |
-  | x |  26[e1c5a2a441f5.preamend]   0963b9e31e70   1970-01-01 00:00 +0000   test
+  | x |  26   0963b9e31e70   1970-01-01 00:00 +0000   test
   |/ /     c3
   | |
   o |  25   4e0ac6fa4ca0   1970-01-01 00:00 +0000   test

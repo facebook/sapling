@@ -5,8 +5,6 @@
   > fbamend=
   > rebase=
   > shelve=
-  > [fbamend]
-  > userestack=True
   > [experimental]
   > copytrace=off
   > evolution=createmarkers

@@ -4,8 +4,6 @@ Set up test environment.
   > fbamend=
   > inhibit=
   > rebase=
-  > [fbamend]
-  > userestack=True
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
