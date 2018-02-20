@@ -62,6 +62,7 @@ Push a tree-only scratch branch from another client
   > 
   > [treemanifest]
   > treeonly=True
+  > sendtrees=True
   > EOF
 
   $ mkdir subdir

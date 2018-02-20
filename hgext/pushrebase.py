@@ -234,22 +234,19 @@ def validaterevset(repo, revset):
 
 def getrebaseparts(repo, peer, outgoing, onto, newhead):
     parts = []
-    if (util.safehasattr(repo.manifestlog, 'datastore') and
-        repo.ui.configbool('treemanifest', 'sendtrees')):
-        mfnodes = []
-        for node in outgoing.missing:
-            mfnodes.append(('', repo[node].manifestnode()))
-
-        # Only add trees if we already have them
-        if not repo.manifestlog.datastore.getmissing(mfnodes):
-            parts.append(createtreepackpart(repo, outgoing))
+    if util.safehasattr(repo.manifestlog, 'datastore'):
+        try:
+            treemod = extensions.find('treemanifest')
+        except KeyError:
+            pass
+        else:
+            if treemod._cansendtrees(repo, outgoing.missing):
+                part = treemod.createtreepackpart(repo, outgoing,
+                                                  rebasepackparttype)
+                parts.append(part)
 
     parts.append(createrebasepart(repo, peer, outgoing, onto, newhead))
     return parts
-
-def createtreepackpart(repo, outgoing):
-    treemod = extensions.find('treemanifest')
-    return treemod.createtreepackpart(repo, outgoing, rebasepackparttype)
 
 def createrebasepart(repo, peer, outgoing, onto, newhead):
     if not outgoing.missing:

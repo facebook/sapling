@@ -68,12 +68,7 @@ def getscratchbranchparts(repo, peer, outgoing, confignonforwardmove,
 
     try:
         treemod = extensions.find('treemanifest')
-        mfnodes = []
-        for node in outgoing.missing:
-            mfnodes.append(('', repo[node].manifestnode()))
-
-        # Only include the tree parts if they all exist
-        if not repo.manifestlog.datastore.getmissing(mfnodes):
+        if treemod._cansendtrees(repo, outgoing.missing):
             parts.append(treemod.createtreepackpart(
                 repo, outgoing, treemod.TREEGROUP_PARTTYPE2))
     except KeyError:
