@@ -1090,6 +1090,12 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             # hgsubversion and hggit do funky things on push. Just call direct.
             if path.startswith('svn+') or path.startswith('git+'):
                 return orig(ui, repo, dest, opargs=opargs, **opts)
+            # Once we have found the path where we are pushing, do not continue
+            # checking for places we are not pushing.
+            break
+        if dest:
+            # If an explicit destination was checked, also stop checking here.
+            break
 
     if not opargs['to']:
         if ui.configbool('remotenames', 'forceto'):

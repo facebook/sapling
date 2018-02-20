@@ -46,8 +46,9 @@ Set up an svn default push path and test behavior
 
   $ hg paths --add default-push svn+ssh://nowhere/in/particular
   $ hg push --to foo ../orig
-  pushing to ../orig
+  pushing rev 71b4c8f22183 to destination ../orig bookmark foo
   searching for changes
-  abort: no bookmark found to push
+  abort: not creating new remote bookmark
+  (use --create to create a new bookmark)
   [255]
 
