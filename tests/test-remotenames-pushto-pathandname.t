@@ -42,3 +42,12 @@ Try to do the right push
   added 1 changesets with 1 changes to 1 files
   updating bookmark ababagalamaga
 
+Set up an svn default push path and test behavior
+
+  $ hg paths --add default-push svn+ssh://nowhere/in/particular
+  $ hg push --to foo ../orig
+  pushing to ../orig
+  searching for changes
+  abort: no bookmark found to push
+  [255]
+

@@ -941,6 +941,11 @@ def expushdiscoverybookmarks(pushop):
                 raise error.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
         return ret
 
+    # in this path, we have a push --to command
+    if not len(pushop.bookmarks):
+        # if there are no bookmarks, something went wrong. bail gracefully.
+        raise error.Abort('no bookmark found to push')
+
     bookmark = pushop.bookmarks[0]
     rev = pushop.revs[0]
 
