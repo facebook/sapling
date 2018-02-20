@@ -293,6 +293,11 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
     return (common, True, srvheadhashes)
 
 def pullremotenames(repo, remote, bookmarks):
+    # when working between multiple local repos which do not all have
+    # remotenames enabled, do this work only for those with it enabled
+    if not util.safehasattr(repo, '_remotenames'):
+        return
+
     path = activepath(repo.ui, remote)
     if path:
         # on a push, we don't want to keep obsolete heads since
@@ -1744,6 +1749,11 @@ def precachedistance(repo):
         precachedistance = False
         precachecurrent = False
     """
+    # when working between multiple local repos which do not all have
+    # remotenames enabled, do this work only for those with it enabled
+    if not util.safehasattr(repo, '_remotenames'):
+        return
+
     # to avoid stale namespaces, let's reload
     repo._remotenames.clearnames()
 

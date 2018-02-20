@@ -46,19 +46,28 @@ Ensure no crashes when working from repo with remotenames on
 Check for crashes when working from repo with remotenames off
   $ cd off
 
-  $ hg pull ../on 2>&1 | grep Error
-  AttributeError: 'localrepository' object has no attribute '_remotenames'
+  $ hg pull ../on
+  pulling from ../on
+  searching for changes
+  no changes found
 
   $ cat >> .hg/hgrc <<EOF
   > [paths]
   > default = $TESTTMP/on
   > EOF
 
-  $ hg pull 2>&1 | grep Error
-  AttributeError: 'localrepository' object has no attribute '_remotenames'
+  $ hg pull
+  pulling from $TESTTMP/on
+  searching for changes
+  no changes found
 
-  $ hg push 2>&1 | grep Error
-  AttributeError: 'localrepository' object has no attribute '_remotenames'
+  $ hg push
+  pushing to $TESTTMP/on
+  searching for changes
+  no changes found
+  [1]
 
-  $ hg pull --rebase 2>&1 | grep Error
-  AttributeError: 'localrepository' object has no attribute '_remotenames'
+  $ hg pull --rebase
+  pulling from $TESTTMP/on
+  searching for changes
+  no changes found
