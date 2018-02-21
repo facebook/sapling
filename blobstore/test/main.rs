@@ -27,7 +27,7 @@ use tempdir::TempDir;
 
 use blobstore::Blobstore;
 use fileblob::Fileblob;
-use memblob::Memblob;
+use memblob::EagerMemblob;
 use rocksblob::Rocksblob;
 
 fn simple<B>(blobstore: B)
@@ -101,7 +101,7 @@ macro_rules! blobstore_test_impl {
 blobstore_test_impl! {
     memblob_test => {
         state: (),
-        new: |_| Memblob::new(),
+        new: |_| EagerMemblob::new(),
         persistent: false,
     }
 }

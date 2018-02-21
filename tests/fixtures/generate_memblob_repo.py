@@ -52,7 +52,7 @@ extern crate futures;
 extern crate bytes;
 
 use bytes::Bytes;
-use memblob::Memblob;
+use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
 use memheads::MemHeads;
@@ -66,7 +66,7 @@ use futures::future::Future;
 pub fn getrepo() -> BlobRepo {
     let bookmarks: MemBookmarks = MemBookmarks::new();
     let heads: MemHeads = MemHeads::new();
-    let blobs = Memblob::new();
+    let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
 
 """

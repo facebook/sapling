@@ -26,7 +26,7 @@ use filelinknodes::FileLinknodes;
 use heads::Heads;
 use linknodes::Linknodes;
 use manifoldblob::ManifoldBlob;
-use memblob::Memblob;
+use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
@@ -105,7 +105,7 @@ impl BlobRepo {
     pub fn new_memblob(
         heads: MemHeads,
         bookmarks: MemBookmarks,
-        blobstore: Memblob,
+        blobstore: EagerMemblob,
         linknodes: MemLinknodes,
     ) -> Self {
         Self::new(

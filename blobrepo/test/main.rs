@@ -23,7 +23,7 @@ use futures::executor::spawn;
 use futures::future::Future;
 
 use blobrepo::BlobRepo;
-use memblob::Memblob;
+use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
@@ -32,7 +32,7 @@ use mercurial_types::{manifest, Blob, Entry, EntryId, MPathElement, NodeHash, Re
 fn get_empty_repo() -> BlobRepo {
     let bookmarks: MemBookmarks = MemBookmarks::new();
     let heads: MemHeads = MemHeads::new();
-    let blobs = Memblob::new();
+    let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
 
     BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes)
