@@ -50,13 +50,13 @@ where
                     linknode
                 );
 
-                let p1 = if p1 == NULL_HASH { None } else { Some(&p1) };
-                let p2 = if p2 == NULL_HASH { None } else { Some(&p2) };
-                let content = delta::apply(b"", &delta);
-
                 Ok((
                     node,
-                    RevlogChangeset::new(BlobNode::new(Blob::from(content), p1, p2))?,
+                    RevlogChangeset::new(BlobNode::new(
+                        Blob::from(delta::apply(b"", &delta)),
+                        p1.into_option().as_ref(),
+                        p2.into_option().as_ref(),
+                    ))?,
                 ))
             },
         )
@@ -90,8 +90,8 @@ mod tests {
                 .unwrap()
                 .as_blob()
                 .clone(),
-            if p1 == NULL_HASH { None } else { Some(&p1) },
-            if p2 == NULL_HASH { None } else { Some(&p2) },
+            p1.into_option().as_ref(),
+            p2.into_option().as_ref(),
         );
 
         let delta = delta::Delta::new_fulltext(blobnode.as_blob().as_slice().unwrap());
