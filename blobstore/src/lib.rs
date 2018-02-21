@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 extern crate bytes;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
@@ -17,8 +18,13 @@ use std::sync::Arc;
 use bytes::Bytes;
 
 use failure::Error;
-use futures::Future;
+use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+
+#[derive(Debug, Fail)]
+pub enum ErrorKind {
+    #[fail(display = "Blob {} not found in blobstore", _0)] NotFound(String),
+}
 
 /// Basic trait for the Blob Store interface
 ///
@@ -90,8 +96,19 @@ pub trait Blobstore: Send + Sync + 'static {
     // "self.assert_present(key).or_else()" and never upload the same key twice.
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error>;
     // Allows the underlying Blobstore to skip the download phase
+    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+        self.get(key).map(|opt| opt.is_some()).boxify()
+    }
     fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
-        self.get(key).map(|_| {}).boxify()
+        self.is_present(key.clone())
+            .and_then(|present| {
+                if present {
+                    future::ok(())
+                } else {
+                    future::err(ErrorKind::NotFound(key).into())
+                }
+            })
+            .boxify()
     }
 }
 
@@ -101,6 +118,9 @@ impl Blobstore for Arc<Blobstore> {
     }
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
+    }
+    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+        self.as_ref().is_present(key)
     }
     fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
         self.as_ref().assert_present(key)
@@ -113,6 +133,9 @@ impl Blobstore for Box<Blobstore> {
     }
     fn put(&self, key: String, value: Bytes) -> BoxFuture<(), Error> {
         self.as_ref().put(key, value)
+    }
+    fn is_present(&self, key: String) -> BoxFuture<bool, Error> {
+        self.as_ref().is_present(key)
     }
     fn assert_present(&self, key: String) -> BoxFuture<(), Error> {
         self.as_ref().assert_present(key)
