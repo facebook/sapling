@@ -492,7 +492,7 @@ impl HgCommands for RepoClient {
         &self,
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
-    ) -> HgCommandRes<()> {
+    ) -> HgCommandRes<Bytes> {
         bundle2_resolver::resolve(
             self.repo.hgrepo.clone(),
             self.logger.new(o!("command" => "unbundle")),

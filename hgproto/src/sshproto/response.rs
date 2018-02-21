@@ -110,7 +110,7 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
         &ReadyForStream => Bytes::from(b"0\n".as_ref()),
 
         // TODO(luk, T25574469) The response for Unbundle should be chunked stream of bundle2
-        &Unbundle => Bytes::from(b"0\n".as_ref()),
+        &Unbundle(ref res) => res.clone(),
 
         &Getbundle(ref res) => res.clone(),
 

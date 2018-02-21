@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::fmt;
+
 use bytes::Bytes;
 use failure::err_msg;
 use futures::{Future, Stream};
@@ -156,6 +158,57 @@ where
 
     let packer = WirePackPacker::new(wirepack_parts, wirepack::Kind::Tree);
     builder.set_data_generated(packer);
+
+    Ok(builder)
+}
+
+pub enum ChangegroupApplyResult {
+    Success { heads_num_diff: i64 },
+    Error,
+}
+
+// Mercurial source code comments are a bit contradictory:
+//
+// From mercurial/changegroup.py
+// Return an integer summarizing the change to this repo:
+// - nothing changed or no source: 0
+// - more heads than before: 1+added heads (2..n)
+// - fewer heads than before: -1-removed heads (-2..-n)
+// - number of heads stays the same: 1
+//
+// From mercurial/exchange.py
+// Integer version of the changegroup push result
+// - None means nothing to push
+// - 0 means HTTP error
+// - 1 means we pushed and remote head count is unchanged *or*
+//   we have outgoing changesets but refused to push
+// - other values as described by addchangegroup()
+//
+// We are using 0 to indicate a error, 1 + heads_num_diff if the number of heads increased,
+// -1 + heads_num_diff if the number of heads decreased. Note that we may change it in the future
+
+impl fmt::Display for ChangegroupApplyResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &ChangegroupApplyResult::Success { heads_num_diff } => {
+                if heads_num_diff >= 0 {
+                    write!(f, "{}", 1 + heads_num_diff)
+                } else {
+                    write!(f, "{}", -1 + heads_num_diff)
+                }
+            }
+            &ChangegroupApplyResult::Error => write!(f, "0"),
+        }
+    }
+}
+
+pub fn replychangegroup_part(
+    res: ChangegroupApplyResult,
+    in_reply_to: u32,
+) -> Result<PartEncodeBuilder> {
+    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::ReplyChangegroup)?;
+    builder.add_mparam("return", format!("{}", res))?;
+    builder.add_mparam("in-reply-to", format!("{}", in_reply_to))?;
 
     Ok(builder)
 }

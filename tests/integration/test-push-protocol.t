@@ -24,9 +24,11 @@ setup repo
   $ cd $TESTTMP
   $ blobimport --blobstore files --linknodes repo-hg repo
 
-setup repo2
+setup two repos: one will be used to push from, another will be used
+to pull these pushed commits
 
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo3
   $ cd repo2
   $ hg pull ../repo-hg
   pulling from ../repo-hg
@@ -89,6 +91,14 @@ push to Mononoke TODO(T25252425) make this work
   bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  error: invalid magic: '2\n' (version '0\n'), should be 'HG'
-  abort: not a Mercurial bundle
+  bundle2-input-bundle: 1 params no-transaction
+  bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
+  bundle2-input-bundle: 0 parts total
+
+Now pull what was just pushed TODO(T25252425) make this work
+  $ cd ../repo3
+  $ hgmn pull -q
+  devel-warn: applied empty changegroup at: * (glob)
+  $ hg log -r 0e067c57feba
+  abort: unknown revision '0e067c57feba'!
   [255]

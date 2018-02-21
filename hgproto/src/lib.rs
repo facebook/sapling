@@ -191,7 +191,7 @@ pub enum SingleResponse {
     Pushkey,
     Streamout, /* (BoxStream<Vec<u8>, Error>) */
     ReadyForStream,
-    Unbundle,
+    Unbundle(Bytes),
     Gettreepack(Bytes),
     Getfiles(Bytes),
 }
@@ -204,6 +204,7 @@ impl SingleResponse {
         match self {
             &Getbundle(_) => true,
             &ReadyForStream => true,
+            &Unbundle(_) => true,
             &Gettreepack(_) => true,
             _ => false,
         }

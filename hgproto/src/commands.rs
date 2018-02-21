@@ -250,7 +250,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     Either::B(
                         hgcmds
                             .unbundle(heads, bundle2stream)
-                            .map(|_| SingleResponse::Unbundle),
+                            .map(|bytes| SingleResponse::Unbundle(bytes)),
                     ),
                 ]);
                 (resps.boxify(), remainder)
@@ -599,7 +599,7 @@ pub trait HgCommands {
         &self,
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item, Error>,
-    ) -> HgCommandRes<()> {
+    ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }
 
