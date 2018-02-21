@@ -54,7 +54,14 @@ class basestore(object):
         missing = []
         for name, node in keys:
             filepath = self._getfilepath(name, node)
-            exists = os.path.exists(filepath)
+            try:
+                size = os.path.getsize(filepath)
+                # An empty file is considered corrupt and we pretend it doesn't
+                # exist.
+                exists = size > 0
+            except os.error:
+                exists = False
+
             if (exists and self._validatecache == 'strict' and
                 not self._validatekey(filepath, 'contains')):
                 exists = False
