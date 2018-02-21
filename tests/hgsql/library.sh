@@ -21,6 +21,7 @@ if [[ -z $DBHOST && -z $DBPORT && -n $DBHOSTPORT ]]; then
 fi
 [[ -z $DBHOST ]] && DBHOST=localhost
 [[ -z $DBPORT ]] && DBPORT=3306
+[[ -z $DBENGINE ]] && DBENGINE=innodb
 [[ -z $DBPASS && -n $PASSWORD ]] && DBPASS="$PASSWORD"
 [[ -z $DBUSER && -n $USER ]] && DBUSER="$USER"
 [[ -z $DBNAME ]] && DBNAME="testdb_hgsql_$$_$(date +%s)" && DBAUTODROP=1
@@ -28,12 +29,22 @@ fi
 
 MYSQLLOG="${MYSQLLOG:-/dev/null}"
 
+# skip if DBENGINE is not supported
+( mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" \
+  --execute='SHOW ENGINES' --silent --skip-column-names  | \
+  egrep -iq "^$DBENGINE[[:space:]](default|yes)[[:space:]]" )
+
+if [[ $? != 0 ]]; then
+  echo "skipped: $DBENGINE unsupported"
+  exit 80
+fi
+
 mysql -h "$DBHOST" -P "$DBPORT" -u "$DBUSER" "$DBPASSOPT" &>> "$MYSQLLOG" <<EOF
 CREATE DATABASE IF NOT EXISTS $DBNAME;
 USE $DBNAME;
 DROP TABLE IF EXISTS revisions;
 DROP TABLE IF EXISTS revision_references;
-$(cat $TESTDIR/hgsql/schema.sql)
+$(cat $TESTDIR/hgsql/schema.$DBENGINE.sql)
 EOF
 
 if [[ $? != 0 ]]; then
@@ -68,6 +79,7 @@ user = $DBUSER
 password = $DBPASS
 port = $DBPORT
 reponame = $2
+engine = $DBENGINE
 
 [server]
 preferuncompressed=True

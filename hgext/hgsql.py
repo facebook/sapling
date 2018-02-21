@@ -69,6 +69,7 @@ configitem('hgsql', 'user', default=None)
 
 configitem('hgsql', 'bypass', default=False)
 configitem('hgsql', 'enabled', default=False)
+configitem('hgsql', 'engine', default='innodb')
 configitem('hgsql', 'locktimeout', default=60)
 configitem('hgsql', 'maxcommitsize', default=52428800)
 configitem('hgsql', 'maxinsertsize', default=1048576)
@@ -468,14 +469,22 @@ def wraprepo(repo):
             waittimeout = self.ui.config('hgsql', 'waittimeout')
             waittimeout = self.sqlconn.converter.escape('%s' % waittimeout)
 
+            self.engine = self.ui.config('hgsql', 'engine')
             self.locktimeout = self.ui.config('hgsql', 'locktimeout')
             self.locktimeout = self.sqlconn.converter.escape('%s' %
                                 self.locktimeout)
 
             self.sqlcursor = self.sqlconn.cursor()
             self.sqlcursor.execute("SET wait_timeout=%s" % waittimeout)
-            self.sqlcursor.execute("SET innodb_lock_wait_timeout=%s" %
-                                   self.locktimeout)
+
+            if self.engine == 'rocksdb':
+                self.sqlcursor.execute("SET rocksdb_lock_wait_timeout=%s" %
+                                       self.locktimeout)
+            elif self.engine == 'innodb':
+                self.sqlcursor.execute("SET innodb_lock_wait_timeout=%s" %
+                                       self.locktimeout)
+            else:
+                raise RuntimeError('unsupported hgsql.engine %s' % self.engine)
 
         def sqlclose(self):
             with warnings.catch_warnings():

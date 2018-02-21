@@ -1,3 +1,11 @@
+#testcases case-innodb case-rocksdb
+
+#if case-rocksdb
+  $ DBENGINE=rocksdb
+#else
+  $ DBENGINE=innodb
+#endif
+
 no-check-code
 
 Python2 is required for its binary path handling

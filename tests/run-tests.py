@@ -1387,10 +1387,11 @@ class TTest(Test):
                 lsplit = l.split()
                 if len(lsplit) < 2 or lsplit[0] != b'#require':
                     after.setdefault(pos, []).append('  !!! invalid #require\n')
-                haveresult, message = self._hghave(lsplit[1:])
-                if not haveresult:
-                    script = [b'echo "%s"\nexit 80\n' % message]
-                    break
+                if not skipping:
+                    haveresult, message = self._hghave(lsplit[1:])
+                    if not haveresult:
+                        script = [b'echo "%s"\nexit 80\n' % message]
+                        break
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b'#if'):
                 lsplit = l.split()

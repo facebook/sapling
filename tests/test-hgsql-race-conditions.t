@@ -1,3 +1,11 @@
+#testcases case-innodb case-rocksdb
+
+#if case-rocksdb
+  $ DBENGINE=rocksdb
+#else
+  $ DBENGINE=innodb
+#endif
+
 no-check-code
 
   $ . "$TESTDIR/hgsql/library.sh"

@@ -74,6 +74,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: hgsql.bypass (bool)
   undocumented: hgsql.database (str)
   undocumented: hgsql.enabled (bool)
+  undocumented: hgsql.engine (str)
   undocumented: hgsql.host (str)
   undocumented: hgsql.locktimeout (str)
   undocumented: hgsql.password (str)
