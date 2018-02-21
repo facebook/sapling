@@ -1,5 +1,0 @@
-cpp_library(
-    name = "fuse_kernel",
-    # TODO: conditionally pull in fuse_kernel_macos.h here on macos
-    headers = ["fuse_kernel_linux.h"],
-)

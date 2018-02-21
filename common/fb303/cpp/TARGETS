@@ -1,8 +1,0 @@
-cpp_library(
-    name = "fb303",
-    srcs = glob(["*.cpp"]),
-    headers = glob(["*.h"]),
-    deps = [
-        "//common/fb303/if:fb303-cpp2",
-    ],
-)

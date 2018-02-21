@@ -1,7 +1,0 @@
-thrift_library(
-    name = "fb303",
-    languages = ["cpp2"],
-    thrift_srcs = {
-        "fb303.thrift": ["FacebookService"],
-    },
-)
