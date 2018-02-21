@@ -112,7 +112,7 @@ Pushbackup fails too
   bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 456 bytes payload
+  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 459 bytes payload
   * unknown header type b2x:infinitepush, backtrace:* (glob)
   finished in * seconds (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)

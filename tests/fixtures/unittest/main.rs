@@ -73,7 +73,7 @@ fn check_head_has_file() {
     let repo = linear::getrepo();
 
     let changeset_future =
-        repo.get_changeset_by_nodeid(&NodeHash::from_ascii_str(&AsciiString::from_ascii(
+        repo.get_changeset_by_changesetid(&ChangesetId::from_ascii_str(&AsciiString::from_ascii(
             "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
         ).expect("Can't turn string to AsciiString"))
             .expect("Can't turn AsciiString to NodeHash"));

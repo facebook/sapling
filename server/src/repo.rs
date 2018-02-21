@@ -26,9 +26,10 @@ use slog::Logger;
 use bundle2_resolver;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId,
-                      NodeHash, Parents, RepoPath, Type, NULL_HASH};
+use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
+                      Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
+use mercurial_types::nodehash::ChangesetId;
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -221,7 +222,7 @@ impl RepoClient {
         let changelogentries = nodestosend
             .and_then({
                 let hgrepo = hgrepo.clone();
-                move |node| hgrepo.get_changeset_by_nodeid(&node)
+                move |node| hgrepo.get_changeset_by_changesetid(&ChangesetId::new(node))
             })
             .and_then(|cs| {
                 let mut v = Vec::new();
@@ -299,9 +300,13 @@ impl HgCommands for RepoClient {
                     return Ok(Async::Ready(None));
                 }
 
-                self.wait_cs = self.wait_cs
-                    .take()
-                    .or_else(|| Some(self.repo.hgrepo.get_changeset_by_nodeid(&self.n)));
+                self.wait_cs = self.wait_cs.take().or_else(|| {
+                    Some(
+                        self.repo
+                            .hgrepo
+                            .get_changeset_by_changesetid(&ChangesetId::new(self.n)),
+                    )
+                });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
                 self.wait_cs = None; // got it
 

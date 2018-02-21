@@ -12,6 +12,7 @@ use bytes::Bytes;
 pub use failure::Error;
 
 use mercurial_types::{Blob, BlobHash, NodeHash};
+use mercurial_types::nodehash::ChangesetId;
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -39,7 +40,7 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
-    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(NodeHash),
+    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(ChangesetId),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(NodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(NodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]

@@ -21,6 +21,7 @@ use futures::stream::{self, Stream};
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
 use mercurial_types::{NodeHash, NULL_HASH};
+use mercurial_types::nodehash::ChangesetId;
 
 use nodehashkey::Key;
 
@@ -82,7 +83,7 @@ impl Filler for GenFiller {
 
     fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {
         let parents = repo
-            .get_changeset_by_nodeid(nodeid) // Future<Changeset>
+            .get_changeset_by_changesetid(&ChangesetId::new(*nodeid)) // Future<Changeset>
             .map(|cs| stream::iter_ok(cs.parents().into_iter()))
             .flatten_stream(); // Stream<NodeHash>
 

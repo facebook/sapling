@@ -166,11 +166,13 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<Box<Changeset>, Error> {
-        let changesetid = ChangesetId::new(*nodeid);
-        let nodeid = *nodeid;
-        BlobChangeset::load(&self.blobstore, &changesetid)
-            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(nodeid).into()))
+    pub fn get_changeset_by_changesetid(
+        &self,
+        changesetid: &ChangesetId,
+    ) -> BoxFuture<Box<Changeset>, Error> {
+        let chid = changesetid.clone();
+        BlobChangeset::load(&self.blobstore, &chid)
+            .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(chid).into()))
             .map(|cs| cs.boxed())
             .boxify()
     }
@@ -309,7 +311,7 @@ impl Stream for BlobChangesetStream {
                     if let Some(next) = try_ready!(self.heads.poll()) {
                         let state = if self.seen.insert(next) {
                             // haven't seen before
-                            WaitCS(next, self.repo.get_changeset_by_nodeid(&next))
+                            WaitCS(next, self.repo.get_changeset_by_changesetid(&ChangesetId::new(next)))
                         } else {
                             Idle // already done it
                         };

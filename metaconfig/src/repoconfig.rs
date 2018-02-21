@@ -16,7 +16,7 @@ use futures::{future, Future, IntoFuture};
 
 use blobrepo::BlobRepo;
 use mercurial::RevlogRepo;
-use mercurial_types::{Changeset, MPath, Manifest, NodeHash};
+use mercurial_types::{Changeset, MPath, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::ChangesetId;
 use mercurial_types::path::MPathElement;
@@ -67,10 +67,10 @@ impl RepoConfigs {
     /// Read the config repo and generate RepoConfigs based on it
     pub fn read_config_repo(
         repo: BlobRepo,
-        changeset_hash: NodeHash,
+        changesetid: ChangesetId,
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
-            repo.get_changeset_by_nodeid(&changeset_hash)
+            repo.get_changeset_by_changesetid(&changesetid)
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
                 })
