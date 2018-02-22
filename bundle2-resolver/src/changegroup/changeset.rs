@@ -24,42 +24,30 @@ where
     S: Stream<Item = ChangesetDeltaed, Error = Error> + Send + 'static,
 {
     deltaed
-        .and_then(
-            |ChangesetDeltaed {
-                 chunk:
-                     CgDeltaChunk {
-                         node,
-                         p1,
-                         p2,
-                         base,
-                         linknode,
-                         delta,
-                     },
-             }| {
-                ensure_msg!(
-                    base == NULL_HASH,
-                    "Changeset chunk base ({:?}) should be equal to root commit ({:?}), \
-                     because it is never deltaed",
-                    base,
-                    NULL_HASH
-                );
-                ensure_msg!(
-                    node == linknode,
-                    "Changeset chunk node ({:?}) should be equal to linknode ({:?})",
-                    node,
-                    linknode
-                );
+        .and_then(|ChangesetDeltaed { chunk }| {
+            ensure_msg!(
+                chunk.base == NULL_HASH,
+                "Changeset chunk base ({:?}) should be equal to root commit ({:?}), \
+                 because it is never deltaed",
+                chunk.base,
+                NULL_HASH
+            );
+            ensure_msg!(
+                chunk.node == chunk.linknode,
+                "Changeset chunk node ({:?}) should be equal to linknode ({:?})",
+                chunk.node,
+                chunk.linknode
+            );
 
-                Ok((
-                    node,
-                    RevlogChangeset::new(BlobNode::new(
-                        Blob::from(delta::apply(b"", &delta)),
-                        p1.into_option().as_ref(),
-                        p2.into_option().as_ref(),
-                    ))?,
-                ))
-            },
-        )
+            Ok((
+                chunk.node,
+                RevlogChangeset::new(BlobNode::new(
+                    Blob::from(delta::apply(b"", &chunk.delta)),
+                    chunk.p1.into_option().as_ref(),
+                    chunk.p2.into_option().as_ref(),
+                ))?,
+            ))
+        })
         .boxify()
 }
 
