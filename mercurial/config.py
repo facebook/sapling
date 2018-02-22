@@ -7,10 +7,8 @@
 
 from __future__ import absolute_import
 
-import errno
 import os
 
-from .i18n import _
 from . import (
     error,
     pycompat,
@@ -150,11 +148,8 @@ class config(object):
                     try:
                         include(inc, remap=remap, sections=sections)
                         break
-                    except IOError as inst:
-                        if inst.errno != errno.ENOENT:
-                            raise error.ParseError(_("cannot include %s (%s)")
-                                                   % (inc, inst.strerror),
-                                                   "%s:%s" % (src, line))
+                    except IOError:
+                        pass
                 continue
             if emptyre.match(l):
                 continue
