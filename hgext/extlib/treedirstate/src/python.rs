@@ -385,4 +385,41 @@ py_class!(class treedirstatemap |py| {
             .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))
     }
 
+    def pathcomplete(
+        &self,
+        spec: PyBytes,
+        acceptablestates: PyBytes,
+        matchcallback: PyObject,
+        fullpaths: bool
+    ) -> PyResult<PyObject> {
+        let mut dirstate = self.dirstate(py).borrow_mut();
+        let acceptablestates = acceptablestates.data(py);
+
+        let mut visitor = |filepath: &Vec<KeyRef>| {
+            let filename = PyBytes::new(py, &filepath.concat()).into_object();
+            matchcallback.call(py, (filename,), None).map_err(|e| callback_error(py, e))?;
+            Ok(())
+        };
+
+        let acceptable = |state: &FileState| {
+            acceptablestates.contains(&state.state)
+        };
+
+        // Files in state a, n or m are in the tracked tree.
+        if b"anm".iter().any(|x| acceptablestates.contains(x)) {
+            dirstate
+                .path_complete_tracked(spec.data(py), fullpaths, &acceptable, &mut visitor)
+                .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        }
+
+        // Files in state r are in the removed tree.
+        if acceptablestates.contains(&b'r') {
+            dirstate
+                .path_complete_removed(spec.data(py), fullpaths, &acceptable, &mut visitor)
+                .map_err(|e| PyErr::new::<exc::IOError, _>(py, e.description()))?;
+        }
+
+        Ok(py.None())
+    }
+
 });

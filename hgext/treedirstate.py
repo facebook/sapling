@@ -35,6 +35,7 @@ from __future__ import absolute_import
 import errno
 import heapq
 import itertools
+import os
 import random
 import string
 import struct
@@ -710,6 +711,43 @@ def wrappull(orig, ui, repo, *args, **kwargs):
 
     return orig(ui, repo, *args, **kwargs)
 
+def wrapdebugpathcomplete(orig, ui, repo, *specs, **opts):
+    if istreedirstate(repo):
+        cwd = repo.getcwd()
+        matches = []
+        rootdir = repo.root + pycompat.ossep
+        acceptable = ''
+        if opts[r'normal']:
+            acceptable += 'nm'
+        if opts[r'added']:
+            acceptable += 'a'
+        if opts[r'removed']:
+            acceptable += 'r'
+        if not acceptable:
+            acceptable = 'nmar'
+        fullpaths = bool(opts[r'full'])
+        fixpaths = pycompat.ossep != '/'
+        treedirstatemap = repo.dirstate._map._rmap
+        for spec in sorted(specs) or ['']:
+            spec = os.path.normpath(os.path.join(pycompat.getcwd(), spec))
+            if spec != repo.root and not spec.startswith(rootdir):
+                continue
+            if os.path.isdir(spec):
+                spec += '/'
+            spec = spec[len(rootdir):]
+            if fixpaths:
+                spec = spec.replace(pycompat.ossep, '/')
+            treedirstatemap.pathcomplete(spec, acceptable, matches.append,
+                                         fullpaths)
+        for p in matches:
+            p = repo.pathto(p, cwd).rstrip('/')
+            if fixpaths:
+                p = p.replace('/', pycompat.ossep)
+            ui.write(p)
+            ui.write('\n')
+    else:
+        return orig(ui, repo, *specs, **opts)
+
 def featuresetup(ui, supported):
     supported |= {'treedirstate'}
 
@@ -729,6 +767,8 @@ def extsetup(ui):
     extensions.wrapfunction(scmutil, 'casecollisionauditor', wrapcca)
     extensions.wrapfunction(localrepo.localrepository, 'close', wrapclose)
     extensions.wrapcommand(commands.table, 'pull', wrappull)
+    extensions.wrapcommand(commands.table, 'debugpathcomplete',
+                           wrapdebugpathcomplete)
 
 def reposetup(ui, repo):
     ui.log('treedirstate_enabled', '',

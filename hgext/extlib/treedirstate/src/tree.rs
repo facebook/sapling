@@ -58,10 +58,22 @@ enum PathRecurse<'name, 'node, T: 'node> {
     ConflictingFile(KeyRef<'name>, KeyRef<'name>, &'node mut T),
 }
 
-/// Splits a key into the first path element and the remaining path elements (if any).
+/// Splits a key into the first path element and the remaining path elements (if any).  Doesn't
+/// split the key if it just contains an exact file or directory name.
 fn split_key<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
     // Skip the last character.  Even if it's a '/' we don't want to split on it.
     for (index, value) in key.iter().take(key.len() - 1).enumerate() {
+        if *value == b'/' {
+            return (&key[..index + 1], Some(&key[index + 1..]));
+        }
+    }
+    (key, None)
+}
+
+/// Splits a key into the first path element and the remaining path elements (if any).  Splits
+/// the key even if it contains an exact file or directory name.
+fn split_key_exact<'a>(key: KeyRef<'a>) -> (KeyRef<'a>, Option<KeyRef<'a>>) {
+    for (index, value) in key.iter().enumerate() {
         if *value == b'/' {
             return (&key[..index + 1], Some(&key[index + 1..]));
         }
@@ -473,6 +485,106 @@ impl<T: Serializable + Clone> Node<T> {
             }
         }
     }
+
+    /// Checks if a path is suitable for completion, in that it contains a file that matches
+    /// the acceptable conditions.
+    fn path_complete_check<FA>(&mut self, store: &StoreView, acceptable: &FA) -> Result<bool>
+    where
+        FA: Fn(&T) -> bool,
+    {
+        for (_name, entry) in self.load_entries(store)?.iter_mut() {
+            match entry {
+                &mut NodeEntry::Directory(ref mut node) => {
+                    if node.path_complete_check(store, acceptable)? {
+                        return Ok(true);
+                    }
+                }
+                &mut NodeEntry::File(ref mut file) => {
+                    if acceptable(file) {
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    /// Attempt to complete a path prefix.
+    ///
+    /// If full_paths is true, calls the visitor for every file that matches the prefix where
+    /// the file's state returns true when passed to acceptable.
+    ///
+    /// If full_paths is false, the first matching directory that matches the prefix is used as
+    /// long as there is at least one file under the directory that is acceptable.
+    fn path_complete<'a, FA, FV>(
+        &'a mut self,
+        store: &StoreView,
+        path: &mut Vec<KeyRef<'a>>,
+        prefix: KeyRef<'a>,
+        full_paths: bool,
+        acceptable: &FA,
+        visitor: &mut FV,
+    ) -> Result<()>
+    where
+        FA: Fn(&T) -> bool,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+    {
+        let (elem, subpath) = split_key_exact(prefix);
+        if let Some(subpath) = subpath {
+            // Prefix part is for a directory, so look for that directory.
+            let entry = self.load_entries(store)?.get_mut(elem);
+            if let Some(&mut NodeEntry::Directory(ref mut node)) = entry {
+                path.push(elem);
+                node.path_complete(store, path, subpath, full_paths, acceptable, visitor)?;
+                path.pop();
+            }
+        } else {
+            // Prefix part is for a entry in this directory.  Iterate across all matching entries.
+            for (entry_name, entry) in self.load_entries(store)?
+                .range_mut((Bound::Included(elem), Bound::Unbounded))
+            {
+                if entry_name.len() < elem.len() || &entry_name[..elem.len()] != elem {
+                    // This entry is no longer a prefix.
+                    break;
+                }
+                match entry {
+                    &mut NodeEntry::Directory(ref mut node) => {
+                        if full_paths {
+                            // The entry is a directory, and the caller has asked for full paths.
+                            // Visit every entry inside the directory.
+                            let mut visit_adapter = |filepath: &Vec<KeyRef>, state: &mut T| {
+                                if acceptable(state) {
+                                    visitor(filepath)?;
+                                }
+                                Ok(())
+                            };
+                            path.push(entry_name);
+                            node.visit(store, path, &mut visit_adapter)?;
+                            path.pop();
+                        } else {
+                            // The entry is a directory, and the caller has asked for matching
+                            // directories.  Check there is an acceptable file under the
+                            // directory.
+                            if node.path_complete_check(store, acceptable)? {
+                                path.push(entry_name);
+                                visitor(path)?;
+                                path.pop();
+                            }
+                        }
+                    }
+                    &mut NodeEntry::File(ref mut file) => {
+                        // This entry is a file.
+                        if acceptable(file) {
+                            path.push(entry_name);
+                            visitor(path)?;
+                            path.pop();
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<T: Serializable + Clone> Tree<T> {
@@ -593,6 +705,23 @@ impl<T: Serializable + Clone> Tree<T> {
 
     pub fn clear_filtered_keys(&mut self) {
         self.root.clear_filtered_keys();
+    }
+
+    pub fn path_complete<FA, FV>(
+        &mut self,
+        store: &StoreView,
+        prefix: KeyRef,
+        full_paths: bool,
+        acceptable: &FA,
+        visitor: &mut FV,
+    ) -> Result<()>
+    where
+        FA: Fn(&T) -> bool,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+    {
+        let mut path = Vec::new();
+        self.root
+            .path_complete(store, &mut path, prefix, full_paths, acceptable, visitor)
     }
 }
 

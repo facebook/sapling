@@ -273,6 +273,48 @@ impl TreeDirstate {
     pub fn clear_filtered_keys(&mut self) {
         self.tracked.clear_filtered_keys();
     }
+
+    /// Visit all completed acceptable paths that match the given prefix.
+    pub fn path_complete_tracked<FA, FV>(
+        &mut self,
+        prefix: KeyRef,
+        full_paths: bool,
+        acceptable: &FA,
+        visitor: &mut FV,
+    ) -> Result<()>
+    where
+        FA: Fn(&FileState) -> bool,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+    {
+        self.tracked.path_complete(
+            self.store.store_view(),
+            prefix,
+            full_paths,
+            acceptable,
+            visitor,
+        )
+    }
+
+    /// Visit all completed acceptable paths that match the given prefix.
+    pub fn path_complete_removed<FA, FV>(
+        &mut self,
+        prefix: KeyRef,
+        full_paths: bool,
+        acceptable: &FA,
+        visitor: &mut FV,
+    ) -> Result<()>
+    where
+        FA: Fn(&FileState) -> bool,
+        FV: FnMut(&Vec<KeyRef>) -> Result<()>,
+    {
+        self.removed.path_complete(
+            self.store.store_view(),
+            prefix,
+            full_paths,
+            acceptable,
+            visitor,
+        )
+    }
 }
 
 #[cfg(test)]
