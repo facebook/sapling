@@ -38,10 +38,10 @@ constexpr int64_t kLargestRepresentableSec = 16299260425ll;
 constexpr uint32_t kLargestRepresentableNsec = 709551615u;
 
 struct ClampPolicy {
-  static uint64_t minimum(timespec /*ts*/) {
+  static uint64_t minimum(timespec ts) {
     return 0;
   }
-  static uint64_t maximum(timespec /*ts*/) {
+  static uint64_t maximum(timespec ts) {
     return ~0ull;
   }
 };

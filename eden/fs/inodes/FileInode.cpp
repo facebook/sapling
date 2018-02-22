@@ -64,7 +64,7 @@ FileInode::State::State(
 }
 
 FileInode::State::State(
-    FileInode* /*inode*/,
+    FileInode* inode,
     mode_t m,
     const timespec& creationTime)
     : tag(MATERIALIZED_IN_OVERLAY), mode(m) {
@@ -188,7 +188,7 @@ FileInode::FileInode(
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
-    folly::File&& /*file*/,
+    folly::File&& file,
     timespec ctime)
     : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
       state_(folly::in_place, this, mode, ctime) {}
