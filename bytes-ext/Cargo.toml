@@ -1,0 +1,7 @@
+[package]
+name = "bytes-ext"
+version = "0.1.0"
+
+[dependencies]
+error-chain = "0.11"
+bytes = "0.4"
