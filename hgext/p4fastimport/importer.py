@@ -146,7 +146,8 @@ class ChangeManifestImporter(object):
                 if depotname not in self._importset.filelist:
                     continue
                 info = fileinfo[depotname]
-                localname, baserev = info['localname'], info['baserev']
+                localname, baserev = (
+                        info['localname'], info['baserevatcl'][str(change.cl)])
 
                 if self._ui.configbool('p4fastimport', 'checksymlinks', True):
                     # Under rare situations, when a symlink points to a
@@ -200,7 +201,6 @@ class ChangeManifestImporter(object):
                 flags = info['flags'].get(change.cl, '')
                 if flags != mf.flags(localname):
                     mf.setflag(localname, flags)
-                fileinfo[depotname]['baserev'] += 1
 
             linkrev = self._importset.linkrev(change.cl)
             oldmp1 = mp1
@@ -405,11 +405,12 @@ class P4FileImporter(collections.Mapping):
         return p4.get_file(self._p4filelog.depotfile, clnum=clnum)
 
 class FileImporter(object):
-    def __init__(self, ui, repo, importset, p4filelog):
+    def __init__(self, ui, repo, importset, p4filelog, p1ctx):
         self._ui = ui
         self._repo = repo
         self._importset = importset
         self._p4filelog = p4filelog # type: p4.P4Filelog
+        self._p1ctx = p1ctx
 
     @util.propertycache
     def relpath(self):
@@ -446,9 +447,20 @@ class FileImporter(object):
 
         revs = set()
         for c in self._importset.changelists:
-            if c.cl in p4fi.revisions and not self._p4filelog.isdeleted(c.cl):
+            if c.cl in p4fi.revisions:
                 revs.add(c)
 
+        hgfile = self.relpath
+        p1 = self._p1ctx
+        try:
+            fnode = p1[hgfile].filenode()
+            wasdeleted = False
+        except error.ManifestLookupError:
+            # file doesn't exist in p1
+            fnode = nullid
+            wasdeleted = True
+
+        baserevatcl = collections.defaultdict(dict)
         fileflags = collections.defaultdict(dict)
         lastlinkrev = 0
 
@@ -457,6 +469,10 @@ class FileImporter(object):
         largefiles = []
         lfsext = self.findlfs()
         for c in sorted(revs):
+            if self._p4filelog.isdeleted(c.cl):
+                wasdeleted = True
+                continue
+
             linkrev = self._importset.linkrev(c.cl)
             fparent1, fparent2 = nullid, nullid
 
@@ -465,8 +481,9 @@ class FileImporter(object):
             assert linkrev >= lastlinkrev
             lastlinkrev = linkrev
 
-            if len(hgfilelog) > 0:
-                fparent1 = hgfilelog.tip()
+            if wasdeleted is False:
+                fparent1 = fnode
+            wasdeleted = False
 
             # select the content
             text = None
@@ -498,6 +515,14 @@ class FileImporter(object):
                 'path: %s\n' % (short(node), short(fparent1), linkrev,
                     len(text), src, self.relpath))
 
+            baserev = len(hgfilelog) - 1
+            # abort when filelog is still empty  after writing entries
+            if baserev < 0:
+                raise error.Abort(
+                    'fail to write to hg filelog for file %s at %d' % (
+                        hgfile, c.cl))
+            baserevatcl[c.cl] = baserev
+
             if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
                 lfspointer = lfsext.pointer.deserialize(
                         hgfilelog.revision(node, raw=True))
@@ -505,8 +530,10 @@ class FileImporter(object):
                 largefiles.append((c.cl, self.depotfile, oid))
                 self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
 
+            fnode = node
+
         newlen = len(hgfilelog)
-        return fileflags, largefiles, origlen, newlen
+        return fileflags, largefiles, baserevatcl, origlen, newlen
 
 class SyncFileImporter(FileImporter):
     def __init__(self, ui, repo, client, cl, p4filelog, localfile=None):

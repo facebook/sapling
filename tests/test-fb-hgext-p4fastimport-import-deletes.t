@@ -51,7 +51,7 @@ Simple import
   reading filelog * (glob)
   importing repository.
   writing filelog: b789fdd96dc2, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/a (glob)
-  writing filelog: f9597ff22e3f, p1 b789fdd96dc2, linkrev 2, 2 bytes, src: *, path: Main/a (glob)
+  writing filelog: b789fdd96dc2, p1 000000000000, linkrev 2, 2 bytes, src: *, path: Main/a (glob)
   writing filelog: 149da44f2a4e, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/b/c (glob)
   writing filelog: a9092a3d84a3, p1 000000000000, linkrev 0, 2 bytes, src: *, path: Main/d (glob)
   changelist 1: writing manifest. node: * p1: 000000000000 p2: 000000000000 linkrev: 0 (glob)
@@ -71,10 +71,26 @@ Verify
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  3 files, 3 changesets, 4 total revisions
+  3 files, 3 changesets, 3 total revisions
 
   $ hg update tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Check hg debug data
+  $ hg debugdata -m 0
+  Main/a\x00b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 (esc)
+  Main/b/c\x00149da44f2a4e14f488b7bd4157945a9837408c00 (esc)
+  Main/d\x00a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
+  $ hg debugdata -m 1
+  Main/b/c\x00149da44f2a4e14f488b7bd4157945a9837408c00 (esc)
+  Main/d\x00a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
+  $ hg debugdata -m 2
+  Main/a\x00b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 (esc)
+  Main/b/c\x00149da44f2a4e14f488b7bd4157945a9837408c00 (esc)
+  Main/d\x00a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
+  $ hg debugindex Main/a
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0       3     -1       0 b789fdd96dc2 000000000000 000000000000
 
 End Test
 

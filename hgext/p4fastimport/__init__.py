@@ -127,18 +127,19 @@ def writelfsmetadata(largefiles, revisions, outfile):
             inserts)
         cur.execute("COMMIT")
 
-def create(tr, ui, repo, importset, filelogs):
+def create(tr, ui, repo, importset, p1ctx, filelogs):
     for filelog in filelogs:
         # If the Perforce is case insensitive a filelog can map to
         # multiple filenames. For exmaple A.txt and a.txt would show up in the
         # same filelog. It would be more appropriate to update the filelist
         # after receiving the initial filelist but this would not be parallel.
-        fi = importer.FileImporter(ui, repo, importset, filelog)
-        fileflags, largefiles, oldtiprev, newtiprev = fi.create(tr)
+        fi = importer.FileImporter(ui, repo, importset, filelog, p1ctx)
+        fileflags, largefiles, baserevatcl, oldtiprev, newtiprev = fi.create(tr)
         yield 1, json.dumps({
             'newtiprev': newtiprev,
             'oldtiprev': oldtiprev,
             'fileflags': fileflags,
+            'baserevatcl': baserevatcl,
             'largefiles': largefiles,
             'depotname': filelog.depotfile,
             'localname': fi.relpath,
@@ -286,7 +287,7 @@ def p4fastimport(ui, repo, client, **opts):
         ftr = ftrmod.filetransaction(ui.warn, repo.svfs)
         try:
             for filelogs in map(sorted, runlist.values()):
-                wargs = (ftr, ui, repo, importset)
+                wargs = (ftr, ui, repo, importset, p1ctx)
                 for i, serialized in runworker(ui, create, wargs, filelogs):
                     data = json.loads(serialized)
                     ui.progress(_('importing filelogs'), count,
@@ -298,7 +299,7 @@ def p4fastimport(ui, repo, client, **opts):
                     fileinfo[data['depotname']] = {
                         'localname': data['localname'].encode('utf-8'),
                         'flags': decodefileflags(data['fileflags']),
-                        'baserev': data['oldtiprev'],
+                        'baserevatcl': data['baserevatcl'],
                     }
                     largefiles.extend(data['largefiles'])
                     count += i
