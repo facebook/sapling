@@ -39,7 +39,9 @@ void ManifestEntry::initialize(
   char *buf = this->ownedmemory;
 
   char *filenamecopy = buf;
-  memcpy(filenamecopy, filename, filenamelen);
+  if (filenamelen > 0) {
+    memcpy(filenamecopy, filename, filenamelen);
+  }
   filenamecopy[filenamelen] = '\0';
   buf += filenamelen + 1;
 
