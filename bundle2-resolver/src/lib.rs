@@ -15,6 +15,8 @@ extern crate futures;
 extern crate futures_ext;
 #[cfg(test)]
 extern crate itertools;
+#[cfg(not(test))]
+extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
@@ -26,6 +28,8 @@ extern crate blobrepo;
 extern crate mercurial;
 extern crate mercurial_bundles;
 extern crate mercurial_types;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 
 mod changegroup;
 pub mod errors;

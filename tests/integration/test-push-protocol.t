@@ -42,11 +42,12 @@ start mononoke
 
 create a new commit in repo2 and check that it's seen as outgoing
 
-  $ touch b
-  $ hg add b
+  $ mkdir b_dir
+  $ touch b_dir/b
+  $ hg add b_dir/b
   $ hg ci -mb
   $ hg log
-  changeset:   1:0e067c57feba
+  changeset:   1:8eea60339f0d
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -60,7 +61,7 @@ create a new commit in repo2 and check that it's seen as outgoing
   $ hgmn outgoing ssh://user@dummy/repo
   comparing with ssh://user@dummy/repo
   searching for changes
-  changeset:   1:0e067c57feba
+  changeset:   1:8eea60339f0d
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -84,7 +85,7 @@ push to Mononoke TODO(T25252425) make this work
   checking for updated bookmarks
   1 changesets found
   list of changesets:
-  0e067c57feba1a5694ca4844f05588bb1bf82342
+  8eea60339f0d60ba0f3bdca74dfd11b1a281f321
   sending unbundle command
   bundle2-output-bundle: "HG20", 4 parts total
   bundle2-output-part: "replycaps" 196 bytes payload

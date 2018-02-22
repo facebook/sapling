@@ -7,17 +7,11 @@
 use futures::{Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
-use mercurial_bundles::changegroup::{CgDeltaChunk, Part, Section};
-use mercurial_types::MPath;
+use mercurial_bundles::changegroup::{Part, Section};
 
 use changegroup::changeset::ChangesetDeltaed;
+use changegroup::filelog::FilelogDeltaed;
 use errors::*;
-
-#[derive(Debug, Eq, PartialEq)]
-pub struct FilelogDeltaed {
-    path: MPath,
-    chunk: CgDeltaChunk,
-}
 
 pub fn split_changegroup<S>(
     cg2s: S,
@@ -135,6 +129,9 @@ mod tests {
 
     use futures::stream::iter_ok;
     use itertools::{assert_equal, equal};
+
+    use mercurial_bundles::changegroup::CgDeltaChunk;
+    use mercurial_types::MPath;
 
     fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> bool
     where

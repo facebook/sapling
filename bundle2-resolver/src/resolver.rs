@@ -13,7 +13,7 @@ use slog::Logger;
 
 use blobrepo::BlobRepo;
 use bytes::Bytes;
-use changegroup::{convert_to_revlog_changesets, split_changegroup};
+use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 
@@ -40,7 +40,7 @@ pub fn resolve(
                                 Ok(())
                             }
                         })
-                        .join(f.for_each({
+                        .join(convert_to_revlog_filelog(f).for_each({
                             let logger = logger.clone();
                             move |p| {
                                 debug!(logger, "changegroup part: {:?}", p);
