@@ -93,6 +93,16 @@ impl Manifest for Box<Manifest + Sync> {
     }
 }
 
+impl Manifest for Box<Manifest> {
+    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+        (**self).lookup(path)
+    }
+
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
+        (**self).list()
+    }
+}
+
 /// Type of an Entry
 ///
 /// File and Executable are identical - they both represent files containing arbitrary content.

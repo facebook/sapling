@@ -56,11 +56,15 @@ impl ChangedEntry {
 /// with a directory of the same name, then returned stream will contain Deleted file entry,
 /// and Added directory entry. The same applies for executable and symlinks, although we may
 /// change it in future
-pub fn changed_entry_stream(
-    to: Box<Manifest>,
-    from: Box<Manifest>,
+pub fn changed_entry_stream<TM, FM>(
+    to: &TM,
+    from: &FM,
     path: MPath,
-) -> BoxStream<ChangedEntry, Error> {
+) -> BoxStream<ChangedEntry, Error>
+where
+    TM: Manifest,
+    FM: Manifest,
+{
     diff_manifests(path, to, from)
         .map(recursive_changed_entry_stream)
         .flatten()
@@ -93,8 +97,8 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
 
                         diff_manifests(
                             path.join_element(&entry_path),
-                            left_manifest,
-                            right_manifest,
+                            &left_manifest,
+                            &right_manifest,
                         ).map(recursive_changed_entry_stream)
                     })
                     .flatten_stream()
@@ -146,11 +150,11 @@ pub fn recursive_entry_stream(
 
 /// Difference between manifests, non-recursive.
 /// It fetches manifest content, sorts it and compares.
-fn diff_manifests(
-    path: MPath,
-    left: Box<Manifest>,
-    right: Box<Manifest>,
-) -> BoxStream<ChangedEntry, Error> {
+fn diff_manifests<LM, RM>(path: MPath, left: &LM, right: &RM) -> BoxStream<ChangedEntry, Error>
+where
+    LM: Manifest,
+    RM: Manifest,
+{
     let left_vec_future = left.list().collect();
     let right_vec_future = right.list().collect();
 

@@ -170,7 +170,11 @@ fn find_changed_entry_status_stream(
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
 ) -> Vec<ChangedEntry> {
-    let mut stream = spawn(changed_entry_stream(manifest, basemanifest, MPath::empty()));
+    let mut stream = spawn(changed_entry_stream(
+        &manifest,
+        &basemanifest,
+        MPath::empty(),
+    ));
     let mut res = vec![];
     loop {
         let new_elem = stream.wait_stream();

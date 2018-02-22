@@ -577,7 +577,7 @@ fn get_changed_entry_stream(
 
     let changed_entries = manifest
         .join(basemanifest)
-        .map(|(mf, basemf)| changed_entry_stream(mf, basemf, MPath::empty()))
+        .map(|(mf, basemf)| changed_entry_stream(&mf, &basemf, MPath::empty()))
         .flatten_stream();
 
     let changed_entries = changed_entries
