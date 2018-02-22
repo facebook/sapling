@@ -9,16 +9,18 @@ use std::mem;
 
 use bytes::Bytes;
 use futures::Stream;
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
+use blobrepo::{BlobEntry, BlobRepo};
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, Blob, Delta, MPath, NodeHash, RepoPath};
+use mercurial_types::{delta, manifest, Blob, Delta, MPath, NodeHash, RepoPath};
 use mercurial_types::nodehash::NULL_HASH;
 
 use errors::*;
 use stats::*;
+use upload_blobs::UploadableBlob;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -34,6 +36,14 @@ pub struct Filelog {
     pub p2: Option<NodeHash>,
     pub linknode: NodeHash,
     pub blob: Blob<Bytes>,
+}
+
+impl UploadableBlob for Filelog {
+    type Value = BoxFuture<(BlobEntry, RepoPath), Error>;
+
+    fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
+        repo.upload_entry(self.blob, manifest::Type::File, self.p1, self.p2, self.path)
+    }
 }
 
 pub fn convert_to_revlog_filelog<S>(deltaed: S) -> BoxStream<Filelog, Error>

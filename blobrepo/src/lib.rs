@@ -52,6 +52,7 @@ mod utils;
 pub use errors::*;
 
 pub use changeset::BlobChangeset;
+pub use file::BlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
 //

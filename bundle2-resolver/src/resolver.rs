@@ -17,10 +17,11 @@ use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
+use upload_blobs::upload_blobs;
 use wirepackparser::TreemanifestBundle2Parser;
 
 pub fn resolve(
-    _repo: Arc<BlobRepo>,
+    repo: Arc<BlobRepo>,
     logger: Logger,
     heads: Vec<String>,
     bundle2: BoxStream<Bundle2Item, Error>,
@@ -42,13 +43,13 @@ pub fn resolve(
                                 Ok(())
                             }
                         })
-                        .join(convert_to_revlog_filelog(f).for_each({
+                        .join(upload_blobs(repo.clone(), convert_to_revlog_filelog(f)))
+                        .map({
                             let logger = logger.clone();
-                            move |p| {
-                                debug!(logger, "changegroup part: {:?}", p);
-                                Ok(())
+                            move |((), map)| {
+                                debug!(logger, "filelogs uploaded: {:?}", map.keys());
                             }
-                        }))
+                        })
                         .then(move |_| {
                             parts::replychangegroup_part(
                                 parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
@@ -58,16 +59,17 @@ pub fn resolve(
                         .map(|res| Some(res))
                         .boxify()
                 }
-                Bundle2Item::B2xTreegroup2(_, parts) => TreemanifestBundle2Parser::new(parts)
-                    .for_each({
-                        let logger = logger.clone();
-                        move |p| {
-                            debug!(logger, "b2xtreegroup2 part: {:?}", p);
-                            Ok(())
-                        }
-                    })
-                    .map(|()| None)
-                    .boxify(),
+                Bundle2Item::B2xTreegroup2(_, parts) => {
+                    upload_blobs(repo.clone(), TreemanifestBundle2Parser::new(parts))
+                        .map({
+                            let logger = logger.clone();
+                            move |map| {
+                                debug!(logger, "manifests uploaded: {:?}", map.keys());
+                                None
+                            }
+                        })
+                        .boxify()
+                }
                 Bundle2Item::Replycaps(_, part) => part.map({
                     let logger = logger.clone();
                     move |p| {

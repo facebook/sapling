@@ -124,7 +124,7 @@ fn upload_blob_one_parent() {
         repo.upload_entry(
             blob,
             manifest::Type::File,
-            Some(&p1),
+            Some(p1),
             None,
             fake_path.clone(),
         )

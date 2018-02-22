@@ -44,5 +44,6 @@ pub mod errors;
 mod resolver;
 mod stats;
 mod wirepackparser;
+mod upload_blobs;
 
 pub use resolver::resolve;

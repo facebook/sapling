@@ -10,13 +10,16 @@ use std::mem;
 use bytes::Bytes;
 use futures::Poll;
 use futures::stream::Stream;
+use futures_ext::BoxFuture;
 
+use blobrepo::{BlobEntry, BlobRepo};
 use mercurial::manifest::revlog::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{delta, NodeHash, RepoPath, NULL_HASH};
+use mercurial_types::{delta, manifest, Blob, NodeHash, RepoPath, NULL_HASH};
 
 use errors::*;
+use upload_blobs::UploadableBlob;
 
 /// Parser for wirepack tree part. It returns a stream of TreemanifestEntry, that can be used by
 /// Mononoke's Commit Api.
@@ -79,6 +82,21 @@ impl TreemanifestEntry {
             path,
             manifest_content,
         })
+    }
+}
+
+impl UploadableBlob for TreemanifestEntry {
+    type Value = (ManifestContent, BoxFuture<(BlobEntry, RepoPath), Error>);
+
+    fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
+        let manifest_content = self.manifest_content;
+        repo.upload_entry(
+            Blob::from(self.data),
+            manifest::Type::File,
+            self.p1,
+            self.p2,
+            self.path,
+        ).map(move |(node, value)| (node, (manifest_content, value)))
     }
 }
 

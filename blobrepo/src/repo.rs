@@ -219,10 +219,12 @@ impl BlobRepo {
         &self,
         raw_content: Blob<Bytes>,
         content_type: manifest::Type,
-        p1: Option<&NodeHash>,
-        p2: Option<&NodeHash>,
+        p1: Option<NodeHash>,
+        p2: Option<NodeHash>,
         path: RepoPath,
     ) -> Result<(NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)> {
+        let p1 = p1.as_ref();
+        let p2 = p2.as_ref();
         let raw_content = raw_content.clean();
         let parents = Parents::new(p1, p2);
 
