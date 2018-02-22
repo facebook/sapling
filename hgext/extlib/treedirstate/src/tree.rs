@@ -455,13 +455,11 @@ impl<T: Serializable + Clone> Node<T> {
             }
             Ok(None)
         } else {
-            Ok(
-                self.filtered_keys
-                    .as_ref()
-                    .unwrap()
-                    .get(elem)
-                    .map(|e| vec![e.as_ref()]),
-            )
+            Ok(self.filtered_keys
+                .as_ref()
+                .unwrap()
+                .get(elem)
+                .map(|e| vec![e.as_ref()]))
         }
     }
 
@@ -585,12 +583,12 @@ impl<T: Serializable + Clone> Tree<T> {
     where
         F: FnMut(KeyRef) -> Result<Key>,
     {
-        Ok(self.root.get_filtered_key(store, name, filter)?.map(
-            |mut path| {
+        Ok(self.root
+            .get_filtered_key(store, name, filter)?
+            .map(|mut path| {
                 path.reverse();
                 path.concat()
-            },
-        ))
+            }))
     }
 
     pub fn clear_filtered_keys(&mut self) {
@@ -601,11 +599,11 @@ impl<T: Serializable + Clone> Tree<T> {
 #[cfg(test)]
 mod tests {
 
+    use errors::*;
+    use filestate::FileState;
     use store::NullStore;
     use store::tests::MapStore;
     use tree::{Key, KeyRef, Tree};
-    use filestate::FileState;
-    use errors::*;
 
     // Test files in order.  Note lexicographic ordering of file9 and file10.
     static TEST_FILES: [(&[u8], u32, i32, i32); 16] = [
@@ -828,11 +826,9 @@ mod tests {
 
         // Define a mapping function that upper-cases 'A' characters:
         fn map_upper_a(k: KeyRef) -> Result<Key> {
-            Ok(
-                k.iter()
-                    .map(|c| if *c == b'a' { b'A' } else { *c })
-                    .collect(),
-            )
+            Ok(k.iter()
+                .map(|c| if *c == b'a' { b'A' } else { *c })
+                .collect())
         }
 
         // Look-up with normalized name should give non-normalized version.
