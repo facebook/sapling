@@ -35,11 +35,11 @@ class FakeDirHandle : public DirHandle {
       const fuse_setattr_in& /* attr */) override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<DirList> readdir(DirList&& list, off_t off) override {
+  folly::Future<DirList> readdir(DirList&& /*list*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }
 
-  folly::Future<folly::Unit> fsyncdir(bool datasync) override {
+  folly::Future<folly::Unit> fsyncdir(bool /*datasync*/) override {
     throw std::runtime_error("fake!");
   }
 
@@ -62,19 +62,20 @@ class FakeFileHandle : public FileHandle {
     throw std::runtime_error("fake!");
   }
 
-  folly::Future<BufVec> read(size_t size, off_t off) override {
+  folly::Future<BufVec> read(size_t /*size*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<size_t> write(BufVec&& buf, off_t off) override {
+  folly::Future<size_t> write(BufVec&& /*buf*/, off_t /*off*/) override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<size_t> write(folly::StringPiece data, off_t off) override {
+  folly::Future<size_t> write(folly::StringPiece /*data*/, off_t /*off*/)
+      override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<folly::Unit> flush(uint64_t lock_owner) override {
+  folly::Future<folly::Unit> flush(uint64_t /*lock_owner*/) override {
     throw std::runtime_error("fake!");
   }
-  folly::Future<folly::Unit> fsync(bool datasync) override {
+  folly::Future<folly::Unit> fsync(bool /*datasync*/) override {
     throw std::runtime_error("fake!");
   }
 
