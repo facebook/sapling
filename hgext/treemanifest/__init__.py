@@ -198,6 +198,7 @@ def uisetup(ui):
 
     wireproto.commands['gettreepack'] = (servergettreepack, '*')
     wireproto.wirepeer.gettreepack = clientgettreepack
+    localrepo.localpeer.gettreepack = localgettreepack
 
     extensions.wrapfunction(repair, 'striptrees', striptrees)
     extensions.wrapfunction(repair, '_collectmanifest', _collectmanifest)
@@ -318,6 +319,13 @@ def wraprepo(repo):
                 remote = conn.peer
                 _gettrees(self, remote, rootdir, mfnodes, basemfnodes,
                           directories, start)
+
+        def _restrictcapabilities(self, caps):
+            caps = super(treerepository, self)._restrictcapabilities(caps)
+            if repo.svfs.treemanifestserver:
+                caps = set(caps)
+                caps.add('gettreepack')
+            return caps
 
     repo.__class__ = treerepository
 
@@ -651,9 +659,16 @@ def serverreposetup(repo):
     else:
         extensions.wrapfunction(wireproto, 'capabilities', _capabilities)
 
-def _addmanifestgroup(*args, **kwargs):
-    raise error.Abort(_("cannot push commits to a treemanifest transition "
-                        "server without pushrebase"))
+def _addmanifestgroup(orig, revlog, *args, **kwargs):
+    isserver = False
+    opts = getattr(revlog.opener, 'options', None)
+    if opts is not None:
+        isserver = opts.get('treemanifest-server', False)
+    if isserver:
+        raise error.Abort(_("cannot push commits to a treemanifest transition "
+                            "server without pushrebase"))
+
+    return orig(revlog, *args, **kwargs)
 
 def getmanifestlog(orig, self):
     if not treeenabled(self.ui):
@@ -1221,7 +1236,8 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:
-        remote._readerr()
+        if util.safehasattr(remote, '_readerr'):
+            remote._readerr()
         output = remote.ui.popbuffer()
         if output:
             repo.ui.debug(output)
@@ -1434,6 +1450,13 @@ def clientgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
     f = remote._callcompressable("gettreepack", **opts)
     return bundle2.getunbundler(remote.ui, f)
 
+def localgettreepack(remote, rootdir, mfnodes, basemfnodes, directories):
+    bundler = _gettreepack(remote._repo, rootdir, mfnodes, basemfnodes,
+                           directories)
+    chunks = bundler.getchunks()
+    cb = util.chunkbuffer(chunks)
+    return bundle2.getunbundler(remote._repo.ui, cb)
+
 class treememoizer(object):
     """A class that keeps references to trees until they've been consumed the
     expected number of times.
@@ -1476,6 +1499,10 @@ def servergettreepack(repo, proto, args):
     directories = sorted(list(wireproto.unescapearg(d) for d
                               in args['directories'].split(',') if d != ''))
 
+    bundler = _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories)
+    return wireproto.streamres(gen=bundler.getchunks(), v1compressible=True)
+
+def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories):
     try:
         bundler = bundle2.bundle20(repo.ui)
         packstream = generatepackstream(repo, rootdir, mfnodes,
@@ -1494,7 +1521,8 @@ def servergettreepack(repo, proto, args):
             advargs.append(('hint', exc.hint))
         bundler.addpart(bundle2.bundlepart('error:abort',
                                            manargs, advargs))
-    return wireproto.streamres(gen=bundler.getchunks(), v1compressible=True)
+
+    return bundler
 
 def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
     """

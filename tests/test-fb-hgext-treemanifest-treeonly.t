@@ -502,3 +502,39 @@ Test creating a treeonly repo from scratch
   @@ -0,0 +1,1 @@
   +foo
   
+Test pulling new commits from a local repository (not over ssh),
+with pullprefetchrevs configured.
+  $ cd ..
+  $ hg init treeonlyrepo2
+  $ cd treeonlyrepo2
+  $ cat >> .hg/hgrc <<EOF
+  > [paths]
+  > default=$TESTTMP/master
+  > 
+  > [extensions]
+  > treemanifest=
+  > fastmanifest=
+  > 
+  > [treemanifest]
+  > sendtrees=True
+  > treeonly=True
+  > pullprefetchrevs=tip
+  > 
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > 
+  > [remotefilelog]
+  > reponame=treeonlyrepo2
+  > EOF
+  $ hg pull
+  pulling from $TESTTMP/master
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 2 files
+  new changesets 2278cc8c6ce6:4f84204095e0
+  (run 'hg update' to get a working copy)
+  prefetching trees
+  2 trees fetched over * (glob)

@@ -626,6 +626,9 @@ class localrepository(object):
         if REVLOGV2_REQUIREMENT in self.requirements:
             self.svfs.options['revlogv2'] = True
 
+        treemanifestserver = self.ui.configbool('treemanifest', 'server')
+        self.svfs.options['treemanifest-server'] = treemanifestserver
+
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)
 
