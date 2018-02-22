@@ -92,7 +92,7 @@ impl UploadableBlob for TreemanifestEntry {
         let manifest_content = self.manifest_content;
         repo.upload_entry(
             Blob::from(self.data),
-            manifest::Type::File,
+            manifest::Type::Tree,
             self.p1,
             self.p2,
             self.path,
