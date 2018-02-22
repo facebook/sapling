@@ -12,6 +12,7 @@ extern crate bytes;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 extern crate heapsize;
 #[cfg(test)]

@@ -334,6 +334,17 @@ macro_rules! handle_nb {
     })
 }
 
+/// Macro that can be used like `?` operator, but in the context where the expected return type is
+/// BoxFuture. The result of it is either Ok part of Result or immediate returning the Err part
+/// converted into BoxFuture.
+#[macro_export]
+macro_rules! try_boxfuture {
+    ($e:expr) => (match $e {
+        Ok(t) => t,
+        Err(e) => return ::futures::future::err(e.into()).boxify(),
+    })
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
