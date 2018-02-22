@@ -6,14 +6,13 @@
 
 //! Root manifest, tree nodes
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use futures::future::{Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial::manifest::revlog::{self, Details};
+use mercurial::manifest::revlog::ManifestContent;
 use mercurial_types::{Entry, MPath, Manifest};
 use mercurial_types::nodehash::{ManifestId, NULL_HASH};
 
@@ -25,7 +24,7 @@ use utils::get_node;
 
 pub struct BlobManifest {
     blobstore: Arc<Blobstore>,
-    files: BTreeMap<MPath, Details>,
+    content: ManifestContent,
 }
 
 impl BlobManifest {
@@ -37,7 +36,7 @@ impl BlobManifest {
         if nodehash == NULL_HASH {
             Ok(Some(BlobManifest {
                 blobstore: blobstore.clone(),
-                files: BTreeMap::new(),
+                content: ManifestContent::new_empty(),
             })).into_future()
                 .boxify()
         } else {
@@ -63,7 +62,7 @@ impl BlobManifest {
     pub fn parse<D: AsRef<[u8]>>(blobstore: Arc<Blobstore>, data: D) -> Result<Self> {
         Ok(BlobManifest {
             blobstore: blobstore,
-            files: revlog::parse(data.as_ref())?,
+            content: ManifestContent::parse(data.as_ref())?,
         })
     }
 }
@@ -73,7 +72,7 @@ impl Manifest for BlobManifest {
         // Path is a single MPathElement. In t25575327 we'll change the type.
         let name = path.clone().into_iter().next_back();
 
-        let res = self.files.get(path).map({
+        let res = self.content.files.get(path).map({
             move |d| {
                 BlobEntry::new(
                     self.blobstore.clone(),
@@ -91,7 +90,8 @@ impl Manifest for BlobManifest {
     }
 
     fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        let entries = self.files
+        let entries = self.content
+            .files
             .clone()
             .into_iter()
             .map({

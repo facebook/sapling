@@ -34,56 +34,83 @@ pub struct Details {
 pub struct RevlogManifest {
     // This is None for testing only -- the public API ensures `repo` always exists.
     repo: Option<RevlogRepo>,
-    files: BTreeMap<MPath, Details>,
+    content: ManifestContent,
 }
 
-// Each manifest revision contains a list of the file revisions in each changeset, in the form:
-//
-// <filename>\0<hex file revision id>[<flags>]\n
-//
-// Source: mercurial/parsers.c:parse_manifest()
-//
-// NB: filenames are sequences of non-zero bytes, not strings
-fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Details>> {
-    let mut files = BTreeMap::new();
+#[derive(Debug, Eq, PartialEq)]
+pub struct ManifestContent {
+    pub files: BTreeMap<MPath, Details>,
+}
 
-    for line in data.split(|b| *b == b'\n') {
-        if line.len() == 0 {
-            break;
+impl ManifestContent {
+    pub fn new_empty() -> Self {
+        Self {
+            files: BTreeMap::new(),
         }
-
-        let (name, rest) = match find(line, &0) {
-            None => bail_msg!("Malformed entry: no \\0"),
-            Some(nil) => {
-                let (name, rest) = line.split_at(nil);
-                if let Some((_, hash)) = rest.split_first() {
-                    (name, hash)
-                } else {
-                    bail_msg!("Malformed entry: no hash");
-                }
-            }
-        };
-
-        let path = if let Some(prefix) = prefix {
-            prefix.join(&MPath::new(name).context("invalid path in manifest")?)
-        } else {
-            MPath::new(name).context("invalid path in manifest")?
-        };
-        let details = Details::parse(rest)?;
-
-        // XXX check path > last entry in files
-        files.insert(path, details);
     }
 
-    Ok(files)
-}
+    // Each manifest revision contains a list of the file revisions in each changeset, in the form:
+    //
+    // <filename>\0<hex file revision id>[<flags>]\n
+    //
+    // Source: mercurial/parsers.c:parse_manifest()
+    //
+    // NB: filenames are sequences of non-zero bytes, not strings
+    fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Details>> {
+        let mut files = BTreeMap::new();
 
-pub fn parse(data: &[u8]) -> Result<BTreeMap<MPath, Details>> {
-    parse_impl(data, None)
-}
+        for line in data.split(|b| *b == b'\n') {
+            if line.len() == 0 {
+                break;
+            }
 
-pub fn parse_with_prefix(data: &[u8], prefix: &MPath) -> Result<BTreeMap<MPath, Details>> {
-    parse_impl(data, Some(prefix))
+            let (name, rest) = match find(line, &0) {
+                None => bail_msg!("Malformed entry: no \\0"),
+                Some(nil) => {
+                    let (name, rest) = line.split_at(nil);
+                    if let Some((_, hash)) = rest.split_first() {
+                        (name, hash)
+                    } else {
+                        bail_msg!("Malformed entry: no hash");
+                    }
+                }
+            };
+
+            let path = if let Some(prefix) = prefix {
+                prefix.join(&MPath::new(name).context("invalid path in manifest")?)
+            } else {
+                MPath::new(name).context("invalid path in manifest")?
+            };
+            let details = Details::parse(rest)?;
+
+            // XXX check path > last entry in files
+            files.insert(path, details);
+        }
+
+        Ok(files)
+    }
+
+    pub fn parse(data: &[u8]) -> Result<Self> {
+        Ok(Self {
+            files: Self::parse_impl(data, None)?,
+        })
+    }
+
+    pub fn parse_with_prefix(data: &[u8], prefix: &MPath) -> Result<Self> {
+        Ok(Self {
+            files: Self::parse_impl(data, Some(prefix))?,
+        })
+    }
+
+    pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
+        for (ref k, ref v) in &self.files {
+            k.generate(out)?;
+            out.write(&b"\0"[..])?;
+            v.generate(out)?;
+            out.write(&b"\n"[..])?;
+        }
+        Ok(())
+    }
 }
 
 impl RevlogManifest {
@@ -96,7 +123,7 @@ impl RevlogManifest {
 
     fn parse(repo: Option<RevlogRepo>, data: &[u8]) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
-        parse(data).map(|files| RevlogManifest { repo, files })
+        ManifestContent::parse(data).map(|content| RevlogManifest { repo, content })
     }
 
     fn parse_with_prefix(
@@ -105,25 +132,20 @@ impl RevlogManifest {
         prefix: &MPath,
     ) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
-        parse_with_prefix(data, prefix).map(|files| RevlogManifest { repo, files })
+        ManifestContent::parse_with_prefix(data, prefix)
+            .map(|content| RevlogManifest { repo, content })
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
-        for (ref k, ref v) in &self.files {
-            k.generate(out)?;
-            out.write(&b"\0"[..])?;
-            v.generate(out)?;
-            out.write(&b"\n"[..])?;
-        }
-        Ok(())
+        self.content.generate(out)
     }
 
     pub fn lookup(&self, path: &MPath) -> Option<&Details> {
-        self.files.get(path)
+        self.content.files.get(path)
     }
 
     pub fn manifest(&self) -> Vec<(&MPath, &Details)> {
-        self.files.iter().collect()
+        self.content.files.iter().collect()
     }
 }
 
@@ -394,7 +416,9 @@ mod test {
             RevlogManifest::parse(None, b"").unwrap(),
             RevlogManifest {
                 repo: None,
-                files: BTreeMap::new(),
+                content: ManifestContent {
+                    files: BTreeMap::new(),
+                },
             }
         );
     }
@@ -441,7 +465,7 @@ mod test {
                         },
                     ),
                 ];
-                assert_eq!(m.files.into_iter().collect::<Vec<_>>(), expect);
+                assert_eq!(m.content.files.into_iter().collect::<Vec<_>>(), expect);
             }
             Err(e) => println!("got expected error: {}", e),
         }
@@ -474,7 +498,7 @@ mod test {
         match RevlogManifest::parse(None, MANIFEST) {
             Ok(m) => {
                 println!("Got manifest:");
-                for (k, v) in &m.files {
+                for (k, v) in &m.content.files {
                     println!("{:?} {:?}", k, v);
                 }
             }
