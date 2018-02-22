@@ -69,12 +69,12 @@ impl BlobRepo {
     pub fn new_files(path: &Path) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        let bookmarks = Arc::new(FileBookmarks::open(path.join("books"))
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?);
+        let bookmarks = FileBookmarks::open(path.join("books"))
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let blobstore = Fileblob::open(path.join("blobs"))
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let linknodes = Arc::new(FileLinknodes::open(path.join("linknodes"))
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?);
+        let linknodes = FileLinknodes::open(path.join("linknodes"))
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
 
         Ok(Self::new(
             Arc::new(heads),
