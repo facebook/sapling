@@ -94,25 +94,30 @@ class EdenHgTestCase(testcase.EdenTestCase):
     def setup_eden_test(self):
         super().setup_eden_test()
 
-        # Create an hgrc to use as the $HGRCPATH.
-        hgrc = get_default_hgrc()
-        self.apply_hg_config_variant(hgrc)
-
         # Create the backing repository
-        self.backing_repo_name = 'backing_repo'
-        self.mount = os.path.join(self.mounts_dir, self.backing_repo_name)
-        self.backing_repo = self.create_repo(self.backing_repo_name,
-                                             hgrepo.HgRepository, hgrc=hgrc)
-        self.populate_backing_repo(self.backing_repo)
+        self.backing_repo = self.create_backing_repo()
 
+        self.backing_repo_name = 'backing_repo'
         self.eden.add_repository(self.backing_repo_name, self.backing_repo.path)
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
         self.amend_edenrc_before_clone()
+        self.mount = os.path.join(self.mounts_dir, 'main')
         self.eden.clone(self.backing_repo_name, self.mount, allow_empty=True)
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(self.mount)
+
+    def create_backing_repo(self):
+        hgrc = self.get_hgrc()
+        repo = self.create_repo('main', hgrepo.HgRepository, hgrc=hgrc)
+        self.populate_backing_repo(repo)
+        return repo
+
+    def get_hgrc(self):
+        hgrc = get_default_hgrc()
+        self.apply_hg_config_variant(hgrc)
+        return hgrc
 
     def populate_backing_repo(self, repo):
         raise NotImplementedError('individual test classes must implement '
@@ -327,9 +332,11 @@ def _apply_flatmanifest_config(test, config):
 def _apply_treemanifest_config(test, config):
     config['extensions']['fastmanifest'] = ''
     config['extensions']['treemanifest'] = ''
+    config['extensions']['pushrebase'] = ''
     config['fastmanifest'] = {
         'usetree': 'True',
         'usecache': 'False',
+        'cacheonchange': 'True',
     }
     config['remotefilelog'] = {
         'reponame': 'eden_integration_tests',
