@@ -5,10 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::HashMap;
+use std::mem;
 
 use bytes::Bytes;
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
+use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use mercurial_bundles::changegroup::CgDeltaChunk;
@@ -16,6 +18,7 @@ use mercurial_types::{delta, Blob, Delta, MPath, NodeHash, RepoPath};
 use mercurial_types::nodehash::NULL_HASH;
 
 use errors::*;
+use stats::*;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -57,12 +60,14 @@ where
 
 struct DeltaCache {
     bytes_cache: HashMap<NodeHash, Bytes>,
+    bytes_heap_size: i64,
 }
 
 impl DeltaCache {
     fn new() -> Self {
         Self {
             bytes_cache: HashMap::new(),
+            bytes_heap_size: 0,
         }
     }
 
@@ -89,7 +94,31 @@ impl DeltaCache {
             self.bytes_cache.insert(node, bytes.clone()).is_none(),
             "Two Filelogs with identical node were provided"
         );
+
+        let dsize = delta.heap_size_of_children() as i64;
+        STATS::deltacache_dsize.add_value(dsize);
+        STATS::deltacache_dsize_large.add_value(dsize);
+
+        let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
+        STATS::deltacache_fsize.add_value(fsize);
+        STATS::deltacache_fsize_large.add_value(fsize);
+        self.bytes_heap_size += fsize;
+
         Ok(Blob::from(bytes))
+    }
+}
+
+impl ::std::ops::Drop for DeltaCache {
+    fn drop(&mut self) {
+        let approx_bucket_size =
+            self.bytes_cache.capacity() * (mem::size_of::<Bytes>() + mem::size_of::<NodeHash>());
+
+        let approx_keys_size = self.bytes_cache.len() * mem::size_of_val(&NULL_HASH);
+
+        let cache_size = approx_bucket_size as i64 + approx_keys_size as i64 + self.bytes_heap_size;
+
+        STATS::deltacache_size.add_value(cache_size);
+        STATS::deltacache_size_large.add_value(cache_size);
     }
 }
 
@@ -159,7 +188,6 @@ mod tests {
     use super::*;
 
     use std::cmp::min;
-    use std::mem;
 
     use futures::Future;
     use futures::stream::iter_ok;

@@ -13,8 +13,11 @@ extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
 extern crate futures_ext;
+extern crate heapsize;
 #[cfg(test)]
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
 #[cfg(not(test))]
 extern crate quickcheck;
 #[cfg(test)]
@@ -22,6 +25,8 @@ extern crate quickcheck;
 extern crate quickcheck;
 #[macro_use]
 extern crate slog;
+#[macro_use]
+extern crate stats as stats_crate;
 extern crate tokio_io;
 
 extern crate blobrepo;
@@ -34,6 +39,7 @@ extern crate mercurial_types_mocks;
 mod changegroup;
 pub mod errors;
 mod resolver;
+mod stats;
 mod wirepackparser;
 
 pub use resolver::resolve;
