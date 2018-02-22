@@ -7,15 +7,17 @@
 use std::io::Cursor;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
-use bytes::Bytes;
+use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
+
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup};
 use errors::*;
-use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
+use wirepackparser::TreemanifestBundle2Parser;
 
 pub fn resolve(
     _repo: Arc<BlobRepo>,
@@ -56,7 +58,7 @@ pub fn resolve(
                         .map(|res| Some(res))
                         .boxify()
                 }
-                Bundle2Item::B2xTreegroup2(_, parts) => parts
+                Bundle2Item::B2xTreegroup2(_, parts) => TreemanifestBundle2Parser::new(parts)
                     .for_each({
                         let logger = logger.clone();
                         move |p| {

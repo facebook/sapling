@@ -150,6 +150,10 @@ impl RevlogManifest {
 }
 
 impl Details {
+    pub fn new(entryid: EntryId, flag: Type) -> Self {
+        Self { entryid, flag }
+    }
+
     fn parse(data: &[u8]) -> Result<Details> {
         if data.len() < 40 {
             bail_msg!("hash too small");

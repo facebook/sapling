@@ -18,6 +18,9 @@ extern crate heapsize;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 #[cfg(not(test))]
 extern crate quickcheck;
 #[cfg(test)]

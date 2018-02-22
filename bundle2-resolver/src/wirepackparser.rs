@@ -11,10 +11,10 @@ use bytes::Bytes;
 use futures::Poll;
 use futures::stream::Stream;
 
+use mercurial::manifest::revlog::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{NodeHash, RepoPath, NULL_HASH};
-use mercurial_types::delta;
+use mercurial_types::{delta, NodeHash, RepoPath, NULL_HASH};
 
 use errors::*;
 
@@ -24,7 +24,6 @@ use errors::*;
 /// It assumes a few things:
 /// 1) all data is sent as a delta from the null revision (i.e. data is basically non-deltaed).
 /// 2) there are exactly one history entry and exactly one data entry for each tree.
-#[allow(dead_code)]
 pub struct TreemanifestBundle2Parser<S> {
     stream: WirePackConverter<S, TreemanifestPartProcessor>,
 }
@@ -33,7 +32,6 @@ impl<S> TreemanifestBundle2Parser<S>
 where
     S: Stream<Item = Part, Error = Error>,
 {
-    #[allow(dead_code)]
     pub fn new(part_stream: S) -> Self {
         Self {
             stream: WirePackConverter::new(part_stream, TreemanifestPartProcessor::new()),
@@ -57,20 +55,30 @@ where
 pub struct TreemanifestEntry {
     pub node: NodeHash,
     pub data: Bytes,
-    pub p1: NodeHash,
-    pub p2: NodeHash,
+    pub p1: Option<NodeHash>,
+    pub p2: Option<NodeHash>,
     pub path: RepoPath,
+    pub manifest_content: ManifestContent,
 }
 
 impl TreemanifestEntry {
-    fn new(node: NodeHash, data: Bytes, p1: NodeHash, p2: NodeHash, path: RepoPath) -> Self {
-        Self {
+    fn new(
+        node: NodeHash,
+        data: Bytes,
+        p1: NodeHash,
+        p2: NodeHash,
+        path: RepoPath,
+    ) -> Result<Self> {
+        let manifest_content = ManifestContent::parse(data.as_ref())?;
+
+        Ok(Self {
             node,
             data,
-            p1,
-            p2,
+            p1: p1.into_option(),
+            p2: p2.into_option(),
             path,
-        }
+            manifest_content,
+        })
     }
 }
 
@@ -135,7 +143,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
         let p2 = unwrap_field(&mut self.p2, "p2")?;
         let path = unwrap_field(&mut self.path, "path")?;
 
-        Ok(Some(TreemanifestEntry::new(node, bytes, p1, p2, path)))
+        Ok(Some(TreemanifestEntry::new(node, bytes, p1, p2, path)?))
     }
 
     fn end(&mut self) -> Result<Option<Self::Data>> {
@@ -164,7 +172,11 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 mod test {
     use super::*;
     use futures::{stream, Future};
-    use std::str::FromStr;
+
+    use mercurial::manifest::revlog::Details;
+    use mercurial_types::{EntryId, MPath};
+    use mercurial_types::manifest::Type;
+    use mercurial_types_mocks::nodehash as nodehash_mocks;
 
     #[test]
     fn test_simple() {
@@ -229,10 +241,10 @@ mod test {
     }
 
     fn get_history_entry() -> Part {
-        let node = NodeHash::from_str("1111111111111111111111111111111111111111").unwrap();
-        let p1 = NodeHash::from_str("2222222222222222222222222222222222222222").unwrap();
-        let p2 = NodeHash::from_str("3333333333333333333333333333333333333333").unwrap();
-        let linknode = NodeHash::from_str("4444444444444444444444444444444444444444").unwrap();
+        let node = nodehash_mocks::ONES_HASH;
+        let p1 = nodehash_mocks::TWOS_HASH;
+        let p2 = nodehash_mocks::THREES_HASH;
+        let linknode = nodehash_mocks::FOURS_HASH;
 
         Part::History(HistoryEntry {
             node,
@@ -250,9 +262,32 @@ mod test {
         }
     }
 
+    fn get_revlog_manifest_content() -> ManifestContent {
+        ManifestContent {
+            files: btreemap!{
+                MPath::new("test_dir/test_file").unwrap() =>
+                Details::new(
+                    EntryId::new(nodehash_mocks::ONES_HASH),
+                    Type::File,
+                ),
+                MPath::new("test_dir2/test_manifest").unwrap() =>
+                Details::new(
+                    EntryId::new(nodehash_mocks::TWOS_HASH),
+                    Type::Tree,
+                ),
+            },
+        }
+    }
+
     fn get_data_entry() -> Part {
-        let node = NodeHash::from_str("1111111111111111111111111111111111111111").unwrap();
-        let data = "text".as_bytes();
+        let node = nodehash_mocks::ONES_HASH;
+
+        let data = {
+            let mut data = Vec::new();
+            get_revlog_manifest_content().generate(&mut data).unwrap();
+            data
+        };
+
         Part::Data(DataEntry {
             node,
             delta_base: NULL_HASH,
@@ -267,11 +302,25 @@ mod test {
     }
 
     fn get_expected_entry() -> TreemanifestEntry {
-        let node = NodeHash::from_str("1111111111111111111111111111111111111111").unwrap();
-        let p1 = NodeHash::from_str("2222222222222222222222222222222222222222").unwrap();
-        let p2 = NodeHash::from_str("3333333333333333333333333333333333333333").unwrap();
-        let data = "text".as_bytes();
+        let node = nodehash_mocks::ONES_HASH;
+        let p1 = nodehash_mocks::TWOS_HASH;
+        let p2 = nodehash_mocks::THREES_HASH;
 
-        TreemanifestEntry::new(node, Bytes::from(data), p1, p2, RepoPath::root())
+        let data = {
+            let mut data = Vec::new();
+            get_revlog_manifest_content().generate(&mut data).unwrap();
+            data
+        };
+
+        let entry =
+            TreemanifestEntry::new(node, Bytes::from(data), p1, p2, RepoPath::root()).unwrap();
+
+        assert_eq!(
+            entry.manifest_content,
+            get_revlog_manifest_content(),
+            "Sanity check for manifest content failed"
+        );
+
+        entry
     }
 }
