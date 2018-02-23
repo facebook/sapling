@@ -102,7 +102,6 @@ hgext/extlib/cfastmanifest/tree_iterator_test.c
 hgext/extlib/cfastmanifest/tree_path.c
 hgext/extlib/cfastmanifest/tree_path.h
 hgext/extlib/cfastmanifest/tree_test.c
-hgext/extlib/cstore/bitmanipulation.h
 hgext/extlib/cstore/datapackstore.h
 hgext/extlib/cstore/datastore.h
 hgext/extlib/cstore/deltachain.h

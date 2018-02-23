@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hgext/extlib/cstore/bitmanipulation.h"
+#include "mercurial/bitmanipulation.h"
 
 static struct mpatch_flist *lalloc(ssize_t size)
 {
