@@ -15,7 +15,7 @@ use futures::future::Future;
 use futures::stream::{self, iter_ok, Stream};
 
 use blobrepo::BlobRepo;
-use mercurial_types::NodeHash;
+use mercurial_types::{Changeset, NodeHash};
 use mercurial_types::nodehash::ChangesetId;
 use repoinfo::{Generation, RepoGenCache};
 

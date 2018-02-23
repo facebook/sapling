@@ -23,13 +23,13 @@ use tokio_core::reactor::Remote;
 
 use slog::Logger;
 
+use blobrepo::BlobChangeset;
 use bundle2_resolver;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, MPath, ManifestId, NodeHash,
-                      Parents, RepoPath, Type, NULL_HASH};
+use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId,
+                      NodeHash, Parents, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
-use mercurial_types::nodehash::ChangesetId;
 use metaconfig::repoconfig::RepoType;
 
 use hgproto::{self, GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
@@ -291,7 +291,7 @@ impl HgCommands for RepoClient {
             }
         }
 
-        impl Stream for ParentStream<BoxFuture<Box<Changeset>, hgproto::Error>> {
+        impl Stream for ParentStream<BoxFuture<BlobChangeset, hgproto::Error>> {
             type Item = NodeHash;
             type Error = hgproto::Error;
 

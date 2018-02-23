@@ -20,7 +20,7 @@ use futures::stream::{self, Stream};
 
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
-use mercurial_types::{NodeHash, NULL_HASH};
+use mercurial_types::{Changeset, NodeHash, NULL_HASH};
 use mercurial_types::nodehash::ChangesetId;
 
 use nodehashkey::Key;

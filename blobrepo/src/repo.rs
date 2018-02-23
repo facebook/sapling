@@ -169,11 +169,10 @@ impl BlobRepo {
     pub fn get_changeset_by_changesetid(
         &self,
         changesetid: &ChangesetId,
-    ) -> BoxFuture<Box<Changeset>, Error> {
+    ) -> BoxFuture<BlobChangeset, Error> {
         let chid = changesetid.clone();
         BlobChangeset::load(&self.blobstore, &chid)
             .and_then(move |cs| cs.ok_or(ErrorKind::ChangesetMissing(chid).into()))
-            .map(|cs| cs.boxed())
             .boxify()
     }
 
@@ -297,7 +296,7 @@ pub struct BlobChangesetStream {
 
 enum BCState {
     Idle,
-    WaitCS(NodeHash, BoxFuture<Box<Changeset>, Error>),
+    WaitCS(NodeHash, BoxFuture<BlobChangeset, Error>),
 }
 
 impl Stream for BlobChangesetStream {
@@ -313,7 +312,11 @@ impl Stream for BlobChangesetStream {
                     if let Some(next) = try_ready!(self.heads.poll()) {
                         let state = if self.seen.insert(next) {
                             // haven't seen before
-                            WaitCS(next, self.repo.get_changeset_by_changesetid(&ChangesetId::new(next)))
+                            WaitCS(
+                                next,
+                                self.repo
+                                    .get_changeset_by_changesetid(&ChangesetId::new(next)),
+                            )
                         } else {
                             Idle // already done it
                         };

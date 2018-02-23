@@ -16,7 +16,7 @@ extern crate mercurial_types_mocks;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use mercurial_types::{Entry, MPath, Manifest, RepoPath, Type, NULL_HASH};
+use mercurial_types::{Changeset, Entry, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};

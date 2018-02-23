@@ -65,7 +65,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{MPathElement, NodeHash};
+use mercurial_types::{Changeset, MPathElement, NodeHash};
 use mercurial_types::nodehash::ChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
