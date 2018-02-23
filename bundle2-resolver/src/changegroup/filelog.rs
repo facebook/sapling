@@ -8,7 +8,8 @@ use std::collections::HashMap;
 use std::mem;
 
 use bytes::Bytes;
-use futures::Stream;
+use futures::{Future, Stream};
+use futures::future::Shared;
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
@@ -39,10 +40,11 @@ pub struct Filelog {
 }
 
 impl UploadableBlob for Filelog {
-    type Value = BoxFuture<(BlobEntry, RepoPath), Error>;
+    type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Error>>;
 
     fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
         repo.upload_entry(self.blob, manifest::Type::File, self.p1, self.p2, self.path)
+            .map(|(node, fut)| (node, fut.shared()))
     }
 }
 

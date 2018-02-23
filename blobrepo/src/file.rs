@@ -23,6 +23,7 @@ use manifest::BlobManifest;
 
 use utils::{get_node, RawNodeBlob};
 
+#[derive(Clone)]
 pub struct BlobEntry {
     blobstore: Arc<Blobstore>,
     name: Option<MPathElement>,

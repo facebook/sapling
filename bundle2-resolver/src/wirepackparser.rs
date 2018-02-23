@@ -8,8 +8,8 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
-use futures::Poll;
-use futures::stream::Stream;
+use futures::{Future, Poll, Stream};
+use futures::future::Shared;
 use futures_ext::BoxFuture;
 
 use blobrepo::{BlobEntry, BlobRepo};
@@ -86,7 +86,10 @@ impl TreemanifestEntry {
 }
 
 impl UploadableBlob for TreemanifestEntry {
-    type Value = (ManifestContent, BoxFuture<(BlobEntry, RepoPath), Error>);
+    type Value = (
+        ManifestContent,
+        Shared<BoxFuture<(BlobEntry, RepoPath), Error>>,
+    );
 
     fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
         let manifest_content = self.manifest_content;
@@ -96,7 +99,7 @@ impl UploadableBlob for TreemanifestEntry {
             self.p1,
             self.p2,
             self.path,
-        ).map(move |(node, value)| (node, (manifest_content, value)))
+        ).map(move |(node, value)| (node, (manifest_content, value.shared())))
     }
 }
 
