@@ -44,7 +44,14 @@ def _diff(orig, ui, repo, *pats, **opts):
     if not opts.get('since_last_arc_diff'):
         return orig(ui, repo, *pats, **opts)
 
-    ctx = repo['.']
+    if len(opts['rev']) > 1:
+        mess = _('cannot specify --since-last-arc-diff with multiple revisions')
+        raise error.Abort(mess)
+    try:
+        targetrev = opts['rev'][0]
+    except IndexError:
+        targetrev = '.'
+    ctx = repo[targetrev]
     phabrev = diffprops.parserevfromcommitmsg(ctx.description())
 
     if phabrev is None:
@@ -59,13 +66,13 @@ def _diff(orig, ui, repo, *pats, **opts):
         raise error.Abort(mess)
 
     rev = str(rev['hash'])
-    opts['rev'] = [rev]
+    opts['rev'] = [rev, targetrev]
 
     # if patterns aren't provided, restrict diff to files in both changesets
     # this prevents performing a diff on rebased changes
     if len(pats) == 0:
         prev = set(repo.unfiltered()[rev].files())
-        curr = set(repo['.'].files())
+        curr = set(repo[targetrev].files())
         pats = tuple(os.path.join(repo.root, p) for p in prev | curr)
 
     return orig(ui, repo, *pats, **opts)

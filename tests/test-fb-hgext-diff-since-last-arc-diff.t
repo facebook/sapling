@@ -100,7 +100,17 @@ assert that we order the commits consistently based on the time field.
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff --nodates
-  diff -r 88dd5a13bf28 foo
+  diff -r 88dd5a13bf28 -r 2e6531b7dada foo
+  --- a/foo
+  +++ b/foo
+  @@ -0,0 +1,1 @@
+  +bleet
+
+Make a new commit on top, and then use -r to look at the previous commit
+  $ echo other > foo
+  $ hg commit -m "Other commmit"
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff --nodates -r 2e6531b
+  diff -r 88dd5a13bf28 -r 2e6531b7dada foo
   --- a/foo
   +++ b/foo
   @@ -0,0 +1,1 @@
