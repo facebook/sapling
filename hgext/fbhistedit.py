@@ -136,10 +136,7 @@ def defineactions():
                     '--continue/--retry, or abort with histedit --abort'))
 
         def continueclean(self):
-            parentctxnode = self.state.parentctxnode
             newctx = self.repo['.']
-            if newctx.node() != parentctxnode:
-                return newctx, [(parentctxnode, (newctx.node(),))]
             return newctx, []
 
     @histedit.action(['execr', 'xr'],

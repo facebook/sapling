@@ -528,8 +528,6 @@ public commit.
   > pick 5aeafddb5246
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  abort: cannot obsolete public changeset: d8249471110a
-  (see 'hg help phases' for details)
   $ hg log -G -T '{node|short} [{phase}] {desc|firstline}\n'
   @  325ec50aef26 [draft] f
   |
@@ -537,10 +535,6 @@ public commit.
   |
   o  c90a2aff5a5c [draft] x (inserted)
   |
-  | o  5aeafddb5246 [draft] f
-  | |
-  | o  6bd17118649c [draft] d (amended)
-  |/
   o  d8249471110a [public] e
   |
   o  177f92b77385 [public] c
