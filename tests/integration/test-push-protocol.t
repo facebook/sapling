@@ -10,11 +10,11 @@ setup repo
 
   $ hginit_treemanifest repo-hg
   $ cd repo-hg
-  $ touch a
+  $ echo "a file content" > a
   $ hg add a
   $ hg ci -ma
   $ hg log
-  changeset:   0:3903775176ed
+  changeset:   0:0e7ec5675652
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -40,37 +40,170 @@ start mononoke
   $ mononoke -P $TESTTMP/mononoke-config -B test-config
   $ wait_for_mononoke $TESTTMP/repo
 
-create a new commit in repo2 and check that it's seen as outgoing
+create new commits in repo2 and check that they are seen as outgoing
 
   $ mkdir b_dir
-  $ touch b_dir/b
+  $ echo "new a file content" > a
+  $ echo "b file content" > b_dir/b
   $ hg add b_dir/b
   $ hg ci -mb
-  $ hg log
-  changeset:   1:8eea60339f0d
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     b
+
+  $ echo "updated b file content" > b_dir/b
+  $ mkdir c_dir
+  $ echo "c file content" > c_dir/c
+  $ hg add c_dir/c
+  $ hg ci -mc
+
+create a commit that makes identical change to file b
+
+  $ hg update '.^'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo "updated b file content" > b_dir/b
+  $ mkdir d_dir
+  $ echo "d file content" > d_dir/d
+  $ hg add d_dir/d
+  $ hg ci -md
+
+create a commit that reverts files a and b to older version
+
+  $ echo "a file content" > a
+  $ echo "b file content" > b_dir/b
+  $ hg ci -me
+
+create a commit that sets content of some files to content of other files
+
+  $ echo "b file content" > a
+  $ echo "a file content" > b_dir/b
+  $ mkdir c_dir
+  $ echo "a file content" > c_dir/c
+  $ hg add c_dir/c
+  $ echo "b file content" > d_dir/d
+  $ hg ci -mf
+
+create a commit that renames, copy and deletes some files
+
+  $ hg rm b_dir/b
+  $ hg mv a b_dir/b
+  $ mkdir e_dir
+  $ hg mv c_dir/c e_dir/e
+  $ mkdir a_dir
+  $ hg mv d_dir/d a_dir/a
+  $ echo "a file content" > a_dir/a
+  $ hg cp a_dir/a b_dir/a_bis
+  $ hg ci -mg
+
+  $ hg sl --all -r "all()" --stat
+  @  changeset:   6:634de738bb0f
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     g
+  |
+  |   a           |  1 -
+  |   a_dir/a     |  1 +
+  |   b_dir/a_bis |  1 +
+  |   b_dir/b     |  2 +-
+  |   c_dir/c     |  1 -
+  |   d_dir/d     |  1 -
+  |   e_dir/e     |  1 +
+  |   7 files changed, 4 insertions(+), 4 deletions(-)
+  |
+  o  changeset:   5:8315ea53ef41
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     f
+  |
+  |   a       |  2 +-
+  |   b_dir/b |  2 +-
+  |   c_dir/c |  1 +
+  |   d_dir/d |  2 +-
+  |   4 files changed, 4 insertions(+), 3 deletions(-)
+  |
+  o  changeset:   4:30da5bf63484
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     e
+  |
+  |   a       |  2 +-
+  |   b_dir/b |  2 +-
+  |   2 files changed, 2 insertions(+), 2 deletions(-)
+  |
+  o  changeset:   3:fbd6b221382e
+  |  parent:      1:bb0985934a0f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     d
+  |
+  |   b_dir/b |  2 +-
+  |   d_dir/d |  1 +
+  |   2 files changed, 2 insertions(+), 1 deletions(-)
+  |
+  | o  changeset:   2:f40c09205504
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     c
+  |
+  |     b_dir/b |  2 +-
+  |     c_dir/c |  1 +
+  |     2 files changed, 2 insertions(+), 1 deletions(-)
+  |
+  o  changeset:   1:bb0985934a0f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b
+  |
+  |   a       |  2 +-
+  |   b_dir/b |  1 +
+  |   2 files changed, 2 insertions(+), 1 deletions(-)
+  |
+  o  changeset:   0:0e7ec5675652
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
   
-  changeset:   0:3903775176ed
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     a
+      a |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
   
+
   $ hgmn outgoing ssh://user@dummy/repo
   comparing with ssh://user@dummy/repo
   searching for changes
-  changeset:   1:8eea60339f0d
-  tag:         tip
+  changeset:   1:bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
+  changeset:   2:f40c09205504
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+  changeset:   3:fbd6b221382e
+  parent:      1:bb0985934a0f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     d
+  
+  changeset:   4:30da5bf63484
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     e
+  
+  changeset:   5:8315ea53ef41
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     f
+  
+  changeset:   6:634de738bb0f
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     g
+  
 
-push to Mononoke TODO(T25252425) make this work
+push to Mononoke
 
-  $ hgmn push --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
+  $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo
   pushing to ssh://user@dummy/repo
   running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
   sending hello command
@@ -83,20 +216,25 @@ push to Mononoke TODO(T25252425) make this work
   searching for changes
   all remote heads known locally
   checking for updated bookmarks
-  1 changesets found
+  6 changesets found
   list of changesets:
-  8eea60339f0d60ba0f3bdca74dfd11b1a281f321
+  bb0985934a0f8a493887892173b68940ceb40b4f
+  f40c09205504d8410f8c8679bf7a85fef25f9337
+  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  30da5bf63484d2d6572edafb3ea211c17cd8c005
+  8315ea53ef41d34f56232c88669cc80225b6e66d
+  634de738bb0ff135e32d48567718fb9d7dedf575
   sending unbundle command
-  bundle2-output-bundle: "HG20", 4 parts total
+  bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "replycaps" 196 bytes payload
-  bundle2-output-part: "check:heads" streamed payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  bundle2-input-bundle: 1 params no-transaction
-  bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
-  bundle2-input-bundle: 0 parts total
+  remote: * ERRO Command failed, remote: true, error: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2, root_cause: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2, backtrace:  (glob)
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
 
 Now pull what was just pushed TODO(T25252425) make this work
+
   $ cd ../repo3
   $ hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)

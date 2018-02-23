@@ -77,6 +77,7 @@ function hginit_treemanifest() {
 [extensions]
 treemanifest=
 remotefilelog=
+smartlog=
 [treemanifest]
 server=True
 sendtrees=True
@@ -95,6 +96,7 @@ function hgclone_treemanifest() {
 treemanifest=
 remotefilelog=
 fastmanifest=
+smartlog=
 [treemanifest]
 sendtrees=True
 treeonly=True
