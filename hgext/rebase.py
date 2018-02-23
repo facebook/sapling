@@ -829,7 +829,15 @@ def rebase(ui, repo, **opts):
 
     if rbsrt.inmemory:
         try:
-            return _origrebase(ui, repo, rbsrt, **opts)
+            overrides = {
+                # It's important to check for path conflicts with IMM to
+                # prevent commits with path<>file conflicts from being created
+                # (if you rebase on disk the filesystem prevents you from doing
+                # this).
+                ("experimental", "merge.checkpathconflicts"): True
+            }
+            with ui.configoverride(overrides):
+                return _origrebase(ui, repo, rbsrt, **opts)
         except error.InterventionRequired:
             # This can occur if in-memory was turned off and then legitimate
             # conflicts were raised. Raise as usual.
