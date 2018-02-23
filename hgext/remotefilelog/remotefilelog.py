@@ -14,8 +14,12 @@ from . import (
 )
 import collections, os
 from mercurial.node import bin, nullid
-from mercurial import filelog, revlog, mdiff, ancestor, error
+from mercurial import filelog, revlog, mdiff, ancestor, error, util
 from mercurial.i18n import _
+
+# corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
+# signed integer)
+_maxentrysize = 0x7fffffff
 
 class remotefilelognodemap(object):
     def __init__(self, filename, store):
@@ -118,6 +122,13 @@ class remotefilelog(object):
 
         meta, metaoffset = filelog.parsemeta(text)
         rawtext, validatehash = self._processflags(text, flags, 'write')
+
+        if len(rawtext) > _maxentrysize:
+            raise revlog.RevlogError(
+                _("%s: size of %s exceeds maximum size of %s")
+                % (self.filename, util.bytecount(len(rawtext)),
+                   util.bytecount(_maxentrysize)))
+
         return self.addrawrevision(rawtext, transaction, linknode, p1, p2,
                                    node, flags, cachedelta,
                                    _metatuple=(meta, metaoffset))
