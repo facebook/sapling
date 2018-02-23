@@ -517,3 +517,35 @@ Test amend inside exec rule:
   |
   o  cb9a9f314b8b a
   
+Use exec to create a new commit at the bottom of a stack (that is,
+on top of a public commit).  Histedit shouldn't try to obsolete the
+public commit.
+
+  $ hg phase -p ::d8249471110a
+  $ hg histedit --commands - 2>&1 << EOF
+  > exec touch x; hg add x; hg commit -m "x (inserted)"
+  > pick 6bd17118649c
+  > pick 5aeafddb5246
+  > EOF
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  abort: cannot obsolete public changeset: d8249471110a
+  (see 'hg help phases' for details)
+  $ hg log -G -T '{node|short} [{phase}] {desc|firstline}\n'
+  @  325ec50aef26 [draft] f
+  |
+  o  6fa3f6d34b50 [draft] d (amended)
+  |
+  o  c90a2aff5a5c [draft] x (inserted)
+  |
+  | o  5aeafddb5246 [draft] f
+  | |
+  | o  6bd17118649c [draft] d (amended)
+  |/
+  o  d8249471110a [public] e
+  |
+  o  177f92b77385 [public] c
+  |
+  o  d2ae7f538514 [public] b
+  |
+  o  cb9a9f314b8b [public] a
+  
