@@ -542,10 +542,10 @@ this should proceed as if there's no merge driver
 ensure the right path to load the merge driver hook
   $ hg -R repo1 merge 1 --config experimental.mergedriver=python:fail
   loading preprocess hook failed:
-  merging bar.txt
-  merging foo.txt
-  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
-  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
+  merging repo1/bar.txt
+  merging repo1/foo.txt
+  warning: conflicts while merging repo1/bar.txt! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging repo1/foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

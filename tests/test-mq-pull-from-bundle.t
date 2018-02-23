@@ -91,7 +91,7 @@ Pull queue bundle:
   adding file changes
   added 1 changesets with 3 changes to 3 files
   new changesets d7553909353d
-  merging series
+  merging .hg/patches/series
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ test -f .hg/patches/hg-bundle* && echo 'temp. bundle file remained' || true
 
@@ -123,7 +123,7 @@ Unbundle queue bundle:
   adding file changes
   added 1 changesets with 3 changes to 3 files
   new changesets d7553909353d
-  merging series
+  merging .hg/patches/series
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R .hg/patches theads

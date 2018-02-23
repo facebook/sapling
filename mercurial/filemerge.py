@@ -691,6 +691,10 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
     ui = repo.ui
     fd = fcd.path()
+    relorig = repo.pathto(orig)
+    relfo = repo.pathto(fco.path())
+    relfd = repo.pathto(fd)
+
     binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
     symlink = 'l' in fcd.flags() + fco.flags()
     changedelete = fcd.isabsent() or fco.isabsent()
@@ -724,9 +728,9 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
     if premerge:
         if orig != fco.path():
-            ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
+            ui.status(_("merging %s and %s to %s\n") % (relorig, relfo, relfd))
         else:
-            ui.status(_("merging %s\n") % fd)
+            ui.status(_("merging %s\n") % relfd)
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
@@ -737,7 +741,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
                 raise error.InMemoryMergeConflictsError('in-memory merge does '
                                                         'not support merge '
                                                         'conflicts')
-            ui.warn(onfailure % fd)
+            ui.warn(onfailure % relfd)
         return True, 1, False
 
     back = _makebackup(repo, ui, wctx, fcd, premerge)
@@ -767,7 +771,7 @@ def _filemerge(premerge, repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
                     raise error.InMemoryMergeConflictsError('in-memory merge '
                                                             'does not support '
                                                             'merge conflicts')
-                ui.warn(onfailure % fd)
+                ui.warn(onfailure % relfd)
             _onfilemergefailure(ui)
 
         return True, r, deleted
