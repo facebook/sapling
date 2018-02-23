@@ -58,7 +58,7 @@ enum dir_state {
 
 static inline int inset(const uint32_t bitset[], char c)
 {
-	return bitset[((uint8_t)c) >> 5] & (1 << (((uint8_t)c) & 31));
+	return bitset[((uint8_t)c) >> 5] & (1u << (((uint8_t)c) & 31));
 }
 
 static inline void charcopy(char *dest, Py_ssize_t *destlen, size_t destsize,
