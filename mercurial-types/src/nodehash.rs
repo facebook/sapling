@@ -16,8 +16,10 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
+use sql_types::NodeHashSql;
 
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
+pub const NULL_CSID: ChangesetId = ChangesetId(NULL_HASH);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
@@ -154,7 +156,8 @@ impl Arbitrary for NodeHash {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[sql_type = "NodeHashSql"]
 pub struct ChangesetId(NodeHash);
 
 impl ChangesetId {
@@ -163,11 +166,16 @@ impl ChangesetId {
         NodeHash::from_ascii_str(s).map(ChangesetId)
     }
 
+    #[inline]
+    pub fn as_nodehash(&self) -> &NodeHash {
+        &self.0
+    }
+
     pub fn into_nodehash(self) -> NodeHash {
         self.0
     }
 
-    pub fn new(hash: NodeHash) -> Self {
+    pub const fn new(hash: NodeHash) -> Self {
         ChangesetId(hash)
     }
 

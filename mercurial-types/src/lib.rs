@@ -53,6 +53,8 @@ extern crate ascii;
 extern crate assert_matches;
 extern crate bincode;
 extern crate bytes;
+#[macro_use]
+extern crate diesel;
 extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
@@ -92,6 +94,8 @@ pub mod manifest_utils;
 pub mod blob;
 pub mod blobnode;
 pub mod changeset;
+pub mod repo;
+pub mod sql_types;
 mod node;
 
 pub use blob::{Blob, BlobHash};
@@ -102,6 +106,7 @@ pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{ChangesetId, EntryId, ManifestId, NodeHash, NULL_HASH};
 pub use path::{fncache_fsencode, simple_fsencode, MPath, MPathElement, RepoPath};
+pub use repo::RepositoryId;
 pub use utils::percent_encode;
 
 pub use errors::{Error, ErrorKind};

@@ -15,3 +15,4 @@ extern crate mercurial_types;
 pub mod hash;
 pub mod manifest;
 pub mod nodehash;
+pub mod repo;
