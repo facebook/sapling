@@ -17,7 +17,7 @@ constexpr std::array<char, sizeof...(Args)> make_buf(Args &&... args)
 {
 	std::array<unsigned char, sizeof...(Args)> unsigned_array = {
 	    {static_cast<unsigned char>(std::forward<Args>(args))...}};
-	std::array<char, sizeof...(Args)> result;
+	std::array<char, sizeof...(Args)> result{{}};
 	memcpy(result.data(), unsigned_array.data(), unsigned_array.size());
 	return result;
 }
