@@ -31,6 +31,7 @@ Create repo
   removing bin2
   adding c
   $ hg commit -m c
+  $ hg bookmark bookmark1 -i
 
 Test basic dump of two commits
 
@@ -45,6 +46,7 @@ Test basic dump of two commits
                       "old_file": null
                   }
               ],
+              "bookmarks": [],
               "date": [
                   0,
                   0
@@ -77,6 +79,7 @@ Test basic dump of two commits
                       "old_file": null
                   }
               ],
+              "bookmarks": [],
               "date": [
                   0,
                   0
@@ -109,6 +112,9 @@ Test basic dump of two commits
                       "new_file": null,
                       "old_file": "31f7b4d23cf93fd41972d0a879086e900cbf06c9"
                   }
+              ],
+              "bookmarks": [
+                  "bookmark1"
               ],
               "date": [
                   0,

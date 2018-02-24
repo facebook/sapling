@@ -97,6 +97,7 @@ def crdump(ui, repo, *revs, **opts):
                     'node': ctx.parents()[0].hex(),
                 },
                 'user': ctx.user(),
+                'bookmarks': ctx.bookmarks(),
             }
             if ctx.parents()[0].phase() != phases.public:
                 # we need this only if parent is in the same draft stack
