@@ -107,8 +107,6 @@ hgext/extlib/cstore/datastore.h
 hgext/extlib/cstore/deltachain.h
 hgext/extlib/cstore/key.h
 hgext/extlib/cstore/match.h
-hgext/extlib/cstore/mpatch.c
-hgext/extlib/cstore/mpatch.h
 hgext/extlib/cstore/py-cdatapack.h
 hgext/extlib/cstore/py-datapackstore.h
 hgext/extlib/cstore/py-structs.h

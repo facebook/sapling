@@ -13,7 +13,7 @@
 #include <memory>
 
 extern "C" {
-#include "hgext/extlib/cstore/mpatch.h"
+#include "mercurial/mpatch.h"
 }
 
 UnionDatapackStore::UnionDatapackStore(std::vector<DataStore*> stores) :

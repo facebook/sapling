@@ -1097,7 +1097,7 @@ libraries = [
             [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
     }),
     ('mpatch', {
-        "sources": ["hgext/extlib/cstore/mpatch.c"],
+        "sources": ["mercurial/mpatch.c"],
         "include_dirs" : ["."] + include_dirs,
     }),
 ]
