@@ -385,6 +385,44 @@ Check --git and -g
   
 
 
+Check nodates
+  $ hg show --nodates
+  changeset:   1:a23f7b259024
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r 2a575d662478 -r a23f7b259024 file
+  --- a/file
+  +++ b/file
+  @@ -1,1 +1,2 @@
+   git
+  +more
+  
+
+Check noprefix
+  $ hg show --noprefix
+  changeset:   1:a23f7b259024
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       file
+  description:
+  file
+  
+  
+  diff -r 2a575d662478 -r a23f7b259024 file
+  --- file	Thu Jan 01 00:00:00 1970 +0000
+  +++ file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   git
+  +more
+  
+
 Check hg show '' fails to parse the revision
 
   $ hg show ''
@@ -414,6 +452,9 @@ Confirm that --help works (it didn't when we used an alias)
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
+      --nodates             omit dates from diff headers (but keeps it in commit
+                            header)
+      --noprefix            omit a/ and b/ prefixes from filenames
    -U --unified VALUE       number of lines of diff context to show (default:
                             <type 'int'>)
    -w --ignore-all-space    ignore white space when comparing lines
@@ -444,6 +485,9 @@ Confirm that --help works (it didn't when we used an alias)
    -T --template TEMPLATE   display with template
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
+      --nodates             omit dates from diff headers (but keeps it in commit
+                            header)
+      --noprefix            omit a/ and b/ prefixes from filenames
    -U --unified VALUE       number of lines of diff context to show (default:
                             <type 'int'>)
    -w --ignore-all-space    ignore white space when comparing lines

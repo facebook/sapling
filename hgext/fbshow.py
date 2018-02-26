@@ -55,6 +55,9 @@ def uisetup(ui):
     ] + commands.templateopts + commands.walkopts
 
     local_opts = [
+        ('', 'nodates', None, _('omit dates from diff headers ' +
+                                '(but keeps it in commit header)')),
+        ('', 'noprefix', None, _('omit a/ and b/ prefixes from filenames')),
         ('U', 'unified', int, _('number of lines of diff context to show')),
     ] + commands.diffwsopts
 
