@@ -9,19 +9,18 @@
 //! A generation number for a changeset is 1 + max(parents, 0). This number is computed for each
 //! changeset and memoized for efficiency.
 
-use std::cmp;
 use std::sync::Arc;
 use std::usize;
 
-use failure::Error;
+use failure::{err_msg, Error};
 use futures::IntoFuture;
-use futures::future::{self, Either, Future};
-use futures::stream::{self, Stream};
+use futures::future::{Either, Future};
+
+use futures_ext::FutureExt;
 
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
-use mercurial_types::{Changeset, NodeHash, NULL_HASH};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::{ChangesetId, NodeHash, NULL_HASH};
 
 use nodehashkey::Key;
 
@@ -81,24 +80,15 @@ impl Filler for GenFiller {
     type Key = Key<BlobRepo>;
     type Value = Box<Future<Item = Generation, Error = Error> + Send>;
 
-    fn fill(&self, cache: &Asyncmemo<Self>, &Key(ref repo, ref nodeid): &Self::Key) -> Self::Value {
-        let parents = repo
-            .get_changeset_by_changesetid(&ChangesetId::new(*nodeid)) // Future<Changeset>
-            .map(|cs| stream::iter_ok(cs.parents().into_iter()))
-            .flatten_stream(); // Stream<NodeHash>
-
-        let gen = parents
-            .map({
-                let repo = repo.clone();
-                let cache = cache.clone();
-
-                // recursive call to get gen for parent(s)
-                move |p| cache.get((&repo, p))
-            }) // Stream<Future<Generation>>
-            .buffer_unordered(2) // (up to 2 parents) Stream<Generation>
-            .fold(Generation(0), |g, s| future::ok::<_, Error>(cmp::max(g, s)))
-            .map(|Generation(g)| Generation(g + 1)); // Future<Generation>
-
-        Box::new(gen) as Box<Future<Item = Generation, Error = Error> + Send + 'static>
+    fn fill(
+        &self,
+        _cache: &Asyncmemo<Self>,
+        &Key(ref repo, ref nodeid): &Self::Key,
+    ) -> Self::Value {
+        let cs = ChangesetId::new(*nodeid);
+        repo.get_generation_number(&cs)
+            .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs))))
+            .map(|gen| Generation(gen))
+            .boxify()
     }
 }

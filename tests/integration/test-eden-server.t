@@ -123,6 +123,7 @@ Add commit with a directory
   D* 3: changeset 813c7514ad5e14493de885987c241c14c5cd3153 (glob)
   D* 4: changeset 7f48e9c786d1cbab525424e45139585724f84e28 (glob)
   D* 5: changeset 617e87e2aa2fe36508e8d5e15a162bcd2e79808e (glob)
+  * filling up changesets changesets store (glob)
 
 Heads output order is unpredictable, let's sort them by commit hash
   $ grep "head " < $TESTTMP/blobimport.out | sort -k 6

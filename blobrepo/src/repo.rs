@@ -236,6 +236,13 @@ impl BlobRepo {
         self.linknodes.get(path, node)
     }
 
+    pub fn get_generation_number(&self, cs: &ChangesetId) -> BoxFuture<Option<u64>, Error> {
+        self.changesets
+            .get(self.repoid, *cs)
+            .map(|res| res.map(|res| res.gen))
+            .boxify()
+    }
+
     // Given content, ensure that there is a matching BlobEntry in the repo. This may not upload
     // the entry or the data blob if the repo is aware of that data already existing in the
     // underlying store.
