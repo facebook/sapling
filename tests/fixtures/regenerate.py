@@ -12,6 +12,7 @@ import os
 import subprocess
 import tempfile
 from typing import Optional
+from scm import repo
 
 import click
 
@@ -94,6 +95,13 @@ def convert(tar: str, blobimport: str):
                 ]
             )
             safe_overwrite_dir(new_dir, abs_dest)
+            with open(os.path.join(abs_dest, 'topology'), 'w') as topology_file:
+                hgrepo = repo.Repository(revlog_repo, prefer='hg')
+                commits = hgrepo.get_commits([':'])
+                for commit in commits:
+                    parents = ' '.join((commit.hash for commit in commit.parents()))
+                    topology_file.write('%s %s\n' % (commit.hash, parents))
+
 
 
 def safe_overwrite_dir(src: str, abs_dest: str):

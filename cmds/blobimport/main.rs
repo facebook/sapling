@@ -24,6 +24,7 @@ extern crate tokio_core;
 
 extern crate blobrepo;
 extern crate blobstore;
+extern crate changesets;
 extern crate fileblob;
 extern crate fileheads;
 extern crate filekv;
@@ -50,6 +51,7 @@ use std::sync::mpsc::sync_channel;
 use std::thread;
 
 use bytes::Bytes;
+use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
 use failure::{Error, Result, ResultExt, SlogKVError};
 use futures::{stream, Future, IntoFuture, Stream};
@@ -67,6 +69,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
+use mercurial_types::{Changeset, ChangesetId, RepositoryId};
 use rocksblob::Rocksblob;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
@@ -101,7 +104,7 @@ pub(crate) enum BlobstoreEntry {
 
 fn run_blobimport<In, Out>(
     input: In,
-    output: Option<Out>,
+    output: Out,
     blobtype: BlobstoreType,
     write_linknodes: bool,
     logger: &Logger,
@@ -181,7 +184,7 @@ where
 
     info!(logger, "Converting: {}", input.display());
     let convert_context = convert::ConvertContext {
-        repo,
+        repo: repo.clone(),
         sender,
         headstore,
         core,
@@ -192,8 +195,7 @@ where
     };
     let res = if write_linknodes {
         info!(logger, "Opening linknodes store: {:?}", output);
-        let output = output.expect("output path is not provided");
-        let output = output.into();
+        let output = output.clone().into();
         let linknodes_store = open_linknodes_store(&output, &cpupool)?;
         convert_context.convert(linknodes_store)
     } else {
@@ -201,7 +203,45 @@ where
         convert_context.convert(NoopLinknodes::new())
     };
     iothread.join().expect("failed to join io thread")?;
-    res
+    res?;
+
+    if !skip.is_none() && !commits_limit.is_none() {
+        warn!(
+            logger,
+            "skipping filling up changesets store because --skip or --commits-limit is set"
+        );
+    } else {
+        warn!(logger, "filling up changesets changesets store");
+        let changesets = open_changesets_store(output.into())?;
+        let mut core = Core::new()?;
+        let fut = repo.changesets()
+            .and_then(|node| {
+                let node = ChangesetId::new(node);
+                repo.get_changeset_by_changesetid(&node)
+                    .map(move |cs| (cs, node))
+            })
+            .for_each(|(cs, node)| {
+                let parents = cs.parents()
+                    .into_iter()
+                    .map(|p| ChangesetId::new(p))
+                    .collect();
+                let insert = ChangesetInsert {
+                    repo_id: RepositoryId::new(0), // TODO(stash): real repo id
+                    cs_id: node,
+                    parents,
+                };
+                changesets.add(&insert)
+            });
+        core.run(fut)?;
+    }
+    Ok(())
+}
+
+fn open_changesets_store(mut output: PathBuf) -> Result<Arc<Changesets>> {
+    output.push("changesets");
+    Ok(Arc::new(SqliteChangesets::create(
+        output.to_string_lossy(),
+    )?))
 }
 
 fn open_repo<P: Into<PathBuf>>(
@@ -227,20 +267,12 @@ fn open_repo<P: Into<PathBuf>>(
     Ok(revlog)
 }
 
-fn open_headstore<P: Into<PathBuf>>(
-    path: Option<P>,
-    pool: &Arc<CpuPool>,
-) -> Result<Box<heads::Heads>> {
-    match path {
-        Some(path) => {
-            let mut heads = path.into();
+fn open_headstore<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<Box<heads::Heads>> {
+    let mut heads = path.into();
 
-            heads.push("heads");
-            let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
-            Ok(Box::new(headstore))
-        }
-        None => Ok(Box::new(memheads::MemHeads::new())),
-    }
+    heads.push("heads");
+    let headstore = fileheads::FileHeads::create_with_pool(heads, pool.clone())?;
+    Ok(Box::new(headstore))
 }
 
 fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Result<FileLinknodes> {
@@ -251,7 +283,7 @@ fn open_linknodes_store<P: Into<PathBuf>>(path: P, pool: &Arc<CpuPool>) -> Resul
 }
 
 fn open_blobstore<P: Into<PathBuf>>(
-    output: Option<P>,
+    output: P,
     ty: BlobstoreType,
     remote: &Remote,
     postpone_compaction: bool,
@@ -259,7 +291,6 @@ fn open_blobstore<P: Into<PathBuf>>(
 ) -> Result<BBlobstore> {
     let blobstore: BBlobstore = match ty {
         BlobstoreType::Files => {
-            let output = output.expect("output path is not specified");
             let mut output = output.into();
             output.push("blobs");
             Arc::new(Fileblob::create(output)
@@ -267,7 +298,6 @@ fn open_blobstore<P: Into<PathBuf>>(
                 .context("Failed to open file blob store")?)
         }
         BlobstoreType::Rocksdb => {
-            let output = output.expect("output path is not specified");
             let mut output = output.into();
             output.push("blobs");
             let options = rocksdb::Options::new()
@@ -438,16 +468,14 @@ fn main() {
 
         let channel_size: usize = matches
             .value_of("channel-size")
-            .map(|size| {
-                size.parse().expect("channel-size must be positive integer")
-            })
+            .map(|size| size.parse().expect("channel-size must be positive integer"))
             .unwrap_or(1000);
 
         let write_linknodes = matches.is_present("linknodes");
 
         run_blobimport(
             input,
-            output.map(|path| path.to_string()),
+            output.expect("output must be specified").to_string(),
             blobtype,
             write_linknodes,
             &root_log,
@@ -470,7 +498,6 @@ fn main() {
                     .expect("inmemory_logs_capacity must be positive integer")
             }),
         )?;
-
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
             let options = rocksdb::Options::new().create_if_missing(false);

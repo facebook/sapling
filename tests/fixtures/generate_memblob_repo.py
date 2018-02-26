@@ -52,11 +52,13 @@ extern crate heads;
 extern crate futures;
 extern crate bytes;
 
+use std::str::FromStr;
+
 use bytes::Bytes;
-use changesets::SqliteChangesets;
+use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
-use mercurial_types::{NodeHash, RepositoryId};
+use mercurial_types::{ChangesetId, NodeHash, RepositoryId};
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use blobrepo::BlobRepo;
@@ -72,23 +74,64 @@ pub fn getrepo() -> BlobRepo {
     let linknodes = MemLinknodes::new();
     let changesets = SqliteChangesets::in_memory()
         .expect("cannot create in-memory changeset table");
+    let repo_id = RepositoryId::new(0);
 
 """
         )
+        indent = 0
+
+        def writeline(line):
+            if line == "":
+                rs.write("")
+            else:
+                rs.write(' ' * 4 * indent)
+                rs.write(line)
+                rs.write('\n')
+
+        indent += 1
+        with open(os.path.join(args.source, "topology")) as f:
+            for line in f.readlines():
+                line = line.strip()
+                split = line.split(' ')
+                if len(split) == 0:
+                    raise Exception("Incorrect commit graph topology")
+
+                commit_hash = split[0]
+                writeline('let cs_id = ChangesetId::new(NodeHash::from_str("{}").unwrap());'.format(commit_hash))
+                writeline('let parents = vec![')
+                if len(split) > 1:
+                    indent += 1
+                    for p in split[1:-1]:
+                        writeline('ChangesetId::new(NodeHash::from_str("{}").unwrap()), '.format(p))
+
+                    writeline('ChangesetId::new(NodeHash::from_str("{}").unwrap())'.format(split[-1]))
+                    indent -= 1
+                writeline('];')
+                writeline('let cs_insert = ChangesetInsert {')
+                indent += 1
+                writeline('repo_id,')
+                writeline('cs_id,')
+                writeline('parents,')
+                indent -= 1
+                writeline('};')
+                writeline("changesets.add(&cs_insert).wait().unwrap();")
+                writeline("")
+            writeline("")
+
         for head in glob.glob(os.path.join(args.source, "heads", "head-*")):
             head = head[-40:]
-            rs.write(
-                '    heads.add(&NodeHash::from_ascii_str(&AsciiString::from_ascii("{}").unwrap()).unwrap()).wait().expect("Head put failed");\n'.
+            writeline(
+                'heads.add(&NodeHash::from_ascii_str(&AsciiString::from_ascii("{}").unwrap()).unwrap()).wait().expect("Head put failed");'.
                 format(head)
             )
-        rs.write("\n")
+        writeline("")
         blob_prefix_len = len(os.path.join(args.source, "blobs", "blob-"))
         for blob in glob.glob(os.path.join(args.source, "blobs", "blob-*")):
             key = blob[blob_prefix_len:]
             with open(blob, "rb") as data:
                 blobdata = "\\x".join(chunk_string(data.read().hex()))
-                rs.write(
-                    '    blobs.put(String::from("{}"), Bytes::from_static(b"\\x{}")).wait().expect("Blob put failed");\n'.
+                writeline(
+                    'blobs.put(String::from("{}"), Bytes::from_static(b"\\x{}")).wait().expect("Blob put failed");'.
                     format(key, blobdata)
                 )
         for linknode in glob.glob(
@@ -96,13 +139,13 @@ pub fn getrepo() -> BlobRepo {
         ):
             with open(linknode, "rb") as data:
                 linknode_data = "\\x".join(chunk_string(data.read().hex()))
-                rs.write(
-                    '    linknodes.add_data_encoded(&b"\\x{}"[..]).expect("Linknode add failed");\n'.
+                writeline(
+                    'linknodes.add_data_encoded(&b"\\x{}"[..]).expect("Linknode add failed");'.
                     format(linknode_data)
                 )
         rs.writelines(
             """
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, RepositoryId::new(0))
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, repo_id)
 }
 """
         )

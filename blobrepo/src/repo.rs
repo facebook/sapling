@@ -82,8 +82,8 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = FileLinknodes::open(path.join("linknodes"))
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
-        let changesets = SqliteChangesets::in_memory()
-            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
 
         Ok(Self::new(
             Arc::new(heads),
@@ -104,8 +104,8 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = FileLinknodes::open(path.join("linknodes"))
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
-        let changesets = SqliteChangesets::in_memory()
-            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+        let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
 
         Ok(Self::new(
             Arc::new(heads),
@@ -146,6 +146,7 @@ impl BlobRepo {
         let linknodes = MemLinknodes::new();
         let changesets = SqliteChangesets::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
+
         Ok(Self::new(
             Arc::new(heads),
             Arc::new(bookmarks),
@@ -188,8 +189,9 @@ impl BlobRepo {
     }
 
     pub fn changeset_exists(&self, changesetid: &ChangesetId) -> BoxFuture<bool, Error> {
-        BlobChangeset::load(&self.blobstore, &changesetid)
-            .map(|cs| cs.is_some())
+        self.changesets
+            .get(self.repoid, *changesetid)
+            .map(|res| res.is_some())
             .boxify()
     }
 
