@@ -327,13 +327,15 @@ test metaediting a commit with visible obsolete children
   [66f7d4] r1
   $ hg metaedit -m "obsolete test"
   $ glog -r 'all()'
-  o  18:b4125821adeb@default(draft) message from exec (amended)
+  o  16:b4125821adeb@default(draft) message from exec (amended)
   |
-  | o  17:c685b6f90460@default(draft) metaedit
-  | |
-  | o  16:fe06afc18a6e@default(draft) message from exec
-  |/
   @  15:be6d42c57183@default(draft) obsolete test
   |
+  | o  13:942d79297adf@default(draft) metaedit
+  | |
+  | x  12:b5e5d076151f@default(draft) message from exec
+  | |
+  | x  1:66f7d451a68b@default(draft) r1
+  |/
   o  0:1ea73414a91b@default(draft) r0
   
