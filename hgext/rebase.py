@@ -860,6 +860,7 @@ def rebase(ui, repo, **opts):
                          '(%s)\n' % e))
                 ui.log("rebase", "", rebase_imm_restart=True,
                     rebase_imm_exception=str(e))
+                rbsrt.inmemory = False
                 _origrebase(ui, repo, rbsrt, **{'abort': True})
                 return _origrebase(ui, repo, rbsrt, **opts)
             else:
