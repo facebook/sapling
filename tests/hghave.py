@@ -90,7 +90,10 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     """Return the match object if cmd executes successfully and its output
     is matched by the supplied regular expression.
     """
-    r = re.compile(regexp)
+    if hasattr(regexp, 'search'):
+        r = regexp
+    else:
+        r = re.compile(regexp)
     try:
         p = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -744,3 +747,9 @@ def has_fuzzywuzzy():
         return True
     except ImportError:
         return False
+
+@check("eden", "Eden HG extension")
+def has_eden():
+    return matchoutput(
+        'hg --debug --config extensions.eden= --version 2>&1',
+        re.compile(br'^\s*eden\s+(in|ex)ternal\s*$', re.MULTILINE))

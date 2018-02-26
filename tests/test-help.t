@@ -314,6 +314,7 @@ Test extension help:
        directaccess  This extension provides direct access
        dirsync
        drop          drop specified changeset from the stack
+       eden          accelerated hg functionality in Eden checkouts (eden !)
        edrecord      (no help text available)
        eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
