@@ -25,6 +25,7 @@ extern crate heapsize_derive;
 
 extern crate blobstore;
 extern crate bookmarks;
+extern crate changesets;
 extern crate fileblob;
 extern crate filebookmarks;
 extern crate fileheads;

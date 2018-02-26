@@ -11,6 +11,7 @@ extern crate bytes;
 extern crate futures;
 
 extern crate blobrepo;
+extern crate changesets;
 extern crate memblob;
 extern crate membookmarks;
 extern crate memheads;
@@ -23,6 +24,7 @@ use futures::executor::spawn;
 use futures::future::Future;
 
 use blobrepo::BlobRepo;
+use changesets::SqliteChangesets;
 use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
@@ -34,8 +36,9 @@ fn get_empty_repo() -> BlobRepo {
     let heads: MemHeads = MemHeads::new();
     let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
+    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
 
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes)
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets)
 }
 
 #[test]

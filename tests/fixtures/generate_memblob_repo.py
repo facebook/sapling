@@ -39,6 +39,7 @@ if __name__ == '__main__':
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+extern crate changesets;
 extern crate memblob;
 extern crate membookmarks;
 extern crate mercurial_types;
@@ -52,6 +53,7 @@ extern crate futures;
 extern crate bytes;
 
 use bytes::Bytes;
+use changesets::SqliteChangesets;
 use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use mercurial_types::NodeHash;
@@ -68,6 +70,8 @@ pub fn getrepo() -> BlobRepo {
     let heads: MemHeads = MemHeads::new();
     let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
+    let changesets = SqliteChangesets::in_memory()
+        .expect("cannot create in-memory changeset table");
 
 """
         )
@@ -98,7 +102,7 @@ pub fn getrepo() -> BlobRepo {
                 )
         rs.writelines(
             """
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes)
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets)
 }
 """
         )

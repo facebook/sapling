@@ -19,6 +19,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
+use changesets::{Changesets, SqliteChangesets};
 use fileblob::Fileblob;
 use filebookmarks::FileBookmarks;
 use fileheads::FileHeads;
@@ -49,6 +50,7 @@ pub struct BlobRepo {
     bookmarks: Arc<Bookmarks>,
     heads: Arc<Heads>,
     linknodes: Arc<Linknodes>,
+    changesets: Arc<Changesets>,
 }
 
 impl BlobRepo {
@@ -57,12 +59,14 @@ impl BlobRepo {
         bookmarks: Arc<Bookmarks>,
         blobstore: Arc<Blobstore>,
         linknodes: Arc<Linknodes>,
+        changesets: Arc<Changesets>,
     ) -> Self {
         BlobRepo {
             heads,
             bookmarks,
             blobstore,
             linknodes,
+            changesets,
         }
     }
 
@@ -75,12 +79,15 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = FileLinknodes::open(path.join("linknodes"))
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        let changesets = SqliteChangesets::in_memory()
+            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(linknodes),
+            Arc::new(changesets),
         ))
     }
 
@@ -93,12 +100,15 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = FileLinknodes::open(path.join("linknodes"))
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        let changesets = SqliteChangesets::in_memory()
+            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(linknodes),
+            Arc::new(changesets),
         ))
     }
 
@@ -107,12 +117,14 @@ impl BlobRepo {
         bookmarks: MemBookmarks,
         blobstore: EagerMemblob,
         linknodes: MemLinknodes,
+        changesets: SqliteChangesets,
     ) -> Self {
         Self::new(
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(linknodes),
+            Arc::new(changesets),
         )
     }
 
@@ -121,11 +133,14 @@ impl BlobRepo {
         let bookmarks = MemBookmarks::new();
         let blobstore = ManifoldBlob::new_may_panic(bucket.to_string(), remote);
         let linknodes = MemLinknodes::new();
+        let changesets = SqliteChangesets::in_memory()
+            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
         Ok(Self::new(
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
             Arc::new(linknodes),
+            Arc::new(changesets),
         ))
     }
 
@@ -283,6 +298,7 @@ impl Clone for BlobRepo {
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),
             linknodes: self.linknodes.clone(),
+            changesets: self.changesets.clone(),
         }
     }
 }

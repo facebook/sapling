@@ -19,6 +19,7 @@ pub enum StateOpenError {
     Heads,
     Bookmarks,
     Blobstore,
+    Changesets,
     Linknodes,
 }
 
@@ -30,6 +31,7 @@ impl fmt::Display for StateOpenError {
             Heads => write!(f, "heads"),
             Bookmarks => write!(f, "bookmarks"),
             Blobstore => write!(f, "blob store"),
+            Changesets => write!(f, "changesets"),
             Linknodes => write!(f, "linknodes"),
         }
     }
