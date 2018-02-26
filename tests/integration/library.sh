@@ -46,6 +46,7 @@ EOF
   cat > repos/repo <<CONFIG
 path="$TESTTMP/repo"
 repotype="blob:files"
+repoid=0
 CONFIG
   hg add -q repos
   hg ci -ma

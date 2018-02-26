@@ -56,7 +56,7 @@ use bytes::Bytes;
 use changesets::SqliteChangesets;
 use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
-use mercurial_types::NodeHash;
+use mercurial_types::{NodeHash, RepositoryId};
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use blobrepo::BlobRepo;
@@ -102,7 +102,7 @@ pub fn getrepo() -> BlobRepo {
                 )
         rs.writelines(
             """
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets)
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, RepositoryId::new(0))
 }
 """
         )

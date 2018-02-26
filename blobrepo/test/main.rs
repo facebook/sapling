@@ -29,7 +29,8 @@ use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{manifest, Blob, Entry, EntryId, MPathElement, NodeHash, RepoPath};
+use mercurial_types::{manifest, Blob, Entry, EntryId, MPathElement, NodeHash, RepoPath,
+                      RepositoryId};
 
 fn get_empty_repo() -> BlobRepo {
     let bookmarks: MemBookmarks = MemBookmarks::new();
@@ -37,8 +38,9 @@ fn get_empty_repo() -> BlobRepo {
     let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
     let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
+    let repoid = RepositoryId::new(0);
 
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets)
+    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, repoid)
 }
 
 #[test]

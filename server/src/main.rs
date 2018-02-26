@@ -77,6 +77,7 @@ use slog_logview::LogViewDrain;
 use bytes::Bytes;
 use hgproto::{sshproto, HgProtoHandler};
 use mercurial::RevlogRepo;
+use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoType;
 
@@ -223,7 +224,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
 fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
 where
-    I: IntoIterator<Item = (RepoType, usize)>,
+    I: IntoIterator<Item = (RepoType, usize, i32)>,
 {
     // Given the list of paths to repos:
     // - create a thread for it
@@ -232,14 +233,21 @@ where
 
     let handles: Vec<_> = repos
         .into_iter()
-        .map(move |(repotype, cache_size)| {
+        .map(move |(repotype, cache_size, repoid)| {
             // start a thread for each repo to own the reactor and start listening for
             // connections and detach it
             thread::Builder::new()
                 .name(format!("listener_{:?}", repotype))
                 .spawn({
                     let root_log = root_log.clone();
-                    move || repo_listen(repotype, cache_size, root_log.clone())
+                    move || {
+                        repo_listen(
+                            repotype,
+                            cache_size,
+                            root_log.clone(),
+                            RepositoryId::new(repoid),
+                        )
+                    }
                 })
                 .map_err(Error::from)
         })
@@ -258,10 +266,11 @@ where
 }
 
 // Listener thread for a specific repo
-fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger) -> ! {
+fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger, repoid: RepositoryId) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
-    let (sockname, repo) = repo::init_repo(&root_log, &repotype, cache_size, &core.remote())
-        .expect("failed to initialize repo");
+    let (sockname, repo) =
+        repo::init_repo(&root_log, &repotype, cache_size, &core.remote(), repoid)
+            .expect("failed to initialize repo");
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
@@ -355,7 +364,7 @@ fn main() {
             config
                 .repos
                 .into_iter()
-                .map(|(_, c)| (c.repotype, c.generation_cache_size)),
+                .map(|(_, c)| (c.repotype, c.generation_cache_size, c.repoid)),
             root_log,
         )?;
 

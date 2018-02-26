@@ -65,7 +65,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, MPathElement, NodeHash};
+use mercurial_types::{Changeset, MPathElement, NodeHash, RepositoryId};
 use mercurial_types::nodehash::ChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
@@ -482,6 +482,7 @@ struct RawRepoConfig {
     reponame: String,
     addr: String,
     ssl: Ssl,
+    repoid: i32,
 }
 
 fn main() {
@@ -520,16 +521,20 @@ fn main() {
         RawRepoType::BlobFiles => start_server(
             &config.addr,
             config.reponame,
-            BlobRepo::new_files(&config.path.expect("Please specify a path to the blobrepo"))
-                .expect("couldn't open blob state"),
+            BlobRepo::new_files(
+                &config.path.expect("Please specify a path to the blobrepo"),
+                RepositoryId::new(config.repoid),
+            ).expect("couldn't open blob state"),
             root_logger.clone(),
             config.ssl,
         ),
         RawRepoType::BlobRocks => start_server(
             &config.addr,
             config.reponame,
-            BlobRepo::new_rocksdb(&config.path.expect("Please specify a path to the blobrepo"))
-                .expect("couldn't open blob state"),
+            BlobRepo::new_rocksdb(
+                &config.path.expect("Please specify a path to the blobrepo"),
+                RepositoryId::new(config.repoid),
+            ).expect("couldn't open blob state"),
             root_logger.clone(),
             config.ssl,
         ),
@@ -558,6 +563,7 @@ fn main() {
                         .manifold_bucket
                         .expect("manifold bucket is not specified"),
                     &remote,
+                    RepositoryId::new(config.repoid),
                 ).expect("couldn't open blob state"),
                 root_logger.clone(),
                 config.ssl,

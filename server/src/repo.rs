@@ -28,7 +28,7 @@ use bundle2_resolver;
 use mercurial;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{percent_encode, BlobNode, Changeset, ChangesetId, Entry, MPath, ManifestId,
-                      NodeHash, Parents, RepoPath, Type, NULL_HASH};
+                      NodeHash, Parents, RepoPath, RepositoryId, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -50,12 +50,13 @@ pub fn init_repo(
     repotype: &RepoType,
     cache_size: usize,
     remote: &Remote,
+    repoid: RepositoryId,
 ) -> Result<(PathBuf, HgRepo)> {
     let repopath = repotype.path();
 
     let mut sock = repopath.join(".hg");
 
-    let repo = HgRepo::new(parent_logger, repotype, cache_size, remote)
+    let repo = HgRepo::new(parent_logger, repotype, cache_size, remote, repoid)
         .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
@@ -64,20 +65,20 @@ pub fn init_repo(
 }
 
 pub trait OpenableRepoType {
-    fn open(&self, remote: &Remote) -> Result<BlobRepo>;
+    fn open(&self, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self, remote: &Remote) -> Result<BlobRepo> {
+    fn open(&self, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
         use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
         let ret = match *self {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
-            BlobFiles(ref path) => BlobRepo::new_files(&path)?,
-            BlobRocks(ref path) => BlobRepo::new_rocksdb(&path)?,
-            TestBlobManifold(ref bucket, _) => BlobRepo::new_test_manifold(bucket, remote)?,
+            BlobFiles(ref path) => BlobRepo::new_files(&path, repoid)?,
+            BlobRocks(ref path) => BlobRepo::new_rocksdb(&path, repoid)?,
+            TestBlobManifold(ref bucket, _) => BlobRepo::new_test_manifold(bucket, remote, repoid)?,
         };
 
         Ok(ret)
@@ -141,12 +142,13 @@ impl HgRepo {
         repo: &RepoType,
         cache_size: usize,
         remote: &Remote,
+        repoid: RepositoryId,
     ) -> Result<Self> {
         let path = repo.path().to_owned();
 
         Ok(HgRepo {
             path: format!("{}", path.display()),
-            hgrepo: Arc::new(repo.open(remote)?),
+            hgrepo: Arc::new(repo.open(remote, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
             _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
         })

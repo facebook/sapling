@@ -109,6 +109,7 @@ Add commit with a directory
   $ echo "path=\"$TESTTMP/blobrepo\"" >> $TESTTMP/config
   $ echo "addr='127.0.0.1:$SOCKET'" >> $TESTTMP/config
   $ echo 'repotype="blob:rocks"' >> $TESTTMP/config
+  $ echo 'repoid=0' >> $TESTTMP/config
   $ echo "[ssl]" >> $TESTTMP/config
   $ echo "cert=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config

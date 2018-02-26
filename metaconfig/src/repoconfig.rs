@@ -32,6 +32,8 @@ pub struct RepoConfig {
     pub repotype: RepoType,
     /// How large a cache to use (in bytes) for RepoGenCache derived information
     pub generation_cache_size: usize,
+    /// Numerical repo id of the repo.
+    pub repoid: i32,
 }
 
 /// Types of repositories supported
@@ -181,6 +183,7 @@ struct RawRepoConfig {
     repotype: RawRepoType,
     generation_cache_size: Option<usize>,
     manifold_bucket: Option<String>,
+    repoid: i32,
 }
 
 /// Types of repositories supported
@@ -211,10 +214,12 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
         };
 
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
+        let repoid = this.repoid;
 
         Ok(RepoConfig {
             repotype,
             generation_cache_size,
+            repoid,
         })
     }
 }
@@ -234,10 +239,12 @@ mod test {
             path="/tmp/fbsource"
             repotype="blob:files"
             generation_cache_size=1048576
+            repoid=0
         "#;
         let www_content = r#"
             path="/tmp/www"
             repotype="revlog"
+            repoid=1
         "#;
 
         let my_path_manifest = MockManifest::with_content(vec![
@@ -269,6 +276,7 @@ mod test {
             RepoConfig {
                 repotype: RepoType::BlobFiles("/tmp/fbsource".into()),
                 generation_cache_size: 1024 * 1024,
+                repoid: 0,
             },
         );
         repos.insert(
@@ -276,6 +284,7 @@ mod test {
             RepoConfig {
                 repotype: RepoType::Revlog("/tmp/www".into()),
                 generation_cache_size: 10 * 1024 * 1024,
+                repoid: 1,
             },
         );
         assert_eq!(

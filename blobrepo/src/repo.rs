@@ -31,10 +31,10 @@ use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Blob, BlobNode, Changeset, Entry, MPath, Manifest, NodeHash, Parents,
-                      RepoPath};
+use mercurial_types::{Blob, BlobNode, Changeset, ChangesetId, Entry, MPath, Manifest, NodeHash,
+                      Parents, RepoPath, RepositoryId};
 use mercurial_types::manifest;
-use mercurial_types::nodehash::{ChangesetId, ManifestId};
+use mercurial_types::nodehash::ManifestId;
 use rocksblob::Rocksblob;
 use storage_types::Version;
 use tokio_core::reactor::Remote;
@@ -51,6 +51,7 @@ pub struct BlobRepo {
     heads: Arc<Heads>,
     linknodes: Arc<Linknodes>,
     changesets: Arc<Changesets>,
+    repoid: RepositoryId,
 }
 
 impl BlobRepo {
@@ -60,6 +61,7 @@ impl BlobRepo {
         blobstore: Arc<Blobstore>,
         linknodes: Arc<Linknodes>,
         changesets: Arc<Changesets>,
+        repoid: RepositoryId,
     ) -> Self {
         BlobRepo {
             heads,
@@ -67,10 +69,11 @@ impl BlobRepo {
             blobstore,
             linknodes,
             changesets,
+            repoid,
         }
     }
 
-    pub fn new_files(path: &Path) -> Result<Self> {
+    pub fn new_files(path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = FileBookmarks::open(path.join("books"))
@@ -88,10 +91,11 @@ impl BlobRepo {
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
+            repoid,
         ))
     }
 
-    pub fn new_rocksdb(path: &Path) -> Result<Self> {
+    pub fn new_rocksdb(path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = FileBookmarks::open(path.join("books"))
@@ -109,6 +113,7 @@ impl BlobRepo {
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
+            repoid,
         ))
     }
 
@@ -118,6 +123,7 @@ impl BlobRepo {
         blobstore: EagerMemblob,
         linknodes: MemLinknodes,
         changesets: SqliteChangesets,
+        repoid: RepositoryId,
     ) -> Self {
         Self::new(
             Arc::new(heads),
@@ -125,10 +131,15 @@ impl BlobRepo {
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
+            repoid,
         )
     }
 
-    pub fn new_test_manifold<T: ToString>(bucket: T, remote: &Remote) -> Result<Self> {
+    pub fn new_test_manifold<T: ToString>(
+        bucket: T,
+        remote: &Remote,
+        repoid: RepositoryId,
+    ) -> Result<Self> {
         let heads = MemHeads::new();
         let bookmarks = MemBookmarks::new();
         let blobstore = ManifoldBlob::new_may_panic(bucket.to_string(), remote);
@@ -141,6 +152,7 @@ impl BlobRepo {
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
+            repoid,
         ))
     }
 
@@ -299,6 +311,7 @@ impl Clone for BlobRepo {
             blobstore: self.blobstore.clone(),
             linknodes: self.linknodes.clone(),
             changesets: self.changesets.clone(),
+            repoid: self.repoid.clone(),
         }
     }
 }
