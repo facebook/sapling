@@ -136,6 +136,8 @@ diffopts2 = [
      _('number of lines of context to show'), _('NUM')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
     ('', 'root', '', _('produce diffs relative to subdirectory'), _('DIR')),
+    ('', 'only-files-in-revs', None,
+     _('only show changes for files modified in the requested revisions')),
 ]
 
 mergetoolopts = [

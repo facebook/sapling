@@ -1842,6 +1842,7 @@ def diff(ui, repo, *pats, **opts):
     change = opts.get('change')
     stat = opts.get('stat')
     reverse = opts.get('reverse')
+    onlyfilesinrevs = opts.get('only_files_in_revs')
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
@@ -1854,6 +1855,11 @@ def diff(ui, repo, *pats, **opts):
 
     if reverse:
         node1, node2 = node2, node1
+
+    if onlyfilesinrevs:
+        files1 = set(repo[node1].files())
+        files2 = set(repo[node2].files())
+        pats = pats + tuple(repo.wvfs.join(f) for f in files1 | files2)
 
     diffopts = patch.diffallopts(ui, opts)
     m = scmutil.match(repo[node2], pats, opts)

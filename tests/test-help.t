@@ -698,6 +698,8 @@ Test command without options
    -U --unified NUM         number of lines of context to show
       --stat                output diffstat-style summary of changes
       --root DIR            produce diffs relative to subdirectory
+      --only-files-in-revs  only show changes for files modified in the
+                            requested revisions
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -S --subrepos            recurse into subrepositories
