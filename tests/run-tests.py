@@ -1269,6 +1269,7 @@ class TTest(Test):
             self.name = '%s (case %s)' % (self.name, _strpath(case))
             self.errpath = b'%s.%s.err' % (self.errpath[:-4], case)
             self._tmpname += b'-%s' % case
+        self._hghavecache = {}
 
     @property
     def refpath(self):
@@ -1308,6 +1309,19 @@ class TTest(Test):
         return self._processoutput(exitcode, output, salt, after, expected)
 
     def _hghave(self, reqs):
+        # Cache the results of _hghave() checks.
+        # In some cases the same _hghave() call can be repeated hundreds of
+        # times in a row.  (For instance, if a linematch check with a hghave
+        # requirement does not match, the _hghave() call will be repeated for
+        # each remaining line in the test output.)
+        key = tuple(reqs)
+        result = self._hghavecache.get(key)
+        if result is None:
+            result = self._computehghave(reqs)
+            self._hghavecache[key] = result
+        return result
+
+    def _computehghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
         runtestdir = os.path.abspath(os.path.dirname(_bytespath(__file__)))
         tdir = runtestdir.replace(b'\\', b'/')
