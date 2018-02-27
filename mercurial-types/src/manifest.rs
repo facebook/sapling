@@ -7,8 +7,8 @@
 use std::fmt::{self, Display};
 
 use failure::Error;
-use futures::future::Future;
-use futures::stream::Stream;
+use futures::future::{self, Future};
+use futures::stream::{self, Stream};
 
 use blob::Blob;
 use blobnode::Parents;
@@ -46,6 +46,18 @@ pub trait Manifest: Send + 'static {
         Self: Sync + Sized,
     {
         Box::new(self)
+    }
+}
+
+pub struct EmptyManifest;
+
+impl Manifest for EmptyManifest {
+    fn lookup(&self, _path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+        future::ok(None).boxify()
+    }
+
+    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
+        stream::empty().boxify()
     }
 }
 

@@ -30,6 +30,7 @@ extern crate fileblob;
 extern crate filebookmarks;
 extern crate fileheads;
 extern crate filelinknodes;
+#[macro_use]
 extern crate futures_ext;
 extern crate heads;
 extern crate linknodes;
@@ -49,6 +50,7 @@ mod manifest;
 mod file;
 mod errors;
 mod utils;
+mod repo_commit;
 
 pub use errors::*;
 
@@ -56,6 +58,9 @@ pub use changeset::BlobChangeset;
 pub use file::BlobEntry;
 pub use manifest::BlobManifest;
 pub use repo::BlobRepo;
+pub use repo_commit::ChangesetHandle;
+// TODO: This is exported for testing - is this the right place for it?
+pub use repo_commit::compute_changed_files;
 //
 // TODO: (jsgf) T21597565 This is exposed here for blobimport -- don't use it for anything else.
 

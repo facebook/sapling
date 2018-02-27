@@ -4,17 +4,18 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 
 use bincode;
 use bytes::Bytes;
-use failure::ResultExt;
+use failure::{Fail, ResultExt};
 use futures::{Async, Poll};
 use futures::future::Future;
 use futures::stream::{self, Stream};
+use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobstore::Blobstore;
@@ -27,12 +28,12 @@ use filelinknodes::FileLinknodes;
 use heads::Heads;
 use linknodes::Linknodes;
 use manifoldblob::ManifoldBlob;
-use memblob::EagerMemblob;
+use memblob::{EagerMemblob, LazyMemblob};
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{Blob, BlobNode, Changeset, ChangesetId, Entry, MPath, Manifest, NodeHash,
-                      Parents, RepoPath, RepositoryId};
+                      Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::ManifestId;
 use rocksblob::Rocksblob;
@@ -43,6 +44,7 @@ use BlobChangeset;
 use BlobManifest;
 use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, BlobEntry};
+use repo_commit::*;
 use utils::{get_node, get_node_key, RawNodeBlob};
 
 pub struct BlobRepo {
@@ -121,6 +123,24 @@ impl BlobRepo {
         heads: MemHeads,
         bookmarks: MemBookmarks,
         blobstore: EagerMemblob,
+        linknodes: MemLinknodes,
+        changesets: SqliteChangesets,
+        repoid: RepositoryId,
+    ) -> Self {
+        Self::new(
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+            Arc::new(changesets),
+            repoid,
+        )
+    }
+
+    pub fn new_lazymemblob(
+        heads: MemHeads,
+        bookmarks: MemBookmarks,
+        blobstore: LazyMemblob,
         linknodes: MemLinknodes,
         changesets: SqliteChangesets,
         repoid: RepositoryId,
@@ -309,6 +329,84 @@ impl BlobRepo {
                 .map(|_| (blob_entry, path))
                 .boxify(),
         ))
+    }
+
+    /// Create a changeset in this repo. This will upload all the blobs to the underlying Blobstore
+    /// and ensure that the changeset is marked as "complete".
+    /// No attempt is made to clean up the Blobstore if the changeset creation fails
+    pub fn create_changeset(
+        &self,
+        p1: Option<ChangesetHandle>,
+        p2: Option<ChangesetHandle>,
+        root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
+        new_child_entries: BoxStream<(BlobEntry, RepoPath), Error>,
+        user: String,
+        time: Time,
+        extra: BTreeMap<Vec<u8>, Vec<u8>>,
+        comments: String,
+    ) -> ChangesetHandle {
+        let entry_processor = UploadEntries::new(self.blobstore.clone());
+        let (signal_parent_ready, can_be_parent) = oneshot::channel();
+
+        let upload_entries = process_entries(
+            self.clone(),
+            &entry_processor,
+            root_manifest,
+            new_child_entries,
+        );
+
+        let parents_complete = extract_parents_complete(&p1, &p2);
+        let parents_data = handle_parents(self.clone(), p1, p2);
+        let changeset = {
+            upload_entries.join(parents_data).and_then({
+                let linknodes = self.linknodes.clone();
+                let blobstore = self.blobstore.clone();
+
+                move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
+                    compute_changed_files(
+                        &root_manifest,
+                        p1_manifest.as_ref(),
+                        p2_manifest.as_ref(),
+                    ).and_then({
+                        move |files| {
+                            let blobcs = try_boxfuture!(make_new_changeset(
+                                parents,
+                                root_hash,
+                                user,
+                                time,
+                                extra,
+                                files,
+                                comments,
+                            ));
+
+                            let cs_id = blobcs.get_changeset_id().into_nodehash();
+                            let manifest_id = *blobcs.manifestid();
+
+                            blobcs
+                                .save(blobstore)
+                                .join(entry_processor.finalize(linknodes, cs_id))
+                                .map(move |_| {
+                                    // We deliberately eat this error - this is only so that
+                                    // another changeset can start uploading to the blob store
+                                    // while we complete this one
+                                    let _ = signal_parent_ready.send((cs_id, manifest_id));
+                                })
+                                .map(move |_| blobcs)
+                                .boxify()
+                        }
+                    })
+                }
+            })
+        };
+
+        let parents_complete =
+            parents_complete.map_err(|e| ErrorKind::ParentsFailed.context(e).into());
+
+        // TODO This should call the completion API before returning changeset
+        ChangesetHandle::new_pending(
+            can_be_parent.shared(),
+            parents_complete.and_then(|_| changeset).boxify().shared(),
+        )
     }
 }
 

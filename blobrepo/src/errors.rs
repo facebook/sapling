@@ -11,8 +11,7 @@ use bytes::Bytes;
 
 pub use failure::Error;
 
-use mercurial_types::{Blob, BlobHash, NodeHash};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::{Blob, BlobHash, ChangesetId, NodeHash, Parents, RepoPath, Type};
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -48,6 +47,18 @@ pub enum ErrorKind {
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(NodeHash, BlobHash),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(Blob<Bytes>),
+    #[fail(display = "Parents are not in blob store {:?}", _0)] ParentsUnknown(Parents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
     SerializationFailed(NodeHash, bincode::Error),
+    #[fail(display = "Root manifest is not a manifest (type {})", _0)] BadRootManifest(Type),
+    #[fail(display = "Manifest type {} does not match uploaded type {}", _0, _1)]
+    ManifestTypeMismatch(Type, Type),
+    #[fail(display = "Node generation failed for unknown reason")] NodeGenerationFailed,
+    #[fail(display = "Path {} appears multiple times in manifests", _0)] DuplicateEntry(RepoPath),
+    #[fail(display = "Duplicate manifest hash {}", _0)] DuplicateManifest(NodeHash),
+    #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(NodeHash),
+    #[fail(display = "Some manifests do not exist")] MissingManifests,
+    #[fail(display = "Parents failed to complete")] ParentsFailed,
+    #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]
+    NotAManifest(NodeHash, Type),
 }

@@ -132,7 +132,7 @@ where
             .get_changeset_by_changesetid(&csid)
             .from_err()
             .and_then(move |cs| {
-                let bcs = BlobChangeset::new(&csid, cs);
+                let bcs = BlobChangeset::new_with_id(&csid, cs);
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
                     .map_err(Error::from)

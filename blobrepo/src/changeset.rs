@@ -43,11 +43,27 @@ fn cskey(changesetid: &ChangesetId) -> String {
 }
 
 impl BlobChangeset {
-    pub fn new(changesetid: &ChangesetId, revlogcs: RevlogChangeset) -> Self {
+    pub fn new(revlogcs: RevlogChangeset) -> Result<Self> {
+        let node = revlogcs.get_node()?;
+        let nodeid = node.nodeid()
+            .ok_or(Error::from(ErrorKind::NodeGenerationFailed))?;
+        let changesetid = ChangesetId::new(nodeid);
+
+        Ok(Self {
+            changesetid,
+            revlogcs,
+        })
+    }
+
+    pub fn new_with_id(changesetid: &ChangesetId, revlogcs: RevlogChangeset) -> Self {
         Self {
             changesetid: *changesetid,
             revlogcs,
         }
+    }
+
+    pub fn get_changeset_id(&self) -> ChangesetId {
+        self.changesetid
     }
 
     pub fn load(

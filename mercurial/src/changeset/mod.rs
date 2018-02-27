@@ -153,6 +153,26 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
 }
 
 impl RevlogChangeset {
+    pub fn new_from_parts(
+        parents: Parents,
+        manifestid: ManifestId,
+        user: Vec<u8>,
+        time: Time,
+        extra: BTreeMap<Vec<u8>, Vec<u8>>,
+        files: Vec<MPath>,
+        comments: Vec<u8>,
+    ) -> Self {
+        Self {
+            parents,
+            manifestid,
+            user,
+            time,
+            extra: Extra(extra),
+            files,
+            comments,
+        }
+    }
+
     pub fn new<T: AsRef<[u8]>>(node: BlobNode<T>) -> Result<Self> {
         Self::parse(node)
     }
