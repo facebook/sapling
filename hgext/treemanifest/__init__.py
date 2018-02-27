@@ -600,62 +600,11 @@ class memtreemanifestctx(object):
     def read(self):
         return self._treemanifest
 
-    def write(self, transaction, link, p1, p2, added, removed):
-        if not util.safehasattr(transaction, 'treedatapack'):
-            mfl = self._manifestlog
-            opener = mfl._opener
-            ui = self._manifestlog.ui
-            packpath = shallowutil.getlocalpackpath(
-                    opener.vfs.base,
-                    'manifests')
-            transaction.treedatapack = mutabledatapack(
-                    ui,
-                    packpath)
-            transaction.treehistpack = mutablehistorypack(
-                    ui,
-                    packpath)
-            def finalize(tr):
-                tr.treedatapack.close()
-                tr.treehistpack.close()
-                mfl.datastore.markforrefresh()
-            def abort(tr):
-                tr.treedatapack.abort()
-                tr.treehistpack.abort()
-            def writepending(tr):
-                finalize(tr)
-                transaction.treedatapack = mutabledatapack(
-                        ui,
-                        packpath)
-                transaction.treehistpack = mutablehistorypack(
-                        ui,
-                        packpath)
-                # re-register to write pending changes so that a series
-                # of writes are correctly flushed to the store.  This
-                # happens during amend.
-                tr.addpending('treepack', writepending)
-            transaction.addfinalize('treepack', finalize)
-            transaction.addabort('treepack', abort)
-            transaction.addpending('treepack', writepending)
-
-        dpack = transaction.treedatapack
-        hpack = transaction.treehistpack
-
-        newtree = self._treemanifest
-        p1tree = self._manifestlog[p1].read()
-        newtreeiter = newtree.finalize(p1tree)
-
-        node = None
-        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-            # Not using deltas, since there aren't any other trees in
-            # this pack it could delta against.
-            dpack.add(nname, nnode, revlog.nullid, ntext)
-            hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
-            if nname == "":
-                node = nnode
-
-        if node is not None:
-            self._manifestlog.addmemtree(node, newtree, p1, p2)
-        return node
+    def write(self, tr, linkrev, p1, p2, added, removed):
+        mfl = self._manifestlog
+        linknode = mfl._maplinkrev(linkrev)
+        return _writeclientmanifest(
+            self._treemanifest, tr, mfl, p1, p2, linknode)
 
 def serverreposetup(repo):
     extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
@@ -750,6 +699,57 @@ def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
         del treemfrevlog.__dict__['addrevision']
 
     return n
+
+def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode):
+    assert isinstance(mfl, treeonlymanifestlog)
+    if not util.safehasattr(tr, 'treedatapack'):
+        opener = mfl._opener
+        ui = mfl.ui
+        packpath = shallowutil.getlocalpackpath(opener.vfs.base, 'manifests')
+        tr.treedatapack = mutabledatapack(ui, packpath)
+        tr.treehistpack = mutablehistorypack(ui, packpath)
+
+        def finalize(tr):
+            tr.treedatapack.close()
+            tr.treehistpack.close()
+            mfl.datastore.markforrefresh()
+
+        def abort(tr):
+            tr.treedatapack.abort()
+            tr.treehistpack.abort()
+
+        def writepending(tr):
+            finalize(tr)
+            tr.treedatapack = mutabledatapack(ui, packpath)
+            tr.treehistpack = mutablehistorypack(ui, packpath)
+
+            # re-register to write pending changes so that a series
+            # of writes are correctly flushed to the store.  This
+            # happens during amend.
+            tr.addpending('treepack', writepending)
+
+        tr.addfinalize('treepack', finalize)
+        tr.addabort('treepack', abort)
+        tr.addpending('treepack', writepending)
+
+    dpack = tr.treedatapack
+    hpack = tr.treehistpack
+
+    p1tree = mfl[p1node].read()
+    newtreeiter = newtree.finalize(p1tree)
+
+    node = None
+    for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+        # Not using deltas, since there aren't any other trees in
+        # this pack it could delta against.
+        dpack.add(nname, nnode, revlog.nullid, ntext)
+        hpack.add(nname, nnode, np1, np2, linknode, '')
+        if nname == "":
+            node = nnode
+
+    if node is not None:
+        mfl.addmemtree(node, newtree, p1node, p2node)
+    return node
 
 @command('debuggentrees', [
     ('s', 'skip-allowed-roots', None,
