@@ -700,7 +700,12 @@ def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
 
     return n
 
-def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode):
+def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
+                         overridenode=None):
+    """Writes the given tree into the given treeonly manifestlog. If
+    `overridenode` is specified, the tree root is written with that node instead
+    of its actual node.
+    """
     assert isinstance(mfl, treeonlymanifestlog)
     if not util.safehasattr(tr, 'treedatapack'):
         opener = mfl._opener
@@ -732,19 +737,27 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode):
         tr.addabort('treepack', abort)
         tr.addpending('treepack', writepending)
 
-    dpack = tr.treedatapack
-    hpack = tr.treehistpack
+    # If the manifest was already committed as a flat manifest, use
+    # its node.
+    if overridenode is not None:
+        dpack = InterceptedMutableDataPack(tr.treedatapack, overridenode,
+                                           p1node)
+        hpack = InterceptedMutableHistoryPack(tr.treehistpack, overridenode,
+                                           p1node)
+    else:
+        dpack = tr.treedatapack
+        hpack = tr.treehistpack
 
     p1tree = mfl[p1node].read()
     newtreeiter = newtree.finalize(p1tree)
 
-    node = None
+    node = overridenode
     for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
         # Not using deltas, since there aren't any other trees in
         # this pack it could delta against.
         dpack.add(nname, nnode, revlog.nullid, ntext)
         hpack.add(nname, nnode, np1, np2, linknode, '')
-        if nname == "":
+        if node is None and nname == "":
             node = nnode
 
     if node is not None:
