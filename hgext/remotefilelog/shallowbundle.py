@@ -50,20 +50,6 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
 
     yield self.close()
 
-def _cansendflat(repo, mfnodes):
-    if not util.safehasattr(repo.manifestlog, '_revlog'):
-        return False
-
-    if repo.ui.configbool('treemanifest', 'treeonly'):
-        return False
-
-    revlog = repo.manifestlog._revlog
-    for mfnode in mfnodes:
-        if mfnode not in revlog.nodemap:
-            return False
-
-    return True
-
 @shallowutil.interposeclass(changegroup, 'cg1packer')
 class shallowcg1packer(changegroup.cg1packer):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
@@ -76,6 +62,24 @@ class shallowcg1packer(changegroup.cg1packer):
     def group(self, nodelist, rlog, lookup, units=None, reorder=None):
         return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
                             units=units)
+
+    def _cansendflat(self, mfnodes):
+        repo = self._repo
+        if 'treeonly' in self._bundlecaps:
+            return False
+
+        if not util.safehasattr(repo.manifestlog, '_revlog'):
+            return False
+
+        if repo.ui.configbool('treemanifest', 'treeonly'):
+            return False
+
+        revlog = repo.manifestlog._revlog
+        for mfnode in mfnodes:
+            if mfnode not in revlog.nodemap:
+                return False
+
+        return True
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
                           mfs, fnodes, *args, **kwargs):
@@ -107,7 +111,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 # conversion). In that case, don't worry if the prefetch fails.
                 pass
 
-        if _cansendflat(repo, mfs.keys()):
+        if self._cansendflat(mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
             # us.
             chunks = super(shallowcg1packer, self).generatemanifests(
@@ -280,7 +284,7 @@ if util.safehasattr(changegroup, 'cg3packer'):
             # If we're not sending flat manifests, then the subclass
             # generatemanifests call did not add the appropriate closing chunk
             # for a changegroup3.
-            if not _cansendflat(self._repo, mfs.keys()):
+            if not self._cansendflat(mfs.keys()):
                 yield self._manifestsdone()
 
 # Unused except in older versions of Mercurial

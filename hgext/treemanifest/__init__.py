@@ -198,6 +198,8 @@ def uisetup(ui):
                             _unpackmanifestscg1)
     extensions.wrapfunction(changegroup.cg3unpacker, '_unpackmanifests',
                             _unpackmanifestscg3)
+    extensions.wrapfunction(exchange, '_pullbundle2extraprepare',
+                            pullbundle2extraprepare)
     extensions.wrapfunction(revlog.revlog, 'checkhash', _checkhash)
 
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
@@ -2085,3 +2087,9 @@ class cachestore(object):
             nodeinfo = self.store.getnodeinfo(name, node)
             self._write(key, self._serializenodeinfo(nodeinfo))
             return nodeinfo
+
+def pullbundle2extraprepare(orig, pullop, kwargs):
+    repo = pullop.repo
+    if treeenabled(repo.ui) and repo.ui.configbool('treemanifest', 'treeonly'):
+        bundlecaps = kwargs.get('bundlecaps', set())
+        bundlecaps.add('treeonly')
