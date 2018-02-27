@@ -76,7 +76,7 @@ class unioncontentstore(object):
             except KeyError:
                 pass
 
-        raise KeyError((name, hex(node)))
+        raise shallowutil.MissingNodesError([(name, node)])
 
     def getdeltachain(self, name, node):
         """Returns the deltachain for the given name/node pair.

@@ -469,8 +469,7 @@ class treeonlymanifestlog(object):
         try:
             store.get(dir, node)
         except KeyError:
-            raise KeyError("tree node not found (%s, %s)" %
-                           (dir, hex(node)))
+            raise shallowutil.MissingNodesError([(dir, node)])
 
         return treemanifestctx(self, dir, node)
 
@@ -1224,15 +1223,17 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
                             (count, time.time() - start))
 
         if missingnodes:
-            raise shallowutil.MissingNodesError(missingnodes,
-                                    'nodes missing from server response')
+            raise shallowutil.MissingNodesError(
+                (('', n) for n in missingnodes),
+                'tree nodes missing from server response')
     except bundle2.AbortFromPart as exc:
         repo.ui.debug('remote: abort: %s\n' % exc)
         # Give stderr some time to reach the client, so we can read it into the
         # currently pushed ui buffer, instead of it randomly showing up in a
         # future ui read.
         time.sleep(0.1)
-        raise shallowutil.MissingNodesError(mfnodes, hint=exc.hint)
+        raise shallowutil.MissingNodesError((('', n) for n in mfnodes),
+                                            hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
     finally:

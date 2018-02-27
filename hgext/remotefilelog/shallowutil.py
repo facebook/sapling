@@ -529,15 +529,16 @@ def getreponame(ui):
         return os.path.basename(reponame)
     return "unknown"
 
-class MissingNodesError(error.Abort):
-    def __init__(self, nodes, message=None, hint=None):
-        nodes = list(nodes)
-        nodestr = '\n'.join(hex(mfnode) for mfnode in nodes[:10])
-        if len(nodes) > 10:
-            nodestr += '\n...'
-        fullmessage = _(
-            'unable to download the following trees from the server:')
-        if message is not None:
-            fullmessage += ' ' + message
-        fullmessage += '\n' + nodestr
-        super(MissingNodesError, self).__init__(fullmessage, hint=hint)
+class MissingNodesError(error.Abort, KeyError):
+    def __init__(self, keys, message=None, hint=None):
+        keys = list(keys)
+        nodestr = ', '.join("('%s', %s)" % (name, hex(node)) for name, node in
+                            keys[:10])
+        if len(keys) > 10:
+            nodestr += ',...'
+
+        if message is None:
+            message = _(
+                'unable to find the following nodes locally or on the server: ')
+        message += nodestr
+        super(MissingNodesError, self).__init__(message, hint=hint)

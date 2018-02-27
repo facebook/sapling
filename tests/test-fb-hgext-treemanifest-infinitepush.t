@@ -201,8 +201,10 @@ Pull a normal scratch branch into a treeonly client
   new changesets 42ec76eb772a
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg log -r 42ec76eb772a -T ' ' --stat
-  abort: unable to download the following trees from the server:
-  bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9
+  abort: "unable to find the following nodes locally or on the server: ('', bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9)"
+  [255]
+  $ hg log -r 42ec76eb772a -T ' ' --stat
+  abort: "unable to find the following nodes locally or on the server: ('', bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9)"
   [255]
   $ cd ..
 
