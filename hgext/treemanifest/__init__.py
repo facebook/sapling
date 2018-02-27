@@ -631,8 +631,11 @@ class memtreemanifestctx(object):
     def write(self, tr, linkrev, p1, p2, added, removed):
         mfl = self._manifestlog
         linknode = mfl._maplinkrev(linkrev)
-        return _writeclientmanifest(
+        node = _writeclientmanifest(
             self._treemanifest, tr, mfl, p1, p2, linknode)
+        if node is not None and util.safehasattr(mfl, 'addmemtree'):
+            mfl.addmemtree(node, self._treemanifest, p1, p2)
+        return node
 
 def serverreposetup(repo):
     extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
@@ -751,8 +754,6 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
         if node is None and nname == "":
             node = nnode
 
-    if node is not None and util.safehasattr(mfl, 'addmemtree'):
-        mfl.addmemtree(node, newtree, p1node, p2node)
     return node
 
 @command('debuggentrees', [
@@ -874,8 +875,10 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         assert linkrev != -1, "attempting to create manifest with null linkrev"
         _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
     else:
-        _writeclientmanifest(newtree, tr, tmfl, p1node, p2node, linknode,
-                             overridenode=mfctx.node())
+        node = _writeclientmanifest(newtree, tr, tmfl, p1node, p2node, linknode,
+                                    overridenode=mfctx.node())
+        if node is not None and util.safehasattr(tmfl, 'addmemtree'):
+            tmfl.addmemtree(node, newtree, p1node, p2node)
 
 def _getnewtree(newflat, parenttree, parentflat):
     diff = parentflat.diff(newflat)

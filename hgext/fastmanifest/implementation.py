@@ -1052,9 +1052,13 @@ class manifestfactory(object):
                     fflag = m.flags(filename)
                     newtree.set(filename, fnode, fflag)
 
+                tmfl = mfl.treemanifestlog
                 node = treemanifest._writeclientmanifest(newtree, transaction,
-                               mfl.treemanifestlog, p1, p2, revlog.nullid,
+                               tmfl, p1, p2, revlog.nullid,
                                overridenode=node)
+
+                if node is not None and util.safehasattr(tmfl, 'addmemtree'):
+                    tmfl.addmemtree(node, self._treemanifest, p1, p2)
 
                 treemanifestcache.getinstance(opener,
                                               mfl.ui)[node] = newtree
