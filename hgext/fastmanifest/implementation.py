@@ -1031,7 +1031,6 @@ class manifestfactory(object):
             node = orig(mfctx, transaction, link, p1, p2, added, removed)
 
         if supportsctree and treeenabled:
-            datastore = mfl.datastore
             opener = mfctx._revlog().opener
 
             m = mfctx._manifestdict
@@ -1054,72 +1053,80 @@ class manifestfactory(object):
                     fflag = m.flags(filename)
                     newtree.set(filename, fnode, fflag)
 
-                if not util.safehasattr(transaction, 'treedatapack'):
-                    packpath = shallowutil.getlocalpackpath(
-                            opener.vfs.base,
-                            'manifests')
-                    transaction.treedatapack = datapack.mutabledatapack(
-                            self.ui,
-                            packpath)
-                    transaction.treehistpack = historypack.mutablehistorypack(
-                            self.ui,
-                            packpath)
-                    def finalize(tr):
-                        tr.treedatapack.close()
-                        tr.treehistpack.close()
-                        treemanifestcache.getinstance(opener,
-                                                      self.ui).clear()
-                        datastore.markforrefresh()
-
-                    def writepending(tr):
-                        finalize(tr)
-                        transaction.treedatapack = datapack.mutabledatapack(
-                                self.ui,
-                                packpath)
-                        transaction.treehistpack = \
-                            historypack.mutablehistorypack(
-                                self.ui,
-                                packpath)
-                        # re-register to write pending changes so that a series
-                        # of writes are correctly flushed to the store.  This
-                        # happens during amend.
-                        tr.addpending('treepack', writepending)
-
-                    def abort(tr):
-                        tr.treedatapack.abort()
-                        tr.treehistpack.abort()
-                    transaction.addfinalize('treepack', finalize)
-                    transaction.addabort('treepack', abort)
-                    transaction.addpending('treepack', writepending)
-
-                # If the manifest was already committed as a flat manifest, use
-                # its node.
-                if node is not None:
-                    dpack = treemanifest.InterceptedMutableDataPack(
-                            transaction.treedatapack,
-                            node, p1)
-                    hpack = treemanifest.InterceptedMutableHistoryPack(
-                            transaction.treehistpack, node, p1)
-                else:
-                    dpack = transaction.treedatapack
-                    hpack = transaction.treehistpack
-
-                newtreeiter = newtree.finalize(tree)
-                for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-                    # If the node wasn't set by a flat manifest, use the tree
-                    # root node.
-                    if node is None and nname == '':
-                        node = nnode
-
-                    # Not using deltas, since there aren't any other trees in
-                    # this pack it could delta against.
-                    dpack.add(nname, nnode, revlog.nullid, ntext)
-                    hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
-
-                treemanifestcache.getinstance(opener,
-                                              self.ui)[node] = newtree
+                node = _writetree(mfl, transaction, newtree, tree, node, p1)
 
         return node
+
+def _writetree(mfl, transaction, newtree, tree, node, p1):
+    datastore = mfl.datastore
+    opener = mfl._opener
+
+    if not util.safehasattr(transaction, 'treedatapack'):
+        packpath = shallowutil.getlocalpackpath(
+                opener.vfs.base,
+                'manifests')
+        transaction.treedatapack = datapack.mutabledatapack(
+                mfl.ui,
+                packpath)
+        transaction.treehistpack = historypack.mutablehistorypack(
+                mfl.ui,
+                packpath)
+        def finalize(tr):
+            tr.treedatapack.close()
+            tr.treehistpack.close()
+            treemanifestcache.getinstance(opener,
+                                          mfl.ui).clear()
+            datastore.markforrefresh()
+
+        def writepending(tr):
+            finalize(tr)
+            transaction.treedatapack = datapack.mutabledatapack(
+                    mfl.ui,
+                    packpath)
+            transaction.treehistpack = \
+                historypack.mutablehistorypack(
+                    mfl.ui,
+                    packpath)
+            # re-register to write pending changes so that a series
+            # of writes are correctly flushed to the store.  This
+            # happens during amend.
+            tr.addpending('treepack', writepending)
+
+        def abort(tr):
+            tr.treedatapack.abort()
+            tr.treehistpack.abort()
+        transaction.addfinalize('treepack', finalize)
+        transaction.addabort('treepack', abort)
+        transaction.addpending('treepack', writepending)
+
+    # If the manifest was already committed as a flat manifest, use
+    # its node.
+    if node is not None:
+        dpack = treemanifest.InterceptedMutableDataPack(
+                transaction.treedatapack,
+                node, p1)
+        hpack = treemanifest.InterceptedMutableHistoryPack(
+                transaction.treehistpack, node, p1)
+    else:
+        dpack = transaction.treedatapack
+        hpack = transaction.treehistpack
+
+    newtreeiter = newtree.finalize(tree)
+    for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+        # If the node wasn't set by a flat manifest, use the tree
+        # root node.
+        if node is None and nname == '':
+            node = nnode
+
+        # Not using deltas, since there aren't any other trees in
+        # this pack it could delta against.
+        dpack.add(nname, nnode, revlog.nullid, ntext)
+        hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
+
+    treemanifestcache.getinstance(opener,
+                                  mfl.ui)[node] = newtree
+
+    return node
 
 def _silent_debug(*args, **kwargs):
     """Replacement for ui.debug that silently swallows the arguments.
