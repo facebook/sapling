@@ -66,6 +66,7 @@ pub fn resolve(
                 .ensure_stream_finished(bundle2)
                 .and_then(move |()| resolver.prepare_response(changegroup_id))
         })
+        .map_err(|err| err.context("bundle2-resolver error").into())
         .boxify()
 }
 
@@ -123,12 +124,16 @@ impl Bundle2Resolver {
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
                         .collect()
-                        .join(upload_blobs(repo, convert_to_revlog_filelog(f)))
+                        .join(
+                            upload_blobs(repo, convert_to_revlog_filelog(f))
+                                .map_err(|err| err.context("While uploading File Blobs").into()),
+                        )
                         .map(move |(changesets, filelogs)| (part_id, changesets, filelogs, bundle2))
                         .boxify()
                 }
                 _ => err(format_err!("Expected Bundle2 Changegroup")).boxify(),
             })
+            .map_err(|err| err.context("While resolving Changegroup").into())
             .boxify()
     }
 
@@ -145,11 +150,13 @@ impl Bundle2Resolver {
             .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
                 Some(Bundle2Item::B2xTreegroup2(_, parts)) => {
                     upload_blobs(repo, TreemanifestBundle2Parser::new(parts))
+                        .map_err(|err| err.context("While uploading Manifest Blobs").into())
                         .map(move |manifests| (manifests, bundle2))
                         .boxify()
                 }
                 _ => err(format_err!("Expected Bundle2 B2xTreegroup2")).boxify(),
             })
+            .map_err(|err| err.context("While resolving B2xTreegroup2").into())
             .boxify()
     }
 
@@ -195,6 +202,7 @@ impl Bundle2Resolver {
         bundle
             .build()
             .map(|cursor| Bytes::from(cursor.into_inner()))
+            .map_err(|err| err.context("While preparing response").into())
             .boxify()
     }
 }

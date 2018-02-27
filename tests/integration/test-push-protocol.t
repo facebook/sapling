@@ -229,7 +229,7 @@ push to Mononoke
   bundle2-output-part: "replycaps" 196 bytes payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  remote: * ERRO Command failed, remote: true, error: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2, root_cause: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2, backtrace:  (glob)
+  remote: * ERRO Command failed, remote: true, error: bundle2-resolver error, root_cause: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2, backtrace: , cause: While resolving Changegroup, cause: While uploading File Blobs, cause: Either the Filelogs are not topologically sorted or the base (NodeHash(Sha1(0600b58cce771984a57da11a12d8e402ea7e7e38))) is not present in this bundle2 (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

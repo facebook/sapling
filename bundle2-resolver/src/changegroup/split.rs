@@ -27,13 +27,17 @@ where
     let (changesets, remainder) = cg2s.take_while(|part| match part {
         &Part::CgChunk(Section::Changeset, _) => Ok(true),
         &Part::SectionEnd(Section::Changeset) => Ok(false),
-        bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
+        bad => bail_msg!("Expected Changeset chunk or end, found: {:?}", bad),
     }).return_remainder();
 
     let changesets = changesets
         .and_then(|part| match part {
             Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
-            bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
+            bad => bail_msg!("Expected Changeset chunk, found: {:?}", bad),
+        })
+        .map_err(|err| {
+            err.context("While extracting Changesets from Changegroup")
+                .into()
         })
         .boxify();
 
@@ -49,8 +53,12 @@ where
                     Ok(true)
                 }
                 _ if seen_manifest_end => Ok(false),
-                bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
+                bad => bail_msg!("Expected Manifest end, found: {:?}", bad),
             }
+        })
+        .map_err(|err| {
+            err.context("While skipping Manifests in Changegroup")
+                .into()
         })
         .and_then({
             let mut seen_filelog = None;
@@ -73,6 +81,10 @@ where
                     },
                 }
             }
+        })
+        .map_err(|err| {
+            err.context("While extracting Filelogs from Changegroup")
+                .into()
         })
         .filter_map(|x| x)
         .boxify();
