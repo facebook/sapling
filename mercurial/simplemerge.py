@@ -471,7 +471,10 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
             mergedtext += line
 
     if not opts.get('print'):
-        localctx.write(mergedtext, localctx.flags())
+        # HACK(phillco): We need to call ``workingflags()`` if ``localctx`` is
+        # a workingfilectx (see workingfilectx.workingflags).
+        flags = getattr(localctx, 'workingflags', localctx.flags)()
+        localctx.write(mergedtext, flags)
 
     if m3.conflicts and not mode == 'union':
         return 1

@@ -125,6 +125,9 @@ class abstractvfs(object):
     def islink(self, path=None):
         return os.path.islink(self.join(path))
 
+    def isexec(self, path=None):
+        return util.isexec(self.join(path))
+
     def isfileorlink(self, path=None):
         '''return whether path is a regular file or a symlink
 

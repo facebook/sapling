@@ -1944,6 +1944,21 @@ class workingfilectx(committablefilectx):
     def audit(self):
         return self._repo.wvfs.audit(self._path)
 
+    def workingflags(self):
+        """Returns this file's flags ('l', 'x', 'lx', or '') by inspecting
+        the working copy.
+
+        This *should* be the default behavior of flags() to mimic data(),
+        size(), exists(), etc.; since it does not exist, flags() returns the
+        p1's flags for ``file`` instead.
+
+        However, too much existing code relies on this to switch whole hog.
+        """
+        vfs = self._repo.wvfs
+        flags = [vfs.islink(self._path) and 'l',
+                 vfs.isexec(self._path) and 'x']
+        return ''.join(filter(None, flags))
+
     def cmp(self, fctx):
         """compare with other file context
 
