@@ -733,6 +733,9 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
             # happens during amend.
             tr.addpending('treepack', writepending)
 
+            # returning False indicates there are no pending changes.
+            return False
+
         tr.addfinalize('treepack', finalize)
         tr.addabort('treepack', abort)
         tr.addpending('treepack', writepending)
