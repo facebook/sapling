@@ -193,7 +193,8 @@ def uisetup(ui):
 
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
 
-    extensions.wrapfunction(manifest.memmanifestctx, 'write', _writemanifest)
+    extensions.wrapfunction(
+        manifest.memmanifestctx, 'write', _writemanifestwrapper)
 
     extensions.wrapcommand(commands.table, 'pull', pull)
 
@@ -654,50 +655,16 @@ def getmanifestlog(orig, self):
 
     return mfl
 
-def _writemanifest(orig, self, transaction, link, p1, p2, added, removed):
-    n = orig(self, transaction, link, p1, p2, added, removed)
+def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
+    n = orig(self, tr, link, p1, p2, added, removed)
 
     mfl = self._manifestlog
-    if (not util.safehasattr(mfl._revlog.opener, 'treemanifestserver') or
-        not mfl._revlog.opener.treemanifestserver):
-        return n
-
-    # Since we're adding the root flat manifest, let's add the corresponding
-    # root tree manifest.
-    treemfl = mfl.treemanifestlog
-
-    m = self._manifestdict
-
-    parentflat = mfl[p1].read()
-    diff = parentflat.diff(m)
-
-    newtree = treemfl[p1].read().copy()
-    added = []
-    removed = []
-    for filename, (old, new) in diff.iteritems():
-        if new is not None and new[0] is not None:
-            added.append(filename)
-            newtree[filename] = new[0]
-            newtree.setflag(filename, new[1])
-        else:
-            removed.append(filename)
-            del newtree[filename]
-
-    try:
-        treemfrevlog = treemfl._revlog
-        oldaddrevision = treemfrevlog.addrevision
-        def addusingnode(*args, **kwargs):
-            newkwargs = kwargs.copy()
-            newkwargs['node'] = n
-            return oldaddrevision(*args, **newkwargs)
-        treemfrevlog.addrevision = addusingnode
-
-        def readtree(dir, node):
-            return treemfl.get(dir, node).read()
-        treemfrevlog.add(newtree, transaction, link, p1, p2, added, removed,
-                         readtree=readtree)
-    finally:
-        del treemfrevlog.__dict__['addrevision']
+    if (util.safehasattr(mfl._revlog.opener, 'treemanifestserver') and
+        mfl._revlog.opener.treemanifestserver):
+        # Since we're adding the root flat manifest, let's add the corresponding
+        # root tree manifest.
+        tmfl = mfl.treemanifestlog
+        _converttotree(tr, mfl, tmfl, self, link)
 
     return n
 

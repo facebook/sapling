@@ -1416,6 +1416,8 @@ class memmanifestctx(object):
     def __init__(self, manifestlog):
         self._manifestlog = manifestlog
         self._manifestdict = manifestdict()
+        self._node = None
+        self._parents = None
         self._linkrev = None
 
     def _revlog(self):
@@ -1433,10 +1435,28 @@ class memmanifestctx(object):
         return self._manifestdict
 
     def write(self, transaction, link, p1, p2, added, removed):
+        if self._node is not None:
+            raise error.ProgrammingError("calling memmanifestctx.write() twice")
+
         node = self._revlog().add(self._manifestdict, transaction, link, p1, p2,
                                   added, removed)
+        self._node = node
+        self._parents = (p1, p2)
         self._linkrev = link
         return node
+
+    @property
+    def parents(self):
+        if self._parents is None:
+            raise error.ProgrammingError("accessing memmanifestctx.parents "
+                                         "before write()")
+        return self._parents
+
+    def node(self):
+        if self._node is None:
+            raise error.ProgrammingError("accessing memmanifestctx.node() "
+                                         "before write()")
+        return self._node
 
     @property
     def linknode(self):
