@@ -759,28 +759,6 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
     `overridenode` is specified, the tree root is written with that node instead
     of its actual node.
     """
-    if mfl._mutabledatapack is None:
-        def finalize(tr):
-            mfl.commitpending()
-
-        def abort(tr):
-            mfl.abortpending()
-
-        def writepending(tr):
-            mfl.commitpending()
-
-            # re-register to write pending changes so that a series
-            # of writes are correctly flushed to the store.  This
-            # happens during amend.
-            tr.addpending('treepack', writepending)
-
-            # returning False indicates there are no pending changes.
-            return False
-
-        tr.addfinalize('treepack', finalize)
-        tr.addabort('treepack', abort)
-        tr.addpending('treepack', writepending)
-
     p1tree = mfl[p1node].read()
     # Unwrap hybrid manifests from fastmanifest. This is a temporary hack until
     # the next patch which deletes this entire function.

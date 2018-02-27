@@ -568,8 +568,13 @@ class localrepository(object):
             return ret
         return checksvfs
 
+    @unfilteredmethod
     def close(self):
         self._writecaches()
+
+        # If we have any pending manifests, commit them to disk.
+        if 'manifestlog' in self.__dict__:
+            self.manifestlog.commitpending()
 
     def _loadextensions(self):
         extensions.loadall(self.ui)
@@ -1284,6 +1289,28 @@ class localrepository(object):
         tr.changes['bookmarks'] = {}
 
         tr.hookargs['txnid'] = txnid
+
+        # Write parts of the repository store that don't participate in the
+        # standard transaction mechanism.
+        unfi = self.unfiltered()
+        def commitnotransaction(tr):
+            if 'manifestlog' in unfi.__dict__:
+                self.manifestlog.commitpending()
+        def abortnotransaction(tr):
+            if 'manifestlog' in unfi.__dict__:
+                self.manifestlog.abortpending()
+        def writependingnotransaction(tr):
+            commitnotransaction(tr)
+            tr.addpending('notransaction', writependingnotransaction)
+            return False
+        tr.addfinalize('notransaction', commitnotransaction)
+        tr.addabort('notransaction', abortnotransaction)
+        tr.addpending('notransaction', writependingnotransaction)
+
+        # If any writes happened outside the transaction, go ahead and flush
+        # them before opening the new transaction.
+        commitnotransaction(None)
+
         # note: writing the fncache only during finalize mean that the file is
         # outdated when running hooks. As fncache is used for streaming clone,
         # this is not expected to break anything that happen during the hooks.
@@ -1543,6 +1570,11 @@ class localrepository(object):
                 # want to lose them.
                 # TODO: Solve the problem instead of working around it.
                 continue
+
+            if k == 'manifestlog' and 'manifestlog' in unfiltered.__dict__:
+                # The manifestlog may have uncommitted additions, let's just
+                # flush them to disk so we don't lose them.
+                self.manifestlog.commitpending()
 
             if clearfilecache:
                 del self._filecache[k]
