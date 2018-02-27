@@ -1412,6 +1412,14 @@ class manifestlog(object):
         self._dirmancache.clear()
         self._revlog.clearcaches()
 
+    def commitpending(self):
+        """Used in alternative manifestlog implementations to flush additions to
+        disk."""
+
+    def abortpending(self):
+        """Used in alternative manifestlog implementations to throw out pending
+        additions."""
+
 class memmanifestctx(object):
     def __init__(self, manifestlog):
         self._manifestlog = manifestlog

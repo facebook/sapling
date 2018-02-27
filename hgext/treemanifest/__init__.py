@@ -426,8 +426,73 @@ def setuptreestores(repo, mfl):
 
     remotestore.setshared(mfl.datastore, mfl.historystore)
 
-class treemanifestlog(manifest.manifestlog):
+class basetreemanifestlog(object):
+    def __init__(self):
+        self._mutabledatapack = None
+        self._mutablehistorypack = None
+
+    def add(self, ui, newtree, p1tree, overridenode=None, overridep1node=None):
+        """Writes the given tree into the manifestlog. If `overridenode` is
+        specified, the tree root is written with that node instead of its actual
+        node. If `overridep1node` is specified, the the p1 node for the root
+        tree is also overriden.
+        """
+        if self._mutabledatapack is None:
+            packpath = shallowutil.getlocalpackpath(
+                    self._opener.vfs.base,
+                    'manifests')
+            self._mutabledatapack = mutabledatapack(ui, packpath)
+            self._mutablehistorypack = mutablehistorypack(ui, packpath)
+
+        newtreeiter = newtree.finalize(p1tree)
+
+        dpack = self._mutabledatapack
+        hpack = self._mutablehistorypack
+        if overridenode is not None:
+            dpack = InterceptedMutableDataPack(
+                    dpack, overridenode, overridep1node)
+            hpack = InterceptedMutableHistoryPack(
+                    hpack, overridenode, overridep1node)
+
+        node = overridenode
+        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+            # Not using deltas, since there aren't any other trees in
+            # this pack it could delta against.
+            dpack.add(nname, nnode, revlog.nullid, ntext)
+            hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
+            if node is None and nname == "":
+                node = nnode
+
+        return node
+
+    def commitpending(self):
+        if self._mutabledatapack is not None:
+            dpack = self._mutabledatapack
+            hpack = self._mutablehistorypack
+
+            dpack.close()
+            hpack.close()
+
+            self._mutabledatapack = None
+            self._mutablehistorypack = None
+
+            self.datastore.markforrefresh()
+            self.historystore.markforrefresh()
+
+    def abortpending(self):
+        if self._mutabledatapack is not None:
+            dpack = self._mutabledatapack
+            hpack = self._mutablehistorypack
+
+            dpack.abort()
+            hpack.abort()
+
+            self._mutabledatapack = None
+            self._mutablehistorypack = None
+
+class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
     def __init__(self, opener, repo, treemanifest=False):
+        basetreemanifestlog.__init__(self)
         assert treemanifest is False
         cachesize = 4
 
@@ -449,8 +514,9 @@ class treemanifestlog(manifest.manifestlog):
 
         self.cachesize = cachesize
 
-class treeonlymanifestlog(object):
+class treeonlymanifestlog(basetreemanifestlog):
     def __init__(self, opener, repo):
+        super(treeonlymanifestlog, self).__init__()
         self._opener = opener
         self._memtrees = {}
         self._changelog = repo.unfiltered().changelog
@@ -693,26 +759,15 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
     `overridenode` is specified, the tree root is written with that node instead
     of its actual node.
     """
-    if not util.safehasattr(tr, 'treedatapack'):
-        opener = mfl._opener
-        ui = mfl.ui
-        packpath = shallowutil.getlocalpackpath(opener.vfs.base, 'manifests')
-        tr.treedatapack = mutabledatapack(ui, packpath)
-        tr.treehistpack = mutablehistorypack(ui, packpath)
-
+    if mfl._mutabledatapack is None:
         def finalize(tr):
-            tr.treedatapack.close()
-            tr.treehistpack.close()
-            mfl.datastore.markforrefresh()
+            mfl.commitpending()
 
         def abort(tr):
-            tr.treedatapack.abort()
-            tr.treehistpack.abort()
+            mfl.abortpending()
 
         def writepending(tr):
-            finalize(tr)
-            tr.treedatapack = mutabledatapack(ui, packpath)
-            tr.treehistpack = mutablehistorypack(ui, packpath)
+            mfl.commitpending()
 
             # re-register to write pending changes so that a series
             # of writes are correctly flushed to the store.  This
@@ -726,34 +781,14 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
         tr.addabort('treepack', abort)
         tr.addpending('treepack', writepending)
 
-    # If the manifest was already committed as a flat manifest, use
-    # its node.
-    if overridenode is not None:
-        dpack = InterceptedMutableDataPack(tr.treedatapack, overridenode,
-                                           p1node)
-        hpack = InterceptedMutableHistoryPack(tr.treehistpack, overridenode,
-                                           p1node)
-    else:
-        dpack = tr.treedatapack
-        hpack = tr.treehistpack
-
     p1tree = mfl[p1node].read()
     # Unwrap hybrid manifests from fastmanifest. This is a temporary hack until
     # the next patch which deletes this entire function.
     if util.safehasattr(p1tree, '_treemanifest'):
         p1tree = p1tree._treemanifest()
 
-    newtreeiter = newtree.finalize(p1tree)
-
-    node = overridenode
-    for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-        # Not using deltas, since there aren't any other trees in
-        # this pack it could delta against.
-        dpack.add(nname, nnode, revlog.nullid, ntext)
-        hpack.add(nname, nnode, np1, np2, linknode, '')
-        if node is None and nname == "":
-            node = nnode
-
+    node = mfl.add(mfl.ui, newtree, p1tree, overridenode=overridenode,
+                   overridep1node=p1node)
     return node
 
 @command('debuggentrees', [
