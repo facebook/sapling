@@ -216,6 +216,53 @@ def _watchmantofsencoding(path):
 
     return encoded
 
+def _finddirs(dirstate):
+    '''Query watchman for all directories in the working copy'''
+    state = dirstate._fsmonitorstate
+    dirstate._watchmanclient.settimeout(state.timeout + 0.1)
+    result = dirstate._watchmanclient.command('query', {
+        'fields': ['name'],
+            'expression': [
+                'allof', ['type', 'd'],
+                [
+                    'not', [
+                        'anyof', ['dirname', '.hg'],
+                        ['name', '.hg', 'wholename']
+                    ]
+                ]
+            ],
+            'sync_timeout': int(state.timeout * 1000),
+            'empty_on_fresh_instance': state.walk_on_invalidate,
+        })
+    return result['files']
+
+def wrappurge(orig, repo, match, findfiles, finddirs, includeignored):
+    # If includeignored is set, we always need to do a full rewalk.
+    if includeignored:
+        return orig(repo, match, findfiles, finddirs, includeignored)
+
+    files = []
+    dirs = []
+    usefastdirs = True
+    if finddirs:
+        try:
+            fastdirs = _finddirs(repo.dirstate)
+        except Exception:
+            repo.ui.debug('fsmonitor: fallback to core purge, '
+                          'query dirs failed')
+            usefastdirs = False
+
+    if findfiles or not usefastdirs:
+        files, dirs = orig(repo, match, findfiles,
+                           finddirs and not usefastdirs, False)
+
+    if finddirs and usefastdirs:
+        dirs = (f for f in sorted(fastdirs, reverse=True)
+                if (match(f) and not os.listdir(repo.wjoin(f)) and
+                    not repo.dirstate._dirignore(f)))
+
+    return files, dirs
+
 def overridewalk(orig, self, match, subrepos, unknown, ignored, full=True):
     '''Replacement for dirstate.walk, hooking into Watchman.
 
@@ -628,6 +675,13 @@ def extsetup(ui):
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
     extensions.wrapfunction(merge, 'update', wrapupdate)
+
+    def purgeloaded(loaded=False):
+        if not loaded:
+            return
+        purge = extensions.find('purge')
+        extensions.wrapfunction(purge, 'findthingstopurge', wrappurge)
+    extensions.afterloaded('purge', purgeloaded)
 
 def wrapsymlink(orig, source, link_name):
     ''' if we create a dangling symlink, also touch the parent dir

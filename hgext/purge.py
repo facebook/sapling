@@ -44,6 +44,35 @@ command = registrar.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
 
+def findthingstopurge(repo, match, findfiles, finddirs, includeignored):
+    """Find files and/or directories that should be purged.
+
+    Returns a pair (files, dirs), where files is an iterable of files to
+    remove, and dirs is an iterable of directories to remove.
+    """
+    if finddirs:
+        directories = []
+        match.explicitdir = match.traversedir = directories.append
+
+    status = repo.status(match=match, ignored=includeignored, unknown=True)
+
+    if findfiles:
+        files = sorted(status.unknown + status.ignored)
+    else:
+        files = []
+
+    if finddirs:
+        # Use a generator expression to lazily test for directory contents,
+        # otherwise nested directories that are being removed would be counted
+        # when in reality they'd be removed already by the time the parent
+        # directory is to be removed.
+        dirs = (f for f in sorted(directories, reverse=True)
+                if (match(f) and not os.listdir(repo.wjoin(f))))
+    else:
+        dirs = []
+
+    return files, dirs
+
 @command('purge|clean',
     [('a', 'abort-on-err', None, _('abort if an error occurs')),
     ('',  'all', None, _('purge ignored files too')),
@@ -91,6 +120,7 @@ def purge(ui, repo, *dirs, **opts):
         act = False # --print0 implies --print
     removefiles = opts.get('files')
     removedirs = opts.get('dirs')
+    removeignored = opts.get('all')
     if not removefiles and not removedirs:
         removefiles = True
         removedirs = True
@@ -108,20 +138,15 @@ def purge(ui, repo, *dirs, **opts):
             ui.write('%s%s' % (name, eol))
 
     match = scmutil.match(repo[None], dirs, opts)
-    if removedirs:
-        directories = []
-        match.explicitdir = match.traversedir = directories.append
-    status = repo.status(match=match, ignored=opts.get('all'), unknown=True)
+    files, dirs = findthingstopurge(repo, match, removefiles, removedirs,
+                                    removeignored)
 
-    if removefiles:
-        for f in sorted(status.unknown + status.ignored):
-            if act:
-                ui.note(_('removing file %s\n') % f)
-            remove(util.unlink, f)
+    for f in files:
+        if act:
+            ui.note(_('removing file %s\n') % f)
+        remove(util.unlink, f)
 
-    if removedirs:
-        for f in sorted(directories, reverse=True):
-            if match(f) and not os.listdir(repo.wjoin(f)):
-                if act:
-                    ui.note(_('removing directory %s\n') % f)
-                remove(os.rmdir, f)
+    for f in dirs:
+        if act:
+            ui.note(_('removing directory %s\n') % f)
+        remove(os.rmdir, f)
