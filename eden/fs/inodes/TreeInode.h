@@ -82,7 +82,9 @@ class TreeInode : public InodeBase {
      * Create a hash for a materialized entry.
      */
     Entry(mode_t m, fusell::InodeNumber number)
-        : mode_(m), inodeNumber_{number} {}
+        : mode_(m), inodeNumber_{number} {
+      DCHECK(number.hasValue());
+    }
 
     Entry(Entry&& e) = default;
     Entry& operator=(Entry&& e) = default;
@@ -107,20 +109,21 @@ class TreeInode : public InodeBase {
     }
 
     bool hasInodeNumber() const {
-      return inodeNumber_ != 0;
+      return inodeNumber_.hasValue();
     }
     fusell::InodeNumber getInodeNumber() const {
-      DCHECK_NE(inodeNumber_, 0);
+      DCHECK(inodeNumber_.hasValue());
       return inodeNumber_;
     }
     void setInodeNumber(fusell::InodeNumber number) {
-      DCHECK_EQ(inodeNumber_, 0);
+      DCHECK(number.hasValue());
+      DCHECK(!inodeNumber_.hasValue());
       DCHECK(!inode_);
       inodeNumber_ = number;
     }
 
     void setMaterialized(fusell::InodeNumber inode) {
-      DCHECK(inodeNumber_ == 0 || inode == inodeNumber_);
+      DCHECK(inodeNumber_.empty() || inode == inodeNumber_);
       inodeNumber_ = inode;
       hash_.clear();
     }
@@ -204,7 +207,7 @@ class TreeInode : public InodeBase {
      * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
      * is set.)
      */
-    fusell::InodeNumber inodeNumber_{0};
+    fusell::InodeNumber inodeNumber_{};
 
     /**
      * A pointer to the child inode, if it is loaded, or null if it is not

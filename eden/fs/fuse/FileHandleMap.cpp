@@ -132,7 +132,7 @@ SerializedFileHandleMap FileHandleMap::serializeMap() {
 
     entry.handleId = (int64_t)it.first;
     entry.isDir = std::dynamic_pointer_cast<DirHandle>(it.second) != nullptr;
-    entry.inodeNumber = it.second->getInodeNumber();
+    entry.inodeNumber = it.second->getInodeNumber().get();
 
     result.entries.push_back(std::move(entry));
   }

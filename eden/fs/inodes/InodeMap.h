@@ -475,7 +475,7 @@ class InodeMap {
     std::unordered_map<fusell::InodeNumber, UnloadedInode> unloadedInodes_;
 
     /** The next inode number to allocate */
-    fusell::InodeNumber nextInodeNumber_{FUSE_ROOT_ID + 1};
+    uint64_t nextInodeNumber_{FUSE_ROOT_ID + 1};
 
     /**
      * A promise to fulfill once shutdown() completes.

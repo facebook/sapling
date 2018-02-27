@@ -83,8 +83,7 @@ class FakeFileHandle : public FileHandle {
 };
 } // namespace
 
-FileHandleMapEntry
-makeEntry(fusell::InodeNumber inode, uint64_t handleId, bool isDir) {
+FileHandleMapEntry makeEntry(uint64_t inode, uint64_t handleId, bool isDir) {
   FileHandleMapEntry entry;
   entry.inodeNumber = inode;
   entry.handleId = (int64_t)handleId;
@@ -95,8 +94,8 @@ makeEntry(fusell::InodeNumber inode, uint64_t handleId, bool isDir) {
 TEST(FileHandleMap, Serialization) {
   FileHandleMap fmap;
 
-  auto fileHandle = std::make_shared<FakeFileHandle>(123);
-  auto dirHandle = std::make_shared<FakeDirHandle>(345);
+  auto fileHandle = std::make_shared<FakeFileHandle>(fusell::InodeNumber{123});
+  auto dirHandle = std::make_shared<FakeDirHandle>(fusell::InodeNumber{345});
 
   auto fileHandleNo = fmap.recordHandle(fileHandle);
   auto dirHandleNo = fmap.recordHandle(dirHandle);

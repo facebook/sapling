@@ -140,7 +140,7 @@ TreeInode::TreeInode(
     PathComponentPiece name,
     Dir&& dir)
     : InodeBase(ino, dtype_t::Dir, parent, name), contents_(std::move(dir)) {
-  DCHECK_NE(ino, FUSE_ROOT_ID);
+  DCHECK_NE(ino, kRootNodeId);
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
@@ -161,7 +161,7 @@ fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
   fusell::Dispatcher::Attr attr(getMount()->initStatData());
 
   attr.st.st_mode = S_IFDIR | 0755;
-  attr.st.st_ino = getNodeId();
+  attr.st.st_ino = getNodeId().get();
 #if defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || \
     _POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700
   attr.st.st_atim = contents->timeStamps.atime.toTimespec();
@@ -194,7 +194,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(name);
     if (iter == contents->entries.end()) {
-      if (name == kDotEdenName && getNodeId() != FUSE_ROOT_ID) {
+      if (name == kDotEdenName && getNodeId() != kRootNodeId) {
         return getInodeMap()->lookupInode(getMount()->getDotEdenInodeNumber());
       }
 
@@ -3009,7 +3009,7 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   TreeInodeDebugInfo info;
-  info.inodeNumber = getNodeId();
+  info.inodeNumber = getNodeId().get();
   info.refcount = getRefcount();
 
   auto myPath = getPath();
@@ -3041,7 +3041,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
         auto& inodeEntry = entry.second;
         infoEntry.name = entry.first.stringPiece().str();
         if (inodeEntry.hasInodeNumber()) {
-          infoEntry.inodeNumber = inodeEntry.getInodeNumber();
+          infoEntry.inodeNumber = inodeEntry.getInodeNumber().get();
         } else {
           infoEntry.inodeNumber = 0;
         }
@@ -3059,7 +3059,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
     info.entries.emplace_back();
     auto& infoEntry = info.entries.back();
     infoEntry.name = childData.first.stringPiece().str();
-    infoEntry.inodeNumber = childData.second->getNodeId();
+    infoEntry.inodeNumber = childData.second->getNodeId().get();
     infoEntry.loaded = true;
 
     auto childTree = childData.second.asTreePtrOrNull();
@@ -3128,7 +3128,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
   // now we are simply setting the mode to (S_IFDIR | 0755).
 
   // Set InodeNumber, timeStamps, mode in the result.
-  result.st.st_ino = getNodeId();
+  result.st.st_ino = getNodeId().get();
   result.st.st_mode = S_IFDIR | 0755;
   auto contents = contents_.wlock();
   contents->timeStamps.setattrTimes(getClock(), attr);

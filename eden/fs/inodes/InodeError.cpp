@@ -47,7 +47,7 @@ const char* InodeError::what() const noexcept {
 std::string InodeError::computeMessage() const {
   std::string path;
   if (child_.hasValue()) {
-    if (inode_->getNodeId() == FUSE_ROOT_ID) {
+    if (inode_->getNodeId() == kRootNodeId) {
       path = child_.value().stringPiece().str();
     } else {
       path = inode_->getLogPath() + "/";

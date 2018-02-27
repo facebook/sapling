@@ -52,7 +52,7 @@ fuse_entry_out computeEntryParam(
     fusell::InodeNumber number,
     const fusell::Dispatcher::Attr& attr) {
   fuse_entry_out entry;
-  entry.nodeid = number;
+  entry.nodeid = number.get();
   entry.generation = 1;
   auto fuse_attr = attr.asFuseAttr();
   entry.attr = fuse_attr.attr;

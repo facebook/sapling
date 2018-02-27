@@ -70,9 +70,7 @@ namespace {
  * significant byte.  Inode numbers are allocated in monotonically increasing
  * order, so this helps spread them out across the subdirectories.
  */
-void formatSubdirPath(
-    MutableStringPiece subdirPath,
-    fusell::InodeNumber inode) {
+void formatSubdirPath(MutableStringPiece subdirPath, uint64_t inode) {
   constexpr char hexdigit[] = "0123456789abcdef";
   DCHECK_EQ(subdirPath.size(), 2);
   subdirPath[0] = hexdigit[(inode >> 4) & 0xf];
@@ -181,7 +179,7 @@ void Overlay::initNewOverlay() {
   // Populate these subdirectories now.
   std::array<char, 3> subdirPath;
   subdirPath[2] = '\0';
-  for (int n = 0; n < 256; ++n) {
+  for (uint64_t n = 0; n < 256; ++n) {
     formatSubdirPath(MutableStringPiece{subdirPath.data(), 2}, n);
     result = ::mkdirat(localDirFile.fd(), subdirPath.data(), 0755);
     if (result != 0 && errno != EEXIST) {
@@ -223,7 +221,9 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
       result.entries.emplace(PathComponentPiece{name}, value.mode, hash);
     } else {
       result.entries.emplace(
-          PathComponentPiece{name}, value.mode, value.inodeNumber);
+          PathComponentPiece{name},
+          value.mode,
+          fusell::InodeNumber::fromThrift(value.inodeNumber));
     }
   }
 
@@ -246,7 +246,7 @@ void Overlay::saveOverlayDir(
     overlay::OverlayEntry oent;
     oent.mode = ent.getModeUnsafe();
     if (ent.isMaterialized()) {
-      oent.inodeNumber = ent.getInodeNumber();
+      oent.inodeNumber = ent.getInodeNumber().get();
       DCHECK_NE(oent.inodeNumber, 0);
     } else {
       oent.inodeNumber = 0;
@@ -301,9 +301,9 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
   // we could tell if it was a file or directory.  This way we could do a
   // simpler scan of opening every single file.  For now we have to walk the
   // directory tree from the root downwards.
-  fusell::InodeNumber maxInode = FUSE_ROOT_ID;
+  auto maxInode = kRootNodeId;
   std::vector<fusell::InodeNumber> toProcess;
-  toProcess.push_back(FUSE_ROOT_ID);
+  toProcess.push_back(maxInode);
   while (!toProcess.empty()) {
     auto dirInodeNumber = toProcess.back();
     toProcess.pop_back();
@@ -315,14 +315,14 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
     }
 
     for (const auto& entry : dir.value().entries) {
-      auto entryInode =
-          static_cast<fusell::InodeNumber>(entry.second.inodeNumber);
-      if (entryInode == 0) {
+      if (entry.second.inodeNumber == 0) {
         continue;
       }
+      auto entryInode =
+          fusell::InodeNumber::fromThrift(entry.second.inodeNumber);
       maxInode = std::max(maxInode, entryInode);
       if (mode_to_dtype(entry.second.mode) == dtype_t::Dir) {
-        toProcess.push_back(entry.second.inodeNumber);
+        toProcess.push_back(entryInode);
       }
     }
   }
@@ -331,7 +331,7 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
   // filenames we see.  This is needed in case there are unlinked inodes
   // present.
   std::array<char, 2> subdir;
-  for (int n = 0; n < 256; ++n) {
+  for (uint64_t n = 0; n < 256; ++n) {
     formatSubdirPath(MutableStringPiece{subdir.data(), subdir.size()}, n);
     auto subdirPath = localDir_ +
         PathComponentPiece{StringPiece{subdir.data(), subdir.size()}};
@@ -339,9 +339,10 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
     auto boostPath = boost::filesystem::path{subdirPath.value().c_str()};
     for (const auto& entry : boost::filesystem::directory_iterator(boostPath)) {
       auto entryInodeNumber =
-          folly::tryTo<fusell::InodeNumber>(entry.path().filename().string());
+          folly::tryTo<uint64_t>(entry.path().filename().string());
       if (entryInodeNumber.hasValue()) {
-        maxInode = std::max(maxInode, entryInodeNumber.value());
+        maxInode =
+            std::max(maxInode, fusell::InodeNumber{entryInodeNumber.value()});
       }
     }
   }
@@ -356,7 +357,7 @@ const AbsolutePath& Overlay::getLocalDir() const {
 AbsolutePath Overlay::getFilePath(fusell::InodeNumber inodeNumber) const {
   std::array<char, 2> subdir;
   formatSubdirPath(
-      MutableStringPiece{subdir.data(), subdir.size()}, inodeNumber);
+      MutableStringPiece{subdir.data(), subdir.size()}, inodeNumber.get());
   auto numberStr = folly::to<string>(inodeNumber);
   return localDir_ +
       PathComponentPiece{StringPiece{subdir.data(), subdir.size()}} +

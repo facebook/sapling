@@ -245,7 +245,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
     // in attr.st.st_size.
     struct stat overlayStat;
     checkUnixError(fstat(file.fd(), &overlayStat));
-    result.st.st_ino = self->getNodeId();
+    result.st.st_ino = self->getNodeId().get();
     result.st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
     result.st.st_atim = state->timeStamps.atime.toTimespec();
     result.st.st_ctim = state->timeStamps.ctime.toTimespec();
@@ -444,7 +444,7 @@ folly::Future<struct stat> FileInode::stat() {
   return ensureDataLoaded().then([self = inodePtrFromThis()]() {
     auto st = self->getMount()->initStatData();
     st.st_nlink = 1;
-    st.st_ino = self->getNodeId();
+    st.st_ino = self->getNodeId().get();
 
     auto state = self->state_.wlock();
 

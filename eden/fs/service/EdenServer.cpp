@@ -534,7 +534,9 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
           // TODO: we should record the opendir() flags in the
           // SerializedFileHandleMap so that we can restore
           // the correct flags here.
-          dispatcher->opendir(handleEntry.inodeNumber, 0)
+          dispatcher
+              ->opendir(
+                  fusell::InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
               .then([dispatcher, number = handleEntry.handleId](
                         std::shared_ptr<fusell::DirHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
@@ -546,7 +548,10 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
           // TODO: we should record the open() flags in the
           // SerializedFileHandleMap so that we can restore
           // the correct flags here.
-          dispatcher->open(handleEntry.inodeNumber, O_RDWR)
+          dispatcher
+              ->open(
+                  fusell::InodeNumber::fromThrift(handleEntry.inodeNumber),
+                  O_RDWR)
               .then([dispatcher, number = handleEntry.handleId](
                         std::shared_ptr<fusell::FileHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(

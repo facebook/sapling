@@ -33,7 +33,7 @@ TEST(InodeMap, invalidInodeNumber) {
 
   EdenBugDisabler noCrash;
   auto* inodeMap = testMount.getEdenMount()->getInodeMap();
-  auto future = inodeMap->lookupFileInode(0x12345678);
+  auto future = inodeMap->lookupFileInode(fusell::InodeNumber{0x12345678});
   EXPECT_THROW_RE(future.get(), std::runtime_error, "unknown inode number");
 }
 

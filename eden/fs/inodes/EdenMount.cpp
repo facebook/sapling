@@ -208,7 +208,7 @@ folly::Future<folly::Unit> EdenMount::initialize() {
 folly::Future<TreeInodePtr> EdenMount::createRootInode(
     const ParentCommits& parentCommits) {
   // Load the overlay, if present.
-  auto rootOverlayDir = overlay_->loadOverlayDir(FUSE_ROOT_ID);
+  auto rootOverlayDir = overlay_->loadOverlayDir(kRootNodeId);
   if (rootOverlayDir) {
     return folly::makeFuture<TreeInodePtr>(
         TreeInodePtr::makeNew(this, std::move(rootOverlayDir.value())));

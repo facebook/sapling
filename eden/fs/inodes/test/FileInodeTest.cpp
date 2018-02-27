@@ -108,7 +108,7 @@ fusell::Dispatcher::Attr setFileAttr(
 void basicAttrChecks(
     const FileInodePtr& inode,
     const fusell::Dispatcher::Attr& attr) {
-  EXPECT_EQ(inode->getNodeId(), attr.st.st_ino);
+  EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
   EXPECT_EQ(1, attr.st.st_nlink);
   EXPECT_EQ(inode->getMount()->getUid(), attr.st.st_uid);
   EXPECT_EQ(inode->getMount()->getGid(), attr.st.st_gid);

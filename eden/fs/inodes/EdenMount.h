@@ -570,7 +570,7 @@ class EdenMount {
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
-  fusell::InodeNumber dotEdenInodeNumber_{0};
+  fusell::InodeNumber dotEdenInodeNumber_{};
 
   /**
    * A mutex around all name-changing operations in this mount point.

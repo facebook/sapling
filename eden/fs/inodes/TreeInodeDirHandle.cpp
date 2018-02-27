@@ -55,7 +55,10 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     /// If 0, look up/assign it based on name
     fusell::InodeNumber ino;
 
-    Entry(folly::StringPiece name, dtype_t type, fusell::InodeNumber ino = 0)
+    Entry(
+        folly::StringPiece name,
+        dtype_t type,
+        fusell::InodeNumber ino = fusell::InodeNumber{})
         : name(name), type(type), ino(ino) {}
   };
   folly::fbvector<Entry> entries;
@@ -93,16 +96,18 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 
   while (entry_iter < entries.end()) {
     const auto& entry = *entry_iter;
-    st.st_ino = entry.ino;
-    st.st_mode = dtype_to_mode(entry.type);
 
-    if (st.st_ino == 0) {
+    if (entry.ino.hasValue()) {
+      st.st_ino = entry.ino.get();
+    } else {
       // We haven't looked up its inode yet, do so now.
       // We defer it from the first pass above in case we have a huge
       // dir and need to paginate through it across several calls into
       // this function.
-      st.st_ino = inode_->getChildInodeNumber(PathComponentPiece{entry.name});
+      st.st_ino =
+          inode_->getChildInodeNumber(PathComponentPiece{entry.name}).get();
     }
+    st.st_mode = dtype_to_mode(entry.type);
 
     if (!list.add(entry.name, st, ++off)) {
       break;

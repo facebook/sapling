@@ -29,7 +29,7 @@ InodeBase::~InodeBase() {
 }
 
 InodeBase::InodeBase(EdenMount* mount)
-    : ino_{FUSE_ROOT_ID},
+    : ino_{kRootNodeId},
       type_{dtype_t::Dir},
       mount_{mount},
       location_{
@@ -52,7 +52,7 @@ InodeBase::InodeBase(
       location_{LocationInfo{std::move(parent), name}} {
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
-  DCHECK_NE(ino_, 0);
+  DCHECK(ino_.hasValue());
   XLOG(DBG5) << "inode " << this << " (" << ino_
              << ") created: " << getLogPath();
 }
@@ -131,7 +131,7 @@ bool InodeBase::getPathHelper(
     // acquire the root inode's location lock.  (Otherwise all path lookups
     // would have to acquire the root's lock, making it more likely to be
     // contended.)
-    if (parent->ino_ == FUSE_ROOT_ID) {
+    if (parent->ino_ == kRootNodeId) {
       // Reverse the names vector, since we built it from bottom to top.
       std::reverse(names.begin(), names.end());
       return !unlinked;
@@ -155,7 +155,7 @@ bool InodeBase::getPathHelper(
 }
 
 folly::Optional<RelativePath> InodeBase::getPath() const {
-  if (ino_ == FUSE_ROOT_ID) {
+  if (ino_ == kRootNodeId) {
     return RelativePath();
   }
 
@@ -167,7 +167,7 @@ folly::Optional<RelativePath> InodeBase::getPath() const {
 }
 
 std::string InodeBase::getLogPath() const {
-  if (ino_ == FUSE_ROOT_ID) {
+  if (ino_ == kRootNodeId) {
     // We use "<root>" here instead of the empty string to make log messages
     // more understandable.  The empty string would likely be confusing, as it
     // would appear if the file name were missing.

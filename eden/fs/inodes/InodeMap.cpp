@@ -55,10 +55,10 @@ void InodeMap::initialize(
   auto data = data_.wlock();
   CHECK(!root_);
   root_ = std::move(root);
-  auto ret = data->loadedInodes_.emplace(FUSE_ROOT_ID, root_.get());
+  auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
   CHECK(ret.second);
-  DCHECK_GE(maxExistingInode, FUSE_ROOT_ID);
-  data->nextInodeNumber_ = maxExistingInode + 1;
+  DCHECK_GE(maxExistingInode, kRootNodeId);
+  data->nextInodeNumber_ = maxExistingInode.getRawValue() + 1;
 }
 
 Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
@@ -364,7 +364,7 @@ folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
       // If the inode is not loaded, return its parent's path as long as it's
       // parent isn't the root
       auto parent = unloadedIt->second.parent;
-      if (parent == FUSE_ROOT_ID) {
+      if (parent == kRootNodeId) {
         // The parent is the Eden mount root, just return its name (base case)
         return RelativePath(unloadedIt->second.name);
       }
@@ -434,8 +434,8 @@ SerializedInodeMap InodeMap::save() {
     const auto& entry = it.second;
     SerializedInodeMapEntry serializedEntry;
 
-    serializedEntry.inodeNumber = entry.number;
-    serializedEntry.parentInode = entry.parent;
+    serializedEntry.inodeNumber = entry.number.get();
+    serializedEntry.parentInode = entry.parent.get();
     serializedEntry.name = entry.name.stringPiece().str();
     serializedEntry.isUnlinked = entry.isUnlinked;
     serializedEntry.numFuseReferences = entry.numFuseReferences;
@@ -457,7 +457,9 @@ void InodeMap::load(const SerializedInodeMap& takeover) {
   data->nextInodeNumber_ = takeover.nextInodeNumber;
   for (const auto& entry : takeover.unloadedInodes) {
     auto unloadedEntry = UnloadedInode(
-        entry.inodeNumber, entry.parentInode, PathComponentPiece{entry.name});
+        fusell::InodeNumber::fromThrift(entry.inodeNumber),
+        fusell::InodeNumber::fromThrift(entry.parentInode),
+        PathComponentPiece{entry.name});
     unloadedEntry.numFuseReferences = entry.numFuseReferences;
     if (entry.numFuseReferences < 0) {
       auto message = folly::to<std::string>(
@@ -474,7 +476,8 @@ void InodeMap::load(const SerializedInodeMap& takeover) {
     unloadedEntry.mode = entry.mode;
 
     auto result = data->unloadedInodes_.emplace(
-        entry.inodeNumber, std::move(unloadedEntry));
+        fusell::InodeNumber::fromThrift(entry.inodeNumber),
+        std::move(unloadedEntry));
     if (!result.second) {
       auto message = folly::to<std::string>(
           "failed to emplace inode number ",
@@ -713,7 +716,7 @@ bool InodeMap::shouldLoadChild(
     fusell::InodeNumber childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-  CHECK_LT(childInode, data->nextInodeNumber_);
+  CHECK_LT(childInode.get(), data->nextInodeNumber_);
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
@@ -772,9 +775,7 @@ fusell::InodeNumber InodeMap::allocateInodeNumber(Members& data) {
   static_assert(
       sizeof(data.nextInodeNumber_) >= 8,
       "expected fusell::InodeNumber to be at least 64-bits");
-  fusell::InodeNumber number = data.nextInodeNumber_;
-  ++data.nextInodeNumber_;
-  return number;
+  return fusell::InodeNumber{data.nextInodeNumber_++};
 }
 } // namespace eden
 } // namespace facebook
