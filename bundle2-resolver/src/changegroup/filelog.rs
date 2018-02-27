@@ -6,11 +6,12 @@
 
 use std::collections::HashMap;
 use std::mem;
+use std::sync::Arc;
 
 use bytes::Bytes;
 use futures::{Future, Stream};
-use futures::future::Shared;
-use futures_ext::{BoxFuture, BoxStream, StreamExt};
+use futures::future::{ok, Shared};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
@@ -48,38 +49,49 @@ impl UploadableBlob for Filelog {
     }
 }
 
-pub fn convert_to_revlog_filelog<S>(deltaed: S) -> BoxStream<Filelog, Error>
+pub fn convert_to_revlog_filelog<S>(repo: Arc<BlobRepo>, deltaed: S) -> BoxStream<Filelog, Error>
 where
     S: Stream<Item = FilelogDeltaed, Error = Error> + Send + 'static,
 {
-    let mut delta_cache = DeltaCache::new();
+    let mut delta_cache = DeltaCache::new(repo);
     deltaed
         .and_then(move |FilelogDeltaed { path, chunk }| {
-            let blob =
-                delta_cache.decode(chunk.node.clone(), chunk.base.into_option(), chunk.delta)?;
+            let CgDeltaChunk {
+                node,
+                base,
+                delta,
+                p1,
+                p2,
+                linknode,
+            } = chunk;
 
-            Ok(Filelog {
-                path: RepoPath::file(path)?,
-                node: chunk.node,
-                p1: chunk.p1.into_option(),
-                p2: chunk.p2.into_option(),
-                linknode: chunk.linknode,
-                blob,
-            })
+            delta_cache
+                .decode(node.clone(), base.into_option(), delta)
+                .and_then(move |blob| {
+                    Ok(Filelog {
+                        path: RepoPath::file(path)?,
+                        node,
+                        p1: p1.into_option(),
+                        p2: p2.into_option(),
+                        linknode,
+                        blob,
+                    })
+                })
+                .boxify()
         })
         .boxify()
 }
 
 struct DeltaCache {
-    bytes_cache: HashMap<NodeHash, Bytes>,
-    bytes_heap_size: i64,
+    repo: Arc<BlobRepo>,
+    bytes_cache: HashMap<NodeHash, Shared<BoxFuture<Bytes, Error>>>,
 }
 
 impl DeltaCache {
-    fn new() -> Self {
+    fn new(repo: Arc<BlobRepo>) -> Self {
         Self {
+            repo,
             bytes_cache: HashMap::new(),
-            bytes_heap_size: 0,
         }
     }
 
@@ -88,49 +100,56 @@ impl DeltaCache {
         node: NodeHash,
         base: Option<NodeHash>,
         delta: Delta,
-    ) -> Result<Blob<Bytes>> {
-        let vec = match base {
-            None => delta::apply(b"", &delta),
-            Some(base) => match self.bytes_cache.get(&base) {
-                Some(bytes) => delta::apply(bytes, &delta),
-                None => bail_msg!(
-                    "Either the Filelogs are not topologically sorted \
-                     or the base ({:?}) is not present in this bundle2",
-                    base
-                ),
-            },
+    ) -> BoxFuture<Blob<Bytes>, Error> {
+        let bytes = match self.bytes_cache.get(&node).cloned() {
+            Some(bytes) => bytes,
+            None => {
+                let dsize = delta.heap_size_of_children() as i64;
+                STATS::deltacache_dsize.add_value(dsize);
+                STATS::deltacache_dsize_large.add_value(dsize);
+
+                let vec = match base {
+                    None => ok(delta::apply(b"", &delta)).boxify(),
+                    Some(base) => {
+                        let fut = match self.bytes_cache.get(&base) {
+                            Some(bytes) => bytes
+                                .clone()
+                                .map(move |bytes| delta::apply(&bytes, &delta))
+                                .map_err(|err| format_err!("{:?}", err))
+                                .boxify(),
+                            None => self.repo
+                                .get_file_content(&base)
+                                .map(move |vec| delta::apply(vec.as_slice(), &delta))
+                                .boxify(),
+                        };
+                        fut.map_err(move |err| {
+                            err.context(format_err!(
+                                "While looking for base {:?} to apply on delta {:?}",
+                                base,
+                                node
+                            )).into()
+                        }).boxify()
+                    }
+                };
+
+                let bytes = vec.map(|vec| Bytes::from(vec)).boxify().shared();
+
+                if self.bytes_cache.insert(node, bytes.clone()).is_some() {
+                    panic!("Logic error: byte cache returned None for HashMap::get with node");
+                }
+                bytes
+            }
         };
 
-        let bytes = Bytes::from(vec);
-        ensure_msg!(
-            self.bytes_cache.insert(node, bytes.clone()).is_none(),
-            "Two Filelogs with identical node were provided"
-        );
-
-        let dsize = delta.heap_size_of_children() as i64;
-        STATS::deltacache_dsize.add_value(dsize);
-        STATS::deltacache_dsize_large.add_value(dsize);
-
-        let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
-        STATS::deltacache_fsize.add_value(fsize);
-        STATS::deltacache_fsize_large.add_value(fsize);
-        self.bytes_heap_size += fsize;
-
-        Ok(Blob::from(bytes))
-    }
-}
-
-impl ::std::ops::Drop for DeltaCache {
-    fn drop(&mut self) {
-        let approx_bucket_size =
-            self.bytes_cache.capacity() * (mem::size_of::<Bytes>() + mem::size_of::<NodeHash>());
-
-        let approx_keys_size = self.bytes_cache.len() * mem::size_of_val(&NULL_HASH);
-
-        let cache_size = approx_bucket_size as i64 + approx_keys_size as i64 + self.bytes_heap_size;
-
-        STATS::deltacache_size.add_value(cache_size);
-        STATS::deltacache_size_large.add_value(cache_size);
+        bytes
+            .inspect(|bytes| {
+                let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
+                STATS::deltacache_fsize.add_value(fsize);
+                STATS::deltacache_fsize_large.add_value(fsize);
+            })
+            .map(|bytes| Blob::from((*bytes).clone()))
+            .map_err(|err| format_err!("{:?}", err))
+            .boxify()
     }
 }
 
@@ -237,8 +256,10 @@ mod tests {
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
     {
-        let result = convert_to_revlog_filelog(iter_ok(inp.into_iter().collect::<Vec<_>>()))
-            .collect()
+        let result = convert_to_revlog_filelog(
+            Arc::new(BlobRepo::new_memblob_empty().unwrap()),
+            iter_ok(inp.into_iter().collect::<Vec<_>>()),
+        ).collect()
             .wait()
             .unwrap();
 
@@ -368,7 +389,11 @@ mod tests {
             vec![f2_deltaed, f1_deltaed]
         };
 
-        let result = convert_to_revlog_filelog(iter_ok(inp)).collect().wait();
+        let result = convert_to_revlog_filelog(
+            Arc::new(BlobRepo::new_memblob_empty().unwrap()),
+            iter_ok(inp),
+        ).collect()
+            .wait();
 
         match result {
             Ok(_) => assert!(

@@ -125,7 +125,7 @@ impl Bundle2Resolver {
                     convert_to_revlog_changesets(c)
                         .collect()
                         .join(
-                            upload_blobs(repo, convert_to_revlog_filelog(f))
+                            upload_blobs(repo.clone(), convert_to_revlog_filelog(repo, f))
                                 .map_err(|err| err.context("While uploading File Blobs").into()),
                         )
                         .map(move |(changesets, filelogs)| (part_id, changesets, filelogs, bundle2))

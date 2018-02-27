@@ -155,6 +155,18 @@ impl BlobRepo {
         )
     }
 
+    pub fn new_memblob_empty() -> Result<Self> {
+        Ok(Self::new(
+            Arc::new(MemHeads::new()),
+            Arc::new(MemBookmarks::new()),
+            Arc::new(EagerMemblob::new()),
+            Arc::new(MemLinknodes::new()),
+            Arc::new(SqliteChangesets::in_memory()
+                .context(ErrorKind::StateOpen(StateOpenError::Changesets))?),
+            RepositoryId::new(0),
+        ))
+    }
+
     pub fn new_test_manifold<T: ToString>(
         bucket: T,
         remote: &Remote,
