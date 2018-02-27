@@ -501,6 +501,9 @@ class hybridmanifestlog(manifest.manifestlog):
     def __init__(self, opener, repo):
         super(hybridmanifestlog, self).__init__(opener, repo)
 
+        self._opener = opener
+        self.ui = repo.ui
+
         self.treemanifestlog = treemanifestlog(opener, repo)
         setuptreestores(repo, self.treemanifestlog)
         self.datastore = self.treemanifestlog.datastore
@@ -687,7 +690,6 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
     `overridenode` is specified, the tree root is written with that node instead
     of its actual node.
     """
-    assert isinstance(mfl, treeonlymanifestlog)
     if not util.safehasattr(tr, 'treedatapack'):
         opener = mfl._opener
         ui = mfl.ui
@@ -744,7 +746,7 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
         if node is None and nname == "":
             node = nnode
 
-    if node is not None:
+    if node is not None and util.safehasattr(mfl, 'addmemtree'):
         mfl.addmemtree(node, newtree, p1node, p2node)
     return node
 
