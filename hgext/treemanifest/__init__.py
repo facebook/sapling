@@ -735,6 +735,11 @@ def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
         hpack = tr.treehistpack
 
     p1tree = mfl[p1node].read()
+    # Unwrap hybrid manifests from fastmanifest. This is a temporary hack until
+    # the next patch which deletes this entire function.
+    if util.safehasattr(p1tree, '_treemanifest'):
+        p1tree = p1tree._treemanifest()
+
     newtreeiter = newtree.finalize(p1tree)
 
     node = overridenode
