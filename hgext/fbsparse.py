@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg, pathutil, registrar, patch
+from mercurial import localrepo, error, hg, pathutil, registrar, patch, pycompat
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -1202,26 +1202,26 @@ def _cwdlist(repo):
     """
     ctx = repo['.']
     mf = ctx.manifest()
-    cwd = util.normpath(os.getcwd())
 
     # Get the root of the repo so that we remove the content of
     # the root from the current working directory
     root = repo.root
-    if cwd.startswith(root):
-        cwd = cwd[len(root):]
-    else:
-        raise error.Abort(_("the current working directory should begin " +
-            "with the root %s") % root)
+    cwd = util.normpath(pycompat.getcwd())
+    cwd = os.path.relpath(cwd, root)
+    cwd = '' if cwd == os.curdir else cwd + pycompat.ossep
+    if cwd.startswith(os.pardir + pycompat.ossep):
+        raise error.Abort(
+            _("the current working directory should begin "
+              "with the root %s") % root)
 
-    cwd = cwd.strip("/")
     sparsematch = repo.sparsematch(ctx.rev())
     checkedoutentries = set()
     allentries = set()
-    cwdlength = len(cwd) + 1
+    cwdlength = len(cwd)
+
     for filepath in mf:
         if filepath.startswith(cwd):
-            tail = filepath[cwdlength:] if cwdlength > 1 else filepath
-            entryname = tail.split('/', 1)[0]
+            entryname = filepath[cwdlength:].partition(pycompat.ossep)[0]
 
             allentries.add(entryname)
             if sparsematch(filepath):

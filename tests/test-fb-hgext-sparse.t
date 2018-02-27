@@ -354,7 +354,20 @@ Test --cwd-list
   $ hg sparse --cwd-list
   - bar
     foo
-  $ cd ..
+
+Make sure to match whole directory names, not prefixes
+
+  $ mkdir prefix prefixpostfix
+  $ touch prefix/correct prefixpostfix/incorrect
+  $ hg sparse -I prefix prefixpostfix
+  $ hg addremove .
+  adding prefix/correct
+  adding prefixpostfix/incorrect
+  $ hg ci -m 'subdirs'
+  $ cd prefix
+  $ hg sparse --cwd-list
+    correct
+  $ cd ../..
 
   $ cd ..
 

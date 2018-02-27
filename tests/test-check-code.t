@@ -95,9 +95,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   hgext/fastannotate/commands.py:43:
    >         reldir = os.path.relpath(os.getcwd(), reporoot)
    use pycompat.getcwd instead (py3)
-  hgext/fbsparse.py:1205:
-   >     cwd = util.normpath(os.getcwd())
-   use pycompat.getcwd instead (py3)
   Skipping hgext/hgsql.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/__init__.py it has no-che?k-code (glob)
   Skipping hgext/hgsubversion/compathacks.py it has no-che?k-code (glob)
