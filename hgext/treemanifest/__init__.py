@@ -497,6 +497,29 @@ class treeonlymanifestlog(object):
         manifestlogs."""
         return self._changelog.node(linkrev)
 
+class hybridmanifestlog(manifest.manifestlog):
+    def __init__(self, opener, repo):
+        super(hybridmanifestlog, self).__init__(opener, repo)
+
+        self.treemanifestlog = treemanifestlog(opener, repo)
+        setuptreestores(repo, self.treemanifestlog)
+        self.datastore = self.treemanifestlog.datastore
+        self.historystore = self.treemanifestlog.historystore
+
+        if util.safehasattr(self.treemanifestlog, 'shareddatastores'):
+            self.shareddatastores = self.treemanifestlog.shareddatastores
+            self.localdatastores = self.treemanifestlog.localdatastores
+            self.sharedhistorystores = self.treemanifestlog.sharedhistorystores
+            self.localhistorystores = self.treemanifestlog.localhistorystores
+
+    def commitpending(self):
+        super(hybridmanifestlog, self).commitpending()
+        self.treemanifestlog.commitpending()
+
+    def abortpending(self):
+        super(hybridmanifestlog, self).abortpending()
+        self.treemanifestlog.abortpending()
+
 class treemanifestctx(object):
     def __init__(self, manifestlog, dir, node):
         self._manifestlog = manifestlog
@@ -641,17 +664,7 @@ def getmanifestlog(orig, self):
         mfl = treeonlymanifestlog(self.svfs, self)
         setuptreestores(self, mfl)
     else:
-        mfl = orig(self)
-        mfl.treemanifestlog = treemanifestlog(self.svfs, self)
-        setuptreestores(self, mfl.treemanifestlog)
-        mfl.datastore = mfl.treemanifestlog.datastore
-        mfl.historystore = mfl.treemanifestlog.historystore
-
-        if util.safehasattr(mfl.treemanifestlog, 'shareddatastores'):
-            mfl.shareddatastores = mfl.treemanifestlog.shareddatastores
-            mfl.localdatastores = mfl.treemanifestlog.localdatastores
-            mfl.sharedhistorystores = mfl.treemanifestlog.sharedhistorystores
-            mfl.localhistorystores = mfl.treemanifestlog.localhistorystores
+        mfl = hybridmanifestlog(self.svfs, self)
 
     return mfl
 
