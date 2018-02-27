@@ -343,6 +343,10 @@ class EdenFS(object):
         return_code = self.run_unchecked('health')
         return return_code == 0
 
+    def set_log_level(self, category, level):
+        with self.get_thrift_client() as client:
+            client.debugSetLogLevel(category, level)
+
 
 class EdenCommandError(subprocess.CalledProcessError):
     def __init__(self, ex: subprocess.CalledProcessError) -> None:

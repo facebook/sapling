@@ -95,6 +95,21 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
           inode->prefetch().ensure([inode] {});
           return computeEntryParam(inode->getNodeId(), attr);
         });
+      })
+      .onError([](const std::system_error& err) {
+        // Translate ENOENT into a successful response with an
+        // inode number of 0 and a large entry_valid time, to let the kernel
+        // cache this negative lookup result.
+        if (err.code().category() == std::system_category() &&
+            err.code().value() == ENOENT) {
+          fuse_entry_out entry = {};
+          entry.attr_valid =
+              std::numeric_limits<decltype(entry.attr_valid)>::max();
+          entry.entry_valid =
+              std::numeric_limits<decltype(entry.entry_valid)>::max();
+          return entry;
+        }
+        throw err;
       });
 }
 
