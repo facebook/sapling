@@ -20,7 +20,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
-use changesets::{Changesets, SqliteChangesets};
+use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use fileblob::Fileblob;
 use filebookmarks::FileBookmarks;
 use fileheads::FileHeads;
@@ -402,10 +402,25 @@ impl BlobRepo {
         let parents_complete =
             parents_complete.map_err(|e| ErrorKind::ParentsFailed.context(e).into());
 
-        // TODO This should call the completion API before returning changeset
+        let complete_changesets = self.changesets.clone();
+        let repo_id = self.repoid;
         ChangesetHandle::new_pending(
             can_be_parent.shared(),
-            parents_complete.and_then(|_| changeset).boxify().shared(),
+            changeset
+                .join(parents_complete)
+                .and_then(move |(cs, _)| {
+                    let completion_record = ChangesetInsert {
+                        repo_id: repo_id,
+                        cs_id: cs.get_changeset_id(),
+                        parents: cs.parents()
+                            .into_iter()
+                            .map(|n| ChangesetId::new(n))
+                            .collect(),
+                    };
+                    complete_changesets.add(&completion_record).map(|_| cs)
+                })
+                .boxify()
+                .shared(),
         )
     }
 }
