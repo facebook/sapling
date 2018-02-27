@@ -1330,6 +1330,8 @@ class manifestlog(object):
         usetreemanifest = False
         cachesize = 4
 
+        self.ui = repo.ui
+
         opts = getattr(opener, 'options', None)
         if opts is not None:
             usetreemanifest = opts.get('treemanifest', usetreemanifest)

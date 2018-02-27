@@ -406,7 +406,6 @@ def setuptreestores(repo, mfl):
 
     mfl.shareddatastores = [datastore]
     mfl.localdatastores = [localdatastore]
-    mfl.ui = ui
 
     # History store
     sharedhistorystore = historypackstore(ui, packpath)
@@ -554,6 +553,8 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
         assert treemanifest is False
         cachesize = 4
 
+        self.ui = repo.ui
+
         opts = getattr(opener, 'options', None)
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
@@ -576,6 +577,7 @@ class treeonlymanifestlog(basetreemanifestlog):
     def __init__(self, opener, repo):
         super(treeonlymanifestlog, self).__init__()
         self._opener = opener
+        self.ui = repo.ui
         self._memtrees = {}
         self._changelog = repo.unfiltered().changelog
 
