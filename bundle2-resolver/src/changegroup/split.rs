@@ -61,23 +61,47 @@ where
                 .into()
         })
         .and_then({
-            let mut seen_filelog = None;
+            let mut seen_path = None;
             move |part| {
-                match seen_filelog.take() {
-                    None => match part {
-                        Part::CgChunk(Section::Filelog(path), chunk) => {
-                            seen_filelog = Some(path.clone());
-                            Ok(Some(FilelogDeltaed { path, chunk }))
-                        }
-                        Part::End => Ok(None), // this is covered by CheckEnd wrapper
-                        bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
-                    },
-                    Some(path) => match &part {
-                        &Part::SectionEnd(Section::Filelog(ref p)) if &path == p => {
-                            seen_filelog = None;
-                            Ok(None)
-                        }
-                        bad => bail_msg!("Unexpected changegroup part: {:?}", bad),
+                if let &Some(ref seen_path) = &seen_path {
+                    match &part {
+                        &Part::CgChunk(Section::Filelog(ref path), _)
+                        | &Part::SectionEnd(Section::Filelog(ref path)) => if seen_path != path {
+                            bail_msg!(
+                                "Mismatched path found {0} ({0:?}) != {1} ({1:?}), for part: {2:?}",
+                                seen_path,
+                                path,
+                                part
+                            );
+                        },
+                        _ => (), // Handled in the next pattern-match
+                    }
+                }
+
+                match part {
+                    Part::CgChunk(Section::Filelog(path), chunk) => {
+                        seen_path = Some(path.clone());
+                        Ok(Some(FilelogDeltaed { path, chunk }))
+                    }
+                    Part::SectionEnd(Section::Filelog(_)) if seen_path.is_some() => {
+                        seen_path = None;
+                        Ok(None)
+                    }
+                    // Checking that there is exactly one Part::end is is covered by CheckEnd
+                    // wrapper
+                    Part::End if seen_path.is_none() => Ok(None),
+                    bad => if seen_path.is_some() {
+                        bail_msg!(
+                            "Expected Filelog chunk or end, seen_path was {:?}, found: {:?}",
+                            seen_path,
+                            bad
+                        )
+                    } else {
+                        bail_msg!(
+                            "Expected Filelog chunk or Part::End, seen_path was {:?}, found: {:?}",
+                            seen_path,
+                            bad
+                        )
                     },
                 }
             }
@@ -229,8 +253,10 @@ mod tests {
             c1: CgDeltaChunk,
             c2: CgDeltaChunk,
             f1: CgDeltaChunk,
+            f1_bis: CgDeltaChunk,
             f1_p: MPath,
             f2: CgDeltaChunk,
+            f2_bis: CgDeltaChunk,
             f2_p: MPath
         ) -> bool {
             check_splitting(
@@ -241,8 +267,10 @@ mod tests {
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
                         Part::CgChunk(Section::Filelog(f1_p.clone()), f1.clone()),
+                        Part::CgChunk(Section::Filelog(f1_p.clone()), f1_bis.clone()),
                         Part::SectionEnd(Section::Filelog(f1_p.clone())),
                         Part::CgChunk(Section::Filelog(f2_p.clone()), f2.clone()),
+                        Part::CgChunk(Section::Filelog(f2_p.clone()), f2_bis.clone()),
                         Part::SectionEnd(Section::Filelog(f2_p.clone())),
                         Part::End,
                     ].into_iter(),
@@ -250,12 +278,20 @@ mod tests {
                 vec![ChangesetDeltaed { chunk: c1 }, ChangesetDeltaed { chunk: c2 }],
                 vec![
                     FilelogDeltaed {
-                        path: f1_p,
+                        path: f1_p.clone(),
                         chunk: f1,
                     },
                     FilelogDeltaed {
-                        path: f2_p,
+                        path: f1_p,
+                        chunk: f1_bis,
+                    },
+                    FilelogDeltaed {
+                        path: f2_p.clone(),
                         chunk: f2,
+                    },
+                    FilelogDeltaed {
+                        path: f2_p,
+                        chunk: f2_bis,
                     },
                 ],
             )
