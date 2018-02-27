@@ -84,6 +84,7 @@ when the maximum size is hit.
 from __future__ import absolute_import
 
 import abc
+import contextlib
 import hashlib
 import os
 import random
@@ -1715,6 +1716,7 @@ class generatingdatastore(object):
     def __init__(self, repo):
         self._repo = repo
         self._shareddata = None
+        self._beinggenerated = set()
 
     def setshared(self, shareddata, sharedhistory):
         self._shareddata = shareddata
@@ -1724,13 +1726,27 @@ class generatingdatastore(object):
     def _generatetrees(self, name, node):
         pass
 
+    @contextlib.contextmanager
+    def _generating(self, name, node):
+        key = (name, node)
+        if key in self._beinggenerated:
+            # This key is already being generated, so we've reentered the
+            # generator and hit infinite recurssion.
+            raise KeyError((name, hex(node)))
+
+        self._beinggenerated.add(key)
+        yield
+        self._beinggenerated.remove(key)
+
     def get(self, name, node):
-        self._generatetrees(name, node)
-        return self._shareddata.get(name, node)
+        with self._generating(name, node):
+            self._generatetrees(name, node)
+            return self._shareddata.get(name, node)
 
     def getdeltachain(self, name, node):
-        self._generatetrees(name, node)
-        return self._shareddata.getdeltachain(name, node)
+        with self._generating(name, node):
+            self._generatetrees(name, node)
+            return self._shareddata.getdeltachain(name, node)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a generating store")
@@ -1745,12 +1761,14 @@ class generatingdatastore(object):
         return {}
 
     def getancestors(self, name, node, known=None):
-        self._generatetrees(name, node)
-        return self._sharedhistory.getancestors(name, node, known=known)
+        with self._generating(name, node):
+            self._generatetrees(name, node)
+            return self._sharedhistory.getancestors(name, node, known=known)
 
     def getnodeinfo(self, name, node):
-        self._generatetrees(name, node)
-        return self._sharedhistory.getnodeinfo(name, node)
+        with self._generating(name, node):
+            self._generatetrees(name, node)
+            return self._sharedhistory.getnodeinfo(name, node)
 
 class remotetreestore(generatingdatastore):
     def _generatetrees(self, name, node):
