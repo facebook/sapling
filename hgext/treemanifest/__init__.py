@@ -35,6 +35,14 @@ automatically downloading trees from the server when they don't exist locally.
     [treemanifest]
     demanddownload = True
 
+Disabling `treemanifest.demandgenerate` will prevent the extension from
+automatically generating tree manifest from corresponding flat manifest when
+it doesn't exist locally. Note that this setting is only relevant in treeonly
+mode.
+
+    [treemanifest]
+    demandgenerate = True
+
 Setting `treemanifest.pullprefetchcount` to an integer N will cause the latest N
 commits' manifests to be downloaded (if they aren't already).
 
@@ -382,7 +390,10 @@ def setuptreestores(repo, mfl):
                                                  PACK_CATEGORY)
 
     demanddownload = ui.configbool('treemanifest', 'demanddownload', True)
+    demandgenerate = (ui.configbool('treemanifest', 'treeonly') and
+                      ui.configbool('treemanifest', 'demandgenerate', True))
     remotestore = remotetreestore(repo)
+    ondemandstore = ondemandtreedatastore(repo)
 
     mutablestore = mutablemanifeststore(mfl)
 
@@ -400,6 +411,9 @@ def setuptreestores(repo, mfl):
         datastores = [datastore, localdatastore, mutablestore]
         if demanddownload:
             datastores.append(remotestore)
+
+        if demandgenerate:
+            datastores.append(ondemandstore)
 
         mfl.datastore = unioncontentstore(*datastores,
                                           writestore=localdatastore)
@@ -421,6 +435,9 @@ def setuptreestores(repo, mfl):
     if demanddownload:
         histstores.append(remotestore)
 
+    if demandgenerate:
+        histstores.append(ondemandstore)
+
     mfl.historystore = unionmetadatastore(
         *histstores,
         writestore=localhistorystore)
@@ -428,6 +445,7 @@ def setuptreestores(repo, mfl):
         mfl.historystore)
 
     remotestore.setshared(mfl.datastore, mfl.historystore)
+    ondemandstore.setshared(mfl.datastore, mfl.historystore)
 
 class mutablemanifeststore(object):
     """A proxy class that gets added to the union store and knows how to
@@ -1844,6 +1862,15 @@ class remotetreestore(generatingdatastore):
         self._repo._prefetchtrees(name, [node], basemfnodes, [])
         self._shareddata.markforrefresh()
         self._sharedhistory.markforrefresh()
+
+class ondemandtreedatastore(generatingdatastore):
+    def _generatetrees(self, name, node):
+        repo = self._repo
+        with repo.wlock(), repo.lock(), repo.transaction('demandtreegen') as tr:
+            mfl = manifest.manifestlog(repo.svfs, repo)
+            tmfl = repo.manifestlog
+            mfctx = manifest.manifestctx(mfl, node)
+            _converttotree(tr, mfl, tmfl, mfctx)
 
 def serverrepack(repo, incremental=False, options=None):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
