@@ -1685,7 +1685,7 @@ class remotetreestore(object):
         self._shareddata = shareddata
         self._sharedhistory = sharedhistory
 
-    def _fetch(self, name, node):
+    def _generatetrees(self, name, node):
         # Only look at the server if not root or is public
         basemfnodes = []
         if name == '':
@@ -1707,16 +1707,12 @@ class remotetreestore(object):
         self._sharedhistory.markforrefresh()
 
     def get(self, name, node):
-        self._fetch(name, node)
+        self._generatetrees(name, node)
         return self._shareddata.get(name, node)
 
     def getdeltachain(self, name, node):
-        # Since our remote content stores just contain full texts, we return a
-        # fake delta chain that just consists of a single full text revision.
-        # The nullid in the deltabasenode slot indicates that the revision is a
-        # fulltext.
-        revision = self.get(name, node)
-        return [(name, node, None, nullid, revision)]
+        self._generatetrees(name, node)
+        return self._shareddata.getdeltachain(name, node)
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to a remote store")
@@ -1731,11 +1727,11 @@ class remotetreestore(object):
         return {}
 
     def getancestors(self, name, node, known=None):
-        self._fetch(name, node)
+        self._generatetrees(name, node)
         return self._sharedhistory.getancestors(name, node, known=known)
 
     def getnodeinfo(self, name, node):
-        self._fetch(name, node)
+        self._generatetrees(name, node)
         return self._sharedhistory.getnodeinfo(name, node)
 
 def serverrepack(repo, incremental=False, options=None):
