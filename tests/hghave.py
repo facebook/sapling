@@ -90,10 +90,7 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     """Return the match object if cmd executes successfully and its output
     is matched by the supplied regular expression.
     """
-    if hasattr(regexp, 'search'):
-        r = regexp
-    else:
-        r = re.compile(regexp)
+    r = re.compile(regexp)
     try:
         p = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
