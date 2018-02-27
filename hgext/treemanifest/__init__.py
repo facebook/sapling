@@ -696,11 +696,13 @@ class memtreemanifestctx(object):
 
     def write(self, tr, linkrev, p1, p2, added, removed):
         mfl = self._manifestlog
-        linknode = mfl._maplinkrev(linkrev)
-        node = _writeclientmanifest(
-            self._treemanifest, tr, mfl, p1, p2, linknode)
+
+        newtree = self._treemanifest
+        p1tree = mfl[p1].read()
+
+        node = mfl.add(mfl.ui, newtree, p1tree)
         if node is not None and util.safehasattr(mfl, 'addmemtree'):
-            mfl.addmemtree(node, self._treemanifest, p1, p2)
+            mfl.addmemtree(node, newtree, p1, p2)
         return node
 
 def serverreposetup(repo):
@@ -752,22 +754,6 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
         _converttotree(tr, mfl, tmfl, self, link, torevlog=True)
 
     return n
-
-def _writeclientmanifest(newtree, tr, mfl, p1node, p2node, linknode,
-                         overridenode=None):
-    """Writes the given tree into the given treeonly manifestlog. If
-    `overridenode` is specified, the tree root is written with that node instead
-    of its actual node.
-    """
-    p1tree = mfl[p1node].read()
-    # Unwrap hybrid manifests from fastmanifest. This is a temporary hack until
-    # the next patch which deletes this entire function.
-    if util.safehasattr(p1tree, '_treemanifest'):
-        p1tree = p1tree._treemanifest()
-
-    node = mfl.add(mfl.ui, newtree, p1tree, overridenode=overridenode,
-                   overridep1node=p1node)
-    return node
 
 @command('debuggentrees', [
     ('s', 'skip-allowed-roots', None,
@@ -888,8 +874,9 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         assert linkrev != -1, "attempting to create manifest with null linkrev"
         _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
     else:
-        node = _writeclientmanifest(newtree, tr, tmfl, p1node, p2node, linknode,
-                                    overridenode=mfctx.node())
+        node = tmfl.add(mfl.ui, newtree, parenttree,
+                        overridenode=mfctx.node(),
+                        overridep1node=p1node)
         if node is not None and util.safehasattr(tmfl, 'addmemtree'):
             tmfl.addmemtree(node, newtree, p1node, p2node)
 

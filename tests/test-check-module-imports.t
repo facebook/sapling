@@ -67,7 +67,6 @@ outputs, which should be fixed later.
   hgext/fastmanifest/implementation.py:22: symbol import follows non-symbol import: hgext.fastmanifest.metrics
   hgext/fastmanifest/implementation.py:23: direct symbol import CACHE_SUBDIR, DEFAULT_MAX_MEMORY_ENTRIES from hgext.fastmanifest.constants
   hgext/fastmanifest/implementation.py:23: symbol import follows non-symbol import: hgext.fastmanifest.constants
-  hgext/fastmanifest/implementation.py:30: import should be relative: hgext
   hgext/fbamend/common.py:10: relative import of stdlib module
   hgext/fbamend/common.py:10: direct symbol import defaultdict from collections
   hgext/fbamend/common.py:12: import should be relative: hgext

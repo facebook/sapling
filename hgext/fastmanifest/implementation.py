@@ -27,7 +27,6 @@ from .constants import (
 
 try:
     from ..extlib import cstore
-    from hgext import treemanifest
     supportsctree = True
 except ImportError:
     supportsctree = False
@@ -1053,9 +1052,18 @@ class manifestfactory(object):
                     newtree.set(filename, fnode, fflag)
 
                 tmfl = mfl.treemanifestlog
-                node = treemanifest._writeclientmanifest(newtree, transaction,
-                               tmfl, p1, p2, revlog.nullid,
-                               overridenode=node)
+
+                # If the manifest was already committed as a flat manifest, use
+                # its node.
+                overridenode = None
+                overridep1node = None
+                if node is not None:
+                    overridenode = node
+                    overridep1node = p1
+
+                node = tmfl.add(self.ui, newtree, tree,
+                                overridenode=overridenode,
+                                overridep1node=overridep1node)
 
                 if node is not None and util.safehasattr(tmfl, 'addmemtree'):
                     tmfl.addmemtree(node, self._treemanifest, p1, p2)
