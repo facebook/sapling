@@ -383,6 +383,9 @@ def setuptreestores(repo, mfl):
 
     demanddownload = ui.configbool('treemanifest', 'demanddownload', True)
     remotestore = remotetreestore(repo)
+
+    mutablestore = mutablemanifeststore(mfl)
+
     # Data store
     if ui.configbool('treemanifest', 'usecunionstore'):
         datastore = cstore.datapackstore(packpath)
@@ -394,7 +397,7 @@ def setuptreestores(repo, mfl):
         datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
         localdatastore = datapackstore(ui, localpackpath,
                                        usecdatapack=usecdatapack)
-        datastores = [datastore, localdatastore]
+        datastores = [datastore, localdatastore, mutablestore]
         if demanddownload:
             datastores.append(remotestore)
 
@@ -415,7 +418,7 @@ def setuptreestores(repo, mfl):
         localhistorystore,
     ]
 
-    histstores = [sharedhistorystore, localhistorystore]
+    histstores = [sharedhistorystore, localhistorystore, mutablestore]
     if demanddownload:
         histstores.append(remotestore)
 
@@ -426,6 +429,60 @@ def setuptreestores(repo, mfl):
         mfl.historystore)
 
     remotestore.setshared(mfl.datastore, mfl.historystore)
+
+class mutablemanifeststore(object):
+    """A proxy class that gets added to the union store and knows how to
+    answer requests by inspecting the manifestlog's current mutable data
+    and history packs. We can't insert the mutable packs themselves into the
+    union store because they can be created and destroyed over time."""
+
+    def __init__(self, manifestlog):
+        self.manifestlog = manifestlog
+
+    def getmissing(self, keys):
+        datapack = self.manifestlog._mutabledatapack
+        if datapack is None:
+            return keys
+
+        return datapack.getmissing(keys)
+
+    def get(self, name, node):
+        datapack = self.manifestlog._mutabledatapack
+        if datapack is None:
+            raise KeyError(name, hex(node))
+
+        return datapack.get(name, node)
+
+    def getdelta(self, name, node):
+        datapack = self.manifestlog._mutabledatapack
+        if datapack is None:
+            raise KeyError(name, hex(node))
+
+        return datapack.getdelta(name, node)
+
+    def getdeltachain(self, name, node):
+        datapack = self.manifestlog._mutabledatapack
+        if datapack is None:
+            raise KeyError(name, hex(node))
+
+        return datapack.getdeltachain(name, node)
+
+    def getnodeinfo(self, name, node):
+        historypack = self.manifestlog._mutablehistorypack
+        if historypack is None:
+            raise KeyError(name, hex(node))
+
+        return historypack.getnodeinfo(name, node)
+
+    def getancestors(self, name, node):
+        historypack = self.manifestlog._mutablehistorypack
+        if historypack is None:
+            raise KeyError(name, hex(node))
+
+        return historypack.getancestors(name, node)
+
+    def getmetrics(self):
+        return {}
 
 class basetreemanifestlog(object):
     def __init__(self):
@@ -444,8 +501,6 @@ class basetreemanifestlog(object):
                     'manifests')
             self._mutabledatapack = mutabledatapack(ui, packpath)
             self._mutablehistorypack = mutablehistorypack(ui, packpath)
-            self.datastore.addstore(self._mutabledatapack)
-            self.historystore.addstore(self._mutablehistorypack)
 
         newtreeiter = newtree.finalize(p1tree)
 
@@ -475,8 +530,6 @@ class basetreemanifestlog(object):
 
             dpack.close()
             hpack.close()
-            self.datastore.removestore(dpack)
-            self.historystore.removestore(hpack)
 
             self._mutabledatapack = None
             self._mutablehistorypack = None
@@ -491,8 +544,6 @@ class basetreemanifestlog(object):
 
             dpack.abort()
             hpack.abort()
-            self.datastore.removestore(dpack)
-            self.historystore.removestore(hpack)
 
             self._mutabledatapack = None
             self._mutablehistorypack = None
