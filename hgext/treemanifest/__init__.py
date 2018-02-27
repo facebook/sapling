@@ -425,7 +425,7 @@ def setuptreestores(repo, mfl):
     remotestore.setshared(mfl.datastore, mfl.historystore)
 
 class treemanifestlog(manifest.manifestlog):
-    def __init__(self, opener, treemanifest=False):
+    def __init__(self, opener, repo, treemanifest=False):
         assert treemanifest is False
         cachesize = 4
 
@@ -433,6 +433,8 @@ class treemanifestlog(manifest.manifestlog):
         if opts is not None:
             cachesize = opts.get('manifestcachesize', cachesize)
         self._treeinmem = True
+
+        self._changelog = repo.unfiltered().changelog
 
         self._opener = opener
         self._revlog = manifest.manifestrevlog(opener,
@@ -446,9 +448,10 @@ class treemanifestlog(manifest.manifestlog):
         self.cachesize = cachesize
 
 class treeonlymanifestlog(object):
-    def __init__(self, opener):
+    def __init__(self, opener, repo):
         self._opener = opener
         self._memtrees = {}
+        self._changelog = repo.unfiltered().changelog
 
     def __getitem__(self, node):
         return self.get('', node)
@@ -481,6 +484,16 @@ class treeonlymanifestlog(object):
 
     def clearcaches(self):
         self._memtrees.clear()
+
+    def _maplinknode(self, linknode):
+        """Turns a linknode into a linkrev. Only needed for revlog backed
+        manifestlogs."""
+        return self._changelog.rev(linknode)
+
+    def _maplinkrev(self, linkrev):
+        """Turns a linkrev into a linknode. Only needed for revlog backed
+        manifestlogs."""
+        return self._changelog.node(linkrev)
 
 class treemanifestctx(object):
     def __init__(self, manifestlog, dir, node):
@@ -674,11 +687,11 @@ def getmanifestlog(orig, self):
         return orig(self)
 
     if self.ui.configbool('treemanifest', 'treeonly'):
-        mfl = treeonlymanifestlog(self.svfs)
+        mfl = treeonlymanifestlog(self.svfs, self)
         setuptreestores(self, mfl)
     else:
         mfl = orig(self)
-        mfl.treemanifestlog = treemanifestlog(self.svfs)
+        mfl.treemanifestlog = treemanifestlog(self.svfs, self)
         setuptreestores(self, mfl.treemanifestlog)
         mfl.datastore = mfl.treemanifestlog.datastore
         mfl.historystore = mfl.treemanifestlog.historystore

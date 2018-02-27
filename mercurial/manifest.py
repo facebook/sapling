@@ -1337,12 +1337,30 @@ class manifestlog(object):
         self._treeinmem = usetreemanifest
 
         self._revlog = repo._constructmanifest()
+        self._changelog = repo.unfiltered().changelog
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
         self._dirmancache[''] = util.lrucachedict(cachesize)
 
         self.cachesize = cachesize
+
+    def _maplinknode(self, linknode):
+        """Turns a linknode into a linkrev. Only needed for revlog backed
+        manifestlogs."""
+        linkrev = self._changelog.rev(linknode)
+        if linkrev == revlog.nullrev:
+            raise error.ProgrammingError("attempting to convert null "
+                                         "linknode")
+        return linkrev
+
+    def _maplinkrev(self, linkrev):
+        """Turns a linkrev into a linknode. Only needed for revlog backed
+        manifestlogs."""
+        if linkrev == revlog.nullrev:
+            raise error.ProgrammingError("attempting to convert null "
+                                         "linkrev")
+        return self._changelog.node(linkrev)
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a
@@ -1398,6 +1416,7 @@ class memmanifestctx(object):
     def __init__(self, manifestlog):
         self._manifestlog = manifestlog
         self._manifestdict = manifestdict()
+        self._linkrev = None
 
     def _revlog(self):
         return self._manifestlog._revlog
@@ -1414,8 +1433,17 @@ class memmanifestctx(object):
         return self._manifestdict
 
     def write(self, transaction, link, p1, p2, added, removed):
-        return self._revlog().add(self._manifestdict, transaction, link, p1, p2,
+        node = self._revlog().add(self._manifestdict, transaction, link, p1, p2,
                                   added, removed)
+        self._linkrev = link
+        return node
+
+    @property
+    def linknode(self):
+        if self._linkrev is None:
+            raise error.ProgrammingError(_("accessing memmanifestctx.linknode "
+                                         "before write()"))
+        return self._manifestlog._maplinkrev(self._linkrev)
 
 class manifestctx(object):
     """A class representing a single revision of a manifest, including its
@@ -1451,6 +1479,12 @@ class manifestctx(object):
     @propertycache
     def parents(self):
         return self._revlog().parents(self._node)
+
+    @propertycache
+    def linknode(self):
+        revlog = self._revlog()
+        linkrev = revlog.linkrev(revlog.rev(self._node))
+        return self._manifestlog._maplinkrev(linkrev)
 
     def read(self):
         if self._data is None:
