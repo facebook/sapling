@@ -183,6 +183,8 @@ _notset = object()
 os.stat_float_times(False)
 
 def safehasattr(thing, attr):
+    # Use instead of the builtin ``hasattr``. (See
+    # https://hynek.me/articles/hasattr/)
     return getattr(thing, attr, _notset) is not _notset
 
 def bytesinput(fin, fout, *args, **kwargs):
