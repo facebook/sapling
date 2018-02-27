@@ -443,6 +443,8 @@ class basetreemanifestlog(object):
                     'manifests')
             self._mutabledatapack = mutabledatapack(ui, packpath)
             self._mutablehistorypack = mutablehistorypack(ui, packpath)
+            self.datastore.addstore(self._mutabledatapack)
+            self.historystore.addstore(self._mutablehistorypack)
 
         newtreeiter = newtree.finalize(p1tree)
 
@@ -472,6 +474,8 @@ class basetreemanifestlog(object):
 
             dpack.close()
             hpack.close()
+            self.datastore.removestore(dpack)
+            self.historystore.removestore(hpack)
 
             self._mutabledatapack = None
             self._mutablehistorypack = None
@@ -486,6 +490,8 @@ class basetreemanifestlog(object):
 
             dpack.abort()
             hpack.abort()
+            self.datastore.removestore(dpack)
+            self.historystore.removestore(hpack)
 
             self._mutabledatapack = None
             self._mutablehistorypack = None
