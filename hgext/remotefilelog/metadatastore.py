@@ -7,7 +7,7 @@ from . import basestore, shallowutil
 
 class unionmetadatastore(object):
     def __init__(self, *args, **kwargs):
-        self.stores = args
+        self.stores = list(args)
         self.writestore = kwargs.get('writestore')
 
         # If allowincomplete==True then the union store can return partial
@@ -112,6 +112,12 @@ class unionmetadatastore(object):
         for store in self.stores:
             if util.safehasattr(store, 'markforrefresh'):
                 store.markforrefresh()
+
+    def addstore(self, store):
+        self.stores.append(store)
+
+    def removestore(self, store):
+        self.stores.remove(store)
 
 class remotefilelogmetadatastore(basestore.basestore):
     def getancestors(self, name, node, known=None):
