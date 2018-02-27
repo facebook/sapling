@@ -122,3 +122,8 @@ bool PythonDataStore::contains(const Key &key)
   std::shared_ptr<KeyIterator> it = getMissing(iter);
   return (!it->next());
 }
+
+PythonObj PythonDataStore::getStore()
+{
+  return this->_store;
+}

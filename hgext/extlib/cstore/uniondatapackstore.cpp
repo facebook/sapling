@@ -8,6 +8,7 @@
 // no-check-code
 
 #include "hgext/extlib/cstore/uniondatapackstore.h"
+#include "hgext/extlib/cstore/util.h"
 
 #include <algorithm>
 #include <memory>
@@ -16,8 +17,12 @@ extern "C" {
 #include "mercurial/mpatch.h"
 }
 
-UnionDatapackStore::UnionDatapackStore(std::vector<DataStore *> stores)
-    : _stores(stores)
+UnionDatapackStore::UnionDatapackStore()
+{
+}
+
+UnionDatapackStore::UnionDatapackStore(std::vector<DataStore*> &stores)
+  : _stores(stores)
 {
 }
 
@@ -149,4 +154,14 @@ void UnionDatapackStore::markForRefresh()
     DataStore *substore = *it;
     substore->markForRefresh();
   }
+}
+
+void UnionDatapackStore::addStore(DataStore *store)
+{
+  _stores.push_back(store);
+}
+
+void UnionDatapackStore::removeStore(DataStore *store)
+{
+  removeFromVector<DataStore *>(_stores, store);
 }

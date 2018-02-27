@@ -44,6 +44,11 @@ PythonObj &PythonObj::operator=(const PythonObj &other)
   return *this;
 }
 
+bool PythonObj::operator==(const PythonObj &other) const
+{
+  return this->obj == other.obj;
+}
+
 PythonObj::operator PyObject *() const
 {
   return this->obj;

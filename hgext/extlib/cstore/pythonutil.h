@@ -59,6 +59,8 @@ public:
 
   PythonObj &operator=(const PythonObj &other);
 
+  bool operator==(const PythonObj &other) const;
+
   operator PyObject *() const;
 
   operator bool() const;

@@ -155,6 +155,36 @@ class uniondatapackstoretests(unittest.TestCase):
         self.assertEquals(set([("foo", missinghash1), ("foo2", missinghash2)]),
                           set(missing))
 
+    def testAddRemoveStore(self):
+        packdir = self.makeTempDir()
+        revisions = [("foo", self.getFakeHash(), nullid, "content")]
+        store = self.createPackStore(packdir, revisions=revisions)
+
+        packdir2 = self.makeTempDir()
+        revisions2 = [("foo2", self.getFakeHash(), nullid, "content2")]
+        store2 = self.createPackStore(packdir2, revisions=revisions2)
+
+        unionstore = uniondatapackstore([store])
+        unionstore.addstore(store2)
+
+        # Fetch from store2
+        result = unionstore.get('foo2', revisions2[0][1])
+        self.assertEquals(result, revisions2[0][3])
+
+        # Drop the store
+        unionstore.removestore(store2)
+
+        # Fetch from store1
+        result = unionstore.get('foo', revisions[0][1])
+        self.assertEquals(result, revisions[0][3])
+
+        # Fetch from missing store2
+        try:
+            unionstore.get('foo2', revisions2[0][1])
+            self.asserFalse(True, "get should've thrown")
+        except KeyError:
+            pass
+
 class uniondatastorepythontests(uniondatapackstoretests):
     def createPackStore(self, packdir, revisions=None):
         if revisions is None:

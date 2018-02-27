@@ -59,7 +59,9 @@ class UnionDatapackStore : public Store
 public:
   std::vector<DataStore *> _stores;
 
-  UnionDatapackStore(std::vector<DataStore *> stores);
+  UnionDatapackStore();
+
+  UnionDatapackStore(std::vector<DataStore*> &stores);
 
   ~UnionDatapackStore() override;
 
@@ -72,6 +74,9 @@ public:
   UnionDatapackStoreKeyIterator getMissing(KeyIterator &missing);
 
   void markForRefresh();
+
+  void addStore(DataStore *store);
+  void removeStore(DataStore *store);
 };
 
 #endif // FBHGEXT_CSTORE_UNIONDATAPACKSTORE_H

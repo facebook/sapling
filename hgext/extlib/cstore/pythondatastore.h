@@ -73,6 +73,8 @@ public:
 
   ~PythonDataStore() = default;
 
+  PythonObj getStore();
+
   DeltaChainIterator getDeltaChain(const Key &key);
 
   std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing);
