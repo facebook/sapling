@@ -83,6 +83,7 @@ when the maximum size is hit.
 """
 from __future__ import absolute_import
 
+import abc
 import hashlib
 import os
 import random
@@ -1676,7 +1677,13 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
 
     yield wirepack.closepart()
 
-class remotetreestore(object):
+class generatingdatastore(object):
+    """Abstract base class representing stores which generate trees on the
+    fly and write them to the shared store. Thereafter, the stores replay the
+    lookup operation on the shared store expecting it to succeed."""
+    # Make this an abstract class, so it cannot be instantiated on its own.
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, repo):
         self._repo = repo
         self._shareddata = None
@@ -1685,6 +1692,39 @@ class remotetreestore(object):
         self._shareddata = shareddata
         self._sharedhistory = sharedhistory
 
+    @abc.abstractmethod
+    def _generatetrees(self, name, node):
+        pass
+
+    def get(self, name, node):
+        self._generatetrees(name, node)
+        return self._shareddata.get(name, node)
+
+    def getdeltachain(self, name, node):
+        self._generatetrees(name, node)
+        return self._shareddata.getdeltachain(name, node)
+
+    def add(self, name, node, data):
+        raise RuntimeError("cannot add to a generating store")
+
+    def getmissing(self, keys):
+        return keys
+
+    def markledger(self, ledger, options=None):
+        pass
+
+    def getmetrics(self):
+        return {}
+
+    def getancestors(self, name, node, known=None):
+        self._generatetrees(name, node)
+        return self._sharedhistory.getancestors(name, node, known=known)
+
+    def getnodeinfo(self, name, node):
+        self._generatetrees(name, node)
+        return self._sharedhistory.getnodeinfo(name, node)
+
+class remotetreestore(generatingdatastore):
     def _generatetrees(self, name, node):
         # Only look at the server if not root or is public
         basemfnodes = []
@@ -1705,34 +1745,6 @@ class remotetreestore(object):
         self._repo._prefetchtrees(name, [node], basemfnodes, [])
         self._shareddata.markforrefresh()
         self._sharedhistory.markforrefresh()
-
-    def get(self, name, node):
-        self._generatetrees(name, node)
-        return self._shareddata.get(name, node)
-
-    def getdeltachain(self, name, node):
-        self._generatetrees(name, node)
-        return self._shareddata.getdeltachain(name, node)
-
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to a remote store")
-
-    def getmissing(self, keys):
-        return keys
-
-    def markledger(self, ledger, options=None):
-        pass
-
-    def getmetrics(self):
-        return {}
-
-    def getancestors(self, name, node, known=None):
-        self._generatetrees(name, node)
-        return self._sharedhistory.getancestors(name, node, known=known)
-
-    def getnodeinfo(self, name, node):
-        self._generatetrees(name, node)
-        return self._sharedhistory.getnodeinfo(name, node)
 
 def serverrepack(repo, incremental=False, options=None):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
