@@ -34,7 +34,7 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use bincode::{deserialize, serialize, Infinite};
+use bincode::{deserialize, serialize};
 use futures::{Async, Poll};
 use futures::future::{poll_fn, Future, IntoFuture};
 use futures::stream::{self, Stream};
@@ -289,7 +289,7 @@ where
 
             // Write out new value if versions match.
             if file_version == *version {
-                let out = serialize(&(value, new_version), Infinite)?;
+                let out = serialize(&(value, new_version))?;
                 file.seek(SeekFrom::Start(0))?;
                 file.set_len(0)?;
                 file.write_all(&out)?;

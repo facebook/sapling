@@ -317,7 +317,7 @@ impl BlobRepo {
         // Upload the new node
         let node_upload = self.blobstore.put(
             get_node_key(nodeid),
-            bincode::serialize(&raw_node, bincode::Infinite)
+            bincode::serialize(&raw_node)
                 .map_err(|err| Error::from(ErrorKind::SerializationFailed(nodeid, err)))?
                 .into(),
         );

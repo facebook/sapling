@@ -116,7 +116,7 @@ impl BlobChangeset {
                     parents: *self.revlogcs.parents(),
                     blob: Cow::Borrowed(data),
                 };
-                bincode::serialize(&blob, bincode::Infinite).map_err(Error::from)
+                bincode::serialize(&blob).map_err(Error::from)
             })
             .into_future()
             .and_then(move |blob| blobstore.put(key, blob.into()))

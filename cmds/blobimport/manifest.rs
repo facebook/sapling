@@ -41,7 +41,7 @@ where
         // blobs.
         let nodekey = format!("node-{}.bincode", entry_hash);
         let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-        let nodeblob = bincode::serialize(&nodeblob, bincode::Bounded(4096))
+        let nodeblob = bincode::serialize(&nodeblob)
             .expect("bincode serialize failed");
 
         let res1 = sender.send(BlobstoreEntry::ManifestEntry((
