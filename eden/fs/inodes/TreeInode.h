@@ -758,6 +758,25 @@ class TreeInode : public InodeBase {
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
   /**
+   * Send a request to the kernel to invalidate the FUSE cache for the given
+   * child entry name.
+   *
+   * This is safe to call while holding the contents_ lock, but it is not
+   * required.  Calling it without the contents_ lock held is preferable when
+   * possible.
+   */
+  void invalidateFuseCache(PathComponentPiece name);
+
+  /**
+   * Invalidate the kernel FUSE cache for this entry name only if we are not
+   * being called from inside a FUSE request handler.
+   *
+   * If we are being invoked because of a FUSE request for this entry we don't
+   * need to tell the kernel about the change--it will automatically know.
+   */
+  void invalidateFuseCacheIfRequired(PathComponentPiece name);
+
+  /**
    * Attempt to remove an empty directory during a checkout operation.
    *
    * Returns true on success, or false if the directory could not be removed.

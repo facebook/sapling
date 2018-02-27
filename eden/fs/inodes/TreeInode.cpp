@@ -793,6 +793,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
+  invalidateFuseCacheIfRequired(name);
+
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
@@ -898,6 +900,7 @@ FileInodePtr TreeInode::symlink(
     this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
+  invalidateFuseCacheIfRequired(name);
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
@@ -975,6 +978,7 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
     this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
   }
 
+  invalidateFuseCacheIfRequired(name);
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
@@ -1043,6 +1047,7 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     overlay->saveOverlayDir(getNodeId(), *contents);
   }
 
+  invalidateFuseCacheIfRequired(name);
   getMount()->getJournal().addDelta(
       std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
 
@@ -1228,10 +1233,7 @@ int TreeInode::tryRemoveChild(
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (flushKernelCache) {
-    auto* fuseChannel = getMount()->getFuseChannel();
-    if (fuseChannel) {
-      fuseChannel->invalidateEntry(getNodeId(), name);
-    }
+    invalidateFuseCache(name);
   }
 
   return 0;
@@ -2361,6 +2363,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             newScmEntry->getHash());
+        invalidateFuseCache(newScmEntry->getName());
       }
     } else if (!newScmEntry) {
       // This file exists in the old tree, but is being removed in the new
@@ -2380,6 +2383,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
             newScmEntry->getHash());
+        invalidateFuseCache(newScmEntry->getName());
       }
     }
 
@@ -2474,42 +2478,41 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
       return makeFuture();
     }
 
-    std::unique_ptr<InodeBase> deletedInode;
-    auto contents = contents_.wlock();
+    {
+      std::unique_ptr<InodeBase> deletedInode;
+      auto contents = contents_.wlock();
 
-    // The CheckoutContext should be holding the rename lock, so the entry
-    // at this name should still be the specified inode.
-    auto it = contents->entries.find(name);
-    if (it == contents->entries.end()) {
-      auto bug = EDEN_BUG()
-          << "entry removed while holding rename lock during checkout: "
-          << inode->getLogPath();
-      return folly::makeFuture<Unit>(bug.toException());
-    }
-    if (it->second.getInode() != inode.get()) {
-      auto bug = EDEN_BUG()
-          << "entry changed while holding rename lock during checkout: "
-          << inode->getLogPath();
-      return folly::makeFuture<Unit>(bug.toException());
-    }
+      // The CheckoutContext should be holding the rename lock, so the entry
+      // at this name should still be the specified inode.
+      auto it = contents->entries.find(name);
+      if (it == contents->entries.end()) {
+        auto bug = EDEN_BUG()
+            << "entry removed while holding rename lock during checkout: "
+            << inode->getLogPath();
+        return folly::makeFuture<Unit>(bug.toException());
+      }
+      if (it->second.getInode() != inode.get()) {
+        auto bug = EDEN_BUG()
+            << "entry changed while holding rename lock during checkout: "
+            << inode->getLogPath();
+        return folly::makeFuture<Unit>(bug.toException());
+      }
 
-    // This is a file, so we can simply unlink it, and replace/remove the entry
-    // as desired.
-    deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
-    if (newScmEntry) {
-      DCHECK_EQ(newScmEntry->getName(), name);
-      it->second = Entry(
-          modeFromTreeEntryType(newScmEntry->getType()),
-          newScmEntry->getHash());
-    } else {
-      contents->entries.erase(it);
+      // This is a file, so we can simply unlink it, and replace/remove the
+      // entry as desired.
+      deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
+      if (newScmEntry) {
+        DCHECK_EQ(newScmEntry->getName(), name);
+        it->second = Entry(
+            modeFromTreeEntryType(newScmEntry->getType()),
+            newScmEntry->getHash());
+      } else {
+        contents->entries.erase(it);
+      }
     }
 
     // Tell FUSE to invalidate its cache for this entry.
-    auto* fuseChannel = getMount()->getFuseChannel();
-    if (fuseChannel) {
-      fuseChannel->invalidateEntry(getNodeId(), name);
-    }
+    invalidateFuseCache(name);
 
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
@@ -2561,18 +2564,23 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         }
 
         // Add the new entry
-        auto contents = parentInode->contents_.wlock();
-        DCHECK(!newScmEntry->isTree());
-        auto ret = contents->entries.emplace(
-            name,
-            modeFromTreeEntryType(newScmEntry->getType()),
-            newScmEntry->getHash());
-        if (!ret.second) {
+        bool inserted;
+        {
+          auto contents = parentInode->contents_.wlock();
+          DCHECK(!newScmEntry->isTree());
+          auto ret = contents->entries.emplace(
+              name,
+              modeFromTreeEntryType(newScmEntry->getType()),
+              newScmEntry->getHash());
+          inserted = ret.second;
+        }
+        if (inserted) {
+          parentInode->invalidateFuseCache(name);
+        } else {
           // Hmm.  Someone else already created a new entry in this location
           // before we had a chance to add our new entry.  We don't block new
-          // file or directory creations during a checkout operation, so this is
-          // possible.  Just report an error in this case.
-          contents.unlock();
+          // file or directory creations during a checkout operation, so this
+          // is possible.  Just report an error in this case.
           ctx->addError(
               parentInode.get(),
               name,
@@ -2584,6 +2592,21 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
                   "was in progress"));
         }
       });
+}
+
+void TreeInode::invalidateFuseCache(PathComponentPiece name) {
+  auto* fuseChannel = getMount()->getFuseChannel();
+  if (fuseChannel) {
+    fuseChannel->invalidateEntry(getNodeId(), name);
+  }
+}
+
+void TreeInode::invalidateFuseCacheIfRequired(PathComponentPiece name) {
+  if (fusell::RequestData::isFuseRequest()) {
+    // no need to flush the cache if we are inside a FUSE request handler
+    return;
+  }
+  invalidateFuseCache(name);
 }
 
 void TreeInode::saveOverlayPostCheckout(
