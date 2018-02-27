@@ -5,7 +5,6 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![allow(deprecated)] // T25454375
 
 /// Mononoke endpoint for Eden.
 ///
@@ -41,6 +40,7 @@ extern crate serde_json;
 extern crate slog;
 extern crate slog_glog_fmt;
 extern crate tokio_core;
+extern crate tokio_proto;
 extern crate tokio_tls;
 extern crate toml;
 
@@ -53,7 +53,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::string::ToString;
 use std::sync::Arc;
-use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
@@ -73,7 +72,8 @@ use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
 use regex::{Captures, Regex};
 use scuba::{ScubaClient, ScubaSample};
 use slog::{Drain, Level, Logger};
-use tokio_tls::TlsAcceptorExt;
+use tokio_proto::TcpServer;
+use tokio_tls::proto;
 
 pub use failure::{DisplayChain, Error, Result, ResultExt};
 
@@ -431,32 +431,18 @@ fn start_server(addr: &str, reponame: String, repo: BlobRepo, logger: Logger, ss
         }
     };
 
-    let mut core = Core::new().expect("cannot create http server core");
-    let handle = core.handle();
-    let listener = TcpListener::bind(&addr, &handle).expect("cannot bind to the address");
-    let incoming = listener.incoming().from_err::<Error>();
+    let cpupool = Arc::new(CpuPool::new_num_cpus());
+    let protoserver = proto::Server::new(Http::new(), tlsacceptor);
+    let tcpserver = TcpServer::new(protoserver, addr);
 
     info!(logger, "started eden server");
-    let cpupool = Arc::new(CpuPool::new_num_cpus());
-    let http_server = Http::new();
-    let conns = incoming.for_each(|stream_addr| {
-        let (tcp_stream, remote_addr) = stream_addr;
-        let http_server = http_server.clone();
-        let handle = handle.clone();
-        let service = EdenServer::new(map.clone(), cpupool.clone(), logger.clone());
-        let logger = logger.clone();
-        tlsacceptor.accept_async(tcp_stream).then(move |stream| {
-            match stream {
-                Ok(stream) => {
-                    http_server.bind_connection(&handle, stream, remote_addr, service);
-                }
-                Err(err) => error!(logger, "accept async failed {}", err),
-            };
-            Ok(())
-        })
+    tcpserver.serve(move || {
+        Ok(EdenServer::new(
+            map.clone(),
+            cpupool.clone(),
+            logger.clone(),
+        ))
     });
-
-    core.run(conns).expect("http server main loop failed");
 }
 
 /// Types of repositories supported
