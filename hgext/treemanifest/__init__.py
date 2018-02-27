@@ -825,72 +825,95 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
     ], _('hg backfilltree [OPTIONS]'))
 def backfilltree(ui, repo, *args, **opts):
     with repo.wlock(), repo.lock(), repo.transaction('backfilltree') as tr:
-        _backfill(tr, repo, int(opts.get('limit')))
+        start, end = _getbackfillrange(repo, int(opts.get('limit')))
+        if start <= end:
+            mfl = repo.manifestlog
+            tmfl = mfl.treemanifestlog
+            revs = xrange(start, end)
+            _backfilltree(tr, repo, mfl, tmfl, revs)
 
-def _backfill(tr, repo, limit):
-    ui = repo.ui
-    cl = repo.changelog
-    mfl = repo.manifestlog
-    tmfl = mfl.treemanifestlog
-    treerevlog = tmfl._revlog
-
+def _getbackfillrange(repo, limit):
+    treerevlog = repo.manifestlog.treemanifestlog._revlog
     maxrev = len(treerevlog) - 1
     start = treerevlog.linkrev(maxrev) + 1
-    end = min(len(cl), start + limit)
 
-    converting = _("converting")
+    numclrevs = len(repo.changelog)
+    end = min(numclrevs, start + limit)
+    return (start, end)
 
-    ui.progress(converting, 0, total=end - start)
-    for i in xrange(start, end):
-        ctx = repo[i]
-        newflat = ctx.manifest()
-        p1 = ctx.p1()
-        p2 = ctx.p2()
-        p1node = p1.manifestnode()
-        p2node = p2.manifestnode()
-        if p1node != nullid:
-            if (p1node not in treerevlog.nodemap or
-                (p2node != nullid and p2node not in treerevlog.nodemap)):
-                ui.warn(_("unable to find parent nodes %s %s\n") % (hex(p1node),
-                                                                   hex(p2node)))
-                return
-            parentflat = mfl[p1node].read()
-            parenttree = tmfl[p1node].read()
-        else:
-            parentflat = manifest.manifestdict()
-            parenttree = manifest.treemanifest()
+def _backfilltree(tr, repo, mfl, tmfl, revs):
+    ui = repo.ui
+    converting = _("converting flat manifest to tree manifest")
+    ui.progress(converting, 0, total=len(revs))
+    count = 0
+    for rev in revs:
+        ui.progress(converting, count, total=len(revs))
+        count += 1
 
-        diff = parentflat.diff(newflat)
-
-        newtree = parenttree.copy()
-        added = []
-        removed = []
-        for filename, (old, new) in diff.iteritems():
-            if new is not None and new[0] is not None:
-                added.append(filename)
-                newtree[filename] = new[0]
-                newtree.setflag(filename, new[1])
-            else:
-                removed.append(filename)
-                del newtree[filename]
-
-        try:
-            oldaddrevision = treerevlog.addrevision
-            def addusingnode(*args, **kwargs):
-                newkwargs = kwargs.copy()
-                newkwargs['node'] = ctx.manifestnode()
-                return oldaddrevision(*args, **newkwargs)
-            treerevlog.addrevision = addusingnode
-            def readtree(dir, node):
-                return tmfl.get(dir, node).read()
-            treerevlog.add(newtree, tr, ctx.rev(), p1node, p2node, added,
-                    removed, readtree=readtree)
-        finally:
-            del treerevlog.__dict__['addrevision']
-
-        ui.progress(converting, i - start, total=end - start)
+        _converttotree(tr, mfl, tmfl, repo[rev].manifestctx())
 
     ui.progress(converting, None)
+
+def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None):
+    p1node, p2node = mfctx.parents
+    newflat = mfctx.read()
+    if p1node != nullid:
+        try:
+            parentflat = mfl[p1node].read()
+            parenttree = tmfl[p1node].read()
+            # Just read p2node to verify it's actually present
+            tmfl[p2node].read()
+        except KeyError:
+            raise error.Abort(_("unable to find parent nodes %s %s") %
+                              (hex(p1node), hex(p2node)))
+    else:
+        parentflat = manifest.manifestdict()
+        parenttree = manifest.treemanifest()
+
+    newtree, added, removed = _getnewtree(newflat, parenttree, parentflat)
+
+    linknode = mfctx.linknode
+    # manifests that haven't been added to the changelog yet (and therefore
+    # maplinknode returns -1) should've had their linkrev provided as an
+    # argument.
+    if linkrev is None:
+        linkrev = mfl._maplinknode(linknode)
+    assert linkrev != -1, "attempting to create manifest with null linkrev"
+    _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
+
+def _getnewtree(newflat, parenttree, parentflat):
+    diff = parentflat.diff(newflat)
+
+    newtree = parenttree.copy()
+    added = []
+    removed = []
+    for filename, (old, new) in diff.iteritems():
+        if new is not None and new[0] is not None:
+            added.append(filename)
+            newtree[filename] = new[0]
+            newtree.setflag(filename, new[1])
+        else:
+            removed.append(filename)
+            del newtree[filename]
+
+    return (newtree, added, removed)
+
+def _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed):
+    try:
+        p1node, p2node = mfctx.parents
+        treerevlog = tmfl._revlog
+        oldaddrevision = treerevlog.addrevision
+        def addusingnode(*args, **kwargs):
+            newkwargs = kwargs.copy()
+            newkwargs['node'] = mfctx.node()
+            return oldaddrevision(*args, **newkwargs)
+        treerevlog.addrevision = addusingnode
+        def readtree(dir, node):
+            return tmfl.get(dir, node).read()
+        treerevlog.add(newtree, tr, linkrev, p1node, p2node, added, removed,
+                       readtree=readtree)
+    finally:
+        del treerevlog.__dict__['addrevision']
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if not treeenabled(repo.ui):
