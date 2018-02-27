@@ -1055,6 +1055,13 @@ class manifestfactory(object):
 
                 node = _writetree(mfl, transaction, newtree, tree, node, p1)
 
+                treemanifestcache.getinstance(opener,
+                                              mfl.ui)[node] = newtree
+                def finalize(tr):
+                    treemanifestcache.getinstance(opener,
+                                                  mfl.ui).clear()
+                transaction.addfinalize('fastmanifesttreecache', finalize)
+
         return node
 
 def _writetree(mfl, transaction, newtree, tree, node, p1):
@@ -1074,8 +1081,6 @@ def _writetree(mfl, transaction, newtree, tree, node, p1):
         def finalize(tr):
             tr.treedatapack.close()
             tr.treehistpack.close()
-            treemanifestcache.getinstance(opener,
-                                          mfl.ui).clear()
             datastore.markforrefresh()
 
         def writepending(tr):
@@ -1122,9 +1127,6 @@ def _writetree(mfl, transaction, newtree, tree, node, p1):
         # this pack it could delta against.
         dpack.add(nname, nnode, revlog.nullid, ntext)
         hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
-
-    treemanifestcache.getinstance(opener,
-                                  mfl.ui)[node] = newtree
 
     return node
 
