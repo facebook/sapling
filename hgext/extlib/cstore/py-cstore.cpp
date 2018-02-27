@@ -17,14 +17,13 @@
 #include "hgext/extlib/cstore/py-datapackstore.h"
 #include "hgext/extlib/cstore/py-treemanifest.h"
 
-static PyMethodDef mod_methods[] = {
-  {NULL, NULL}
-};
+static PyMethodDef mod_methods[] = {{NULL, NULL}};
 
 static char mod_description[] =
     "Module containing a native store implementation";
 
-PyMODINIT_FUNC initcstore(void) {
+PyMODINIT_FUNC initcstore(void)
+{
   PyObject *mod;
 
   mod = Py_InitModule3("cstore", mod_methods, mod_description);
@@ -59,5 +58,6 @@ PyMODINIT_FUNC initcstore(void) {
     return;
   }
   Py_INCREF(&uniondatapackstoreType);
-  PyModule_AddObject(mod, "uniondatapackstore", (PyObject *)&uniondatapackstoreType);
+  PyModule_AddObject(mod, "uniondatapackstore",
+                     (PyObject *)&uniondatapackstoreType);
 }

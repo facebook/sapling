@@ -30,7 +30,7 @@ struct py_uniondatapackstore {
 
   // Keep a reference to the python objects so we can decref them later.
   std::vector<PythonObj> cstores;
-  std::vector< std::shared_ptr<PythonDataStore> > pystores;
+  std::vector<std::shared_ptr<PythonDataStore>> pystores;
 };
 
 #endif // FBHGEXT_CSTORE_PY_STRUCTS_H

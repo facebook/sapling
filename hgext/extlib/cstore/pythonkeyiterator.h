@@ -12,34 +12,37 @@
 
 #include "hgext/extlib/cstore/pythonutil.h"
 
-class PythonKeyIterator : public KeyIterator {
-  private:
-    PythonObj _input;
-    Key _current;
+class PythonKeyIterator : public KeyIterator
+{
+private:
+  PythonObj _input;
+  Key _current;
 
-  public:
-    PythonKeyIterator(PythonObj input) :
-      _input(input) {}
+public:
+  PythonKeyIterator(PythonObj input) : _input(input)
+  {
+  }
 
-    Key *next() {
-        PyObject *item;
-        while ((item = PyIter_Next((PyObject*)_input)) != NULL) {
-          PythonObj itemObj(item);
+  Key *next()
+  {
+    PyObject *item;
+    while ((item = PyIter_Next((PyObject *)_input)) != NULL) {
+      PythonObj itemObj(item);
 
-          char *name;
-          Py_ssize_t namelen;
-          char *node;
-          Py_ssize_t nodelen;
-          if (!PyArg_ParseTuple(item, "s#s#", &name, &namelen, &node, &nodelen)) {
-            throw pyexception();
-          }
+      char *name;
+      Py_ssize_t namelen;
+      char *node;
+      Py_ssize_t nodelen;
+      if (!PyArg_ParseTuple(item, "s#s#", &name, &namelen, &node, &nodelen)) {
+        throw pyexception();
+      }
 
-          _current = Key(name, namelen, node, nodelen);
-          return &_current;
-        }
-
-        return NULL;
+      _current = Key(name, namelen, node, nodelen);
+      return &_current;
     }
+
+    return NULL;
+  }
 };
 
-#endif //FBHGEXT_PYTHONKEYITERATOR_H
+#endif // FBHGEXT_PYTHONKEYITERATOR_H

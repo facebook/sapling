@@ -24,57 +24,64 @@
 /*
  * Wrapper around python delta chain
  */
-class PyDeltaChain : public DeltaChain {
-  private:
-    std::shared_ptr< std::vector<DeltaChainLink> > _chain;
-    std::shared_ptr< std::vector<PythonObj> > _pythonChainLinks;
+class PyDeltaChain : public DeltaChain
+{
+private:
+  std::shared_ptr<std::vector<DeltaChainLink>> _chain;
+  std::shared_ptr<std::vector<PythonObj>> _pythonChainLinks;
 
-  public:
-    PyDeltaChain(std::shared_ptr< std::vector<DeltaChainLink> > chain,
-                 std::shared_ptr< std::vector<PythonObj> > pythonChainLinks) :
-      _chain(chain),
-      _pythonChainLinks(pythonChainLinks) {}
+public:
+  PyDeltaChain(std::shared_ptr<std::vector<DeltaChainLink>> chain,
+               std::shared_ptr<std::vector<PythonObj>> pythonChainLinks)
+      : _chain(chain), _pythonChainLinks(pythonChainLinks)
+  {
+  }
 
-    // Default destructor is used, because the destructor of _chain
-    // and _tuples objects will free the allocated memory automatically.
-    ~PyDeltaChain() {}
+  // Default destructor is used, because the destructor of _chain
+  // and _tuples objects will free the allocated memory automatically.
+  ~PyDeltaChain()
+  {
+  }
 
-    const DeltaChainLink getlink(const size_t idx) {
-      return _chain->at(idx);
+  const DeltaChainLink getlink(const size_t idx)
+  {
+    return _chain->at(idx);
+  }
+
+  size_t linkcount()
+  {
+    return _chain->size();
+  }
+
+  get_delta_chain_code_t status()
+  {
+    if (_chain->size()) {
+      return GET_DELTA_CHAIN_OK;
+    } else {
+      return GET_DELTA_CHAIN_NOT_FOUND;
     }
-
-    size_t linkcount() {
-      return _chain->size();
-    }
-
-    get_delta_chain_code_t status() {
-      if (_chain->size()) {
-        return GET_DELTA_CHAIN_OK;
-      } else {
-        return GET_DELTA_CHAIN_NOT_FOUND;
-      }
-    }
-
+  }
 };
 
-class PythonDataStore : public DataStore {
-  private:
-    PythonObj _store; // pointer to python object
+class PythonDataStore : public DataStore
+{
+private:
+  PythonObj _store; // pointer to python object
 
-  public:
-    PythonDataStore(PythonObj store);
+public:
+  PythonDataStore(PythonObj store);
 
-    ~PythonDataStore() = default;
+  ~PythonDataStore() = default;
 
-    DeltaChainIterator getDeltaChain(const Key &key);
+  DeltaChainIterator getDeltaChain(const Key &key);
 
-    std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing);
+  std::shared_ptr<KeyIterator> getMissing(KeyIterator &missing);
 
-    std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key);
+  std::shared_ptr<DeltaChain> getDeltaChainRaw(const Key &key);
 
-    bool contains(const Key &key);
+  bool contains(const Key &key);
 
-    void markForRefresh();
+  void markForRefresh();
 };
 
-#endif //FBHGEXT_PYTHONDATASTORE_H
+#endif // FBHGEXT_PYTHONDATASTORE_H
