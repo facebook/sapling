@@ -342,37 +342,6 @@ class InodeMap {
       folly::Promise<InodePtr> promise);
 
   /**
-   * newChildLoadStarted() should only be called by TreeInode.
-   *
-   * This will be called by TreeInode when it wants to start loading a new
-   * child entry that does not already have an inode number allocated.
-   *
-   * Because no inode is allocated the TreeInode knows that no existing load
-   * attempt is in progress.  If an inode number were allocated TreeInode would
-   * need to call shouldLoadChild() instead.
-   *
-   * This function allocate an inode number for the child, record the pending
-   * load operation, and then return the allocated inode number.
-   *
-   * The TreeInode must later call inodeLoadComplete() or inodeLoadFailed()
-   * when it finishes loading the inode.
-   *
-   * The TreeInode must be holding its contents lock when calling this method.
-   *
-   * @param parent The TreeInode calling this function to check if it should
-   *   load a child.
-   * @param name The name of the child inode.
-   * @param promise A promise to fulfil when this inode is finished loading.
-   *   The InodeMap is responsible for fulfilling this promise.
-   *
-   * @return Returns the newly allocated child inode number.
-   */
-  fusell::InodeNumber newChildLoadStarted(
-      const TreeInode* parent,
-      PathComponentPiece name,
-      folly::Promise<InodePtr> promise);
-
-  /**
    * inodeLoadComplete() should only be called by TreeInode.
    *
    * The TreeInode must be holding its contents lock when calling this method.

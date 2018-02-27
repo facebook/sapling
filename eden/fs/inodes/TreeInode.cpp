@@ -214,17 +214,19 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     // being loaded, or if we need to start loading it now.
     folly::Promise<InodePtr> promise;
     returnFuture = promise.getFuture();
-    bool startLoad;
+    bool allocatedInodeNumber;
     if (entryPtr.hasInodeNumber()) {
       childNumber = entryPtr.getInodeNumber();
-      startLoad = getInodeMap()->shouldLoadChild(
-          this, name, childNumber, std::move(promise));
+      allocatedInodeNumber = false;
     } else {
-      childNumber =
-          getInodeMap()->newChildLoadStarted(this, name, std::move(promise));
-      // Immediately record the newly allocated inode number
+      childNumber = getInodeMap()->allocateInodeNumber();
       entryPtr.setInodeNumber(childNumber);
-      startLoad = true;
+      allocatedInodeNumber = true;
+    }
+    bool startLoad = getInodeMap()->shouldLoadChild(
+        this, name, childNumber, std::move(promise));
+    if (allocatedInodeNumber) {
+      DCHECK(startLoad);
     }
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
@@ -2786,22 +2788,17 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     std::vector<IncompleteInodeLoad>* pendingLoads) {
   DCHECK(!entry.getInode());
 
-  bool startLoad;
   fusell::InodeNumber childNumber;
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
   if (entry.hasInodeNumber()) {
     childNumber = entry.getInodeNumber();
-    startLoad = getInodeMap()->shouldLoadChild(
-        this, name, childNumber, std::move(promise));
   } else {
-    childNumber =
-        getInodeMap()->newChildLoadStarted(this, name, std::move(promise));
-    // Immediately record the newly allocated inode number
+    childNumber = getInodeMap()->allocateInodeNumber();
     entry.setInodeNumber(childNumber);
-    startLoad = true;
   }
-
+  bool startLoad = getInodeMap()->shouldLoadChild(
+      this, name, childNumber, std::move(promise));
   if (startLoad) {
     auto loadFuture =
         startLoadingInodeNoThrow(entry, name, entry.getInodeNumber());

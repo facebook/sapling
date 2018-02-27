@@ -717,11 +717,6 @@ bool InodeMap::shouldLoadChild(
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
-    // This happens when the inode was stored on disk by a previous instance of
-    // the eden daemon and this is the first time we have been asked to load it
-    // into memory.
-    //
-    // Insert a new entry into data->unloadedInodes_
     fusell::InodeNumber parentNumber = parent->getNodeId();
     auto newUnloadedData = UnloadedInode(childInode, parentNumber, name);
     auto ret =
@@ -742,25 +737,6 @@ bool InodeMap::shouldLoadChild(
   // to start the load operation.  Otherwise someone else (whoever added the
   // first promise) has already started loading the inode.
   return isFirstPromise;
-}
-
-fusell::InodeNumber InodeMap::newChildLoadStarted(
-    const TreeInode* parent,
-    PathComponentPiece name,
-    folly::Promise<InodePtr> promise) {
-  auto data = data_.wlock();
-
-  // Allocate a new inode number
-  auto childNumber = allocateInodeNumber(*data);
-
-  // Put an entry in unloadedInodes_
-  fusell::InodeNumber parentNumber = parent->getNodeId();
-  auto unloadedData = UnloadedInode(childNumber, parentNumber, name);
-  unloadedData.promises.push_back(std::move(promise));
-  data->unloadedInodes_.emplace(childNumber, std::move(unloadedData));
-
-  // Return the inode number
-  return childNumber;
 }
 
 fusell::InodeNumber InodeMap::allocateInodeNumber() {
