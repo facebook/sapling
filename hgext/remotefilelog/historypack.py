@@ -431,18 +431,15 @@ class mutablehistorypack(basepack.mutablebasepack):
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         copyfrom = copyfrom or ''
         copyfromlen = struct.pack('!H', len(copyfrom))
-        self.fileentries.setdefault(filename, []).append((node, p1, p2,
-                                                          linknode,
-                                                          copyfromlen,
-                                                          copyfrom))
+        entrymap = self.fileentries.setdefault(filename, {})
+        entrymap[node] = (node, p1, p2, linknode, copyfromlen, copyfrom)
 
     def _write(self):
         for filename in sorted(self.fileentries):
-            entries = self.fileentries[filename]
+            entrymap = self.fileentries[filename]
             sectionstart = self.packfp.tell()
 
             # Write the file section content
-            entrymap = dict((e[0], e) for e in entries)
             def parentfunc(node):
                 x, p1, p2, x, x, x = entrymap[node]
                 parents = []
@@ -453,7 +450,7 @@ class mutablehistorypack(basepack.mutablebasepack):
                 return parents
 
             sortednodes = list(reversed(shallowutil.sortnodes(
-                (e[0] for e in entries),
+                entrymap.iterkeys(),
                 parentfunc)))
 
             # Write the file section header
@@ -543,3 +540,28 @@ class mutablehistorypack(basepack.mutablebasepack):
             nodecountraw = struct.pack('!Q', nodecount)
         return (''.join(fileindexentries) + nodecountraw +
                 ''.join(nodeindexentries))
+
+    def getancestors(self, name, node, known=None):
+        entrymap = self.fileentries.get(name)
+        if entrymap is None:
+            raise KeyError((name, hex(node)))
+
+        entry = entrymap.get(node)
+        if entry is not None:
+            enode, p1, p2, linknode, copyfromlen, copyfrom = entry
+            return {node: (p1, p2, linknode, copyfrom)}
+
+        raise KeyError((name, hex(node)))
+
+    def getnodeinfo(self, name, node):
+        return self.getancestors(name, node)[node]
+
+    def getmissing(self, keys):
+        missing = []
+        fileentries = self.fileentries
+        for name, node in keys:
+            entrymap = fileentries.get(name)
+            if node not in entrymap:
+                missing.append((name, node))
+
+        return missing

@@ -269,6 +269,43 @@ class histpacktests(unittest.TestCase):
             self.assertEquals(p2, actual[1])
             self.assertEquals(linknode, actual[2])
             self.assertEquals(copyfrom, actual[3])
+
+    def testReadingMutablePack(self):
+        """Tests that the data written into a mutablehistorypack can be read out
+        before it has been finalized."""
+        packdir = self.makeTempDir()
+        packer = mutablehistorypack(mercurial.ui.ui(), packdir, version=1)
+
+        revisions = []
+
+        filename = "foo"
+        lastnode = nullid
+        for i in range(5):
+            node = self.getFakeHash()
+            revisions.append((filename, node, lastnode, nullid, nullid, ''))
+            lastnode = node
+
+        filename = "bar"
+        lastnode = nullid
+        for i in range(5):
+            node = self.getFakeHash()
+            revisions.append((filename, node, lastnode, nullid, nullid, ''))
+            lastnode = node
+
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            packer.add(filename, node, p1, p2, linknode, copyfrom)
+
+        # Test getancestors()
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            entry = packer.getancestors(filename, node)
+            self.assertEquals(entry, {node: (p1, p2, linknode, copyfrom)})
+
+        # Test getmissing()
+        missingcheck = [(revisions[0][0], revisions[0][1]),
+                        ('foo', self.getFakeHash())]
+        missing = packer.getmissing(missingcheck)
+        self.assertEquals(missing, missingcheck[1:])
+
 # TODO:
 # histpack store:
 # - repack two packs into one
