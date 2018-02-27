@@ -664,7 +664,7 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
         # Since we're adding the root flat manifest, let's add the corresponding
         # root tree manifest.
         tmfl = mfl.treemanifestlog
-        _converttotree(tr, mfl, tmfl, self, link)
+        _converttotree(tr, mfl, tmfl, self, link, torevlog=True)
 
     return n
 
@@ -817,11 +817,12 @@ def _backfilltree(tr, repo, mfl, tmfl, revs):
         ui.progress(converting, count, total=len(revs))
         count += 1
 
-        _converttotree(tr, mfl, tmfl, repo[rev].manifestctx())
+        _converttotree(tr, mfl, tmfl, repo[rev].manifestctx(),
+                       torevlog=True)
 
     ui.progress(converting, None)
 
-def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None):
+def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
     p1node, p2node = mfctx.parents
     newflat = mfctx.read()
     if p1node != nullid:
@@ -835,18 +836,26 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None):
                               (hex(p1node), hex(p2node)))
     else:
         parentflat = manifest.manifestdict()
-        parenttree = manifest.treemanifest()
+
+        if torevlog:
+            parenttree = manifest.treemanifest()
+        else:
+            parenttree = cstore.treemanifest(tmfl.datastore)
 
     newtree, added, removed = _getnewtree(newflat, parenttree, parentflat)
 
     linknode = mfctx.linknode
-    # manifests that haven't been added to the changelog yet (and therefore
-    # maplinknode returns -1) should've had their linkrev provided as an
-    # argument.
-    if linkrev is None:
-        linkrev = mfl._maplinknode(linknode)
-    assert linkrev != -1, "attempting to create manifest with null linkrev"
-    _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
+    if torevlog:
+        # manifests that haven't been added to the changelog yet (and therefore
+        # maplinknode returns -1) should've had their linkrev provided as an
+        # argument.
+        if linkrev is None:
+            linkrev = mfl._maplinknode(linknode)
+        assert linkrev != -1, "attempting to create manifest with null linkrev"
+        _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
+    else:
+        _writeclientmanifest(newtree, tr, tmfl, p1node, p2node, linknode,
+                             overridenode=mfctx.node())
 
 def _getnewtree(newflat, parenttree, parentflat):
     diff = parentflat.diff(newflat)
