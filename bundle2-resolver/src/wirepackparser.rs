@@ -91,15 +91,16 @@ impl UploadableBlob for TreemanifestEntry {
         Shared<BoxFuture<(BlobEntry, RepoPath), Error>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
+    fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
+        let path = self.path;
         let manifest_content = self.manifest_content;
         repo.upload_entry(
             Blob::from(self.data),
             manifest::Type::Tree,
             self.p1,
             self.p2,
-            self.path,
-        ).map(move |(node, value)| (node, (manifest_content, value.shared())))
+            path.clone(),
+        ).map(move |(node, value)| ((node, path), (manifest_content, value.shared())))
     }
 }
 

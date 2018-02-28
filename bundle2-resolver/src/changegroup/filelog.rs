@@ -43,9 +43,15 @@ pub struct Filelog {
 impl UploadableBlob for Filelog {
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Error>>;
 
-    fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)> {
-        repo.upload_entry(self.blob, manifest::Type::File, self.p1, self.p2, self.path)
-            .map(|(node, fut)| (node, fut.shared()))
+    fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
+        let path = self.path;
+        repo.upload_entry(
+            self.blob,
+            manifest::Type::File,
+            self.p1,
+            self.p2,
+            path.clone(),
+        ).map(move |(node, fut)| ((node, path), fut.shared()))
     }
 }
 

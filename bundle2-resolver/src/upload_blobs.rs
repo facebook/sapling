@@ -11,20 +11,28 @@ use futures::Stream;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::BlobRepo;
-use mercurial_types::NodeHash;
+use mercurial_types::{NodeHash, RepoPath};
 
 use errors::*;
 
 pub trait UploadableBlob {
     type Value: Send + 'static;
 
-    fn upload(self, repo: &BlobRepo) -> Result<(NodeHash, Self::Value)>;
+    fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)>;
 }
+
+#[derive(PartialEq, Eq)]
+pub enum UploadBlobsType {
+    IgnoreDuplicates,
+    EnsureNoDuplicates,
+}
+use self::UploadBlobsType::*;
 
 pub fn upload_blobs<S, B>(
     repo: Arc<BlobRepo>,
     blobs: S,
-) -> BoxFuture<HashMap<NodeHash, B::Value>, Error>
+    ubtype: UploadBlobsType,
+) -> BoxFuture<HashMap<(NodeHash, RepoPath), B::Value>, Error>
 where
     S: Stream<Item = B, Error = Error> + Send + 'static,
     B: UploadableBlob,
@@ -33,8 +41,9 @@ where
         .fold(HashMap::new(), move |mut map, item| {
             let (key, value) = item.upload(&repo)?;
             ensure_msg!(
-                map.insert(key, value).is_none(),
-                "Blob already provided before"
+                map.insert(key.clone(), value).is_none() || ubtype == IgnoreDuplicates,
+                "Blob {:?} already provided before",
+                key
             );
             Ok(map)
         })

@@ -229,9 +229,9 @@ push to Mononoke
   bundle2-output-part: "replycaps" 196 bytes payload
   bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  remote: * ERRO Command failed, remote: true, error: bundle2-resolver error, root_cause: Blob already provided before, backtrace: , cause: While resolving Changegroup, cause: While uploading File Blobs, cause: Blob already provided before (glob)
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
+  bundle2-input-bundle: 1 params no-transaction
+  bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
+  bundle2-input-bundle: 0 parts total
 
 Now pull what was just pushed TODO(T25252425) make this work
 

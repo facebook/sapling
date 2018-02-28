@@ -17,18 +17,18 @@ use slog::Logger;
 use blobrepo::BlobRepo;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::NodeHash;
+use mercurial_types::{NodeHash, RepoPath};
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
 use errors::*;
-use upload_blobs::{upload_blobs, UploadableBlob};
+use upload_blobs::{upload_blobs, UploadBlobsType, UploadableBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(NodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<NodeHash, <Filelog as UploadableBlob>::Value>;
-type Manifests = HashMap<NodeHash, <TreemanifestEntry as UploadableBlob>::Value>;
+type Filelogs = HashMap<(NodeHash, RepoPath), <Filelog as UploadableBlob>::Value>;
+type Manifests = HashMap<(NodeHash, RepoPath), <TreemanifestEntry as UploadableBlob>::Value>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
@@ -125,8 +125,11 @@ impl Bundle2Resolver {
                     convert_to_revlog_changesets(c)
                         .collect()
                         .join(
-                            upload_blobs(repo.clone(), convert_to_revlog_filelog(repo, f))
-                                .map_err(|err| err.context("While uploading File Blobs").into()),
+                            upload_blobs(
+                                repo.clone(),
+                                convert_to_revlog_filelog(repo, f),
+                                UploadBlobsType::EnsureNoDuplicates,
+                            ).map_err(|err| err.context("While uploading File Blobs").into()),
                         )
                         .map(move |(changesets, filelogs)| (part_id, changesets, filelogs, bundle2))
                         .boxify()
@@ -149,8 +152,11 @@ impl Bundle2Resolver {
         next_item(bundle2)
             .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
                 Some(Bundle2Item::B2xTreegroup2(_, parts)) => {
-                    upload_blobs(repo, TreemanifestBundle2Parser::new(parts))
-                        .map_err(|err| err.context("While uploading Manifest Blobs").into())
+                    upload_blobs(
+                        repo,
+                        TreemanifestBundle2Parser::new(parts),
+                        UploadBlobsType::IgnoreDuplicates,
+                    ).map_err(|err| err.context("While uploading Manifest Blobs").into())
                         .map(move |manifests| (manifests, bundle2))
                         .boxify()
                 }
