@@ -252,7 +252,7 @@ def callcatch(ui, func):
         ui.warn(_("abort: out of memory\n"))
     except SystemExit as inst:
         # Commands shouldn't sys.exit directly, but give a return code.
-        # Just in case catch this and and pass exit code to caller.
+        # Just in case catch this and pass exit code to caller.
         return inst.code
     except socket.error as inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])

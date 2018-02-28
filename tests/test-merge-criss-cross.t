@@ -327,7 +327,7 @@ The other way around:
   6 second change
   <<<
 
-Verify how the output looks and and how verbose it is:
+Verify how the output looks and how verbose it is:
 
   $ hg up -qC
   $ hg merge
