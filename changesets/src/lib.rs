@@ -204,7 +204,7 @@ macro_rules! impl_changesets {
                         // Diesel doesn't expose them. Using it isn't strictly necessary, because
                         // inserts can be later queried from selects within the same transaction.
                         // But doing so would probably save a roundtrip.
-                        // TODO: (sid0) T26215642 expose last_insert_id in Diesel and and use it.
+                        // TODO: (sid0) T26215642 expose last_insert_id in Diesel and use it.
                         let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;
 
                         // parent_rows might not be in the same order as cs.parents.
