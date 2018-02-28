@@ -36,7 +36,9 @@ struct InodeNumber {
    * initialized to zero.
    */
   constexpr explicit InodeNumber(uint64_t ino) noexcept : rawValue_{ino} {
-    DCHECK_NE(0, rawValue_);
+    // This is intentionally an assert() rather than DCHECK_NE() since
+    // DCHECK_NE is not allowed in constexpr methods.
+    assert(0 != rawValue_);
   }
 
   enum NoCheck { NO_CHECK };
