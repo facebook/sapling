@@ -21,7 +21,6 @@ quickcheck = "*"
 tempdir = "*"
 
 [dependencies.cpython]
-version = "*"
+version = "0.2"
 default-features = false
 features = ["python27-sys", "extension-module-2-7"]
-path = "../../../build/hg-vendored-crates/cpython"
