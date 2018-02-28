@@ -359,12 +359,14 @@ impl HgCommands for RepoClient {
     fn heads(&self) -> HgCommandRes<HashSet<NodeHash>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
+        let logger = self.logger.clone();
         self.repo
             .hgrepo
             .get_heads()
             .collect()
             .from_err()
             .and_then(|v| Ok(v.into_iter().collect()))
+            .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
             .boxify()
     }
 

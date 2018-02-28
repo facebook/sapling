@@ -373,6 +373,7 @@ impl BlobRepo {
             upload_entries.join(parents_data).and_then({
                 let linknodes = self.linknodes.clone();
                 let blobstore = self.blobstore.clone();
+                let heads = self.heads.clone();
 
                 move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
                     compute_changed_files(
@@ -396,6 +397,7 @@ impl BlobRepo {
 
                             blobcs
                                 .save(blobstore)
+                                .join(heads.add(&cs_id))
                                 .join(entry_processor.finalize(linknodes, cs_id))
                                 .map(move |_| {
                                     // We deliberately eat this error - this is only so that

@@ -236,8 +236,227 @@ push to Mononoke
 Now pull what was just pushed TODO(T25252425) make this work
 
   $ cd ../repo3
+  $ hgmn sl --all -r "all()" --stat
+  @  changeset:   0:0e7ec5675652
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+      a |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
-  $ hg log -r 0e067c57feba
-  abort: unknown revision '0e067c57feba'!
-  [255]
+
+Because the revision numbers are assigned nondeterministically we cannot
+compare output of the entire tree. Instead we compare only linear histories
+
+  $ hgmn log --graph --template '{node}' -r "::f40c09205504"
+  o  f40c09205504d8410f8c8679bf7a85fef25f9337
+  |
+  o  bb0985934a0f8a493887892173b68940ceb40b4f
+  |
+  @  0e7ec5675652a04069cbf976a42e45b740f3243c
+  
+  $ hgmn log --graph --template '{node}' -r "::634de738bb0f"
+  o  634de738bb0ff135e32d48567718fb9d7dedf575
+  |
+  o  8315ea53ef41d34f56232c88669cc80225b6e66d
+  |
+  o  30da5bf63484d2d6572edafb3ea211c17cd8c005
+  |
+  o  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  |
+  o  bb0985934a0f8a493887892173b68940ceb40b4f
+  |
+  @  0e7ec5675652a04069cbf976a42e45b740f3243c
+  
+
+  $ for commit in `hg log --template '{node} ' -r '0e7ec567::634de738'` f40c09205504d8410f8c8679bf7a85fef25f9337; do \
+  $ if [ "`hg export -R $TESTTMP/repo2 ${commit}`" == "`hgmn export ${commit}`" ]; then echo "${commit} comparison SUCCESS"; fi; hgmn export ${commit}; echo; echo; done
+  0e7ec5675652a04069cbf976a42e45b740f3243c comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 0e7ec5675652a04069cbf976a42e45b740f3243c
+  # Parent  0000000000000000000000000000000000000000
+  a
+  
+  diff -r 000000000000 -r 0e7ec5675652 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a file content
+  
+  
+  bb0985934a0f8a493887892173b68940ceb40b4f comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID bb0985934a0f8a493887892173b68940ceb40b4f
+  # Parent  0e7ec5675652a04069cbf976a42e45b740f3243c
+  b
+  
+  diff -r 0e7ec5675652 -r bb0985934a0f a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -a file content
+  +new a file content
+  diff -r 0e7ec5675652 -r bb0985934a0f b_dir/b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b file content
+  
+  
+  fbd6b221382efa5d5bc53130cdaccf06e04c97d3 comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  # Parent  bb0985934a0f8a493887892173b68940ceb40b4f
+  d
+  
+  diff -r bb0985934a0f -r fbd6b221382e b_dir/b
+  --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -b file content
+  +updated b file content
+  diff -r bb0985934a0f -r fbd6b221382e d_dir/d
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +d file content
+  
+  
+  30da5bf63484d2d6572edafb3ea211c17cd8c005 comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 30da5bf63484d2d6572edafb3ea211c17cd8c005
+  # Parent  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
+  e
+  
+  diff -r fbd6b221382e -r 30da5bf63484 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -new a file content
+  +a file content
+  diff -r fbd6b221382e -r 30da5bf63484 b_dir/b
+  --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -updated b file content
+  +b file content
+  
+  
+  8315ea53ef41d34f56232c88669cc80225b6e66d comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 8315ea53ef41d34f56232c88669cc80225b6e66d
+  # Parent  30da5bf63484d2d6572edafb3ea211c17cd8c005
+  f
+  
+  diff -r 30da5bf63484 -r 8315ea53ef41 a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -a file content
+  +b file content
+  diff -r 30da5bf63484 -r 8315ea53ef41 b_dir/b
+  --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -b file content
+  +a file content
+  diff -r 30da5bf63484 -r 8315ea53ef41 c_dir/c
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a file content
+  diff -r 30da5bf63484 -r 8315ea53ef41 d_dir/d
+  --- a/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -d file content
+  +b file content
+  
+  
+  634de738bb0ff135e32d48567718fb9d7dedf575 comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 634de738bb0ff135e32d48567718fb9d7dedf575
+  # Parent  8315ea53ef41d34f56232c88669cc80225b6e66d
+  g
+  
+  diff -r 8315ea53ef41 -r 634de738bb0f a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -b file content
+  diff -r 8315ea53ef41 -r 634de738bb0f a_dir/a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a_dir/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a file content
+  diff -r 8315ea53ef41 -r 634de738bb0f b_dir/a_bis
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/a_bis	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a file content
+  diff -r 8315ea53ef41 -r 634de738bb0f b_dir/b
+  --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -a file content
+  +b file content
+  diff -r 8315ea53ef41 -r 634de738bb0f c_dir/c
+  --- a/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -a file content
+  diff -r 8315ea53ef41 -r 634de738bb0f d_dir/d
+  --- a/d_dir/d	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -b file content
+  diff -r 8315ea53ef41 -r 634de738bb0f e_dir/e
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/e_dir/e	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a file content
+  
+  
+  f40c09205504d8410f8c8679bf7a85fef25f9337 comparison SUCCESS
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID f40c09205504d8410f8c8679bf7a85fef25f9337
+  # Parent  bb0985934a0f8a493887892173b68940ceb40b4f
+  c
+  
+  diff -r bb0985934a0f -r f40c09205504 b_dir/b
+  --- a/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b_dir/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,1 @@
+  -b file content
+  +updated b file content
+  diff -r bb0985934a0f -r f40c09205504 c_dir/c
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c_dir/c	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +c file content
+  
+  
