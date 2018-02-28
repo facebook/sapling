@@ -257,7 +257,11 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
 
     validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing))
 
-    cg = changegroup.makestream(repo, outgoing, '01', 'push')
+    if repo.ui.configbool('pushrebase', 'moderncgversion'):
+        version = changegroup.safeversion(repo)
+    else:
+        version = '01'
+    cg = changegroup.makestream(repo, outgoing, version, 'push')
 
     # Explicitly notify the server what obsmarker versions the client supports
     # so the client could receive marker from the server.
@@ -289,6 +293,7 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
         advisoryparams={
             # advisory: (old) server could ignore this without error
             'obsmarkerversions': obsmarkerversions,
+            'cgversion': version,
         }.items(),
         data = cg)
 
@@ -507,7 +512,7 @@ def rebasepartgen(pushop, bundler):
 
 bundle2.capabilities[rebaseparttype] = ()
 
-def _makebundlefile(part):
+def _makebundlefile(op, part, cgversion):
     """constructs a temporary bundle file
 
     part.data should be an uncompressed v1 changegroup"""
@@ -517,12 +522,23 @@ def _makebundlefile(part):
     try: # guards bundlefile
         try: # guards fp
             fp = os.fdopen(fd, 'wb')
-            magic = 'HG10UN'
-            fp.write(magic)
-            data = part.read(mmap.PAGESIZE - len(magic))
-            while data:
-                fp.write(data)
-                data = part.read(mmap.PAGESIZE)
+            if cgversion == '01':
+                magic = 'HG10UN'
+                fp.write(magic)
+                data = part.read(mmap.PAGESIZE - len(magic))
+                while data:
+                    fp.write(data)
+                    data = part.read(mmap.PAGESIZE)
+            elif cgversion == '02':
+                bundle = bundle2.bundle20(op.repo.ui, {})
+                cgpart = bundle.newpart('CHANGEGROUP', data=part.read())
+                cgpart.addparam('version', cgversion)
+
+                for chunk in bundle.getchunks():
+                    fp.write(chunk)
+            else:
+                raise ValueError("unsupported changegroup version '%s'" %
+                                 cgversion)
         finally:
             fp.close()
     except Exception:
@@ -840,7 +856,8 @@ def _createbundlerepo(op, bundlepath):
 
     return bundle
 
-@bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'obsmarkerversions'))
+@bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'obsmarkerversions',
+                                      'cgversion'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
@@ -851,7 +868,8 @@ def bundle2rebase(op, part):
     markerdate = util.makedate()
 
     try: # guards bundlefile
-        bundlefile = _makebundlefile(part)
+        cgversion = params.get('cgversion', '01')
+        bundlefile = _makebundlefile(op, part, cgversion)
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
         bundle = _createbundlerepo(op, bundlepath)
 

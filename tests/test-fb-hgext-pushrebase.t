@@ -162,6 +162,36 @@ Check that we did not generate any check:heads parts
   |
   o  initial [public:2bb9d20e471c]
   
+  $ hg strip -r 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/server/.hg/strip-backup/6a6d9484552c-65c69aee-backup.hg
+
+  $ cd ../client
+  $ hg strip 3
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/add0c792bfce-c3f42717-backup.hg
+  $ hg up 0e3997dc0733
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ log
+  @  b => baz [draft:0e3997dc0733]
+  |
+  o  b => xxx [draft:46a2df24e272]
+  |
+  o  initial [public:2bb9d20e471c]
+  
+
+Push using changegroup2
+
+  $ hg push --to default --config pushrebase.moderncgversion=True
+  pushing to ssh://user@dummy/server
+  searching for changes
+  remote: pushing 2 changesets:
+  remote:     46a2df24e272  b => xxx
+  remote:     0e3997dc0733  b => baz
+  remote: 3 new changesets from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 1 changes to 2 files (+1 heads)
 
   $ cd ../client
   $ hg strip 1
