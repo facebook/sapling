@@ -189,6 +189,8 @@ def wraprepo(repo):
                 cmd.append('--repack')
             if revs:
                 cmd += ['-r', revs]
+            if base:
+                cmd += ['-b', base]
             cmd = ' '.join(map(util.shellquote, cmd))
 
             runshellcommand(cmd, encoding.environ)

@@ -69,7 +69,7 @@ from . import (
     shallowstore,
     shallowutil,
 )
-from mercurial.node import hex
+from mercurial.node import hex, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 from mercurial import (
@@ -883,7 +883,9 @@ def pull(orig, ui, repo, *pats, **opts):
             revs = scmutil.revrange(repo, [prefetchrevset])
             base = repo['.'].rev()
             if bgprefetch:
-                repo.backgroundprefetch(prefetchrevset, repack=bgrepack)
+                basestr = None if base == nullrev else str(base)
+                repo.backgroundprefetch(prefetchrevset, base=basestr,
+                                        repack=bgrepack)
             else:
                 repo.prefetch(revs, base=base)
                 if bgrepack:

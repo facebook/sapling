@@ -79,6 +79,23 @@
   $TESTTMP/hgcache/master/af/f024fe4ab0fece4091de044c58c9ae4233383a/bb6ccd5dceaa5e9dc220e0dad65e051b94f69a2c
   $TESTTMP/hgcache/repos
 
+# prefetch uses the current commit as the base
+  $ hg up -q 'tip^'
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ clearcache
+  $ hg prefetch
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob)
+  $ clearcache
+  $ hg pull -q
+  $ sleep 0.5
+  $ hg debugwaitonprefetch >/dev/null 2>%1
+- Note how the second prefetch only downloads 3 files instead of 4, because the
+- background prefetch downloaded the difference between . and the prefetch
+- revset.
+  $ hg prefetch
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  $ hg up -q null
+
 # background prefetch with repack on pull when configured
 
   $ cat >> .hg/hgrc <<EOF
