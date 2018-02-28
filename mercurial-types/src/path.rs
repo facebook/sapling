@@ -650,7 +650,7 @@ impl fmt::Debug for MPathElement {
 
 impl fmt::Debug for MPath {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MPath({:?})", self.to_vec())
+        write!(fmt, "MPath({:?} \"{}\")", self.to_vec(), self)
     }
 }
 
