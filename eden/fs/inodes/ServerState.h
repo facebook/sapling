@@ -27,7 +27,7 @@ class PrivHelper;
 class ServerState {
  public:
   ServerState();
-  ServerState(UserInfo userInfo, std::unique_ptr<PrivHelper> privHelper);
+  ServerState(UserInfo userInfo, std::shared_ptr<PrivHelper> privHelper);
   ~ServerState();
 
   /**
@@ -75,7 +75,7 @@ class ServerState {
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   fusell::ThreadLocalEdenStats edenStats_;
-  std::unique_ptr<PrivHelper> privHelper_;
+  std::shared_ptr<PrivHelper> privHelper_;
 };
 } // namespace eden
 } // namespace facebook

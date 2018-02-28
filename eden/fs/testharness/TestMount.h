@@ -32,6 +32,8 @@ namespace facebook {
 namespace eden {
 class ClientConfig;
 class FakeBackingStore;
+class FakeFuse;
+class FakePrivHelper;
 class FakeTreeBuilder;
 class FileInode;
 class LocalStore;
@@ -229,6 +231,12 @@ class TestMount {
     return edenMount_;
   }
 
+  const std::shared_ptr<FakePrivHelper>& getPrivHelper() const {
+    return privHelper_;
+  }
+
+  void registerFakeFuse(std::shared_ptr<FakeFuse> fuse);
+
   /**
    * Get a hash to use for the next commit.
    *
@@ -283,6 +291,7 @@ class TestMount {
   std::atomic<uint64_t> commitNumber_{1};
 
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();
+  std::shared_ptr<FakePrivHelper> privHelper_;
 
   ServerState serverState_;
 };

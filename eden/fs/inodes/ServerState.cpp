@@ -18,7 +18,7 @@ ServerState::ServerState() : userInfo_{UserInfo::lookup()} {}
 
 ServerState::ServerState(
     UserInfo userInfo,
-    std::unique_ptr<PrivHelper> privHelper)
+    std::shared_ptr<PrivHelper> privHelper)
     : userInfo_{std::move(userInfo)}, privHelper_{std::move(privHelper)} {}
 
 ServerState::~ServerState() {}

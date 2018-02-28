@@ -14,6 +14,7 @@
 #include <folly/io/IOBuf.h>
 #include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -28,6 +29,8 @@
 #include "eden/fs/store/hg/HgManifestImporter.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
+#include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 
@@ -53,22 +56,24 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
       type == other.type;
 }
 
-TestMount::TestMount() {
+TestMount::TestMount()
+    : privHelper_{make_shared<FakePrivHelper>()},
+      serverState_{UserInfo::lookup(), privHelper_} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
 }
 
-TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady) {
-  initTestDirectory();
+TestMount::TestMount(FakeTreeBuilder& rootBuilder, bool startReady)
+    : TestMount() {
   initialize(rootBuilder, startReady);
 }
 
 TestMount::TestMount(
     Hash initialCommitHash,
     FakeTreeBuilder& rootBuilder,
-    bool startReady) {
-  initTestDirectory();
+    bool startReady)
+    : TestMount() {
   initialize(initialCommitHash, rootBuilder, startReady);
 }
 
@@ -121,6 +126,10 @@ void TestMount::initialize(
   edenMount_ = EdenMount::create(
       std::move(config_), std::move(objectStore), &serverState_, clock_);
   edenMount_->initialize().get();
+}
+
+void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {
+  privHelper_->registerMount(edenMount_->getPath(), std::move(fuse));
 }
 
 Hash TestMount::nextCommitHash() {

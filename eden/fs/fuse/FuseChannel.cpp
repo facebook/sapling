@@ -643,6 +643,11 @@ void FuseChannel::processSession() {
     const auto arg_size = static_cast<size_t>(res);
 
     if (arg_size < sizeof(struct fuse_in_header)) {
+      // This shouldn't normally happen on real FUSE devices.
+      //
+      // This does happen in our unit tests where we use a fake FUSE channel:
+      // we cannot trigger -ENODEV to signal mount point cleanup, so we simply
+      // close the connection instead.
       XLOG(ERR) << "read truncated message from kernel fuse device: len="
                 << arg_size;
       requestSessionExit();
