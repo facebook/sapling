@@ -16,7 +16,6 @@ look for python scripts with execute bit but not shebang
 look for shell scripts with execute bit but not shebang
 
   $ testrepohg files 'set:**.sh and exec() and not grep(r"^#!.*(ba)?sh")'
-  fb/facebook-hg-rpms/hgsql_getdb.sh
   fb/tests/getdb.sh
 
 look for non scripts with no shebang

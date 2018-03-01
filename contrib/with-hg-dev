@@ -11,7 +11,7 @@ SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 builtin cd $(dirname "$SCRIPT_PATH")
 
 if [[ -z $HG_DEV_DIR ]]; then
-  for path in ../../hg-dev ${HG_RPM_DIR:-~/facebook-hg-rpms/hg-dev}; do
+  for path in ../../hg-dev ${HG_RPM_DIR}; do
     if [[ -f "$path" ]]; then
       source "$path"
       break
@@ -23,4 +23,4 @@ if [[ -z $HG_DEV_DIR ]]; then
   fi
 fi
 
-command $@
+command "$@"

@@ -6,8 +6,6 @@
 look for python scripts that do not use /usr/bin/env
 
   $ testrepohg files 'set:** and grep(r"^#!.*?python") and not grep(r"^#!/usr/bi{1}n/env python") - **/*.t'
-  fb/facebook-hg-rpms/sctrigger.py
-  fb/facebook-hg-rpms/vendorcrates.py
 
 In tests, enforce $PYTHON and *not* /usr/bin/env python or similar:
   $ testrepohg files 'set:**/*.t and grep(r"#!.*?python")' \
