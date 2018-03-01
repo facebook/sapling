@@ -18,6 +18,15 @@ Show on empty repository: checking consistency
   
   
 
+Add log alias to and make sure show still works
+  $ hg show --config alias.log=log
+  changeset:   -1:000000000000
+  tag:         tip
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+  
+
   $ hg show 1
   abort: unknown revision '1'!
   [255]

@@ -576,14 +576,8 @@ class lazyaliasentry(object):
 
     def __getitem__(self, n):
         aliasdef = self._aliasdef
-        if n == 0:
-            return aliasdef
-        elif n == 1:
-            return aliasdef.opts
-        elif n == 2:
-            return aliasdef.help
-        else:
-            raise IndexError
+        l = [aliasdef, aliasdef.opts, aliasdef.help]
+        return l[n]
 
     def __iter__(self):
         for i in range(3):
