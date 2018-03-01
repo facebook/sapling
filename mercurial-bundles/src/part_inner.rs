@@ -23,6 +23,7 @@ use capabilities;
 use changegroup;
 use errors::*;
 use futures_ext::{StreamExt, StreamLayeredExt};
+use infinitepush;
 use part_header::{PartHeader, PartHeaderType};
 use part_outer::{OuterFrame, OuterStream};
 use wirepack;
@@ -39,6 +40,7 @@ lazy_static! {
         // removed T26384190.
         m.insert(PartHeaderType::B2xInfinitepush, hashset!{
             "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"});
+        m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset!{});
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::Replycaps, hashset!{});
         m
@@ -95,6 +97,11 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::B2xInfinitepush(header, Box::new(cg2_stream))
+        }
+        &PartHeaderType::B2xInfinitepushBookmarks => {
+            let bookmarks_stream =
+                wrapped_stream.decode(infinitepush::InfinitepushBookmarksUnpacker::new());
+            Bundle2Item::B2xInfinitepushBookmarks(header, Box::new(bookmarks_stream))
         }
         &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(

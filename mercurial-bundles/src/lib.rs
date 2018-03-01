@@ -53,6 +53,7 @@ extern crate partial_io;
 pub mod bundle2;
 pub mod bundle2_encode;
 pub mod changegroup;
+pub mod infinitepush;
 mod capabilities;
 mod chunk;
 mod delta;
@@ -85,6 +86,8 @@ pub enum Bundle2Item {
     Changegroup(PartHeader, BoxStream<changegroup::Part, Error>),
     B2xInfinitepush(PartHeader, BoxStream<changegroup::Part, Error>),
     B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
+    // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
+    B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes::Bytes, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
 }
 
@@ -113,6 +116,9 @@ impl fmt::Debug for Bundle2Item {
             &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
             &B2xInfinitepush(ref header, _) => {
                 write!(f, "Bundle2Item::B2xInfinitepush({:?}, ...)", header)
+            }
+            &B2xInfinitepushBookmarks(ref header, _) => {
+                write!(f, "Bundle2Item::B2xInfinitepushBookmarks({:?}, ...)", header)
             }
             &B2xTreegroup2(ref header, _) => {
                 write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)

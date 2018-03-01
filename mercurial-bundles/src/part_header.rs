@@ -36,6 +36,9 @@ pub enum PartHeaderType {
     CheckHeads,
     /// Contains changegroup for infinitepush commits
     B2xInfinitepush,
+    /// Contains bookmarks for infinitepush backups (won't be used in Mononoke,
+    /// but they needs to be parsed).
+    B2xInfinitepushBookmarks,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -66,6 +69,7 @@ impl PartHeaderType {
             "listkeys" => Ok(Listkeys),
             "b2x:treegroup2" => Ok(B2xTreegroup2),
             "b2x:infinitepush" => Ok(B2xInfinitepush),
+            "b2x:infinitepushscratchbookmarks" => Ok(B2xInfinitepushBookmarks),
             "check:heads" => Ok(CheckHeads),
             bad => bail_msg!("unknown header type {}", bad),
         }
@@ -80,6 +84,7 @@ impl PartHeaderType {
             Listkeys => "listkeys",
             B2xTreegroup2 => "b2x:treegroup2",
             B2xInfinitepush => "b2x:infinitepush",
+            B2xInfinitepushBookmarks => "b2x:infinitepushscratchbookmarks",
             CheckHeads => "check:heads",
         }
     }

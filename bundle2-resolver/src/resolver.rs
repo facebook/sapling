@@ -9,7 +9,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use futures::{Future, Stream};
+use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -53,6 +53,15 @@ pub fn resolve(
         .and_then(move |(changegroup_id, changesets, filelogs, bundle2)| {
             let bundle2 = resolver
                 .resolve_b2xtreegroup2(bundle2)
+                .and_then({
+                    let resolver = resolver.clone();
+
+                    move |(manifests, bundle2)| {
+                        resolver
+                            .maybe_resolve_infinitepush_bookmarks(bundle2)
+                            .map(|(_, bundle2)| (manifests, bundle2))
+                    }
+                })
                 .and_then({
                     let resolver = resolver.clone();
 
@@ -167,6 +176,31 @@ impl Bundle2Resolver {
                 _ => err(format_err!("Expected Bundle2 B2xTreegroup2")).boxify(),
             })
             .map_err(|err| err.context("While resolving B2xTreegroup2").into())
+            .boxify()
+    }
+
+    /// Parse b2xinfinitepushscratchbookmarks.
+    /// This part is ignored, so just parse it and forget it
+    fn maybe_resolve_infinitepush_bookmarks(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+    ) -> BoxFuture<((), BoxStream<Bundle2Item, Error>), Error> {
+        next_item(bundle2)
+            .and_then(
+                move |(infinitepushbookmarks, bundle2)| match infinitepushbookmarks {
+                    Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
+                        bookmarks.collect().map(|_| ((), bundle2)).boxify()
+                    }
+                    None => Ok(((), bundle2)).into_future().boxify(),
+                    _ => err(format_err!(
+                        "Expected B2xInfinitepushBookmarks or end of the stream"
+                    )).boxify(),
+                },
+            )
+            .map_err(|err| {
+                err.context("While resolving B2xInfinitepushBookmarks")
+                    .into()
+            })
             .boxify()
     }
 

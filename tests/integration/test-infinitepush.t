@@ -77,8 +77,10 @@ Do infinitepush (aka commit cloud) push
   $ cat newfile
   new
 
-Pushbackup fails too
+Pushbackup also works
   $ cd ../repo-push
+  $ echo aa > aa && hg addremove && hg ci -q -m newrepo
+  adding aa
   $ hgmn pushbackup ssh://user@dummy/repo --debug
   starting backup* (glob)
   running * (glob)
@@ -91,11 +93,47 @@ Pushbackup fails too
   sending batch command
   searching for changes
   all remote heads known locally
+  1 changesets found
+  list of changesets:
+  95cad53aab1b0b33eceee14473b3983312721529
+  sending unbundle command
+  bundle2-output-bundle: "HG20", (1 params) 4 parts total
+  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "B2X:INFINITEPUSH" (params: 0 advisory) streamed payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
+  finished in * seconds (glob)
+
+  $ cd ../repo-pull
+  $ hgmn pull 
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  new changesets 95cad53aab1b
+  (run 'hg update' to get a working copy)
+  $ hgmn up -q 95cad53aab1b0b33ecee
+  $ cat aa
+  aa
+
+Pushbackup that pushes only bookmarks doesn't work (T26428992)
+  $ cd ../repo-push
+  $ hg book newbook
+  $ hgmn pushbackup ssh://user@dummy/repo --debug
+  starting backup 14:33:50 01 Mar 2018 GMT
+  running /data/users/stash/fbsource/fbcode/buck-out/gen/scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''/data/users/stash/fbsource/fbcode/buck-out/gen/scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio'
+  sending hello command
+  sending between command
+  remote: 194
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=HG20%0Alistkeys%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks
+  remote: 1
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "replycaps" 250 bytes payload
-  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
-  * unknown header type b2x:infinitepushscratchbookmarks* (glob)
-  finished in * seconds (glob)
+  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 181 bytes payload
+  remote: Mar 01 14:33:50.738 ERRO Command failed, remote: true, error: bundle2-resolver error, root_cause: Expected Bundle2 Changegroup, backtrace: , cause: While resolving Changegroup, cause: Expected Bundle2 Changegroup
+  finished in 0.126301 seconds
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
