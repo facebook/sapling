@@ -5,4 +5,9 @@ version = "0.1.0"
 [dependencies]
 
 [dev-dependencies]
-quickcheck = "0.4"
+quickcheck = "*"
+criterion = "*"
+
+[[bench]]
+name = "bench"
+harness = false
