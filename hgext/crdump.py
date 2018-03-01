@@ -29,6 +29,7 @@ command = registrar.command(cmdtable)
          # We use 1<<15 for "as much context as possible"
          ('U', 'unified',
           1 << 15, _('number of lines of context to show'), _('NUM')),
+         ('l', 'lfs', False, 'Provide sha256 for lfs files instead of dumping'),
          ],
          _('hg debugcrdump [OPTION]... [-r] [REV]'))
 def crdump(ui, repo, *revs, **opts):
@@ -86,6 +87,12 @@ def crdump(ui, repo, *revs, **opts):
     cdata = []
     outdir = tempfile.mkdtemp(suffix='hg.crdump')
     try:
+        lfs = None
+        if opts['lfs']:
+            try:
+                lfs = extensions.find('lfs')
+            except KeyError:
+                pass # lfs extension is not enabled
         for rev in revs:
             ctx = repo[rev]
             rdata = {
@@ -119,7 +126,7 @@ def crdump(ui, repo, *revs, **opts):
                 except KeyError:
                     pass
             rdata['patch_file'] = dumppatch(ui, repo, ctx, outdir, contextlines)
-            rdata['binary_files'] = dumpbinaryfiles(ui, repo, ctx, outdir)
+            rdata['binary_files'] = dumpbinaryfiles(ui, repo, ctx, outdir, lfs)
             cdata.append(rdata)
 
         ui.write(json.dumps({
@@ -147,33 +154,69 @@ def dumpfctx(outdir, fctx):
             f.write(fctx.data())
     return outfile
 
-def dumpbinaryfiles(ui, repo, ctx, outdir):
+def _getfilesizeandsha256(flog, ctx, fname, lfs):
+    try:
+        fnode = ctx.filenode(fname)
+    except error.ManifestLookupError:
+        return None, None
+
+    if lfs.wrapper._islfs(flog, node=fnode): # if file was uploaded to lfs
+        rawtext = flog.revision(fnode, raw=True)
+        gitlfspointer = lfs.pointer.deserialize(rawtext)
+        sha256_hash = gitlfspointer.oid()
+        filesize = gitlfspointer.size()
+        return sha256_hash, filesize
+    return None, None
+
+def dumpbinaryfiles(ui, repo, ctx, outdir, lfs):
     binaryfiles = []
     pctx = ctx.parents()[0]
-    for fname in ctx.files():
-        oldfile = newfile = None
-        dump = False
+    with ui.configoverride({('remotefilelog', 'dolfsprefetch'): False}):
+        for fname in ctx.files():
+            oldfile = newfile = None
+            dump = False
+            oldfilesha256 = newfilesha256 = None
+            oldfilesize = newfilesize = None
+            if lfs is not None:
+                flog = repo.file(fname)
+                newfilesha256, newfilesize = _getfilesizeandsha256(flog, ctx,
+                                                                    fname, lfs)
+                oldfilesha256, oldfilesize = _getfilesizeandsha256(flog, pctx,
+                                                                    fname, lfs)
+            # if one of the versions is binary file which is not in lfs
+            # the whole change will show up as binary in diff output
+            if not newfilesha256:
+                fctx = ctx[fname] if fname in ctx else None
+                if fctx and fctx.isbinary():
+                    dump = True
 
-        fctx = ctx[fname] if fname in ctx else None
-        pfctx = pctx[fname] if fname in pctx else None
+            if not oldfilesha256:
+                pfctx = pctx[fname] if fname in pctx else None
+                if pfctx and pfctx.isbinary():
+                    dump = True
 
-        # if one of the versions is binary file the whole change will show
-        # up as binary in diff output so we need to dump both versions
-        if fctx and fctx.isbinary():
-            dump = True
-        if pfctx and pfctx.isbinary():
-            dump = True
+            if dump:
+                if not newfilesha256 and fctx:
+                    newfile = dumpfctx(outdir, fctx)
+                if not oldfilesha256 and pfctx:
+                    oldfile = dumpfctx(outdir, pfctx)
 
-        if dump:
-            if fctx:
-                newfile = dumpfctx(outdir, fctx)
-            if pfctx:
-                oldfile = dumpfctx(outdir, pfctx)
-            binaryfiles.append({
-                'file_name': fname,
-                'old_file': oldfile,
-                'new_file': newfile,
-            })
+            if lfs is None and dump:
+                binaryfiles.append({
+                    'file_name': fname,
+                    'old_file': oldfile,
+                    'new_file': newfile,
+                })
+            elif newfile or newfilesha256 or oldfile or oldfilesha256:
+                binaryfiles.append({
+                    'file_name': fname,
+                    'old_file': oldfile,
+                    'new_file': newfile,
+                    'new_file_sha256': newfilesha256,
+                    'old_file_sha256': oldfilesha256,
+                    'new_file_size': newfilesize,
+                    'old_file_size': oldfilesize,
+                })
 
     return binaryfiles
 
