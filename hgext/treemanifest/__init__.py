@@ -598,7 +598,6 @@ class treeonlymanifestlog(basetreemanifestlog):
         super(treeonlymanifestlog, self).__init__()
         self._opener = opener
         self.ui = repo.ui
-        self._memtrees = {}
         self._changelog = repo.unfiltered().changelog
 
     def __getitem__(self, node):
@@ -611,10 +610,6 @@ class treeonlymanifestlog(basetreemanifestlog):
         if node == nullid:
             return treemanifestctx(self, dir, node)
 
-        memtree = self._memtrees.get((dir, node))
-        if memtree is not None:
-            return memtree
-
         store = self.datastore
 
         try:
@@ -624,14 +619,8 @@ class treeonlymanifestlog(basetreemanifestlog):
 
         return treemanifestctx(self, dir, node)
 
-    def addmemtree(self, node, tree, p1, p2):
-        ctx = treemanifestctx(self, '', node)
-        ctx._data = tree
-        ctx.parents = (p1, p2)
-        self._memtrees[('', node)] = ctx
-
     def clearcaches(self):
-        self._memtrees.clear()
+        pass
 
     def _maplinknode(self, linknode):
         """Turns a linknode into a linkrev. Only needed for revlog backed
@@ -781,8 +770,6 @@ class memtreemanifestctx(object):
         p1tree = mfl[p1].read()
 
         node = mfl.add(mfl.ui, newtree, p1tree)
-        if node is not None and util.safehasattr(mfl, 'addmemtree'):
-            mfl.addmemtree(node, newtree, p1, p2)
         return node
 
 def serverreposetup(repo):
@@ -954,11 +941,9 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         assert linkrev != -1, "attempting to create manifest with null linkrev"
         _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
     else:
-        node = tmfl.add(mfl.ui, newtree, parenttree,
-                        overridenode=mfctx.node(),
-                        overridep1node=p1node)
-        if node is not None and util.safehasattr(tmfl, 'addmemtree'):
-            tmfl.addmemtree(node, newtree, p1node, p2node)
+        tmfl.add(mfl.ui, newtree, parenttree,
+                 overridenode=mfctx.node(),
+                 overridep1node=p1node)
 
 def _getnewtree(newflat, parenttree, parentflat):
     diff = parentflat.diff(newflat)

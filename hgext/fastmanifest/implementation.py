@@ -1065,9 +1065,6 @@ class manifestfactory(object):
                                 overridenode=overridenode,
                                 overridep1node=overridep1node)
 
-                if node is not None and util.safehasattr(tmfl, 'addmemtree'):
-                    tmfl.addmemtree(node, self._treemanifest, p1, p2)
-
                 treemanifestcache.getinstance(opener,
                                               mfl.ui)[node] = newtree
                 def finalize(tr):
