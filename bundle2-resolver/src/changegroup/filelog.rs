@@ -125,7 +125,7 @@ impl DeltaCache {
                                 .boxify(),
                             None => self.repo
                                 .get_file_content(&base)
-                                .map(move |vec| delta::apply(vec.as_slice(), &delta))
+                                .map(move |bytes| delta::apply(bytes.to_vec().as_slice(), &delta))
                                 .boxify(),
                         };
                         fut.map_err(move |err| {

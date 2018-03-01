@@ -7,6 +7,8 @@
 //! Plain files, symlinks
 use std::sync::Arc;
 
+use bytes::Bytes;
+
 use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -34,7 +36,7 @@ pub struct BlobEntry {
 pub fn fetch_file_content_and_renames_from_blobstore(
     blobstore: &Arc<Blobstore>,
     nodeid: NodeHash,
-) -> BoxFuture<(Vec<u8>, Option<(MPath, NodeHash)>), Error> {
+) -> BoxFuture<(Bytes, Option<(MPath, NodeHash)>), Error> {
     get_node(blobstore, nodeid)
         .and_then({
             let blobstore = blobstore.clone();
@@ -53,7 +55,7 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                             file.copied_from().and_then(|from| {
                                 file.content()
                                     .ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                                    .map(|content| (Vec::from(content), from))
+                                    .map(|content| (Bytes::from(content), from))
                             })
                         })
                 })

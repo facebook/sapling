@@ -16,6 +16,7 @@
 /// ```
 extern crate ascii;
 extern crate blobrepo;
+extern crate bytes;
 extern crate clap;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -56,6 +57,7 @@ use std::sync::Arc;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobRepo;
+use bytes::Bytes;
 use clap::App;
 use futures::{Future, IntoFuture, Stream};
 use futures::sync::oneshot;
@@ -231,7 +233,7 @@ where
         &self,
         reponame: String,
         changesetid: &ChangesetId,
-    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
+    ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
@@ -240,11 +242,13 @@ where
         };
         repo.get_changeset_by_changesetid(&changesetid)
             .map(|cs| {
-                cs.manifestid()
-                    .clone()
-                    .into_nodehash()
-                    .to_string()
-                    .into_bytes()
+                Bytes::from(
+                    cs.manifestid()
+                        .clone()
+                        .into_nodehash()
+                        .to_string()
+                        .into_bytes(),
+                )
             })
             .from_err()
             .boxify()
@@ -255,7 +259,7 @@ where
         reponame: String,
         hash: &NodeHash,
         options: TreeMetadataOptions,
-    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
+    ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {
@@ -280,7 +284,7 @@ where
             .collect()
             .map(|entries| {
                 let x: serde_json::Value = entries.into();
-                x.to_string().into_bytes()
+                Bytes::from(x.to_string().into_bytes())
             })
             .boxify()
     }
@@ -289,7 +293,7 @@ where
         &self,
         reponame: String,
         hash: &NodeHash,
-    ) -> Box<futures::Future<Item = Vec<u8>, Error = Error> + Send> {
+    ) -> Box<futures::Future<Item = Bytes, Error = Error> + Send> {
         let repo = match self.name_to_repo.get(&reponame) {
             Some(repo) => repo,
             None => {

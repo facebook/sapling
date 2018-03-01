@@ -189,7 +189,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn get_file_content(&self, key: &NodeHash) -> BoxFuture<Vec<u8>, Error> {
+    pub fn get_file_content(&self, key: &NodeHash) -> BoxFuture<Bytes, Error> {
         fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
             .map(|contentrename| contentrename.0)
             .boxify()
