@@ -9,8 +9,8 @@
 #[macro_use]
 extern crate quickcheck;
 
-use std::mem::size_of;
 use std::io::{self, Read, Write};
+use std::mem::size_of;
 
 pub trait VLQEncode<T> {
     /// Encode an integer to a VLQ byte array and write it directly to a stream.
@@ -91,6 +91,37 @@ pub trait VLQDecode<T> {
     fn read_vlq(&mut self) -> io::Result<T>;
 }
 
+pub trait VLQDecodeAt<T> {
+    /// Read a VLQ byte array from the given offset and decode it to an integer.
+    ///
+    /// Returns `Ok((decoded_integer, bytes_read))` on success.
+    ///
+    /// This is similar to `VLQDecode::read_vlq`. It's for immutable `AsRef<[u8]>` instead of
+    /// a mutable `io::Read` object.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use vlqencoding::VLQDecodeAt;
+    /// use std::io::ErrorKind;
+    ///
+    /// let c = &[120u8, 211, 171, 202, 220, 84, 255];
+    ///
+    /// let x: Result<(u8, _), _> = c.read_vlq_at(0);
+    /// assert_eq!(x.unwrap(), (120u8, 1));
+    ///
+    /// let x: Result<(u64, _), _> = c.read_vlq_at(1);
+    /// assert_eq!(x.unwrap(), (22742734291u64, 5));
+    ///
+    /// let x: Result<(u64, _), _> = c.read_vlq_at(6);
+    /// assert_eq!(x.unwrap_err().kind(), ::std::io::ErrorKind::InvalidData);
+    ///
+    /// let x: Result<(u64, _), _> = c.read_vlq_at(7);
+    /// assert_eq!(x.unwrap_err().kind(), ::std::io::ErrorKind::InvalidData);
+    /// ```
+    fn read_vlq_at(&self, offset: usize) -> io::Result<(T, usize)>;
+}
+
 macro_rules! impl_unsigned_primitive {
     ($T: ident) => (
         impl<W: Write> VLQEncode<$T> for W {
@@ -134,6 +165,34 @@ macro_rules! impl_unsigned_primitive {
                 Ok(value)
             }
         }
+
+        impl<R: AsRef<[u8]>> VLQDecodeAt<$T> for R {
+            fn read_vlq_at(&self, offset: usize) -> io::Result<($T, usize)> {
+                let buf = self.as_ref();
+                let mut size = 0;
+                let mut value = 0 as $T;
+                let mut base = 1 as $T;
+                let base_multiplier = (1 << 7) as $T;
+                loop {
+                    if let Some(byte) = buf.get(offset + size) {
+                        size += 1;
+                        value = ($T::from(byte & 127))
+                            .checked_mul(base)
+                            .and_then(|v| v.checked_add(value))
+                            .ok_or(io::ErrorKind::InvalidData)?;
+                        if byte & 128 == 0 {
+                            break;
+                        }
+                        base = base.checked_mul(base_multiplier).ok_or(
+                            io::ErrorKind::InvalidData,
+                        )?;
+                    } else {
+                        return Err(io::ErrorKind::InvalidData.into());
+                    }
+                }
+                Ok((value, size))
+            }
+        }
     )
 }
 
@@ -158,6 +217,14 @@ macro_rules! impl_signed_primitive {
                 })
             }
         }
+
+        impl<R: AsRef<[u8]>> VLQDecodeAt<$T> for R {
+            fn read_vlq_at(&self, offset: usize) -> io::Result<($T, usize)> {
+                (self.read_vlq_at(offset) as Result<($U, _), _>).map (|(n, s)| {
+                    (((n >> 1) as $T) ^ -((n & 1) as $T), s)
+                })
+            }
+        }
     )
 }
 
@@ -169,8 +236,8 @@ impl_signed_primitive!(i8, u8);
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::io::{self, Cursor, Seek, SeekFrom};
-    use {VLQDecode, VLQEncode};
 
     macro_rules! check_round_trip {
         ($N: expr) => (
@@ -179,10 +246,17 @@ mod tests {
                 let mut x = $N;
                 v.write_vlq(x).expect("write");
 
+                // `z` and `y` below are helpful for the compiler to figure out the return type of
+                // `read_vlq_at`, and `read_vlq`.
+                #[allow(unused_assignments)]
+                let mut z = x;
+                let t = v.read_vlq_at(0).unwrap();
+                z = t.0;
+
                 let mut c = Cursor::new(v);
                 let y = x;
                 x = c.read_vlq().unwrap();
-                x == y
+                x == y && y == z && t.1 == c.position() as usize
             }
         )
     }
