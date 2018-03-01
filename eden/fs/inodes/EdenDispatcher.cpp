@@ -77,7 +77,7 @@ folly::Future<std::shared_ptr<fusell::DirHandle>> EdenDispatcher::opendir(
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "opendir({}, flags={:x})", ino, flags);
   return inodeMap_->lookupTreeInode(ino).then(
-      [flags](const TreeInodePtr& inode) { return inode->opendir(flags); });
+      [](const TreeInodePtr& inode) { return inode->opendir(); });
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::lookup(

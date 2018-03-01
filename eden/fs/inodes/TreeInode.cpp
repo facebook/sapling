@@ -560,8 +560,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       number, inodePtrFromThis(), name, std::move(overlayDir.value()));
 }
 
-folly::Future<std::shared_ptr<fusell::DirHandle>> TreeInode::opendir(
-    int /* flags */) {
+std::shared_ptr<fusell::DirHandle> TreeInode::opendir() {
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
 }
 

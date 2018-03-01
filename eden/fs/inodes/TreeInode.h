@@ -311,7 +311,7 @@ class TreeInode : public InodeBase {
 
   fusell::InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(int flags);
+  std::shared_ptr<fusell::DirHandle> opendir();
   folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
