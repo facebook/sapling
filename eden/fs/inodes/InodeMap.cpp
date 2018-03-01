@@ -775,6 +775,8 @@ fusell::InodeNumber InodeMap::allocateInodeNumber(Members& data) {
   static_assert(
       sizeof(data.nextInodeNumber_) >= 8,
       "expected fusell::InodeNumber to be at least 64-bits");
+  DCHECK_NE(data.nextInodeNumber_, 0)
+      << "allocateInodeNumber called before initialize";
   return fusell::InodeNumber{data.nextInodeNumber_++};
 }
 } // namespace eden
