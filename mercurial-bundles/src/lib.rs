@@ -83,6 +83,7 @@ pub use types::StreamHeader;
 pub enum Bundle2Item {
     Start(StreamHeader),
     Changegroup(PartHeader, BoxStream<changegroup::Part, Error>),
+    B2xInfinitepush(PartHeader, BoxStream<changegroup::Part, Error>),
     B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
 }
@@ -110,6 +111,9 @@ impl fmt::Debug for Bundle2Item {
         match self {
             &Start(ref header) => write!(f, "Bundle2Item::Start({:?})", header),
             &Changegroup(ref header, _) => write!(f, "Bundle2Item::Changegroup({:?}, ...)", header),
+            &B2xInfinitepush(ref header, _) => {
+                write!(f, "Bundle2Item::B2xInfinitepush({:?}, ...)", header)
+            }
             &B2xTreegroup2(ref header, _) => {
                 write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)
             }

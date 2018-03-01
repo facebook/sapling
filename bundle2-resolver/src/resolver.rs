@@ -122,7 +122,8 @@ impl Bundle2Resolver {
 
         next_item(bundle2)
             .and_then(move |(changegroup, bundle2)| match changegroup {
-                Some(Bundle2Item::Changegroup(header, parts)) => {
+                Some(Bundle2Item::Changegroup(header, parts))
+                | Some(Bundle2Item::B2xInfinitepush(header, parts)) => {
                     let part_id = header.part_id();
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)

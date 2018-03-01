@@ -33,6 +33,12 @@ lazy_static! {
     static ref KNOWN_PARAMS: HashMap<PartHeaderType, HashSet<&'static str>> = {
         let mut m: HashMap<PartHeaderType, HashSet<&'static str>> = HashMap::new();
         m.insert(PartHeaderType::Changegroup, hashset!{"version", "nbchanges", "treemanifest"});
+        // TODO(stash): currently ignore all the parameters. Later we'll
+        // support 'bookmark' parameter, and maybe 'create' and 'force' (although 'force' will
+        // probably) be renamed T26385545. 'bookprevnode' and 'pushbackbookmarks' will be
+        // removed T26384190.
+        m.insert(PartHeaderType::B2xInfinitepush, hashset!{
+            "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"});
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::Replycaps, hashset!{});
         m
@@ -83,6 +89,12 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 logger.new(o!("stream" => "cg2")),
             ));
             Bundle2Item::Changegroup(header, Box::new(cg2_stream))
+        }
+        &PartHeaderType::B2xInfinitepush => {
+            let cg2_stream = wrapped_stream.decode(changegroup::unpacker::Cg2Unpacker::new(
+                logger.new(o!("stream" => "cg2")),
+            ));
+            Bundle2Item::B2xInfinitepush(header, Box::new(cg2_stream))
         }
         &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(

@@ -34,6 +34,8 @@ pub enum PartHeaderType {
     /// Mononoke this parameter will be ignored, because it does not provide transaction during
     /// push
     CheckHeads,
+    /// Contains changegroup for infinitepush commits
+    B2xInfinitepush,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -63,6 +65,7 @@ impl PartHeaderType {
             "replycaps" => Ok(Replycaps),
             "listkeys" => Ok(Listkeys),
             "b2x:treegroup2" => Ok(B2xTreegroup2),
+            "b2x:infinitepush" => Ok(B2xInfinitepush),
             "check:heads" => Ok(CheckHeads),
             bad => bail_msg!("unknown header type {}", bad),
         }
@@ -76,6 +79,7 @@ impl PartHeaderType {
             Replycaps => "replycaps",
             Listkeys => "listkeys",
             B2xTreegroup2 => "b2x:treegroup2",
+            B2xInfinitepush => "b2x:infinitepush",
             CheckHeads => "check:heads",
         }
     }
