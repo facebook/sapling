@@ -6,6 +6,7 @@
     # Name of the rpm binary
     rpmbin = rpm
 """
+import subprocess
 
 from functools import partial
 from mercurial.i18n import _
@@ -15,12 +16,14 @@ from mercurial import (
     debugcommands,
     encoding,
     error,
+    progress,
+    pycompat,
     registrar,
-    util,
-)
-from mercurial import pycompat, scmutil
-from . import blackbox
+    scmutil,
+    util)
+
 from . import (
+    blackbox,
     shareutil,
     smartlog,
     fbsparse as sparse,
@@ -34,7 +37,6 @@ from .remotefilelog import (
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
 _failsafeerrors = []
 
 def _failsafe(func):
@@ -186,17 +188,8 @@ def infinitepushbackuplogs(ui, repo):
             linelimit -= linecount
     return ''.join(reversed(logs))
 
-@command('^rage', rageopts , _('hg rage'))
-def rage(ui, repo, *pats, **opts):
-    """collect useful diagnostics for asking help from the source control team
-
-    The rage command collects useful diagnostic information.
-
-    By default, the information will be uploaded to Phabricator and
-    instructions about how to ask for help will be printed.
-    """
+def _makerage(ui, repo, **opts):
     srcrepo = shareutil.getsrcrepo(repo)
-
     def format(pair, basic=True):
         if basic:
             fmt = "%s: %s\n"
@@ -237,6 +230,7 @@ def rage(ui, repo, *pats, **opts):
             lambda: str(srcrepo.vfs.stat('store/obsstore').st_size))),
     ]
 
+    oldcolormode = ui._colormode
     ui._colormode = None
 
     detailed = [
@@ -280,6 +274,8 @@ def rage(ui, repo, *pats, **opts):
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
+    msg = ''
+
     if util.safehasattr(repo, 'name'):
         # Add the contents of both local and shared pack directories.
         packlocs = {
@@ -311,23 +307,60 @@ def rage(ui, repo, *pats, **opts):
     if _failsafeerrors:
         msg += '\n' + '\n'.join(_failsafeerrors)
 
+    ui._colormode = oldcolormode
+    return msg
+
+@command('^rage', rageopts, _('hg rage'))
+def rage(ui, repo, *pats, **opts):
+    """collect useful diagnostics for asking help from the source control team
+
+    The rage command collects useful diagnostic information.
+
+    By default, the information will be uploaded to Phabricator and
+    instructions about how to ask for help will be printed.
+
+    After submitting to Phabricator, it prints configerable advice::
+
+    [pasterage]
+    advice = Please see our FAQ guide: https://...
+
+    """
+    with progress.spinner(ui, "Generating paste"):
+        msg = _makerage(ui, repo, **opts)
+
     if opts.get('preview'):
         ui.write('%s\n' % msg)
         return
 
-    fp = util.popen('arc paste --lang hgrage --title hgrage', 'w')
-    fp.write(msg)
-    ret = fp.close()
+    if opts.get('oncall'):
+        with progress.spinner(ui, "Generating task for oncall"):
+            createtask(ui, repo, msg)
+        return
+
+    with progress.spinner(ui, "Saving paste"):
+        p = subprocess.Popen(
+            ['arc', 'paste', '--lang', 'hgrage' , '--title', 'hgrage'],
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        out, err = p.communicate(input=msg + '\n')
+        ret = p.returncode
+
     if ret:
-        ui.warn(_('No paste was created.\n'))
         fd, tmpname = tempfile.mkstemp(prefix='hg-rage-')
         with os.fdopen(fd, r'w') as tmpfp:
             tmpfp.write(msg)
-            ui.warn(_('Saved contents to %s\n') % tmpname)
+            ui.write(_('Failed to post the diagnostic paste to Phabricator, '
+                      'but its contents have been written to:\n\n'))
+            ui.write(_('  %s\n') % tmpname, label='rage.link')
+            ui.write(_('\nPlease include this file in the %s.\n') %
+                     ui.config('ui', 'supportcontact'))
     else:
-        if opts.get('oncall'):
-            createtask(ui, repo, msg)
-        else:
-            ui.write(_('Please post your problem and the above link at'
-                       ' %s for help.\n')
-                     % (ui.config('ui', 'supportcontact'),))
+        ui.write(_('Please post in %s with the following link:\n\n')
+                 % (ui.config('ui', 'supportcontact')))
+        ui.write('  ' + out + '\n', label='rage.link')
+    ui.write(ui.config('pasterage', 'advice') + '\n')
+
+colortable = {
+    'rage.link': 'blue bold',
+}
