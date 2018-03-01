@@ -35,7 +35,6 @@ import sqlite3
 from . import (
     p4,
     importer,
-    filetransaction as ftrmod
 )
 
 from .util import decodefileflags, getcl, lastcl, runworker
@@ -284,7 +283,7 @@ def p4fastimport(ui, repo, client, **opts):
         count = 0
         fileinfo = {}
         largefiles = []
-        ftr = ftrmod.filetransaction(ui.warn, repo.svfs)
+        ftr = repo.transaction('importer')
         try:
             for filelogs in map(sorted, runlist.values()):
                 wargs = (ftr, ui, repo, importset, p1ctx)

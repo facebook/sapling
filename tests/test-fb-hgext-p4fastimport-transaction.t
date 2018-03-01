@@ -100,7 +100,7 @@ One more submit
   $ cd $hgwd
   $ hg --config "extensions.fail=$TESTTMP/fail.py" p4fastimport --bookmark master -P $P4ROOT hg-p4-import 2>&1 | grep -E "^transaction|^rollback"
   transaction abort!
-  rollback complete
+  rollback completed
 
 Verify
 
