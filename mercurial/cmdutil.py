@@ -3882,7 +3882,7 @@ summaryremotehooks = util.hooks()
 # (state file, clearable, allowcommit, error, hint)
 unfinishedstates = [
     ('graftstate', True, False, _('graft in progress'),
-     _("use 'hg graft --continue' or 'hg update' to abort")),
+     _("use 'hg graft --continue' or 'hg graft --abort' to abort")),
     ('updatestate', True, False, _('last update was interrupted'),
      _("use 'hg update' to get a consistent checkout"))
     ]

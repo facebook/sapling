@@ -372,8 +372,7 @@ def cherrypick(ui, repo, *args, **kwargs):
     if opts.get('continue'):
         cmd['--continue'] = None
     elif opts.get('abort'):
-        ui.status(_("note: hg graft does not have --abort.\n\n"))
-        return
+        cmd['--abort'] = None
     else:
         cmd.extend(args)
 

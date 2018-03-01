@@ -54,6 +54,9 @@ Can't continue without starting:
   $ hg graft --continue
   abort: no graft in progress
   [255]
+  $ hg graft --abort
+  abort: no graft in progress
+  [255]
   $ hg revert -r . -q e
 
 Need to specify a rev:
@@ -246,13 +249,16 @@ Commit while interrupted should fail:
 
   $ hg ci -m 'commit interrupted graft'
   abort: graft in progress
-  (use 'hg graft --continue' or 'hg update' to abort)
+  (use 'hg graft --continue' or 'hg graft --abort' to abort)
   [255]
 
 Abort the graft and try committing:
 
-  $ hg up -C .
+  $ hg graft --abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status --verbose
+  ? a.orig
+  ? e.orig
   $ echo c >> e
   $ hg ci -mtest
 
@@ -296,6 +302,10 @@ Continue with a revision should fail:
 
   $ hg graft -c -r 6
   abort: can't specify --continue and revisions
+  [255]
+
+  $ hg graft --abort -r 6
+  abort: can't specify --abort and revisions
   [255]
 
 Continue for real, clobber usernames

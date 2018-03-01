@@ -2056,6 +2056,7 @@ def forget(ui, repo, *pats, **opts):
     'graft',
     [('r', 'rev', [], _('revisions to graft'), _('REV')),
      ('c', 'continue', False, _('resume interrupted graft')),
+     ('', 'abort', False, _('abort an interrupted graft')),
      ('e', 'edit', False, _('invoke editor on commit messages')),
      ('', 'log', None, _('append graft info to log message')),
      ('f', 'force', False, _('force graft')),
@@ -2113,6 +2114,10 @@ def graft(ui, repo, *revs, **opts):
 
           hg graft -c
 
+      - abort an interrupted graft::
+
+          hg graft --abort
+
       - show the source of a grafted changeset::
 
           hg log --debug -r .
@@ -2146,10 +2151,12 @@ def _dograft(ui, repo, *revs, **opts):
                                      **pycompat.strkwargs(opts))
 
     cont = False
-    if opts.get('continue'):
-        cont = True
-        if revs:
+    if opts.get('continue') or opts.get('abort'):
+        if revs and opts.get('continue'):
             raise error.Abort(_("can't specify --continue and revisions"))
+        if revs and opts.get('abort'):
+            raise error.Abort(_("can't specify --abort and revisions"))
+
         # read in unfinished revisions
         try:
             nodes = repo.vfs.read('graftstate').splitlines()
@@ -2158,6 +2165,11 @@ def _dograft(ui, repo, *revs, **opts):
             if inst.errno != errno.ENOENT:
                 raise
             cmdutil.wrongtooltocontinue(repo, _('graft'))
+
+        if opts.get('continue'):
+            cont = True
+        if opts.get('abort'):
+            return update(ui, repo, node='.', clean=True)
     else:
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
