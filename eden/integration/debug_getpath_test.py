@@ -8,7 +8,9 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from .lib import testcase, edenclient
+from facebook.eden.ttypes import TimeSpec
 import os
+import time
 
 
 @testcase.eden_repo_test
@@ -64,16 +66,15 @@ class DebugGetPathTest:
         Test that calling `eden debug getpath` on an unloaded inode returns the
         correct path and indicates that it is unloaded
         '''
+        dirpath = os.path.join(self.mount, 'dir')
+        filepath = os.path.join(dirpath, 'file')
+
         # Create the file
         self.write_file(os.path.join('dir', 'file'), 'blah')
         # Get the inodeNumber
-        stat = os.stat(os.path.join(self.mount, 'dir', 'file'))
-        # Unload any inodes in directory dir
-        self.eden.run_cmd(
-            'debug',
-            'unload',
-            os.path.join(self.mount, 'dir'),
-            '0')
+        stat = os.stat(filepath)
+        self.unload_one_inode_under('dir')
+
         # Get the path for dir/file from its inodeNumber
         output = self.eden.run_cmd(
             'debug',
@@ -82,7 +83,7 @@ class DebugGetPathTest:
             cwd=self.mount)
 
         self.assertEqual(
-            'unloaded ' + os.path.join(self.mount, 'dir', 'file') + '\n',
+            f'unloaded {filepath}\n',
             output)
 
     def test_getpath_unloaded_inode_rename_parent(self):
@@ -92,14 +93,12 @@ class DebugGetPathTest:
         '''
         # Create the file
         self.write_file(os.path.join('foo', 'bar', 'test.txt'), 'blah')
+        dirpath = os.path.join(self.mount, 'foo', 'bar')
         # Get the inodeNumber
-        stat = os.stat(os.path.join(self.mount, 'foo', 'bar', 'test.txt'))
-        # Unload inodes in foo/bar
-        self.eden.run_cmd(
-            'debug',
-            'unload',
-            os.path.join(self.mount, 'foo', 'bar'),
-            '0')
+        stat = os.stat(os.path.join(dirpath, 'test.txt'))
+
+        self.unload_one_inode_under(os.path.join('foo', 'bar'))
+
         # Rename the foo directory
         os.rename(os.path.join(self.mount, 'foo'),
                   os.path.join(self.mount, 'newname'))
@@ -114,6 +113,23 @@ class DebugGetPathTest:
             'unloaded ' +
             os.path.join(self.mount, 'newname', 'bar', 'test.txt') + '\n',
             output)
+
+    def unload_one_inode_under(self, path):
+        # TODO: To support unloading more than one inode, sum the return value
+        # until count is reached our the attempt limit has been reached.
+        remaining_attempts = 5
+        while True:
+            age = TimeSpec()  # zero
+            with self.eden.get_thrift_client() as client:
+                count = client.unloadInodeForPath(self.mount, path, age)
+            if remaining_attempts == 1:
+                self.assertEqual(1, count)
+            elif count == 1:
+                break
+            else:
+                remaining_attempts -= 1
+                time.sleep(1)
+                continue
 
     def test_getpath_unlinked_inode(self):
         '''
