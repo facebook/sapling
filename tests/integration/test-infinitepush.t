@@ -132,7 +132,7 @@ Pushbackup that pushes only bookmarks doesn't work (T26428992)
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "replycaps" 250 bytes payload
-  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 181 bytes payload
+  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
   *error: bundle2-resolver error, root_cause: Expected Bundle2 Changegroup* (glob)
   finished in * seconds (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
