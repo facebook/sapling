@@ -31,3 +31,19 @@ EOF
     fi
   done
 }
+
+# Like "hg debugdrawdag", but do not leave local tags in the repo and define
+# nodes as environment variables.
+# This is useful if the test wants to hide those commits because tags would
+# make commits visible. The function will set environment variables so
+# commits can still be referred as $TAGNAME.
+drawdag() {
+  hg debugdrawdag "$@"
+  eval `hg tags -T '{tag}={node}\n'`
+  rm -f .hg/localtags
+}
+
+# Set config items like --config way, instead of using cat >> $HGRCPATH
+setconfig() {
+  python "$RUNTESTDIR/setconfig.py" "$@"
+}

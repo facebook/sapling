@@ -1541,7 +1541,7 @@ Rebasing a merge with one of its parent having a hidden successor
   $ hg init $TESTTMP/merge-p1-hidden-successor
   $ cd $TESTTMP/merge-p1-hidden-successor
 
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   >  E
   >  |
   > B3 B2 # amend: B1 -> B2 -> B3
@@ -1552,9 +1552,6 @@ Rebasing a merge with one of its parent having a hidden successor
   >  |/
   >  A
   > EOS
-
-  $ eval `hg tags -T '{tag}={node}\n'`
-  $ rm .hg/localtags
 
   $ hg rebase -r $D -d $E
   rebasing 5:9e62094e4d94 "D"
@@ -1575,21 +1572,15 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
 
   $ hg init $TESTTMP/hidden-state1
   $ cd $TESTTMP/hidden-state1
-  $ cat >> .hg/hgrc <<EOF
-  > [experimental]
-  > rebaseskipobsolete=0
-  > EOF
+  $ setconfig experimental.rebaseskipobsolete=0
 
-  $ hg debugdrawdag <<'EOS'
+  $ drawdag <<'EOS'
   >    C
   >    |
   >  D B # prune: B, C
   >  |/  # B/D=B
   >  A
   > EOS
-
-  $ eval `hg tags -T '{tag}={node}\n'`
-  $ rm .hg/localtags
 
   $ hg update -q $C --hidden
   $ hg rebase -s $B -d $D

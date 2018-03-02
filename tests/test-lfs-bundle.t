@@ -15,15 +15,8 @@ non-LFS in the bundle; or vice-versa.
 Init:
   $ . helpers-usechg.sh
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > lfs=
-  > remotefilelog=
-  > [lfs]
-  > url=file://$TESTTMP/lfs-remote
-  > [remotefilelog]
-  > cachepath=$TESTTMP/remotefilelog-cache
-  > EOF
+  $ enable lfs remotefilelog
+  $ setconfig lfs.url=file://$TESTTMP/remote remotefilelog.cachepath=$TESTTMP/cache
 
 Helper functions to create commits:
 
