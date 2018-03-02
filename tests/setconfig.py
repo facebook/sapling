@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
-import os, sys
+import os
+import sys
 
 if os.path.exists('.hg'):
     hgrcpath = '.hg/hgrc'

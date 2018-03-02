@@ -571,37 +571,21 @@ to avoid race conditions between free port detection and actual usage.
 Running In Debug Mode
 ======================
 
-  $ rt --debug 2>&1 | grep -v pwd
+  $ rt --debug 2>&1 | grep SALT
   + echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
-  + echo babar
-  babar
   + echo *SALT* 10 0 (glob)
   *SALT* 10 0 (glob)
   *+ echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
-  + echo babar
-  babar
   + echo *SALT* 2 0 (glob)
   *SALT* 2 0 (glob)
-  + echo xyzzy
-  xyzzy
   + echo *SALT* 9 0 (glob)
   *SALT* 9 0 (glob)
-  + printf *abc\ndef\nxyz\n* (glob)
-  abc
-  def
-  xyz
   + echo *SALT* 15 0 (glob)
   *SALT* 15 0 (glob)
-  + printf *zyx\nwvu\ntsr\n* (glob)
-  zyx
-  wvu
-  tsr
   + echo *SALT* 22 0 (glob)
   *SALT* 22 0 (glob)
-  .
-  # Ran 2 tests, 0 skipped, 0 failed.
 
 Parallel runs
 ==============
