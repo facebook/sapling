@@ -1,8 +1,4 @@
-
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > absorb=
-  > EOF
+  $ enable absorb
 
   $ sedi() { # workaround check-code
   > pattern="$1"
@@ -13,8 +9,7 @@
   > done
   > }
 
-  $ hg init repo1
-  $ cd repo1
+  $ newrepo
 
 Do not crash with empty repo:
 
@@ -245,9 +240,7 @@ Merge commit will not be changed:
 
 Use a new repo:
 
-  $ cd ..
-  $ hg init repo2
-  $ cd repo2
+  $ newrepo
 
 Make some commits to multiple files:
 
@@ -379,9 +372,7 @@ Executable files:
   > [diff]
   > git=True
   > EOF
-  $ cd ..
-  $ hg init repo3
-  $ cd repo3
+  $ newrepo
   $ echo > foo.py
   $ chmod +x foo.py
   $ hg add foo.py
@@ -406,9 +397,7 @@ Executable files:
 
 Remove lines may delete changesets:
 
-  $ cd ..
-  $ hg init repo4
-  $ cd repo4
+  $ newrepo
   $ cat > a <<EOF
   > 1
   > 2

@@ -1,16 +1,9 @@
 Set up test environment.
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > fbamend=
-  > inhibit=
-  > rebase=
-  > [experimental]
-  > evolution = createmarkers
-  > EOF
+  $ enable fbamend inhibit rebase obsstore
   $ showgraph() {
   >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
   > }
-  $ hg init fbamendnext && cd fbamendnext
+  $ newrepo
 
 Check help text for new options and removal of unsupported options.
   $ hg next --help

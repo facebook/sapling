@@ -1393,6 +1393,9 @@ class TTest(Test):
         if os.getenv('MSYSTEM'):
             script.append(b'alias pwd="pwd -W"\n')
 
+        # Source $RUNTESTDIR/tinit.sh for utility functions
+        script.append(b'source "$RUNTESTDIR/tinit.sh"\n')
+
         n = 0
         for n, l in enumerate(lines):
             if not l.endswith(b'\n'):
