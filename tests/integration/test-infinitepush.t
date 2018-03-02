@@ -122,8 +122,8 @@ Pushbackup that pushes only bookmarks doesn't work (T26428992)
   $ cd ../repo-push
   $ hg book newbook
   $ hgmn pushbackup ssh://user@dummy/repo --debug
-  starting backup 14:33:50 01 Mar 2018 GMT
-  running /data/users/stash/fbsource/fbcode/buck-out/gen/scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''/data/users/stash/fbsource/fbcode/buck-out/gen/scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio'
+  starting backup* (glob)
+  running * (glob)
   sending hello command
   sending between command
   remote: 194
@@ -133,7 +133,7 @@ Pushbackup that pushes only bookmarks doesn't work (T26428992)
   bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "replycaps" 250 bytes payload
   bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" 181 bytes payload
-  remote: Mar 01 14:33:50.738 ERRO Command failed, remote: true, error: bundle2-resolver error, root_cause: Expected Bundle2 Changegroup, backtrace: , cause: While resolving Changegroup, cause: Expected Bundle2 Changegroup
-  finished in 0.126301 seconds
+  *error: bundle2-resolver error, root_cause: Expected Bundle2 Changegroup* (glob)
+  finished in * seconds (glob)
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
