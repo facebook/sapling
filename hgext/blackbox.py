@@ -44,6 +44,7 @@ from mercurial.i18n import _
 from mercurial.node import hex
 
 from mercurial import (
+    error,
     registrar,
     ui as uimod,
     util,
@@ -170,9 +171,15 @@ def wrapui(ui):
             rev = '(unknown)'
             changed = ''
             if repo:
-                ctx = repo[None]
-                parents = ctx.parents()
-                rev = ('+'.join([hex(p.node()) for p in parents]))
+                try:
+                    ctx = repo[None]
+                    parents = ctx.parents()
+                    rev = ('+'.join([hex(p.node()) for p in parents]))
+                except error.Abort:
+                    # This can happen if the dirstate file is sufficiently
+                    # corrupt that we can't extract the parents. In that case,
+                    # just don't set the rev.
+                    pass
                 if (ui.configbool('blackbox', 'dirty') and
                     ctx.dirty(missing=True, merge=False, branch=False)):
                     changed = '+'

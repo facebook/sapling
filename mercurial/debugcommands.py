@@ -17,6 +17,7 @@ import random
 import socket
 import ssl
 import string
+import struct
 import sys
 import tempfile
 import time
@@ -1872,7 +1873,18 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
     One use of this command is to make the next :hg:`status` invocation
     check the actual file content.
     """
-    ctx = scmutil.revsingle(repo, rev)
+    try:
+        ctx = scmutil.revsingle(repo, rev)
+
+        # Force the dirstate to read so that we can catch the case where they
+        # dirstate is so corrupt that it can't be read.
+        repo.dirstate['_']
+    except (error.Abort, struct.error, ValueError):
+        # This can happen if the dirstate file is so corrupt that creating a
+        # context fails. Remove it entirely and retry.
+        os.remove(os.path.join(repo.path, 'dirstate'))
+        ctx = scmutil.revsingle(repo, rev)
+
     with repo.wlock():
         dirstate = repo.dirstate
         changedfiles = None
