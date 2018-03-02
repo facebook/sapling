@@ -37,7 +37,7 @@ pub struct Filelog {
     pub p1: Option<NodeHash>,
     pub p2: Option<NodeHash>,
     pub linknode: NodeHash,
-    pub blob: Blob<Bytes>,
+    pub blob: Blob,
 }
 
 impl UploadableBlob for Filelog {
@@ -106,7 +106,7 @@ impl DeltaCache {
         node: NodeHash,
         base: Option<NodeHash>,
         delta: Delta,
-    ) -> BoxFuture<Blob<Bytes>, Error> {
+    ) -> BoxFuture<Blob, Error> {
         let bytes = match self.bytes_cache.get(&node).cloned() {
             Some(bytes) => bytes,
             None => {

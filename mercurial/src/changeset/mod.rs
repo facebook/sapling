@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::io::{self, Write};
 use std::str::{self, FromStr};
 
+use bytes::Bytes;
 use errors::*;
 use failure;
 use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
@@ -173,7 +174,7 @@ impl RevlogChangeset {
         }
     }
 
-    pub fn new<T: AsRef<[u8]>>(node: BlobNode<T>) -> Result<Self> {
+    pub fn new(node: BlobNode) -> Result<Self> {
         Self::parse(node)
     }
 
@@ -205,7 +206,7 @@ impl RevlogChangeset {
     // XXX Files sorted? No escaping?
     // XXX "extra" - how sorted? What encoding?
     // XXX "comment" - line endings normalized at all?
-    fn parse<T: AsRef<[u8]>>(node: BlobNode<T>) -> Result<Self> {
+    fn parse(node: BlobNode) -> Result<Self> {
         // This is awkward - we want to store the node in the resulting
         // RevlogChangeset but we need to borrow from it to parse its data. Set up a
         // partially initialized RevlogChangeset then fill it in as we go.
@@ -271,12 +272,12 @@ impl RevlogChangeset {
         serialize_cs(self, out)
     }
 
-    pub fn get_node(&self) -> Result<BlobNode<Vec<u8>>> {
+    pub fn get_node(&self) -> Result<BlobNode> {
         let mut v = Vec::new();
 
         self.generate(&mut v)?;
         let (p1, p2) = self.parents.get_nodes();
-        Ok(BlobNode::new(v, p1, p2))
+        Ok(BlobNode::new(Bytes::from(v), p1, p2))
     }
 }
 

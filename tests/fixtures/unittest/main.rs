@@ -7,12 +7,14 @@
 // Test the linear repo fixture
 
 extern crate ascii;
+extern crate bytes;
 extern crate futures;
 
 extern crate linear;
 extern crate mercurial_types;
 
 use ascii::AsciiString;
+use bytes::Bytes;
 use futures::executor::spawn;
 use mercurial_types::Changeset;
 use mercurial_types::manifest::{Content, Type};
@@ -103,7 +105,7 @@ fn check_head_has_file() {
         assert_eq!(blob.size(), Some(21));
         assert_eq!(
             blob.into_inner().expect("Can't read content"),
-            b"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n"
+            Bytes::from(&b"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n"[..])
         );
     } else {
         panic!("files is not a file blob");

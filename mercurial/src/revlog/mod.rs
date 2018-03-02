@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+extern crate bytes;
+
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt::Debug;
 use std::fs::File;
@@ -12,6 +14,7 @@ use std::path::Path;
 use std::result;
 use std::sync::Arc;
 
+use bytes::Bytes;
 use errors::*;
 use failure;
 use memmap::Mmap;
@@ -263,10 +266,10 @@ impl RevlogInner {
                 Ok(res)
             }
             err => {
-                return Err(
-                    ErrorKind::Revlog(format!("failed to parse entry offset {}: {:?}", off, err))
-                        .into(),
-                )
+                return Err(ErrorKind::Revlog(format!(
+                    "failed to parse entry offset {}: {:?}",
+                    off, err
+                )).into())
             }
         }
     }
@@ -370,13 +373,11 @@ impl RevlogInner {
         if let Some(baserev) = entry.baserev {
             let delta = match parser::deltachunk(chunkdata) {
                 IResult::Done(rest, _) if rest.len() != 0 => {
-                    return Err(
-                        ErrorKind::Revlog(format!(
-                            "Failed to unpack details: {} remains, {:?}",
-                            rest.len(),
-                            &rest[..16]
-                        )).into(),
-                    );
+                    return Err(ErrorKind::Revlog(format!(
+                        "Failed to unpack details: {} remains, {:?}",
+                        rest.len(),
+                        &rest[..16]
+                    )).into());
                 }
                 IResult::Done(_, deltas) => Chunk::Deltas(baserev, deltas),
                 err => {
@@ -391,13 +392,11 @@ impl RevlogInner {
         } else {
             let literal = match parser::literal(chunkdata) {
                 IResult::Done(rest, _) if rest.len() != 0 => {
-                    return Err(
-                        ErrorKind::Revlog(format!(
-                            "Failed to unpack literal: {} remains, {:?}",
-                            rest.len(),
-                            &rest[..16]
-                        )).into(),
-                    );
+                    return Err(ErrorKind::Revlog(format!(
+                        "Failed to unpack literal: {} remains, {:?}",
+                        rest.len(),
+                        &rest[..16]
+                    )).into());
                 }
                 IResult::Done(_, literal) => Chunk::Literal(literal),
                 err => {
@@ -464,9 +463,10 @@ impl RevlogInner {
             let entry = self.get_entry(idx)?;
             if let Some(baserev) = entry.baserev.map(Into::into) {
                 if baserev >= idx {
-                    Err(ErrorKind::Revlog(
-                        format!("baserev {:?} >= idx {:?}", baserev, idx),
-                    ))?;
+                    Err(ErrorKind::Revlog(format!(
+                        "baserev {:?} >= idx {:?}",
+                        baserev, idx
+                    )))?;
                 }
                 idx = baserev;
             } else {
@@ -497,10 +497,7 @@ impl RevlogInner {
         Ok(data)
     }
 
-    fn make_node<T>(&self, entry: &Entry, blob: Blob<T>) -> Result<BlobNode<T>>
-    where
-        T: AsRef<[u8]>,
-    {
+    fn make_node(&self, entry: &Entry, blob: Blob) -> Result<BlobNode> {
         let mut pnodeid = |p| {
             let pn = self.get_entry(p);
             pn.map(|n| n.nodeid)
@@ -524,7 +521,7 @@ impl RevlogInner {
             self.construct_simple(tgtidx)?
         };
 
-        self.make_node(&entry, Blob::from(data))
+        self.make_node(&entry, Blob::from(Bytes::from(data)))
     }
 
     fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {

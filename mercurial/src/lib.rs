@@ -8,6 +8,7 @@
 
 // External dependencies
 
+extern crate bytes;
 extern crate flate2;
 extern crate futures;
 extern crate futures_ext;

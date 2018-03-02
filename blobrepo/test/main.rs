@@ -99,7 +99,7 @@ fn upload_file_no_parents<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob<Bytes> = Bytes::from(data.into().as_bytes()).into();
+    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::File, None, None, path.clone())
         .unwrap()
 }
@@ -113,7 +113,7 @@ fn upload_file_one_parent<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob<Bytes> = Bytes::from(data.into().as_bytes()).into();
+    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::File, Some(p1), None, path.clone())
         .unwrap()
 }
@@ -126,7 +126,7 @@ fn upload_manifest_no_parents<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob<Bytes> = Bytes::from(data.into().as_bytes()).into();
+    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::Tree, None, None, path.clone())
         .unwrap()
 }
@@ -140,7 +140,7 @@ fn upload_manifest_one_parent<S>(
 where
     S: Into<String>,
 {
-    let blob: Blob<Bytes> = Bytes::from(data.into().as_bytes()).into();
+    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
     repo.upload_entry(blob, manifest::Type::Tree, Some(p1), None, path.clone())
         .unwrap()
 }
@@ -213,7 +213,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
 
     let content = run_future(entry.get_content()).unwrap();
     match content {
-        manifest::Content::File(f) => assert!(f == b"blob"[..].into()),
+        manifest::Content::File(f) => assert!(f == Blob::from(Bytes::from(&b"blob"[..]))),
         _ => panic!(),
     };
 
@@ -251,7 +251,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
 
     let content = run_future(entry.get_content()).unwrap();
     match content {
-        manifest::Content::File(f) => assert!(f == b"blob"[..].into()),
+        manifest::Content::File(f) => assert!(f == Blob::from(Bytes::from(&b"blob"[..]))),
         _ => panic!(),
     };
     // And the blob now exists

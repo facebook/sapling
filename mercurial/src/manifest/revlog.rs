@@ -312,7 +312,7 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
@@ -392,11 +392,11 @@ impl Entry for RevlogEntry {
     }
 }
 
-fn strip_file_metadata(blob: &Blob<Vec<u8>>) -> Blob<Vec<u8>> {
+fn strip_file_metadata(blob: &Blob) -> Blob {
     match blob {
         &Blob::Dirty(ref bytes) => {
             let (_, off) = file::File::extract_meta(bytes);
-            Blob::from(&bytes[off..])
+            Blob::from(bytes.slice_from(off))
         }
         _ => blob.clone(),
     }

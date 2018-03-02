@@ -284,7 +284,7 @@ impl BlobRepo {
     // adding the entries to a changeset.
     pub fn upload_entry(
         &self,
-        raw_content: Blob<Bytes>,
+        raw_content: Blob,
         content_type: manifest::Type,
         p1: Option<NodeHash>,
         p2: Option<NodeHash>,

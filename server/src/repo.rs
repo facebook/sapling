@@ -230,7 +230,7 @@ impl RepoClient {
                 let mut v = Vec::new();
                 mercurial::changeset::serialize_cs(&cs, &mut v)?;
                 let parents = cs.parents().get_nodes();
-                Ok(BlobNode::new(v, parents.0, parents.1))
+                Ok(BlobNode::new(Bytes::from(v), parents.0, parents.1))
             });
 
         bundle.add_part(parts::changegroup_part(changelogentries)?);

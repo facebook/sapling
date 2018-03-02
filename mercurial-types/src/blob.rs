@@ -14,12 +14,12 @@ use errors::*;
 
 /// Representation of a blob of data.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
-pub enum Blob<T> {
+#[derive(Serialize, Deserialize)]
+pub enum Blob {
     /// Modified data with no corresponding hash
-    Dirty(T),
+    Dirty(Bytes),
     /// Clean data paired with its hash
-    Clean(T, BlobHash),
+    Clean(Bytes, BlobHash),
     /// External data; we only have its hash
     Extern(BlobHash),
     /// External data; we only have its nodeid
@@ -70,10 +70,7 @@ impl<'a> From<&'a [u8]> for BlobHash {
     }
 }
 
-impl<T> Blob<T>
-where
-    T: AsRef<[u8]>,
-{
+impl Blob {
     /// Clean a `Blob` by computing its hash. Leaves non-`Dirty` blobs unchanged.
     pub fn clean(self) -> Self {
         match self {
@@ -87,13 +84,13 @@ where
 
     pub fn size(&self) -> Option<usize> {
         match self {
-            &Blob::Dirty(ref data) => Some(data.as_ref().len()),
+            &Blob::Dirty(ref data) => Some(data.len()),
             &Blob::Clean(_, ref data) => Some(data.as_ref().len()),
             &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }
 
-    pub fn as_inner(&self) -> Option<&T> {
+    pub fn as_inner(&self) -> Option<&Bytes> {
         match self {
             &Blob::Dirty(ref data) => Some(data),
             &Blob::Clean(ref data, _) => Some(data),
@@ -108,7 +105,7 @@ where
         }
     }
 
-    pub fn into_inner(self) -> Option<T> {
+    pub fn into_inner(self) -> Option<Bytes> {
         match self {
             Blob::Dirty(data) => Some(data),
             Blob::Clean(data, _) => Some(data),
@@ -125,30 +122,14 @@ where
     }
 }
 
-/// Construct a dirty blob from raw data.
-impl<'a> From<&'a [u8]> for Blob<Vec<u8>> {
-    fn from(data: &'a [u8]) -> Self {
-        Blob::Dirty(Vec::from(data))
-    }
-}
-
-impl From<Vec<u8>> for Blob<Vec<u8>> {
-    fn from(data: Vec<u8>) -> Self {
-        Blob::Dirty(data)
-    }
-}
-
-impl From<Bytes> for Blob<Bytes> {
+impl From<Bytes> for Blob {
     fn from(data: Bytes) -> Self {
         Blob::Dirty(data)
     }
 }
 
 /// Get a reference to the `Blob`'s data, if it has some (ie, not `Extern`)
-impl<'a, T> Into<Option<&'a [u8]>> for &'a Blob<T>
-where
-    T: AsRef<[u8]>,
-{
+impl<'a> Into<Option<&'a [u8]>> for &'a Blob {
     fn into(self) -> Option<&'a [u8]> {
         match self {
             &Blob::Clean(ref data, _) => Some(data.as_ref()),
@@ -159,14 +140,14 @@ where
 }
 
 /// Construct an `Extern` `Blob` from a `BlobHash`
-impl<T> From<BlobHash> for Blob<T> {
+impl From<BlobHash> for Blob {
     fn from(bh: BlobHash) -> Self {
         Blob::Extern(bh)
     }
 }
 
 /// Construct a `NodeId` `Blob` from a `NodeHash`
-impl<T> From<NodeHash> for Blob<T> {
+impl From<NodeHash> for Blob {
     fn from(id: NodeHash) -> Self {
         Blob::NodeId(id)
     }

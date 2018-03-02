@@ -64,24 +64,21 @@ impl Iterator for ParentIter {
 /// A Mercurial node backed by some data. This can represent a changeset, a manifest or a file
 /// blob.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
-pub struct BlobNode<T = Vec<u8>> {
-    blob: Blob<T>,
+#[derive(Serialize, Deserialize)]
+pub struct BlobNode {
+    blob: Blob,
     parents: Parents,
     maybe_copied: bool,
 }
 
-impl<T> BlobNode<T>
-where
-    T: AsRef<[u8]>,
-{
+impl BlobNode {
     /// Construct a node with the given content and parents.
     /// NOTE: Mercurial encodes the fact that a file has been copied from some other path
     /// by encoding the fact by using p2 instead of p1 to refer to the parent version.
     /// Two parent nodes are always considered to have been potentially copied.
-    pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode<T>
+    pub fn new<B>(blob: B, p1: Option<&NodeHash>, p2: Option<&NodeHash>) -> BlobNode
     where
-        B: Into<Blob<T>>,
+        B: Into<Blob>,
     {
         let blob = blob.into();
         BlobNode {
@@ -95,7 +92,7 @@ where
         self.blob.size()
     }
 
-    pub fn as_blob(&self) -> &Blob<T> {
+    pub fn as_blob(&self) -> &Blob {
         &self.blob
     }
 
@@ -136,17 +133,18 @@ where
 mod test {
     use super::*;
     use blob::Blob;
+    use bytes::Bytes;
 
     #[test]
     fn test_node_none() {
-        let blob = Blob::from(&[0; 10][..]);
+        let blob = Blob::from(Bytes::from(&[0; 10][..]));
         let n = BlobNode::new(blob, None, None);
         assert_eq!(n.parents, Parents::None);
     }
 
     #[test]
     fn test_node_one() {
-        let blob = Blob::from(&[0; 10][..]);
+        let blob = Blob::from(Bytes::from(&[0; 10][..]));
         let p = &BlobNode::new(blob.clone(), None, None);
         assert!(p.maybe_copied);
         {
@@ -172,8 +170,8 @@ mod test {
     #[test]
     fn test_node_two() {
         use std::mem;
-        let mut p1 = BlobNode::new(Blob::from(&b"foo1"[..]), None, None);
-        let mut p2 = BlobNode::new(Blob::from(&b"foo2"[..]), None, None);
+        let mut p1 = BlobNode::new(Blob::from(Bytes::from(&b"foo1"[..])), None, None);
+        let mut p2 = BlobNode::new(Blob::from(Bytes::from(&b"foo2"[..])), None, None);
         assert!(p1.maybe_copied);
         assert!(p2.maybe_copied);
 
@@ -185,13 +183,21 @@ mod test {
         let pid2: Option<NodeHash> = (&p2).nodeid();
 
         let node1 = {
-            let n = BlobNode::new(Blob::from(&b"bar"[..]), pid1.as_ref(), pid2.as_ref());
+            let n = BlobNode::new(
+                Blob::from(Bytes::from(&b"bar"[..])),
+                pid1.as_ref(),
+                pid2.as_ref(),
+            );
             assert_eq!(n.parents, Parents::Two(pid1.unwrap(), pid2.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 1")
         };
         let node2 = {
-            let n = BlobNode::new(Blob::from(&b"bar"[..]), pid2.as_ref(), pid1.as_ref());
+            let n = BlobNode::new(
+                Blob::from(Bytes::from(&b"bar"[..])),
+                pid2.as_ref(),
+                pid1.as_ref(),
+            );
             assert_eq!(n.parents, Parents::Two(pid2.unwrap(), pid1.unwrap()));
             assert!(!n.maybe_copied);
             n.nodeid().expect("no nodeid 2")

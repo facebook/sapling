@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+extern crate bytes;
+
 use std::collections::HashSet;
 use std::collections::hash_map::{Entry, HashMap};
 use std::fmt::{self, Display};
@@ -26,6 +28,7 @@ use mercurial_types::nodehash::{ChangesetId, EntryId};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
+use bytes::Bytes;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
@@ -241,7 +244,7 @@ impl RevlogRepo {
         // It's possible that commit has null pointer to manifest hash.
         // In that case we want to return empty blobnode
         let blobnode = if nodeid == &NULL_HASH {
-            Ok(BlobNode::new(vec![], None, None))
+            Ok(BlobNode::new(Bytes::new(), None, None))
         } else {
             self.manifest
                 .get_idx_by_nodeid(nodeid)

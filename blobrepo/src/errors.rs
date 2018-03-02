@@ -7,7 +7,6 @@
 use std::fmt;
 
 use bincode;
-use bytes::Bytes;
 
 pub use failure::Error;
 
@@ -46,7 +45,7 @@ pub enum ErrorKind {
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(NodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
     ContentMissing(NodeHash, BlobHash),
-    #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(Blob<Bytes>),
+    #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(Blob),
     #[fail(display = "Parents are not in blob store {:?}", _0)] ParentsUnknown(Parents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]
     SerializationFailed(NodeHash, bincode::Error),

@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use bincode;
+use bytes::Bytes;
 use failure;
 use futures::future::{Either, Future, IntoFuture};
 
@@ -83,10 +84,10 @@ impl BlobChangeset {
 
             let fut = blobstore.get(key).and_then(move |got| match got {
                 None => Ok(None),
-                Some(blob) => {
-                    let RawCSBlob { parents, blob } = bincode::deserialize(blob.as_ref())?;
+                Some(bytes) => {
+                    let RawCSBlob { parents, blob } = bincode::deserialize(bytes.as_ref())?;
                     let (p1, p2) = parents.get_nodes();
-                    let blob = Blob::from(blob.into_owned());
+                    let blob = Blob::from(Bytes::from(blob.into_owned()));
                     let node = BlobNode::new(blob, p1, p2);
                     let cs = BlobChangeset {
                         changesetid: changesetid,

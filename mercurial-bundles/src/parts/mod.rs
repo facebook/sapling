@@ -63,8 +63,8 @@ where
         let base = NULL_HASH;
         // Linknode is the same as node
         let linknode = node;
-        let text = blobnode.as_blob().as_inner().unwrap_or(&vec![]).clone();
-        let delta = Delta::new_fulltext(text);
+        let text = blobnode.as_blob().as_inner().unwrap_or(&Bytes::new()).clone();
+        let delta = Delta::new_fulltext(text.to_vec());
 
         let deltachunk = CgDeltaChunk {
             node,
@@ -148,7 +148,7 @@ where
             let data = wirepack::Part::Data(wirepack::DataEntry {
                 node,
                 delta_base: NULL_HASH,
-                delta: Delta::new_fulltext(content),
+                delta: Delta::new_fulltext(content.to_vec()),
             });
 
             iter_ok(vec![history_meta, history, data_meta, data].into_iter())

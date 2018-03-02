@@ -7,6 +7,7 @@
 use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
+use bytes::Bytes;
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, Blob, BlobNode, NodeHash};
@@ -42,7 +43,7 @@ where
             Ok((
                 chunk.node,
                 RevlogChangeset::new(BlobNode::new(
-                    Blob::from(delta::apply(b"", &chunk.delta)),
+                    Blob::from(Bytes::from(delta::apply(b"", &chunk.delta))),
                     chunk.p1.into_option().as_ref(),
                     chunk.p2.into_option().as_ref(),
                 ))?,

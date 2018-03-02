@@ -147,8 +147,8 @@ impl Display for Type {
 
 /// Concrete representation of various Entry Types.
 pub enum Content {
-    File(Blob<Vec<u8>>),       // TODO stream
-    Executable(Blob<Vec<u8>>), // TODO stream
+    File(Blob),       // TODO stream
+    Executable(Blob), // TODO stream
     Symlink(MPath),
     Tree(Box<Manifest + Sync>),
 }
@@ -166,7 +166,7 @@ pub trait Entry: Send + 'static {
 
     /// Get the raw content of the object as it exists in the blobstore,
     /// without any interpretation. This is only really useful for doing a bit-level duplication.
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error>;
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error>;
 
     /// Get the interpreted content of the object. This will likely require IO
     fn get_content(&self) -> BoxFuture<Content, Error>;
@@ -221,7 +221,7 @@ where
         self.entry.get_parents().boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         self.entry.get_raw_content().boxify()
     }
 
@@ -251,7 +251,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_parents()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         (**self).get_raw_content()
     }
 

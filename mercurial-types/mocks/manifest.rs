@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use bytes::Bytes;
 use failure::Error;
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -19,7 +20,7 @@ pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
 pub fn make_file<C: AsRef<str>>(content: C) -> ContentFactory {
     let content = content.as_ref().to_owned().into_bytes();
-    Arc::new(move || Content::File(Blob::Dirty(content.clone())))
+    Arc::new(move || Content::File(Blob::Dirty(Bytes::from(content.clone()))))
 }
 
 #[derive(Clone)]
@@ -123,7 +124,7 @@ impl Entry for MockEntry {
     fn get_parents(&self) -> BoxFuture<Parents, Error> {
         unimplemented!();
     }
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         unimplemented!();
     }
     fn get_content(&self) -> BoxFuture<Content, Error> {

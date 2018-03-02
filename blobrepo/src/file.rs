@@ -47,7 +47,6 @@ pub fn fetch_file_content_and_renames_from_blobstore(
                 blobstore.get(key).and_then(move |blob| {
                     blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
                         .and_then(|blob| {
-                            let blob = blob.as_ref();
                             let (p1, p2) = parents.get_nodes();
                             let blobnode = BlobNode::new(blob, p1, p2);
                             let file = file::File::new(blobnode);
@@ -92,7 +91,7 @@ impl BlobEntry {
         get_node(&self.blobstore, self.id.into_nodehash())
     }
 
-    fn get_raw_content_inner(&self) -> BoxFuture<Vec<u8>, Error> {
+    fn get_raw_content_inner(&self) -> BoxFuture<Bytes, Error> {
         let nodeid = self.id.into_nodehash();
         let blobstore = self.blobstore.clone();
 
@@ -102,12 +101,9 @@ impl BlobEntry {
                 move |node| {
                     let key = format!("sha1-{}", node.blob.sha1());
 
-                    blobstore
-                        .get(key)
-                        .and_then(move |blob| {
-                            blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
-                        })
-                        .map(|blob| Vec::from(blob.as_ref()))
+                    blobstore.get(key).and_then(move |blob| {
+                        blob.ok_or(ErrorKind::ContentMissing(nodeid, node.blob).into())
+                    })
                 }
             })
             .boxify()
@@ -123,9 +119,9 @@ impl Entry for BlobEntry {
         self.get_node().map(|node| node.parents).boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob<Vec<u8>>, Error> {
+    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         self.get_raw_content_inner()
-            .map(|blob| Blob::from(blob.as_ref()))
+            .map(|bytes| Blob::from(bytes))
             .boxify()
     }
 
@@ -134,8 +130,8 @@ impl Entry for BlobEntry {
         self.get_raw_content_inner()
             .and_then({
                 let ty = self.ty;
-                move |blob| {
-                    let blob = blob.as_ref();
+                move |bytes| {
+                    let blob = bytes.as_ref();
 
                     // Mercurial file blob can have metadata, but tree manifest can't
                     let blob = if ty == Type::Tree {
@@ -145,8 +141,8 @@ impl Entry for BlobEntry {
                         &blob[off..]
                     };
                     let res = match ty {
-                        Type::File => Content::File(Blob::from(blob)),
-                        Type::Executable => Content::Executable(Blob::from(blob)),
+                        Type::File => Content::File(Blob::from(bytes.clone())),
+                        Type::Executable => Content::Executable(Blob::from(bytes.clone())),
                         Type::Symlink => Content::Symlink(MPath::new(blob)?),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };

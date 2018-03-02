@@ -22,7 +22,7 @@ use BlobstoreEntry;
 pub(crate) fn put_entry(
     sender: SyncSender<BlobstoreEntry>,
     entry_hash: NodeHash,
-    blob: Blob<Vec<u8>>,
+    blob: Blob,
     parents: Parents,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
@@ -30,7 +30,6 @@ where
 {
     let bytes = blob.into_inner()
         .ok_or(failure::err_msg("missing blob data"))
-        .map(Bytes::from)
         .into_future();
     bytes.and_then(move |bytes| {
         let nodeblob = RawNodeBlob {
