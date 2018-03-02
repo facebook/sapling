@@ -1662,7 +1662,13 @@ class workingctx(committablectx):
                               icasefs=icasefs)
 
     def _filtersuspectsymlink(self, files):
-        if not files or self._repo.dirstate._checklink:
+        """Filter out changes that make symlinks invalid
+
+        ``unsafe.filtersuspectsymlink`` option allows to enable/disable this
+        safety check.
+        """
+        if not files or self._repo.dirstate._checklink or not\
+            self._repo.ui.configbool('unsafe', 'filtersuspectsymlink'):
             return files
 
         # Symlink placeholders may get non-symlink-like contents

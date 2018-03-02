@@ -1102,6 +1102,9 @@ coreconfigitem('ui', 'username',
 coreconfigitem('ui', 'verbose',
     default=False,
 )
+coreconfigitem('unsafe', 'filtersuspectsymlink',
+    default=True,
+)
 coreconfigitem('verify', 'skipflags',
     default=None,
 )
