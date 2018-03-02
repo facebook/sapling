@@ -985,24 +985,25 @@ def verify(repo, revs=None):
     # since they can't be pushed/pulled, and --hidden can be used if they are a
     # concern.
 
-    # pathto() is needed for -R case
-    revs = repo.revs("filelog(%s)",
-                     util.pathto(repo.root, repo.getcwd(), '.hgsubstate'))
+    if not repo.ui.configbool("verify", "skipmanifests"):
+        # pathto() is needed for -R case
+        revs = repo.revs("filelog(%s)",
+                         util.pathto(repo.root, repo.getcwd(), '.hgsubstate'))
 
-    if revs:
-        repo.ui.status(_('checking subrepo links\n'))
-        for rev in revs:
-            ctx = repo[rev]
-            try:
-                for subpath in ctx.substate:
-                    try:
-                        ret = (ctx.sub(subpath, allowcreate=False).verify()
-                               or ret)
-                    except error.RepoError as e:
-                        repo.ui.warn(('%s: %s\n') % (rev, e))
-            except Exception:
-                repo.ui.warn(_('.hgsubstate is corrupt in revision %s\n') %
-                             node.short(ctx.node()))
+        if revs:
+            repo.ui.status(_('checking subrepo links\n'))
+            for rev in revs:
+                ctx = repo[rev]
+                try:
+                    for subpath in ctx.substate:
+                        try:
+                            ret = (ctx.sub(subpath, allowcreate=False).verify()
+                                   or ret)
+                        except error.RepoError as e:
+                            repo.ui.warn(('%s: %s\n') % (rev, e))
+                except Exception:
+                    repo.ui.warn(_('.hgsubstate is corrupt in revision %s\n') %
+                                 node.short(ctx.node()))
 
     return ret
 
