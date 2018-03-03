@@ -163,30 +163,31 @@ The below two files are taken from git: t/t4061-diff-indent.sh
   diff --git a/a.c b/a.c
   --- a/a.c
   +++ b/a.c
-  @@ -5,12 +5,6 @@
+  @@ -4,12 +4,6 @@
+   int f() {
      return 1;
    }
-   /*
+  -/*
   - * This function returns 2.
   - */
   -int g() {
   -  return 2;
   -}
-  -/*
+   /*
     * This function returns 3.
     */
-   int h() {
   diff --git a/b.c b/b.c
   --- a/b.c
   +++ b/b.c
-  @@ -3,5 +3,9 @@
+  @@ -2,6 +2,10 @@
+      do_something();
    }
    
-   if (y) {
+  +if (y) {
   +   do_another_thing();
   +}
   +
-  +if (y) {
+   if (y) {
       do_something_else();
    }
   diff --git a/c.rb b/c.rb
@@ -194,50 +195,50 @@ The below two files are taken from git: t/t4061-diff-indent.sh
   +++ b/c.rb
   @@ -1,4 +1,7 @@
    #!ruby
-   ["foo", "bar", "baz"].map do |i|
+  +["foo", "bar", "baz"].map do |i|
   +  i
   +end
-  +["foo", "bar", "baz"].map do |i|
+   ["foo", "bar", "baz"].map do |i|
      i.upcase
    end
   diff --git a/d.py b/d.py
   --- a/d.py
   +++ b/d.py
-  @@ -3,6 +3,10 @@
+  @@ -2,6 +2,10 @@
+       import foo
    except ImportError:
        pass
-   try:
+  +try:
   +    import baz
   +except ImportError:
   +    pass
-  +try:
+   try:
        import bar
    except ImportError:
-       pass
   diff --git a/functions.c b/functions.c
   --- a/functions.c
   +++ b/functions.c
-  @@ -1,6 +1,11 @@
+  @@ -1,5 +1,10 @@
    1
    2
-   /* function */
+  +/* function */
   +bar() {
   +    foo
   +}
   +
-  +/* function */
+   /* function */
    foo() {
        foo
-   }
   diff --git a/spaces.txt b/spaces.txt
   --- a/spaces.txt
   +++ b/spaces.txt
-  @@ -3,5 +3,8 @@
+  @@ -2,6 +2,9 @@
+   2
    a
    
-   b
+  +b
   +a
   +
-  +b
+   b
    3
    4

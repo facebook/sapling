@@ -553,6 +553,9 @@ coreconfigitem('experimental', 'sparse-read.min-gap-size',
 coreconfigitem('experimental', 'treemanifest',
     default=False,
 )
+coreconfigitem('experimental', 'xdiff',
+    default=True,
+)
 coreconfigitem('extensions', '.*',
     default=None,
     generic=True,

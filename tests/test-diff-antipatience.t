@@ -8,38 +8,32 @@ Test case that makes use of the weakness of patience diff algorithm
   diff -r f0aeecb49805 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,15 +1,4 @@
+  @@ -1,4 +1,4 @@
   -a
-  -x
-  -x
-  -x
-  -x
-  -x
-  -x
-  -x
-  -x
-  -x
-  -x
-  -u
   +b
    x
    x
    x
-  @@ -40,5 +29,16 @@
+  @@ -9,7 +9,6 @@
+   x
+   x
+   x
+  -u
+   x
+   x
+   x
+  @@ -30,6 +29,7 @@
+   x
+   x
+   x
+  +u
+   x
+   x
+   x
+  @@ -40,5 +40,5 @@
    x
    x
    x
   -a
-  +u
-  +x
-  +x
-  +x
-  +x
-  +x
-  +x
-  +x
-  +x
-  +x
-  +x
   +b
    

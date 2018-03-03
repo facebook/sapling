@@ -18,6 +18,7 @@ from . import (
     pycompat,
     util,
 )
+from .cext import xdiff
 
 _missing_newline_marker = "\\ No newline at end of file\n"
 
@@ -34,6 +35,12 @@ try:
     xrange(0)
 except NameError:
     xrange = range
+
+# called by dispatch.py
+def init(ui):
+    if ui.configbool('experimental', 'xdiff'):
+        global blocks
+        blocks = xdiff.blocks
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
@@ -213,7 +220,7 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
     if opts.ignorews or opts.ignorewsamount or opts.ignorewseol:
         text1 = wsclean(opts, text1, False)
         text2 = wsclean(opts, text2, False)
-    diff = bdiff.blocks(text1, text2)
+    diff = blocks(text1, text2)
     for i, s1 in enumerate(diff):
         # The first match is special.
         # we've either found a match starting at line 0 or a match later
@@ -518,7 +525,7 @@ def patch(a, bin):
 
 # similar to difflib.SequenceMatcher.get_matching_blocks
 def get_matching_blocks(a, b):
-    return [(d[0], d[2], d[1] - d[0]) for d in bdiff.blocks(a, b)]
+    return [(d[0], d[2], d[1] - d[0]) for d in blocks(a, b)]
 
 def trivialdiffheader(length):
     return struct.pack(">lll", 0, 0, length) if length else ''

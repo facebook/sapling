@@ -295,9 +295,9 @@ annotate after rename merge with -l
   :    @@ -1,3 +1,3 @@
   :    -a (?)
   :     a
+  :    -a (?)
   :    +z
   :     a
-  :    -a (?)
   :
   o  1:762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
   |  --- a/a
@@ -319,16 +319,16 @@ annotate after rename merge with -l
  the upstream bdiff change (96f2f50d923f+3633403888ae+8c0c75aa3ff4+5c4e2636c1a9
  +38ed54888617) alters the output so deletion is not always at the end of the
  output. for example:
- | a | b | old | new | # old: e1d6aa0e4c3a, new: 8836f13e3c5b
- |-------------------|
- | a | a |  a  | -a  |
- | a | z | +z  |  a  |
- | a | a |  a  | +z  |
- |   |   | -a  |  a  |
- |-------------------|
- | a | a |     a     |
- | a | a |     a     |
- | a |   |    -a     |
+ | a | b | old | new | xdiff | # old: e1d6aa0e4c3a, new: 8836f13e3c5b
+ |---------------------------| # xdiff: enabled by D7135206, which will
+ | a | a |  a  | -a  |  a    | # try to shift hunks around so make them
+ | a | z | +z  |  a  | -a    | # connected.
+ | a | a |  a  | +z  | +z    |
+ |   |   | -a  |  a  |  a    |
+ |---------------------------|
+ | a | a |     a             |
+ | a | a |     a             |
+ | a |   |    -a             |
  this leads to more question marks below)
 
 (rev 1 adds two "a"s and rev 6 deletes one "a".

@@ -921,6 +921,9 @@ def _dispatch(req):
         elif rpath:
             ui.warn(_("warning: --repository ignored\n"))
 
+        from . import mdiff
+        mdiff.init(ui)
+
         msg = _formatargs(fullargs)
         ui.log("command", '%s\n', msg)
         strcmdopt = pycompat.strkwargs(cmdoptions)

@@ -803,14 +803,13 @@ Test interactive shelve
   examine changes to 'a/a'? [Ynesfdaq?] y
   
   @@ -1,3 +1,4 @@
-  +a
    a
+  +a
    c
    x
   record change 1/2 to 'a/a'? [Ynesfdaq?] y
   
-  @@ -1,3 +2,4 @@
-   a
+  @@ -2,2 +3,3 @@
    c
    x
   +x

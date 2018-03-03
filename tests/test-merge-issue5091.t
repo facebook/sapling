@@ -45,12 +45,21 @@ If the diff algorithm tries to group multiple hunks into one. It will cause a
 merge conflict in the middle.
 
   $ hg merge other -q -t :merge3
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  [1]
 
   $ cat A
   S
   S
+  <<<<<<< working copy: 14ce9a1fcd1e - test: Local
+  S
   X
   S
+  ||||||| base
+  S
+  =======
+  X
+  >>>>>>> merge rev:    4171d1cf524c other - test: Other
   S
   S
 
@@ -103,11 +112,21 @@ and everything gets auto resolved reasonably.
   $ hg ci -m Local -q
 
   $ hg merge other -q -t :merge3
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
+  [1]
 
   $ cat A
   S
   S
+  <<<<<<< working copy: 057fc5d1a99c - test: Local
   S
+  ||||||| base
+  Y
+  S
+  =======
+  Y
+  X
+  >>>>>>> merge rev:    f0ba17ae43c9 other - test: Other
   Y
   X
   Y

@@ -201,6 +201,7 @@ def populateextmods(localmods):
         'hgext.extlib.treedirstate',
         'hgext.patchrmdir',
         'hgext.traceprof',
+        'mercurial.cext.xdiff',
     ])
     return newlocalmods
 
