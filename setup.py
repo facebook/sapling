@@ -271,7 +271,7 @@ try:
     py2exe.Distribution # silence unused import warning
     py2exeloaded = True
     # import py2exe's patched Distribution class
-    from distutils.core import Distribution
+    from distutils.core import Distribution # noqa: F811
 except ImportError:
     py2exeloaded = False
 
@@ -995,6 +995,28 @@ extmodules = [
               extra_compile_args=osutil_cflags,
               extra_link_args=osutil_ldflags,
               depends=common_depends),
+    Extension('mercurial.cext.xdiff',
+              sources=[
+                  'lib/third-party/xdiff/xdiffi.c',
+                  'lib/third-party/xdiff/xemit.c',
+                  'lib/third-party/xdiff/xmerge.c',
+                  'lib/third-party/xdiff/xprepare.c',
+                  'lib/third-party/xdiff/xutils.c',
+                  'mercurial/cext/xdiff.c',
+              ],
+              include_dirs=common_include_dirs + [
+                  'lib/third-party/xdiff',
+              ],
+              depends=common_depends + [
+                  'lib/third-party/xdiff/xdiff.h',
+                  'lib/third-party/xdiff/xdiffi.h',
+                  'lib/third-party/xdiff/xemit.h',
+                  'lib/third-party/xdiff/xinclude.h',
+                  'lib/third-party/xdiff/xmacros.h',
+                  'lib/third-party/xdiff/xprepare.h',
+                  'lib/third-party/xdiff/xtypes.h',
+                  'lib/third-party/xdiff/xutils.h',
+              ]),
     Extension('hgext.fsmonitor.pywatchman.bser',
               ['hgext/fsmonitor/pywatchman/bser.c']),
 ]

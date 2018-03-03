@@ -248,7 +248,8 @@ pypats = [
     (r"[^_]_\([ \t\n]*(?:'[^']+'[ \t\n+]*)+%", "don't use % inside _()"),
     (r'(\w|\)),\w', "missing whitespace after ,"),
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
-    (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
+#   false positive on multi-line keyword arguments
+#    (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
     ((
         # a line ending with a colon, potentially with trailing comments
