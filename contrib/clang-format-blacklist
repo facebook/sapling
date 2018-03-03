@@ -141,6 +141,21 @@ lib/third-party/sha1dc/sha1.c
 lib/third-party/sha1dc/sha1.h
 lib/third-party/sha1dc/ubc_check.c
 lib/third-party/sha1dc/ubc_check.h
+lib/third-party/xdiff/xdiff.h
+lib/third-party/xdiff/xdiffi.c
+lib/third-party/xdiff/xdiffi.h
+lib/third-party/xdiff/xemit.c
+lib/third-party/xdiff/xemit.h
+lib/third-party/xdiff/xhistogram.c
+lib/third-party/xdiff/xinclude.h
+lib/third-party/xdiff/xmacros.h
+lib/third-party/xdiff/xmerge.c
+lib/third-party/xdiff/xpatience.c
+lib/third-party/xdiff/xprepare.c
+lib/third-party/xdiff/xprepare.h
+lib/third-party/xdiff/xtypes.h
+lib/third-party/xdiff/xutils.c
+lib/third-party/xdiff/xutils.h
 # Temporary hack before we figure out how to fix it. See T24862348
 fb-hgext/linelog/linelog.c
 fb-hgext/linelog/linelog.h
