@@ -38,9 +38,9 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 		return PyErr_NoMemory();
 
 	xpparam_t xpp = {
-	    0,    /* flags */
-	    NULL, /* anchors */
-	    0,    /* anchors_nr */
+	    XDF_INDENT_HEURISTIC, /* flags */
+	    NULL,                 /* anchors */
+	    0,                    /* anchors_nr */
 	};
 	xdemitconf_t xecfg = {
 	    0,                  /* ctxlen */
