@@ -975,15 +975,32 @@ static int xdl_call_hunk_func(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 			      xdemitconf_t const *xecfg)
 {
 	xdchange_t *xch, *xche;
-
-	for (xch = xscr; xch; xch = xche->next) {
-		xche = xdl_get_hunk(&xch, xecfg);
-		if (!xch)
-			break;
-		if (xecfg->hunk_func(xch->i1, xche->i1 + xche->chg1 - xch->i1,
-				     xch->i2, xche->i2 + xche->chg2 - xch->i2,
-				     ecb->priv) < 0)
+	if ((xecfg->flags & XDL_EMIT_BDIFFHUNK) != 0) {
+		long i1 = 0, i2 = 0, n1 = xe->xdf1.nrec, n2 = xe->xdf2.nrec;
+		for (xch = xscr; xch; xch = xche->next) {
+			xche = xdl_get_hunk(&xch, xecfg);
+			if (!xch)
+				break;
+			if (xch->i1 > i1 || xch->i2 > i2) {
+				if (xecfg->hunk_func(i1, xch->i1, i2, xch->i2, ecb->priv) < 0)
+					return -1;
+			}
+			i1 = xche->i1 + xche->chg1;
+			i2 = xche->i2 + xche->chg2;
+		}
+		if (xecfg->hunk_func(i1, n1, i2, n2, ecb->priv) < 0)
 			return -1;
+	} else {
+		for (xch = xscr; xch; xch = xche->next) {
+			xche = xdl_get_hunk(&xch, xecfg);
+			if (!xch)
+				break;
+			if (xecfg->hunk_func(
+					xch->i1, xche->i1 + xche->chg1 - xch->i1,
+					xch->i2, xche->i2 + xche->chg2 - xch->i2,
+					ecb->priv) < 0)
+				return -1;
+		}
 	}
 	return 0;
 }
@@ -1026,18 +1043,15 @@ int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		xdl_free_env(&xe);
 		return -1;
 	}
-	if (xscr) {
-		if (xpp->flags & XDF_IGNORE_BLANK_LINES)
-			xdl_mark_ignorable(xscr, &xe, xpp->flags);
 
-		if (ef(&xe, xscr, ecb, xecfg) < 0) {
-
-			xdl_free_script(xscr);
-			xdl_free_env(&xe);
-			return -1;
-		}
+	if (xpp->flags & XDF_IGNORE_BLANK_LINES)
+		xdl_mark_ignorable(xscr, &xe, xpp->flags);
+	if (ef(&xe, xscr, ecb, xecfg) < 0) {
 		xdl_free_script(xscr);
+		xdl_free_env(&xe);
+		return -1;
 	}
+	xdl_free_script(xscr);
 	xdl_free_env(&xe);
 
 	return 0;

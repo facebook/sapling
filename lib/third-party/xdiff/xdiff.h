@@ -48,6 +48,9 @@ extern "C" {
 /* xdemitconf_t.flags */
 #define XDL_EMIT_FUNCNAMES (1 << 0)
 #define XDL_EMIT_FUNCCONTEXT (1 << 2)
+/* emit bdiff-style "matched" (a1, a2, b1, b2) hunks instead of "different"
+ * (a1, a2 - a1, b1, b2 - b1) hunks */
+#define XDL_EMIT_BDIFFHUNK (1 << 4)
 
 #define XDL_MMB_READONLY (1 << 0)
 
