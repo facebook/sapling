@@ -802,6 +802,14 @@ static void xdl_bug(const char *msg)
 }
 
 /*
+ * For indentation heuristic, skip searching for better slide position after
+ * checking MAX_BORING lines without finding an improvement. This defends the
+ * indentation heuristic logic against pathological cases. The value is not
+ * picked scientifically but should be good enough.
+ */
+#define MAX_BORING 100
+
+/*
  * Move back and forward change groups for a consistent and pretty diff output.
  * This also helps in finding joinable change groups and reducing the diff
  * size.
@@ -897,19 +905,43 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 			long shift, best_shift = -1;
 			struct split_score best_score;
 
-			for (shift = earliest_end; shift <= g.end; shift++) {
+			/*
+			 * This is O(N * MAX_BLANKS) (N = shift-able lines).
+			 * Even with MAX_BLANKS bounded to a small value, a
+			 * large N could still make this loop take several
+			 * times longer than the main diff algorithm. The
+			 * "boring" value is to help cut down N to something
+			 * like (MAX_BORING + groupsize).
+			 *
+			 * Scan from bottom to top. So we can exit the loop
+			 * without compromising the assumption "for a same best
+			 * score, pick the bottommost shift".
+			 */
+			int boring = 0;
+			for (shift = g.end; shift >= earliest_end; shift--) {
 				struct split_measurement m;
 				struct split_score score = {0, 0};
+				int cmp;
 
 				measure_split(xdf, shift, &m);
 				score_add_split(&m, &score);
 				measure_split(xdf, shift - groupsize, &m);
 				score_add_split(&m, &score);
-				if (best_shift == -1 ||
-				    score_cmp(&score, &best_score) <= 0) {
+
+				if (best_shift == -1) {
+					cmp = -1;
+				} else {
+					cmp = score_cmp(&score, &best_score);
+				}
+				if (cmp < 0) {
+					boring = 0;
 					best_score.effective_indent = score.effective_indent;
 					best_score.penalty = score.penalty;
 					best_shift = shift;
+				} else {
+					boring += 1;
+					if (boring >= MAX_BORING)
+						break;
 				}
 			}
 
