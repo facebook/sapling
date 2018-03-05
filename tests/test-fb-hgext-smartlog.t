@@ -99,8 +99,11 @@ As a revset
   |    c2
   |
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  | |    b
-  | |
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
 
 With --master
   $ hg smartlog -T compact --master 1
@@ -141,6 +144,9 @@ Specific revs
   .
   | o  2[feature1]   49cdb4091aca   1970-01-01 00:00 +0000   test
   |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
   |
   o  0   df4fd610a3d6   1970-01-01 00:00 +0000   test
        a1

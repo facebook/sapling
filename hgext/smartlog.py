@@ -537,7 +537,7 @@ def smartlogrevset(repo, subset, x):
                 if current != anc and not ispublic:
                     parents = parentrevs(current)
                     for p in parents:
-                        if p > anc:
+                        if p >= anc:
                             queue.append(p)
 
     # add context: master, current commit, and the common ancestor
