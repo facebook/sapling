@@ -7,7 +7,12 @@ import sys
 
 os.chdir(os.getenv('TESTTMP'))
 
-if sys.argv[1] != "user@dummy":
+# Skipping SSH options
+host_index = 1
+while host_index < len(sys.argv) and sys.argv[host_index].startswith('-'):
+    host_index += 1
+
+if sys.argv[host_index] != "user@dummy":
     sys.exit(-1)
 
 os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get('LOCALIP', '127.0.0.1')
@@ -18,7 +23,7 @@ for i, arg in enumerate(sys.argv[1:]):
     log.write(" %d:%s" % (i + 1, arg))
 log.write("\n")
 log.close()
-hgcmd = sys.argv[2]
+hgcmd = sys.argv[host_index + 1]
 if os.name == 'nt':
     # hack to make simple unix single quote quoting work on windows
     hgcmd = hgcmd.replace("'", '"')

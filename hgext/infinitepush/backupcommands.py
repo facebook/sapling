@@ -628,6 +628,13 @@ def _dobackup(ui, repo, dest, **opts):
 
 def _dobackgroundbackup(ui, repo, dest=None):
     background_cmd = ['hg', 'pushbackup']
+    infinitepush_bgssh = ui.config('infinitepush', 'bgssh')
+    if infinitepush_bgssh:
+        background_cmd += ['--config', 'ui.ssh=%s' % infinitepush_bgssh]
+
+    if ui.configbool('infinitepushbackup', 'bgdebug', False):
+        background_cmd.append('--debug')
+
     if dest:
         background_cmd.append(dest)
     logfile = None

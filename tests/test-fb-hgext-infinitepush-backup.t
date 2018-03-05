@@ -594,3 +594,11 @@ Check the logs, make sure just one process was started
   remote:     1ef11233b74d  B
   remote:     ffeec75ec603  C
   finished in \d+\.(\d+)? seconds (re)
+
+Check if ssh batch mode enables only for background backup and not for foreground
+  $ hg pushbackup --debug | debugsshcall
+  running .* ".*/dummyssh" 'user@dummy' 'hg -R repo serve --stdio' (re)
+  $ hg pushbackup --background --config infinitepushbackup.logdir=$TESTTMP/logs --config infinitepushbackup.bgdebug=yes
+  $ waitbgbackup
+  $ cat $TESTTMP/logs/test/* | debugsshcall
+  running .* ".*/dummyssh" -bgssh 'user@dummy' 'hg -R repo serve --stdio' (re)

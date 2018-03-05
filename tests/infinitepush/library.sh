@@ -20,6 +20,7 @@ infinitepush=
 ssh = python "$TESTDIR/dummyssh"
 [infinitepush]
 branchpattern=re:scratch/.*
+bgssh = python "$TESTDIR/dummyssh" -bgssh
 EOF
 }
 
@@ -128,4 +129,6 @@ setuplogdir() {
   chmod +t $TESTTMP/logs
 }
 
-
+debugsshcall() {
+  sed -nr '/^running .*dummyssh.*$/p'
+}
