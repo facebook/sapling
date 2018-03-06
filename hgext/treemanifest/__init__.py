@@ -131,6 +131,7 @@ from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
     connectionpool,
     resolveprefetchopts,
+    shallowbundle,
     shallowrepo,
     shallowutil,
     wirepack,
@@ -1415,9 +1416,12 @@ def _registerbundle2parts():
         pushop.stepsdone.add('treepack')
 
         # Only add trees if we have them
-        if _cansendtrees(pushop.repo, pushop.outgoing.missing):
+        sendtrees = shallowbundle.cansendtrees(pushop.repo,
+                                               pushop.outgoing.missing)
+        if sendtrees != shallowbundle.NoTrees:
             part = createtreepackpart(pushop.repo, pushop.outgoing,
-                                      TREEGROUP_PARTTYPE2)
+                                      TREEGROUP_PARTTYPE2,
+                                      sendtrees=sendtrees)
             bundler.addpart(part)
 
     @exchange.getbundle2partsgenerator(TREEGROUP_PARTTYPE2)
@@ -1432,19 +1436,17 @@ def _registerbundle2parts():
             return
 
         outgoing = exchange._computeoutgoing(repo, heads, common)
-        if _cansendtrees(repo, outgoing.missing):
-            part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
+        sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing)
+        if sendtrees != shallowbundle.NoTrees:
+            part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
+                                      sendtrees=sendtrees)
             bundler.addpart(part)
 
-def _cansendtrees(repo, nodes):
-    sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
-    if not sendtrees:
-        return False
+def createtreepackpart(repo, outgoing, partname,
+                       sendtrees=shallowbundle.AllTrees):
+    if sendtrees == shallowbundle.NoTrees:
+        raise error.ProgrammingError("calling createtreepackpart with NoTrees")
 
-    repo.prefetchtrees(repo[node].manifestnode() for node in nodes)
-    return True
-
-def createtreepackpart(repo, outgoing, partname):
     rootdir = ''
     mfnodes = []
     basemfnodes = []
@@ -1925,8 +1927,10 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
     orig(ui, repo, bundler, source, outgoing, opts)
 
     # Only add trees if we have them
-    if _cansendtrees(repo, outgoing.missing):
-        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2)
+    sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing)
+    if sendtrees != shallowbundle.NoTrees:
+        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
+                                  sendtrees=sendtrees)
         bundler.addpart(part)
 
 def _handlebundle2part(orig, self, bundle, part):

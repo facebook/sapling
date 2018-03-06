@@ -55,6 +55,7 @@ from .remotefilelog import (
     datapack,
     historypack,
     metadatastore,
+    shallowbundle,
     wirepack,
 )
 
@@ -240,9 +241,11 @@ def getrebaseparts(repo, peer, outgoing, onto, newhead):
         except KeyError:
             pass
         else:
-            if treemod._cansendtrees(repo, outgoing.missing):
+            sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing)
+            if sendtrees != shallowbundle.NoTrees:
                 part = treemod.createtreepackpart(repo, outgoing,
-                                                  rebasepackparttype)
+                                                  rebasepackparttype,
+                                                  sendtrees=sendtrees)
                 parts.append(part)
 
     parts.append(createrebasepart(repo, peer, outgoing, onto, newhead))

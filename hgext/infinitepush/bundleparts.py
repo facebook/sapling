@@ -68,9 +68,13 @@ def getscratchbranchparts(repo, peer, outgoing, confignonforwardmove,
 
     try:
         treemod = extensions.find('treemanifest')
-        if treemod._cansendtrees(repo, outgoing.missing):
+        remotefilelog = extensions.find('remotefilelog')
+        sendtrees = remotefilelog.shallowbundle.cansendtrees(repo,
+                                                             outgoing.missing)
+        if sendtrees != remotefilelog.shallowbundle.NoTrees:
             parts.append(treemod.createtreepackpart(
-                repo, outgoing, treemod.TREEGROUP_PARTTYPE2))
+                repo, outgoing, treemod.TREEGROUP_PARTTYPE2,
+                sendtrees=sendtrees))
     except KeyError:
         pass
 

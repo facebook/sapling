@@ -13,9 +13,9 @@ from mercurial import changegroup, mdiff, match, bundlerepo
 from mercurial import util, error
 from mercurial.i18n import _
 
-NoFiles = 0
-LocalFiles = 1
-AllFiles = 2
+NoFiles = NoTrees = 0
+LocalFiles = LocalTrees = 1
+AllFiles = AllTrees = 2
 
 requirement = "remotefilelog"
 
@@ -465,3 +465,11 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     repo.ui.progress(_('files'), None)
 
     return len(revisiondatas), newfiles
+
+def cansendtrees(repo, nodes):
+    sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
+    if not sendtrees:
+        return NoTrees
+
+    repo.prefetchtrees(repo[node].manifestnode() for node in nodes)
+    return AllTrees
