@@ -85,7 +85,7 @@ impl Blob {
     pub fn size(&self) -> Option<usize> {
         match self {
             &Blob::Dirty(ref data) => Some(data.len()),
-            &Blob::Clean(_, ref data) => Some(data.as_ref().len()),
+            &Blob::Clean(ref data, _) => Some(data.as_ref().len()),
             &Blob::Extern(..) | &Blob::NodeId(..) => None,
         }
     }

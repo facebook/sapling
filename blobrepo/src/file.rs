@@ -131,18 +131,16 @@ impl Entry for BlobEntry {
             .and_then({
                 let ty = self.ty;
                 move |bytes| {
-                    let blob = bytes.as_ref();
-
                     // Mercurial file blob can have metadata, but tree manifest can't
                     let blob = if ty == Type::Tree {
-                        blob
+                        bytes
                     } else {
-                        let (_, off) = file::File::extract_meta(blob);
-                        &blob[off..]
+                        let (_, off) = file::File::extract_meta(&bytes);
+                        bytes.slice_from(off)
                     };
                     let res = match ty {
-                        Type::File => Content::File(Blob::from(bytes.clone())),
-                        Type::Executable => Content::Executable(Blob::from(bytes.clone())),
+                        Type::File => Content::File(Blob::from(blob)),
+                        Type::Executable => Content::Executable(Blob::from(blob)),
                         Type::Symlink => Content::Symlink(MPath::new(blob)?),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
