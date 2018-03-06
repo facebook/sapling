@@ -1214,18 +1214,22 @@ def _cwdlist(repo):
             _("the current working directory should begin "
               "with the root %s") % root)
 
+    matcher = matchmod.match(
+        repo.root, repo.getcwd(),
+        patterns=['path:' + cwd])
+    files = mf.matches(matcher)
+
     sparsematch = repo.sparsematch(ctx.rev())
     checkedoutentries = set()
     allentries = set()
     cwdlength = len(cwd)
 
-    for filepath in mf:
-        if filepath.startswith(cwd):
-            entryname = filepath[cwdlength:].partition(pycompat.ossep)[0]
+    for filepath in files:
+        entryname = filepath[cwdlength:].partition(pycompat.ossep)[0]
 
-            allentries.add(entryname)
-            if sparsematch(filepath):
-                checkedoutentries.add(entryname)
+        allentries.add(entryname)
+        if sparsematch(filepath):
+            checkedoutentries.add(entryname)
 
     ui = repo.ui
     for entry in sorted(allentries):
