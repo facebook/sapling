@@ -43,8 +43,8 @@ class verifier(object):
         self.badrevs = set()
         self.errors = 0
         self.warnings = 0
-        self.havecl = len(repo.changelog) > 0
-        self.havemf = len(repo.manifestlog._revlog) > 0
+        self.havecl = bool(repo.changelog)
+        self.havemf = bool(repo.manifestlog)
         self.revlogv1 = repo.changelog.version != revlog.REVLOGV0
         self.lrugetctx = util.lrucachefunc(repo.changectx)
         self.refersmf = False

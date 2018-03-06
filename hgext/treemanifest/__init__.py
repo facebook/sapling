@@ -568,6 +568,9 @@ class basetreemanifestlog(object):
             self._mutabledatapack = None
             self._mutablehistorypack = None
 
+    def __nonzero__(self):
+        return True
+
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
     def __init__(self, opener, repo, treemanifest=False):
         basetreemanifestlog.__init__(self)

@@ -1347,6 +1347,9 @@ class manifestlog(object):
 
         self.cachesize = cachesize
 
+    def __nonzero__(self):
+        return bool(self._revlog)
+
     def _maplinknode(self, linknode):
         """Turns a linknode into a linkrev. Only needed for revlog backed
         manifestlogs."""
