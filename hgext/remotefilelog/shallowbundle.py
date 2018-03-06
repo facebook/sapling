@@ -101,15 +101,10 @@ class shallowcg1packer(changegroup.cg1packer):
         # so we can inspect which files changed and need to be sent. So let's
         # bulk fetch the trees up front.
         repo = self._repo
+        sendtrees = NoTrees
         if (not fastpathlinkrev and
             util.safehasattr(repo, 'prefetchtrees')):
-            try:
-                repo.prefetchtrees(mfs.keys())
-            except shallowutil.MissingNodesError:
-                # During migrations, we may be sending flat manifests that don't
-                # have tree equivalents (like an old commit made before the
-                # conversion). In that case, don't worry if the prefetch fails.
-                pass
+            sendtrees = cansendtrees(repo, mfs.values())
 
         if self._cansendflat(mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
@@ -125,7 +120,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 yield chunk
         else:
             # If not using the fast path, we need to discover what files to send
-            if not fastpathlinkrev:
+            if not fastpathlinkrev and sendtrees != NoTrees:
                 mflog = repo.manifestlog
                 for mfnode, clnode in mfs.iteritems():
                     mfctx = mflog[mfnode]
@@ -468,8 +463,24 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
 def cansendtrees(repo, nodes):
     sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
+    result = AllTrees
+    prefetch = AllTrees
     if not sendtrees:
-        return NoTrees
+        result = NoTrees
+        # If we're not in treeonly mode, we will consult the manifests when
+        # getting ready to send the flat manifests. This will cause tree
+        # manifest lookups, so let's go ahead and bulk prefetch them.
+        prefetch = AllTrees
 
-    repo.prefetchtrees(repo[node].manifestnode() for node in nodes)
-    return AllTrees
+    ctxs = [repo[node] for node in nodes]
+
+    try:
+        repo.prefetchtrees(c.manifestnode() for c in ctxs
+                           if prefetch == AllTrees)
+    except shallowutil.MissingNodesError:
+        # During migrations, we may be sending flat manifests that don't
+        # have tree equivalents (like an old commit made before the
+        # conversion). In that case, don't worry if the prefetch fails.
+        pass
+
+    return result
