@@ -44,6 +44,11 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
     # build deltas
     for i in xrange(len(nodelist) - 1):
         prev, curr = nodelist[i], nodelist[i + 1]
+        if self._cgdeltaconfig == changegroup.CFG_CGDELTA_ALWAYS_NULL:
+            prev = nullid
+        elif (self._cgdeltaconfig == changegroup.CFG_CGDELTA_NO_EXTERNAL
+              and i == 0):
+            prev = nullid
         linknode = lookup(curr)
         for c in self.nodechunk(rlog, curr, prev, linknode):
             yield c

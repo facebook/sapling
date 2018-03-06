@@ -826,6 +826,15 @@ Example for ``~/.hgrc``::
 ``uselz4``
     Enable or disable the lz4 compression format on the revlogs.
 
+``cgdeltabase``
+    Control the delta base of revisions in a changegroup. Could be one of:
+    "default", "no-external", "always-null", or "default". "default" means
+    delta base can be any revision. "no-external" limits delta bases to be
+    only revisions in a same changegroup. "always-null" enforces deltas to be
+    the "null" revision, effectively making revisions full texts.
+
+    Default: "default".
+
 ``graph``
 ---------
 

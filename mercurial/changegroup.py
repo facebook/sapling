@@ -28,6 +28,10 @@ from . import (
     util,
 )
 
+CFG_CGDELTA_ALWAYS_NULL = "always-null"
+CFG_CGDELTA_NO_EXTERNAL = "no-external"
+CFG_CGDELTA_DEFAULT = "default"
+
 _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
 _CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
@@ -530,6 +534,14 @@ class cg1packer(object):
             self._verbosenote = self._repo.ui.note
         else:
             self._verbosenote = lambda s: None
+        cgdeltaconfig = repo.ui.config('format', 'cgdeltabase')
+        if cgdeltaconfig not in [CFG_CGDELTA_ALWAYS_NULL,
+                                 CFG_CGDELTA_NO_EXTERNAL,
+                                 CFG_CGDELTA_DEFAULT]:
+            repo.ui.warn(_('ignore unknown cgdeltabase config: %s\n')
+                         % cgdeltaconfig)
+            cgdeltaconfig = CFG_CGDELTA_DEFAULT
+        self._cgdeltaconfig = cgdeltaconfig
 
     def close(self):
         return closechunk()
@@ -581,6 +593,10 @@ class cg1packer(object):
                 self._progress(msgbundling, r + 1, unit=units, total=total)
             prev, curr = revs[r], revs[r + 1]
             linknode = lookup(revlog.node(curr))
+            if self._cgdeltaconfig == CFG_CGDELTA_ALWAYS_NULL:
+                prev = nullrev
+            elif self._cgdeltaconfig == CFG_CGDELTA_NO_EXTERNAL and r == 0:
+                prev = nullrev
             for c in self.revchunk(revlog, curr, prev, linknode):
                 yield c
 
@@ -782,7 +798,8 @@ class cg1packer(object):
         progress(msgbundling, None)
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
-        if not revlog.candelta(prev, rev):
+        if (not revlog.candelta(prev, rev)
+            or self._cgdeltaconfig != CFG_CGDELTA_DEFAULT):
             raise error.ProgrammingError('cannot change deltabase for cg1')
         return prev
 
@@ -834,7 +851,10 @@ class cg2packer(cg1packer):
             self._reorder = False
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
-        dp = revlog.deltaparent(rev)
+        if self._cgdeltaconfig == CFG_CGDELTA_DEFAULT:
+            dp = revlog.deltaparent(rev)
+        else:
+            dp = nullrev
         if dp == nullrev and revlog.storedeltachains:
             # Avoid sending full revisions when delta parent is null. Pick prev
             # in that case. It's tempting to pick p1 in this case, as p1 will

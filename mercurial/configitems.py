@@ -567,6 +567,9 @@ coreconfigitem('extdata', '.*',
 coreconfigitem('format', 'aggressivemergedeltas',
     default=False,
 )
+coreconfigitem('format', 'cgdeltabase',
+    default='default',  # changegroup.CFG_CGDELTA_DEFAULT
+)
 coreconfigitem('format', 'chunkcachesize',
     default=None,
 )
