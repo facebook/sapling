@@ -167,7 +167,7 @@ mod test {
 
     #[test]
     fn union_identical_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -183,7 +183,7 @@ mod test {
 
     #[test]
     fn union_error_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
@@ -207,7 +207,7 @@ mod test {
 
     #[test]
     fn union_three_nodes() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Note that these are *not* in generation order deliberately.
@@ -243,7 +243,7 @@ mod test {
 
     #[test]
     fn union_nothing() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![];
@@ -254,7 +254,7 @@ mod test {
 
     #[test]
     fn union_nesting() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Note that these are *not* in generation order deliberately.
@@ -298,7 +298,7 @@ mod test {
     fn slow_ready_union_nothing() {
         // Tests that we handle an input staying at NotReady for a while without panicing
         let repeats = 10;
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
         let inputs: Vec<Box<NodeStream>> = vec![
             Box::new(NotReadyEmptyStream {
@@ -324,7 +324,7 @@ mod test {
 
     #[test]
     fn union_branch_even_repo() {
-        let repo = Arc::new(branch_even::getrepo());
+        let repo = Arc::new(branch_even::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Two nodes should share the same generation number
@@ -359,7 +359,7 @@ mod test {
 
     #[test]
     fn union_branch_uneven_repo() {
-        let repo = Arc::new(branch_uneven::getrepo());
+        let repo = Arc::new(branch_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Two nodes should share the same generation number
@@ -404,7 +404,7 @@ mod test {
 
     #[test]
     fn union_branch_wide_repo() {
-        let repo = Arc::new(branch_wide::getrepo());
+        let repo = Arc::new(branch_wide::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Two nodes should share the same generation number

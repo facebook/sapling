@@ -86,20 +86,22 @@ pub fn init_repo(
 }
 
 pub trait OpenableRepoType {
-    fn open(&self, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo>;
+    fn open(&self, logger: Logger, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
 }
 
 impl OpenableRepoType for RepoType {
-    fn open(&self, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
+    fn open(&self, logger: Logger, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo> {
         use hgproto::ErrorKind;
         use metaconfig::repoconfig::RepoType::*;
 
         let ret = match *self {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
-            BlobFiles(ref path) => BlobRepo::new_files(&path, repoid)?,
-            BlobRocks(ref path) => BlobRepo::new_rocksdb(&path, repoid)?,
-            TestBlobManifold(ref bucket, _) => BlobRepo::new_test_manifold(bucket, remote, repoid)?,
+            BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
+            BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
+            TestBlobManifold(ref bucket, _) => {
+                BlobRepo::new_test_manifold(logger, bucket, remote, repoid)?
+            }
         };
 
         Ok(ret)
@@ -134,7 +136,6 @@ pub struct HgRepo {
     path: String,
     hgrepo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
-    _logger: Logger,
     scuba: Option<Arc<ScubaClient>>,
 }
 
@@ -183,12 +184,12 @@ impl HgRepo {
         scuba_table: Option<String>,
     ) -> Result<Self> {
         let path = repo.path().to_owned();
+        let logger = parent_logger.new(o!("repo" => format!("{}", path.display())));
 
         Ok(HgRepo {
             path: format!("{}", path.display()),
-            hgrepo: Arc::new(repo.open(remote, repoid)?),
+            hgrepo: Arc::new(repo.open(logger, remote, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
-            _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
             scuba: match scuba_table {
                 Some(name) => Some(Arc::new(ScubaClient::new(name))),
                 None => None,

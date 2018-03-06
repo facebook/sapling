@@ -235,7 +235,7 @@ macro_rules! quickcheck_setops {
         #[test]
         fn $test_name() {
             fn prop(set: RevsetSpec) -> bool {
-                let repo = Arc::new($repo::getrepo());
+                let repo = Arc::new($repo::getrepo(None));
                 match_hashset_to_revset(repo, set)
             }
             quickcheck(prop as fn(RevsetSpec) -> bool)

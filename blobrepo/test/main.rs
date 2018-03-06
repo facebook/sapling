@@ -50,7 +50,7 @@ fn get_empty_eager_repo() -> BlobRepo {
     let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
     let repoid = RepositoryId::new(0);
 
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, repoid)
+    BlobRepo::new_memblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
 }
 
 fn get_empty_lazy_repo() -> BlobRepo {
@@ -61,7 +61,7 @@ fn get_empty_lazy_repo() -> BlobRepo {
     let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
     let repoid = RepositoryId::new(0);
 
-    BlobRepo::new_lazymemblob(heads, bookmarks, blobs, linknodes, changesets, repoid)
+    BlobRepo::new_lazymemblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
 }
 
 macro_rules! test_both_repotypes {
@@ -511,7 +511,7 @@ test_both_repotypes!(
 
 #[test]
 fn test_compute_changed_files_no_parents() {
-    let repo = many_files_dirs::getrepo();
+    let repo = many_files_dirs::getrepo(None);
     let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
     let expected = vec![
         MPath::new(b"1").unwrap(),
@@ -537,7 +537,7 @@ fn test_compute_changed_files_one_parent() {
     // Note that this is a commit and its parent commit, so you can use:
     // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
     // to see how Mercurial would compute the files list and confirm that it's the same
-    let repo = many_files_dirs::getrepo();
+    let repo = many_files_dirs::getrepo(None);
     let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
     let parenthash = string_to_nodehash("473b2e715e0df6b2316010908879a3c78e275dd9");
     let expected = vec![

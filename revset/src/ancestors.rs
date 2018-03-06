@@ -168,7 +168,7 @@ mod test {
 
     #[test]
     fn linear_ancestors() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = AncestorsNodeStream::new(
@@ -196,7 +196,7 @@ mod test {
 
     #[test]
     fn merge_ancestors_from_merge() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = AncestorsNodeStream::new(
@@ -229,7 +229,7 @@ mod test {
 
     #[test]
     fn merge_ancestors_one_branch() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = AncestorsNodeStream::new(
@@ -254,7 +254,7 @@ mod test {
     fn unshared_merge_all() {
         // The unshared_merge_uneven fixture has a commit after the merge. Pull in everything
         // by starting at the head and working back to the original unshared history commits
-        let repo = Arc::new(unshared_merge_uneven::getrepo());
+        let repo = Arc::new(unshared_merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = AncestorsNodeStream::new(
@@ -293,7 +293,7 @@ mod test {
 
     #[test]
     fn no_common_ancestor() {
-        let repo = Arc::new(unshared_merge_uneven::getrepo());
+        let repo = Arc::new(unshared_merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = greatest_common_ancestor(
@@ -309,7 +309,7 @@ mod test {
 
     #[test]
     fn greatest_common_ancestor_different_branches() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = greatest_common_ancestor(
@@ -332,7 +332,7 @@ mod test {
 
     #[test]
     fn greatest_common_ancestor_same_branch() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = greatest_common_ancestor(
@@ -355,7 +355,7 @@ mod test {
 
     #[test]
     fn all_common_ancestors_different_branches() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = common_ancestors(
@@ -378,7 +378,7 @@ mod test {
 
     #[test]
     fn all_common_ancestors_same_branch() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = common_ancestors(

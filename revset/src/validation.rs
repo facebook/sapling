@@ -88,7 +88,7 @@ mod test {
 
     #[test]
     fn validate_accepts_single_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -104,7 +104,7 @@ mod test {
     fn slow_ready_validates() {
         // Tests that we handle an input staying at NotReady for a while without panicing
         let repeats = 10;
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
         let mut nodestream = ValidateNodeStream::new(
             Box::new(NotReadyEmptyStream {
@@ -131,7 +131,7 @@ mod test {
     #[test]
     #[should_panic]
     fn repeat_hash_panics() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -152,7 +152,7 @@ mod test {
     #[test]
     #[should_panic]
     fn wrong_order_panics() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = SingleNodeHash::new(

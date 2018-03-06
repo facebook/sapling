@@ -173,7 +173,7 @@ mod test {
 
     #[test]
     fn intersect_identical_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -189,7 +189,7 @@ mod test {
 
     #[test]
     fn intersect_three_different_nodes() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Note that these are *not* in generation order deliberately.
@@ -215,7 +215,7 @@ mod test {
 
     #[test]
     fn intersect_three_identical_nodes() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
@@ -247,7 +247,7 @@ mod test {
 
     #[test]
     fn intersect_nesting() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
@@ -286,7 +286,7 @@ mod test {
 
     #[test]
     fn intersection_of_unions() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
@@ -340,7 +340,7 @@ mod test {
 
     #[test]
     fn intersect_error_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
@@ -364,7 +364,7 @@ mod test {
 
     #[test]
     fn intersect_nothing() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![];
@@ -377,7 +377,7 @@ mod test {
     fn slow_ready_intersect_nothing() {
         // Tests that we handle an input staying at NotReady for a while without panicing
         let repeats = 10;
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
         let inputs: Vec<Box<NodeStream>> = vec![
             Box::new(NotReadyEmptyStream {
@@ -403,7 +403,7 @@ mod test {
 
     #[test]
     fn intersect_unshared_merge_even() {
-        let repo = Arc::new(unshared_merge_even::getrepo());
+        let repo = Arc::new(unshared_merge_even::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Post-merge, merge, and both unshared branches
@@ -466,7 +466,7 @@ mod test {
 
     #[test]
     fn intersect_unshared_merge_uneven() {
-        let repo = Arc::new(unshared_merge_uneven::getrepo());
+        let repo = Arc::new(unshared_merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Post-merge, merge, and both unshared branches

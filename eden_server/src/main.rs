@@ -508,27 +508,35 @@ fn main() {
     };
 
     match config.repotype {
-        RawRepoType::BlobFiles => start_server(
-            &config.addr,
-            config.reponame,
-            BlobRepo::new_files(
-                &config.path.expect("Please specify a path to the blobrepo"),
-                RepositoryId::new(config.repoid),
-            ).expect("couldn't open blob state"),
-            root_logger.clone(),
-            config.ssl,
-        ),
-        RawRepoType::BlobRocks => start_server(
-            &config.addr,
-            config.reponame,
-            BlobRepo::new_rocksdb(
-                &config.path.expect("Please specify a path to the blobrepo"),
-                RepositoryId::new(config.repoid),
-            ).expect("couldn't open blob state"),
-            root_logger.clone(),
-            config.ssl,
-        ),
+        RawRepoType::BlobFiles => {
+            let path = config.path.expect("Please specify a path to the blobrepo");
+            let repo_logger = root_logger.new(o!("repo" => format!("{}", path.display())));
+            start_server(
+                &config.addr,
+                config.reponame,
+                BlobRepo::new_files(repo_logger, &path, RepositoryId::new(config.repoid))
+                    .expect("couldn't open blob state"),
+                root_logger.clone(),
+                config.ssl,
+            )
+        }
+        RawRepoType::BlobRocks => {
+            let path = config.path.expect("Please specify a path to the blobrepo");
+            let repo_logger = root_logger.new(o!("repo" => format!("{}", path.display())));
+            start_server(
+                &config.addr,
+                config.reponame,
+                BlobRepo::new_rocksdb(repo_logger, &path, RepositoryId::new(config.repoid))
+                    .expect("couldn't open blob state"),
+                root_logger.clone(),
+                config.ssl,
+            )
+        }
         RawRepoType::BlobManifold => {
+            let bucket = config
+                .manifold_bucket
+                .expect("manifold bucket is not specified");
+            let repo_logger = root_logger.new(o!("repo" => format!("{}", bucket)));
             let (sender, receiver) = oneshot::channel();
             // manifold requires a separate detached thread to do the IO, that's why we create a
             // separate thread to handle it.
@@ -549,9 +557,8 @@ fn main() {
                 &config.addr,
                 config.reponame,
                 BlobRepo::new_test_manifold(
-                    config
-                        .manifold_bucket
-                        .expect("manifold bucket is not specified"),
+                    repo_logger,
+                    bucket,
                     &remote,
                     RepositoryId::new(config.repoid),
                 ).expect("couldn't open blob state"),

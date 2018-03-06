@@ -17,6 +17,7 @@ use futures::future::Future;
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use slog::{Discard, Drain, Logger};
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
@@ -48,6 +49,7 @@ use repo_commit::*;
 use utils::{get_node, get_node_key, RawNodeBlob};
 
 pub struct BlobRepo {
+    logger: Logger,
     blobstore: Arc<Blobstore>,
     bookmarks: Arc<Bookmarks>,
     heads: Arc<Heads>,
@@ -58,6 +60,7 @@ pub struct BlobRepo {
 
 impl BlobRepo {
     pub fn new(
+        logger: Logger,
         heads: Arc<Heads>,
         bookmarks: Arc<Bookmarks>,
         blobstore: Arc<Blobstore>,
@@ -66,6 +69,7 @@ impl BlobRepo {
         repoid: RepositoryId,
     ) -> Self {
         BlobRepo {
+            logger,
             heads,
             bookmarks,
             blobstore,
@@ -75,7 +79,7 @@ impl BlobRepo {
         }
     }
 
-    pub fn new_files(path: &Path, repoid: RepositoryId) -> Result<Self> {
+    pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = FileBookmarks::open(path.join("books"))
@@ -88,6 +92,7 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
 
         Ok(Self::new(
+            logger,
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
@@ -97,7 +102,7 @@ impl BlobRepo {
         ))
     }
 
-    pub fn new_rocksdb(path: &Path, repoid: RepositoryId) -> Result<Self> {
+    pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = FileBookmarks::open(path.join("books"))
@@ -110,6 +115,7 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
 
         Ok(Self::new(
+            logger,
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
@@ -119,7 +125,10 @@ impl BlobRepo {
         ))
     }
 
+    // Memblob repos are test repos, and do not have to have a logger. If we're given None,
+    // we won't log.
     pub fn new_memblob(
+        logger: Option<Logger>,
         heads: MemHeads,
         bookmarks: MemBookmarks,
         blobstore: EagerMemblob,
@@ -128,6 +137,7 @@ impl BlobRepo {
         repoid: RepositoryId,
     ) -> Self {
         Self::new(
+            logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
@@ -138,6 +148,7 @@ impl BlobRepo {
     }
 
     pub fn new_lazymemblob(
+        logger: Option<Logger>,
         heads: MemHeads,
         bookmarks: MemBookmarks,
         blobstore: LazyMemblob,
@@ -146,6 +157,7 @@ impl BlobRepo {
         repoid: RepositoryId,
     ) -> Self {
         Self::new(
+            logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
@@ -155,8 +167,9 @@ impl BlobRepo {
         )
     }
 
-    pub fn new_memblob_empty() -> Result<Self> {
+    pub fn new_memblob_empty(logger: Option<Logger>) -> Result<Self> {
         Ok(Self::new(
+            logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(MemHeads::new()),
             Arc::new(MemBookmarks::new()),
             Arc::new(EagerMemblob::new()),
@@ -168,6 +181,7 @@ impl BlobRepo {
     }
 
     pub fn new_test_manifold<T: ToString>(
+        logger: Logger,
         bucket: T,
         remote: &Remote,
         repoid: RepositoryId,
@@ -180,6 +194,7 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
+            logger,
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
@@ -442,6 +457,7 @@ impl BlobRepo {
 impl Clone for BlobRepo {
     fn clone(&self) -> Self {
         Self {
+            logger: self.logger.clone(),
             heads: self.heads.clone(),
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),

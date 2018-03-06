@@ -51,6 +51,7 @@ extern crate ascii;
 extern crate heads;
 extern crate futures;
 extern crate bytes;
+extern crate slog;
 
 use std::str::FromStr;
 
@@ -66,8 +67,9 @@ use ascii::AsciiString;
 use blobstore::Blobstore;
 use heads::Heads;
 use futures::future::Future;
+use slog::Logger;
 
-pub fn getrepo() -> BlobRepo {
+pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
     let bookmarks: MemBookmarks = MemBookmarks::new();
     let heads: MemHeads = MemHeads::new();
     let blobs = EagerMemblob::new();
@@ -145,7 +147,7 @@ pub fn getrepo() -> BlobRepo {
                 )
         rs.writelines(
             """
-    BlobRepo::new_memblob(heads, bookmarks, blobs, linknodes, changesets, repo_id)
+    BlobRepo::new_memblob(logger, heads, bookmarks, blobs, linknodes, changesets, repo_id)
 }
 """
         )

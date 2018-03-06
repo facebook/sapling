@@ -286,7 +286,7 @@ fn do_check(
 
 #[test]
 fn test_recursive_changed_entry_stream_simple() {
-    let repo = Arc::new(many_files_dirs::getrepo());
+    let repo = Arc::new(many_files_dirs::getrepo(None));
     let main_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
     let base_hash = NodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
     // main_hash is a child of base_hash
@@ -316,7 +316,7 @@ fn test_recursive_changed_entry_stream_simple() {
 
 #[test]
 fn test_recursive_changed_entry_stream_changed_dirs() {
-    let repo = Arc::new(many_files_dirs::getrepo());
+    let repo = Arc::new(many_files_dirs::getrepo(None));
     let main_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
     let base_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
     // main_hash is a child of base_hash
@@ -344,7 +344,7 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
 
 #[test]
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
-    let repo = Arc::new(many_files_dirs::getrepo());
+    let repo = Arc::new(many_files_dirs::getrepo(None));
     let main_hash = NodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
     let base_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
     // main_hash is a child of base_hash

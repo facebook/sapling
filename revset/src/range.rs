@@ -238,7 +238,7 @@ mod test {
 
     #[test]
     fn linear_range() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = RangeNodeStream::new(
@@ -264,7 +264,7 @@ mod test {
 
     #[test]
     fn linear_direct_parent_range() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = RangeNodeStream::new(
@@ -287,7 +287,7 @@ mod test {
 
     #[test]
     fn linear_single_node_range() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = RangeNodeStream::new(
@@ -309,7 +309,7 @@ mod test {
 
     #[test]
     fn linear_empty_range() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // These are swapped, so won't find anything
@@ -325,7 +325,7 @@ mod test {
 
     #[test]
     fn merge_range_from_merge() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = RangeNodeStream::new(
@@ -349,7 +349,7 @@ mod test {
 
     #[test]
     fn merge_range_everything() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = RangeNodeStream::new(

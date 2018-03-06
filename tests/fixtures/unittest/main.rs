@@ -23,7 +23,7 @@ use mercurial_types::path::MPath;
 
 #[test]
 fn check_heads() {
-    let repo = linear::getrepo();
+    let repo = linear::getrepo(None);
 
     let heads_stream = repo.get_heads();
     let mut heads = spawn(heads_stream);
@@ -55,7 +55,7 @@ fn check_heads() {
 
 #[test]
 fn check_head_exists() {
-    let repo = linear::getrepo();
+    let repo = linear::getrepo(None);
 
     let nodehash =
         NodeHash::from_ascii_str(&AsciiString::from_ascii(
@@ -73,7 +73,7 @@ fn check_head_exists() {
 
 #[test]
 fn check_head_has_file() {
-    let repo = linear::getrepo();
+    let repo = linear::getrepo(None);
 
     let changeset_future = repo.get_changeset_by_changesetid(&ChangesetId::from_ascii_str(
         &AsciiString::from_ascii("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
@@ -114,7 +114,7 @@ fn check_head_has_file() {
 
 #[test]
 fn count_changesets() {
-    let repo = linear::getrepo();
+    let repo = linear::getrepo(None);
     let all_changesets_stream = repo.get_changesets();
     let mut all_changesets = spawn(all_changesets_stream);
     let mut count = 0;

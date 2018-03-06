@@ -127,7 +127,7 @@ mod test {
 
     #[test]
     fn difference_identical_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -143,7 +143,7 @@ mod test {
 
     #[test]
     fn difference_node_and_empty() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -159,7 +159,7 @@ mod test {
 
     #[test]
     fn difference_empty_and_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let head_hash = string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
@@ -175,7 +175,7 @@ mod test {
 
     #[test]
     fn difference_two_nodes() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodestream = SetDifferenceNodeStream::new(
@@ -203,7 +203,7 @@ mod test {
 
     #[test]
     fn difference_error_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let nodehash = string_to_nodehash("0000000000000000000000000000000000000000");
@@ -231,7 +231,7 @@ mod test {
     fn slow_ready_difference_nothing() {
         // Tests that we handle an input staying at NotReady for a while without panicing
         let repeats = 10;
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
         let mut nodestream = SetDifferenceNodeStream::new(
             &repo,
@@ -260,7 +260,7 @@ mod test {
 
     #[test]
     fn difference_union_with_single_node() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
@@ -303,7 +303,7 @@ mod test {
 
     #[test]
     fn difference_single_node_with_union() {
-        let repo = Arc::new(linear::getrepo());
+        let repo = Arc::new(linear::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         let inputs: Vec<Box<NodeStream>> = vec![
@@ -338,7 +338,7 @@ mod test {
 
     #[test]
     fn difference_merge_even() {
-        let repo = Arc::new(merge_even::getrepo());
+        let repo = Arc::new(merge_even::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Top three commits in my hg log -G -r 'all()' output
@@ -401,7 +401,7 @@ mod test {
 
     #[test]
     fn difference_merge_uneven() {
-        let repo = Arc::new(merge_uneven::getrepo());
+        let repo = Arc::new(merge_uneven::getrepo(None));
         let repo_generation = RepoGenCache::new(10);
 
         // Merge commit, and one from each branch
