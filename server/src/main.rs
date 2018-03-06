@@ -13,6 +13,7 @@ extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
 extern crate futures_ext;
+extern crate futures_stats;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_uds;
@@ -47,6 +48,7 @@ extern crate metaconfig;
 extern crate pylz4;
 extern crate repoinfo;
 extern crate revset;
+extern crate scuba;
 extern crate services;
 extern crate sshrelay;
 extern crate stats;
@@ -224,7 +226,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
 
 fn start_repo_listeners<I>(repos: I, root_log: &Logger) -> Result<Vec<JoinHandle<!>>>
 where
-    I: IntoIterator<Item = (RepoType, usize, i32)>,
+    I: IntoIterator<Item = (RepoType, usize, i32, Option<String>)>,
 {
     // Given the list of paths to repos:
     // - create a thread for it
@@ -233,7 +235,7 @@ where
 
     let handles: Vec<_> = repos
         .into_iter()
-        .map(move |(repotype, cache_size, repoid)| {
+        .map(move |(repotype, cache_size, repoid, scuba_table)| {
             // start a thread for each repo to own the reactor and start listening for
             // connections and detach it
             thread::Builder::new()
@@ -246,6 +248,7 @@ where
                             cache_size,
                             root_log.clone(),
                             RepositoryId::new(repoid),
+                            scuba_table,
                         )
                     }
                 })
@@ -266,11 +269,22 @@ where
 }
 
 // Listener thread for a specific repo
-fn repo_listen(repotype: RepoType, cache_size: usize, root_log: Logger, repoid: RepositoryId) -> ! {
+fn repo_listen(
+    repotype: RepoType,
+    cache_size: usize,
+    root_log: Logger,
+    repoid: RepositoryId,
+    scuba_table: Option<String>,
+) -> ! {
     let mut core = tokio_core::reactor::Core::new().expect("failed to create tokio core");
-    let (sockname, repo) =
-        repo::init_repo(&root_log, &repotype, cache_size, &core.remote(), repoid)
-            .expect("failed to initialize repo");
+    let (sockname, repo) = repo::init_repo(
+        &root_log,
+        &repotype,
+        cache_size,
+        &core.remote(),
+        repoid,
+        scuba_table,
+    ).expect("failed to initialize repo");
 
     let listen_log = root_log.new(o!("repo" => repo.path().clone()));
 
@@ -364,7 +378,7 @@ fn main() {
             config
                 .repos
                 .into_iter()
-                .map(|(_, c)| (c.repotype, c.generation_cache_size, c.repoid)),
+                .map(|(_, c)| (c.repotype, c.generation_cache_size, c.repoid, c.scuba_table)),
             root_log,
         )?;
 

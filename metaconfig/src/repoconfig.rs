@@ -34,6 +34,8 @@ pub struct RepoConfig {
     pub generation_cache_size: usize,
     /// Numerical repo id of the repo.
     pub repoid: i32,
+    /// Scuba table for logging performance of operations
+    pub scuba_table: Option<String>,
 }
 
 /// Types of repositories supported
@@ -184,6 +186,7 @@ struct RawRepoConfig {
     generation_cache_size: Option<usize>,
     manifold_bucket: Option<String>,
     repoid: i32,
+    scuba_table: Option<String>,
 }
 
 /// Types of repositories supported
@@ -215,11 +218,13 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
 
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);
         let repoid = this.repoid;
+        let scuba_table = this.scuba_table;
 
         Ok(RepoConfig {
             repotype,
             generation_cache_size,
             repoid,
+            scuba_table,
         })
     }
 }
@@ -240,11 +245,13 @@ mod test {
             repotype="blob:files"
             generation_cache_size=1048576
             repoid=0
+            scuba_table="scuba_table"
         "#;
         let www_content = r#"
             path="/tmp/www"
             repotype="revlog"
             repoid=1
+            scuba_table="scuba_table"
         "#;
 
         let my_path_manifest = MockManifest::with_content(vec![
@@ -277,6 +284,7 @@ mod test {
                 repotype: RepoType::BlobFiles("/tmp/fbsource".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
+                scuba_table: Some("scuba_table".to_string()),
             },
         );
         repos.insert(
@@ -285,6 +293,7 @@ mod test {
                 repotype: RepoType::Revlog("/tmp/www".into()),
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: 1,
+                scuba_table: Some("scuba_table".to_string()),
             },
         );
         assert_eq!(

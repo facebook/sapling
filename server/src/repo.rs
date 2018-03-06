@@ -18,7 +18,9 @@ use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
 use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_stats::{Stats, Timed};
 use pylz4;
+use scuba::{ScubaClient, ScubaSample};
 use tokio_core::reactor::Remote;
 
 use slog::Logger;
@@ -45,19 +47,38 @@ use revset::{AncestorsNodeStream, IntersectNodeStream, NodeStream, SetDifference
 const METAKEYFLAG: &str = "f";
 const METAKEYSIZE: &str = "s";
 
+mod ops {
+    pub const HELLO: &str = "hello";
+    pub const UNBUNDLE: &str = "unbundle";
+    pub const HEADS: &str = "heads";
+    pub const LOOKUP: &str = "lookup";
+    pub const KNOWN: &str = "known";
+    pub const BETWEEN: &str = "between";
+    pub const GETBUNDLE: &str = "getbundle";
+    pub const GETTREEPACK: &str = "gettreepack";
+    pub const GETFILES: &str = "getfiles";
+}
+
 pub fn init_repo(
     parent_logger: &Logger,
     repotype: &RepoType,
     cache_size: usize,
     remote: &Remote,
     repoid: RepositoryId,
+    scuba_table: Option<String>,
 ) -> Result<(PathBuf, HgRepo)> {
     let repopath = repotype.path();
 
     let mut sock = repopath.join(".hg");
 
-    let repo = HgRepo::new(parent_logger, repotype, cache_size, remote, repoid)
-        .with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
+    let repo = HgRepo::new(
+        parent_logger,
+        repotype,
+        cache_size,
+        remote,
+        repoid,
+        scuba_table,
+    ).with_context(|_| format!("Failed to initialize repo {:?}", repopath))?;
 
     sock.push("mononoke.sock");
 
@@ -94,11 +115,27 @@ impl OpenableRepoType for RepoType {
     }
 }
 
+fn add_common_stats_and_send_to_scuba(
+    scuba: Option<Arc<ScubaClient>>,
+    sample: &mut ScubaSample,
+    stats: &Stats,
+) {
+    if let Some(ref scuba) = scuba {
+        sample.add("time_elapsed_ms", stats.completion_time.num_milliseconds());
+        if let Some(nanos) = stats.poll_time.num_nanoseconds() {
+            sample.add("poll_time_ns", nanos);
+        }
+        sample.add("poll_count", stats.poll_count);
+        scuba.log(&sample);
+    }
+}
+
 pub struct HgRepo {
     path: String,
     hgrepo: Arc<BlobRepo>,
     repo_generation: RepoGenCache,
     _logger: Logger,
+    scuba: Option<Arc<ScubaClient>>,
 }
 
 fn wireprotocaps() -> Vec<String> {
@@ -143,6 +180,7 @@ impl HgRepo {
         cache_size: usize,
         remote: &Remote,
         repoid: RepositoryId,
+        scuba_table: Option<String>,
     ) -> Result<Self> {
         let path = repo.path().to_owned();
 
@@ -151,11 +189,21 @@ impl HgRepo {
             hgrepo: Arc::new(repo.open(remote, repoid)?),
             repo_generation: RepoGenCache::new(cache_size),
             _logger: parent_logger.new(o!("repo" => format!("{}", path.display()))),
+            scuba: match scuba_table {
+                Some(name) => Some(Arc::new(ScubaClient::new(name))),
+                None => None,
+            },
         })
     }
 
     pub fn path(&self) -> &String {
         &self.path
+    }
+
+    fn scuba_sample(&self, op: &str) -> ScubaSample {
+        let mut sample = ScubaSample::new();
+        sample.add("operation", op);
+        sample
     }
 }
 
@@ -268,6 +316,61 @@ impl RepoClient {
             .from_err()
             .boxify())
     }
+
+    fn gettreepack_untimed(&self, params: GettreepackArgs) -> HgCommandRes<Bytes> {
+        info!(self.logger, "gettreepack {:?}", params);
+
+        if !params.directories.is_empty() {
+            // This param is not used by core hg, don't worry about implementing it now
+            return Err(err_msg("directories param is not supported"))
+                .into_future()
+                .boxify();
+        }
+
+        // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
+        // already has can be sent to the client.
+        let basemfnode = params.basemfnodes.get(0).unwrap_or(&NULL_HASH);
+
+        if params.rootdir.len() != 0 {
+            // For now, only root repo
+            return Err(err_msg("only empty rootdir is supported"))
+                .into_future()
+                .boxify();
+        }
+
+        let writer = Cursor::new(Vec::new());
+        let mut bundle = Bundle2EncodeBuilder::new(writer);
+        // Mercurial currently hangs while trying to read compressed bundles over the wire:
+        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
+        // TODO: possibly enable compression support once this is fixed.
+        bundle.set_compressor_type(None);
+
+        // TODO(stash): T25850889 same entries will be generated over and over again.
+        // Potentially it can be very inefficient.
+        let changed_entries = params.mfnodes.iter().fold(
+            stream::empty().boxify(),
+            |cur_stream, manifest_id| {
+                let new_stream =
+                    get_changed_entry_stream(self.repo.hgrepo.clone(), manifest_id, basemfnode);
+                cur_stream.select(new_stream).boxify()
+            },
+        );
+
+        let changed_entries = changed_entries.filter({
+            let mut used_hashes = HashSet::new();
+            move |entry| used_hashes.insert(*entry.0.get_hash())
+        });
+
+        parts::treepack_part(changed_entries)
+            .into_future()
+            .and_then(|part| {
+                bundle.add_part(part);
+                bundle.build()
+            })
+            .map(|cursor| Bytes::from(cursor.into_inner()))
+            .from_err()
+            .boxify()
+    }
 }
 
 impl HgCommands for RepoClient {
@@ -324,6 +427,9 @@ impl HgCommands for RepoClient {
             }
         }
 
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::BETWEEN);
+
         // TODO(jsgf): do pairs in parallel?
         // TODO: directly return stream of streams
         let repo = self.repo.clone();
@@ -344,6 +450,9 @@ impl HgCommands for RepoClient {
                     .collect()
             })
             .collect()
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            })
             .boxify()
     }
 
@@ -360,6 +469,8 @@ impl HgCommands for RepoClient {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
         let logger = self.logger.clone();
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::HEADS);
         self.repo
             .hgrepo
             .get_heads()
@@ -367,6 +478,9 @@ impl HgCommands for RepoClient {
             .from_err()
             .and_then(|v| Ok(v.into_iter().collect()))
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            })
             .boxify()
     }
 
@@ -374,6 +488,8 @@ impl HgCommands for RepoClient {
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
         let repo = self.repo.hgrepo.clone();
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::LOOKUP);
         NodeHash::from_str(&key)
             .into_future()
             .and_then(move |node| {
@@ -399,6 +515,9 @@ impl HgCommands for RepoClient {
                     Ok(buf.freeze())
                 }
             })
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            })
             .boxify()
     }
 
@@ -407,6 +526,8 @@ impl HgCommands for RepoClient {
         info!(self.logger, "known: {:?}", nodes);
         let repo_generation = &self.repo.repo_generation;
         let hgrepo = &self.repo.hgrepo;
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::KNOWN);
 
         // Ultimately, this block takes all ancestors of heads in this repo intersected with
         // the nodes passed in by the client, and then returns a Vec<bool>, true if the
@@ -451,7 +572,7 @@ impl HgCommands for RepoClient {
                         // nodes that are both an ancestor of a get_heads() head and were
                         // passed in by the client
                     ).collect()
-                        .from_err::<hgproto::Error>()
+                         .from_err::<hgproto::Error>()
                 }
             })
             // We have a Future<Future<Vec<NodeHash>>> - collapse one layer of Future.
@@ -466,6 +587,9 @@ impl HgCommands for RepoClient {
                     .map(|node| known.contains(node))
                     .collect::<Vec<bool>>()
             })
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            })
             .boxify()
     }
 
@@ -473,10 +597,16 @@ impl HgCommands for RepoClient {
     fn getbundle(&self, args: GetbundleArgs) -> HgCommandRes<Bytes> {
         info!(self.logger, "Getbundle: {:?}", args);
 
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::GETBUNDLE);
+
         match self.create_bundle(args) {
             Ok(res) => res,
             Err(err) => Err(err).into_future().boxify(),
-        }
+        }.timed(move |stats, _| {
+            add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+        })
+            .boxify()
     }
 
     // @wireprotocommand('hello')
@@ -488,85 +618,60 @@ impl HgCommands for RepoClient {
         caps.push(format!("bundle2={}", bundle2caps()));
         res.insert("capabilities".to_string(), caps);
 
-        future::ok(res).boxify()
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::HELLO);
+        future::ok(res)
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            })
+            .boxify()
     }
 
-    // @wireprotocommand('unbundle', 'heads')
+    // @wireprotocommand('unbundle')
     fn unbundle(
         &self,
         heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
     ) -> HgCommandRes<Bytes> {
-        bundle2_resolver::resolve(
+        let res = bundle2_resolver::resolve(
             self.repo.hgrepo.clone(),
             self.logger.new(o!("command" => "unbundle")),
             heads,
             stream,
-        )
+        );
+
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::UNBUNDLE);
+
+        res.timed(move |stats, _| {
+            add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+        }).boxify()
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> HgCommandRes<Bytes> {
-        info!(self.logger, "gettreepack {:?}", params);
+        let scuba = self.repo.scuba.clone();
+        let mut sample = self.repo.scuba_sample(ops::GETTREEPACK);
 
-        if !params.directories.is_empty() {
-            // This param is not used by core hg, don't worry about implementing it now
-            return Err(err_msg("directories param is not supported"))
-                .into_future()
-                .boxify();
-        }
-
-        // TODO(stash): T25850889 only one basemfnodes is used. That means that trees that client
-        // already has can be sent to the client.
-        let basemfnode = params.basemfnodes.get(0).unwrap_or(&NULL_HASH);
-
-        if params.rootdir.len() != 0 {
-            // For now, only root repo
-            return Err(err_msg("only empty rootdir is supported"))
-                .into_future()
-                .boxify();
-        }
-
-        let writer = Cursor::new(Vec::new());
-        let mut bundle = Bundle2EncodeBuilder::new(writer);
-        // Mercurial currently hangs while trying to read compressed bundles over the wire:
-        // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
-        // TODO: possibly enable compression support once this is fixed.
-        bundle.set_compressor_type(None);
-
-        // TODO(stash): T25850889 same entries will be generated over and over again.
-        // Potentially it can be very inefficient.
-        let changed_entries = params.mfnodes.iter().fold(
-            stream::empty().boxify(),
-            |cur_stream, manifest_id| {
-                let new_stream =
-                    get_changed_entry_stream(self.repo.hgrepo.clone(), manifest_id, basemfnode);
-                cur_stream.select(new_stream).boxify()
-            },
-        );
-
-        let changed_entries = changed_entries.filter({
-            let mut used_hashes = HashSet::new();
-            move |entry| used_hashes.insert(*entry.0.get_hash())
-        });
-
-        parts::treepack_part(changed_entries)
-            .into_future()
-            .and_then(|part| {
-                bundle.add_part(part);
-                bundle.build()
+        return self.gettreepack_untimed(params)
+            .timed(move |stats, _| {
+                add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
             })
-            .map(|cursor| Bytes::from(cursor.into_inner()))
-            .from_err()
-            .boxify()
+            .boxify();
     }
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
         info!(self.logger, "getfiles");
-        let repo = self.repo.hgrepo.clone();
+        let repo = self.repo.clone();
         params
-            .and_then(move |(node, path)| create_remotefilelog_blob(repo.clone(), node, path))
+            .and_then(move |(node, path)| {
+                let repo = repo.clone();
+                create_remotefilelog_blob(repo.hgrepo.clone(), node, path).timed(move |stats, _| {
+                    let mut sample = repo.scuba_sample(ops::GETFILES);
+                    add_common_stats_and_send_to_scuba(repo.scuba.clone(), &mut sample, &stats);
+                })
+            })
             .boxify()
     }
 }
