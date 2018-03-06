@@ -321,7 +321,7 @@ def rage(ui, repo, *pats, **opts):
 
     After submitting to Phabricator, it prints configerable advice::
 
-    [pasterage]
+    [rage]
     advice = Please see our FAQ guide: https://...
 
     """
@@ -359,7 +359,7 @@ def rage(ui, repo, *pats, **opts):
         ui.write(_('Please post in %s with the following link:\n\n')
                  % (ui.config('ui', 'supportcontact')))
         ui.write('  ' + out + '\n', label='rage.link')
-    ui.write(ui.config('pasterage', 'advice') + '\n')
+    ui.write(ui.config('rage', 'advice', '') + '\n')
 
 colortable = {
     'rage.link': 'blue bold',
