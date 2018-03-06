@@ -130,5 +130,5 @@ setuplogdir() {
 }
 
 debugsshcall() {
-  sed -nr '/^running .*dummyssh.*$/p'
+  sed -n '/^running .*dummyssh.*$/p'
 }
