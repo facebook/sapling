@@ -1668,16 +1668,27 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
 def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
+
+    total = sum(map(len, actions.values()))
+    prog = 0
+    progress = repo.ui.progress
+    _recording = _('recording')
+    _files = _('files')
+
     # remove (must come first)
     for f, args, msg in actions.get('r', []):
         if branchmerge:
             repo.dirstate.remove(f)
         else:
             repo.dirstate.drop(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # forget (must come first)
     for f, args, msg in actions.get('f', []):
         repo.dirstate.drop(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # resolve path conflicts
     for f, args, msg in actions.get('pr', []):
@@ -1689,10 +1700,14 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.remove(f0)
         else:
             repo.dirstate.drop(f0)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # re-add
     for f, args, msg in actions.get('a', []):
         repo.dirstate.add(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # re-add/mark as modified
     for f, args, msg in actions.get('am', []):
@@ -1700,14 +1715,19 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.normallookup(f)
         else:
             repo.dirstate.add(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # exec change
     for f, args, msg in actions.get('e', []):
         repo.dirstate.normallookup(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # keep
     for f, args, msg in actions.get('k', []):
-        pass
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # get
     for f, args, msg in actions.get('g', []):
@@ -1715,6 +1735,8 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.otherparent(f)
         else:
             repo.dirstate.normal(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # merge
     for f, args, msg in actions.get('m', []):
@@ -1740,6 +1762,8 @@ def recordupdates(repo, actions, branchmerge):
                 repo.dirstate.normallookup(f)
             if move:
                 repo.dirstate.drop(f1)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # directory rename, move local
     for f, args, msg in actions.get('dm', []):
@@ -1751,6 +1775,8 @@ def recordupdates(repo, actions, branchmerge):
         else:
             repo.dirstate.normal(f)
             repo.dirstate.drop(f0)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
     # directory rename, get
     for f, args, msg in actions.get('dg', []):
@@ -1760,6 +1786,8 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.copy(f0, f)
         else:
             repo.dirstate.normal(f)
+        prog += 1
+        progress(_recording, prog, total=total, unit=_files)
 
 def update(repo, node, branchmerge, force, ancestor=None,
            mergeancestor=False, labels=None, matcher=None, mergeforce=False,

@@ -12,8 +12,8 @@
   > disable=False
   > assume-tty = 1
   > delay = 0
-  > # set changedelay really large so we don't see nested topics
-  > changedelay = 30000
+  > # set changedelay to 0 so we see all topics
+  > changedelay = 0
   > format = topic bar number
   > refresh = 0
   > width = 60
@@ -58,6 +58,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 01 state clean, options none
@@ -72,6 +75,9 @@ the table cases
   ./bar
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -94,6 +100,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 03 state missing, options none
@@ -109,6 +118,9 @@ the table cases
   ./bar
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -138,6 +150,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 12 state modified, options -f
@@ -152,6 +167,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 13 state missing, options -f
@@ -165,6 +183,9 @@ the table cases
   R foo
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -186,6 +207,9 @@ the table cases
   ./foo
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -224,6 +248,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 23 state missing, options -A
@@ -239,6 +266,9 @@ the table cases
   ./bar
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -269,6 +299,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 32 state modified, options -Af
@@ -284,6 +317,9 @@ the table cases
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 33 state missing, options -Af
@@ -297,6 +333,9 @@ the table cases
   R foo
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -331,6 +370,10 @@ dir, options none
   \r (no-eol) (esc)
   updating [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [====================>                      ] 1/2\r (no-eol) (esc)
+  recording [==========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -f
@@ -354,6 +397,10 @@ dir, options -f
   ./foo
   \r (no-eol) (esc)
   updating [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [====================>                      ] 1/2\r (no-eol) (esc)
+  recording [==========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -379,6 +426,9 @@ dir, options -Av
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -A <dir>
@@ -401,6 +451,9 @@ dir, options -A <dir>
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 without any files/dirs, options -A
@@ -420,6 +473,9 @@ without any files/dirs, options -A
   ./test/foo
   \r (no-eol) (esc)
   updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [==========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -445,6 +501,10 @@ dir, options -Af
   ./test/foo
   \r (no-eol) (esc)
   updating [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  recording [====================>                      ] 1/2\r (no-eol) (esc)
+  recording [==========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
