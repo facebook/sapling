@@ -300,7 +300,6 @@ Test peer-to-peer push/pull of tree only commits
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663
   $ hg up tip
-  2 trees fetched over * (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -l 3 -T '{desc}\n' --stat
   @  hybrid flat+tree commit

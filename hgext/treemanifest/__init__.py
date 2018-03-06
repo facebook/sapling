@@ -1452,9 +1452,13 @@ def createtreepackpart(repo, outgoing, partname,
     basemfnodes = []
     directories = []
 
+    alltrees = sendtrees == shallowbundle.AllTrees
+
     for node in outgoing.missing:
-        mfnode = repo[node].manifestnode()
-        mfnodes.append(mfnode)
+        ctx = repo[node]
+        mfnode = ctx.manifestnode()
+        if alltrees or ctx.phase() != phases.public:
+            mfnodes.append(mfnode)
     basectxs = repo.set('parents(roots(%ln))', outgoing.missing)
     for basectx in basectxs:
         basemfnodes.append(basectx.manifestnode())

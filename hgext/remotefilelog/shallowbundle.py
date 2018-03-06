@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from . import fileserverclient, remotefilelog, shallowutil
 import os
 from mercurial.node import bin, hex, nullid
-from mercurial import changegroup, mdiff, match, bundlerepo
+from mercurial import changegroup, mdiff, match, bundlerepo, phases
 from mercurial import util, error
 from mercurial.i18n import _
 
@@ -123,6 +123,13 @@ class shallowcg1packer(changegroup.cg1packer):
             if not fastpathlinkrev and sendtrees != NoTrees:
                 mflog = repo.manifestlog
                 for mfnode, clnode in mfs.iteritems():
+                    if sendtrees == LocalTrees:
+                        # Don't inspect public commits, since we won't be
+                        # sending them.
+                        ctx = repo[clnode]
+                        if ctx.phase() == phases.public:
+                            continue
+
                     mfctx = mflog[mfnode]
                     p1node = mfctx.parents[0]
                     p1ctx = mflog[p1node]
@@ -463,24 +470,40 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
 def cansendtrees(repo, nodes):
     sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
+    treeonly = repo.ui.configbool('treemanifest', 'treeonly')
+
     result = AllTrees
     prefetch = AllTrees
+
     if not sendtrees:
         result = NoTrees
         # If we're not in treeonly mode, we will consult the manifests when
         # getting ready to send the flat manifests. This will cause tree
         # manifest lookups, so let's go ahead and bulk prefetch them.
         prefetch = AllTrees
+    elif not repo.svfs.treemanifestserver:
+        # If we are a client, don't send public commits since we probably
+        # don't have the trees and since the destination client will be able
+        # to fetch them on demand anyway. Servers should send them if
+        # they're doing a push, but that should almost never happen.
+        result = LocalTrees
+        prefetch = LocalTrees
+        if not treeonly:
+            # If we're sending trees and flats, then we need to prefetch
+            # everything, since when it inspects the flat manifests it will
+            # attempt to access the tree equivalent.
+            prefetch = AllTrees
 
     ctxs = [repo[node] for node in nodes]
 
     try:
         repo.prefetchtrees(c.manifestnode() for c in ctxs
-                           if prefetch == AllTrees)
+                if prefetch == AllTrees or c.phase() != phases.public)
     except shallowutil.MissingNodesError:
+        if treeonly:
+            raise
         # During migrations, we may be sending flat manifests that don't
         # have tree equivalents (like an old commit made before the
         # conversion). In that case, don't worry if the prefetch fails.
-        pass
 
     return result

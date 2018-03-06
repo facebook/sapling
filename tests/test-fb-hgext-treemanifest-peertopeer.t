@@ -119,21 +119,18 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 # Push and expect only one bulk download of trees
-  $ hg push -q ../client2 --config treemanifest.sendtrees=True
-  4 trees fetched over * (glob)
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  $ hg push -q ../client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
+  2 trees fetched over * (glob)
   $ ls ../client2/.hg/store/packs/manifests
-  52e40524fd1590fae9864853645b640b33e9cab4.dataidx
-  52e40524fd1590fae9864853645b640b33e9cab4.datapack
-  b838127394a8b2e240f6041002d2d8ba20666e3e.histidx
-  b838127394a8b2e240f6041002d2d8ba20666e3e.histpack
+  8964241a9e91662f023728d8503d13a9a546a100.histidx
+  8964241a9e91662f023728d8503d13a9a546a100.histpack
+  c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
+  c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
   $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
   3ffa0e0bbc70  90044db98b33  000000000000  000000000000  
-  90044db98b33  d9920715ba88  000000000000  b8ff91c925b4  
-  d9920715ba88  85b359fdb09e  000000000000  2937cde31c19  
   
   dir
   Node          P1 Node       P2 Node       Link Node     Copy From
@@ -142,4 +139,3 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
   143a95c22d77  a18d21674e76  000000000000  b8ff91c925b4  
-  a18d21674e76  bc0c2c938b92  000000000000  2937cde31c19  
