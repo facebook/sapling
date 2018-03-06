@@ -50,7 +50,11 @@ pub fn resolve(
 
     resolver
         .resolve_changegroup(bundle2)
-        .and_then(move |(changegroup_id, changesets, filelogs, bundle2)| {
+        .and_then(move |(cg_push, bundle2)| {
+            let changegroup_id = cg_push.part_id;
+            let changesets = cg_push.changesets;
+            let filelogs = cg_push.filelogs;
+
             let bundle2 = resolver
                 .resolve_b2xtreegroup2(bundle2)
                 .and_then({
@@ -86,6 +90,12 @@ fn next_item(
     bundle2: BoxStream<Bundle2Item, Error>,
 ) -> BoxFuture<(Option<Bundle2Item>, BoxStream<Bundle2Item, Error>), Error> {
     bundle2.into_future().map_err(|(err, _)| err).boxify()
+}
+
+struct ChangegroupPush {
+    part_id: PartId,
+    changesets: Changesets,
+    filelogs: Filelogs,
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -126,7 +136,7 @@ impl Bundle2Resolver {
     fn resolve_changegroup(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(PartId, Changesets, Filelogs, BoxStream<Bundle2Item, Error>), Error> {
+    ) -> BoxFuture<(ChangegroupPush, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
         next_item(bundle2)
@@ -144,7 +154,10 @@ impl Bundle2Resolver {
                                 UploadBlobsType::EnsureNoDuplicates,
                             ).map_err(|err| err.context("While uploading File Blobs").into()),
                         )
-                        .map(move |(changesets, filelogs)| (part_id, changesets, filelogs, bundle2))
+                        .map(move |(changesets, filelogs)| {
+                            let cg_push = ChangegroupPush {part_id, changesets, filelogs};
+                            (cg_push, bundle2)
+                        })
                         .boxify()
                 }
                 _ => err(format_err!("Expected Bundle2 Changegroup")).boxify(),
