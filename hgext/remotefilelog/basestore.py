@@ -51,8 +51,17 @@ class basestore(object):
             shallowutil.mkstickygroupdir(self.ui, path)
 
     def getmissing(self, keys):
+        progress = self.repo.ui.progress
+        _discovering = _('discovering')
+        _files = _('files')
+        total = len(keys)
+        prog = 0
+
         missing = []
         for name, node in keys:
+            prog += 1
+            progress(_discovering, prog, total=total, unit=_files)
+
             filepath = self._getfilepath(name, node)
             try:
                 size = os.path.getsize(filepath)
