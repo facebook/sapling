@@ -707,24 +707,11 @@ def _discover(ui, repo):
         ctx = repo['.']
         mf = ctx.manifest()
 
-        tmf = None
-        if util.safehasattr(mf, '_treemanifest'):
-            # Hybrid manifest, use the (much) faster subtree support
-            tmf = mf._treemanifest()
-
-        if tmf is not None:
-            # a treemanifest is available for this revision
-            matcher = matchmod.match(
-                repo.root, repo.getcwd(),
-                patterns=['path:' + profile_directory])
-            files = tmf.matches(matcher)
-        else:
-            files = (f for f in mf if f.startswith(profile_directory))
-
-        available.update(
-            fname for fname in files
-            if not os.path.basename(fname).startswith('README.') and
-            not fname.endswith('/README'))
+        matcher = matchmod.match(
+            repo.root, repo.getcwd(),
+            patterns=['path:' + profile_directory],
+            exclude=['**/README.*', '**/README'])
+        available.update(mf.matches(matcher))
 
     return [ProfileInfo(p, (
                 PROFILE_ACTIVE if p in active else

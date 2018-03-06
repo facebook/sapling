@@ -282,6 +282,7 @@ Test profile discovery
   > EOF
   $ mkdir -p profiles/foo profiles/bar
   $ touch profiles/README.txt
+  $ touch profiles/foo/README
   $ cat > profiles/foo/spam <<EOF
   > %include profiles/bar/eggs
   > EOF
