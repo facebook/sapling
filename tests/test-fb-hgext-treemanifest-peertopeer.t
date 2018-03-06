@@ -127,3 +127,19 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   52e40524fd1590fae9864853645b640b33e9cab4.datapack
   b838127394a8b2e240f6041002d2d8ba20666e3e.histidx
   b838127394a8b2e240f6041002d2d8ba20666e3e.histpack
+  $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  3ffa0e0bbc70  90044db98b33  000000000000  000000000000  
+  90044db98b33  d9920715ba88  000000000000  b8ff91c925b4  
+  d9920715ba88  85b359fdb09e  000000000000  2937cde31c19  
+  
+  dir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  23226e7a252c  000000000000  000000000000  000000000000  
+  
+  subdir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  143a95c22d77  a18d21674e76  000000000000  b8ff91c925b4  
+  a18d21674e76  bc0c2c938b92  000000000000  2937cde31c19  
