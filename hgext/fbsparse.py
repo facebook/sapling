@@ -400,7 +400,7 @@ def _wraprepo(ui, repo):
             profiles = []
             for line in raw.split('\n'):
                 line = line.strip()
-                if not line or line.startswith('#'):
+                if not line or line.startswith(('#', ';')):
                     # empty or comment line, skip
                     continue
                 elif line.startswith('%include '):
