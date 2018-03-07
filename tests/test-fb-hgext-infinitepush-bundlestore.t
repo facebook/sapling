@@ -28,7 +28,6 @@ the history but is stored on disk
   remote:     20759b6926ce  scratchcommit
   $ hg log -G
   @  changeset:   1:20759b6926ce
-  |  bookmark:    scratch/mybranch
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -104,7 +103,7 @@ Push to non-scratch bookmark
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  newcommit public
   |
-  | o  scratchcommit draft scratch/mybranch
+  | o  scratchcommit draft
   |/
   o  initialcommit public
   
@@ -141,7 +140,7 @@ Push scratch bookmark with no new revs
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
-  @  new scratch commit draft scratch/anotherbranch scratch/mybranch
+  @  new scratch commit draft scratch/mybranch
   |
   o  scratchcommit draft
   |
@@ -280,13 +279,13 @@ Non-fastforward scratch bookmark push
   $ hg ci --amend -m 'scratch amended commit'
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/6c10d49fe927-c99ffec5-amend.hg (glob)
   $ hg log -G -T '{desc} {phase} {bookmarks}'
-  @  scratch amended commit draft scratch/mybranch
+  @  scratch amended commit draft
   |
   o  scratchcommitwithpushrebase draft
   |
   o  scratchcommitnobook draft
   |
-  o  new scratch commit draft
+  o  new scratch commit draft scratch/mybranch
   |
   | o  newcommit public
   | |
@@ -319,13 +318,13 @@ Non-fastforward scratch bookmark push
   scratch/anotherbranch 1de1d7d92f8965260391d0513fe8a8d5973d3042
   scratch/mybranch 8872775dd97a750e1533dc1fbbca665644b32547
   $ hg log -G -T '{desc} {phase} {bookmarks}'
-  @  scratch amended commit draft scratch/mybranch
+  @  scratch amended commit draft
   |
   o  scratchcommitwithpushrebase draft
   |
   o  scratchcommitnobook draft
   |
-  o  new scratch commit draft
+  o  new scratch commit draft scratch/mybranch
   |
   | o  newcommit public
   | |
@@ -361,7 +360,7 @@ Use --force because this push creates new head
   |
   o  newcommit public
   |
-  | @  new scratch commit draft scratch/anotherbranch scratch/mybranch
+  | @  new scratch commit draft scratch/mybranch
   | |
   | o  scratchcommit draft
   |/
@@ -422,15 +421,9 @@ Scratch pull of pruned commits
   > [experimental]
   > evolution=createmarkers
   > EOF
-  $ hg prune -r scratch/mybranch
-  advice: 'hg hide' provides a better UI for hiding commits
-  1 changesets pruned
-  $ hg log -r 'reverse(::scratch/mybranch)' -T '{desc}\n'
-  scratchcommitwithpushrebase
-  scratchcommitnobook
-  new scratch commit
-  scratchcommit
-  initialcommit
+  $ hg book -d scratch/mybranch
+  $ hg hide 8872775dd97a
+  1 changesets hidden
   $ hg pull -B scratch/mybranch
   pulling from ssh://user@dummy/repo
   no changes found
@@ -695,6 +688,8 @@ Trying to pull from bad path
 Strip commit and pull it using hg update with bookmark name
   $ hg strip -q d8fde0ddfc96
   $ hg book -d scratch/mybranch
+  abort: bookmark 'scratch/mybranch' does not exist
+  [255]
   $ hg up scratch/mybranch
   'scratch/mybranch' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo

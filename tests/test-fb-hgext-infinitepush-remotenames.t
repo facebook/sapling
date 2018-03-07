@@ -179,7 +179,7 @@ Try to push with remotebookmarks disabled
   remote: pushing 1 commit:
   remote:     36667a3f76e4  newscratch
   $ hg book
-     scratch/secondbranch      2:36667a3f76e4
+  no bookmarks set
 
 Create new bookmark and try to pull it
   $ mkcommit newcommittoupdate1

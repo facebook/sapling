@@ -5,7 +5,6 @@
 
 from .common import (
     encodebookmarks,
-    isremotebooksenabled,
 )
 from mercurial import (
     bundle2,
@@ -43,19 +42,10 @@ def getscratchbranchparts(repo, peer, outgoing, confignonforwardmove,
     params['cgversion'] = cgversion
     if bookmark:
         params['bookmark'] = bookmark
-        # 'prevbooknode' is necessary for pushkey reply part
-        params['bookprevnode'] = ''
-        if bookmark in repo:
-            params['bookprevnode'] = repo[bookmark].hex()
         if create:
             params['create'] = '1'
     if confignonforwardmove:
         params['force'] = '1'
-
-    # Do not send pushback bundle2 part with bookmarks if remotenames extension
-    # is enabled. It will be handled manually in `_push()`
-    if not isremotebooksenabled(ui):
-        params['pushbackbookmarks'] = '1'
 
     parts = []
 

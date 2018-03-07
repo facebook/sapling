@@ -1205,7 +1205,6 @@ def storebundle(op, params, bundlefile):
         bundle = repository(op.repo.ui, bundlepath)
 
         bookmark = params.get('bookmark')
-        bookprevnode = params.get('bookprevnode', '')
         create = params.get('create')
         force = params.get('force')
 
@@ -1266,8 +1265,6 @@ def storebundle(op, params, bundlefile):
                 index.addbundle(key, nodesctx)
             if bookmark:
                 index.addbookmark(bookmark, bookmarknode)
-                _maybeaddpushbackpart(op, bookmark, bookmarknode,
-                                      bookprevnode, params)
         log(scratchbranchparttype, eventtype='success',
             elapsedms=(time.time() - parthandlerstart) * 1000)
 
@@ -1296,8 +1293,7 @@ def processinfinitepush(unbundler, param, value):
         pass
 
 @bundle2.parthandler(scratchbranchparttype,
-                     ('bookmark', 'bookprevnode' 'create', 'force',
-                      'pushbackbookmarks', 'cgversion'))
+                     ('bookmark', 'create', 'force', 'cgversion'))
 def bundle2scratchbranch(op, part):
     '''unbundle a bundle2 part containing a changegroup to store'''
 
@@ -1344,17 +1340,6 @@ def bundle2scratchbookmarks(op, part):
             index.deletebookmarks(todelete)
         if toinsert:
             index.addmanybookmarks(toinsert)
-
-def _maybeaddpushbackpart(op, bookmark, newnode, oldnode, params):
-    if params.get('pushbackbookmarks'):
-        if op.reply and 'pushback' in op.reply.capabilities:
-            params = {
-                'namespace': 'bookmarks',
-                'key': bookmark,
-                'new': newnode,
-                'old': oldnode,
-            }
-            op.reply.newpart('pushkey', mandatoryparams=params.iteritems())
 
 def bundle2pushkey(orig, op, part):
     '''Wrapper of bundle2.handlepushkey()
