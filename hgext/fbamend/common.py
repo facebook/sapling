@@ -234,4 +234,4 @@ def metarewrite(repo, old, newbases, commitopts):
         lockmod.release(tr, lock, wlock)
 
 def newunstable(repo, revs):
-    return repo.revs("(%ld::) - %ld - obsolete()", revs, revs)
+    return repo.revs("(%ld::) - %ld", revs, revs)

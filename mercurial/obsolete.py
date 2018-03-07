@@ -1063,6 +1063,36 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     This function operates within a transaction of its own, but does
     not take any lock on the repo.
     """
+    # If P -> Q, X -> Y are being added, and there is an
+    # existing marker P -> ... -> X, add a Q -> Y marker automatically.
+    # Note: P must not equal to X or Y.
+
+    # To detect that, first extract 1:1 relationships and put them into a map.
+    relmap = util.sortdict()  # {predecessor_node: successor_node}
+    for rel in relations:
+        if len(rel[1]) == 1 and rel[0].node() != rel[1][0].node():
+            relmap[rel[0].node()] = rel[1][0].node()
+
+    # Calculate the "automatic" relations.
+    autorels = []
+    unfi = repo.unfiltered()
+    for p, q in relmap.items():
+        # Find "X"s, as in P -> ... -> X, and X -> Y.
+        xs = [x for x in obsutil.allsuccessors(unfi.obsstore, [p])
+              if x != p and x in relmap]
+        # Create the "Q -> Y" marker.
+        for x in xs:
+            y = relmap[x]
+            if y == p:
+                continue
+            # There is no easy way to get a correct "operation", since it could
+            # be a chain of actions. Use a name "copy" so it's different from
+            # other operations. Also fills in predecessor and successor as they
+            # might be potentially useful.
+            autorels.append((unfi[q], (unfi[y],),
+                             {'operation': 'copy', 'predecessor': node.hex(p),
+                              'successor': node.hex(x)}))
+
     # prepare metadata
     if metadata is None:
         metadata = {}
@@ -1082,7 +1112,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
     tr = repo.transaction('add-obsolescence-marker')
     try:
         markerargs = []
-        for rel in relations:
+        for rel in relations + autorels:
             prec = rel[0]
             sucs = rel[1]
             localmetadata = metadata.copy()

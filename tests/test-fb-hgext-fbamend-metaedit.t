@@ -304,38 +304,34 @@ test histedit compat
   |
   o  0:1ea73414a91b@default(draft) r0
   
-test metaediting a commit with visible obsolete children
+Test copying obsmarkers
 
-  $ hg update 12
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg amend --no-rebase -m "message from exec (amended)"
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  $ hg init $TESTTMP/autorel
+  $ cd $TESTTMP/autorel
+  $ hg debugdrawdag<<'EOS'
+  > D
+  > |
+  > C C1 # amend: C -> C1
+  > |/
+  > B
+  > |
+  > A
+  > EOS
+  $ hg metaedit -r B -m B1
+  $ rm .hg/localtags
   $ glog -r 'all()'
-  @  14:8a6db5bb2237@default(draft) message from exec (amended)
+  o  8:52bc6136aa97@default(draft) D
   |
-  | o  13:942d79297adf@default(draft) metaedit
+  | o  7:1be7301b35ae@default(draft) C1
   | |
-  | x  12:b5e5d076151f@default(draft) message from exec
+  x |  6:19437442f9e4@default(draft) C
   |/
-  o  1:66f7d451a68b@default(draft) r1
+  o  5:888bb4818188@default(draft) B1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  0:426bada5c675@default(draft) A
   
-  $ hg prev
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  [66f7d4] r1
-  $ hg metaedit -m "obsolete test"
-  $ glog -r 'all()'
-  o  16:b4125821adeb@default(draft) message from exec (amended)
-  |
-  @  15:be6d42c57183@default(draft) obsolete test
-  |
-  | o  13:942d79297adf@default(draft) metaedit
-  | |
-  | x  12:b5e5d076151f@default(draft) message from exec
-  | |
-  | x  1:66f7d451a68b@default(draft) r1
-  |/
-  o  0:1ea73414a91b@default(draft) r0
-  
+  $ hg log -r 'successors(19437442f9e4)-19437442f9e4' -T '{node}\n'
+  1be7301b35ae8ac3543a07a5d0ce5ca615be709f
+
+  $ hg log -r 'precursors(19437442f9e4)-19437442f9e4' -T '{desc} {node}\n' --hidden
+  C 26805aba1e600a82e93661149f2313866a221a7b

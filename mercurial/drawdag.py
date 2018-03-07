@@ -430,7 +430,7 @@ def drawdag(repo, text):
             elif cmd in (b'split',):
                 pre, succs = arg.split(b'->')
                 succs = succs.split(b',')
-                rels.append((getctx(pre), (getctx(s) for s in succs)))
+                rels.append((getctx(pre), [getctx(s) for s in succs]))
             elif cmd in (b'prune',):
                 for n in arg.split(b','):
                     rels.append((getctx(n), ()))
