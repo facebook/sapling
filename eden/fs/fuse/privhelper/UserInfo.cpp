@@ -11,9 +11,11 @@
 
 #include <grp.h>
 #include <pwd.h>
+#include <selinux/selinux.h>
 #include <vector>
 
 #include <folly/Exception.h>
+#include <folly/experimental/logging/xlog.h>
 
 using folly::checkUnixError;
 using folly::throwSystemError;
@@ -26,6 +28,27 @@ struct UserInfo::PasswdEntry {
   std::vector<char> buf;
 };
 
+static void dropToBasicSELinuxPrivileges() {
+  const char* baseContext = "user_u:base_r:base_t";
+
+  XLOG(DBG2) << "Dropping SELinux context..." << [&] {
+    char* con;
+    if (0 == getcon(&con)) {
+      SCOPE_SUCCESS {
+        freecon(con);
+      };
+      return " prior context was: " + std::string(con);
+    }
+    return std::string();
+  }();
+
+  // Drop to basic user SELinux privileges.
+  // This is required in order to gdb into edenfs without sudo.
+  if (setcon(const_cast<char*>(baseContext))) {
+    XLOG(WARN) << "setcon() failed when dropping SELinux context";
+  }
+}
+
 void UserInfo::dropPrivileges() {
   // Configure the correct supplementary groups
   auto rc = initgroups(username_.c_str(), gid_);
@@ -36,6 +59,8 @@ void UserInfo::dropPrivileges() {
   // Drop to the correct user ID
   rc = setreuid(uid_, uid_);
   checkUnixError(rc, "failed to drop user privileges");
+
+  dropToBasicSELinuxPrivileges();
 }
 
 UserInfo::PasswdEntry UserInfo::getPasswdUid(uid_t uid) {
