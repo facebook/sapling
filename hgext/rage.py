@@ -57,41 +57,6 @@ def shcmd(cmd, input=None, check=True, keeperr=True):
         out += err
     return out
 
-def createtask(ui, repo, defaultdesc):
-    """FBONLY: create task for source control oncall"""
-    prompt = '''Title: [hg rage] %s on %s by %s
-
-Description:
-%s
-
-HG: Edit task title and description. Lines beginning with 'HG:' are removed."
-HG: First line is the title followed by the description.
-HG: Feel free to add relevant information.
-''' % (repo.root, socket.gethostname(), encoding.environ.get('LOGNAME'),
-       defaultdesc)
-
-    text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
-    lines = text.splitlines()
-    title = re.sub("(?m)^Title:\s+", "", lines[0])
-    desc = re.sub("(?m)^Description:\s+", "", '\n'.join(lines[1:]))
-    tag = 'hg rage'
-    oncall = 'source_control'
-    taskid = shcmd(' '.join([
-        'tasks',
-        'create',
-        '--title=' + util.shellquote(title),
-        '--pri=low',
-        '--assign=' + util.shellquote(oncall),
-        '--sub=' + util.shellquote(oncall),
-        '--tag=' + util.shellquote(tag),
-        '--desc=' + util.shellquote(desc),
-        ])
-    )
-    tasknum = shcmd('tasks view ' + taskid).splitlines()[0].split()[0]
-    ui.write(
-        _('Task created: https://our.intern.facebook.com/intern/tasks/?t=%s\n')
-        % tasknum)
-
 def which(name):
     """ """
     for p in encoding.environ.get('PATH', '/bin').split(pycompat.ospathsep):
@@ -330,11 +295,6 @@ def rage(ui, repo, *pats, **opts):
 
     if opts.get('preview'):
         ui.write('%s\n' % msg)
-        return
-
-    if opts.get('oncall'):
-        with progress.spinner(ui, "Generating task for oncall"):
-            createtask(ui, repo, msg)
         return
 
     with progress.spinner(ui, "Saving paste"):
