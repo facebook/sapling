@@ -21,177 +21,19 @@ extern crate memheads;
 extern crate memlinknodes;
 extern crate mercurial_types;
 
-use std::collections::BTreeMap;
-
-use ascii::AsAsciiStr;
 use bytes::Bytes;
-use failure::Error;
-use futures::executor::spawn;
-use futures::future::Future;
-use futures::stream::futures_unordered;
-use futures_ext::{BoxFuture, StreamExt};
+use futures::Future;
 
-use blobrepo::{compute_changed_files, BlobEntry, BlobRepo, ChangesetHandle};
-use changesets::SqliteChangesets;
-use memblob::{EagerMemblob, LazyMemblob};
-use membookmarks::MemBookmarks;
-use memheads::MemHeads;
-use memlinknodes::MemLinknodes;
+use blobrepo::{compute_changed_files, BlobRepo};
 use mercurial_types::{manifest, Blob, Changeset, ChangesetId, Entry, EntryId, MPath, MPathElement,
-                      ManifestId, NodeHash, RepoPath, RepositoryId, Time};
+                      ManifestId, RepoPath};
 
-// We start with utilities - search down for "TESTS BEGIN" to find the actual test cases
+#[macro_use]
+mod utils;
 
-fn get_empty_eager_repo() -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
-    let heads: MemHeads = MemHeads::new();
-    let blobs = EagerMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_memblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
-}
-
-fn get_empty_lazy_repo() -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
-    let heads: MemHeads = MemHeads::new();
-    let blobs = LazyMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_lazymemblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
-}
-
-macro_rules! test_both_repotypes {
-    ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[test]
-        fn $lazy_test() {
-            $impl_name(get_empty_lazy_repo())
-        }
-
-        #[test]
-        fn $eager_test() {
-            $impl_name(get_empty_eager_repo())
-        }
-    };
-    (should_panic, $impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[test]
-        #[should_panic]
-        fn $lazy_test() {
-            $impl_name(get_empty_lazy_repo())
-        }
-
-        #[test]
-        #[should_panic]
-        fn $eager_test() {
-            $impl_name(get_empty_eager_repo())
-        }
-    }
-}
-
-fn upload_file_no_parents<S>(
-    repo: &BlobRepo,
-    data: S,
-    path: &RepoPath,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
-where
-    S: Into<String>,
-{
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::File, None, None, path.clone())
-        .unwrap()
-}
-
-fn upload_file_one_parent<S>(
-    repo: &BlobRepo,
-    data: S,
-    path: &RepoPath,
-    p1: NodeHash,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
-where
-    S: Into<String>,
-{
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::File, Some(p1), None, path.clone())
-        .unwrap()
-}
-
-fn upload_manifest_no_parents<S>(
-    repo: &BlobRepo,
-    data: S,
-    path: &RepoPath,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
-where
-    S: Into<String>,
-{
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::Tree, None, None, path.clone())
-        .unwrap()
-}
-
-fn upload_manifest_one_parent<S>(
-    repo: &BlobRepo,
-    data: S,
-    path: &RepoPath,
-    p1: NodeHash,
-) -> (NodeHash, BoxFuture<(BlobEntry, RepoPath), Error>)
-where
-    S: Into<String>,
-{
-    let blob: Blob = Bytes::from(data.into().as_bytes()).into();
-    repo.upload_entry(blob, manifest::Type::Tree, Some(p1), None, path.clone())
-        .unwrap()
-}
-
-fn create_changeset_no_parents(
-    repo: &BlobRepo,
-    root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
-) -> ChangesetHandle {
-    repo.create_changeset(
-        None,
-        None,
-        root_manifest,
-        futures_unordered(other_nodes).boxify(),
-        "author <author@fb.com>".into(),
-        Time { time: 0, tz: 0 },
-        BTreeMap::new(),
-        "Test commit".into(),
-    )
-}
-
-fn create_changeset_one_parent(
-    repo: &BlobRepo,
-    root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
-    other_nodes: Vec<BoxFuture<(BlobEntry, RepoPath), Error>>,
-    p1: ChangesetHandle,
-) -> ChangesetHandle {
-    repo.create_changeset(
-        Some(p1),
-        None,
-        root_manifest,
-        futures_unordered(other_nodes).boxify(),
-        "\u{041F}\u{0451}\u{0442}\u{0440} <peter@fb.com>".into(),
-        Time { time: 1234, tz: 0 },
-        BTreeMap::new(),
-        "Child commit".into(),
-    )
-}
-
-fn string_to_nodehash(hash: &str) -> NodeHash {
-    NodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
-}
-
-fn run_future<F>(future: F) -> Result<F::Item, F::Error>
-where
-    F: Future,
-{
-    spawn(future).wait_future()
-}
-
-// TESTS BEGIN
+use utils::{create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
+            get_empty_lazy_repo, run_future, string_to_nodehash, upload_file_no_parents,
+            upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent};
 
 fn upload_blob_no_parents(repo: BlobRepo) {
     let expected_hash = string_to_nodehash("c3127cdbf2eae0f09653f9237d85c8436425b246");
