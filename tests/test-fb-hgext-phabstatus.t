@@ -60,7 +60,7 @@ And now with bad responses:
 Missing status field is treated as an error
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
-  >   {"number": 1}
+  >   {"number": 1, "created_time": 0, "updated_time": 2}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
@@ -72,7 +72,8 @@ And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
-  >   {"number": 1, "diff_status_name": "Needs Review"}
+  >   {"number": 1, "diff_status_name": "Needs Review",
+  >    "created_time": 0, "updated_time": 2}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
@@ -82,7 +83,8 @@ Make sure the code works without the smartlog extensions
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
-  >   {"number": 1, "diff_status_name": "Needs Review"}
+  >   {"number": 1, "diff_status_name": "Needs Review",
+  >    "created_time": 0, "updated_time": 2}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg --config 'extensions.smartlog=!' log -T '{phabstatus}\n' -r .

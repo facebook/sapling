@@ -11,12 +11,12 @@
 # relationship between a draft commit and its landed counterpart.
 # Thanks to these markers, less information is displayed and rebases can have
 # less irrelevant conflicts.
-
 from mercurial import commands
 from mercurial import obsolete
 from mercurial import phases
 from mercurial import extensions
 from .extlib.phabricator import diffprops
+from .phabstatus import COMMITTEDSTATUS, getdiffstatus
 
 def getdiff(rev):
     phabrev = diffprops.parserevfromcommitmsg(rev.description())
@@ -28,35 +28,62 @@ def extsetup(ui):
 def _pull(orig, ui, repo, *args, **opts):
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
         return orig(ui, repo, *args, **opts)
+
     maxrevbeforepull = len(repo.changelog)
     r = orig(ui, repo, *args, **opts)
     maxrevafterpull = len(repo.changelog)
 
-    # Collect the diff number of the landed diffs
-    landeddiffs = {}
-    for rev in range(maxrevbeforepull, maxrevafterpull):
-        n = repo[rev]
-        if n.phase() == phases.public:
-            diff = getdiff(n)
-            if diff is not None:
-                landeddiffs[diff] = n
+    createmarkers(r, repo, maxrevbeforepull, maxrevafterpull)
+    return r
+
+def createmarkers(pullres, repo, start, stop, fromdrafts=True):
+    landeddiffs = getlandeddiffs(repo, start, stop, onlypublic=fromdrafts)
 
     if not landeddiffs:
-        return r
+        return
 
-    # Try to find match with the drafts
-    tocreate = []
-    unfiltered = repo.unfiltered()
-    for rev in unfiltered.revs("draft() - obsolete()"):
-        n = unfiltered[rev]
-        diff = getdiff(n)
-        if diff in landeddiffs and landeddiffs[diff].rev() != n.rev():
-            tocreate.append((n, (landeddiffs[diff],)))
+    tocreate = getmarkersfromdrafts(repo, landeddiffs) if fromdrafts else \
+        getmarkers(repo, landeddiffs)
 
     if not tocreate:
-        return r
+        return
+
+    unfiltered = repo.unfiltered()
 
     with unfiltered.lock(), unfiltered.transaction('pullcreatemarkers'):
         obsolete.createmarkers(unfiltered, tocreate)
 
-    return r
+def getlandeddiffs(repo, start, stop, onlypublic=True):
+    landeddiffs = {}
+
+    for rev in range(start, stop):
+        rev = repo[rev]
+        if not onlypublic or rev.phase() == phases.public:
+            diff = getdiff(rev)
+            if diff is not None:
+                landeddiffs[diff] = rev
+    return landeddiffs
+
+def getmarkers(repo, landeddiffs):
+    return [(landeddiffs[rev], tuple())
+            for rev in getlandedrevsiter(repo, landeddiffs)]
+
+def getmarkersfromdrafts(repo, landeddiffs):
+    tocreate = []
+    unfiltered = repo.unfiltered()
+
+    for rev in unfiltered.revs("draft() - obsolete()"):
+        rev = unfiltered[rev]
+        diff = getdiff(rev)
+
+        if diff in landeddiffs and landeddiffs[diff].rev() != rev.rev():
+            marker = (rev, (landeddiffs[diff],))
+            tocreate.append(marker)
+    return tocreate
+
+def getlandedrevsiter(repo, landeddiffs):
+    statuses = (status for status in getdiffstatus(repo, *landeddiffs.keys())
+                if status != 'Error')
+
+    return (diff for status, diff in zip(statuses, landeddiffs.keys())
+            if status['status'] == COMMITTEDSTATUS)

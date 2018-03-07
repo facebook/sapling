@@ -16,6 +16,7 @@ setupcommon() {
   cat >> $HGRCPATH << EOF
 [extensions]
 infinitepush=
+pullcreatemarkers=
 [ui]
 ssh = python "$TESTDIR/dummyssh"
 [infinitepush]

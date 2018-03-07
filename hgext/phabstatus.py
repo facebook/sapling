@@ -17,6 +17,8 @@ from .extlib.phabricator import (
     graphql,
 )
 
+COMMITTEDSTATUS = 'Committed'
+
 def memoize(f):
     """
     NOTE: This is a hack

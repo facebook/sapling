@@ -53,7 +53,9 @@ Missing status field is treated as an error
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3}
+  >   "differential_diffs": {"count": 3},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
@@ -73,7 +75,9 @@ Missing count field is treated as an error
   >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"lolwut\"}}"}
   >       ]
   >     }
-  >   }
+  >   },
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
@@ -94,7 +98,9 @@ Missing hash field is treated as unsync
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3}
+  >   "differential_diffs": {"count": 3},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .
@@ -113,7 +119,9 @@ And finally, the success case
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 3}
+  >   "differential_diffs": {"count": 3},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{syncstatus}\n' -r .

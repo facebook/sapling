@@ -37,9 +37,14 @@
     # This information includes the local revision number and unix timestamp
     # of the last time we successfully made a backup.
     savelatestbackupinfo = False
-"""
 
+    # Enable creating obsolete markers when backup is restored.
+    createlandedasmarkers = False
+"""
 from __future__ import absolute_import
+
+import ConfigParser
+import collections
 import errno
 import json
 import os
@@ -49,10 +54,6 @@ import stat
 import subprocess
 import time
 
-from .bundleparts import (
-    getscratchbookmarkspart,
-    getscratchbranchparts,
-)
 from mercurial import (
     bundle2,
     changegroup,
@@ -65,21 +66,17 @@ from mercurial import (
     hg,
     localrepo,
     lock as lockmod,
+    node,
     phases,
+    policy,
     registrar,
     scmutil,
     util,
 )
-
-from collections import defaultdict, namedtuple
-from mercurial import policy
-from mercurial.extensions import wrapfunction, unwrapfunction
-from mercurial.node import bin, hex, nullrev, short
 from mercurial.i18n import _
 
 from .. import shareutil
-
-from ConfigParser import ConfigParser
+from . import bundleparts
 
 osutil = policy.importmod(r'osutil')
 
@@ -91,8 +88,8 @@ templatekeyword = registrar.templatekeyword()
 localoverridesfile = 'generated.infinitepushbackups.rc'
 secondsinhour = 60 * 60
 
-backupbookmarktuple = namedtuple('backupbookmarktuple',
-                                 ['hostname', 'reporoot', 'localbookmark'])
+backupbookmarktuple = collections.namedtuple(
+    'backupbookmarktuple', ['hostname', 'reporoot', 'localbookmark'])
 
 class backupstate(object):
     def __init__(self):
@@ -204,7 +201,7 @@ def backupdisable(ui, repo, **opts):
 
     timestamp = int(time.time()) + duration
 
-    config = ConfigParser()
+    config = ConfigParser.ConfigParser()
     config.add_section('infinitepushbackup')
     config.set('infinitepushbackup', 'disableduntil', timestamp)
 
@@ -280,13 +277,21 @@ def restore(ui, repo, dest=None, **opts):
                             if x not in backupstate.heads]
     if dest:
         pullopts['source'] = dest
+
+    maxrevbeforepull = len(repo.changelog)
     result = pullcmd(ui, repo, **pullopts)
+    maxrevafterpull = len(repo.changelog)
+
+    if ui.config('infinitepushbackup', 'createlandedasmarkers', False):
+        ext = extensions.find('pullcreatemarkers')
+        ext.createmarkers(result, repo, maxrevbeforepull, maxrevafterpull,
+                          fromdrafts=False)
 
     with repo.wlock(), repo.lock(), repo.transaction('bookmark') as tr:
         changes = []
         for book, hexnode in backupstate.localbookmarks.iteritems():
             if hexnode in repo:
-                changes.append((book, bin(hexnode)))
+                changes.append((book, node.bin(hexnode)))
             else:
                 ui.warn(_('%s not found, not creating %s bookmark') %
                         (hexnode, book))
@@ -315,7 +320,7 @@ def getavailablebackups(ui, repo, dest=None, **opts):
                                            sourcehostname, namingmgr)
 
     if opts.get('json'):
-        jsondict = defaultdict(list)
+        jsondict = collections.defaultdict(list)
         for hostname, reporoot in allbackupstates.keys():
             jsondict[hostname].append(reporoot)
             # make sure the output is sorted. That's not an efficient way to
@@ -489,7 +494,7 @@ def smartlogsummary(ui, repo):
             ui.warn(_('note: %d changesets are not backed up.\n') % count)
         else:
             ui.warn(_('note: changeset %s is not backed up.\n') %
-                    short(repo[singleunbackeduprev].node()))
+                    node.short(repo[singleunbackeduprev].node()))
         ui.warn(_('Run `hg pushbackup` to perform a backup.  If this fails,\n'
                   'please report to the Source Control @ FB group.\n'))
 
@@ -589,23 +594,23 @@ def _dobackup(ui, repo, dest, **opts):
 
     # Wrap deltaparent function to make sure that bundle takes less space
     # See _deltaparent comments for details
-    wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+    extensions.wrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
     try:
         bundler = _createbundler(ui, repo, other)
         bundler.addparam("infinitepush", "True")
         backup = False
         if outgoing and outgoing.missing:
             backup = True
-            parts = getscratchbranchparts(repo, other, outgoing,
-                                          confignonforwardmove=False,
-                                          ui=ui, bookmark=None,
-                                          create=False)
+            parts = bundleparts.getscratchbranchparts(
+                repo, other, outgoing, confignonforwardmove=False,
+                ui=ui, bookmark=None, create=False)
             for part in parts:
                 bundler.addpart(part)
 
         if bookmarkstobackup:
             backup = True
-            bundler.addpart(getscratchbookmarkspart(other, bookmarkstobackup))
+            bundler.addpart(bundleparts.getscratchbookmarkspart(
+                other, bookmarkstobackup))
 
         if backup:
             _sendbundle(bundler, other)
@@ -623,7 +628,8 @@ def _dobackup(ui, repo, dest, **opts):
         except Exception:
             ui.warn(_('remote connection cleanup failed\n'))
         ui.status(_('finished in %f seconds\n') % (time.time() - start))
-        unwrapfunction(changegroup.cg2packer, 'deltaparent', _deltaparent)
+        extensions.unwrapfunction(
+            changegroup.cg2packer, 'deltaparent', _deltaparent)
     return 0
 
 def _dobackgroundbackup(ui, repo, dest=None):
@@ -712,8 +718,8 @@ def _getlocalinfo(repo):
 
 def _getlocalbookmarks(repo):
     localbookmarks = {}
-    for bookmark, node in repo._bookmarks.iteritems():
-        hexnode = hex(node)
+    for bookmark, data in repo._bookmarks.iteritems():
+        hexnode = node.hex(data)
         localbookmarks[bookmark] = hexnode
     return localbookmarks
 
@@ -736,7 +742,7 @@ def _filterbookmarks(localbookmarks, repo, headstobackup):
 def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
     pattern = namingmgr.getcommonuserprefix()
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
-    allbackupstates = defaultdict(backupstate)
+    allbackupstates = collections.defaultdict(backupstate)
     for book, hexnode in fetchedbookmarks.iteritems():
         parsed = _parsebackupbookmark(book, namingmgr)
         if parsed:
@@ -855,9 +861,9 @@ def _getcommandandoptions(command):
 def _deltaparent(orig, self, revlog, rev, p1, p2, prev):
     # This version of deltaparent prefers p1 over prev to use less space
     dp = revlog.deltaparent(rev)
-    if dp == nullrev and not revlog.storedeltachains:
+    if dp == node.nullrev and not revlog.storedeltachains:
         # send full snapshot only if revlog configured to do so
-        return nullrev
+        return node.nullrev
     return p1
 
 def _getbookmarkstobackup(repo, newbookmarks, removedbookmarks,

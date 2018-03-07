@@ -44,7 +44,9 @@ Now progressively test the response handling for variations of missing data
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
   >   "diff_status_name": "Needs Review",
-  >   "differential_diffs": {"count": 3}
+  >   "differential_diffs": {"count": 3},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
@@ -54,7 +56,9 @@ Now progressively test the response handling for variations of missing data
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [{
   >   "number": 1,
-  >   "diff_status_name": "Needs Review"
+  >   "diff_status_name": "Needs Review",
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
@@ -75,7 +79,9 @@ there is no diff since what was landed.
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 1}
+  >   "differential_diffs": {"count": 1},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff
@@ -96,7 +102,9 @@ assert that we order the commits consistently based on the time field.
   >       ]
   >     }
   >   },
-  >   "differential_diffs": {"count": 1}
+  >   "differential_diffs": {"count": 1},
+  >   "created_time": 123,
+  >   "updated_time": 222
   > }]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-arc-diff --nodates
