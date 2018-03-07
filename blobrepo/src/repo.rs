@@ -17,6 +17,7 @@ use futures::future::Future;
 use futures::stream::{self, Stream};
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
 
 use blobstore::Blobstore;
@@ -332,15 +333,44 @@ impl BlobRepo {
             content_type,
         )?;
 
-        // Ensure that content is in the blobstore
-        let content_upload = self.blobstore.put(
-            format!("sha1-{}", blob_hash.sha1()),
-            raw_content
-                .clone()
-                .into_inner()
-                .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?,
-        );
+        fn log_upload_stats(
+            logger: Logger,
+            path: RepoPath,
+            nodeid: NodeHash,
+            phase: &str,
+            stats: Stats,
+        ) {
+            let path = format!("{}", path);
+            let nodeid = format!("{}", nodeid);
+            debug!(logger, "Upload blob stats";
+                "phase" => String::from(phase),
+                "path" => path,
+                "nodeid" => nodeid,
+                "poll_count" => stats.poll_count,
+                "poll_time_ms" => stats.poll_time.num_milliseconds(),
+                "completion_time_ms" => stats.completion_time.num_milliseconds()
+            );
+        }
 
+        // Ensure that content is in the blobstore
+        let content_upload = self.blobstore
+            .put(
+                format!("sha1-{}", blob_hash.sha1()),
+                raw_content
+                    .clone()
+                    .into_inner()
+                    .ok_or_else(|| Error::from(ErrorKind::BadUploadBlob(raw_content.clone())))?,
+            )
+            .timed({
+                let logger = self.logger.clone();
+                let path = path.clone();
+                let nodeid = nodeid.clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_upload_stats(logger, path, nodeid, "content_uploaded", stats)
+                    }
+                }
+            });
         // Upload the new node
         let node_upload = self.blobstore.put(
             get_node_key(nodeid),
@@ -353,7 +383,20 @@ impl BlobRepo {
             nodeid,
             content_upload
                 .join(node_upload)
-                .map(|_| (blob_entry, path))
+                .map({
+                    let path = path.clone();
+                    |_| (blob_entry, path)
+                })
+                .timed({
+                    let logger = self.logger.clone();
+                    let path = path.clone();
+                    let nodeid = nodeid.clone();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            log_upload_stats(logger, path, nodeid, "finished", stats)
+                        }
+                    }
+                })
                 .boxify(),
         ))
     }

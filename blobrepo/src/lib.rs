@@ -25,6 +25,8 @@ extern crate heapsize;
 #[macro_use]
 extern crate heapsize_derive;
 
+extern crate futures_stats;
+
 extern crate blobstore;
 extern crate bookmarks;
 extern crate changesets;

@@ -11,6 +11,10 @@ extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
+#[macro_use]
+extern crate maplit;
+#[macro_use]
+extern crate slog;
 
 extern crate blobrepo;
 extern crate changesets;
@@ -28,6 +32,7 @@ use blobrepo::{compute_changed_files, BlobRepo};
 use mercurial_types::{manifest, Blob, Changeset, ChangesetId, Entry, EntryId, MPath, MPathElement,
                       ManifestId, RepoPath};
 
+mod stats_units;
 #[macro_use]
 mod utils;
 
