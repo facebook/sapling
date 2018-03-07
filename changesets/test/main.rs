@@ -21,7 +21,8 @@ use std::sync::Arc;
 
 use futures::Future;
 
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqliteChangesets};
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, MysqlChangesets,
+                 SqliteChangesets};
 use mercurial_types_mocks::nodehash::*;
 use mercurial_types_mocks::repo::*;
 
@@ -245,6 +246,18 @@ changesets_test_impl! {
     }
 }
 
+changesets_test_impl! {
+    mysql_test => {
+        new: new_mysql,
+    }
+}
+
+changesets_test_impl! {
+    mysql_arced_test => {
+        new: new_mysql_arced,
+    }
+}
+
 fn new_sqlite() -> SqliteChangesets {
     let db = SqliteChangesets::in_memory().expect("Creating an in-memory SQLite database failed");
     db
@@ -252,4 +265,12 @@ fn new_sqlite() -> SqliteChangesets {
 
 fn new_sqlite_arced() -> Arc<Changesets> {
     Arc::new(new_sqlite())
+}
+
+fn new_mysql() -> MysqlChangesets {
+    MysqlChangesets::create_test_db("changesets_test").expect("Failed to create test database")
+}
+
+fn new_mysql_arced() -> Arc<Changesets> {
+    Arc::new(new_mysql())
 }

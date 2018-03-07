@@ -113,9 +113,30 @@ pub struct MysqlChangesets {
 }
 
 impl MysqlChangesets {
-    pub fn open(_params: ConnectionParams) -> Result<Self> {
-        // TODO (kulshrax) connect to MySQL, and make this async (return a Future)
-        unimplemented!();
+    pub fn open(params: ConnectionParams) -> Result<Self> {
+        let url = params.to_diesel_url()?;
+        let conn = MysqlConnection::establish(&url)?;
+        Ok(Self {
+            connection: Mutex::new(conn),
+        })
+    }
+
+    pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
+        let params = db::create_test_db(prefix)?;
+        Self::create(params)
+    }
+
+    fn create(params: ConnectionParams) -> Result<Self> {
+        let changesets = Self::open(params)?;
+
+        let up_query = include_str!("../schemas/mysql-changesets.sql");
+        changesets
+            .connection
+            .lock()
+            .expect("lock poisoned")
+            .batch_execute(&up_query)?;
+
+        Ok(changesets)
     }
 }
 
