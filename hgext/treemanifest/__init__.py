@@ -115,6 +115,7 @@ from mercurial import (
     mdiff,
     phases,
     policy,
+    progress,
     registrar,
     repair,
     revlog,
@@ -989,12 +990,13 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
-        for delta in self.deltaiter():
-            pass
+        with progress.spinner(repo.ui, _("converting manifests to trees")):
+            for chunkdata in self.deltaiter():
+                _convertdeltatotree(repo, *chunkdata)
         # Handle sub-tree manifests
         for chunkdata in iter(self.filelogheader, {}):
-            for delta in self.deltaiter():
-                pass
+            raise error.ProgrammingError("sub-trees are not supported in a "
+                                         "changegroup")
         return
     return orig(self, repo, *args, **kwargs)
 
@@ -1004,8 +1006,9 @@ def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
-        for chunkdata in self.deltaiter():
-            pass
+        with progress.spinner(repo.ui, _("converting manifests to trees")):
+            for chunkdata in self.deltaiter():
+                _convertdeltatotree(repo, *chunkdata)
         return
 
     mfrevlog = repo.manifestlog._revlog
@@ -1024,6 +1027,32 @@ def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
 
         # Alert the store that there may be new packs
         repo.manifestlog.datastore.markforrefresh()
+
+def _convertdeltatotree(repo, node, p1, p2, linknode, deltabase, delta, flags):
+    """Converts the given flat manifest delta into a tree. This may be extremely
+    slow since it may need to rebuild a flat manifest full text from a tree."""
+    mfl = repo.manifestlog
+
+    # Get flat base mf text
+    parenttree = mfl[p1].read()
+    parenttext = parenttree.text()
+    if p1 == deltabase:
+        deltabasetext = parenttext
+    else:
+        deltabasetree = mfl[deltabase].read()
+        deltabasetext = deltabasetree.text()
+
+    # Get flat manifests
+    parentflat = manifest.manifestdict(parenttext)
+
+    newflattext = str(mdiff.patch(deltabasetext, delta))
+    newflat = manifest.manifestdict(newflattext)
+
+    # Diff old and new flat text to get new tree
+    newtree = _getnewtree(newflat, parenttree, parentflat)[0]
+
+    # Save new tree
+    mfl.add(mfl.ui, newtree, parenttree, overridenode=node, overridep1node=p1)
 
 class InterceptedMutableDataPack(object):
     """This classes intercepts data pack writes and replaces the node for the
