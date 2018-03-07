@@ -201,9 +201,12 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   $ hg pull -r 42ec76eb772a
   pulling from ssh://user@dummy/master
   searching for changes
-  remote: abort: no remote server configured to fetch trees from
-  abort: pull failed on remote
-  [255]
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  new changesets 42ec76eb772a
+  (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Pull a normal scratch branch into a treeonly client
   $ hg pull -r scratch/nontree
@@ -212,9 +215,9 @@ Pull a normal scratch branch into a treeonly client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files (+1 heads)
-  new changesets 42ec76eb772a:6a9819ced061
-  (run 'hg heads' to see heads, 'hg merge' to merge)
+  added 1 changesets with 2 changes to 1 files
+  new changesets 6a9819ced061
+  (run 'hg update' to get a working copy)
   $ hg log -r 42ec76eb772a -T ' ' --stat
   abort: "unable to find the following nodes locally or on the server: ('', bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9)"
   [255]

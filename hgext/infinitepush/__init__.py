@@ -501,10 +501,12 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
 
     try:
         treemod = extensions.find('treemanifest')
+        remotefilelog = extensions.find('remotefilelog')
     except KeyError:
         pass
     else:
-        if treemod._cansendtrees(bundlerepo, outgoing.missing):
+        missing = outgoing.missing
+        if remotefilelog.shallowbundle.cansendtrees(bundlerepo, missing):
             treepart = treemod.createtreepackpart(bundlerepo, outgoing,
                                                   treemod.TREEGROUP_PARTTYPE2)
             parts.append(treepart)
