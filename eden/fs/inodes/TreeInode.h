@@ -76,7 +76,13 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a non-materialized entry.
      */
-    Entry(mode_t m, Hash hash) : mode_(m), hash_{hash} {}
+    Entry(mode_t m, Hash hash) : Entry(m, fusell::InodeNumber{}, hash) {}
+
+    /**
+     * Create a hash for a non-materialized entry.
+     */
+    Entry(mode_t m, fusell::InodeNumber number, Hash hash)
+        : mode_(m), hash_{hash}, inodeNumber_(number) {}
 
     /**
      * Create a hash for a materialized entry.
@@ -97,6 +103,7 @@ class TreeInode : public InodeBase {
       // authoritative source of data.
       return !hash_.hasValue();
     }
+
     Hash getHash() const {
       // TODO: In the future we should probably only allow callers to invoke
       // this method when inode is not set.  If inode is set it should be the
@@ -104,6 +111,7 @@ class TreeInode : public InodeBase {
       DCHECK(hash_.hasValue());
       return hash_.value();
     }
+
     const folly::Optional<Hash>& getOptionalHash() const {
       return hash_;
     }
@@ -610,7 +618,8 @@ class TreeInode : public InodeBase {
    * used to track the directory in the inode */
   static Dir buildDirFromTree(
       const Tree* tree,
-      const struct timespec& lastCheckoutTime);
+      const struct timespec& lastCheckoutTime,
+      InodeMap* inodeMap);
 
   /**
    * Get a TreeInodePtr to ourself.

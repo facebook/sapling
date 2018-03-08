@@ -15,6 +15,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -204,7 +205,8 @@ void Overlay::initNewOverlay() {
 }
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(
-    fusell::InodeNumber inodeNumber) const {
+    fusell::InodeNumber inodeNumber,
+    InodeMap* /*inodeMap*/) const {
   TreeInode::Dir result;
   auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
   if (!dirData.hasValue()) {
@@ -232,7 +234,7 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
 
 void Overlay::saveOverlayDir(
     fusell::InodeNumber inodeNumber,
-    const TreeInode::Dir& dir) {
+    const TreeInode::Dir& dir) const {
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents

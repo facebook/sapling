@@ -132,7 +132,8 @@ TreeInode::TreeInode(
           name,
           buildDirFromTree(
               tree.get(),
-              parent->getMount()->getLastCheckoutTime())) {}
+              parent->getMount()->getLastCheckoutTime(),
+              parent->getInodeMap())) {}
 
 TreeInode::TreeInode(
     fusell::InodeNumber ino,
@@ -146,7 +147,10 @@ TreeInode::TreeInode(
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
     : TreeInode(
           mount,
-          buildDirFromTree(tree.get(), mount->getLastCheckoutTime())) {}
+          buildDirFromTree(
+              tree.get(),
+              mount->getLastCheckoutTime(),
+              mount->getInodeMap())) {}
 
 TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
     : InodeBase(mount), contents_(std::move(dir)) {}
@@ -363,7 +367,7 @@ void TreeInode::loadUnlinkedChildInode(
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
-        dir = getOverlay()->loadOverlayDir(number).value();
+        dir = getOverlay()->loadOverlayDir(number, getInodeMap()).value();
 
         if (!dir.entries.empty()) {
           // Should be impossible, but worth checking for
@@ -550,7 +554,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 
   // No corresponding TreeEntry, this exists only in the overlay.
   CHECK_EQ(number, entry.getInodeNumber());
-  auto overlayDir = getOverlay()->loadOverlayDir(number);
+  auto overlayDir = getOverlay()->loadOverlayDir(number, getInodeMap());
   if (!overlayDir) {
     auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
                           << name;
@@ -703,7 +707,8 @@ void TreeInode::childDematerialized(
 
 TreeInode::Dir TreeInode::buildDirFromTree(
     const Tree* tree,
-    const struct timespec& lastCheckoutTime) {
+    const struct timespec& lastCheckoutTime,
+    InodeMap* /*inodeMap*/) {
   // Now build out the Dir based on what we know.
   Dir dir;
   if (!tree) {

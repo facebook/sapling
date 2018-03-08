@@ -23,6 +23,8 @@ namespace overlay {
 class OverlayDir;
 }
 
+class InodeMap;
+
 /** Manages the write overlay storage area.
  *
  * The overlay is where we store files that are not yet part of a snapshot.
@@ -50,9 +52,10 @@ class Overlay {
 
   void saveOverlayDir(
       fusell::InodeNumber inodeNumber,
-      const TreeInode::Dir& dir);
+      const TreeInode::Dir& dir) const;
   folly::Optional<TreeInode::Dir> loadOverlayDir(
-      fusell::InodeNumber inodeNumber) const;
+      fusell::InodeNumber inodeNumber,
+      InodeMap* inodeMap) const;
 
   void removeOverlayData(fusell::InodeNumber inodeNumber) const;
 
