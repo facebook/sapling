@@ -1069,6 +1069,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None,
 
     # To detect that, first extract 1:1 relationships and put them into a map.
     relmap = util.sortdict()  # {predecessor_node: successor_node}
+    relations = list(relations)
     for rel in relations:
         if len(rel[1]) == 1 and rel[0].node() != rel[1][0].node():
             relmap[rel[0].node()] = rel[1][0].node()
