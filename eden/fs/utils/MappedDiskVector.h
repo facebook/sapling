@@ -84,8 +84,10 @@ class MappedDiskVector {
    * only used to open the file - a single file descriptor is used from then on
    * with the underlying inode resized in place.
    */
-  explicit MappedDiskVector(folly::StringPiece path)
-      : file_(path, O_RDWR | O_CREAT, 0600) {
+  explicit MappedDiskVector(
+      folly::StringPiece path,
+      bool shouldPopulate = false)
+      : file_(path, O_RDWR | O_CREAT | O_CLOEXEC, 0600) {
     if (!file_.try_lock()) {
       folly::throwSystemError("failed to acquire lock on ", path);
     }
@@ -119,7 +121,7 @@ class MappedDiskVector {
           "Invalid header: this is probably not a MappedDiskVector file");
     }
 
-    createMap(st.st_size, header.entryCount);
+    createMap(st.st_size, header.entryCount, shouldPopulate);
   }
 
   ~MappedDiskVector() {
@@ -252,10 +254,10 @@ class MappedDiskVector {
       throw std::runtime_error("Failed to write complete initial header");
     }
 
-    return createMap(initialSize, header.entryCount);
+    return createMap(initialSize, header.entryCount, false);
   }
 
-  void createMap(off_t fileSize, size_t currentEntryCount) {
+  void createMap(off_t fileSize, size_t currentEntryCount, bool populate) {
     // It's worth keeping the file and mapping a whole number of pages to avoid
     // wasting an partial page at the end.  Note that this is an optimization
     // and it doesn't matter if kPageSize differs from the system page size.
@@ -275,8 +277,13 @@ class MappedDiskVector {
     // Call readahead() here?  Offer it as optional functionality?  InodeTable
     // needs to traverse every record immediately after opening.
 
-    auto map =
-        mmap(0, desiredSize, PROT_READ | PROT_WRITE, MAP_SHARED, file_.fd(), 0);
+    auto map = mmap(
+        0,
+        desiredSize,
+        PROT_READ | PROT_WRITE,
+        MAP_SHARED | (populate ? MAP_POPULATE : 0),
+        file_.fd(),
+        0);
     if (map == MAP_FAILED) {
       folly::throwSystemError("mmap failed on file open");
     }
