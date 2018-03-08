@@ -104,7 +104,7 @@ testpats = [
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'(?<!hg )grep.* -a', "don't use 'grep -a', use in-line python"),
-    (r'sed.*-i', "don't use 'sed -i', use a temporary file"),
+    (r'sed.*-i', "don't use 'sed -i', use a temporary file (it breaks on OSX)"),
     (r'\becho\b.*\\n', "don't use 'echo \\n', use printf"),
     (r'echo -n', "don't use 'echo -n', use printf"),
     (r'(^|\|\s*)\bwc\b[^|]*$\n(?!.*\(re\))', "filter wc output"),

@@ -163,9 +163,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/comprehensive/test-hgsubversion-verify-and-startrev.py it has no-che?k-code (glob)
   Skipping tests/conduithttp.py it has no-che?k-code (glob)
   Skipping tests/fixtures/rsvn.py it has no-che?k-code (glob)
-  tests/test-fb-hgext-infinitepush-pullbackup-markers.t:166:
-   >   $ sed -i s/createlandedasmarkers=True// $HGRCPATH
-   don't use 'sed -i', use a temporary file
   Skipping tests/test-fb-hgext-remotefilelog-bad-configs.t it has no-che?k-code (glob)
   tests/test-hggit-git-submodules.t:61:
    >   $ grep 'submodule "subrepo2"' -A2 .gitmodules > .gitmodules-new

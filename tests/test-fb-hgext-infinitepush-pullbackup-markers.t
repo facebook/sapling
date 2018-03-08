@@ -163,7 +163,8 @@ Clone fresh repo and try to restore from backup
 
 Test createlandedasmarkers option disabled
   $ rm -r frombackup
-  $ sed -i s/createlandedasmarkers=True// $HGRCPATH
+  $ sed s/createlandedasmarkers=True// $HGRCPATH > ${HGRCPATH}.bak
+  $ mv ${HGRCPATH}.bak $HGRCPATH
   $ hg clone ssh://user@dummy/repo frombackup -q
   $ cd frombackup
 
