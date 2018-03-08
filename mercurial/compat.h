@@ -8,10 +8,11 @@
 #if defined(_WIN64)
 typedef __int64 ssize_t;
 typedef unsigned __int64 uintptr_t;
-#else
+#else  /* if defined(_WIN64) */
 typedef int ssize_t;
 typedef unsigned int uintptr_t;
-#endif
+#endif /* if defined(_WIN64) */
+#if _MSC_VER < 1600
 typedef signed char int8_t;
 typedef short int16_t;
 typedef long int32_t;
@@ -20,10 +21,10 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned long uint32_t;
 typedef unsigned __int64 uint64_t;
-#else
+#endif /* if _MSC_VER < 1600 */
 #include <stdint.h>
-#endif
-#else
+#endif /* ifdef _MSC_VER */
+#else  /* ifdef _WIN32 */
 /* not windows */
 #include <sys/types.h>
 #if defined __BEOS__ && !defined __HAIKU__
@@ -32,14 +33,14 @@ typedef unsigned __int64 uint64_t;
 #include <arpa/inet.h>
 #endif
 #include <inttypes.h>
-#endif
+#endif /* ifdef _WIN32 */
 
 #if defined __hpux || defined __SUNPRO_C || defined _AIX
 #define inline
-#endif
+#endif /* if defined __hpux || defined __SUNPRO_C || defined _AIX */
 
 #ifdef __linux
 #define inline __inline
-#endif
+#endif /* ifdef __linux */
 
-#endif
+#endif /* ifndef _HG_COMPAT_H_ */
