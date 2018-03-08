@@ -16,10 +16,9 @@ use futures::{future, Future, IntoFuture};
 
 use blobrepo::BlobRepo;
 use mercurial::RevlogRepo;
-use mercurial_types::{Changeset, MPath, Manifest};
+use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::ChangesetId;
-use mercurial_types::path::MPathElement;
 use toml;
 use vfs::{vfs_from_manifest, ManifestVfsDir, ManifestVfsFile, VfsDir, VfsFile, VfsNode, VfsWalker};
 

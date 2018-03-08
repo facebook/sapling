@@ -13,7 +13,7 @@ use std::mem;
 use futures::{Async, Future, Poll, Stream};
 
 use mercurial_types::manifest::Content;
-use mercurial_types::path::MPathElement;
+use mononoke_types::MPathElement;
 
 use errors::*;
 

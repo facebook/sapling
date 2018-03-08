@@ -15,7 +15,9 @@ extern crate failure_ext as failure;
 extern crate futures;
 extern crate futures_ext;
 extern crate itertools;
+
 extern crate mercurial_types;
+extern crate mononoke_types;
 
 #[cfg(test)]
 extern crate boxfnonce;

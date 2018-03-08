@@ -8,7 +8,7 @@
 
 use std::collections::VecDeque;
 
-use mercurial_types::path::MPathElement;
+use mercurial_types::MPathElement;
 
 pub use failure::{Error, Result, ResultExt};
 

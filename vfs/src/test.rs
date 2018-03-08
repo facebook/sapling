@@ -8,8 +8,7 @@ use futures::Future;
 
 use itertools::assert_equal;
 
-use mercurial_types::MPath;
-use mercurial_types::path::MPathElement;
+use mononoke_types::{MPath, MPathElement};
 
 use mercurial_types_mocks::manifest::MockManifest;
 

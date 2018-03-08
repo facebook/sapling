@@ -6,9 +6,10 @@
 
 use std::collections::BTreeMap;
 
+use mononoke_types::MPath;
+
 use blobnode::Parents;
 use nodehash::ManifestId;
-use path::MPath;
 
 pub trait Changeset: Send + 'static {
     fn manifestid(&self) -> &ManifestId;

@@ -16,10 +16,9 @@ extern crate mercurial_types;
 use ascii::AsciiString;
 use bytes::Bytes;
 use futures::executor::spawn;
-use mercurial_types::Changeset;
+use mercurial_types::{Changeset, MPath};
 use mercurial_types::manifest::{Content, Type};
 use mercurial_types::nodehash::{ChangesetId, NodeHash};
-use mercurial_types::path::MPath;
 
 #[test]
 fn check_heads() {

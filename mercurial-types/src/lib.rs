@@ -48,16 +48,11 @@
 #![feature(try_from)]
 
 extern crate ascii;
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
 extern crate bincode;
 extern crate bytes;
 #[macro_use]
 extern crate diesel;
 extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
 extern crate rand;
 extern crate rust_crypto;
 #[macro_use]
@@ -80,14 +75,15 @@ extern crate serde;
 extern crate serde_derive;
 
 extern crate futures_ext;
+extern crate mononoke_types;
 extern crate storage_types;
 
 pub mod bdiff;
 pub mod delta;
 pub mod errors;
+pub mod fsencode;
 pub mod hash;
 pub mod nodehash;
-pub mod path;
 pub mod utils;
 pub mod manifest;
 pub mod manifest_utils;
@@ -102,12 +98,16 @@ pub use blob::{Blob, BlobHash};
 pub use blobnode::{BlobNode, Parents};
 pub use changeset::{Changeset, Time};
 pub use delta::Delta;
+pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
 pub use nodehash::{ChangesetId, EntryId, ManifestId, NodeHash, NULL_HASH};
-pub use path::{fncache_fsencode, simple_fsencode, MPath, MPathElement, RepoPath};
 pub use repo::RepositoryId;
 pub use utils::percent_encode;
+
+// Re-exports from mononoke-types. Eventually these should go away and everything should depend
+// directly on mononoke-types;
+pub use mononoke_types::{MPath, MPathElement, RepoPath};
 
 pub use errors::{Error, ErrorKind};
 

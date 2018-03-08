@@ -12,7 +12,7 @@ use futures::{Future, Stream};
 use mercurial_types::{Entry, Manifest, Type};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::recursive_entry_stream;
-use mercurial_types::path::{MPath, MPathElement, DOT, DOTDOT};
+use mononoke_types::path::{MPath, MPathElement, DOT, DOTDOT};
 
 use node::{VfsDir, VfsFile, VfsNode};
 use tree::{TNodeId, Tree, TreeValue, ROOT_ID};

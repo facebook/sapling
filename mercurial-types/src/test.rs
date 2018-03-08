@@ -4,9 +4,11 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use path::{fncache_fsencode, MPath};
 use std::path::PathBuf;
 
+use mononoke_types::MPath;
+
+use fsencode::fncache_fsencode;
 
 fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let mut elements = vec![];

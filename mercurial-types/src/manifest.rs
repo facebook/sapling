@@ -10,11 +10,12 @@ use failure::Error;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
+use mononoke_types::{MPath, MPathElement};
+
 use blob::Blob;
 use blobnode::Parents;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use nodehash::EntryId;
-use path::{MPath, MPathElement};
 
 /// Interface for a manifest
 ///
