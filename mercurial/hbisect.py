@@ -19,7 +19,6 @@ from .node import (
 )
 from . import (
     error,
-    util,
 )
 
 def bisect(repo, state):
@@ -36,21 +35,12 @@ def bisect(repo, state):
     changelog = repo.changelog
     clparents = changelog.parentrevs
     skip = set([changelog.rev(n) for n in state['skip']])
-    empty = set()
 
     def buildancestors(bad, good):
-        def ctxmatch(rev):
-            if not util.safehasattr(repo, 'sparsematch'):
-                return True
-            ctx = repo[rev]
-            sparsematch = repo.sparsematch(rev)
-            return any(f for f in ctx.files() if sparsematch(f))
         badrev = min([changelog.rev(n) for n in bad])
         ancestors = collections.defaultdict(lambda: None)
         for rev in repo.revs("descendants(%ln) - ancestors(%ln)", good, good):
             ancestors[rev] = []
-            if not ctxmatch(rev):
-                empty.add(rev)
         if ancestors[badrev] is None:
             return badrev, None
         return badrev, ancestors
@@ -88,11 +78,9 @@ def bisect(repo, state):
     # have we narrowed it down to one entry?
     # or have all other possible candidates besides 'bad' have been skipped?
     tot = len(candidates)
-    unskipped = [c for c in candidates if (c not in skip) and (c != badrev)
-                 and (c not in empty)]
+    unskipped = [c for c in candidates if (c not in skip) and (c != badrev)]
     if tot == 1 or not unskipped:
-        return ([changelog.node(c) for c in candidates if c not in empty],
-                0, good)
+        return ([changelog.node(c) for c in candidates], 0, good)
     perfect = tot // 2
 
     # find the best node to test
@@ -111,14 +99,13 @@ def bisect(repo, state):
         x = len(a) # number of ancestors
         y = tot - x # number of non-ancestors
         value = min(x, y) # how good is this test?
-        if value > best_len and rev not in skip and rev not in empty:
+        if value > best_len and rev not in skip:
             best_len = value
             best_rev = rev
             if value == perfect: # found a perfect candidate? quit early
                 break
 
-        # all downhill from here?
-        if y < perfect and rev not in skip and rev not in empty:
+        if y < perfect and rev not in skip: # all downhill from here?
             # poison children
             poison.update(children.get(rev, []))
             continue
