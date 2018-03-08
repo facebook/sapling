@@ -15,10 +15,11 @@
 #define PY_SSIZE_T_CLEAN
 
 #include <Python.h>
-#include <arpa/inet.h>
+#include <string>
 
 extern "C" {
 #include "lib/cdatapack/cdatapack.h"
+#include "lib/clib/portability/inet.h"
 }
 
 // ====  py_cdatapack PyObject declaration ====
@@ -243,14 +244,14 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args)
     return -1;
   }
 
-  char idx_path[nodelen + sizeof(INDEXSUFFIX)];
-  char data_path[nodelen + sizeof(PACKSUFFIX)];
+  std::string idx_path(node);
+  idx_path.append(INDEXSUFFIX);
 
-  sprintf(idx_path, "%s%s", node, INDEXSUFFIX);
-  sprintf(data_path, "%s%s", node, PACKSUFFIX);
+  std::string data_path(node);
+  data_path.append(PACKSUFFIX);
 
   self->handle =
-      open_datapack(idx_path, strlen(idx_path), data_path, strlen(data_path));
+      open_datapack(idx_path.data(), idx_path.size(), data_path.data(), data_path.size());
 
   if (self->handle == NULL) {
     PyErr_NoMemory();
@@ -263,7 +264,7 @@ static int cdatapack_init(py_cdatapack *self, PyObject *args)
     PyErr_Format(PyExc_RuntimeError, "Unsupported version");
   } else if (self->handle->status != DATAPACK_HANDLE_OK) {
     PyErr_Format(PyExc_ValueError, "Error setting up datapack %s (status=%d)",
-                 data_path, self->handle->status);
+                 data_path.c_str(), self->handle->status);
   }
 
   free(self->handle);

@@ -160,8 +160,8 @@ bool find(
 }
 
 datapack_handle_t *open_datapack(
-    char *indexfp, size_t indexfp_sz,
-    char *datafp, size_t datafp_sz) {
+    const char *indexfp, size_t indexfp_sz,
+    const char *datafp, size_t datafp_sz) {
   int indexfd = -1;
   int datafd = -1;
   datapack_handle_t *handle = NULL;
