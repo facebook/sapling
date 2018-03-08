@@ -372,8 +372,8 @@ def push(repo, dest, force, revs):
                 with repo.wlock():
                     with repo.lock():
                         if hasobsolete:
-                            relations = (
-                                (repo[n], ()) for n in temporary_commits)
+                            relations = [
+                                (repo[n], []) for n in temporary_commits]
                             obsolete.createmarkers(repo, relations)
                         else:
                             util.strip(
