@@ -23,6 +23,7 @@
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/CheckoutContext.h"
@@ -184,16 +185,24 @@ EdenMount::EdenMount(
       gid_(getgid()),
       clock_(clock) {}
 
-folly::Future<folly::Unit> EdenMount::initialize() {
+folly::Future<folly::Unit> EdenMount::initialize(bool shouldSetMaxInodeNumber) {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
   parentInfo_.wlock()->parents.setParents(*parents);
 
+  // Do this before the root TreeInode is allocated in case it needs to allocate
+  // any inode numbers.
+  if (shouldSetMaxInodeNumber) {
+    auto maxInodeNumber = overlay_->getMaxRecordedInode();
+    XLOG(DBG2) << "Initializing eden mount " << getPath()
+               << "; max existing inode number is " << maxInodeNumber;
+    inodeMap_->setMaximumExistingInodeNumber(maxInodeNumber);
+  } else {
+    XLOG(DBG2) << "Initializing eden mount " << getPath() << " from takeover";
+  }
+
   return createRootInode(*parents).then(
       [this, parents](TreeInodePtr initTreeNode) {
-        auto maxInodeNumber = overlay_->getMaxRecordedInode();
-        inodeMap_->initialize(std::move(initTreeNode), maxInodeNumber);
-        XLOG(DBG2) << "Initializing eden mount " << getPath()
-                   << "; max existing inode number is " << maxInodeNumber;
+        inodeMap_->initialize(std::move(initTreeNode));
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the

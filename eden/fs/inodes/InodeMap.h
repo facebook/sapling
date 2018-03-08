@@ -112,6 +112,18 @@ class InodeMap {
   InodeMap& operator=(InodeMap&&) = default;
 
   /**
+   * Set the maximum existing inode number.  This must be called prior to
+   * calling allocateInodeNumber() and must not be called twice.
+   *
+   * @param max The maximum inode number currently assigned to
+   *     any inode in the filesystem.  For newly created file systems this
+   *     should be FUSE_ROOT_ID.  If this is a mount point that has been
+   *     mounted before, this should be the maximum value across all the
+   *     outstanding inodes.
+   */
+  void setMaximumExistingInodeNumber(fusell::InodeNumber max);
+
+  /**
    * Initialize the InodeMap
    *
    * This method must be called shortly after constructing an InodeMap object,
@@ -123,13 +135,8 @@ class InodeMap {
    * the InodeMap construction process, though.
    *
    * @param root The root TreeInode.
-   * @param maxExistingInode  The maximum inode number currently assigned to
-   *     any inode in the filesystem.  For newly created file systems this
-   *     should be FUSE_ROOT_ID.  If this is a mount point that has been
-   *     mounted before, this should be the maximum value across all the
-   *     outstanding inodes.
    */
-  void initialize(TreeInodePtr root, fusell::InodeNumber maxExistingInode);
+  void initialize(TreeInodePtr root);
 
   /**
    * Get the root inode.
@@ -375,8 +382,15 @@ class InodeMap {
    *   TreeInode::create() or TreeInode::mkdir().  In this case
    *   inodeCreated() should be called immediately afterwards to register the
    *   new child Inode object.
+   *
+   * It is illegal to call allocateInodeNumber prior to
+   * setMaximumExistingInodeNumber.
+   *
+   * TODO: It would be easy to extend this function to allocate a range of
+   * inode values in one atomic operation.
    */
   fusell::InodeNumber allocateInodeNumber();
+
   void inodeCreated(const InodePtr& inode);
 
   struct LoadedInodeCounts {
@@ -475,12 +489,6 @@ class InodeMap {
     std::unordered_map<fusell::InodeNumber, UnloadedInode> unloadedInodes_;
 
     /**
-     * The next inode number to allocate.  Zero indicates the InodeMap has not
-     * been initialized yet.
-     */
-    uint64_t nextInodeNumber_{0};
-
-    /**
      * A promise to fulfill once shutdown() completes.
      *
      * This is only initialized when shutdown() is called, and will be
@@ -522,8 +530,6 @@ class InodeMap {
    * It should never be called while already holding the lock.
    */
   PromiseVector extractPendingPromises(fusell::InodeNumber number);
-
-  fusell::InodeNumber allocateInodeNumber(Members& data);
 
   folly::Optional<RelativePath> getPathForInodeHelper(
       fusell::InodeNumber inodeNumber,
@@ -569,6 +575,12 @@ class InodeMap {
    * the InodeMap while holding their own lock.)
    */
   folly::Synchronized<Members> data_;
+
+  /**
+   * The next inode number to allocate.  Zero indicates that
+   * setMaximumExistingInodeNumber has not been called.
+   */
+  std::atomic<uint64_t> nextInodeNumber_{0};
 };
 
 /**

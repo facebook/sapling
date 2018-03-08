@@ -49,16 +49,18 @@ InodeMap::~InodeMap() {
   // destroy the EdenMount.
 }
 
-void InodeMap::initialize(
-    TreeInodePtr root,
-    fusell::InodeNumber maxExistingInode) {
+void InodeMap::setMaximumExistingInodeNumber(fusell::InodeNumber max) {
+  DCHECK_GE(max, kRootNodeId);
+  auto previous = nextInodeNumber_.exchange(max.get() + 1);
+  DCHECK_EQ(0, previous) << "setMaximumExistingInodeNumber called twice";
+}
+
+void InodeMap::initialize(TreeInodePtr root) {
   auto data = data_.wlock();
   CHECK(!root_);
   root_ = std::move(root);
   auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
   CHECK(ret.second);
-  DCHECK_GE(maxExistingInode, kRootNodeId);
-  data->nextInodeNumber_ = maxExistingInode.getRawValue() + 1;
 }
 
 Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
@@ -428,7 +430,8 @@ SerializedInodeMap InodeMap::save() {
   }
 
   SerializedInodeMap result;
-  result.nextInodeNumber = data->nextInodeNumber_;
+  // Therefore, at this point, nobody is calling allocateInodeNumber().
+  result.nextInodeNumber = nextInodeNumber_.load();
   result.unloadedInodes.reserve(data->unloadedInodes_.size());
   for (const auto& it : data->unloadedInodes_) {
     const auto& entry = it.second;
@@ -454,7 +457,9 @@ void InodeMap::load(const SerializedInodeMap& takeover) {
       << "cannot load InodeMap data over a populated instance";
   CHECK_EQ(data->unloadedInodes_.size(), 0)
       << "cannot load InodeMap data over a populated instance";
-  data->nextInodeNumber_ = takeover.nextInodeNumber;
+  CHECK_EQ(nextInodeNumber_.load(), 0)
+      << "cannot load InodeMap data over a populated instance";
+  nextInodeNumber_.store(takeover.nextInodeNumber);
   for (const auto& entry : takeover.unloadedInodes) {
     auto unloadedEntry = UnloadedInode(
         fusell::InodeNumber::fromThrift(entry.inodeNumber),
@@ -716,7 +721,8 @@ bool InodeMap::shouldLoadChild(
     fusell::InodeNumber childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
-  CHECK_LT(childInode.get(), data->nextInodeNumber_);
+  // This is a sanity check - no big deal if we race with allocateInodeNumber.
+  CHECK_LT(childInode.get(), nextInodeNumber_.load());
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
@@ -743,8 +749,23 @@ bool InodeMap::shouldLoadChild(
 }
 
 fusell::InodeNumber InodeMap::allocateInodeNumber() {
-  auto data = data_.wlock();
-  return allocateInodeNumber(*data);
+  // fusell::InodeNumber should generally be 64-bits wide, in which case it
+  // isn't even worth bothering to handle the case where nextInodeNumber_ wraps.
+  // We don't need to bother checking for conflicts with existing inode numbers
+  // since this can only happen if we wrap around.
+  // We don't currently support platforms with 32-bit inode numbers.
+  static_assert(
+      sizeof(nextInodeNumber_) == sizeof(fusell::InodeNumber),
+      "expected nextInodeNumber_ and fusell::InodeNumber to have the same size");
+  static_assert(
+      sizeof(fusell::InodeNumber) >= 8,
+      "expected fusell::InodeNumber to be at least 64 bits");
+
+  // This could be a relaxed atomic operation.  It doesn't matter on x86 but
+  // might on ARM.
+  auto previous = nextInodeNumber_++;
+  DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
+  return fusell::InodeNumber{previous};
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {
@@ -765,19 +786,6 @@ InodeMap::LoadedInodeCounts InodeMap::getLoadedInodeCounts() const {
     }
   }
   return counts;
-}
-
-fusell::InodeNumber InodeMap::allocateInodeNumber(Members& data) {
-  // fusell::InodeNumber should generally be 64-bits wide, in which case it
-  // isn't even worth bothering to handle the case where nextInodeNumber_ wraps.
-  // We don't need to bother checking for conflicts with existing inode numbers
-  // since this can only happen if we wrap around.
-  static_assert(
-      sizeof(data.nextInodeNumber_) >= 8,
-      "expected fusell::InodeNumber to be at least 64-bits");
-  DCHECK_NE(data.nextInodeNumber_, 0)
-      << "allocateInodeNumber called before initialize";
-  return fusell::InodeNumber{data.nextInodeNumber_++};
 }
 } // namespace eden
 } // namespace facebook

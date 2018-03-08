@@ -106,8 +106,12 @@ class EdenMount {
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
+   *
+   * In the case of a takeover, the InodeMap's inode number allocator has
+   * already been initialized, so pass false.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize();
+  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+      bool shouldSetMaxInodeNumber);
 
   /**
    * Destroy the EdenMount.
