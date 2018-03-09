@@ -85,8 +85,10 @@
 '''
 
 from __future__ import absolute_import
+import collections
 import contextlib
 import errno
+import functools
 import json
 import logging
 import os
@@ -99,19 +101,17 @@ import sys
 import tempfile
 import time
 
-from .bundleparts import (
-    copiedpart,
-    getscratchbranchparts,
-    scratchbookmarksparttype,
-    scratchbranchparttype,
-)
 from . import (
     backupcommands,
-    infinitepushcommands,
+    bundleparts,
     common,
+    infinitepushcommands,
 )
-from collections import defaultdict
-from functools import partial
+copiedpart = bundleparts.copiedpart
+getscratchbranchparts = bundleparts.getscratchbranchparts
+scratchbookmarksparttype = bundleparts.scratchbookmarksparttype
+scratchbranchparttype = bundleparts.scratchbranchparttype
+
 from mercurial import (
     bundle2,
     changegroup,
@@ -122,19 +122,27 @@ from mercurial import (
     exchange,
     extensions,
     hg,
+    i18n,
     localrepo,
+    node as nodemod,
+    peer,
     phases,
     pushkey,
     util,
     wireproto,
 )
 
-from mercurial.extensions import wrapcommand, wrapfunction, unwrapfunction
-from mercurial.hg import repository
-from mercurial.node import bin, hex
-from mercurial.i18n import _
-from mercurial.peer import batchable, future
-from mercurial.wireproto import encodelist, decodelist
+batchable = peer.batchable
+bin = nodemod.bin
+decodelist = wireproto.decodelist
+encodelist = wireproto.encodelist
+future = peer.future
+hex = nodemod.hex
+_ = i18n._
+wrapcommand = extensions.wrapcommand
+wrapfunction = extensions.wrapfunction
+unwrapfunction = extensions.unwrapfunction
+repository = hg.repository
 
 pushrebaseparttype = 'b2x:rebase'
 experimental = 'experimental'
@@ -859,7 +867,7 @@ def _readscratchremotebookmarks(ui, repo, other):
 def _saveremotebookmarks(repo, newbookmarks, remote):
     remotenamesext = extensions.find('remotenames')
     remotepath = remotenamesext.activepath(repo.ui, remote)
-    branches = defaultdict(list)
+    branches = collections.defaultdict(list)
     bookmarks = {}
     remotenames = remotenamesext.readremotenames(repo)
     for hexnode, nametype, remote, rname in remotenames:
@@ -974,7 +982,7 @@ def _deleteinfinitepushbookmarks(ui, repo, path, names):
                                 "in path '{}'").format(name, path))
 
     bookmarks = {}
-    branches = defaultdict(list)
+    branches = collections.defaultdict(list)
     for node, nametype, remote, name in remotenames:
         if nametype == "bookmarks" and name not in names:
             bookmarks[name] = node
@@ -1086,9 +1094,10 @@ def _getorcreateinfinitepushlogger(op):
         random.seed()
         requestid = random.randint(0, 2000000000)
         hostname = socket.gethostname()
-        logger = partial(ui.log, 'infinitepush', user=username,
-                         requestid=requestid, hostname=hostname,
-                         reponame=ui.config('infinitepush', 'reponame'))
+        logger = functools.partial(
+            ui.log, 'infinitepush', user=username,
+            requestid=requestid, hostname=hostname,
+            reponame=ui.config('infinitepush', 'reponame'))
         op.records.add('infinitepushlogger', logger)
     else:
         logger = logger[0]

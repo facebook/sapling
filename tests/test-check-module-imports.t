@@ -90,26 +90,6 @@ outputs, which should be fixed later.
   hgext/gitrevset.py:26: stdlib import "re" follows local import: mercurial.i18n
   hgext/hiddenerror.py:28: symbol import follows non-symbol import: mercurial.i18n
   hgext/hiddenerror.py:29: symbol import follows non-symbol import: mercurial.node
-  hgext/infinitepush/__init__.py:102: direct symbol import copiedpart, getscratchbranchparts, scratchbookmarksparttype, scratchbranchparttype from hgext.infinitepush.bundleparts
-  hgext/infinitepush/__init__.py:108: imports from hgext.infinitepush not lexically sorted: common < infinitepushcommands
-  hgext/infinitepush/__init__.py:113: relative import of stdlib module
-  hgext/infinitepush/__init__.py:113: direct symbol import defaultdict from collections
-  hgext/infinitepush/__init__.py:113: symbol import follows non-symbol import: collections
-  hgext/infinitepush/__init__.py:114: relative import of stdlib module
-  hgext/infinitepush/__init__.py:114: direct symbol import partial from functools
-  hgext/infinitepush/__init__.py:114: symbol import follows non-symbol import: functools
-  hgext/infinitepush/__init__.py:132: direct symbol import wrapcommand, wrapfunction, unwrapfunction from mercurial.extensions
-  hgext/infinitepush/__init__.py:132: symbol import follows non-symbol import: mercurial.extensions
-  hgext/infinitepush/__init__.py:132: imports from mercurial.extensions not lexically sorted: unwrapfunction < wrapfunction
-  hgext/infinitepush/__init__.py:133: direct symbol import repository from mercurial.hg
-  hgext/infinitepush/__init__.py:133: symbol import follows non-symbol import: mercurial.hg
-  hgext/infinitepush/__init__.py:134: symbol import follows non-symbol import: mercurial.node
-  hgext/infinitepush/__init__.py:135: symbol import follows non-symbol import: mercurial.i18n
-  hgext/infinitepush/__init__.py:136: direct symbol import batchable, future from mercurial.peer
-  hgext/infinitepush/__init__.py:136: symbol import follows non-symbol import: mercurial.peer
-  hgext/infinitepush/__init__.py:137: direct symbol import encodelist, decodelist from mercurial.wireproto
-  hgext/infinitepush/__init__.py:137: symbol import follows non-symbol import: mercurial.wireproto
-  hgext/infinitepush/__init__.py:137: imports from mercurial.wireproto not lexically sorted: decodelist < encodelist
   hgext/infinitepush/backupcommands.py:76: symbol import follows non-symbol import: mercurial.i18n
   hgext/infinitepush/infinitepushcommands.py:18: direct symbol import cmdtable from hgext.infinitepush.backupcommands
   hgext/infinitepush/infinitepushcommands.py:31: direct symbol import downloadbundle from hgext.infinitepush.common
