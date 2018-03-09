@@ -998,8 +998,8 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
     if revf and srcf:
         raise error.Abort(_('cannot specify both a revision and a source'))
 
+    cmdutil.checkunfinished(repo)
     if not rbsrt.inmemory:
-        cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
     if ui.configbool('commands', 'rebase.requiredest') and not destf:
@@ -1078,8 +1078,7 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
     if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset):
         rbsrt.inmemory = False
 
-        # Check these since we did not before.
-        cmdutil.checkunfinished(repo)
+        # Check for local changes since we did not before.
         cmdutil.bailifchanged(repo)
 
     if not destf:
