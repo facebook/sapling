@@ -10,10 +10,12 @@
 #![feature(try_from)]
 #![feature(const_fn)]
 
+extern crate ascii;
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
 extern crate bincode;
+extern crate blake2;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate heapsize;
@@ -30,6 +32,7 @@ extern crate serde;
 extern crate serde_derive;
 
 pub mod errors;
+pub mod hash;
 pub mod path;
 
 pub use path::{MPath, MPathElement, RepoPath};
