@@ -13,6 +13,7 @@
 
 #include <glog/logging.h>
 #include <cstddef>
+#include <memory>
 #include <utility>
 
 namespace facebook {
@@ -127,6 +128,13 @@ class InodePtrImpl {
   }
 
   /**
+   * Like newPtrLocked() but consumes the given unique_ptr.
+   */
+  static InodePtrImpl takeOwnership(std::unique_ptr<InodeType> value) noexcept {
+    return InodePtrImpl{value.release(), LOCKED_INCREMENT};
+  }
+
+  /**
    * An API for TreeInode to use to construct an InodePtr from itself in order
    * to give to new children inodes that it creates.
    *
@@ -234,11 +242,14 @@ class InodePtr : public InodePtrImpl<InodeBase> {
   }
 
   /*
-   * Override newPtrLocked() and newPtrFromExisting() to return an
-   * InodePtr instead of the InodePtrImpl parent class.
+   * Override newPtrLocked(), takeOwnership(), and newPtrFromExisting() to
+   * return an InodePtr instead of the InodePtrImpl parent class.
    */
   static InodePtr newPtrLocked(InodeBase* value) noexcept {
     return InodePtr{value, InodePtrImpl<InodeBase>::LOCKED_INCREMENT};
+  }
+  static InodePtr takeOwnership(std::unique_ptr<InodeBase> value) noexcept {
+    return InodePtr::newPtrLocked(value.release());
   }
   static InodePtr newPtrFromExisting(InodeBase* value) noexcept {
     return InodePtr{value, InodePtrImpl<InodeBase>::NORMAL_INCREMENT};

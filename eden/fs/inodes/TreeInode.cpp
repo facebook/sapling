@@ -243,7 +243,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
         auto childInode = loadFuture.get();
         entryPtr.setInode(childInode.get());
         promises = getInodeMap()->inodeLoadComplete(childInode.get());
-        childInodePtr = InodePtr::newPtrLocked(childInode.release());
+        childInodePtr = InodePtr::takeOwnership(std::move(childInode));
       } else {
         inodeLoadFuture = std::move(loadFuture);
       }
@@ -310,11 +310,11 @@ class LookupProcessor {
 Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
   auto pathStr = path.stringPiece();
   if (pathStr.empty()) {
-    return makeFuture<InodePtr>(InodePtr::newPtrFromExisting(this));
+    return makeFuture<InodePtr>(inodePtrFromThis());
   }
 
   auto processor = std::make_unique<LookupProcessor>(path);
-  auto future = processor->next(TreeInodePtr::newPtrFromExisting(this));
+  auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.
   return future.ensure([p = std::move(processor)]() mutable { p.reset(); });
@@ -354,7 +354,7 @@ void TreeInode::loadUnlinkedChildInode(
       auto file = std::make_unique<FileInode>(
           number, inodePtrFromThis(), name, mode, hash);
       promises = getInodeMap()->inodeLoadComplete(file.get());
-      inodePtr = InodePtr::newPtrLocked(file.release());
+      inodePtr = InodePtr::takeOwnership(std::move(file));
     } else {
       Dir dir;
 
@@ -380,7 +380,7 @@ void TreeInode::loadUnlinkedChildInode(
       auto tree = std::make_unique<TreeInode>(
           number, inodePtrFromThis(), name, std::move(dir));
       promises = getInodeMap()->inodeLoadComplete(tree.get());
-      inodePtr = InodePtr::newPtrLocked(tree.release());
+      inodePtr = InodePtr::takeOwnership(std::move(tree));
     }
 
     inodePtr->markUnlinkedAfterLoad();
@@ -489,7 +489,7 @@ void TreeInode::inodeLoadComplete(
   }
 
   // Fulfill all of the pending promises after releasing our lock
-  auto inodePtr = InodePtr::newPtrLocked(childInode.release());
+  auto inodePtr = InodePtr::takeOwnership(std::move(childInode));
   for (auto& promise : promises) {
     promise.setValue(inodePtr);
   }
