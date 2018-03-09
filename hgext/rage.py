@@ -12,8 +12,8 @@ from functools import partial
 from mercurial.i18n import _
 from mercurial import (
     bookmarks,
+    cmdutil,
     commands,
-    debugcommands,
     encoding,
     error,
     progress,
@@ -23,10 +23,7 @@ from mercurial import (
     util)
 
 from . import (
-    blackbox,
     shareutil,
-    smartlog,
-    fbsparse as sparse,
 )
 import os, socket, re, tempfile, time, traceback
 
@@ -84,7 +81,7 @@ def obsoleteinfo(repo, hgcmd):
     unfi = repo.unfiltered()
     revs = scmutil.revrange(unfi, ["smartlog()"])
     hashes = '|'.join(unfi[rev].hex() for rev in revs)
-    markers = hgcmd(debugcommands.debugobsolete, rev=[])
+    markers = hgcmd('debugobsolete', rev=[])
     pat = re.compile('(^.*(?:'+hashes+').*$)', re.MULTILINE)
     relevant = pat.findall(markers)
     return "\n".join(relevant)
@@ -162,14 +159,17 @@ def _makerage(ui, repo, **opts):
             fmt =  "%s:\n---------------------------\n%s\n"
         return fmt % pair
 
-    def hgcmd(func, *args, **opts):
+    def hgcmd(cmdname, *args, **additional_opts):
+        cmd, opts = cmdutil.getcmdanddefaultopts(cmdname, commands.table)
+        opts.update(additional_opts)
+
         _repo = repo
         if '_repo' in opts:
             _repo = opts['_repo']
             del opts['_repo']
         ui.pushbuffer(error=True)
         try:
-            func(ui, _repo, *args, **opts)
+            cmd(ui, _repo, *args, **opts)
         finally:
             return ui.popbuffer()
 
@@ -200,28 +200,19 @@ def _makerage(ui, repo, **opts):
 
     detailed = [
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
-        # smartlog as the user sees it
-        ('hg sl (filtered)', _failsafe(lambda: hgcmd(
-            smartlog.smartlog, template='{hsl}'))),
+        ('hg sl (filtered)',
+            _failsafe(lambda: hgcmd('smartlog', template='{hsl}'))),
         # unfiltered smartlog for recent hidden changesets, including full
         # node identity
         ('hg sl (unfiltered)', _failsafe(lambda: hgcmd(
-            smartlog.smartlog, _repo=repo.unfiltered(),
-            template='{node}\n{hsl}'))),
+            'smartlog', _repo=repo.unfiltered(), template='{node}\n{hsl}'))),
+        # smartlog as the user sees it
         ('first 20 lines of "hg status"',
-            _failsafe(lambda:
-                '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
-        ('hg blackbox -l60',
-            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=60))),
-        ('hg summary', _failsafe(lambda: hgcmd(commands.summary))),
+            _failsafe(lambda: '\n'.join(hgcmd('status').splitlines()[:20]))),
+        ('hg blackbox -l60', _failsafe(lambda: hgcmd('blackbox', limit=60))),
+        ('hg summary', _failsafe(lambda: hgcmd('summary'))),
         ('hg config (local)', _failsafe(lambda: '\n'.join(localconfig(ui)))),
-        ('hg sparse',
-            _failsafe(
-                lambda: hgcmd(
-                    sparse.sparse, include=False, exclude=False, delete=False,
-                    force=False, enable_profile=False, disable_profile=False,
-                    refresh=False, reset=False, import_rules=False,
-                    clear_rules=False))),
+        ('hg sparse', _failsafe(lambda: hgcmd('sparse'))),
         ('usechg', _failsafe(usechginfo)),
         ('rpm info', _failsafe(partial(rpminfo, ui))),
         ('klist', _failsafe(lambda: shcmd('klist', check=False))),
@@ -236,7 +227,7 @@ def _makerage(ui, repo, **opts):
             _failsafe(lambda: hgsrcrepofile('infinitepushbackupstate'))),
         ('infinitepush backup logs',
             _failsafe(lambda: infinitepushbackuplogs(ui, repo))),
-        ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
+        ('hg config (all)', _failsafe(lambda: hgcmd('config'))),
     ]
 
     msg = ''
@@ -263,7 +254,7 @@ def _makerage(ui, repo, **opts):
     if ui.configbool("rage", "fastmanifestcached", False):
         detailed.append(
             ('hg sl -r "fastmanifestcached()"',
-                _failsafe(lambda: hgcmd(smartlog.smartlog,
+                _failsafe(lambda: hgcmd('smartlog',
                           rev=["fastmanifestcached()"]))),
         )
 

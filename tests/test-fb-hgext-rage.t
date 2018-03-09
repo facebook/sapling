@@ -1,6 +1,9 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > blackbox=
   > rage=
+  > smartlog=
+  > sparse=
   > EOF
 
   $ hg init repo
@@ -9,8 +12,8 @@
   $ echo "[rage]" >> .hg/hgrc
   $ echo "rpmbin = /""bin/rpm" >> .hg/hgrc
 #endif
-  $ hg rage --preview | grep -o 'blackbox'
-  blackbox
+  $ hg rage --preview | grep -o 'hg blackbox'
+  hg blackbox
 
 Test with shared repo
   $ cat >> $HGRCPATH << EOF
@@ -28,4 +31,3 @@ Create fake infinitepush backup state to be collected by rage
   $ cd repo2
   $ hg rage --preview | grep -o 'fakestate'
   fakestate
-
