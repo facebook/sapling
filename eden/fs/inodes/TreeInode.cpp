@@ -61,6 +61,22 @@ namespace eden {
 TreeInode::CreateResult::CreateResult(const EdenMount* mount)
     : attr(mount->initStatData()) {}
 
+FileInodePtr TreeInode::Entry::asFilePtrOrNull() const {
+  if (auto file = dynamic_cast<FileInode*>(inode_)) {
+    return FileInodePtr::newPtrLocked(file);
+  } else {
+    return FileInodePtr{};
+  }
+}
+
+TreeInodePtr TreeInode::Entry::asTreePtrOrNull() const {
+  if (auto tree = dynamic_cast<TreeInode*>(inode_)) {
+    return TreeInodePtr::newPtrLocked(tree);
+  } else {
+    return TreeInodePtr{};
+  }
+}
+
 /**
  * A helper class to track info about inode loads that we started while holding
  * the contents_ lock.
@@ -208,9 +224,9 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     }
 
     // Check to see if the entry is already loaded
-    auto& entryPtr = iter->second;
-    if (entryPtr.getInode()) {
-      return makeFuture<InodePtr>(InodePtr::newPtrLocked(entryPtr.getInode()));
+    auto& entry = iter->second;
+    if (entry.getInode()) {
+      return makeFuture<InodePtr>(entry.getInodePtr());
     }
 
     // The entry is not loaded yet.  Ask the InodeMap about the entry.
@@ -219,12 +235,12 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     folly::Promise<InodePtr> promise;
     returnFuture = promise.getFuture();
     bool allocatedInodeNumber;
-    if (entryPtr.hasInodeNumber()) {
-      childNumber = entryPtr.getInodeNumber();
+    if (entry.hasInodeNumber()) {
+      childNumber = entry.getInodeNumber();
       allocatedInodeNumber = false;
     } else {
       childNumber = getInodeMap()->allocateInodeNumber();
-      entryPtr.setInodeNumber(childNumber);
+      entry.setInodeNumber(childNumber);
       allocatedInodeNumber = true;
     }
     bool startLoad = getInodeMap()->shouldLoadChild(
@@ -235,13 +251,13 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
-      auto loadFuture = startLoadingInodeNoThrow(entryPtr, name, childNumber);
+      auto loadFuture = startLoadingInodeNoThrow(entry, name, childNumber);
       if (loadFuture.isReady() && loadFuture.hasValue()) {
         // If we finished loading the inode immediately, just call
         // InodeMap::inodeLoadComplete() now, since we still have the data_
         // lock.
         auto childInode = loadFuture.get();
-        entryPtr.setInode(childInode.get());
+        entry.setInode(childInode.get());
         promises = getInodeMap()->inodeLoadComplete(childInode.get());
         childInodePtr = InodePtr::takeOwnership(std::move(childInode));
       } else {
@@ -1204,12 +1220,10 @@ int TreeInode::tryRemoveChild(
       }
     } else {
       // Make sure the entry being removed is the expected file/directory type.
-      auto* currentChild =
-          dynamic_cast<typename InodePtrType::InodeType*>(ent.getInode());
-      if (!currentChild) {
+      child = ent.getInodePtr().asSubclassPtrOrNull<InodePtrType>();
+      if (!child) {
         return InodePtrType::InodeType::WRONG_TYPE_ERRNO;
       }
-      child = InodePtrType::newPtrLocked(currentChild);
     }
 
     // Verify that the child is still in a good state to remove
@@ -1750,9 +1764,8 @@ Future<Unit> TreeInode::diff(
     }
 
     XLOG(DBG7) << "Loading ignore file for " << getLogPath();
-    if (inodeEntry->getInode()) {
-      inode = InodePtr::newPtrLocked(inodeEntry->getInode());
-    } else {
+    inode = inodeEntry->getInodePtr();
+    if (!inode) {
       inodeFuture = loadChildLocked(
           *contents, kIgnoreFilename, *inodeEntry, &pendingLoads);
     }
@@ -1923,8 +1936,7 @@ Future<Unit> TreeInode::computeDiff(
 
       if (inodeEntry->isDirectory()) {
         if (!entryIgnored || context->listIgnored) {
-          if (inodeEntry->getInode()) {
-            auto childPtr = InodePtr::newPtrLocked(inodeEntry->getInode());
+          if (auto childPtr = inodeEntry->getInodePtr()) {
             deferredEntries.emplace_back(
                 DeferredDiffEntry::createUntrackedEntryFromInodeFuture(
                     context,
@@ -1993,7 +2005,7 @@ Future<Unit> TreeInode::computeDiff(
 
       if (inodeEntry->getInode()) {
         // This inode is already loaded.
-        auto childInodePtr = InodePtr::newPtrLocked(inodeEntry->getInode());
+        auto childInodePtr = inodeEntry->getInodePtr();
         deferredEntries.emplace_back(DeferredDiffEntry::createModifiedEntry(
             context,
             entryPath,
@@ -2398,9 +2410,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   auto& entry = it->second;
-  if (entry.getInode()) {
+  if (auto childPtr = entry.getInodePtr()) {
     // If the inode is already loaded, create a CheckoutAction to process it
-    auto childPtr = InodePtr::newPtrLocked(entry.getInode());
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
@@ -2874,9 +2885,8 @@ void TreeInode::unloadChildrenNow() {
         continue;
       }
 
-      auto* asTree = dynamic_cast<TreeInode*>(entry.second.getInode());
-      if (asTree) {
-        treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
+      if (auto asTree = entry.second.asTreePtrOrNull()) {
+        treeChildren.push_back(std::move(asTree));
       } else {
         if (entry.second.getInode()->isPtrAcquireCountZero()) {
           // Unload the inode
@@ -2927,9 +2937,8 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
         continue;
       }
 
-      auto* asFile = dynamic_cast<FileInode*>(entry.second.getInode());
-      if (asFile) {
-        potentialUnload.push_back(FileInodePtr::newPtrLocked(asFile));
+      if (auto asFile = entry.second.asFilePtrOrNull()) {
+        potentialUnload.push_back(std::move(asFile));
       }
     }
   }
@@ -2972,9 +2981,8 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
       if (!entry.second.getInode()) {
         continue;
       }
-      auto asTree = dynamic_cast<TreeInode*>(entry.second.getInode());
-      if (asTree) {
-        treeChildren.push_back(TreeInodePtr::newPtrLocked(asTree));
+      if (auto asTree = entry.second.asTreePtrOrNull()) {
+        treeChildren.push_back(std::move(asTree));
       } else {
         // Check if the entry is present in the toUnload list(atime greater than
         // age)
@@ -3034,8 +3042,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
         // childInodes list.  We will process all loaded children after
         // releasing our own contents_ lock (since we need to grab each child
         // Inode's own lock to get its data).
-        childInodes.emplace_back(
-            entry.first, InodePtr::newPtrLocked(entry.second.getInode()));
+        childInodes.emplace_back(entry.first, entry.second.getInodePtr());
       } else {
         // We can store data about unloaded entries immediately, since we have
         // the authoritative data ourself, and don't need to ask a separate

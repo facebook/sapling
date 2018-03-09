@@ -77,7 +77,7 @@ Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
     //
     // This code path should be quite common, so it's better to perform
     // makeFuture()'s memory allocation without the lock held.
-    auto result = InodePtr::newPtrLocked(loadedIter->second);
+    auto result = loadedIter->second.getPtr();
     data.unlock();
     return folly::makeFuture<InodePtr>(std::move(result));
   }
@@ -126,7 +126,7 @@ Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
       // We found a loaded parent.
       // Grab copies of the arguments we need for startChildLookup(),
       // with the lock still held.
-      InodePtr firstLoadedParent = InodePtr::newPtrLocked(loadedIter->second);
+      InodePtr firstLoadedParent = loadedIter->second.getPtr();
       PathComponent requiredChildName = unloadedData->name;
       bool isUnlinked = unloadedData->isUnlinked;
       auto optionalHash = unloadedData->hash;
@@ -311,7 +311,7 @@ InodePtr InodeMap::lookupLoadedInode(fusell::InodeNumber number) {
   if (it == data->loadedInodes_.end()) {
     return nullptr;
   }
-  return InodePtr::newPtrLocked(it->second);
+  return it->second.getPtr();
 }
 
 TreeInodePtr InodeMap::lookupLoadedTree(fusell::InodeNumber number) {
@@ -394,7 +394,7 @@ void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
     // This ensures that onInodeUnreferenced() will be processed at some point
     // after decrementing the FUSE refcount to 0, even if there were no
     // outstanding pointer references before this.
-    auto inode = InodePtr::newPtrLocked(loadedIter->second);
+    auto inode = loadedIter->second.getPtr();
     // Now release our lock before decrementing the inode's FUSE reference
     // count and immediately releasing our pointer reference.
     data.unlock();
@@ -541,7 +541,7 @@ Future<Unit> InodeMap::shutdown() {
       if (!entry.second->isUnlinked()) {
         continue;
       }
-      inodesToUnload.push_back(InodePtr::newPtrLocked(entry.second));
+      inodesToUnload.push_back(entry.second.getPtr());
     }
     // Release the lock, then release all of our InodePtrs to unload
     // the inodes.
@@ -779,10 +779,10 @@ InodeMap::LoadedInodeCounts InodeMap::getLoadedInodeCounts() const {
   LoadedInodeCounts counts;
   auto data = data_.rlock();
   for (const auto& entry : data->loadedInodes_) {
-    if (dynamic_cast<FileInode*>(entry.second)) {
-      ++counts.fileCount;
-    } else {
+    if (entry.second->getType() == dtype_t::Dir) {
       ++counts.treeCount;
+    } else {
+      ++counts.fileCount;
     }
   }
   return counts;

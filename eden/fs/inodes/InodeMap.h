@@ -472,6 +472,39 @@ class InodeMap {
     int64_t numFuseReferences{0};
   };
 
+  struct LoadedInode {
+    LoadedInode() = default;
+
+    /* implicit */ LoadedInode(InodeBase* inode) : inode_(inode) {}
+
+    LoadedInode(LoadedInode&&) = default;
+    LoadedInode& operator=(LoadedInode&&) = default;
+
+    InodeBase* get() const {
+      return inode_;
+    }
+
+    InodePtr getPtr() const {
+      // Calling InodePtr::newPtrLocked is safe because interacting with
+      // LoadedInode implies the data_ lock is held.
+      return InodePtr::newPtrLocked(inode_);
+    }
+
+    InodeBase* operator->() const {
+      return inode_;
+    }
+
+    InodeBase& operator*() const {
+      return *inode_;
+    }
+
+   private:
+    LoadedInode(const LoadedInode&) = delete;
+    LoadedInode& operator=(const LoadedInode&) = delete;
+
+    InodeBase* inode_{nullptr};
+  };
+
   struct Members {
     /**
      * The map of loaded inodes
@@ -481,7 +514,7 @@ class InodeMap {
      * looked up the InodeMap will wrap the Inode in an InodePtr so that the
      * caller acquires a reference.
      */
-    std::unordered_map<fusell::InodeNumber, InodeBase*> loadedInodes_;
+    std::unordered_map<fusell::InodeNumber, LoadedInode> loadedInodes_;
 
     /**
      * The map of currently unloaded inodes

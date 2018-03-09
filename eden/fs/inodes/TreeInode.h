@@ -179,6 +179,24 @@ class TreeInode : public InodeBase {
       return inode_;
     }
 
+    InodePtr getInodePtr() const {
+      // It's safe to call newPtrLocked because calling getInode() implies the
+      // TreeInode's contents_ lock is held.
+      return inode_ ? InodePtr::newPtrLocked(inode_) : InodePtr{};
+    }
+
+    /**
+     * Same as getInodePtr().asFilePtrOrNull() except it avoids constructing
+     * a FileInodePtr if the entry does not point to a FileInode.
+     */
+    FileInodePtr asFilePtrOrNull() const;
+
+    /**
+     * Same as getInodePtr().asTreePtrOrNull() except it avoids constructing
+     * a TreeInodePtr if the entry does not point to a FileInode.
+     */
+    TreeInodePtr asTreePtrOrNull() const;
+
     void setInode(InodeBase* inode) {
       DCHECK(!inode_);
       DCHECK(inode);
