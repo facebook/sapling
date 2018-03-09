@@ -9,6 +9,7 @@ use std::mem;
 use std::sync::Arc;
 
 use bytes::Bytes;
+use failure::Compat;
 use futures::{Future, Stream};
 use futures::future::{ok, Shared};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
@@ -41,7 +42,7 @@ pub struct Filelog {
 }
 
 impl UploadableBlob for Filelog {
-    type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Error>>;
+    type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
     fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
         let path = self.path;
@@ -51,7 +52,7 @@ impl UploadableBlob for Filelog {
             self.p1,
             self.p2,
             path.clone(),
-        ).map(move |(node, fut)| ((node, path), fut.shared()))
+        ).map(move |(node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
     }
 }
 
@@ -90,7 +91,7 @@ where
 
 struct DeltaCache {
     repo: Arc<BlobRepo>,
-    bytes_cache: HashMap<NodeHash, Shared<BoxFuture<Bytes, Error>>>,
+    bytes_cache: HashMap<NodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
 }
 
 impl DeltaCache {
@@ -121,7 +122,7 @@ impl DeltaCache {
                             Some(bytes) => bytes
                                 .clone()
                                 .map(move |bytes| delta::apply(&bytes, &delta))
-                                .map_err(|err| format_err!("{:?}", err))
+                                .map_err(Error::from)
                                 .boxify(),
                             None => self.repo
                                 .get_file_content(&base)
@@ -129,11 +130,11 @@ impl DeltaCache {
                                 .boxify(),
                         };
                         fut.map_err(move |err| {
-                            err.context(format_err!(
+                            Error::from(err.context(format_err!(
                                 "While looking for base {:?} to apply on delta {:?}",
                                 base,
                                 node
-                            )).into()
+                            ))).compat()
                         }).boxify()
                     }
                 };
@@ -154,7 +155,7 @@ impl DeltaCache {
                 STATS::deltacache_fsize_large.add_value(fsize);
             })
             .map(|bytes| Blob::from((*bytes).clone()))
-            .map_err(|err| format_err!("{:?}", err))
+            .from_err()
             .boxify()
     }
 }

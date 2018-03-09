@@ -155,7 +155,11 @@ impl Bundle2Resolver {
                             ).map_err(|err| err.context("While uploading File Blobs").into()),
                         )
                         .map(move |(changesets, filelogs)| {
-                            let cg_push = ChangegroupPush {part_id, changesets, filelogs};
+                            let cg_push = ChangegroupPush {
+                                part_id,
+                                changesets,
+                                filelogs,
+                            };
                             (cg_push, bundle2)
                         })
                         .boxify()
@@ -298,7 +302,7 @@ impl Bundle2Resolver {
                     uploaded_changesets
                         .into_iter()
                         .map(|(_, cs)| cs.get_completed_changeset()),
-                ).map_err(|err| format_err!("{:?}", err))
+                ).map_err(Error::from)
                     .for_each(|_| Ok(()))
             })
             .map_err(|err| err.context("While uploading Changesets to BlobRepo").into())
@@ -394,7 +398,7 @@ fn walk_manifests(
                         blobfuture
                             .clone()
                             .map(|it| (*it).clone())
-                            .map_err(|err| format_err!("{:?}", err))
+                            .from_err()
                             .boxify(),
                     );
                     entries.append(&mut walk_helper(
@@ -410,7 +414,7 @@ fn walk_manifests(
                         blobfuture
                             .clone()
                             .map(|it| (*it).clone())
-                            .map_err(|err| format_err!("{:?}", err))
+                            .from_err()
                             .boxify(),
                     );
                 }
@@ -428,7 +432,7 @@ fn walk_manifests(
         manifest_root
             .clone()
             .map(|it| (*it).clone())
-            .map_err(|err| format_err!("{:?}", err))
+            .from_err()
             .boxify(),
         stream::futures_unordered(walk_helper(
             &MPath::empty(),

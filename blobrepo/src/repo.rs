@@ -491,6 +491,7 @@ impl BlobRepo {
                     };
                     complete_changesets.add(&completion_record).map(|_| cs)
                 })
+                .map_err(Error::compat)
                 .boxify()
                 .shared(),
         )

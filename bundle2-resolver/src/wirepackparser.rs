@@ -8,9 +8,10 @@ use std::fmt::Debug;
 use std::mem;
 
 use bytes::Bytes;
+use failure::Compat;
 use futures::{Future, Poll, Stream};
 use futures::future::Shared;
-use futures_ext::BoxFuture;
+use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{BlobEntry, BlobRepo};
 use mercurial::manifest::revlog::ManifestContent;
@@ -88,7 +89,7 @@ impl TreemanifestEntry {
 impl UploadableBlob for TreemanifestEntry {
     type Value = (
         ManifestContent,
-        Shared<BoxFuture<(BlobEntry, RepoPath), Error>>,
+        Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
     );
 
     fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
@@ -100,7 +101,15 @@ impl UploadableBlob for TreemanifestEntry {
             self.p1,
             self.p2,
             path.clone(),
-        ).map(move |(node, value)| ((node, path), (manifest_content, value.shared())))
+        ).map(move |(node, value)| {
+            (
+                (node, path),
+                (
+                    manifest_content,
+                    value.map_err(Error::compat).boxify().shared(),
+                ),
+            )
+        })
     }
 }
 

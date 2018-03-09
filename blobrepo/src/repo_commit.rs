@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
+use failure::Compat;
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::Stream;
 use futures::sync::oneshot;
@@ -36,13 +37,13 @@ use utils::get_node_key;
 #[derive(Clone)]
 pub struct ChangesetHandle {
     can_be_parent: Shared<oneshot::Receiver<(NodeHash, ManifestId)>>,
-    completion_future: Shared<BoxFuture<BlobChangeset, Error>>,
+    completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
         can_be_parent: Shared<oneshot::Receiver<(NodeHash, ManifestId)>>,
-        completion_future: Shared<BoxFuture<BlobChangeset, Error>>,
+        completion_future: Shared<BoxFuture<BlobChangeset, Compat<Error>>>,
     ) -> Self {
         Self {
             can_be_parent,
@@ -50,7 +51,7 @@ impl ChangesetHandle {
         }
     }
 
-    pub fn get_completed_changeset(self) -> Shared<BoxFuture<BlobChangeset, Error>> {
+    pub fn get_completed_changeset(self) -> Shared<BoxFuture<BlobChangeset, Compat<Error>>> {
         self.completion_future
     }
 }
@@ -333,7 +334,7 @@ pub fn process_entries(
 pub fn extract_parents_complete(
     p1: &Option<ChangesetHandle>,
     p2: &Option<ChangesetHandle>,
-) -> BoxFuture<SharedItem<()>, SharedError<Error>> {
+) -> BoxFuture<SharedItem<()>, SharedError<Compat<Error>>> {
     match (p1.as_ref(), p2.as_ref()) {
         (None, None) => future::ok(()).shared().boxify(),
         (Some(p), None) | (None, Some(p)) => p.completion_future
