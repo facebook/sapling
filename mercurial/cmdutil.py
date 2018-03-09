@@ -702,6 +702,29 @@ def findpossible(cmd, table, strict=False):
 
     return choice, allcmds
 
+def getcmdanddefaultopts(cmdname, table):
+    """Returns (command, defaultopts) for cmd string
+    This function returns command and all the default options already
+    initialized. It should be used by commands that call other commands. For
+    example, calling pull inside of update, calling log inside of show etc.
+    getcmdanddefaultopts has important benefits:
+    1) It returns "wrapped" command i.e. command with all the overrides applied.
+    This is better than calling commands.pull() directly.
+    2) getcmdanddefaultopts correctly initializes options to their default value
+    and correctly changes their name - replace '-'  with '_'.
+    """
+
+    _aliases, cmdwithopts = findcmd(cmdname, table)
+    cmd, optsdescription = cmdwithopts[:2]
+
+    opts = {}
+    for opt in  optsdescription:
+        name = opt[1].replace('-', '_')
+        value = opt[2]
+        opts[name] = value
+
+    return (cmd, opts)
+
 def findcmd(cmd, table, strict=True):
     """Return (aliases, command table entry) for command string."""
     choice, allcmds = findpossible(cmd, table, strict)

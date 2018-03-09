@@ -108,18 +108,8 @@ def show(ui, repo, *args, **opts):
     overrides.update({('diff', opt): opts.get(opt)
                       for opt in commands.diffwsopts})
 
-    # Call the log command. cmdutil.findcmd ensures that wrapped version of
-    # the log command is called
-    _aliases, logcmdwithopts = cmdutil.findcmd('log', commands.table)
-    logcmd, logoptsdescription = logcmdwithopts[:2]
-
-    logopts = {}
-    # Initialize all log options to a default value
-    for opt in logoptsdescription:
-        name = opt[1]
-        value = opt[2]
-        logopts[name] = value
-    logopts.update(opts)
+    logcmd, defaultlogopts = cmdutil.getcmdanddefaultopts('log', commands.table)
+    defaultlogopts.update(opts)
 
     with ui.configoverride(overrides, 'show'):
-        logcmd(ui, repo, *pats, **logopts)
+        logcmd(ui, repo, *pats, **defaultlogopts)

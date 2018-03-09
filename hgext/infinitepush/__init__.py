@@ -115,6 +115,7 @@ scratchbranchparttype = bundleparts.scratchbranchparttype
 from mercurial import (
     bundle2,
     changegroup,
+    cmdutil,
     commands,
     discovery,
     encoding,
@@ -756,9 +757,8 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
             pullstarttime = time.time()
 
             try:
-                cmdname = '^pull'
-                pullcmd = commands.table[cmdname][0]
-                pullopts = dict(opt[1:3] for opt in commands.table[cmdname][1])
+                (pullcmd, pullopts) = cmdutil.getcmdanddefaultopts(
+                    'pull', commands.table)
                 pullopts.update(kwargs)
                 pullcmd(ui, repo, **pullopts)
             except Exception:
