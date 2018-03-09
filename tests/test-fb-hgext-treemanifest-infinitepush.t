@@ -219,11 +219,13 @@ Pull a normal scratch branch into a treeonly client
   new changesets 6a9819ced061
   (run 'hg update' to get a working copy)
   $ hg log -r 42ec76eb772a -T ' ' --stat
-  abort: "unable to find the following nodes locally or on the server: ('', bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9)"
-  [255]
+    bar/car |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
   $ hg log -r 42ec76eb772a -T ' ' --stat
-  abort: "unable to find the following nodes locally or on the server: ('', bf0601d5cb94247e00d0bdd1d8327f0dd36f54e9)"
-  [255]
+    bar/car |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
   $ cd ..
 
 Verify its not on the server
