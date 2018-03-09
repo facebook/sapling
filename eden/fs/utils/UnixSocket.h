@@ -307,7 +307,7 @@ class UnixSocket : public folly::DelayedDestruction,
     SendCallback* callback{nullptr};
     SendQueuePtr next;
     size_t iovIndex{0};
-    size_t iovCount{0};
+    const size_t iovCount{0};
     size_t filesSent{0};
     HeaderBuffer header;
 

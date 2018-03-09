@@ -351,26 +351,28 @@ UnixSocket::SendQueueEntry::SendQueueEntry(
     Message&& msg,
     SendCallback* cb,
     size_t dataElements)
-    : message(std::move(msg)), callback(cb) {
+    : message(std::move(msg)), callback(cb), iovCount(1 + dataElements) {
   iov[0].iov_base = header.data();
   iov[0].iov_len = header.size();
 
   IOBuf* buf = &message.data;
   size_t bodySize = 0;
-  size_t iovIndex = 1;
+  size_t idx = 1;
   for (size_t n = 0; n < dataElements; ++n) {
     // Skip over 0-length elements in the IOBuf chain.
-    if (buf->length() == 0) {
-      continue;
+    if (buf->length() > 0) {
+      iov[idx].iov_base = const_cast<uint8_t*>(buf->data());
+      iov[idx].iov_len = buf->length();
+      bodySize += buf->length();
+      ++idx;
     }
 
-    iov[iovIndex].iov_base = const_cast<uint8_t*>(buf->data());
-    iov[iovIndex].iov_len = buf->length();
-    bodySize += buf->length();
     buf = buf->next();
-    ++iovIndex;
+    if (buf == &message.data) {
+      break;
+    }
   }
-  iovCount = iovIndex;
+  DCHECK_EQ(iovCount, idx);
 
   serializeHeader(header, bodySize, message.files.size());
 }
@@ -391,12 +393,19 @@ UnixSocket::SendQueuePtr UnixSocket::createSendQueueEntry(
     Message&& message,
     SendCallback* callback) {
   // Compute how many iovec entries we will have.  We have 1 for the message
-  // header plus one for each element in the IOBuf chain.
-  //
-  // This may slightly overcount the number of iovec elements needed if some of
-  // the elements in the IOBuf chain are 0-length buffers.  We'll allocate
-  // space for them, but simply skip over them when filling out the iovecs.
-  auto dataElements = message.data.countChainElements();
+  // header plus one for each non-empty element in the IOBuf chain.
+  size_t dataElements = 0;
+  IOBuf* buf = &message.data;
+  while (true) {
+    if (buf->length() > 0) {
+      ++dataElements;
+    }
+    buf = buf->next();
+    if (buf == &message.data) {
+      break;
+    }
+  }
+
   auto iovecElements = 1 + dataElements;
   size_t allocationSize =
       sizeof(SendQueueEntry) + sizeof(struct iovec[iovecElements]);
