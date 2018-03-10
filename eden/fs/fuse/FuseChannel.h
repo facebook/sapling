@@ -187,6 +187,21 @@ class FuseChannel {
    */
   void finishRequest(const fuse_in_header& header);
 
+  /**
+   * Returns a Future that will complete when all of the
+   * fuse threads have been joined and when all pending
+   * fuse requests initiated by the kernel have been
+   * responded to.
+   * Will throw if called more than once.
+   */
+  folly::Future<folly::Unit> getSessionCompleteFuture();
+
+ private:
+  struct HandlerEntry;
+  using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;
+
+  static const HandlerMap handlerMap;
+
   folly::Future<folly::Unit> fuseRead(
       const fuse_in_header* header,
       const uint8_t* arg);
@@ -281,16 +296,6 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
-  /**
-   * Returns a Future that will complete when all of the
-   * fuse threads have been joined and when all pending
-   * fuse requests initiated by the kernel have been
-   * responded to.
-   * Will throw if called more than once.
-   */
-  folly::Future<folly::Unit> getSessionCompleteFuture();
-
- private:
   void fuseWorkerThread(size_t threadNumber);
   void maybeDispatchSessionComplete();
   void readInitPacket();

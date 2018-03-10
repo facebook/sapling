@@ -128,12 +128,14 @@ StringPiece fuseOpcodeName(FuseOpcode opcode) {
 using Handler = folly::Future<folly::Unit> (
     FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
 
-struct HandlerEntry {
+} // namespace
+
+struct FuseChannel::HandlerEntry {
   Handler handler;
   EdenStats::HistogramPtr histogram;
 };
 
-const std::unordered_map<uint32_t, HandlerEntry> handlerMap = {
+const FuseChannel::HandlerMap FuseChannel::handlerMap = {
     {FUSE_READ, {&FuseChannel::fuseRead, &EdenStats::read}},
     {FUSE_WRITE, {&FuseChannel::fuseWrite, &EdenStats::write}},
     {FUSE_LOOKUP, {&FuseChannel::fuseLookup, &EdenStats::lookup}},
@@ -168,7 +170,6 @@ const std::unordered_map<uint32_t, HandlerEntry> handlerMap = {
     {FUSE_BATCH_FORGET,
      {&FuseChannel::fuseBatchForget, &EdenStats::forgetmulti}},
 };
-} // namespace
 
 static iovec inline make_iovec(const void* addr, size_t len) {
   iovec iov;
