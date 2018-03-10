@@ -222,6 +222,39 @@ impl Key {
     }
 }
 
+impl Root {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        check_type(buf, offset, TYPE_ROOT)?;
+        let (radix_offset, len1) = buf.read_vlq_at(offset + 1)?;
+        let (len, _): (usize, _) = buf.read_vlq_at(offset + 1 + len1)?;
+        if len == 1 + len1 + 1 {
+            Ok(Root { radix_offset })
+        } else {
+            Err(InvalidData.into())
+        }
+    }
+
+    fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64) -> io::Result<Self> {
+        if end > 1 {
+            let (size, _): (u64, _) = buf.as_ref().read_vlq_at(end as usize - 1)?;
+            Self::read_from(buf, end - size)
+        } else {
+            Err(InvalidData.into())
+        }
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+        let mut buf = Vec::with_capacity(16);
+        buf.write_all(&[TYPE_ROOT])?;
+        buf.write_vlq(self.radix_offset)?;
+        let len = buf.len() + 1;
+        buf.write_vlq(len)?;
+        writer.write_all(&buf)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,6 +299,16 @@ mod tests {
             entry.write_to(&mut buf, &HashMap::new()).expect("write");
             let entry1 = Key::read_from(buf, 1).unwrap();
             entry1 == entry
+        }
+
+        fn test_root_format_roundtrip(radix_offset: u64) -> bool {
+            let root = Root { radix_offset };
+            let mut buf = vec![1];
+            root.write_to(&mut buf, &HashMap::new()).expect("write");
+            let root1 = Root::read_from(&buf, 1).unwrap();
+            let end = buf.len() as u64;
+            let root2 = Root::read_from_end(buf, end).unwrap();
+            root1 == root && root2 == root
         }
     }
 }
