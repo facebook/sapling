@@ -348,7 +348,6 @@ void FuseChannel::startWorkerThreads() {
               << " threads.  The error was: " << ex.what();
     if (activeThreads_ == 0) {
       // None were started, immediately report failure
-      threadsFinishedPromise_.setValue();
       sessionCompletePromise_.setValue();
     } else {
       requestSessionExit();
@@ -458,10 +457,6 @@ void FuseChannel::invalidateEntry(
   }
 }
 
-folly::Future<folly::Unit> FuseChannel::getThreadsFinishedFuture() {
-  return threadsFinishedPromise_.getFuture();
-}
-
 folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
   return sessionCompletePromise_.getFuture();
 }
@@ -486,7 +481,6 @@ void FuseChannel::fuseWorkerThread(size_t threadNumber) {
   eventBase_->runInEventBaseThread([this, threadNumber]() {
     workerThreads_[threadNumber].join();
     bool complete = false;
-    bool threadsFinished = false;
 
     // We may be complete; check to see if there are any
     // outstanding requests.  Take care to avoid triggering
@@ -494,8 +488,6 @@ void FuseChannel::fuseWorkerThread(size_t threadNumber) {
     {
       const auto requests = requests_.wlock();
       if (--activeThreads_ == 0) {
-        threadsFinished = true;
-
         // there may be outstanding requests even though we have
         // now shut down all of the fuse device processing threads.
         // If there are none outstanding then we can consider the
@@ -504,10 +496,6 @@ void FuseChannel::fuseWorkerThread(size_t threadNumber) {
         // method below.
         complete = requests->size() == 0;
       }
-    }
-
-    if (threadsFinished) {
-      threadsFinishedPromise_.setValue();
     }
 
     if (complete) {

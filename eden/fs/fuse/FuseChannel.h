@@ -282,13 +282,6 @@ class FuseChannel {
       const uint8_t* arg);
 
   /**
-   * Returns a Future that will complete when all of the fuse
-   * threads have been joined.
-   * Will throw if called more than once.
-   */
-  folly::Future<folly::Unit> getThreadsFinishedFuture();
-
-  /**
    * Returns a Future that will complete when all of the
    * fuse threads have been joined and when all pending
    * fuse requests initiated by the kernel have been
@@ -316,7 +309,6 @@ class FuseChannel {
   std::atomic<size_t> activeThreads_{0};
   size_t numThreads_;
   const AbsolutePath mountPath_;
-  folly::Promise<folly::Unit> threadsFinishedPromise_;
   folly::Promise<folly::Unit> sessionCompletePromise_;
 
   // To prevent logging unsupported opcodes twice.
