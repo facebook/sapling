@@ -12,3 +12,5 @@ extern crate rand;
 extern crate tempdir;
 extern crate twox_hash;
 extern crate vlqencoding;
+
+mod checksum_table;
