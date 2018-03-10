@@ -156,6 +156,87 @@ static int xdl_classify_record(unsigned int pass, xdlclassifier_t *cf, xrecord_t
 }
 
 
+/*
+ * Trim common prefix from files.
+ *
+ * Note: trimming could affect hunk shifting. But the performance benefit
+ * outweighs the shift change. A diff result with suboptimal shifting is still
+ * valid.
+ */
+static void xdl_trim_files(mmfile_t *mf1, mmfile_t *mf2, long reserved,
+		xdfenv_t *xe, mmfile_t *out_mf1, mmfile_t *out_mf2) {
+	mmfile_t msmall, mlarge;
+	/* prefix lines, prefix bytes, suffix lines, suffix bytes */
+	long plines = 0, pbytes = 0, slines = 0, sbytes = 0, i;
+	/* prefix char pointer for msmall and mlarge */
+	const char *pp1, *pp2;
+	/* suffix char pointer for msmall and mlarge */
+	const char *ps1, *ps2;
+
+	/* reserved must >= 0 for the line boundary adjustment to work */
+	if (reserved < 0)
+		reserved = 0;
+
+	if (mf1->size < mf2->size) {
+		memcpy(&msmall, mf1, sizeof(mmfile_t));
+		memcpy(&mlarge, mf2, sizeof(mmfile_t));
+	} else {
+		memcpy(&msmall, mf2, sizeof(mmfile_t));
+		memcpy(&mlarge, mf1, sizeof(mmfile_t));
+	}
+
+	pp1 = msmall.ptr, pp2 = mlarge.ptr;
+	for (i = 0; i < msmall.size && *pp1 == *pp2; ++i) {
+		plines += (*pp1 == '\n');
+		pp1++, pp2++;
+	}
+
+	ps1 = msmall.ptr + msmall.size - 1, ps2 = mlarge.ptr + mlarge.size - 1;
+	while (ps1 > pp1 && *ps1 == *ps2) {
+		slines += (*ps1 == '\n');
+		ps1--, ps2--;
+	}
+
+	/* Retract common prefix and suffix boundaries for reserved lines */
+	if (plines <= reserved + 1) {
+		plines = 0;
+	} else {
+		i = 0;
+		while (i <= reserved) {
+			pp1--;
+			i += (*pp1 == '\n');
+		}
+		/* The new mmfile starts at the next char just after '\n' */
+		pbytes = pp1 - msmall.ptr + 1;
+		plines -= reserved;
+	}
+
+	if (slines <= reserved + 1) {
+		slines = 0;
+	} else {
+		/* Note: with compiler SIMD support (ex. -O3 -mavx2), this
+		 * might perform better than memchr. */
+		i = 0;
+		while (i <= reserved) {
+			ps1++;
+			i += (*ps1 == '\n');
+		}
+		/* The new mmfile includes this '\n' */
+		sbytes = msmall.ptr + msmall.size - ps1 - 1;
+		slines -= reserved;
+		if (msmall.ptr[msmall.size - 1] == '\n')
+			slines -= 1;
+	}
+
+	xe->nprefix = plines;
+	xe->nsuffix = slines;
+	out_mf1->ptr = mf1->ptr + pbytes;
+	out_mf1->size = mf1->size - pbytes - sbytes;
+	out_mf2->ptr = mf2->ptr + pbytes;
+	out_mf2->size = mf2->size - pbytes - sbytes;
+}
+
+
 static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_t const *xpp,
 			   xdlclassifier_t *cf, xdfile_t *xdf) {
 	unsigned int hbits;
@@ -254,10 +335,13 @@ static void xdl_free_ctx(xdfile_t *xdf) {
 	xdl_cha_free(&xdf->rcha);
 }
 
+/* Reserved lines for trimming, to leave room for shifting */
+#define TRIM_RESERVED_LINES 100
 
 int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		    xdfenv_t *xe) {
 	long enl1, enl2, sample;
+	mmfile_t tmf1, tmf2;
 	xdlclassifier_t cf;
 
 	memset(&cf, 0, sizeof(cf));
@@ -270,12 +354,14 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	if (xdl_init_classifier(&cf, enl1 + enl2 + 1, xpp->flags) < 0)
 		return -1;
 
-	if (xdl_prepare_ctx(1, mf1, enl1, xpp, &cf, &xe->xdf1) < 0) {
+	xdl_trim_files(mf1, mf2, TRIM_RESERVED_LINES, xe, &tmf1, &tmf2);
+
+	if (xdl_prepare_ctx(1, &tmf1, enl1, xpp, &cf, &xe->xdf1) < 0) {
 
 		xdl_free_classifier(&cf);
 		return -1;
 	}
-	if (xdl_prepare_ctx(2, mf2, enl2, xpp, &cf, &xe->xdf2) < 0) {
+	if (xdl_prepare_ctx(2, &tmf2, enl2, xpp, &cf, &xe->xdf2) < 0) {
 
 		xdl_free_ctx(&xe->xdf1);
 		xdl_free_classifier(&cf);

@@ -60,6 +60,10 @@ typedef struct s_xdfile {
 
 typedef struct s_xdfenv {
 	xdfile_t xdf1, xdf2;
+
+	/* number of lines for common prefix and suffix that are removed
+	 * from xdf1 and xdf2 as a preprocessing step */
+	long nprefix, nsuffix;
 } xdfenv_t;
 
 
