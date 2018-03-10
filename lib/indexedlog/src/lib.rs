@@ -13,4 +13,5 @@ extern crate tempdir;
 extern crate twox_hash;
 extern crate vlqencoding;
 
+pub mod base16;
 mod checksum_table;
