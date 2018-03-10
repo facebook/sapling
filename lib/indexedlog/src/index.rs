@@ -203,6 +203,25 @@ impl Link {
     }
 }
 
+impl Key {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        check_type(buf, offset, TYPE_KEY)?;
+        let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
+        let key = Vec::from(buf.get(offset + 1 + len..offset + 1 + len + key_len)
+            .ok_or(InvalidData)?);
+        Ok(Key { key })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+        writer.write_all(&[TYPE_KEY])?;
+        writer.write_vlq(self.key.len())?;
+        writer.write_all(&self.key)?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,6 +258,14 @@ mod tests {
             link.write_to(&mut buf, &HashMap::new()).expect("write");
             let link1 = Link::read_from(buf, 1).unwrap();
             link1 == link
+        }
+
+        fn test_key_format_roundtrip(key: Vec<u8>) -> bool {
+            let entry = Key { key };
+            let mut buf = vec![1];
+            entry.write_to(&mut buf, &HashMap::new()).expect("write");
+            let entry1 = Key::read_from(buf, 1).unwrap();
+            entry1 == entry
         }
     }
 }
