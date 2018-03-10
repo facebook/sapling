@@ -2,13 +2,14 @@
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use memmap::{Mmap, MmapOptions};
+use memmap::Mmap;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
 use std::hash::Hasher;
 use std::io::{self, Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use twox_hash::XxHash;
+use utils::mmap_readonly;
 
 /// `ChecksumTable` provides integrity check for an append-only file.
 ///
@@ -77,18 +78,6 @@ fn path_appendext(path: &Path, ext: &str) -> PathBuf {
     buf
 }
 
-fn mmap_readonly(file: &mut File) -> io::Result<(Mmap, u64)> {
-    let len = file.seek(SeekFrom::End(0))?;
-    let mmap = unsafe {
-        if len == 0 {
-            MmapOptions::new().len(1).map_anon()?.make_read_only()?
-        } else {
-            MmapOptions::new().len(len as usize).map(&file)?
-        }
-    };
-    Ok((mmap, len))
-}
-
 /// Default chunk size: 1MB
 const DEFAULT_CHUNK_SIZE: u64 = 1048576;
 
@@ -143,8 +132,8 @@ impl ChecksumTable {
     /// Return errors if the checksum table itself is broken.
     pub fn new<P: AsRef<Path>>(path: &P) -> io::Result<Self> {
         // Read the source of truth file as a mmap buffer
-        let mut file = OpenOptions::new().read(true).open(path)?;
-        let (mmap, len) = mmap_readonly(&mut file)?;
+        let file = OpenOptions::new().read(true).open(path)?;
+        let (mmap, len) = mmap_readonly(&file)?;
 
         // Read checksum file into memory
         let checksum_path = path_appendext(path.as_ref(), "sum");
@@ -207,7 +196,7 @@ impl ChecksumTable {
     /// If multiple processes can write to a same file, the caller is responsible for taking
     /// a lock which covers the appending and checksum updating.
     pub fn update(&mut self, chunk_size: Option<u64>) -> io::Result<()> {
-        let (mmap, len) = mmap_readonly(&mut self.file)?;
+        let (mmap, len) = mmap_readonly(&self.file)?;
         let chunk_size = chunk_size.unwrap_or(self.chunk_size);
 
         if chunk_size == 0 {
