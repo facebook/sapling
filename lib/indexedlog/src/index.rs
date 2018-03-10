@@ -161,6 +161,48 @@ impl Radix {
     }
 }
 
+impl Leaf {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        check_type(buf, offset, TYPE_LEAF)?;
+        let (key_offset, len) = buf.read_vlq_at(offset + 1)?;
+        let (link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        Ok(Leaf {
+            key_offset,
+            link_offset,
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+        writer.write_all(&[TYPE_LEAF])?;
+        writer.write_vlq(translate_offset(self.key_offset, offset_map))?;
+        writer.write_vlq(translate_offset(self.link_offset, offset_map))?;
+        Ok(())
+    }
+}
+
+impl Link {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        check_type(buf, offset, TYPE_LINK)?;
+        let (value, len) = buf.read_vlq_at(offset + 1)?;
+        let (next_link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        Ok(Link {
+            value,
+            next_link_offset,
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+        writer.write_all(&[TYPE_LINK])?;
+        writer.write_vlq(self.value)?;
+        writer.write_vlq(translate_offset(self.next_link_offset, offset_map))?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,6 +220,25 @@ mod tests {
             radix.write_to(&mut buf, &HashMap::new()).expect("write");
             let radix1 = Radix::read_from(buf, 1).unwrap();
             radix1 == radix
+        }
+
+        fn test_leaf_format_roundtrip(key_offset: u64, link_offset: u64) -> bool {
+            let key_offset = key_offset % DIRTY_OFFSET;
+            let link_offset = link_offset % DIRTY_OFFSET;
+            let leaf = Leaf { key_offset, link_offset };
+            let mut buf = vec![1];
+            leaf.write_to(&mut buf, &HashMap::new()).expect("write");
+            let leaf1 = Leaf::read_from(buf, 1).unwrap();
+            leaf1 == leaf
+        }
+
+        fn test_link_format_roundtrip(value: u64, next_link_offset: u64) -> bool {
+            let next_link_offset = next_link_offset % DIRTY_OFFSET;
+            let link = Link { value, next_link_offset };
+            let mut buf = vec![1];
+            link.write_to(&mut buf, &HashMap::new()).expect("write");
+            let link1 = Link::read_from(buf, 1).unwrap();
+            link1 == link
         }
     }
 }
