@@ -39,3 +39,33 @@
 //!   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
 //!   (16-bit) bitmask but that hurts lookup performance.
 
+
+//// Structures related to file format
+
+#[derive(Clone, PartialEq, Debug)]
+struct Radix {
+    pub offsets: [u64; 16],
+    pub link_offset: u64,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Leaf {
+    pub key_offset: u64,
+    pub link_offset: u64,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Key {
+    pub key: Vec<u8>, // base256
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Link {
+    pub value: u64,
+    pub next_link_offset: u64,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+struct Root {
+    pub radix_offset: u64,
+}
