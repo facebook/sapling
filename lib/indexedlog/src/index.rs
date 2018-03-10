@@ -39,6 +39,10 @@
 //!   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
 //!   (16-bit) bitmask but that hurts lookup performance.
 
+use std::collections::HashMap;
+use std::io::{self, Write};
+use std::io::ErrorKind::InvalidData;
+use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 //// Structures related to file format
 
@@ -68,4 +72,112 @@ struct Link {
 #[derive(Clone, PartialEq, Debug)]
 struct Root {
     pub radix_offset: u64,
+}
+
+//// Serialization
+
+// Offsets that are >= DIRTY_OFFSET refer to in-memory entries that haven't been
+// written to disk. Offsets < DIRTY_OFFSET are on-disk offsets.
+const DIRTY_OFFSET: u64 = 1u64 << 63;
+
+const TYPE_HEAD: u8 = 0;
+const TYPE_ROOT: u8 = 1;
+const TYPE_RADIX: u8 = 2;
+const TYPE_LEAF: u8 = 3;
+const TYPE_LINK: u8 = 4;
+const TYPE_KEY: u8 = 5;
+
+/// Convert a possibly "dirty" offset to a non-dirty offset.
+fn translate_offset(v: u64, offset_map: &HashMap<u64, u64>) -> u64 {
+    if v >= DIRTY_OFFSET {
+        // Should always find a value. Otherwise it's a programming error about write order.
+        *offset_map.get(&v).unwrap()
+    } else {
+        v
+    }
+}
+
+/// Check type for an on-disk entry
+fn check_type(buf: &[u8], offset: usize, expected: u8) -> io::Result<()> {
+    let typeint = *(buf.get(offset).ok_or(InvalidData)?);
+    if typeint != expected {
+        Err(InvalidData.into())
+    } else {
+        Ok(())
+    }
+}
+
+impl Radix {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        let mut pos = 0;
+
+        check_type(buf, offset, TYPE_RADIX)?;
+        pos += 1;
+
+        let jumptable = buf.get(offset + pos..offset + pos + 16).ok_or(InvalidData)?;
+        pos += 16;
+
+        let (link_offset, len) = buf.read_vlq_at(offset + pos)?;
+        pos += len;
+
+        let mut offsets = [0; 16];
+        for i in 0..16 {
+            if jumptable[i] != 0 {
+                if jumptable[i] as usize != pos {
+                    return Err(InvalidData.into());
+                }
+                let (v, len) = buf.read_vlq_at(offset + pos)?;
+                offsets[i] = v;
+                pos += len;
+            }
+        }
+
+        Ok(Radix {
+            offsets,
+            link_offset,
+        })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+        // Approximate size good enough for an average radix entry
+        let mut buf = Vec::with_capacity(1 + 16 + 5 * 17);
+
+        buf.write_all(&[TYPE_RADIX])?;
+        buf.write_all(&[0u8; 16])?;
+        buf.write_vlq(translate_offset(self.link_offset, offset_map))?;
+
+        for i in 0..16 {
+            let v = self.offsets[i];
+            if v != 0 {
+                let v = translate_offset(v, offset_map);
+                buf[1 + i] = buf.len() as u8; // update jump table
+                buf.write_vlq(v)?;
+            }
+        }
+
+        writer.write_all(&buf)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    quickcheck! {
+        fn test_radix_format_roundtrip(v: (u64, u64, u64, u64), link_offset: u64) -> bool {
+            let mut offsets = [0; 16];
+            offsets[(v.1 + v.2) as usize % 16] = v.0 % DIRTY_OFFSET;
+            offsets[(v.0 + v.3) as usize % 16] = v.1 % DIRTY_OFFSET;
+            offsets[(v.1 + v.3) as usize % 16] = v.2 % DIRTY_OFFSET;
+            offsets[(v.0 + v.2) as usize % 16] = v.3 % DIRTY_OFFSET;
+
+            let radix = Radix { offsets, link_offset };
+            let mut buf = vec![1];
+            radix.write_to(&mut buf, &HashMap::new()).expect("write");
+            let radix1 = Radix::read_from(buf, 1).unwrap();
+            radix1 == radix
+        }
+    }
 }
