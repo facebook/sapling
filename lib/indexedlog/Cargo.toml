@@ -1,0 +1,22 @@
+[package]
+name = "indexedlog"
+version = "0.1.0"
+
+[dependencies]
+atomicwrites = "*"
+byteorder = "*"
+failure = "*"
+fs2 = "*"
+memmap = "*"
+twox-hash = "*"
+vlqencoding = { path = "../vlqencoding" }
+
+[dev-dependencies]
+criterion = "*"
+quickcheck = "*"
+rand = "*"
+tempdir = "*"
+
+[[bench]]
+name = "bench"
+harness = false
