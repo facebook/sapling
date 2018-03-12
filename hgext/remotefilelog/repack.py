@@ -143,15 +143,6 @@ def _getmanifeststores(repo):
     localpackpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base,
                                             constants.TREEPACK_CATEGORY)
 
-    # The native stores don't support repacking yet, so fall back to the
-    # python versions.
-    if repo.ui.configbool("treemanifest", "usecunionstore"):
-        usecdatapack = repo.ui.configbool("remotefilelog", "fastdatapack")
-        shareddatastores = [datapack.datapackstore(repo.ui, sharedpackpath,
-                                      usecdatapack=usecdatapack)]
-        localdatastores = [datapack.datapackstore(repo.ui, localpackpath,
-                                     usecdatapack=usecdatapack)]
-
     return ((localpackpath, localdatastores, localhistorystores),
             (sharedpackpath, shareddatastores, sharedhistorystores))
 

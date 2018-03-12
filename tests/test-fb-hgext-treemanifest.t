@@ -25,9 +25,6 @@
   > [fastmanifest]
   > usetree=True
   > usecache=False
-  > 
-  > [treemanifest]
-  > usecunionstore=True
   > EOF
 
 Test autocreatetrees

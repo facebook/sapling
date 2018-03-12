@@ -23,12 +23,6 @@ converted to trees during pull by specifying `treemanifest.allowedtreeroots`.
     [treemanifest]
     allowedtreeroots = master,stable
 
-Enabling `treemanifest.usecunionstore` will cause the extension to use the
-native implementation of the datapack stores.
-
-    [treemanifest]
-    usecunionstore = True
-
 Disabling `treemanifest.demanddownload` will prevent the extension from
 automatically downloading trees from the server when they don't exist locally.
 
@@ -411,25 +405,19 @@ def setuptreestores(repo, mfl):
     mutablestore = mutablemanifeststore(mfl)
 
     # Data store
-    if ui.configbool('treemanifest', 'usecunionstore'):
-        datastore = cstore.datapackstore(packpath)
-        localdatastore = cstore.datapackstore(localpackpath)
-        # TODO: can't use remotedatastore with cunionstore yet
-        # TODO make reportmetrics work with cstore
-        mfl.datastore = cstore.uniondatapackstore([localdatastore, datastore])
-    else:
-        datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
-        localdatastore = datapackstore(ui, localpackpath,
-                                       usecdatapack=usecdatapack)
-        datastores = [datastore, localdatastore, mutablestore]
-        if demanddownload:
-            datastores.append(remotestore)
+    # TODO: support cstore.uniondatapackstore here
+    datastore = datapackstore(ui, packpath, usecdatapack=usecdatapack)
+    localdatastore = datapackstore(ui, localpackpath,
+                                   usecdatapack=usecdatapack)
+    datastores = [datastore, localdatastore, mutablestore]
+    if demanddownload:
+        datastores.append(remotestore)
 
-        if demandgenerate:
-            datastores.append(ondemandstore)
+    if demandgenerate:
+        datastores.append(ondemandstore)
 
-        mfl.datastore = unioncontentstore(*datastores,
-                                          writestore=localdatastore)
+    mfl.datastore = unioncontentstore(*datastores,
+                                      writestore=localdatastore)
 
     mfl.shareddatastores = [datastore]
     mfl.localdatastores = [localdatastore]
