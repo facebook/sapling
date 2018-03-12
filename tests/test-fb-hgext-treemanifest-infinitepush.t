@@ -179,7 +179,10 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   new changesets 02c12aef64ff
   (run 'hg update' to get a working copy)
   $ hg log -r 02c12aef64ff  --stat
-  abort: "unable to find the following nodes locally or on the server: ('', 604088751312b68d6f0aeb6467c3a95d662737e0)"
+  remote: abort: data/subdir/a.i@6d1beba3c415: no match found!
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  abort: error downloading file contents:
+  'connection closed early'
   [255]
 
 Pull a treeonly scratch branch into a treeonly client (non-rebundling)

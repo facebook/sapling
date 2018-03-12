@@ -87,7 +87,7 @@ class shallowcg1packer(changegroup.cg1packer):
         return True
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev,
-                          mfs, fnodes, *args, **kwargs):
+                          mfs, fnodes, source):
         """
         - `commonrevs` is the set of known commits on both sides
         - `clrevorder` is a mapping from cl node to rev number, used for
@@ -120,7 +120,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 fastpathlinkrev,
                 mfs,
                 fnodes,
-                *args, **kwargs)
+                source)
             for chunk in chunks:
                 yield chunk
         else:
@@ -473,20 +473,41 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
     return len(revisiondatas), newfiles
 
-def cansendtrees(repo, nodes):
+def cansendtrees(repo, nodes, source=None):
+    """Sending trees has the following rules:
+
+    Clients:
+    - If sendtrees is False, send no trees
+    - else send draft trees 
+
+    Server:
+    - Do not send trees unless it's an infinitepush.
+
+    The function also does a prefetch on clients, so all the necessary trees are
+    bulk downloaded.
+    """
+
     sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
     treeonly = repo.ui.configbool('treemanifest', 'treeonly')
 
     result = AllTrees
     prefetch = AllTrees
 
+    if repo.svfs.treemanifestserver:
+        if source == 'infinitepushpull':
+            result = AllTrees
+        else:
+            result = NoTrees
+        return result
+
+    # Else, is a client
     if not sendtrees:
         result = NoTrees
         # If we're not in treeonly mode, we will consult the manifests when
         # getting ready to send the flat manifests. This will cause tree
         # manifest lookups, so let's go ahead and bulk prefetch them.
         prefetch = AllTrees
-    elif not repo.svfs.treemanifestserver:
+    else:
         # If we are a client, don't send public commits since we probably
         # don't have the trees and since the destination client will be able
         # to fetch them on demand anyway. Servers should send them if

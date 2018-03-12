@@ -2022,6 +2022,11 @@ def _handlebundle2part(orig, self, bundle, part):
         mfl.historystore = unionmetadatastore(
             tempstore,
             mfl.historystore)
+
+        if isinstance(mfl, hybridmanifestlog):
+            tmfl = mfl.treemanifestlog
+            tmfl.datastore = mfl.datastore
+            tmfl.historystore = mfl.historystore
     else:
         orig(self, bundle, part)
 

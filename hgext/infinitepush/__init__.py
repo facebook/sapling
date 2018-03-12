@@ -529,10 +529,18 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
         pass
     else:
         missing = outgoing.missing
-        if remotefilelog.shallowbundle.cansendtrees(bundlerepo, missing):
-            treepart = treemod.createtreepackpart(bundlerepo, outgoing,
-                                                  treemod.TREEGROUP_PARTTYPE2)
-            parts.append(treepart)
+        if remotefilelog.shallowbundle.cansendtrees(bundlerepo, missing,
+                                                    source='infinitepushpull'):
+
+            # Some older bundles may not have tree's, so don't produce trees if
+            # we don't have some of them.
+            # TODO: automatically convert flat's to trees
+            mfnodes = [('', bundlerepo[n].manifestnode()) for n in missing]
+            missingmf = bundlerepo.manifestlog.datastore.getmissing(mfnodes)
+            if not missingmf:
+                treepart = treemod.createtreepackpart(bundlerepo, outgoing,
+                                                      treemod.TREEGROUP_PARTTYPE2)
+                parts.append(treepart)
 
     return parts
 
