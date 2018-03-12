@@ -610,15 +610,16 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
         self._changelog = repo.unfiltered().changelog
 
         self._opener = opener
-        self._revlog = manifest.manifestrevlog(opener,
-                                               indexfile='00manifesttree.i',
-                                               treemanifest=True)
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
         self._dirmancache[''] = util.lrucachedict(cachesize)
 
         self.cachesize = cachesize
+
+    @util.propertycache
+    def _revlog(self):
+        return self.revlogstore._revlog('')
 
 class treeonlymanifestlog(basetreemanifestlog):
     def __init__(self, opener, repo):
