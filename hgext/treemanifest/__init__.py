@@ -368,6 +368,7 @@ def setuptreestores(repo, mfl):
         # Data store
         datastore = cstore.datapackstore(packpath)
         revlogstore = manifestrevlogstore(repo)
+        mfl.revlogstore = revlogstore
         if ui.configbool("treemanifest", "cacheserverstore"):
             maxcachesize = ui.configint('treemanifest', 'servermaxcachesize')
             evictionrate = ui.configint(
@@ -574,6 +575,25 @@ class basetreemanifestlog(object):
     def __nonzero__(self):
         return True
 
+    def __getitem__(self, node):
+        return self.get('', node)
+
+    def get(self, dir, node, verify=True):
+        if dir != '':
+            raise RuntimeError("native tree manifestlog doesn't support "
+                               "subdir reads: (%s, %s)" % (dir, hex(node)))
+        if node == nullid:
+            return treemanifestctx(self, dir, node)
+
+        store = self.datastore
+
+        try:
+            store.get(dir, node)
+        except KeyError:
+            raise shallowutil.MissingNodesError([(dir, node)])
+
+        return treemanifestctx(self, dir, node)
+
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
     def __init__(self, opener, repo, treemanifest=False):
         basetreemanifestlog.__init__(self)
@@ -606,25 +626,6 @@ class treeonlymanifestlog(basetreemanifestlog):
         self._opener = opener
         self.ui = repo.ui
         self._changelog = repo.unfiltered().changelog
-
-    def __getitem__(self, node):
-        return self.get('', node)
-
-    def get(self, dir, node, verify=True):
-        if dir != '':
-            raise RuntimeError("native tree manifestlog doesn't support "
-                               "subdir reads: (%s, %s)" % (dir, hex(node)))
-        if node == nullid:
-            return treemanifestctx(self, dir, node)
-
-        store = self.datastore
-
-        try:
-            store.get(dir, node)
-        except KeyError:
-            raise shallowutil.MissingNodesError([(dir, node)])
-
-        return treemanifestctx(self, dir, node)
 
     def clearcaches(self):
         pass
@@ -915,11 +916,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
                               (hex(p1node), hex(p2node)))
     else:
         parentflat = manifest.manifestdict()
-
-        if torevlog:
-            parenttree = manifest.treemanifest()
-        else:
-            parenttree = cstore.treemanifest(tmfl.datastore)
+        parenttree = cstore.treemanifest(tmfl.datastore)
 
     newtree, added, removed = _getnewtree(newflat, parenttree, parentflat)
 
@@ -955,21 +952,29 @@ def _getnewtree(newflat, parenttree, parentflat):
     return (newtree, added, removed)
 
 def _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed):
-    try:
-        p1node, p2node = mfctx.parents
-        treerevlog = tmfl._revlog
-        oldaddrevision = treerevlog.addrevision
-        def addusingnode(*args, **kwargs):
-            newkwargs = kwargs.copy()
-            newkwargs['node'] = mfctx.node()
-            return oldaddrevision(*args, **newkwargs)
-        treerevlog.addrevision = addusingnode
-        def readtree(dir, node):
-            return tmfl.get(dir, node).read()
-        treerevlog.add(newtree, tr, linkrev, p1node, p2node,
-                       added, removed, readtree=readtree)
-    finally:
-        del treerevlog.__dict__['addrevision']
+    overridenode = mfctx.node()
+    p1node, p2node = mfctx.parents
+
+    p1tree = tmfl[p1node].read()
+    if util.safehasattr(p1tree, '_treemanifest'):
+        # Detect hybrid manifests and unwrap them
+        p1tree = p1tree._treemanifest()
+
+    revlogstore = tmfl.revlogstore
+    node = overridenode
+    for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree):
+        revlog = revlogstore._revlog(nname)
+        override = None
+        if nname == '':
+            override = overridenode
+        resultnode = revlog.addrevision(ntext, tr, linkrev, np1, np2,
+                                        node=override)
+        if node is None and nname == '':
+            node = resultnode
+        if (overridenode is None or nname != '') and resultnode != nnode:
+            raise error.ProgrammingError("tree node mismatch - "
+                "Expected=%s ; Actual=%s" % (hex(nnode), hex(resultnode)))
+    return node
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if not treeenabled(repo.ui):
