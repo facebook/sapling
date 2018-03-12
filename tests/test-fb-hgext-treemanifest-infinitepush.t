@@ -175,15 +175,19 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
+  added 1 changesets with 1 changes to 1 files
   new changesets 02c12aef64ff
   (run 'hg update' to get a working copy)
   $ hg log -r 02c12aef64ff  --stat
-  remote: abort: data/subdir/a.i@6d1beba3c415: no match found!
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
-  abort: error downloading file contents:
-  'connection closed early'
-  [255]
+  changeset:   1:02c12aef64ff
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add subdir/a
+  
+   subdir/a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
 Pull a treeonly scratch branch into a treeonly client (non-rebundling)
 

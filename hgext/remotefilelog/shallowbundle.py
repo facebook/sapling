@@ -125,26 +125,39 @@ class shallowcg1packer(changegroup.cg1packer):
                 yield chunk
         else:
             # If not using the fast path, we need to discover what files to send
-            if not fastpathlinkrev and sendtrees != NoTrees:
-                mflog = repo.manifestlog
-                for mfnode, clnode in mfs.iteritems():
-                    if sendtrees == LocalTrees:
-                        # Don't inspect public commits, since we won't be
-                        # sending them.
-                        ctx = repo[clnode]
-                        if ctx.phase() == phases.public:
-                            continue
+            if not fastpathlinkrev:
+                # If we're sending files, we need to process the manifests
+                filestosend = self.shouldaddfilegroups(source)
+                if filestosend is not NoFiles:
+                    mflog = repo.manifestlog
+                    for mfnode, clnode in mfs.iteritems():
+                        if sendtrees == LocalTrees:
+                            # Don't inspect public commits, since we won't be
+                            # sending them.
+                            ctx = repo[clnode]
+                            if ctx.phase() == phases.public:
+                                continue
 
-                    mfctx = mflog[mfnode]
-                    p1node = mfctx.parents[0]
-                    p1ctx = mflog[p1node]
-                    diff = p1ctx.read().diff(mfctx.read()).iteritems()
-                    for filename, ((anode, aflag), (bnode, bflag)) in diff:
-                        if bnode is not None:
-                            fclnodes = fnodes.setdefault(filename, {})
-                            fclnode = fclnodes.setdefault(bnode, clnode)
-                            if clrevorder[clnode] < clrevorder[fclnode]:
-                                fclnodes[bnode] = clnode
+                        try:
+                            mfctx = mflog[mfnode]
+                            p1node = mfctx.parents[0]
+                            p1ctx = mflog[p1node]
+                        except LookupError:
+                            if not repo.svfs.treemanifestserver:
+                                raise
+                            # If we can't find the flat version, look for trees
+                            tmfl = mflog.treemanifestlog
+                            mfctx = tmfl[mfnode]
+                            p1node = tmfl[mfnode].parents[0]
+                            p1ctx = tmfl[p1node]
+
+                        diff = p1ctx.read().diff(mfctx.read()).iteritems()
+                        for filename, ((anode, aflag), (bnode, bflag)) in diff:
+                            if bnode is not None:
+                                fclnodes = fnodes.setdefault(filename, {})
+                                fclnode = fclnodes.setdefault(bnode, clnode)
+                                if clrevorder[clnode] < clrevorder[fclnode]:
+                                    fclnodes[bnode] = clnode
 
             yield self.close()
 
