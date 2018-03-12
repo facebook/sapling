@@ -1338,6 +1338,7 @@ class manifestlog(object):
             cachesize = opts.get('manifestcachesize', cachesize)
         self._treeinmem = usetreemanifest
 
+        self._opener = opener
         self._revlog = repo._constructmanifest()
         self._changelog = repo.unfiltered().changelog
 

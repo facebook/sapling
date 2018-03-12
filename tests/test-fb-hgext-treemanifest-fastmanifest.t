@@ -49,7 +49,7 @@
   $ hg pull -q
   read flat manifest
     File "*fastmanifest/implementation.py", line *, in loadflat (glob)
-      data = self._revlog.revision(self._node)
+      data = self.revlog.revision(self._node)
   
 
 # Test checking out from a fastmanifest to a treemanifest uses the treemanifest
@@ -63,7 +63,7 @@
   $ hg debugcachemanifest -r .
   read flat manifest
     File "*fastmanifest/implementation.py", line *, in loadflat (glob)
-      data = self._revlog.revision(self._node)
+      data = self.revlog.revision(self._node)
   
   $ hg diff -r tip -r 1 --stat
    c |  1 -

@@ -811,10 +811,17 @@ class hybridmanifestctx(object):
     def __init__(self, ui, manifestlog, revlog, node):
         self._ui = ui
         self._manifestlog = manifestlog
-        self._opener = revlog.opener
+        self._opener = manifestlog._opener
         self._revlog = revlog
         self._node = node
         self._hybridmanifest = None
+
+    @propertycache
+    def revlog(self):
+        if self._revlog is None:
+            raise error.ProgrammingError("cannot access flat manifest revlog "
+                                         "for treeonly repository")
+        return self._revlog
 
     def copy(self):
         memmf = manifest.memmanifestctx(self._manifestlog)
@@ -830,7 +837,7 @@ class hybridmanifestctx(object):
                 return p1, p2
             except KeyError:
                 pass
-        return self._revlog.parents(self._node)
+        return self.revlog.parents(self._node)
 
     def read(self):
         if self._hybridmanifest is None:
@@ -838,9 +845,9 @@ class hybridmanifestctx(object):
                 # This should eventually be made lazy loaded, so consumers can
                 # access the node/p1/linkrev data without having to parse the
                 # whole manifest.
-                data = self._revlog.revision(self._node)
+                data = self.revlog.revision(self._node)
                 arraytext = bytearray(data)
-                self._revlog._fulltextcache[self._node] = arraytext
+                self.revlog._fulltextcache[self._node] = arraytext
                 return manifest.manifestdict(data)
 
             self._hybridmanifest = hybridmanifest(
@@ -865,7 +872,7 @@ class hybridmanifestctx(object):
                         result.setflag(path, newf)
             return mf._converttohybridmanifest(result)
 
-        rl = self._revlog
+        rl = self.revlog
         if rl._usemanifestv2:
             # Need to perform a slow delta
             r0 = revlog.deltaparent(revlog.rev(self._node))
