@@ -135,11 +135,16 @@ Heads output order is unpredictable, let's sort them by commit hash
   I* compaction finished (glob)
   $ edenserver --config-file $TESTTMP/config
 
-Temporary hack to make sure server is ready
-  $ sleep 1
-
 Curl and debugdata output should match
   $ alias curl="curl --cert $TESTDIR/edenservertest.crt --key $TESTDIR/edenservertest.key --cacert $TESTDIR/edenservertest.crt"
+
+Wait at most 4 secs until server is ready
+  $ for i in `seq 1 40`; do
+  > curl https://localhost:$SOCKET > /dev/null 2>&1 && break
+  > sleep 0.1
+  > done
+
+Send requests to the server
   $ curl https://localhost:$SOCKET/repo/cs/3903775176ed42b1458a6281db4a0ccf4d9f287a/roottreemanifestid 2> /dev/null
   8515d4bfda768e04af4c13a69a72e28c7effbea7 (no-eol)
   $ cd repo
