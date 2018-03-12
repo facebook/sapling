@@ -1533,6 +1533,7 @@ class ui(object):
     @util.propertycache
     def _progbar(self):
         """setup the progbar singleton to the ui object"""
+        self._progdebug = self.configbool('progress', 'debug')
         if (self.quiet or self.debugflag
                 or self.configbool('progress', 'disable')
                 or not progress.shouldprint(self)):
@@ -1564,7 +1565,7 @@ class ui(object):
         if self._progbar is not None:
             self._progbar.progress(topic, pos, item=item, unit=unit,
                                    total=total)
-        if pos is None or not self.configbool('progress', 'debug'):
+        if pos is None or not self._progdebug:
             return
 
         if unit:
