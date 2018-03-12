@@ -1061,7 +1061,7 @@ class manifestfactory(object):
                     overridenode = node
                     overridep1node = p1
 
-                node = tmfl.add(self.ui, newtree, tree,
+                node = tmfl.add(self.ui, newtree, p1, p2,
                                 overridenode=overridenode,
                                 overridep1node=overridep1node)
 

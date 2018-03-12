@@ -519,7 +519,8 @@ class basetreemanifestlog(object):
         self._mutabledatapack = None
         self._mutablehistorypack = None
 
-    def add(self, ui, newtree, p1tree, overridenode=None, overridep1node=None):
+    def add(self, ui, newtree, p1node, p2node, overridenode=None,
+            overridep1node=None):
         """Writes the given tree into the manifestlog. If `overridenode` is
         specified, the tree root is written with that node instead of its actual
         node. If `overridep1node` is specified, the the p1 node for the root
@@ -532,6 +533,10 @@ class basetreemanifestlog(object):
             self._mutabledatapack = mutabledatapack(ui, packpath)
             self._mutablehistorypack = mutablehistorypack(ui, packpath)
 
+        p1tree = self[p1node].read()
+        if util.safehasattr(p1tree, '_treemanifest'):
+            # Detect hybrid manifests and unwrap them
+            p1tree = p1tree._treemanifest()
         newtreeiter = newtree.finalize(p1tree)
 
         dpack = self._mutabledatapack
@@ -781,9 +786,8 @@ class memtreemanifestctx(object):
         mfl = self._manifestlog
 
         newtree = self._treemanifest
-        p1tree = mfl[p1].read()
 
-        node = mfl.add(mfl.ui, newtree, p1tree)
+        node = mfl.add(mfl.ui, newtree, p1, p2)
         return node
 
 def serverreposetup(repo):
@@ -941,7 +945,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         assert linkrev != -1, "attempting to create manifest with null linkrev"
         _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
     else:
-        tmfl.add(mfl.ui, newtree, parenttree,
+        tmfl.add(mfl.ui, newtree, p1node, p2node,
                  overridenode=mfctx.node(),
                  overridep1node=p1node)
 
@@ -974,8 +978,8 @@ def _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed):
         treerevlog.addrevision = addusingnode
         def readtree(dir, node):
             return tmfl.get(dir, node).read()
-        treerevlog.add(newtree, tr, linkrev, p1node, p2node, added, removed,
-                       readtree=readtree)
+        treerevlog.add(newtree, tr, linkrev, p1node, p2node,
+                       added, removed, readtree=readtree)
     finally:
         del treerevlog.__dict__['addrevision']
 
@@ -1066,7 +1070,7 @@ def _convertdeltatotree(repo, lrucache, node, p1, p2, linknode, deltabase,
     newtree = _getnewtree(newflat, parenttree, parentflat)[0]
 
     # Save new tree
-    mfl.add(mfl.ui, newtree, parenttree, overridenode=node, overridep1node=p1)
+    mfl.add(mfl.ui, newtree, p1, p2, overridenode=node, overridep1node=p1)
 
 class InterceptedMutableDataPack(object):
     """This classes intercepts data pack writes and replaces the node for the
