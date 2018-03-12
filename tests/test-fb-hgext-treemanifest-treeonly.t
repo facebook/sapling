@@ -467,6 +467,117 @@ Switch back to hybrid mode
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cd ..
 
+Test converting server to treeonly
+  $ cd master
+  $ cp .hg/hgrc .hg/hgrc.bak
+  $ cat >> .hg/hgrc <<EOF
+  > [treemanifest]
+  > treeonly=True
+  > EOF
+- Move the flat manifest away so we guarantee its not read
+  $ mv .hg/store/00manifest.i .hg/store/00manifest.i_old
+  $ hg log -G -T "{desc}\n" --stat
+  o  add y
+  |   y |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  @  modify subdir/x
+  |   subdir/x |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  add subdir/x
+      subdir/x |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg up -q tip
+  $ echo >> subdir/x
+  $ hg commit -m 'modify subdir/x again'
+  $ hg log -r tip -T "{desc}\n" --stat
+  modify subdir/x again
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+Test pulling to a flat client from a treeonly server
+  $ cd ../client
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  abort: non-treemanifest clients cannot pull from treemanifest-only servers
+  [255]
+
+Test pushing flat manifests to a treeonly server
+- Update to a commit with a flat manifest
+  $ hg up -q 2937cde31
+  2 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ echo unpushable >> subdir/x
+  $ hg commit -m "unpushable commit"
+  $ hg push -r tip --to master --config treemanifest.sendtrees=False
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: "unable to find the following nodes locally or on the server: ('', 89bffa38cf192d8f8a234bfb14dd22d0c65064f0)"
+  abort: push failed on remote
+  [255]
+
+Test pulling to a treeonly client from a treeonly server
+  $ cd ../client2
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files (+1 heads)
+  new changesets 4f84204095e0:5b1ec8639460
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -r tip -T '{desc}\n' --stat
+  1 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  modify subdir/x again
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+
+Test pushing from a treeonly client to a treeonly server
+  $ hg config treemanifest
+  treemanifest.sendtrees=True
+  treemanifest.demanddownload=True
+  treemanifest.treeonly=True
+  $ echo 'pushable' >> subdir/x
+  $ hg commit -Aqm 'pushable treeonly commit'
+  $ hg push --to master
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: pushing 4 changesets:
+  remote:     7ec3c5c54734  add y
+  remote:     5b483416c8aa  hybrid flat+tree commit
+  remote:     2f8e443c6ba8  modify y
+  remote:     11c4fc95a874  pushable treeonly commit
+  $ hg -R ../master log -l 4 -T '{desc}\n' -G --stat
+  o  pushable treeonly commit
+  |   subdir/x |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  modify y
+  |   y |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  hybrid flat+tree commit
+  |   subdir/x |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  add y
+  |   y |  1 +
+  ~   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+Reset the server back to hybrid mode
+  $ cd ../master
+- Strip the pushed commits + the recently made commit
+  $ hg -R ../master strip -r '.:'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-3e715521-backup.hg
+  $ mv .hg/hgrc.bak .hg/hgrc
+
 Test creating a treeonly repo from scratch
   $ hg init treeonlyrepo
   $ cd treeonlyrepo

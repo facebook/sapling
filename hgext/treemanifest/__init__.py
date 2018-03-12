@@ -823,6 +823,8 @@ class memtreemanifestctx(object):
 def _addservercaps(repo, caps):
     caps = set(caps)
     caps.add('gettreepack')
+    if repo.ui.configbool('treemanifest', 'treeonly'):
+        caps.add('treeonly')
     return caps
 
 def serverreposetup(repo):
@@ -841,7 +843,10 @@ def getmanifestlog(orig, self):
         return orig(self)
 
     if self.ui.configbool('treemanifest', 'treeonly'):
-        mfl = treeonlymanifestlog(self.svfs, self)
+        if self.ui.configbool('treemanifest', 'server'):
+            mfl = treemanifestlog(self.svfs, self)
+        else:
+            mfl = treeonlymanifestlog(self.svfs, self)
         setuptreestores(self, mfl)
     else:
         mfl = hybridmanifestlog(self.svfs, self)
@@ -1016,7 +1021,12 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, prog, numchanges):
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
-        _convertdeltastotrees(repo, self.deltaiter())
+        if repo.svfs.treemanifestserver:
+            for chunkdata in self.deltaiter():
+                raise error.Abort(_("treeonly server cannot receive flat "
+                                    "manifests"))
+        else:
+            _convertdeltastotrees(repo, self.deltaiter())
         return
 
     mfrevlog = repo.manifestlog._revlog
