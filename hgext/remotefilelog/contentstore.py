@@ -8,7 +8,7 @@ from . import (
     shallowutil,
 )
 
-from mercurial import mdiff, revlog, util
+from mercurial import manifest, mdiff, revlog, util
 from mercurial.node import hex, nullid
 
 try:
@@ -326,10 +326,11 @@ class manifestrevlogstore(object):
     def _revlog(self, name):
         rl = self._revlogs.get(name)
         if rl is None:
-            revlogname = '00manifesttree.i'
-            if name != '':
-                revlogname = 'meta/%s/00manifest.i' % name
-            rl = revlog.revlog(self._svfs, revlogname)
+            indexfile = None
+            if name == '':
+                indexfile = '00manifesttree.i'
+            rl = manifest.manifestrevlog(self._svfs, dir=name,
+                    indexfile=indexfile, treemanifest=True)
             self._revlogs[name] = rl
         return rl
 
