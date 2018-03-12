@@ -491,7 +491,7 @@ def cansendtrees(repo, nodes, source=None):
 
     Clients:
     - If sendtrees is False, send no trees
-    - else send draft trees 
+    - else send draft trees
 
     Server:
     - Do not send trees unless it's an infinitepush.

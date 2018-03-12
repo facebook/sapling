@@ -539,7 +539,7 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
             missingmf = bundlerepo.manifestlog.datastore.getmissing(mfnodes)
             if not missingmf:
                 treepart = treemod.createtreepackpart(bundlerepo, outgoing,
-                                                      treemod.TREEGROUP_PARTTYPE2)
+                                treemod.TREEGROUP_PARTTYPE2)
                 parts.append(treepart)
 
     return parts
