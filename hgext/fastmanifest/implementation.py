@@ -1070,7 +1070,8 @@ class manifestfactory(object):
 
                 node = tmfl.add(self.ui, newtree, p1, p2,
                                 overridenode=overridenode,
-                                overridep1node=overridep1node)
+                                overridep1node=overridep1node,
+                                tr=transaction, linkrev=link)
 
                 treemanifestcache.getinstance(opener,
                                               mfl.ui)[node] = newtree

@@ -509,12 +509,22 @@ class basetreemanifestlog(object):
         self._mutablehistorypack = None
 
     def add(self, ui, newtree, p1node, p2node, overridenode=None,
-            overridep1node=None):
+            overridep1node=None, tr=None, linkrev=None):
         """Writes the given tree into the manifestlog. If `overridenode` is
         specified, the tree root is written with that node instead of its actual
         node. If `overridep1node` is specified, the the p1 node for the root
         tree is also overriden.
         """
+        if ui.configbool('treemanifest', 'server'):
+            return self._addtorevlog(ui, newtree, p1node, p2node,
+                    overridenode=overridenode, overridep1node=overridep1node,
+                    tr=tr, linkrev=linkrev)
+        else:
+            return self._addtopack(ui, newtree, p1node, p2node,
+                    overridenode=overridenode, overridep1node=overridep1node)
+
+    def _addtopack(self, ui, newtree, p1node, p2node, overridenode=None,
+                   overridep1node=None):
         if self._mutabledatapack is None:
             packpath = shallowutil.getlocalpackpath(
                     self._opener.vfs.base,
@@ -545,6 +555,37 @@ class basetreemanifestlog(object):
             if node is None and nname == "":
                 node = nnode
 
+        return node
+
+    def _addtorevlog(self, ui, newtree, p1node, p2node, overridenode=None,
+                     overridep1node=None, tr=None, linkrev=None):
+        if tr is None:
+            raise error.ProgrammingError("missing transaction")
+        if linkrev is None:
+            raise error.ProgrammingError("missing linkrev")
+        if overridep1node is not None and p1node != overridep1node:
+            raise error.ProgrammingError("overridep1node is not supported for "
+                                         "revlogs")
+
+        p1tree = self[p1node].read()
+        if util.safehasattr(p1tree, '_treemanifest'):
+            # Detect hybrid manifests and unwrap them
+            p1tree = p1tree._treemanifest()
+
+        revlogstore = self.revlogstore
+        node = overridenode
+        for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree):
+            revlog = revlogstore._revlog(nname)
+            override = None
+            if nname == '':
+                override = overridenode
+            resultnode = revlog.addrevision(ntext, tr, linkrev, np1, np2,
+                                            node=override)
+            if node is None and nname == '':
+                node = resultnode
+            if (overridenode is None or nname != '') and resultnode != nnode:
+                raise error.ProgrammingError("tree node mismatch - "
+                    "Expected=%s ; Actual=%s" % (hex(nnode), hex(resultnode)))
         return node
 
     def commitpending(self):
@@ -777,7 +818,7 @@ class memtreemanifestctx(object):
 
         newtree = self._treemanifest
 
-        node = mfl.add(mfl.ui, newtree, p1, p2)
+        node = mfl.add(mfl.ui, newtree, p1, p2, tr=tr, linkrev=linkrev)
         return node
 
 def serverreposetup(repo):
@@ -919,21 +960,20 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         parentflat = manifest.manifestdict()
         parenttree = cstore.treemanifest(tmfl.datastore)
 
-    newtree, added, removed = _getnewtree(newflat, parenttree, parentflat)
+    newtree = _getnewtree(newflat, parenttree, parentflat)[0]
 
-    linknode = mfctx.linknode
-    if torevlog:
-        # manifests that haven't been added to the changelog yet (and therefore
-        # maplinknode returns -1) should've had their linkrev provided as an
-        # argument.
-        if linkrev is None:
-            linkrev = mfl._maplinknode(linknode)
+    # Existing manifests can have their linknode converted to a linkrev here.
+    # manifests that haven't been added to the changelog yet (and therefore
+    # maplinknode returns -1) should've had their linkrev provided as an
+    # argument.
+    if linkrev is None:
+        linkrev = mfl._maplinknode(mfctx.linknode)
         assert linkrev != -1, "attempting to create manifest with null linkrev"
-        _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed)
-    else:
-        tmfl.add(mfl.ui, newtree, p1node, p2node,
-                 overridenode=mfctx.node(),
-                 overridep1node=p1node)
+
+    tmfl.add(mfl.ui, newtree, p1node, p2node,
+             overridenode=mfctx.node(),
+             overridep1node=p1node,
+             tr=tr, linkrev=linkrev)
 
 def _getnewtree(newflat, parenttree, parentflat):
     diff = parentflat.diff(newflat)
@@ -951,31 +991,6 @@ def _getnewtree(newflat, parenttree, parentflat):
             del newtree[filename]
 
     return (newtree, added, removed)
-
-def _addtotreerevlog(newtree, tr, tmfl, linkrev, mfctx, added, removed):
-    overridenode = mfctx.node()
-    p1node, p2node = mfctx.parents
-
-    p1tree = tmfl[p1node].read()
-    if util.safehasattr(p1tree, '_treemanifest'):
-        # Detect hybrid manifests and unwrap them
-        p1tree = p1tree._treemanifest()
-
-    revlogstore = tmfl.revlogstore
-    node = overridenode
-    for nname, nnode, ntext, np1text, np1, np2 in newtree.finalize(p1tree):
-        revlog = revlogstore._revlog(nname)
-        override = None
-        if nname == '':
-            override = overridenode
-        resultnode = revlog.addrevision(ntext, tr, linkrev, np1, np2,
-                                        node=override)
-        if node is None and nname == '':
-            node = resultnode
-        if (overridenode is None or nname != '') and resultnode != nnode:
-            raise error.ProgrammingError("tree node mismatch - "
-                "Expected=%s ; Actual=%s" % (hex(nnode), hex(resultnode)))
-    return node
 
 def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
     if not treeenabled(repo.ui):
