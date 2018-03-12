@@ -60,6 +60,11 @@
     locktimeout = 120
 
     # Server-side option. Used only if indextype=sql.
+    # limit number of days to generate warning on trying to
+    # fetch too old commit for hg up / hg pull with short hash rev
+    shorthasholdrevthreshold = 31
+
+    # Server-side option. Used only if indextype=sql.
     # Name of the repository
     reponame = ''
 
@@ -158,6 +163,12 @@ templatekeyword = backupcommands.templatekeyword
 _scratchbranchmatcher = lambda x: False
 _maybehash = re.compile(r'^[a-f0-9]+$').search
 
+colortable = {
+    'commitcloud.changeset': 'green',
+    'commitcloud.meta': 'bold',
+    'commitcloud.commitcloud': 'yellow',
+}
+
 def _buildexternalbundlestore(ui):
     put_args = ui.configlist('infinitepush', 'put_args', [])
     put_binary = ui.config('infinitepush', 'put_binary')
@@ -182,11 +193,14 @@ def _buildsqlindex(ui):
     logfile = ui.config('infinitepush', 'logfile', '')
     waittimeout = ui.configint('infinitepush', 'waittimeout', 300)
     locktimeout = ui.configint('infinitepush', 'locktimeout', 120)
+    shorthasholdrevthreshold = ui.configint(
+        'infinitepush', 'shorthasholdrevthreshold', 60)
     from . import sqlindexapi
     return sqlindexapi.sqlindexapi(
         reponame, host, port, db, user, password,
-        logfile, _getloglevel(ui), waittimeout=waittimeout,
-        locktimeout=locktimeout)
+        logfile, _getloglevel(ui),
+        shorthasholdrevthreshold=shorthasholdrevthreshold,
+        waittimeout=waittimeout, locktimeout=locktimeout)
 
 def _getloglevel(ui):
     loglevel = ui.config('infinitepush', 'loglevel', 'DEBUG')
@@ -762,7 +776,18 @@ def _update(orig, ui, repo, node=None, rev=None, **opts):
                 pullopts.update(kwargs)
                 pullcmd(ui, repo, **pullopts)
             except Exception:
-                ui.warn(_('pull failed: %s\n') % sys.exc_info()[1])
+                remoteerror = str(sys.exc_info()[1])
+                replacements = {
+                    'commitcloud.changeset': ('changeset:',),
+                    'commitcloud.meta': ('date:', 'summary:', 'author:'),
+                    'commitcloud.commitcloud': ('#commitcloud',),
+                }
+                for label, keywords in replacements.iteritems():
+                    for kw in keywords:
+                        remoteerror = remoteerror.replace(
+                            kw, ui.label(kw, label))
+
+                ui.warn(_('pull failed: %s\n') % remoteerror)
             else:
                 ui.warn(_("'%s' found remotely\n") % mayberemote)
                 pulltime = time.time() - pullstarttime

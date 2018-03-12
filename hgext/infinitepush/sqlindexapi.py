@@ -26,6 +26,8 @@ def _convertbookmarkpattern(pattern):
         pattern = pattern[:-1] + '%'
     return pattern
 
+SEC_IN_DAY = 24 * 60 * 60
+
 class sqlindexapi(indexapi):
     '''
     Sql backend for infinitepush index. See schema.sql
@@ -33,6 +35,7 @@ class sqlindexapi(indexapi):
 
     def __init__(self, reponame, host, port,
                  database, user, password, logfile, loglevel,
+                 shorthasholdrevthreshold,
                  waittimeout=300, locktimeout=120):
         super(sqlindexapi, self).__init__()
         self.reponame = reponame
@@ -53,6 +56,7 @@ class sqlindexapi(indexapi):
         self._connected = False
         self._waittimeout = waittimeout
         self._locktimeout = locktimeout
+        self.shorthasholdrevthreshold = shorthasholdrevthreshold
 
     def sqlconnect(self):
         if self.sqlconn:
@@ -213,12 +217,13 @@ class sqlindexapi(indexapi):
             # so user can pick up the desired one easily
             # there is no need to go this path for prefixes longer than 20
             # because to find several commits is highly unlikely
+            # Order suggestions by date to show the recent ones first
             cmd = (
-                'SELECT t1.node, t2.message, t2.author '
+                'SELECT t1.node, t2.message, t2.author, t2.committer_date '
                 'FROM nodestobundle t1 JOIN nodesmetadata t2 '
                 'ON t1.node = t2.node AND t1.reponame = t2.reponame '
                 'WHERE t1.node LIKE %s AND t1.reponame =  %s '
-                'LIMIT 5'
+                'ORDER BY t2.committer_date DESC LIMIT 5'
             )
             params = (nodeprefixpattern, self.reponame)
             self.sqlcursor.execute(cmd, params)
@@ -227,16 +232,37 @@ class sqlindexapi(indexapi):
             def gettitle(s):
                 return s.splitlines()[0]
 
+            # format time from timestamp
+            def formattime(s):
+                _timeformat = r'%d %b %Y %H:%M'
+                return time.strftime(_timeformat, time.localtime(int(s)))
+
+            # format metadata output from query rows
+            def formatdata(arr):
+                return '\n'.join([
+                    '  changeset: {c}\n'
+                    '  author: {a}\n'
+                    '  date: {d}\n'
+                    '  summary: {m}\n'.format(
+                        c=c, m=gettitle(m), a=a, d=formattime(d))
+                    for c, m, a, d in result])
+
             if len(result) > 1:
                 raise indexexception(
                     ('ambiguous identifier \'%s\'\n' % prefix) +
-                     'suggestions are: \n' +
-                     '\n'.join(
-                        ['author: {}, commithash: {}, message: \'{}\''.format(
-                            u[2], u[0], gettitle(u[1])
-                        ) for u in result]
-                    )
-                )
+                     '#commitcloud suggestions are:\n' + formatdata(result))
+
+            if len(result) == 1:
+                revdate = result[0][3]
+                threshold = self.shorthasholdrevthreshold * SEC_IN_DAY
+                if time.time() - revdate > threshold:
+                    raise indexexception(
+                        "commit '%s' is more than %d days old\n"
+                        'description:\n%s'
+                        '#commitcloud hint: if you would like to fetch this '
+                        'commit, please provide the full hash' % (
+                            prefix, self.shorthasholdrevthreshold,
+                            formatdata(result)))
 
         else:
             self.sqlcursor.execute(
