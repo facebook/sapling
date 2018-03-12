@@ -71,11 +71,14 @@ Push a tree-only scratch branch from another client
   $ mkdir subdir
   $ echo "my change" >> subdir/a
   $ hg commit -qAm 'add subdir/a'
+  $ echo "my other change" >> subdir/a
+  $ hg commit -qAm 'edit subdir/a'
   $ hg push --to scratch/foo --create
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 2 commits:
   remote:     02c12aef64ff  add subdir/a
+  remote:     5a7a7de8a420  edit subdir/a
   $ cd ..
 
 Pull a non-tree scratch branch into a normal client
@@ -132,8 +135,8 @@ Pull a treeonly scratch branch into a normal client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
-  new changesets 02c12aef64ff
+  added 2 changesets with 2 changes to 1 files (+1 heads)
+  new changesets 02c12aef64ff:5a7a7de8a420
   (run 'hg heads' to see heads, 'hg merge' to merge)
 - Verify no new manifest revlog entry was written
   $ hg debugindex -m
@@ -149,7 +152,7 @@ Pull a treeonly scratch branch into a normal client
   
   $ cd ..
 
-Pull a treeonly scratch branch into a treeonly client
+Set up another treeonly client
 
   $ hgcloneshallow ssh://user@dummy/master client2 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
   $ cd client2
@@ -163,18 +166,41 @@ Pull a treeonly scratch branch into a treeonly client
   > [treemanifest]
   > treeonly=True
   > EOF
+
+Pull just part of a treeonly scratch branch (this causes rebundling on the server)
+
+  $ hg pull -r 02c12aef64ff
+  pulling from ssh://user@dummy/master
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
+  new changesets 02c12aef64ff
+  (run 'hg update' to get a working copy)
+  $ hg log -r 02c12aef64ff  --stat
+  abort: "unable to find the following nodes locally or on the server: ('', 604088751312b68d6f0aeb6467c3a95d662737e0)"
+  [255]
+
+Pull a treeonly scratch branch into a treeonly client (non-rebundling)
+
   $ hg pull -r scratch/foo
   pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
-  new changesets 02c12aef64ff
+  added 1 changesets with 2 changes to 1 files
+  new changesets 5a7a7de8a420
   (run 'hg update' to get a working copy)
   $ hg log -G
-  o  changeset:   1:02c12aef64ff
+  o  changeset:   2:5a7a7de8a420
   |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     edit subdir/a
+  |
+  o  changeset:   1:02c12aef64ff
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add subdir/a
@@ -186,15 +212,16 @@ Pull a treeonly scratch branch into a treeonly client
   
   $ hg cat -r tip subdir/a
   my change
+  my other change
   $ ls_l .hg/store
-  -rw-r--r--     257 00changelog.i
+  -rw-r--r--     392 00changelog.i
   -rw-r--r--     108 00manifesttree.i
   drwxr-xr-x         data
   drwxrwxr-x         packs
   -rw-r--r--      43 phaseroots
   -rw-r--r--      18 undo
-  -rw-r--r--      17 undo.backupfiles
-  -rw-r--r--       0 undo.phaseroots
+  -rw-r--r--       2 undo.backupfiles
+  -rw-r--r--      43 undo.phaseroots
 
 Pull just part of a normal scratch branch (this causes rebundling on the server)
 
@@ -218,7 +245,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
    bar/car |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   
-
 Pull a normal scratch branch into a treeonly client
   $ hg pull -r scratch/nontree
   pulling from ssh://user@dummy/master
