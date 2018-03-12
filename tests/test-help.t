@@ -1112,6 +1112,7 @@ Test list of internal help commands
                  complete part or all of a tracked path
    debugpickmergetool
                  examine which merge tool is chosen for specified file
+   debugprogress
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
    debugrebuilddirstate

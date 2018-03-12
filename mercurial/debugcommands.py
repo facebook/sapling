@@ -2547,3 +2547,17 @@ def debugdrawdag(ui, repo, **opts):
     """
     text = ui.fin.read()
     return drawdag.drawdag(repo, text)
+
+@command(b'debugprogress', [], _('NUMBER'), norepo=True)
+def debugprogress(ui, number):
+    """
+    Initiate a progress bar and increment the progress NUMBER times.
+
+    The purpose of this command is to guide micro-optimizations to the progress
+    code.
+    """
+    num = int(number)
+    _spinning = _('spinning')
+    for i in xrange(num):
+        ui.progress(_spinning, i, total=num)
+    ui.progress(_spinning, None)
