@@ -341,8 +341,7 @@ def wraprepo(repo):
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
             if repo.svfs.treemanifestserver:
-                caps = set(caps)
-                caps.add('gettreepack')
+                caps = _addservercaps(self, caps)
             return caps
 
     repo.__class__ = treerepository
@@ -821,10 +820,15 @@ class memtreemanifestctx(object):
         node = mfl.add(mfl.ui, newtree, p1, p2, tr=tr, linkrev=linkrev)
         return node
 
+def _addservercaps(repo, caps):
+    caps = set(caps)
+    caps.add('gettreepack')
+    return caps
+
 def serverreposetup(repo):
     def _capabilities(orig, repo, proto):
         caps = orig(repo, proto)
-        caps.append('gettreepack')
+        caps = _addservercaps(repo, caps)
         return caps
 
     if util.safehasattr(wireproto, '_capabilities'):
