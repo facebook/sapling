@@ -99,8 +99,8 @@ impl OpenableRepoType for RepoType {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
             BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
-            TestBlobManifold(ref bucket, _) => {
-                BlobRepo::new_test_manifold(logger, bucket, remote, repoid)?
+            TestBlobManifold(ref bucket, ref prefix, _) => {
+                BlobRepo::new_test_manifold(logger, bucket, &prefix, remote, repoid)?
             }
         };
 
@@ -112,7 +112,7 @@ impl OpenableRepoType for RepoType {
 
         match *self {
             Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
-            TestBlobManifold(_, ref path) => path.as_ref(),
+            TestBlobManifold(_, _, ref path) => path.as_ref(),
         }
     }
 }

@@ -468,6 +468,7 @@ struct Ssl {
 struct RawRepoConfig {
     path: Option<PathBuf>,
     manifold_bucket: Option<String>,
+    manifold_prefix: Option<String>,
     repotype: RawRepoType,
     reponame: String,
     addr: String,
@@ -559,6 +560,7 @@ fn main() {
                 BlobRepo::new_test_manifold(
                     repo_logger,
                     bucket,
+                    &config.manifold_prefix.unwrap_or("".into()),
                     &remote,
                     RepositoryId::new(config.repoid),
                 ).expect("couldn't open blob state"),

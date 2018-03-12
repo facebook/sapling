@@ -184,12 +184,13 @@ impl BlobRepo {
     pub fn new_test_manifold<T: ToString>(
         logger: Logger,
         bucket: T,
+        prefix: &str,
         remote: &Remote,
         repoid: RepositoryId,
     ) -> Result<Self> {
         let heads = MemHeads::new();
         let bookmarks = MemBookmarks::new();
-        let blobstore = ManifoldBlob::new_may_panic(bucket.to_string(), remote);
+        let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
         let linknodes = MemLinknodes::new();
         let changesets = SqliteChangesets::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;

@@ -48,9 +48,9 @@ pub enum RepoType {
     /// RocksDb database
     BlobRocks(PathBuf),
     /// Blob repository with path pointing to the directory where a server socket is going to be.
-    /// Blobs are stored in Manifold, first parameter is Manifold bucket.
+    /// Blobs are stored in Manifold, first parameter is Manifold bucket, second is prefix.
     /// Bookmarks and heads are stored in memory
-    TestBlobManifold(String, PathBuf),
+    TestBlobManifold(String, String, PathBuf),
 }
 
 /// Configuration of a metaconfig repository
@@ -184,6 +184,7 @@ struct RawRepoConfig {
     repotype: RawRepoType,
     generation_cache_size: Option<usize>,
     manifold_bucket: Option<String>,
+    manifold_prefix: Option<String>,
     repoid: i32,
     scuba_table: Option<String>,
 }
@@ -211,7 +212,11 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
                     "manifold bucket must be specified".into(),
                 ))?;
-                RepoType::TestBlobManifold(manifold_bucket, this.path)
+                RepoType::TestBlobManifold(
+                    manifold_bucket,
+                    this.manifold_prefix.unwrap_or("".into()),
+                    this.path,
+                )
             }
         };
 
