@@ -320,8 +320,9 @@ class ui(object):
 
     def resetstate(self):
         """Clear internal state that shouldn't persist across commands"""
-        if self._progbar:
-            self._progbar.resetstate()  # reset last-print time of progress bar
+        if haveprogbar():
+            # reset last-print time of progress bar
+            getprogbar(self).resetstate()
         self.httppasswordmgrdb = httppasswordmgrdbproxy()
 
     @contextlib.contextmanager
@@ -1530,24 +1531,15 @@ class ui(object):
         return (encoding.environ.get("HGEDITOR") or
                 self.config("ui", "editor", editor))
 
-    @util.propertycache
-    def _progbar(self):
-        """setup the progbar singleton to the ui object"""
-        self._progdebug = self.configbool('progress', 'debug')
-        if (self.quiet or self.debugflag
-                or self.configbool('progress', 'disable')
-                or not progress.shouldprint(self)):
-            return None
-        return getprogbar(self)
-
     def _progclear(self):
         """clear progress bar output if any. use it before any output"""
-        if not haveprogbar(): # nothing loaded yet
-            return
-        if self._progbar is not None and self._progbar.printed:
-            self._progbar.clear()
+        if haveprogbar():
+            progbar = getprogbar(self)
+            if progbar is not None and progbar.printed:
+                progbar.clear()
 
-    def progress(self, topic, pos, item="", unit="", total=None):
+    @util.propertycache
+    def progress(self):
         '''show a progress message
 
         By default a textual progress bar will be displayed if an operation
@@ -1562,23 +1554,44 @@ class ui(object):
         All topics should be marked closed by setting pos to None at
         termination.
         '''
-        if self._progbar is not None:
-            self._progbar.progress(topic, pos, item=item, unit=unit,
-                                   total=total)
-        if pos is None or not self._progdebug:
-            return
-
-        if unit:
-            unit = ' ' + unit
-        if item:
-            item = ' ' + item
-
-        if total:
-            pct = 100.0 * pos / total
-            self.debug('%s:%s %d/%d%s (%4.2f%%)\n'
-                     % (topic, item, pos, total, unit, pct))
+        # This is a hot path.  Perform config checks once to find the method
+        # that should be called, and cache the exact method using
+        # util.propertycache.
+        if (self.quiet or self.debugflag
+                or self.configbool('progress', 'disable')
+                or not progress.shouldprint(self)):
+            progbar = None
         else:
-            self.debug('%s:%s %d%s\n' % (topic, item, pos, unit))
+            progbar = getprogbar(self)
+
+        if self.configbool('progress', 'debug'):
+            return self._debugprogress(progbar)
+        elif progbar is None:
+            def emptyprogress(*args, **kwargs):
+                pass
+            return emptyprogress
+        else:
+            # Non-debug fastpath.  Shortcut directly through to the progress
+            # method of the progress bar.
+            return progbar.progress
+
+    def _debugprogress(self, progbar):
+        def debugprogress(topic, pos, item="", unit="", total=None):
+            if progbar is not None:
+                progbar.progress(topic, pos, item=item, unit=unit, total=total)
+            if pos is None:
+                return
+            if unit:
+                unit = ' ' + unit
+            if item:
+                item = ' ' + item
+            if total:
+                pct = 100.0 * pos / total
+                self.debug('%s:%s %d/%d%s (%4.2f%%)\n'
+                         % (topic, item, pos, total, unit, pct))
+            else:
+                self.debug('%s:%s %d%s\n' % (topic, item, pos, unit))
+        return debugprogress
 
     def log(self, service, *msg, **opts):
         '''hook for logging facility extensions

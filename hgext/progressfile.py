@@ -117,9 +117,9 @@ def uisetup(ui):
         is set, and calls the default progbar if plain mode is off.
         """
         @util.propertycache
-        def _progbar(self):
+        def progress(self):
             if self.config('progress', 'statefile'):
-                return progbarwithfile(self)
+                return progbarwithfile(self).progress
             else:
-                return super(progressfileui, self)._progbar
+                return super(progressfileui, self).progress
     ui.__class__ = progressfileui
