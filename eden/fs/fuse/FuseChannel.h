@@ -33,8 +33,6 @@ class Dispatcher;
 
 class FuseChannel {
  public:
-  ~FuseChannel();
-
   /**
    * Construct the fuse channel and session structures that are
    * required by libfuse to communicate with the kernel using
@@ -52,6 +50,18 @@ class FuseChannel {
       folly::EventBase* eventBase,
       size_t numThreads,
       Dispatcher* const dispatcher);
+
+  /**
+   * Destroy the FuseChannel.
+   *
+   * If the FUSE worker threads are still running, the destructor will stop
+   * them and wait for them to exit.
+   *
+   * The destructor must not be invoked from inside one of the worker threads.
+   * For instance, do not invoke the destructor from inside a Dispatcher
+   * callback.
+   */
+  ~FuseChannel();
 
   /**
    * Initialize the FuseChannel; until this completes successfully,
@@ -296,7 +306,7 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
-  void fuseWorkerThread(size_t threadNumber);
+  void fuseWorkerThread();
   void maybeDispatchSessionComplete();
   void readInitPacket();
   void startWorkerThreads();

@@ -316,7 +316,9 @@ FuseChannel::FuseChannel(
       fuseDevice_(std::move(fuseDevice)),
       eventBase_(eventBase),
       numThreads_(numThreads),
-      mountPath_(mountPath) {}
+      mountPath_(mountPath) {
+  CHECK_GE(numThreads_, 1);
+}
 
 folly::Future<folly::Unit> FuseChannel::initialize(
     folly::Optional<fuse_init_out> connInfo,
@@ -340,8 +342,7 @@ void FuseChannel::startWorkerThreads() {
   try {
     workerThreads_.reserve(numThreads_);
     for (auto i = 0; i < numThreads_; ++i) {
-      workerThreads_.emplace_back(
-          std::thread([this, i] { fuseWorkerThread(i); }));
+      workerThreads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
     }
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Error initializing worker threads.  initialized "
@@ -358,7 +359,14 @@ void FuseChannel::startWorkerThreads() {
 }
 
 FuseChannel::~FuseChannel() {
-  CHECK_EQ(activeThreads_, 0) << "we MUST have joined all of the threads";
+  requestSessionExit();
+  for (auto& thread : workerThreads_) {
+    if (std::this_thread::get_id() == thread.get_id()) {
+      XLOG(FATAL) << "cannot destroy a FuseChannel from inside one of "
+                     "its own worker threads";
+    }
+    thread.join();
+  }
 }
 
 FuseChannelData FuseChannel::stealFuseDevice() {
@@ -474,35 +482,33 @@ void FuseChannel::requestSessionExit() {
   }
 }
 
-void FuseChannel::fuseWorkerThread(size_t threadNumber) {
+void FuseChannel::fuseWorkerThread() {
   ++activeThreads_;
 
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
   processSession();
-  eventBase_->runInEventBaseThread([this, threadNumber]() {
-    workerThreads_[threadNumber].join();
-    bool complete = false;
 
-    // We may be complete; check to see if there are any
-    // outstanding requests.  Take care to avoid triggering
-    // the promise callbacks while we hold a lock.
-    {
-      const auto requests = requests_.wlock();
-      if (--activeThreads_ == 0) {
-        // there may be outstanding requests even though we have
-        // now shut down all of the fuse device processing threads.
-        // If there are none outstanding then we can consider the
-        // FUSE requests all complete.  Otherwise, we have logic
-        // to detect the completion transition in the finishRequest()
-        // method below.
-        complete = requests->size() == 0;
-      }
+  // We may be complete; check to see if there are any
+  // outstanding requests.  Take care to avoid triggering
+  // the promise callbacks while we hold a lock.
+  bool complete = false;
+  {
+    const auto requests = requests_.wlock();
+    if (--activeThreads_ == 0) {
+      // there may be outstanding requests even though we have
+      // now shut down all of the fuse device processing threads.
+      // If there are none outstanding then we can consider the
+      // FUSE requests all complete.  Otherwise, we have logic
+      // to detect the completion transition in the finishRequest()
+      // method below.
+      complete = requests->size() == 0;
     }
+  }
 
-    if (complete) {
-      sessionCompletePromise_.setValue();
-    }
-  });
+  if (complete) {
+    eventBase_->runInEventBaseThread(
+        [this]() { sessionCompletePromise_.setValue(); });
+  }
 }
 
 void FuseChannel::readInitPacket() {
