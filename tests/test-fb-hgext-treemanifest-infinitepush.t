@@ -207,6 +207,17 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   added 1 changesets with 1 changes to 1 files (+1 heads)
   new changesets 42ec76eb772a
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -r 42ec76eb772a --stat
+  changeset:   3:42ec76eb772a
+  tag:         tip
+  parent:      0:085784c01c08
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add bar/car
+  
+   bar/car |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
 
 Pull a normal scratch branch into a treeonly client
   $ hg pull -r scratch/nontree
