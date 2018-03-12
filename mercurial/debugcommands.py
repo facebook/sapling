@@ -55,6 +55,7 @@ from . import (
     obsutil,
     phases,
     policy,
+    progress,
     pvec,
     pycompat,
     registrar,
@@ -2548,8 +2549,11 @@ def debugdrawdag(ui, repo, **opts):
     text = ui.fin.read()
     return drawdag.drawdag(repo, text)
 
-@command(b'debugprogress', [], _('NUMBER'), norepo=True)
-def debugprogress(ui, number):
+@command(b'debugprogress',
+    [('s', 'spinner', False, _('use a progress spinner')),
+     ('b', 'bar', False, _('use a new-style progress bar'))],
+    _('NUMBER'), norepo=True)
+def debugprogress(ui, number, spinner=False, bar=False):
     """
     Initiate a progress bar and increment the progress NUMBER times.
 
@@ -2558,6 +2562,16 @@ def debugprogress(ui, number):
     """
     num = int(number)
     _spinning = _('spinning')
-    for i in xrange(num):
-        ui.progress(_spinning, i, total=num)
-    ui.progress(_spinning, None)
+
+    if spinner:
+        with progress.spinner(ui, _spinning):
+            for i in xrange(num):
+                pass
+    elif bar:
+        with progress.bar(ui, _spinning, total=num) as p:
+            for i in xrange(num):
+                p.value = i
+    else:
+        for i in xrange(num):
+            ui.progress(_spinning, i, total=num)
+        ui.progress(_spinning, None)

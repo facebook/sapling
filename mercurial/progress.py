@@ -304,32 +304,78 @@ class progbar(object):
         finally:
             self._refreshlock.release()
 
-class spinner(object):
-    """context manager that add a spinner progress bar to slow operations"""
-    def __init__(self, ui, description):
+class bar(object):
+    """context manager that adds a progress bar to slow operations
+
+    To use this, wrap a section of code that takes a long time like this:
+
+    with progress.bar(ui, "topic") as prog:
+        # processing code
+        prog.value = pos
+        # alternatively: prog.value = (pos, item)
+    """
+    def __init__(self, ui, topic, unit="", total=None):
         self._ui = ui
-        self._description = description
+        self._topic = topic
+        self._unit = unit
+        self._total = total
         self._cond = threading.Condition()
+
+    def reset(self, topic, unit="", total=None):
+        self._cond.acquire()
+        try:
+            self._ui.progress(self._topic, None)
+            self._topic = topic
+            self._unit = unit
+            self._total = total
+            self.value = 0
+        finally:
+            self._cond.release()
 
     def _update(self):
         self._cond.acquire()
-        while self._show:
-            self._cond.wait(0.1)
-            if self._show:
-                self._time += 0.1
-                self._ui.progress(self._description, self._time, unit="s")
-        self._ui.progress(self._description, None)
-        self._cond.release()
+        try:
+            while self._shouldshow:
+                self._cond.wait(0.1)
+                if self._shouldshow:
+                    self._show()
+            self._ui.progress(self._topic, None)
+        finally:
+            self._cond.release()
+
+    def _show(self):
+        value = self.value
+        if isinstance(value, tuple):
+            pos, item = value
+        else:
+            pos = value
+            item = ""
+        self._ui.progress(self._topic, pos, item, self._unit, self._total)
 
     def __enter__(self):
-        self._show = True
-        self._time = 0
-        self._thread = threading.Thread(target=self._update)
+        self.value = 0
+        self._shouldshow = True
+        self._thread = threading.Thread(target=self._update, name="progress")
         self._thread.start()
+        return self
 
     def __exit__(self, type, value, traceback):
         self._cond.acquire()
-        self._show = False
+        self._shouldshow = False
         self._cond.notify_all()
         self._cond.release()
         self._thread.join()
+
+class spinner(bar):
+    """context manager that adds a progress spinner to slow operations
+
+    This context manager should be used when there are no items to count
+    through.
+    """
+    def __enter__(self):
+        self._time = 0
+        return super(spinner, self).__enter__()
+
+    def _show(self):
+        self._time += 0.1
+        self._ui.progress(self._topic, self._time, unit="s")

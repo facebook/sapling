@@ -290,7 +290,7 @@ Show all commands + options
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
-  debugprogress: 
+  debugprogress: spinner, bar
   debugpushkey: 
   debugpvec: 
   debugrebuilddirstate: rev, minimal
