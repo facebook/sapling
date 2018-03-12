@@ -197,7 +197,7 @@ test delay time estimates
 
   $ MOCKTIME=11 hg -y loop 8
   \r (no-eol) (esc)
-  loop [=========>                                ] 2/8 1m07s\r (no-eol) (esc)
+  loop [===========>                                    ] 2/8\r (no-eol) (esc)
   loop [===============>                            ] 3/8 56s\r (no-eol) (esc)
   loop [=====================>                      ] 4/8 45s\r (no-eol) (esc)
   loop [==========================>                 ] 5/8 34s\r (no-eol) (esc)
@@ -234,7 +234,7 @@ Non-linear progress:
 
   $ MOCKTIME='20 20 20 20 20 20 20 20 20 20 500 500 500 500 500 20 20 20 20 20' hg -y loop 20
   \r (no-eol) (esc)
-  loop [=>                                      ]  1/20 6m21s\r (no-eol) (esc)
+  loop [=>                                            ]  1/20\r (no-eol) (esc)
   loop [===>                                    ]  2/20 6m01s\r (no-eol) (esc)
   loop [=====>                                  ]  3/20 5m41s\r (no-eol) (esc)
   loop [=======>                                ]  4/20 5m21s\r (no-eol) (esc)

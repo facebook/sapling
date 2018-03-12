@@ -266,6 +266,8 @@ class progbar(object):
 
     def progress(self, topic, pos, item='', unit='', total=None):
         now = time.time()
+        if pos is not None and now - self.lastprint < self.refresh:
+            return
         self._refreshlock.acquire()
         try:
             if pos is None:
