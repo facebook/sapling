@@ -254,9 +254,10 @@ class cg1unpacker(object):
         # be empty during the pull
         self.manifestheader()
         deltas = self.deltaiter()
-        repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
+        mfnodes = repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
         repo.ui.progress(_('manifests'), None)
         self.callback = None
+        return mfnodes
 
     def apply(self, repo, tr, srctype, url, targetphase=phases.draft,
               expectedtotal=None):
@@ -483,8 +484,8 @@ class cg3unpacker(cg2unpacker):
         return node, p1, p2, deltabase, cs, flags
 
     def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
-        super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp, prog,
-                                                  numchanges)
+        mfnodes = super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp,
+                                                            prog, numchanges)
         for chunkdata in iter(self.filelogheader, {}):
             # If we get here, there are directory manifests in the changegroup
             d = chunkdata["filename"]
@@ -493,6 +494,8 @@ class cg3unpacker(cg2unpacker):
             deltas = self.deltaiter()
             if not dirlog.addgroup(deltas, revmap, trp):
                 raise error.Abort(_("received dir revlog group is empty"))
+
+        return mfnodes
 
 class headerlessfixup(object):
     def __init__(self, fh, h):

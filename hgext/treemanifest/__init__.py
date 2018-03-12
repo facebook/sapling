@@ -787,9 +787,6 @@ class memtreemanifestctx(object):
         return node
 
 def serverreposetup(repo):
-    extensions.wrapfunction(manifest.manifestrevlog, 'addgroup',
-                            _addmanifestgroup)
-
     def _capabilities(orig, repo, proto):
         caps = orig(repo, proto)
         caps.append('gettreepack')
@@ -799,17 +796,6 @@ def serverreposetup(repo):
         extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
     else:
         extensions.wrapfunction(wireproto, 'capabilities', _capabilities)
-
-def _addmanifestgroup(orig, revlog, *args, **kwargs):
-    isserver = False
-    opts = getattr(revlog.opener, 'options', None)
-    if opts is not None:
-        isserver = opts.get('treemanifest-server', False)
-    if isserver:
-        raise error.Abort(_("cannot push commits to a treemanifest transition "
-                            "server without pushrebase"))
-
-    return orig(revlog, *args, **kwargs)
 
 def getmanifestlog(orig, self):
     if not treeenabled(self.ui):
@@ -1007,9 +993,9 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
         return
     return orig(self, repo, *args, **kwargs)
 
-def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
+def _unpackmanifestscg1(orig, self, repo, revmap, trp, prog, numchanges):
     if not treeenabled(repo.ui):
-        return orig(self, repo, *args, **kwargs)
+        return orig(self, repo, revmap, trp, prog, numchanges)
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
@@ -1019,7 +1005,14 @@ def _unpackmanifestscg1(orig, self, repo, *args, **kwargs):
     mfrevlog = repo.manifestlog._revlog
     oldtip = len(mfrevlog)
 
-    orig(self, repo, *args, **kwargs)
+    mfnodes = orig(self, repo, revmap, trp, prog, numchanges)
+
+    if repo.svfs.treemanifestserver:
+        mfl = repo.manifestlog
+        tmfl = repo.manifestlog.treemanifestlog
+        for mfnode in mfnodes:
+            linkrev = mfrevlog.linkrev(mfrevlog.rev(mfnode))
+            _converttotree(trp, mfl, tmfl, mfl[mfnode], linkrev, torevlog=True)
 
     if (util.safehasattr(repo.manifestlog, "datastore") and
         repo.ui.configbool('treemanifest', 'autocreatetrees')):

@@ -75,17 +75,42 @@ Test committing auto-downloads server trees and produces local trees
   54cbf534b62b  000000000000  99            (missing)
   
 
-Test pushing without pushrebase fails
+Test pushing without pushrebase creates trees
   $ hg push
   pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets
   remote: adding manifests
-  remote: transaction abort!
-  remote: rollback completed
-  remote: cannot push commits to a treemanifest transition server without pushrebase
-  abort: push failed on remote
-  [255]
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  $ hg --cwd ../master debugindex .hg/store/meta/subdir2/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       1 ddb35f099a64 000000000000 000000000000
+  $ hg debugdatapack .hg/store/packs/manifests/*.datapack
+  .hg/store/packs/manifests/e3876af326e0e51d1f3ea0444d2b1a7db2915763:
+  subdir2:
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
+  
+  (empty name):
+  Node          Delta Base    Delta Length  Blob Size
+  54cbf534b62b  000000000000  99            (missing)
+  
+  $ hg --cwd ../master debugindex -m
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      51     -1       0 85b359fdb09e 000000000000 000000000000
+       1        51      63      0       1 54cbf534b62b 85b359fdb09e 000000000000
+  $ hg debugindex -m
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      51     -1       0 85b359fdb09e 000000000000 000000000000
+       1        51      63      0       1 54cbf534b62b 85b359fdb09e 000000000000
+  $ hg --cwd ../master debugindex .hg/store/00manifesttree.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      50     -1       0 85b359fdb09e 000000000000 000000000000
+       1        50      62      0       1 54cbf534b62b 85b359fdb09e 000000000000
+  $ hg -R ../master strip -r tip
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/15486e46ccf6-fc9a70e1-backup.hg
+  $ hg phase -dfr .
 
 Test pushing only flat fails if forcetreereceive is on
   $ cat >> ../master/.hg/hgrc <<EOF
