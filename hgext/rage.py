@@ -150,6 +150,10 @@ def infinitepushbackuplogs(ui, repo):
             linelimit -= linecount
     return ''.join(reversed(logs))
 
+def readfsmonitorstate(repo):
+    file = repo.vfs('fsmonitor.state', 'rb')
+    return file.read()
+
 def _makerage(ui, repo, **opts):
     srcrepo = shareutil.getsrcrepo(repo)
     def format(pair, basic=True):
@@ -228,6 +232,7 @@ def _makerage(ui, repo, **opts):
         ('infinitepush backup logs',
             _failsafe(lambda: infinitepushbackuplogs(ui, repo))),
         ('hg config (all)', _failsafe(lambda: hgcmd('config'))),
+        ('fsmonitor state', _failsafe(lambda: readfsmonitorstate(repo)))
     ]
 
     msg = ''
