@@ -9,13 +9,11 @@
  */
 #pragma once
 #include <folly/File.h>
+#include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
-#include <folly/io/async/EventBase.h>
-#include <folly/io/async/Request.h>
 #include <stdlib.h>
 #include <sys/uio.h>
-#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -24,6 +22,11 @@
 
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+namespace folly {
+class RequestContext;
+class EventBase;
+} // namespace folly
 
 namespace facebook {
 namespace eden {
@@ -67,16 +70,15 @@ class FuseChannel {
    * Initialize the FuseChannel; until this completes successfully,
    * FUSE requests will not be serviced.
    *
-   * This will wait for the INIT request from the kernel
-   * and validate that we are compatible.  The `threadPool`
-   * argument will be used as an executor to perform this blocking
-   * INIT operation.
+   * This will first start one worker thread to wait for the INIT request from
+   * the kernel and validate that we are compatible.  Once we have successfully
+   * completed the INIT negotiation with the kernel we will start the remaining
+   * FUSE worker threads and indicate success via the returned Future object.
    *
-   * Once that first step is complete, set up the thread pool
-   * that will be used to service incoming fuse requests.
+   * Returns a folly::Future that will complete inside one of the FuseChannel
+   * worker threads.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      folly::Executor* threadPool);
+  FOLLY_NODISCARD folly::Future<folly::Unit> initialize();
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -98,16 +100,15 @@ class FuseChannel {
   FuseChannel& operator=(FuseChannel const&) = delete;
 
   /**
-   * Dispatches fuse requests until the session is torn down.
-   * This function blocks until the fuse session is stopped.
-   * The intent is that this is called from each of the
-   * fuse worker threads provided by the MountPoint. */
-  void processSession();
-
-  /**
-   * Requests that the worker threads terminate their processing loop.
+   * Request that the FuseChannel stop processing new requests, and prepare
+   * to hand over the FuseDevice to another process.
+   *
+   * TODO: This function should probably return a Future<FuseChannelData>,
+   * and we should get rid of the stealFuseDevice() method.
    */
-  void requestSessionExit();
+  void takeoverStop() {
+    requestSessionExit();
+  }
 
   /**
    * When performing a graceful restart, extract the fuse device
@@ -212,13 +213,39 @@ class FuseChannel {
    * fuse threads have been joined and when all pending
    * fuse requests initiated by the kernel have been
    * responded to.
+   *
    * Will throw if called more than once.
+   *
+   * The session completion future will only be signaled if initialization
+   * (via initialize() or takeoverInitialize()) has completed successfully.
    */
   folly::Future<folly::Unit> getSessionCompleteFuture();
 
  private:
   struct HandlerEntry;
   using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;
+
+  /**
+   * All of our mutable state that may be accessed from the worker threads,
+   * and therefore requires synchronization.
+   */
+  struct State {
+    std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>> requests;
+    std::vector<std::thread> workerThreads;
+
+    /*
+     * We track the number of stopped threads, to know when we are done and can
+     * signal sessionCompletePromise_.  We only want to signal
+     * sessionCompletePromise_ after initialization is successful and then all
+     * threads have stopped.
+     *
+     * If an error occurs during initialization we may have started some but
+     * not all of the worker threads.  We do not want to signal
+     * sessionCompletePromise_ in this case--we will return the error from
+     * initialize() or takeoverInitialize() instead.
+     */
+    size_t stoppedThreads{0};
+  };
 
   static const HandlerMap handlerMap;
 
@@ -316,24 +343,58 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
+  void initWorkerThread();
   void fuseWorkerThread();
   void maybeDispatchSessionComplete();
   void readInitPacket();
   void startWorkerThreads();
 
-  size_t bufferSize_{0};
+  /**
+   * Dispatches fuse requests until the session is torn down.
+   * This function blocks until the fuse session is stopped.
+   * The intent is that this is called from each of the
+   * fuse worker threads provided by the MountPoint.
+   */
+  void processSession();
+
+  /**
+   * Requests that the worker threads terminate their processing loop.
+   */
+  void requestSessionExit();
+  void requestSessionExit(const folly::Synchronized<State>::LockedPtr& state);
+
+  /*
+   * Constant state that does not change for the lifetime of the FuseChannel
+   */
+  const size_t bufferSize_{0};
+  const size_t numThreads_;
   Dispatcher* const dispatcher_{nullptr};
-  folly::File fuseDevice_;
-  folly::EventBase* eventBase_;
-  folly::Optional<fuse_init_out> connInfo_;
-  std::atomic<bool> sessionFinished_{false};
-  folly::Synchronized<
-      std::unordered_map<uint64_t, std::weak_ptr<folly::RequestContext>>>
-      requests_;
-  std::vector<std::thread> workerThreads_;
-  std::atomic<size_t> activeThreads_{0};
-  size_t numThreads_;
+  folly::EventBase* const eventBase_;
   const AbsolutePath mountPath_;
+
+  /*
+   * connInfo_ is modified during the initialization process,
+   * but constant once initialization is complete.
+   */
+  folly::Optional<fuse_init_out> connInfo_;
+
+  /*
+   * TODO: fuseDevice_ needs better synchronization.
+   *
+   * This is modified by stealFuseDevice().  There currently isn't
+   * synchronization enforced between the call to stealFuseDevice() and the
+   * destruction of the FuseChannel object, which destroys fuseDevice_ if it
+   * has not been modified by stealFuseDevice().
+   */
+  folly::File fuseDevice_;
+
+  /*
+   * Mutable state that is accessed from the worker threads.
+   * All of this state uses locking or other synchronization.
+   */
+  std::atomic<bool> sessionFinished_{false};
+  folly::Synchronized<State> state_;
+  folly::Promise<folly::Unit> initPromise_;
   folly::Promise<folly::Unit> sessionCompletePromise_;
 
   // To prevent logging unsupported opcodes twice.

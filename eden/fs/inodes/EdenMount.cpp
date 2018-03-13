@@ -675,7 +675,7 @@ folly::Future<folly::Unit> EdenMount::startFuse(
         serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
 
     createFuseChannel(std::move(fuseDevice), eventBase, threadPool);
-    return channel_->initialize(threadPool.get())
+    return channel_->initialize()
         .then([this](folly::Unit&&) {
           doStateTransition(State::STARTING, State::RUNNING);
         })

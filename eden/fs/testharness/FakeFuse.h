@@ -76,6 +76,17 @@ class FakeFuse {
 
   Response recvResponse();
 
+  /**
+   * Send an INIT request.
+   *
+   * Returns the unique request ID.
+   */
+  uint32_t sendInitRequest(
+      uint32_t majorVersion = FUSE_KERNEL_VERSION,
+      uint32_t minorVersion = FUSE_KERNEL_MINOR_VERSION,
+      uint32_t maxReadahead = 0,
+      uint32_t flags = 0);
+
  private:
   FakeFuse(FakeFuse const&) = delete;
   FakeFuse& operator=(FakeFuse const&) = delete;

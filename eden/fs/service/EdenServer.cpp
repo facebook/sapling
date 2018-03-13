@@ -171,7 +171,7 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
         if (doTakeover) {
           info.takeoverPromise.emplace();
           auto future = info.takeoverPromise->getFuture();
-          info.edenMount->getFuseChannel()->requestSessionExit();
+          info.edenMount->getFuseChannel()->takeoverStop();
           futures.emplace_back(
               future.then([self = this, edenMount = info.edenMount](
                               TakeoverData::MountInfo takeover) {
@@ -610,14 +610,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               mountFinished(edenMount.get(), folly::none);
               return makeFuture<folly::Unit>(ew);
             })
-            // Explicitly move the remainder of processing to a utility
-            // thread; we're likely to reach this point in the context of
-            // a fuse mount thread prior to it responding to the mount
-            // initiation request from the kernel, so if we were to block
-            // here, that would lead to deadlock.  In addition, if we were
-            // to run this via mainEventBase_ we could also deadlock
-            // during started when remounting configured mounts.
-            .via(threadPool_.get())
             .then([edenMount, doTakeover, this] {
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.

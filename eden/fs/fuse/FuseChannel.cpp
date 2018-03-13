@@ -8,7 +8,10 @@
  *
  */
 #include "eden/fs/fuse/FuseChannel.h"
+
 #include <folly/experimental/logging/xlog.h>
+#include <folly/futures/helpers.h>
+#include <folly/io/async/EventBase.h>
 #include <folly/io/async/Request.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
@@ -312,22 +315,23 @@ FuseChannel::FuseChannel(
     size_t numThreads,
     Dispatcher* const dispatcher)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
-      dispatcher_(dispatcher),
-      fuseDevice_(std::move(fuseDevice)),
-      eventBase_(eventBase),
       numThreads_(numThreads),
-      mountPath_(mountPath) {
+      dispatcher_(dispatcher),
+      eventBase_(eventBase),
+      mountPath_(mountPath),
+      fuseDevice_(std::move(fuseDevice)) {
   CHECK_GE(numThreads_, 1);
 }
 
-folly::Future<folly::Unit> FuseChannel::initialize(
-    folly::Executor* threadPool) {
-  // Asynchronously initialize the fuse session.
-  // We cannot block the caller, so we fire this off against the provided
-  // thread pool.
-
-  return folly::via(threadPool).then([this] { readInitPacket(); }).then([this] {
-    startWorkerThreads();
+folly::Future<folly::Unit> FuseChannel::initialize() {
+  // Start one worker thread which will perform the initialization,
+  // and will then start the remaining worker threads and signal success
+  // once initialization completes.
+  return folly::makeFutureWith([&] {
+    auto state = state_.wlock();
+    state->workerThreads.reserve(numThreads_);
+    state->workerThreads.emplace_back([this] { initWorkerThread(); });
+    return initPromise_.getFuture();
   });
 }
 
@@ -340,28 +344,30 @@ void FuseChannel::initializeFromTakeover(fuse_init_out connInfo) {
 }
 
 void FuseChannel::startWorkerThreads() {
+  auto state = state_.wlock();
   try {
-    workerThreads_.reserve(numThreads_);
-    for (auto i = 0; i < numThreads_; ++i) {
-      workerThreads_.emplace_back(std::thread([this] { fuseWorkerThread(); }));
+    state->workerThreads.reserve(numThreads_);
+    while (state->workerThreads.size() < numThreads_) {
+      state->workerThreads.emplace_back([this] { fuseWorkerThread(); });
     }
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error initializing worker threads.  initialized "
-              << activeThreads_ << " out of " << numThreads_
-              << " threads.  The error was: " << ex.what();
-    if (activeThreads_ == 0) {
-      // None were started, immediately report failure
-      sessionCompletePromise_.setValue();
-    } else {
-      requestSessionExit();
-    }
+    XLOG(ERR) << "Error starting FUSE worker threads: "
+              << folly::exceptionStr(ex);
+    // Request any threads we did start to stop now.
+    requestSessionExit(state);
     throw;
   }
 }
 
 FuseChannel::~FuseChannel() {
-  requestSessionExit();
-  for (auto& thread : workerThreads_) {
+  std::vector<std::thread> threads;
+  {
+    auto state = state_.wlock();
+    requestSessionExit(state);
+    threads.swap(state->workerThreads);
+  }
+
+  for (auto& thread : threads) {
     if (std::this_thread::get_id() == thread.get_id()) {
       XLOG(FATAL) << "cannot destroy a FuseChannel from inside one of "
                      "its own worker threads";
@@ -472,10 +478,15 @@ folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
 }
 
 void FuseChannel::requestSessionExit() {
+  requestSessionExit(state_.wlock());
+}
+
+void FuseChannel::requestSessionExit(
+    const Synchronized<State>::LockedPtr& state) {
   bool no = false;
   if (sessionFinished_.compare_exchange_strong(no, true)) {
     // Knock our workers out of their blocking read() syscalls
-    for (auto& thr : workerThreads_) {
+    for (auto& thr : state->workerThreads) {
       if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
         pthread_kill(thr.native_handle(), SIGPIPE);
       }
@@ -483,9 +494,32 @@ void FuseChannel::requestSessionExit() {
   }
 }
 
-void FuseChannel::fuseWorkerThread() {
-  ++activeThreads_;
+void FuseChannel::initWorkerThread() {
+  try {
+    setThreadName(to<std::string>("fuse", mountPath_.basename()));
 
+    // Read the INIT packet
+    readInitPacket();
+
+    // Start the other FUSE worker threads.
+    startWorkerThreads();
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "Error performing FUSE channel initialization: "
+              << folly::exceptionStr(ex);
+    // Indicate that initialization failed.
+    initPromise_.setException(
+        folly::exception_wrapper(std::current_exception(), ex));
+    return;
+  }
+
+  // Signal that initialization is complete.
+  initPromise_.setValue();
+
+  // Continue to run like a normal FUSE worker thread.
+  fuseWorkerThread();
+}
+
+void FuseChannel::fuseWorkerThread() {
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
   processSession();
 
@@ -494,15 +528,16 @@ void FuseChannel::fuseWorkerThread() {
   // the promise callbacks while we hold a lock.
   bool complete = false;
   {
-    const auto requests = requests_.wlock();
-    if (--activeThreads_ == 0) {
+    auto state = state_.wlock();
+    ++state->stoppedThreads;
+    if (state->stoppedThreads == numThreads_) {
       // there may be outstanding requests even though we have
       // now shut down all of the fuse device processing threads.
       // If there are none outstanding then we can consider the
       // FUSE requests all complete.  Otherwise, we have logic
       // to detect the completion transition in the finishRequest()
       // method below.
-      complete = requests->size() == 0;
+      complete = state->requests.empty();
     }
   }
 
@@ -698,9 +733,9 @@ void FuseChannel::processSession() {
         std::shared_ptr<folly::RequestContext> ctx;
 
         {
-          const auto requests = requests_.wlock();
-          const auto requestIter = requests->find(in->unique);
-          if (requestIter != requests->end()) {
+          const auto state = state_.wlock();
+          const auto requestIter = state->requests.find(in->unique);
+          if (requestIter != state->requests.end()) {
             ctx = requestIter->second.lock();
           }
         }
@@ -747,7 +782,7 @@ void FuseChannel::processSession() {
 
           // Save a weak reference to this new request context.
           // We'll need this to process FUSE_INTERRUPT requests.
-          requests_->emplace(
+          state_.wlock()->requests.emplace(
               header->unique,
               std::weak_ptr<folly::RequestContext>(
                   RequestContext::saveContext()));
@@ -777,9 +812,10 @@ void FuseChannel::processSession() {
           replyError(*header, ENOSYS);
         } catch (const std::system_error& exc) {
           XLOG(ERR) << "Failed to write error response to fuse: " << exc.what();
-          sessionFinished_.store(true);
           requestSessionExit();
+          return;
         }
+        break;
       }
     }
   }
@@ -793,13 +829,14 @@ void FuseChannel::finishRequest(const fuse_in_header& header) {
   // while we hold a lock.
   bool complete = false;
   {
-    const auto requests = requests_.wlock();
-    const bool erased = requests->erase(header.unique) > 0;
+    auto state = state_.wlock();
+    const bool erased = state->requests.erase(header.unique) > 0;
 
     // We only want to fulfil on the transition, so we take
     // care to gate this on whether we actually erased and
     // element in the map above.
-    complete = erased && requests->size() == 0 && activeThreads_ == 0;
+    complete = erased && state->requests.empty() &&
+        state->stoppedThreads == numThreads_;
   }
   if (complete) {
     sessionCompletePromise_.setValue();
