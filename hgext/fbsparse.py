@@ -410,31 +410,42 @@ def _wraprepo(ui, repo):
             """
             includes = set()
             excludes = set()
-            current = includes
+
+            sections = {
+                '[include]': includes,
+                '[exclude]': excludes,
+            }
+            current = includes  # no sections == includes
+
             profiles = []
-            for line in raw.split('\n'):
+
+            for i, line in enumerate(raw.split('\n'), start=1):
                 line = line.strip()
                 if not line or line.startswith(('#', ';')):
                     # empty or comment line, skip
                     continue
-                elif line.startswith('%include '):
+
+                if line.startswith('%include '):
+                    # include another profile
                     line = line[9:].strip()
                     if line:
                         profiles.append(line)
-                elif line == '[include]':
-                    if current != includes:
-                        raise error.Abort(_('.hg/sparse cannot have includes ' +
-                            'after excludes'))
                     continue
-                elif line == '[exclude]':
-                    current = excludes
-                elif line:
-                    if line.strip().startswith('/'):
-                        self.ui.warn(_('warning: sparse profile cannot use' +
-                                       ' paths starting with /, ignoring %s\n')
-                                       % line)
-                        continue
-                    current.add(line)
+
+                if line in sections:
+                    if sections[line] is includes and current is excludes:
+                        raise error.Abort(
+                            _('.hg/sparse cannot have includes after excludes'))
+                    current = sections[line]
+                    continue
+
+                # inclusion or exclusion line
+                if line.startswith('/'):
+                    self.ui.warn(_(
+                        'warning: sparse profile cannot use paths starting '
+                        'with /, ignoring %s on line %d\n') % (line, i))
+                    continue
+                current.add(line)
 
             return SparseConfig(includes, excludes, profiles)
 
