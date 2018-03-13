@@ -68,6 +68,9 @@ SubclassPtrType InodePtr::extractSubclassPtr() {
   return SubclassPtrType{subclassPtr, SubclassPtrType::NO_INCREMENT};
 }
 
+template FileInodePtr InodePtr::extractSubclassPtr<FileInodePtr>();
+template TreeInodePtr InodePtr::extractSubclassPtr<TreeInodePtr>();
+
 template <typename SubclassPtrType>
 SubclassPtrType InodePtr::extractSubclassPtrOrNull() {
   if (this->value_ == nullptr) {
@@ -81,6 +84,9 @@ SubclassPtrType InodePtr::extractSubclassPtrOrNull() {
   this->value_ = nullptr;
   return SubclassPtrType{subclassPtr, SubclassPtrType::NO_INCREMENT};
 }
+
+template FileInodePtr InodePtr::extractSubclassPtrOrNull<FileInodePtr>();
+template TreeInodePtr InodePtr::extractSubclassPtrOrNull<TreeInodePtr>();
 
 FileInode* InodePtr::asFile() const {
   return asSubclass<FileInode*>();
