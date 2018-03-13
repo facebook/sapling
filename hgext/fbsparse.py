@@ -183,7 +183,7 @@ def _setupcommit(ui):
 
         if util.safehasattr(repo, 'getsparsepatterns'):
             ctx = repo[node]
-            _, _, profiles = repo.getsparsepatterns(ctx.rev())
+            profiles = repo.getsparsepatterns(ctx.rev()).profiles
             if set(profiles) & set(ctx.files()):
                 origstatus = repo.status()
                 origsparsematch = repo.sparsematch()
@@ -389,11 +389,24 @@ def _setupdiff(ui):
                 extensions.unwrapfunction(patch, 'trydiff', trydiff)
     extensions.wrapcommand(commands.table, 'diff', diff)
 
+@attr.s(frozen=True, slots=True)
+class SparseConfig(object):
+    includes = attr.ib()
+    excludes = attr.ib()
+    profiles = attr.ib()
+
+    def __iter__(self):
+        for field in (self.includes, self.excludes, self.profiles):
+            yield field
+
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
         def readsparseconfig(self, raw):
-            """Takes a string sparse config and returns the includes,
-            excludes, and profiles it specified.
+            """Takes a string sparse config and returns a SparseConfig
+
+            This object contains the includes, excludes, and profiles from the
+            raw profile.
+
             """
             includes = set()
             excludes = set()
@@ -423,16 +436,18 @@ def _wraprepo(ui, repo):
                         continue
                     current.add(line)
 
-            return includes, excludes, profiles
+            return SparseConfig(includes, excludes, profiles)
 
         def getsparsepatterns(self, rev):
-            """Returns the include/exclude patterns specified by the
-            given rev.
+            """Produce the full sparse config for a revision as a SparseConfig
+
+            This includes all patterns from included profiles, transitively.
+
             """
             # Use unfiltered to avoid computing hidden commits
             repo = self.unfiltered()
             if not self.vfs.exists('sparse'):
-                return set(), set(), []
+                return SparseConfig(set(), set(), [])
             if rev is None:
                 raise error.Abort(_("cannot parse sparse patterns from " +
                     "working copy"))
@@ -460,8 +475,8 @@ def _wraprepo(ui, repo):
                         else:
                             self.ui.debug(msg)
                         continue
-                    pincludes, pexcludes, subprofs = \
-                        self.readsparseconfig(raw)
+                    pincludes, pexcludes, subprofs = (
+                        self.readsparseconfig(raw))
                     includes.update(pincludes)
                     excludes.update(pexcludes)
                     for subprofile in subprofs:
@@ -471,7 +486,7 @@ def _wraprepo(ui, repo):
 
             if includes:
                 includes.add('.hg*')
-            return includes, excludes, profiles
+            return SparseConfig(includes, excludes, profiles)
 
         def getrawprofile(self, profile, changeid):
             repo = self.unfiltered()
@@ -601,7 +616,7 @@ def _wraprepo(ui, repo):
 
             activeprofiles = set()
             for rev in revs:
-                _, _, profiles = self.getsparsepatterns(rev)
+                profiles = self.getsparsepatterns(rev).profiles
                 activeprofiles.update(profiles)
 
             return activeprofiles
@@ -700,7 +715,7 @@ def _discover(ui, repo):
     """
     included = repo.getactiveprofiles()
     sparse = repo.vfs.read('sparse')
-    _, _, active = repo.readsparseconfig(sparse)
+    active = repo.readsparseconfig(sparse).profiles
     active = set(active)
 
     profile_directory = ui.config('sparse', 'profile_directory')
