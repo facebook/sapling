@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 use std::collections::{HashMap, HashSet};
-use std::fmt::Arguments;
+use std::fmt::{self, Arguments};
 use std::sync::{Arc, Mutex};
 
 use failure::Error;
@@ -20,6 +20,26 @@ use memlinknodes::MemLinknodes;
 use mercurial_types::{RepoPath, RepositoryId};
 
 use utils::{run_future, upload_file_no_parents};
+
+fn get_logging_blob_repo(logger: Logger) -> BlobRepo {
+    let bookmarks: MemBookmarks = MemBookmarks::new();
+    let heads: MemHeads = MemHeads::new();
+    let blobs = LazyMemblob::new();
+    let linknodes = MemLinknodes::new();
+    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
+    let repoid = RepositoryId::new(0);
+
+    BlobRepo::new_lazymemblob(
+        Some(logger),
+        heads,
+        bookmarks,
+        blobs,
+        linknodes,
+        changesets,
+        repoid,
+    )
+}
+
 // These are minimal tests, just confirming that the right sort of data comes out of our futures
 // ready for later tests to depend on
 
@@ -71,115 +91,127 @@ impl Serializer for GatherData {
     }
 }
 
-struct UploadBlobData {
-    pub path: String,
-    pub nodeid: String,
-    pub poll_count: u64,
-    pub poll_time_ms: i64,
-    pub completion_time_ms: i64,
-}
-
-impl UploadBlobData {
-    pub fn new(source: GatherData) -> Self {
-        Self {
-            path: source
-                .string_data
-                .get("path")
-                .expect("No path supplied")
-                .clone(),
-            nodeid: source
-                .string_data
-                .get("nodeid")
-                .expect("No nodeid supplied")
-                .clone(),
-            poll_count: *source
-                .u64_data
-                .get("poll_count")
-                .expect("No poll_count supplied"),
-            poll_time_ms: *source
-                .i64_data
-                .get("poll_time_ms")
-                .expect("No poll_time_ms supplied"),
-            completion_time_ms: *source
-                .i64_data
-                .get("completion_time_ms")
-                .expect("No completion_time_ms supplied"),
+macro_rules! recover_logged_data {
+    ( $name:ident, $drain:ident; $( $x:ident ),+; $( $phase:expr ),+; $msg:expr) => {
+        struct $name {
+            $(
+                pub $x: String,
+            )*
+            pub poll_count: u64,
+            pub poll_time_us: i64,
+            pub completion_time_us: i64,
         }
-    }
-}
 
-struct UploadBlobTestDrain {
-    pub records: Arc<Mutex<HashMap<String, UploadBlobData>>>,
-}
-
-impl UploadBlobTestDrain {
-    pub fn new() -> Self {
-        Self {
-            records: Arc::new(Mutex::new(HashMap::new())),
+        impl $name {
+            pub fn new(source: GatherData) -> Self {
+                Self {
+                    $(
+                        $x: source
+                            .string_data
+                            .get(stringify!($x))
+                            .expect(stringify!(No $x supplied))
+                            .clone(),
+                    )*
+                    poll_count: *source
+                        .u64_data
+                        .get("poll_count")
+                        .expect("No poll_count supplied"),
+                    poll_time_us: *source
+                        .i64_data
+                        .get("poll_time_us")
+                        .expect("No poll_time_us supplied"),
+                    completion_time_us: *source
+                        .i64_data
+                        .get("completion_time_us")
+                        .expect("No completion_time_us supplied"),
+                }
+            }
         }
-    }
+
+        struct $drain {
+            pub records: Arc<Mutex<HashMap<String, $name>>>,
+        }
+
+        impl $drain {
+            pub fn new() -> Self {
+                Self {
+                    records: Arc::new(Mutex::new(HashMap::new())),
+                }
+            }
+        }
+
+        impl Drain for $drain {
+            type Ok = ();
+            type Err = Error;
+
+            fn log(&self, record: &Record, _values: &OwnedKVList) -> Result<Self::Ok, Self::Err> {
+                let msg = fmt::format(record.msg().clone());
+                if msg != $msg {
+                    return Ok(())
+                }
+                let mut source = GatherData::new();
+                record
+                    .kv()
+                    .serialize(record, &mut source)
+                    .expect("Failed to serialize");
+                assert_eq!(
+                    source.seen_keys,
+                    hashset!{"phase".into(),
+                    $(
+                        stringify!($x).into(),
+                    )*
+                    "poll_count".into(),
+                    "poll_time_us".into(),
+                    "completion_time_us".into()},
+                    "Wrong set of keys supplied"
+                );
+                let mut records = self.records.lock().expect("Lock poisoned");
+                let phase = source
+                    .string_data
+                    .get("phase")
+                    .expect("No phase supplied")
+                    .clone();
+                let allowed_phases: HashSet<String> = hashset!{$($phase.into(),)*};
+                assert!(
+                    allowed_phases.contains(phase.as_str()),
+                    "Illegal phase {}",
+                    phase
+                );
+                assert!(
+                    records
+                        .insert(phase.clone(), $name::new(source))
+                        .is_none(),
+                    "Duplicate phase {}",
+                    phase
+                );
+                Ok(())
+            }
+        }
+    };
 }
 
-impl Drain for UploadBlobTestDrain {
-    type Ok = ();
-    type Err = Error;
+recover_logged_data!(UploadBlobData, UploadBlobTestDrain;
+    path, nodeid;
+    "content_uploaded", "finished";
+    "Upload blob stats"
+);
 
-    fn log(&self, record: &Record, _values: &OwnedKVList) -> Result<Self::Ok, Self::Err> {
-        let mut source = GatherData::new();
-        record
-            .kv()
-            .serialize(record, &mut source)
-            .expect("Failed to serialize");
-        assert_eq!(
-            source.seen_keys,
-            hashset!{"phase".into(),
-            "path".into(),
-            "nodeid".into(),
-            "poll_count".into(),
-            "poll_time_ms".into(),
-            "completion_time_ms".into()},
-            "Wrong set of keys supplied"
-        );
-        let mut records = self.records.lock().expect("Lock poisoned");
-        let phase = source
-            .string_data
-            .get("phase")
-            .expect("No phase supplied")
-            .clone();
-        let allowed_phases = hashset!{"content_uploaded", "finished"};
-        assert!(
-            allowed_phases.contains(phase.as_str()),
-            "Illegal phase {}",
-            phase
-        );
-        assert!(
-            records
-                .insert(phase.clone(), UploadBlobData::new(source))
-                .is_none(),
-            "Duplicate phase {}",
-            phase
-        );
-        Ok(())
+macro_rules! check_stats {
+    ( $records:ident, $data:ident; $( $phase:expr ),+; $data_checks:block ) => {
+        for phase in vec![$($phase.into(),)*].into_iter() {
+            let records = $records.lock().expect("Lock poisoned");
+            let $data = records
+                .get(phase)
+                .expect(&format!("No records for phase {}", phase));
+            $data_checks
+            assert!($data.poll_count > 0, "Not polled before completion!");
+            assert!($data.poll_time_us >= 0, "Negative time in polling");
+            assert!($data.completion_time_us >= 0, "Negative time to completion");
+        }
+    };
+    ( $records:ident, $data:ident; $( $phase:expr ),+ ) => {
+        check_stats!($records, $data; $( $phase, )+; {} );
     }
-}
-
-fn get_logging_blob_repo(logger: Logger) -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
-    let heads: MemHeads = MemHeads::new();
-    let blobs = LazyMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_lazymemblob(
-        Some(logger),
-        heads,
-        bookmarks,
-        blobs,
-        linknodes,
-        changesets,
-        repoid,
-    )
 }
 
 #[test]
@@ -191,15 +223,9 @@ fn test_upload_blob_stats() {
     let fake_path = RepoPath::file("fakefile").expect("Can't generate fake RepoPath");
 
     let (nodeid, future) = upload_file_no_parents(&repo, "blob", &fake_path);
-    let _ = run_future(future);
-    for phase in vec!["content_uploaded", "finished"].into_iter() {
-        let records = records.lock().expect("Lock poisoned");
-        let data = records
-            .get(phase.into())
-            .expect(&format!("No records for phase {}", phase));
-        assert_eq!(data.nodeid, format!("{}", nodeid));
-        assert!(data.poll_count > 0, "Not polled before completion!");
-        assert!(data.poll_time_ms >= 0, "Negative time in polling");
-        assert!(data.completion_time_ms >= 0, "Negative time to completion");
-    }
+    let _ = run_future(future).unwrap();
+
+    check_stats!(records, data; "content_uploaded", "finished";
+        { assert_eq!(data.nodeid, format!("{}", nodeid)); }
+    );
 }

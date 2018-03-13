@@ -348,8 +348,10 @@ impl BlobRepo {
                 "path" => path,
                 "nodeid" => nodeid,
                 "poll_count" => stats.poll_count,
-                "poll_time_ms" => stats.poll_time.num_milliseconds(),
-                "completion_time_ms" => stats.completion_time.num_milliseconds()
+                "poll_time_us" => stats.poll_time.num_microseconds()
+                                    .unwrap_or(i64::max_value()),
+                "completion_time_us" => stats.completion_time.num_microseconds()
+                                        .unwrap_or(i64::max_value())
             );
         }
 
