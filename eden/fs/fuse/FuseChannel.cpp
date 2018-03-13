@@ -351,8 +351,7 @@ void FuseChannel::startWorkerThreads() {
       state->workerThreads.emplace_back([this] { fuseWorkerThread(); });
     }
   } catch (const std::exception& ex) {
-    XLOG(ERR) << "Error starting FUSE worker threads: "
-              << folly::exceptionStr(ex);
+    XLOG(ERR) << "Error starting FUSE worker threads: " << exceptionStr(ex);
     // Request any threads we did start to stop now.
     requestSessionExit(state);
     throw;
@@ -494,7 +493,7 @@ void FuseChannel::requestSessionExit(
   }
 }
 
-void FuseChannel::initWorkerThread() {
+void FuseChannel::initWorkerThread() noexcept {
   try {
     setThreadName(to<std::string>("fuse", mountPath_.basename()));
 
@@ -505,7 +504,7 @@ void FuseChannel::initWorkerThread() {
     startWorkerThreads();
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Error performing FUSE channel initialization: "
-              << folly::exceptionStr(ex);
+              << exceptionStr(ex);
     // Indicate that initialization failed.
     initPromise_.setException(
         folly::exception_wrapper(std::current_exception(), ex));
@@ -519,9 +518,19 @@ void FuseChannel::initWorkerThread() {
   fuseWorkerThread();
 }
 
-void FuseChannel::fuseWorkerThread() {
+void FuseChannel::fuseWorkerThread() noexcept {
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
-  processSession();
+
+  try {
+    processSession();
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "unexpected error in FUSE worker thread: " << exceptionStr(ex);
+    // Request that all other FUSE threads exit.
+    // This will cause us to stop processing the mount and signal our session
+    // complete future.
+    requestSessionExit();
+    // Fall through and continue with the normal thread exit code.
+  }
 
   // We may be complete; check to see if there are any
   // outstanding requests.  Take care to avoid triggering
