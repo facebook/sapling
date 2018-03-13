@@ -422,8 +422,18 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
       folly::EventBase* eventBase,
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+
+  /**
+   * Take over a FUSE channel for an existing mount point.
+   *
+   * This spins up worker threads to service the existing FUSE channel and
+   * returns immediately, or throws an exception on error.
+   */
+  void takeoverFuse(
+      folly::EventBase* eventBase,
       std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-      folly::Optional<fusell::FuseChannelData> takeoverData);
+      fusell::FuseChannelData takeoverData);
 
   /**
    * Obtains a future that will complete once the fuse channel has wound down.
@@ -549,6 +559,16 @@ class EdenMount {
   std::unique_ptr<DiffContext> createDiffContext(
       InodeDiffCallback* callback,
       bool listIgnored) const;
+
+  /**
+   * Construct the channel_ member variable.
+   * This also sets up callbacks to clean up correctly when the channel
+   * is shut down.
+   */
+  void createFuseChannel(
+      folly::File fuseDevice,
+      folly::EventBase* eventBase,
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
 
   /**
    * Private destructor.

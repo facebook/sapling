@@ -321,21 +321,22 @@ FuseChannel::FuseChannel(
 }
 
 folly::Future<folly::Unit> FuseChannel::initialize(
-    folly::Optional<fuse_init_out> connInfo,
     folly::Executor* threadPool) {
   // Asynchronously initialize the fuse session.
   // We cannot block the caller, so we fire this off against the provided
   // thread pool.
 
-  auto init = connInfo.hasValue()
-      ? makeFutureWith([this, connInfo = std::move(connInfo.value())] {
-          connInfo_ = connInfo;
-          XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
-                     << ", max_readahead=" << connInfo_->max_readahead
-                     << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
-        })
-      : folly::via(threadPool).then([this] { readInitPacket(); });
-  return init.then([this] { startWorkerThreads(); });
+  return folly::via(threadPool).then([this] { readInitPacket(); }).then([this] {
+    startWorkerThreads();
+  });
+}
+
+void FuseChannel::initializeFromTakeover(fuse_init_out connInfo) {
+  connInfo_ = connInfo;
+  XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
+             << ", max_readahead=" << connInfo_->max_readahead
+             << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
+  startWorkerThreads();
 }
 
 void FuseChannel::startWorkerThreads() {

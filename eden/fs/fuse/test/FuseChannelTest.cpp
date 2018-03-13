@@ -67,8 +67,7 @@ TEST(FuseChannel, testInit) {
       eventBaseThread.getEventBase(),
       numThreads,
       &dispatcher);
-  auto initFuture =
-      channel.initialize(folly::none, eventBaseThread.getEventBase());
+  auto initFuture = channel.initialize(eventBaseThread.getEventBase());
 
   struct fuse_init_in initArg;
   initArg.major = FUSE_KERNEL_VERSION;

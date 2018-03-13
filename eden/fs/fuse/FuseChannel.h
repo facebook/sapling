@@ -67,11 +67,7 @@ class FuseChannel {
    * Initialize the FuseChannel; until this completes successfully,
    * FUSE requests will not be serviced.
    *
-   * If the optional connInfo field is set then we are performing
-   * a graceful restart / takeover and will populate the internal
-   * connInfo_ field from its value.
-   *
-   * Otherwise: we will wait for the INIT request from the kernel
+   * This will wait for the INIT request from the kernel
    * and validate that we are compatible.  The `threadPool`
    * argument will be used as an executor to perform this blocking
    * INIT operation.
@@ -80,8 +76,22 @@ class FuseChannel {
    * that will be used to service incoming fuse requests.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      folly::Optional<fuse_init_out> connInfo,
       folly::Executor* threadPool);
+
+  /**
+   * Initialize the FuseChannel when taking over an existing FuseDevice.
+   *
+   * This is used when performing a graceful restart of Eden, where we are
+   * taking over a FUSE connection that was already initialized by a previous
+   * process.
+   *
+   * The connInfo parameter specifies the connection data that was already
+   * negotiated by the previous owner of the FuseDevice.
+   *
+   * This function will immediately set up the thread pool used to service
+   * incoming fuse requests.
+   */
+  void initializeFromTakeover(fuse_init_out connInfo);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;

@@ -665,74 +665,86 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
 
 folly::Future<folly::Unit> EdenMount::startFuse(
     folly::EventBase* eventBase,
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
+  return folly::makeFutureWith([&]() {
+    if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
+      throw std::runtime_error("mount point has already been started");
+    }
+
+    auto fuseDevice =
+        serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
+
+    createFuseChannel(std::move(fuseDevice), eventBase, threadPool);
+    return channel_->initialize(threadPool.get())
+        .then([this](folly::Unit&&) {
+          doStateTransition(State::STARTING, State::RUNNING);
+        })
+        .onError([this](folly::exception_wrapper&& ew) {
+          doStateTransition(State::STARTING, State::FUSE_ERROR);
+          return makeFuture<folly::Unit>(std::move(ew));
+        });
+  });
+}
+
+void EdenMount::takeoverFuse(
+    folly::EventBase* eventBase,
     std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-    folly::Optional<FuseChannelData> takeoverData) {
-  return folly::makeFutureWith(
-      [this,
-       eventBase,
-       threadPool,
-       takeoverData = std::move(takeoverData)]() mutable {
-        if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
-          throw std::runtime_error("mount point has already been started");
+    FuseChannelData takeoverData) {
+  if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
+    throw std::runtime_error("mount point has already been started");
+  }
+
+  createFuseChannel(
+      std::move(takeoverData.fd), eventBase, std::move(threadPool));
+
+  try {
+    channel_->initializeFromTakeover(takeoverData.connInfo);
+    doStateTransition(State::STARTING, State::RUNNING);
+  } catch (const std::exception& ex) {
+    doStateTransition(State::STARTING, State::FUSE_ERROR);
+    throw;
+  }
+}
+
+void EdenMount::createFuseChannel(
+    folly::File fuseDevice,
+    folly::EventBase* eventBase,
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
+  eventBase_ = eventBase;
+  threadPool_ = std::move(threadPool);
+
+  channel_ = std::make_unique<fusell::FuseChannel>(
+      std::move(fuseDevice),
+      path_,
+      eventBase_,
+      FLAGS_fuseNumThreads,
+      dispatcher_.get());
+
+  channel_->getSessionCompleteFuture()
+      .then([this] {
+        // In case we are performing a graceful restart,
+        // extract the fuse device now.
+        auto channelData = channel_->stealFuseDevice();
+        channel_.reset();
+
+        std::vector<AbsolutePath> bindMounts;
+        for (const auto& entry : bindMounts_) {
+          bindMounts.push_back(entry.pathInMountDir);
         }
 
-        eventBase_ = eventBase;
-        threadPool_ = threadPool;
-
-        folly::File fuseDevice;
-        folly::Optional<fuse_init_out> connInfo;
-
-        if (takeoverData.hasValue()) {
-          auto& channelData = takeoverData.value();
-          fuseDevice = std::move(channelData.fd);
-          connInfo = channelData.connInfo;
-        } else {
-          fuseDevice =
-              serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
-        }
-
-        channel_ = std::make_unique<fusell::FuseChannel>(
-            std::move(fuseDevice),
+        fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
             path_,
-            eventBase_,
-            FLAGS_fuseNumThreads,
-            dispatcher_.get());
-
-        channel_->getSessionCompleteFuture()
-            .then([this] {
-              // In case we are performing a graceful restart,
-              // extract the fuse device now.
-              auto channelData = channel_->stealFuseDevice();
-              channel_.reset();
-
-              std::vector<AbsolutePath> bindMounts;
-              for (const auto& entry : bindMounts_) {
-                bindMounts.push_back(entry.pathInMountDir);
-              }
-
-              fuseCompletionPromise_.setValue(TakeoverData::MountInfo(
-                  path_,
-                  config_->getClientDirectory(),
-                  bindMounts,
-                  std::move(channelData.fd),
-                  channelData.connInfo,
-                  SerializedFileHandleMap{}, // placeholder
-                  SerializedInodeMap{} // placeholder
-                  ));
-            })
-            .onError([this](folly::exception_wrapper&& ew) {
-              XLOG(ERR) << "session complete with err" << ew;
-              fuseCompletionPromise_.setException(std::move(ew));
-            });
-
-        return channel_->initialize(connInfo, threadPool.get())
-            .then([this](folly::Unit&&) {
-              doStateTransition(State::STARTING, State::RUNNING);
-            })
-            .onError([this](folly::exception_wrapper&& ew) {
-              doStateTransition(State::STARTING, State::FUSE_ERROR);
-              return makeFuture<folly::Unit>(std::move(ew));
-            });
+            config_->getClientDirectory(),
+            bindMounts,
+            std::move(channelData.fd),
+            channelData.connInfo,
+            SerializedFileHandleMap{}, // placeholder
+            SerializedInodeMap{} // placeholder
+            ));
+      })
+      .onError([this](folly::exception_wrapper&& ew) {
+        XLOG(ERR) << "session complete with err" << ew;
+        fuseCompletionPromise_.setException(std::move(ew));
       });
 }
 

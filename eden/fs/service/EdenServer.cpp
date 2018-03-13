@@ -511,7 +511,7 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
 folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
     std::shared_ptr<EdenMount> edenMount) {
   // Start up the fuse workers.
-  return edenMount->startFuse(getMainEventBase(), threadPool_, folly::none);
+  return edenMount->startFuse(getMainEventBase(), threadPool_);
 }
 
 folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
@@ -568,7 +568,7 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
   // Start up the fuse workers.
   return folly::collectAll(futures).then(
       [this, edenMount, channelData = std::move(channelData)]() mutable {
-        return edenMount->startFuse(
+        return edenMount->takeoverFuse(
             getMainEventBase(), threadPool_, std::move(channelData));
       });
 }

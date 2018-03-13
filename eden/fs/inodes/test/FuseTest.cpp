@@ -36,13 +36,13 @@ TEST(FuseTest, initMount) {
   constexpr size_t threadCount = 2;
   auto threadPool =
       make_shared<UnboundedQueueThreadPool>(threadCount, "EdenCPUThread");
-  auto initFuture =
-      testMount.getEdenMount()
-          ->startFuse(evbThread.getEventBase(), threadPool, folly::none)
-          .then([] { XLOG(INFO) << "startFuse() succeeded"; })
-          .onError([&](const folly::exception_wrapper& ew) {
-            ADD_FAILURE() << "startFuse() failed: " << folly::exceptionStr(ew);
-          });
+  auto initFuture = testMount.getEdenMount()
+                        ->startFuse(evbThread.getEventBase(), threadPool)
+                        .then([] { XLOG(INFO) << "startFuse() succeeded"; })
+                        .onError([&](const folly::exception_wrapper& ew) {
+                          ADD_FAILURE() << "startFuse() failed: "
+                                        << folly::exceptionStr(ew);
+                        });
 
   struct fuse_init_in initArg;
   initArg.major = FUSE_KERNEL_VERSION;
