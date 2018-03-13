@@ -687,9 +687,6 @@ Trying to pull from bad path
 
 Strip commit and pull it using hg update with bookmark name
   $ hg strip -q d8fde0ddfc96
-  $ hg book -d scratch/mybranch
-  abort: bookmark 'scratch/mybranch' does not exist
-  [255]
   $ hg up scratch/mybranch
   'scratch/mybranch' does not exist locally - looking for it remotely...
   pulling from ssh://user@dummy/repo
