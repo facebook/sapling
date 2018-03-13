@@ -14,6 +14,7 @@ from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
+from mercurial.thirdparty import attr
 import os, collections, hashlib
 
 cmdtable = {}
@@ -671,10 +672,19 @@ def _wraprepo(ui, repo):
     repo.signaturecache = {}
     repo.__class__ = SparseRepo
 
-ProfileInfo = collections.namedtuple('ProfileInfo', 'path active')
 # A profile is either active, inactive or included; the latter is a profile
 # included (transitively) by an active profile.
-PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = range(3)
+PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = _profile_flags = range(3)
+
+@attr.s(slots=True, frozen=True)
+class ProfileInfo(object):
+    path = attr.ib()
+    active = attr.ib()
+
+    @active.validator
+    def checkactive(self, attribute, value):
+        if not any(value is flag for flag in _profile_flags):
+            raise ValueError('Invalid active flag value')
 
 def _discover(ui, repo):
     """Produce a list of available profiles with metadata
