@@ -21,6 +21,7 @@
 #include "eden/fs/fuse/RequestData.h"
 
 using namespace folly;
+using std::string;
 
 namespace facebook {
 namespace eden {
@@ -570,82 +571,131 @@ void FuseChannel::readInitPacket() {
     fuse_init_in init;
   } init;
 
+  // Loop until we receive the INIT packet, or until we are stopped.
   while (true) {
+    if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+      throw std::runtime_error(folly::to<string>(
+          "FuseChannel for \"",
+          mountPath_,
+          "\" stopped while waiting for INIT packet"));
+    }
+
     auto res = read(fuseDevice_.fd(), &init, sizeof(init));
     if (res < 0) {
-      res = -errno;
-    }
-    switch (res) {
-      case -EINTR:
-      case -EAGAIN:
-      case -ENOENT:
+      int errnum = errno;
+      if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+        throw std::runtime_error(folly::to<string>(
+            "FuseChannel for \"",
+            mountPath_,
+            "\" stopped while waiting for INIT packet"));
+      }
+
+      if (errnum == EINTR || errnum == EAGAIN || errnum == ENOENT) {
         // These are all variations on being interrupted; let's
         // continue and retry.
         continue;
-
-      case sizeof(init):
-        // Successfully read the init header
-        break;
-      default:
-        // Failed somehow
-        throw std::runtime_error(folly::to<std::string>(
-            "error reading fuse kernel initialization request, result=", res));
-    }
-
-    switch (init.header.opcode) {
-      case FUSE_INIT: {
-        fuse_init_out connInfo = {};
-        connInfo.major = FUSE_KERNEL_VERSION;
-        connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
-        connInfo.max_write = bufferSize_ - 4096;
-
-        connInfo.max_readahead = init.init.max_readahead;
-
-        const auto& capable = init.init.flags;
-        auto& want = connInfo.flags;
-
-        want |=
-            capable &
-            (
-                // TODO: follow up and look at the new flags; particularly
-                // FUSE_PARALLEL_DIROPS, FUSE_DO_READDIRPLUS,
-                // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
-                // but may not directly benefit eden today.
-
-                // It would be great to enable FUSE_ATOMIC_O_TRUNC but it
-                // seems to trigger a kernel/FUSE bug.  See
-                // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
-                // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
-                FUSE_BIG_WRITES | FUSE_ASYNC_READ);
-
-        XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
-                   << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
-                   << FUSE_KERNEL_MINOR_VERSION
-                   << ", max_write=" << connInfo.max_write
-                   << ", max_readahead=" << connInfo.max_readahead
-                   << ", capable=" << flagsToLabel(capsLabels, capable)
-                   << ", want=" << flagsToLabel(capsLabels, want);
-
-        if (init.init.major != FUSE_KERNEL_VERSION) {
-          replyError(init.header, EPROTO);
-          throw std::runtime_error("fuse kernel major version is unsupported");
-        }
-
-        connInfo_ = connInfo;
-        sendReply(init.header, connInfo);
-        dispatcher_->initConnection(connInfo);
-        return;
       }
-      default:
-        replyError(init.header, EPROTO);
-        throw std::runtime_error(folly::to<std::string>(
-            "expect to receive FUSE_INIT but got ",
-            fuseOpcodeName(init.header.opcode),
-            " (",
-            init.header.opcode,
-            ")"));
+      if (errnum == ENODEV) {
+        throw std::runtime_error(folly::to<string>(
+            "FUSE device for \"",
+            mountPath_,
+            "\" unmounted before we received INIT request"));
+      }
+      throw std::runtime_error(folly::to<string>(
+          "error reading from FUSE device for \"",
+          mountPath_,
+          "\" while expecting INIT request: ",
+          folly::errnoStr(errnum)));
     }
+    if (res == 0) {
+      // This is generally caused by the unit tests closing a fake fuse
+      // channel.  When we are actually connected to the kernel we normally
+      // expect to see an ENODEV error rather than EOF.
+      throw std::runtime_error(folly::to<string>(
+          "FUSE mount \"",
+          mountPath_,
+          "\" was unmounted before we received the INIT packet"));
+    }
+
+    // Error out if the kernel sends less data than we expected.
+    // We currently don't error out for now if we receive more data: maybe this
+    // could happen for future kernel versions that speak a newer FUSE protocol
+    // with extra fields in fuse_init_in?
+    if (res < sizeof(init)) {
+      throw std::runtime_error(folly::to<string>(
+          "received partial FUSE_INIT packet on mount \"",
+          mountPath_,
+          "\": size=",
+          res));
+    }
+
+    break;
   }
+
+  if (init.header.opcode != FUSE_INIT) {
+    replyError(init.header, EPROTO);
+    throw std::runtime_error(folly::to<std::string>(
+        "expected to receive FUSE_INIT for \"",
+        mountPath_,
+        "\" but got ",
+        fuseOpcodeName(init.header.opcode),
+        " (",
+        init.header.opcode,
+        ")"));
+  }
+
+  fuse_init_out connInfo = {};
+  connInfo.major = FUSE_KERNEL_VERSION;
+  connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+  connInfo.max_write = bufferSize_ - 4096;
+
+  connInfo.max_readahead = init.init.max_readahead;
+
+  const auto& capable = init.init.flags;
+  auto& want = connInfo.flags;
+
+  // TODO: follow up and look at the new flags; particularly
+  // FUSE_PARALLEL_DIROPS, FUSE_DO_READDIRPLUS,
+  // FUSE_READDIRPLUS_AUTO. FUSE_SPLICE_XXX are interesting too,
+  // but may not directly benefit eden today.
+  //
+  // It would be great to enable FUSE_ATOMIC_O_TRUNC but it
+  // seems to trigger a kernel/FUSE bug.  See
+  // test_mmap_is_null_terminated_after_truncate_and_write_to_overlay
+  // in mmap_test.py. FUSE_ATOMIC_O_TRUNC |
+  want = capable & (FUSE_BIG_WRITES | FUSE_ASYNC_READ);
+
+  XLOG(INFO) << "Speaking fuse protocol kernel=" << init.init.major << "."
+             << init.init.minor << " local=" << FUSE_KERNEL_VERSION << "."
+             << FUSE_KERNEL_MINOR_VERSION << " on mount \"" << mountPath_
+             << "\", max_write=" << connInfo.max_write
+             << ", max_readahead=" << connInfo.max_readahead
+             << ", capable=" << flagsToLabel(capsLabels, capable)
+             << ", want=" << flagsToLabel(capsLabels, want);
+
+  if (init.init.major != FUSE_KERNEL_VERSION) {
+    replyError(init.header, EPROTO);
+    throw std::runtime_error(folly::to<std::string>(
+        "Unsupported FUSE kernel version ",
+        init.init.major,
+        ".",
+        init.init.minor,
+        " while initializing \"",
+        mountPath_,
+        "\""));
+  }
+
+  // Update connInfo_
+  // We have not started the other worker threads yet, so this is safe
+  // to update without synchronization.
+  connInfo_ = connInfo;
+
+  // Send the INIT reply before informing the Dispatcher or signalling
+  // initPromise_, so that the kernel will put the mount point in use and will
+  // not block further filesystem access on us while running the Dispatcher
+  // callback code.
+  sendReply(init.header, connInfo);
+  dispatcher_->initConnection(connInfo);
 }
 
 void FuseChannel::processSession() {

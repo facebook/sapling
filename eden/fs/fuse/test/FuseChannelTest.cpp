@@ -11,6 +11,7 @@
 
 #include <folly/experimental/logging/xlog.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
+#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/EdenStats.h"
@@ -88,10 +89,13 @@ TEST_F(FuseChannelTest, testInitDestroy) {
   performInit(channel.get());
 }
 
-// TODO: Add a test where we destroy the FuseChannel before initialization has
-// completed.
-//
-// TODO: Add a test where an error occurs during initialization
+TEST_F(FuseChannelTest, testDestroyWithPendingInit) {
+  // Create a FuseChannel, call initialize(), and then destroy the FuseChannel
+  // without ever having seen the INIT request from the kernel.
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+  EXPECT_FALSE(initFuture.isReady());
+}
 
 TEST_F(FuseChannelTest, testInitUnmount) {
   auto channel = createChannel();
@@ -123,4 +127,71 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
       stopReason == FuseChannel::StopReason::UNMOUNTED ||
       stopReason == FuseChannel::StopReason::DESTRUCTOR)
       << "unexpected FuseChannel stop reason: " << static_cast<int>(stopReason);
+}
+
+TEST_F(FuseChannelTest, testInitErrorClose) {
+  // Close the FUSE device while the FuseChannel is waiting on the INIT request
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+  fuse_.close();
+
+  EXPECT_THROW_RE(
+      initFuture.get(100ms),
+      std::runtime_error,
+      "FUSE mount \"/fake/mount/path\" was unmounted before we "
+      "received the INIT packet");
+}
+
+TEST_F(FuseChannelTest, testInitErrorWrongPacket) {
+  // Send a packet other than FUSE_INIT while the FuseChannel is waiting on the
+  // INIT request
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+
+  // Use a fuse_init_in body, but FUSE_LOOKUP as the opcode
+  struct fuse_init_in initArg = {};
+  fuse_.sendRequest(FUSE_LOOKUP, FUSE_ROOT_ID, initArg);
+
+  EXPECT_THROW_RE(
+      initFuture.get(100ms),
+      std::runtime_error,
+      "expected to receive FUSE_INIT for \"/fake/mount/path\" "
+      "but got FUSE_LOOKUP");
+}
+
+TEST_F(FuseChannelTest, testInitErrorOldVersion) {
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+
+  // Use a fuse_init_in body, but FUSE_LOOKUP as the opcode
+  struct fuse_init_in initArg = {};
+  initArg.major = 2;
+  initArg.minor = 7;
+  initArg.max_readahead = 0;
+  initArg.flags = 0;
+  fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, initArg);
+
+  EXPECT_THROW_RE(
+      initFuture.get(100ms),
+      std::runtime_error,
+      "Unsupported FUSE kernel version 2.7 while initializing "
+      "\"/fake/mount/path\"");
+}
+
+TEST_F(FuseChannelTest, testInitErrorShortPacket) {
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+
+  // Use a fuse_init_in body, but FUSE_LOOKUP as the opcode
+  uint32_t body = 5;
+  fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, body);
+
+  EXPECT_THROW_RE(
+      initFuture.get(100ms),
+      std::runtime_error,
+      "received partial FUSE_INIT packet on mount \"/fake/mount/path\": "
+      "size=44");
+  static_assert(
+      sizeof(fuse_in_header) + sizeof(uint32_t) == 44,
+      "validate the size in our error message check");
 }
