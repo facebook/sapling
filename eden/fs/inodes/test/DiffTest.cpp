@@ -1010,6 +1010,25 @@ TEST(DiffTest, ignoreFileIsDirectory) {
   EXPECT_THAT(result.getModified(), UnorderedElementsAre());
 }
 
+TEST(DiffTest, emptyIgnoreFile) {
+  DiffTest test({
+      {"src/foo.txt", "test\n"},
+      {"src/subdir/bar.txt", "test\n"},
+      {"src/.gitignore", ""},
+  });
+
+  test.getMount().addFile("src/subdir/new.txt", "new\n");
+
+  auto result = test.diff();
+  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
+  EXPECT_THAT(
+      result.getUntracked(),
+      UnorderedElementsAre(RelativePath{"src/subdir/new.txt"}));
+  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
+  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
+  EXPECT_THAT(result.getModified(), UnorderedElementsAre());
+}
+
 // Files under the .hg directory should never be reported in diff results
 TEST(DiffTest, ignoreHidden) {
   DiffTest test({

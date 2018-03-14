@@ -1868,16 +1868,13 @@ Future<Unit> TreeInode::loadGitIgnoreThenDiff(
              tree,
              parentIgnore,
              isIgnored](std::string&& ignoreFileContents) mutable {
-        if (!ignoreFileContents.empty()) {
-          return self->computeDiff(
-              self->contents_.wlock(),
-              context,
-              currentPath,
-              std::move(tree),
-              make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
-              isIgnored);
-        }
-        return makeFuture();
+        return self->computeDiff(
+            self->contents_.wlock(),
+            context,
+            currentPath,
+            std::move(tree),
+            make_unique<GitIgnoreStack>(parentIgnore, ignoreFileContents),
+            isIgnored);
       });
 }
 
