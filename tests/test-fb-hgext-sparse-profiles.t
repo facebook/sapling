@@ -52,6 +52,24 @@ Verify disabling a profile works
   data.py
   webpage.sparse
 
+Verify error checking includes filename and line numbers
+
+  $ cat > broken.sparse <<EOF
+  > # include section omitted
+  > [exclude]
+  > *.html
+  > /absolute/paths/are/ignored
+  > [include]
+  > EOF
+  $ hg add broken.sparse
+  $ hg ci -m 'Adding a broken file'
+  $ hg sparse --enable-profile broken.sparse
+  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
+  abort: A sparse file cannot have includes after excludes in broken.sparse:5
+  [255]
+  $ hg strip .
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/myrepo/.hg/strip-backup/* (glob)
 
 Verify that a profile is updated across multiple commits
 

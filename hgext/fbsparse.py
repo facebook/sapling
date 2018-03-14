@@ -401,13 +401,16 @@ class SparseConfig(object):
 
 def _wraprepo(ui, repo):
     class SparseRepo(repo.__class__):
-        def readsparseconfig(self, raw):
+        def readsparseconfig(self, raw, filename=None):
             """Takes a string sparse config and returns a SparseConfig
 
             This object contains the includes, excludes, and profiles from the
             raw profile.
 
+            The filename is used to report errors and warnings.
+
             """
+            filename = filename or '<sparse profile>'
             includes = set()
             excludes = set()
 
@@ -434,8 +437,9 @@ def _wraprepo(ui, repo):
 
                 if line in sections:
                     if sections[line] is includes and current is excludes:
-                        raise error.Abort(
-                            _('.hg/sparse cannot have includes after excludes'))
+                        raise error.Abort(_(
+                            'A sparse file cannot have includes after excludes '
+                            'in %s:%i') % (filename, i))
                     current = sections[line]
                     continue
 
@@ -443,7 +447,8 @@ def _wraprepo(ui, repo):
                 if line.startswith('/'):
                     self.ui.warn(_(
                         'warning: sparse profile cannot use paths starting '
-                        'with /, ignoring %s on line %d\n') % (line, i))
+                        'with /, ignoring %s, in %s:%i\n') % (
+                            line, filename, i))
                     continue
                 current.add(line)
 
@@ -487,7 +492,7 @@ def _wraprepo(ui, repo):
                             self.ui.debug(msg)
                         continue
                     pincludes, pexcludes, subprofs = (
-                        self.readsparseconfig(raw))
+                        self.readsparseconfig(raw, filename=profile))
                     includes.update(pincludes)
                     excludes.update(pexcludes)
                     for subprofile in subprofs:
@@ -1029,7 +1034,7 @@ def _import(ui, repo, files, opts, force=False):
         for file in files:
             with util.posixfile(util.expandpath(file)) as importfile:
                 iincludes, iexcludes, iprofiles = repo.readsparseconfig(
-                    importfile.read())
+                    importfile.read(), filename=file)
                 oldsize = len(includes) + len(excludes) + len(profiles)
                 includes.update(iincludes - aincludes)
                 excludes.update(iexcludes - aexcludes)
