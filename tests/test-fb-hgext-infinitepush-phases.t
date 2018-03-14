@@ -55,11 +55,10 @@ the history but is stored on disk
   adding file changes
   added 0 changesets with 0 changes to 1 files
 
-- BUG: Commit 4 should not be public
   $ hg log -G -T '{shortest(node)} {desc} {phase}'
   @  ccd5 stack 2 - commit 2 draft
   |
-  o  f133 stack 2 - commit 1 public
+  o  f133 stack 2 - commit 1 draft
   |
   | o  d567 stack 1 - commit 2 draft
   | |

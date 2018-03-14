@@ -645,11 +645,21 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                         bundlecaps, bundlerepo, bundlerevs, repo.ui)
                     cl = bundlerepo.changelog
                     bundleroots = _getbundleroots(repo, bundlerepo, bundlerevs)
+                    draftcommits = set()
                     for rev in bundlerevs:
                         node = cl.node(rev)
-                        newphases[hex(node)] = str(phases.draft)
-                        nodestobundle[node] = (bundlerepo, bundleroots,
-                                               newbundlefile)
+                        draftcommits.add(node)
+                        if node in heads:
+                            nodestobundle[node] = (bundlerepo, bundleroots,
+                                                   newbundlefile)
+
+                    if draftcommits:
+                        # Filter down to roots of this head, so we don't report
+                        # non-roots as phase roots and we don't report commits
+                        # that aren't related to the requested head.
+                        for rev in bundlerepo.revs('roots((%ln) & ::%n)',
+                                                   draftcommits, head):
+                            newphases[bundlerepo[rev].hex()] = str(phases.draft)
 
                 scratchbundles.append(
                     _generateoutputparts(head, cgversion, *nodestobundle[head]))
