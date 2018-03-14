@@ -97,6 +97,20 @@ TEST_F(FuseChannelTest, testDestroyWithPendingInit) {
   EXPECT_FALSE(initFuture.isReady());
 }
 
+TEST_F(FuseChannelTest, testInitDestroyRace) {
+  // Send an INIT request and immediately destroy the FuseChannelTest
+  // without waiting for initialization to complete.
+  auto channel = createChannel();
+  auto initFuture = channel->initialize();
+  fuse_.sendInitRequest();
+  channel.reset();
+
+  // Wait for the initialization future to complete.
+  // It's fine if it fails if the channel was destroyed before initialization
+  // completed, or its fine if it succeeded first too.
+  initFuture.wait(100ms);
+}
+
 TEST_F(FuseChannelTest, testInitUnmount) {
   auto channel = createChannel();
   performInit(channel.get());

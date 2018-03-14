@@ -347,6 +347,18 @@ void FuseChannel::initializeFromTakeover(fuse_init_out connInfo) {
 
 void FuseChannel::startWorkerThreads() {
   auto state = state_.wlock();
+
+  // After aquiring the state_ lock check to see if we have been asked to shut
+  // down.  If so just return without doing anything.
+  //
+  // This can happen if the FuseChannel is destroyed very shortly after we
+  // finish processing the INIT request.  In this case we don't want to start
+  // the remaining worker threads if the destructor is trying to stop and join
+  // them.
+  if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+    return;
+  }
+
   try {
     state->workerThreads.reserve(numThreads_);
     while (state->workerThreads.size() < numThreads_) {
