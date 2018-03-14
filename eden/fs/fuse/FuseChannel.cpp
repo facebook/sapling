@@ -299,7 +299,8 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
     if (err == ENOENT) {
       // Interrupted by a signal.  We don't need to log this,
       // but will propagate it back to our caller.
-    } else if (sessionFinished_.load()) {
+    } else if (
+        runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
       XLOG(INFO) << "error writing to fuse device: session closed";
     } else {
       XLOG(WARNING) << "error writing to fuse device: " << folly::errnoStr(err);
@@ -353,7 +354,7 @@ void FuseChannel::startWorkerThreads() {
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Error starting FUSE worker threads: " << exceptionStr(ex);
     // Request any threads we did start to stop now.
-    requestSessionExit(state);
+    requestSessionExit(state, StopReason::INIT_FAILED);
     throw;
   }
 }
@@ -362,7 +363,7 @@ FuseChannel::~FuseChannel() {
   std::vector<std::thread> threads;
   {
     auto state = state_.wlock();
-    requestSessionExit(state);
+    requestSessionExit(state, StopReason::DESTRUCTOR);
     threads.swap(state->workerThreads);
   }
 
@@ -472,18 +473,23 @@ void FuseChannel::invalidateEntry(
   }
 }
 
-folly::Future<folly::Unit> FuseChannel::getSessionCompleteFuture() {
+folly::Future<FuseChannel::StopReason> FuseChannel::getSessionCompleteFuture() {
   return sessionCompletePromise_.getFuture();
 }
 
-void FuseChannel::requestSessionExit() {
-  requestSessionExit(state_.wlock());
+void FuseChannel::requestSessionExit(StopReason reason) {
+  requestSessionExit(state_.wlock(), reason);
 }
 
 void FuseChannel::requestSessionExit(
-    const Synchronized<State>::LockedPtr& state) {
-  bool no = false;
-  if (sessionFinished_.compare_exchange_strong(no, true)) {
+    const Synchronized<State>::LockedPtr& state,
+    StopReason reason) {
+  StopReason expectedReason = StopReason::RUNNING;
+  if (runState_.compare_exchange_strong(
+          expectedReason,
+          reason,
+          std::memory_order_relaxed,
+          std::memory_order_relaxed)) {
     // Knock our workers out of their blocking read() syscalls
     for (auto& thr : state->workerThreads) {
       if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
@@ -528,7 +534,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
     // Request that all other FUSE threads exit.
     // This will cause us to stop processing the mount and signal our session
     // complete future.
-    requestSessionExit();
+    requestSessionExit(StopReason::WORKER_EXCEPTION);
     // Fall through and continue with the normal thread exit code.
   }
 
@@ -551,8 +557,10 @@ void FuseChannel::fuseWorkerThread() noexcept {
   }
 
   if (complete) {
-    eventBase_->runInEventBaseThread(
-        [this]() { sessionCompletePromise_.setValue(); });
+    eventBase_->runInEventBaseThread([this]() {
+      sessionCompletePromise_.setValue(
+          runState_.load(std::memory_order_relaxed));
+    });
   }
 }
 
@@ -646,7 +654,7 @@ void FuseChannel::processSession() {
   // additional syscalls on each loop iteration.
   auto myPid = getpid();
 
-  while (!sessionFinished_.load()) {
+  while (runState_.load(std::memory_order_relaxed) == StopReason::RUNNING) {
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
     // We can look at turning this on once the main plumbing is complete.
     auto res = read(fuseDevice_.fd(), buf.data(), buf.size());
@@ -654,7 +662,7 @@ void FuseChannel::processSession() {
       res = -errno;
     }
 
-    if (sessionFinished_.load()) {
+    if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
       break;
     }
 
@@ -670,28 +678,33 @@ void FuseChannel::processSession() {
     }
     if (res == -ENODEV) {
       // ENODEV means the filesystem was unmounted
-      requestSessionExit();
+      requestSessionExit(StopReason::UNMOUNTED);
       break;
     }
     if (res < 0) {
       XLOG(WARNING) << "error reading from fuse channel: "
                     << folly::errnoStr(-res);
-      requestSessionExit();
+      requestSessionExit(StopReason::FUSE_READ_ERROR);
       break;
     }
 
     const auto arg_size = static_cast<size_t>(res);
-
     if (arg_size < sizeof(struct fuse_in_header)) {
-      // This shouldn't normally happen on real FUSE devices.
-      //
-      // This does happen in our unit tests where we use a fake FUSE channel:
-      // we cannot trigger -ENODEV to signal mount point cleanup, so we simply
-      // close the connection instead.
-      XLOG(ERR) << "read truncated message from kernel fuse device: len="
-                << arg_size;
-      requestSessionExit();
-      break;
+      if (arg_size == 0) {
+        // This code path is hit when a fake FUSE channel is closed in our unit
+        // tests.  On real FUSE channels we should get ENODEV to indicate that
+        // the FUSE channel was shut down.  However, in our unit tests that use
+        // fake FUSE connections we cannot send an ENODEV error, and so we just
+        // close the channel instead.
+        requestSessionExit(StopReason::UNMOUNTED);
+      } else {
+        // We got a partial FUSE header.  This shouldn't ever happen unless
+        // there is a bug in the FUSE kernel code.
+        XLOG(ERR) << "read truncated message from kernel fuse device: len="
+                  << arg_size;
+        requestSessionExit(StopReason::FUSE_TRUNCATED_REQUEST);
+        break;
+      }
     }
 
     const auto* header = reinterpret_cast<fuse_in_header*>(buf.data());
@@ -821,7 +834,7 @@ void FuseChannel::processSession() {
           replyError(*header, ENOSYS);
         } catch (const std::system_error& exc) {
           XLOG(ERR) << "Failed to write error response to fuse: " << exc.what();
-          requestSessionExit();
+          requestSessionExit(StopReason::FUSE_WRITE_ERROR);
           return;
         }
         break;
@@ -848,7 +861,7 @@ void FuseChannel::finishRequest(const fuse_in_header& header) {
         state->stoppedThreads == numThreads_;
   }
   if (complete) {
-    sessionCompletePromise_.setValue();
+    sessionCompletePromise_.setValue(runState_.load(std::memory_order_relaxed));
   }
 }
 

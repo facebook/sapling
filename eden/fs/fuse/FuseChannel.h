@@ -36,6 +36,18 @@ class Dispatcher;
 
 class FuseChannel {
  public:
+  enum class StopReason {
+    RUNNING, // not stopped
+    INIT_FAILED,
+    UNMOUNTED,
+    TAKEOVER,
+    DESTRUCTOR,
+    FUSE_READ_ERROR,
+    FUSE_WRITE_ERROR,
+    FUSE_TRUNCATED_REQUEST,
+    WORKER_EXCEPTION,
+  };
+
   /**
    * Construct the fuse channel and session structures that are
    * required by libfuse to communicate with the kernel using
@@ -107,7 +119,7 @@ class FuseChannel {
    * and we should get rid of the stealFuseDevice() method.
    */
   void takeoverStop() {
-    requestSessionExit();
+    requestSessionExit(StopReason::TAKEOVER);
   }
 
   /**
@@ -219,7 +231,7 @@ class FuseChannel {
    * The session completion future will only be signaled if initialization
    * (via initialize() or takeoverInitialize()) has completed successfully.
    */
-  folly::Future<folly::Unit> getSessionCompleteFuture();
+  folly::Future<StopReason> getSessionCompleteFuture();
 
  private:
   struct HandlerEntry;
@@ -360,8 +372,10 @@ class FuseChannel {
   /**
    * Requests that the worker threads terminate their processing loop.
    */
-  void requestSessionExit();
-  void requestSessionExit(const folly::Synchronized<State>::LockedPtr& state);
+  void requestSessionExit(StopReason reason);
+  void requestSessionExit(
+      const folly::Synchronized<State>::LockedPtr& state,
+      StopReason reason);
 
   /*
    * Constant state that does not change for the lifetime of the FuseChannel
@@ -392,10 +406,10 @@ class FuseChannel {
    * Mutable state that is accessed from the worker threads.
    * All of this state uses locking or other synchronization.
    */
-  std::atomic<bool> sessionFinished_{false};
+  std::atomic<StopReason> runState_{StopReason::RUNNING};
   folly::Synchronized<State> state_;
   folly::Promise<folly::Unit> initPromise_;
-  folly::Promise<folly::Unit> sessionCompletePromise_;
+  folly::Promise<StopReason> sessionCompletePromise_;
 
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;

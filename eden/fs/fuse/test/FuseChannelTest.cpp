@@ -102,7 +102,8 @@ TEST_F(FuseChannelTest, testInitUnmount) {
   fuse_.close();
 
   // Wait for the FuseChannel to signal that it has finished.
-  channel->getSessionCompleteFuture().get(100ms);
+  auto stopReason = channel->getSessionCompleteFuture().get(100ms);
+  EXPECT_EQ(stopReason, FuseChannel::StopReason::UNMOUNTED);
 }
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
@@ -117,5 +118,9 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
   channel.reset();
 
   // Wait for the session complete future now.
-  completeFuture.get(100ms);
+  auto stopReason = completeFuture.get(100ms);
+  EXPECT_TRUE(
+      stopReason == FuseChannel::StopReason::UNMOUNTED ||
+      stopReason == FuseChannel::StopReason::DESTRUCTOR)
+      << "unexpected FuseChannel stop reason: " << static_cast<int>(stopReason);
 }
