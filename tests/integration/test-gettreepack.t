@@ -74,12 +74,24 @@ hg prefetch failed for treeonly repos. We can use it instead when it's fixed
 
 Make sure that new entries were downloaded
   $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
-  $ ls $TESTTMP/cachepath/repo/packs/manifests
-  14d5757b02d7849c29f5330a9784cde6ea705b10.dataidx
-  14d5757b02d7849c29f5330a9784cde6ea705b10.datapack
-  19f8819363e37aac879d4b9d262a6f159c2f499e.histidx
-  19f8819363e37aac879d4b9d262a6f159c2f499e.histpack
-  2b552b0b3dee8707b0d8e59440602314c30e7c48.histidx
-  2b552b0b3dee8707b0d8e59440602314c30e7c48.histpack
-  bd34d6c34ee406323fec52573c480997f38ae742.dataidx
-  bd34d6c34ee406323fec52573c480997f38ae742.datapack
+  $ ls $TESTTMP/cachepath/repo/packs/manifests | wc -l
+  8
+
+Update to the revisions. Make sure that gettreepack command is not sent because
+we've already downloaded all the trees
+  $ hgmn up 2 --debug | grep 'sending .* command'
+  sending hello command
+  sending between command
+  sending getfiles command
+  $ ls
+  A
+  B
+  C
+
+No wireproto commands should be sent at all, because everything has been already
+downloaded
+  $ hgmn up 1 --debug | grep 'sending .* command'
+  [1]
+  $ ls
+  A
+  B
