@@ -57,6 +57,7 @@ class basestore(object):
         total = len(keys)
         prog = 0
 
+        progress(_discovering, 0, total=total, unit=_files)
         missing = []
         for name, node in keys:
             prog += 1
@@ -76,6 +77,8 @@ class basestore(object):
                 exists = False
             if not exists:
                 missing.append((name, node))
+
+        progress(_discovering, None)
 
         return missing
 
