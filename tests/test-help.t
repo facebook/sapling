@@ -302,6 +302,7 @@ Test extension help:
        churn         command to display statistics about repository history
        cleanobsstore
        clonebundles  advertise pre-generated bundles to seed clones
+       commitcloud   sync changesets via the cloud
        configwarn    warn unsupported user configs
        convert       import revisions from foreign VCS repositories into
                      Mercurial
