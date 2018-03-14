@@ -14,12 +14,14 @@ test sparse
   $ echo x > data.py
   $ echo z > readme.txt
   $ cat > webpage.sparse <<EOF
-  > # frontend sparse profile
+  > [metadata]
+  > title: frontend sparse profile
   > [include]
   > *.html
   > EOF
   $ cat > backend.sparse <<EOF
-  > # backend sparse profile
+  > [metadata]
+  > title: backend sparse profile
   > [include]
   > *.py
   > EOF
@@ -74,12 +76,14 @@ Verify error checking includes filename and line numbers
 Verify that a profile is updated across multiple commits
 
   $ cat > webpage.sparse <<EOF
-  > # frontend sparse profile
+  > [metadata]
+  > title: frontend sparse profile
   > [include]
   > *.html
   > EOF
   $ cat > backend.sparse <<EOF
-  > # backend sparse profile
+  > [metadata]
+  > title: backend sparse profile
   > [include]
   > *.py
   > *.txt
@@ -111,7 +115,8 @@ Introduce a conflicting .hgsparse change
 
   $ hg up -q 0
   $ cat > backend.sparse <<EOF
-  > # Different backend sparse profile
+  > [metadata]
+  > title: Different backend sparse profile
   > [include]
   > *.html
   > EOF
@@ -145,7 +150,8 @@ Verify conflicting merge pulls in the conflicting changes
 Verify resolving the merge removes the temporarily unioned files
 
   $ cat > backend.sparse <<EOF
-  > # backend sparse profile
+  > [metadata]
+  > title: backend sparse profile
   > [include]
   > *.html
   > *.txt
@@ -190,7 +196,7 @@ Verify rebase conflicts pulls in the conflicting changes
   webpage.sparse
 
   $ hg rebase -d 2
-  rebasing 1:a2b1de640a62 "edit profile"
+  rebasing 1:e7901640ca22 "edit profile"
   temporarily included 1 file(s) in the sparse checkout for merging
   merging backend.sparse
   merging data.py
@@ -248,14 +254,14 @@ warning message can be suppressed by setting missingwarning = false in
   index.html
   readme.txt
   $ hg up tip | grep warning
-  warning: sparse profile 'backend.sparse' not found in rev bfcb76de99cc - ignoring it
+  warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
   [1]
   $ ls
   data.py
   index.html
   readme.txt
   $ hg sparse --disable-profile backend.sparse | grep warning
-  warning: sparse profile 'backend.sparse' not found in rev bfcb76de99cc - ignoring it
+  warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
   [1]
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
@@ -303,8 +309,14 @@ Test profile discovery
   $ touch profiles/foo/README
   $ cat > profiles/foo/spam <<EOF
   > %include profiles/bar/eggs
+  > [metadata]
+  > title: Profile that only includes another
   > EOF
   $ cat > profiles/bar/eggs <<EOF
+  > [metadata]
+  > title: Base profile including the profiles directory
+  > description: This is a base profile, you really want to include this one
+  >  if you want to be able to edit profiles.
   > [include]
   > profiles
   > EOF
@@ -321,10 +333,12 @@ Test profile discovery
   [
    {
     "active": "included",
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles.", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
     "active": "active",
+    "metadata": {"title": "Profile that only includes another"},
     "path": "profiles/foo/spam"
    }
   ]
@@ -342,18 +356,22 @@ Test profile discovery
   [
    {
     "active": "included",
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles.", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
     "active": "inactive",
+    "metadata": {},
     "path": "profiles/bar/python"
    },
    {
     "active": "inactive",
+    "metadata": {},
     "path": "profiles/foo/monty"
    },
    {
     "active": "active",
+    "metadata": {"title": "Profile that only includes another"},
     "path": "profiles/foo/spam"
    }
   ]
@@ -368,3 +386,24 @@ not hamper listing.
     profiles/bar/python
     profiles/foo/monty
   * profiles/foo/spam
+
+The metadata section format can have errors, but those are only listed as
+warnings:
+
+  $ cat > profiles/foo/errors <<EOF
+  > [metadata]
+  >   indented line but no current key active
+  > not an option line, there is no delimiter
+  > EOF
+  $ hg add -q profiles
+  $ hg commit -qm 'Broken profile added'
+  $ hg sparse --list-profiles
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs
+    profiles/bar/python
+  warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
+  warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+    profiles/foo/errors
+    profiles/foo/monty
+  * profiles/foo/spam
+

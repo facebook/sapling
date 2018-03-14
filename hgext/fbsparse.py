@@ -16,6 +16,7 @@ from mercurial.node import nullid
 from mercurial.i18n import _
 from mercurial.thirdparty import attr
 import os, collections, hashlib
+import re
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -394,12 +395,17 @@ class SparseConfig(object):
     includes = attr.ib()
     excludes = attr.ib()
     profiles = attr.ib()
+    metadata = attr.ib(default=attr.Factory(dict))
 
     def __iter__(self):
+        # The metadata field is deliberately not included
         for field in (self.includes, self.excludes, self.profiles):
             yield field
 
 def _wraprepo(ui, repo):
+    # metadata parsing expression
+    metadata_key_value = re.compile(r'(?P<key>.*)\s*[:=]\s*(?P<value>.*)')
+
     class SparseRepo(repo.__class__):
         def readsparseconfig(self, raw, filename=None):
             """Takes a string sparse config and returns a SparseConfig
@@ -411,40 +417,72 @@ def _wraprepo(ui, repo):
 
             """
             filename = filename or '<sparse profile>'
+            metadata = {}
+            last_key = None
             includes = set()
             excludes = set()
 
             sections = {
                 '[include]': includes,
                 '[exclude]': excludes,
+                '[metadata]': metadata,
             }
             current = includes  # no sections == includes
 
             profiles = []
 
-            for i, line in enumerate(raw.split('\n'), start=1):
-                line = line.strip()
-                if not line or line.startswith(('#', ';')):
+            for i, line in enumerate(raw.splitlines(), start=1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith(('#', ';')):
                     # empty or comment line, skip
                     continue
 
-                if line.startswith('%include '):
+                if stripped.startswith('%include '):
                     # include another profile
-                    line = line[9:].strip()
-                    if line:
-                        profiles.append(line)
+                    stripped = stripped[9:].strip()
+                    if stripped:
+                        profiles.append(stripped)
                     continue
 
-                if line in sections:
-                    if sections[line] is includes and current is excludes:
+                if stripped in sections:
+                    if sections[stripped] is includes and current is excludes:
                         raise error.Abort(_(
                             'A sparse file cannot have includes after excludes '
                             'in %s:%i') % (filename, i))
-                    current = sections[line]
+                    current = sections[stripped]
+                    continue
+
+                if current is metadata:
+                    # Metadata parsing, INI-style format
+                    if line.startswith((' ', '\t')):  # continuation
+                        if last_key is None:
+                            self.ui.warn(_(
+                                'warning: sparse profile [metadata] section '
+                                'indented lines that do not belong to a '
+                                'multi-line entry, ignoring, in %s:%i\n') % (
+                                    filename, i))
+                            continue
+                        key, value = last_key, stripped
+                    else:
+                        match = metadata_key_value.match(stripped)
+                        if match is None:
+                            self.ui.warn(_(
+                                'warning: sparse profile [metadata] section '
+                                'does not appear to have a valid option '
+                                'definition, ignoring, in %s:%i\n') % (
+                                    filename, i))
+                            last_key = None
+                            continue
+                        key, value = (
+                            s.strip() for s in match.group('key', 'value'))
+                        metadata[key] = []
+
+                    metadata[key].append(value)
+                    last_key = key
                     continue
 
                 # inclusion or exclusion line
-                if line.startswith('/'):
+                if stripped.startswith('/'):
                     self.ui.warn(_(
                         'warning: sparse profile cannot use paths starting '
                         'with /, ignoring %s, in %s:%i\n') % (
@@ -452,7 +490,9 @@ def _wraprepo(ui, repo):
                     continue
                 current.add(line)
 
-            return SparseConfig(includes, excludes, profiles)
+            metadata = {key: '\n'.join(value).strip()
+                        for key, value in metadata.items()}
+            return SparseConfig(includes, excludes, profiles, metadata)
 
         def getsparsepatterns(self, rev):
             """Produce the full sparse config for a revision as a SparseConfig
@@ -708,23 +748,32 @@ def _wraprepo(ui, repo):
 PROFILE_INACTIVE, PROFILE_ACTIVE, PROFILE_INCLUDED = _profile_flags = range(3)
 
 @attr.s(slots=True, frozen=True)
-class ProfileInfo(object):
+class ProfileInfo(collections.Mapping):
     path = attr.ib()
     active = attr.ib()
+    _metadata = attr.ib(default=attr.Factory(dict))
 
     @active.validator
     def checkactive(self, attribute, value):
         if not any(value is flag for flag in _profile_flags):
             raise ValueError('Invalid active flag value')
 
-def _discover(ui, repo):
-    """Produce a list of available profiles with metadata
+    # Mapping methods for metadata access
+    def __getitem__(self, key):
+        return self._metadata[key]
+    def __iter__(self):
+        return iter(self._metadata)
+    def __len__(self):
+        return len(self._metadata)
 
-    Returns a list of ProfileInfo objects, paths are relative to the
-    repository root, the list is sorted by path.
+def _discover(ui, repo):
+    """Generate a list of available profiles with metadata
+
+    Returns a generator yielding ProfileInfo objects, paths are relative to the
+    repository root, the sequence is sorted by path.
 
     If no sparse.profile_directory path is configured, will only
-    list active and included profiles.
+    yield active and included profiles.
 
     README(.*) files are filtered out.
 
@@ -754,11 +803,14 @@ def _discover(ui, repo):
             exclude=['**/README.*', '**/README'])
         available.update(mf.matches(matcher))
 
-    return [ProfileInfo(p, (
-                PROFILE_ACTIVE if p in active else
+    # sort profiles and read profile metadata as we iterate
+    for p in sorted(available | included):
+        raw = repo.getrawprofile(p, '.')
+        yield ProfileInfo(
+            p, (PROFILE_ACTIVE if p in active else
                 PROFILE_INCLUDED if p in included else
-                PROFILE_INACTIVE))
-            for p in sorted(available | included)]
+                PROFILE_INACTIVE),
+            repo.readsparseconfig(raw, filename=p).metadata)
 
 def _listprofiles(ui, repo, opts):
     chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
@@ -773,11 +825,12 @@ def _listprofiles(ui, repo, opts):
                 _('symbols: * = active profile, ~ = transitively '
                   'included\n'),
                 label='sparse.profile.legend')
+
         for info in _discover(ui, repo):
             fm.startitem()
             label = 'sparse.profile.' + labels[info.active]
             fm.plain('%1s ' % chars[info.active], label=label)
-            fm.data(active=labels[info.active])
+            fm.data(active=labels[info.active], metadata=dict(info))
             fm.write(b'path', '%s', info.path, label=label)
             fm.plain('\n')
 
