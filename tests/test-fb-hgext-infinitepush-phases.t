@@ -47,7 +47,7 @@ the history but is stored on disk
   remote:     f13337e62e40  stack 2 - commit 1
   remote:     ccd5ee66f08a  stack 2 - commit 2
   finished in * seconds (glob)
-  $ hg pull -r 4
+  $ hg pull -r bc62
   pulling from ssh://user@dummy/master
   no changes found
   adding changesets
