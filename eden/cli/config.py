@@ -16,6 +16,7 @@ import fcntl
 import json
 import os
 import shutil
+import signal
 import stat
 import subprocess
 import tempfile
@@ -548,25 +549,57 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             # This call does not return
             os.execve(cmd[0], cmd, eden_env)
 
-        # Open the log file
+        # Not running in the foreground.  Since sudo sometimes
+        # requires input (not from stdin, but from the current tty),
+        # don't redirect stdout and stderr to the Eden log.  Instead,
+        # tell the edenfs process to write its stderr and stdout to
+        # the given log path.
+        #
+        # TODO: Much of the following code is unnecessary and a bit
+        # unfortunate.  Ideally, edenfs would daemonize itself (after
+        # EdenServer::prepare()) so that it could exit with messages
+        # to stderr and a nonzero exit code if it failed to start
+        # itself.
+        #
+        # TODO: Another possible area of improvement here is to avoid
+        # having the cli create the .eden directory itself and
+        # eliminate the --logPath option - it should always be in the
+        # same location relative to edenDir.
         log_path = self.get_log_path()
         util.mkdir_p(os.path.dirname(log_path))
+        cmd.extend(['--logPath', log_path])
+
+        # Create the log file, if necessary, and write its initial line.
         with open(log_path, 'a') as log_file:
             startup_msg = time.strftime('%Y-%m-%d %H:%M:%S: starting edenfs\n')
             log_file.write(startup_msg)
 
-            # Start edenfs
-            proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid,
-                                    stdout=log_file, stderr=log_file)
+        # Start edenfs
+        proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid)
+
+        # Total hack to avoid printing the following warning:
+        # > ResourceWarning: subprocess <pid> is still running
+        # (Of course it's still running - our goal was to start a process.)
+        class NoDestructorWarningHack(subprocess.Popen):
+            def __del__(self):
+                pass
+        proc.__class__ = NoDestructorWarningHack
 
         # Wait for edenfs to start or get taken over
         exclude_pid = health_info.pid if takeover else None
-        return util.wait_for_daemon_healthy(
-            proc,
-            self._config_dir,
-            lambda: self.get_thrift_client(),
-            timeout,
-            exclude_pid)
+        try:
+            return util.wait_for_daemon_healthy(
+                proc,
+                self._config_dir,
+                lambda: self.get_thrift_client(),
+                timeout,
+                exclude_pid)
+        except KeyboardInterrupt:
+            # If user presses Ctrl-C while waiting for edenfs to start, forward
+            # that on to the subprocess, especially in case sudo is trying to
+            # read from the tty.
+            proc.send_signal(signal.SIGINT)
+            raise
 
     def get_log_path(self) -> str:
         return os.path.join(self._config_dir, 'logs', 'edenfs.log')

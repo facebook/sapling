@@ -108,5 +108,33 @@ class UserInfo {
   std::string username_;
   AbsolutePath homeDirectory_;
 };
+
+/**
+ * While EffectiveUserScope exists, the effective user ID and
+ * effective group IDs are set to the invoking non-root user.  (But
+ * the real user ID is temporarily set to root, even if run as a
+ * setuid binary, so leaveEffectiveUserScope() can reset to the
+ * original state.
+ *
+ * This is intended for use prior to calling
+ * UserInfo::dropPrivileges().
+ */
+struct EffectiveUserScope {
+ public:
+  explicit EffectiveUserScope(const UserInfo& userInfo);
+  ~EffectiveUserScope();
+
+ private:
+  EffectiveUserScope() = delete;
+  EffectiveUserScope(const EffectiveUserScope&) = delete;
+  EffectiveUserScope(EffectiveUserScope&&) = delete;
+  EffectiveUserScope& operator=(const EffectiveUserScope&) = delete;
+  EffectiveUserScope& operator=(EffectiveUserScope&&) = delete;
+
+  uid_t ruid_;
+  uid_t euid_;
+  gid_t rgid_;
+  gid_t egid_;
+};
 } // namespace eden
 } // namespace facebook

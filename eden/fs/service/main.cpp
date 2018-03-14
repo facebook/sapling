@@ -27,6 +27,10 @@ DEFINE_string(
     "/etc/eden",
     "The directory holding all system configuration files");
 DEFINE_string(configPath, "", "The path of the ~/.edenrc config file");
+DEFINE_string(
+    logPath,
+    "",
+    "If set, redirects stdout and stderr to the log file given.");
 
 // The logging configuration parameter.  We default to DBG2 for everything in
 // eden, and WARNING for all other categories.
@@ -55,6 +59,14 @@ int main(int argc, char** argv) {
         "Pass in the --allowRoot flag if you really mean to run "
         "eden as root.\n");
     return EX_USAGE;
+  }
+
+  // If logPath is set, redirect stdout and stderr.
+  if (!FLAGS_logPath.empty()) {
+    EffectiveUserScope effectiveUserScope(identity);
+    folly::File logHandle(FLAGS_logPath, O_APPEND | O_CREAT | O_WRONLY, 0644);
+    folly::checkUnixError(dup2(logHandle.fd(), STDOUT_FILENO));
+    folly::checkUnixError(dup2(logHandle.fd(), STDERR_FILENO));
   }
 
   // Since we are a daemon, and we don't ever want to be in a situation

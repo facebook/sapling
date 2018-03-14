@@ -71,6 +71,23 @@ void UserInfo::dropPrivileges() {
   dropToBasicSELinuxPrivileges();
 }
 
+EffectiveUserScope::EffectiveUserScope(const UserInfo& userInfo)
+    : ruid_(getuid()), euid_(geteuid()), rgid_(getgid()), egid_(getegid()) {
+  checkUnixError(
+      setregid(userInfo.getGid(), userInfo.getGid()),
+      "setregid() failed in EffectiveUserScope()");
+  checkUnixError(
+      setreuid(0, userInfo.getUid()),
+      "setreuid() failed in EffectiveUserScope()");
+}
+
+EffectiveUserScope::~EffectiveUserScope() {
+  checkUnixError(
+      setreuid(ruid_, euid_), "setreuid() failed in ~EffectiveUserScope()");
+  checkUnixError(
+      setregid(rgid_, egid_), "setregid() failed in ~EffectiveUserScope()");
+}
+
 UserInfo::PasswdEntry UserInfo::getPasswdUid(uid_t uid) {
   static constexpr size_t initialBufSize = 1024;
   static constexpr size_t maxBufSize = 8192;

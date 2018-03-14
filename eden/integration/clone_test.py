@@ -218,7 +218,18 @@ echo -n "$1" >> "{scratch_file}"
 
         # Verify that clone starts the daemon.
         tmp = self._new_tmp_dir()
-        self.eden.run_cmd('clone', self.repo.path, tmp)
+        # Set capture_output to False for this clone command: it introduces a
+        # hang given how we currently spawn edenfs.  And we will check the
+        # daemon's health afterwards.  The hang is caused by Python spawning
+        # `sudo edenfs`.  edenfs will itself redirect its own stdout (and the
+        # privhelper's stdout) to a log file, but the sudo process sticks
+        # around and keeps a reference to the pipe given as stdout, causing
+        # _this_ subprocess.run call's communicate() to wait forever.
+        # In the long term, the fix is to move daemonization into edenfs
+        # itself.  That way it can handle only redirecting its stdout and stderr
+        # after startup, when it daemonizes, and to sudo the edenfs process
+        # will exit, releasing the pipe file handle.
+        self.eden.run_cmd('clone', self.repo.path, tmp, capture_output=False)
         self.assertTrue(self.eden.is_healthy(), msg='clone should start Eden.')
         mount_points = {
             self.mount: self.eden.CLIENT_ACTIVE,

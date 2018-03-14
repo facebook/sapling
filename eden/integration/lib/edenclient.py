@@ -79,7 +79,8 @@ class EdenFS(object):
         return eden.thrift.create_thrift_client(self._eden_dir)
 
     def run_cmd(
-        self, command: str, *args: str, cwd: Optional[str] = None
+        self, command: str, *args: str, cwd: Optional[str] = None,
+        capture_output: bool = True
     ) -> str:
         '''
         Run the specified eden command.
@@ -90,14 +91,35 @@ class EdenFS(object):
         '''
         cmd = self._get_eden_args(command, *args)
         try:
-            completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                               stderr=subprocess.PIPE,
-                                               check=True, cwd=cwd)
+            if capture_output:
+                completed_process = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=True, cwd=cwd)
+            else:
+                # This should not pass subprocess.PIPE as stdout because
+                # waiting on the process to complete could hang if the pipe's
+                # buffer fills.  But we need to pass some fd or the underlying
+                # sudo process will keep a reference to the caller's stdout
+                # pipe.  (See the comment in test_clone_should_start_daemon.
+                # All of this code needs to die.)
+                with open('/dev/null', 'wb') as null:
+                    returncode = subprocess.call(cmd, stdout=null.fileno(),
+                                                 stderr=null.fileno(), cwd=cwd)
+                if returncode:
+                    raise subprocess.CalledProcessError(
+                        returncode, cmd, output='', stderr='')
+                completed_process = subprocess.CompletedProcess(
+                    cmd, returncode, '', '')
         except subprocess.CalledProcessError as ex:
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex)
-        return cast(str, completed_process.stdout.decode('utf-8'))
+        if capture_output:
+            return cast(str, completed_process.stdout.decode('utf-8'))
+        else:
+            return ''
 
     def run_unchecked(self, command: str, *args: str) -> int:
         '''
