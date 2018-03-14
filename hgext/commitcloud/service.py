@@ -5,15 +5,18 @@
 
 from __future__ import absolute_import
 
+import base64
 import collections
 import json
 import os
 
 from mercurial import (
     error,
+    obsolete,
 )
 
-References = collections.namedtuple('References', 'version heads bookmarks')
+References = collections.namedtuple('References',
+                                    'version heads bookmarks obsmarkers')
 
 class LocalService(object):
     """Local commit-cloud service implemented using files on disk.
@@ -42,13 +45,18 @@ class LocalService(object):
         with open(filename, 'w') as f:
             json.dump(data, f)
 
-    def _makereferences(self, data):
+    def _makereferences(self, data, baseversion):
         """Makes a References object from JSON data"""
         version = data['version']
         newheads = [h.encode() for h in data['heads']]
         newbookmarks = {n.encode('utf-8'): v.encode()
                         for n, v in data['bookmarks'].items()}
-        return References(version, newheads, newbookmarks)
+        encobsmarkers = sum((data['obsmarkers'][str(n + 1)]
+                             for n in range(baseversion, version)), [])
+        decobsmarkers = b''.join([base64.b64decode(m) for m in encobsmarkers])
+        obsmarkers = obsolete._fm1readmarkers(decobsmarkers,
+                                              0, len(decobsmarkers))
+        return References(version, newheads, newbookmarks, obsmarkers)
 
     def getreferences(self, baseversion):
         """Gets the current references if they differ from the base version
@@ -59,16 +67,16 @@ class LocalService(object):
             self._ui.debug(
                 'commitcloud local service: '
                 'get_references for current version %s\n' % version)
-            return References(version, None, None)
+            return References(version, None, None, None)
         else:
             self._ui.debug(
                 'commitcloud local service: '
                 'get_references for versions from %s to %s\n'
                 % (baseversion, version))
-            return self._makereferences(data)
+            return self._makereferences(data, baseversion)
 
     def updatereferences(self, version, oldheads, newheads, oldbookmarks,
-                          newbookmarks):
+                          newbookmarks, newobsmarkers):
         """Updates the references to a new version.
 
         If the update was successful, returns `(True, references)`, where
@@ -80,16 +88,21 @@ class LocalService(object):
         """
         data = self._load()
         if version != data['version']:
-            return False, self._makereferences(data)
-        data['version'] = data['version'] + 1
+            return False, self._makereferences(data, version)
+        newversion = data['version'] + 1
+        data['version'] = newversion
         data['heads'] = newheads
         data['bookmarks'] = newbookmarks
+        encodedmarkers = [base64.b64encode(m)
+                          for m in obsolete.encodemarkers(newobsmarkers, False,
+                                                          obsolete._fm1version)]
+        data['obsmarkers'][str(newversion)] = encodedmarkers
         self._ui.debug(
             'commitcloud local service: '
             'update_references to %s (%s heads, %s bookmarks)\n'
-            % (data['version'], len(data['heads']), len(data['bookmarks'])))
+            % (newversion, len(data['heads']), len(data['bookmarks'])))
         self._save(data)
-        return True, References(data['version'], None, None)
+        return True, References(newversion, None, None, None)
 
 def get(ui):
     servicetype = ui.config('commitcloud', 'servicetype')

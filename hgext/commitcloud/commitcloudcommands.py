@@ -13,6 +13,7 @@ from mercurial.i18n import _
 from mercurial import (
     commands,
     node,
+    obsolete,
     registrar,
 )
 
@@ -47,12 +48,18 @@ def cloudsync(ui, repo, **opts):
         if not synced:
             # The local repo has changed.  We must send these changes to the
             # cloud.
+            obsmarkers = []
+            if repo.svfs.exists('commitcloudpendingobsmarkers'):
+                with repo.svfs.open('commitcloudpendingobsmarkers') as f:
+                    _version, obsmarkers = obsolete._readmarkers(f.read())
             synced, cloudrefs = serv.updatereferences(
                     lastsyncstate.version, lastsyncstate.heads, localheads,
-                    lastsyncstate.bookmarks, localbookmarks)
+                    lastsyncstate.bookmarks, localbookmarks, obsmarkers)
             if synced:
                 lastsyncstate.update(cloudrefs.version, localheads,
                                      localbookmarks)
+                if obsmarkers:
+                    repo.svfs.unlink('commitcloudpendingobsmarkers')
 
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions('^pull')
@@ -63,6 +70,9 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
 
     # Merge cloud bookmarks into the repo
     _mergebookmarks(ui, repo, cloudrefs.bookmarks, lastsyncstate.bookmarks)
+
+    # Merge obsmarkers
+    _mergeobsmarkers(ui, repo, cloudrefs.obsmarkers)
 
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(cloudrefs.version, cloudrefs.heads,
@@ -106,6 +116,11 @@ def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
                         else:
                             changes.append((name, None))
         repo._bookmarks.applychanges(repo, tr, changes)
+
+def _mergeobsmarkers(ui, repo, obsmarkers):
+    with repo.wlock(), repo.lock(), repo.transaction('commitcloud-obs') as tr:
+        tr._commitcloudskippendingobsmarkers = True
+        repo.obsstore.add(tr, obsmarkers)
 
 def _forkname(ui, name, othernames):
     hostname = ui.config('commitcloud', 'hostname', socket.gethostname())

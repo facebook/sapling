@@ -1,5 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > fbamend =
   > infinitepush =
   > commitcloud =
   > [ui]
@@ -10,6 +11,8 @@
   > hostname = testhost
   > [alias]
   > tglog = log -G --template "{node|short} '{desc}' {bookmarks}\n"
+  > [experimental]
+  > evolution = createmarkers, allowunstable
   > EOF
 
   $ mkcommit() {
@@ -142,3 +145,40 @@ Move the bookmark also on the first client, it should be forked in the sync
   o  d20a80d4def3 'base'
   
   $ cd ..
+
+Amend a commit
+  $ cd client1
+  $ echo more >> commit1
+  $ hg amend --rebase -m "commit1 amended"
+  rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
+  $ hg pushbackup -q
+  $ hg cloudsync
+  $ hg tglog
+  o  48610b1a7ec0 'commit2' bookmark1
+  |
+  @  a7bb357e7299 'commit1 amended' bookmark1-testhost
+  |
+  o  d20a80d4def3 'base'
+  
+  $ cd ..
+
+Sync the amended commit to the other client
+  $ cd client2
+  $ hg cloudsync
+  pulling from ssh://user@dummy/server
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 2 files (+1 heads)
+  new changesets a7bb357e7299:48610b1a7ec0
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up -q tip
+  $ hg tglog
+  @  48610b1a7ec0 'commit2' bookmark1
+  |
+  o  a7bb357e7299 'commit1 amended' bookmark1-testhost
+  |
+  o  d20a80d4def3 'base'
+  
+  $ test ! -f .hg/store/commitcloudpendingobsmarkers
