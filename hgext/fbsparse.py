@@ -826,12 +826,17 @@ def _listprofiles(ui, repo, opts):
                   'included\n'),
                 label='sparse.profile.legend')
 
-        for info in _discover(ui, repo):
+        profiles = list(_discover(ui, repo))
+        max_width = max(len(p.path) for p in profiles)
+
+        for info in profiles:
             fm.startitem()
             label = 'sparse.profile.' + labels[info.active]
-            fm.plain('%1s ' % chars[info.active], label=label)
+            fm.plain('%-1s ' % chars[info.active], label=label)
             fm.data(active=labels[info.active], metadata=dict(info))
-            fm.write(b'path', '%s', info.path, label=label)
+            fm.write(b'path', '%-{}s'.format(max_width), info.path, label=label)
+            if 'title' in info:
+                fm.plain(' - %s' % info.get('title', b''), label=label)
             fm.plain('\n')
 
 @command('^sparse', [

@@ -327,8 +327,8 @@ Test profile discovery
   $ hg sparse --enable-profile profiles/foo/spam
   $ hg sparse --list-profiles
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs
-  * profiles/foo/spam
+  ~ profiles/bar/eggs - Base profile including the profiles directory
+  * profiles/foo/spam - Profile that only includes another
   $ hg sparse --list-profiles -T json
   [
    {
@@ -348,10 +348,10 @@ Test profile discovery
   > EOF
   $ hg sparse --list-profiles
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs
+  ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
-    profiles/foo/monty
-  * profiles/foo/spam
+    profiles/foo/monty 
+  * profiles/foo/spam   - Profile that only includes another
   $ hg sparse --list-profiles -T json
   [
    {
@@ -382,10 +382,10 @@ not hamper listing.
   $ hg sparse --exclude profiles/bar
   $ hg sparse --list-profiles
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs
+  ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
-    profiles/foo/monty
-  * profiles/foo/spam
+    profiles/foo/monty 
+  * profiles/foo/spam   - Profile that only includes another
 
 The metadata section format can have errors, but those are only listed as
 warnings:
@@ -399,11 +399,11 @@ warnings:
   $ hg commit -qm 'Broken profile added'
   $ hg sparse --list-profiles
   symbols: * = active profile, ~ = transitively included
-  ~ profiles/bar/eggs
-    profiles/bar/python
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
+  ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/python
     profiles/foo/errors
-    profiles/foo/monty
-  * profiles/foo/spam
+    profiles/foo/monty 
+  * profiles/foo/spam   - Profile that only includes another
 
