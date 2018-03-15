@@ -1068,7 +1068,8 @@ class manifestfactory(object):
                     overridenode = node
                     overridep1node = p1
 
-                node = tmfl.add(self.ui, newtree, p1, p2,
+                # linknode=None because linkrev is provided
+                node = tmfl.add(self.ui, newtree, p1, p2, None,
                                 overridenode=overridenode,
                                 overridep1node=overridep1node,
                                 tr=transaction, linkrev=link)

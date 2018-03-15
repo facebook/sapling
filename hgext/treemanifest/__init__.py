@@ -518,7 +518,7 @@ class basetreemanifestlog(object):
         self._mutabledatapack = None
         self._mutablehistorypack = None
 
-    def add(self, ui, newtree, p1node, p2node, overridenode=None,
+    def add(self, ui, newtree, p1node, p2node, linknode, overridenode=None,
             overridep1node=None, tr=None, linkrev=None):
         """Writes the given tree into the manifestlog. If `overridenode` is
         specified, the tree root is written with that node instead of its actual
@@ -526,11 +526,11 @@ class basetreemanifestlog(object):
         tree is also overriden.
         """
         if ui.configbool('treemanifest', 'server'):
-            return self._addtorevlog(ui, newtree, p1node, p2node,
+            return self._addtorevlog(ui, newtree, p1node, p2node, linknode,
                     overridenode=overridenode, overridep1node=overridep1node,
                     tr=tr, linkrev=linkrev)
         else:
-            return self._addtopack(ui, newtree, p1node, p2node,
+            return self._addtopack(ui, newtree, p1node, p2node, linknode,
                     overridenode=overridenode, overridep1node=overridep1node)
 
     def _createmutablepack(self):
@@ -540,10 +540,16 @@ class basetreemanifestlog(object):
         self._mutabledatapack = mutabledatapack(self.ui, packpath)
         self._mutablehistorypack = mutablehistorypack(self.ui, packpath)
 
-    def _addtopack(self, ui, newtree, p1node, p2node, overridenode=None,
-                   overridep1node=None):
+    def _addtopack(self, ui, newtree, p1node, p2node, linknode,
+                   overridenode=None, overridep1node=None):
         if self._mutabledatapack is None:
             self._createmutablepack()
+
+        # Temporarily turn unknown linknode's into the nullid for now. Once
+        # we're able to write linkrevs into history packs we can get rid of
+        # this.
+        if linknode is None:
+            linknode = nullid
 
         p1tree = self[p1node].read()
         if util.safehasattr(p1tree, '_treemanifest'):
@@ -564,21 +570,25 @@ class basetreemanifestlog(object):
             # Not using deltas, since there aren't any other trees in
             # this pack it could delta against.
             dpack.add(nname, nnode, revlog.nullid, ntext)
-            hpack.add(nname, nnode, np1, np2, revlog.nullid, '')
+            hpack.add(nname, nnode, np1, np2, linknode, '')
             if node is None and nname == "":
                 node = nnode
 
         return node
 
-    def _addtorevlog(self, ui, newtree, p1node, p2node, overridenode=None,
-                     overridep1node=None, tr=None, linkrev=None):
+    def _addtorevlog(self, ui, newtree, p1node, p2node, linknode,
+                     overridenode=None, overridep1node=None, tr=None,
+                     linkrev=None):
         if tr is None:
             raise error.ProgrammingError("missing transaction")
-        if linkrev is None:
-            raise error.ProgrammingError("missing linkrev")
+        if linkrev is None and linknode is None:
+            raise error.ProgrammingError("missing linkrev or linknode")
         if overridep1node is not None and p1node != overridep1node:
             raise error.ProgrammingError("overridep1node is not supported for "
                                          "revlogs")
+
+        if linkrev is None:
+            linkrev = self._maplinknode(linknode)
 
         p1tree = self[p1node].read()
         if util.safehasattr(p1tree, '_treemanifest'):
@@ -831,7 +841,8 @@ class memtreemanifestctx(object):
 
         newtree = self._treemanifest
 
-        node = mfl.add(mfl.ui, newtree, p1, p2, tr=tr, linkrev=linkrev)
+        # linknode=None because the linkrev is provided
+        node = mfl.add(mfl.ui, newtree, p1, p2, None, tr=tr, linkrev=linkrev)
         return node
 
 def _addservercaps(repo, caps):
@@ -878,9 +889,9 @@ def getbundlemanifestlog(orig, self):
         wrapmfl = mfl.treemanifestlog
 
     class bundlemanifestlog(wrapmfl.__class__):
-        def add(self, ui, newtree, p1node, p2node, overridenode=None,
+        def add(self, ui, newtree, p1node, p2node, linknode, overridenode=None,
                 overridep1node=None, tr=None, linkrev=None):
-            return self._addtopack(ui, newtree, p1node, p2node,
+            return self._addtopack(ui, newtree, p1node, p2node, linknode,
                     overridenode=overridenode, overridep1node=overridep1node)
 
         def _createmutablepack(self):
@@ -1023,7 +1034,7 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
         linkrev = mfl._maplinknode(mfctx.linknode)
         assert linkrev != -1, "attempting to create manifest with null linkrev"
 
-    tmfl.add(mfl.ui, newtree, p1node, p2node,
+    tmfl.add(mfl.ui, newtree, p1node, p2node, None,
              overridenode=mfctx.node(),
              overridep1node=p1node,
              tr=tr, linkrev=linkrev)
@@ -1137,7 +1148,8 @@ def _convertdeltatotree(repo, lrucache, node, p1, p2, linknode, deltabase,
     newtree = _getnewtree(newflat, parenttree, parentflat)[0]
 
     # Save new tree
-    mfl.add(mfl.ui, newtree, p1, p2, overridenode=node, overridep1node=p1)
+    mfl.add(mfl.ui, newtree, p1, p2, linknode, overridenode=node,
+            overridep1node=p1)
 
 class InterceptedMutableDataPack(object):
     """This classes intercepts data pack writes and replaces the node for the
@@ -1168,13 +1180,13 @@ class InterceptedMutableHistoryPack(object):
         self._p1node = p1node
         self.entries = []
 
-    def add(self, filename, node, p1, p2, linknode, copyfrom):
+    def add(self, filename, node, p1, *args, **kwargs):
         # For the root node, provide the flat manifest as the key
         if filename == "":
             node = self._node
             if p1 != nullid:
                 p1 = self._p1node
-        self._pack.add(filename, node, p1, p2, linknode, copyfrom)
+        self._pack.add(filename, node, p1, *args, **kwargs)
 
 def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     cl = repo.changelog
