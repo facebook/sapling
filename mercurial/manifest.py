@@ -1366,6 +1366,8 @@ class manifestlog(object):
         if linkrev == revlog.nullrev:
             raise error.ProgrammingError("attempting to convert null "
                                          "linkrev")
+        if linkrev >= len(self._changelog):
+            raise LookupError(_("linkrev %s not in changelog") % linkrev)
         return self._changelog.node(linkrev)
 
     def __getitem__(self, node):

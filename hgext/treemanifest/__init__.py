@@ -531,25 +531,21 @@ class basetreemanifestlog(object):
                     tr=tr, linkrev=linkrev)
         else:
             return self._addtopack(ui, newtree, p1node, p2node, linknode,
-                    overridenode=overridenode, overridep1node=overridep1node)
+                    overridenode=overridenode, overridep1node=overridep1node,
+                    linkrev=linkrev)
 
     def _createmutablepack(self):
         packpath = shallowutil.getlocalpackpath(
                 self._opener.vfs.base,
                 'manifests')
         self._mutabledatapack = mutabledatapack(self.ui, packpath)
-        self._mutablehistorypack = mutablehistorypack(self.ui, packpath)
+        self._mutablehistorypack = mutablehistorypack(self.ui, packpath,
+                                       changelog=self._changelog)
 
     def _addtopack(self, ui, newtree, p1node, p2node, linknode,
-                   overridenode=None, overridep1node=None):
+                   overridenode=None, overridep1node=None, linkrev=None):
         if self._mutabledatapack is None:
             self._createmutablepack()
-
-        # Temporarily turn unknown linknode's into the nullid for now. Once
-        # we're able to write linkrevs into history packs we can get rid of
-        # this.
-        if linknode is None:
-            linknode = nullid
 
         p1tree = self[p1node].read()
         if util.safehasattr(p1tree, '_treemanifest'):
@@ -570,7 +566,8 @@ class basetreemanifestlog(object):
             # Not using deltas, since there aren't any other trees in
             # this pack it could delta against.
             dpack.add(nname, nnode, revlog.nullid, ntext)
-            hpack.add(nname, nnode, np1, np2, linknode, '')
+            hpack.add(nname, nnode, np1, np2, linknode, '',
+                      linkrev=linkrev)
             if node is None and nname == "":
                 node = nnode
 
@@ -892,7 +889,8 @@ def getbundlemanifestlog(orig, self):
         def add(self, ui, newtree, p1node, p2node, linknode, overridenode=None,
                 overridep1node=None, tr=None, linkrev=None):
             return self._addtopack(ui, newtree, p1node, p2node, linknode,
-                    overridenode=overridenode, overridep1node=overridep1node)
+                    overridenode=overridenode, overridep1node=overridep1node,
+                    linkrev=linkrev)
 
         def _createmutablepack(self):
             self._mutabledatapack = memdatapack()

@@ -72,10 +72,10 @@ Create client1 - it will have both server commits
   2 trees fetched over * (glob)
 
   $ ls .hg/store/packs/manifests
+  53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histidx
+  53e6d2d846d94f543bad25dcbaa1f753c3ce9fa6.histpack
   a235931ce2211c58acacdf765f4050d5c92a54e5.dataidx
   a235931ce2211c58acacdf765f4050d5c92a54e5.datapack
-  fedab9b2d171527f5d1109c27e8ba5dc80b36f6c.histidx
-  fedab9b2d171527f5d1109c27e8ba5dc80b36f6c.histpack
 
 Pushing with treemanifest disabled does not produce trees
 (disable demand import so treemanifest.py is forced to load)
@@ -122,19 +122,19 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
   $ hg push -q ../client2 --config treemanifest.sendtrees=True --config treemanifest.treeonly=True
   2 trees fetched over * (glob)
   $ ls ../client2/.hg/store/packs/manifests
-  8964241a9e91662f023728d8503d13a9a546a100.histidx
-  8964241a9e91662f023728d8503d13a9a546a100.histpack
+  700fb8a7918068e308a998d338d1689074118d07.histidx
+  700fb8a7918068e308a998d338d1689074118d07.histpack
   c446da942a8eb5a687e11a12920e4d4526ef765a.dataidx
   c446da942a8eb5a687e11a12920e4d4526ef765a.datapack
   $ hg debughistorypack ../client2/.hg/store/packs/manifests/*histidx
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
-  3ffa0e0bbc70  90044db98b33  000000000000  000000000000  
+  3ffa0e0bbc70  90044db98b33  000000000000  54609f68e211  
   
   dir
   Node          P1 Node       P2 Node       Link Node     Copy From
-  23226e7a252c  000000000000  000000000000  000000000000  
+  23226e7a252c  000000000000  000000000000  54609f68e211  
   
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From

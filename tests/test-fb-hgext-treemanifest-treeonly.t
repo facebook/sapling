@@ -89,8 +89,8 @@ Make a local hybrid flat+tree draft commit
   $ ls_l .hg/store/packs/manifests
   -r--r--r--    1106 3c68632603fbc30bd6ee720bd43c0f0940930cc8.dataidx
   -r--r--r--     211 3c68632603fbc30bd6ee720bd43c0f0940930cc8.datapack
-  -r--r--r--    1196 54389aae9b0f11d9cc4e33901e6de68bad129e73.histidx
-  -r--r--r--     183 54389aae9b0f11d9cc4e33901e6de68bad129e73.histpack
+  -r--r--r--    1196 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histidx
+  -r--r--r--     183 a5c12ff082e94f0aabc66725c89bcb2e624310bf.histpack
 
 Transition to tree-only client
   $ cat >> .hg/hgrc <<EOF
@@ -101,8 +101,10 @@ Transition to tree-only client
 Make a local tree-only draft commit
   $ ls_l .hg/store/packs/manifests | wc -l
   \s*4 (re)
+  $ ls .hg/store/packs/manifests > $TESTTMP/origpacks
   $ echo t >> subdir/x
   $ hg commit -qm "tree only commit"
+  $ ls .hg/store/packs/manifests > $TESTTMP/aftercommit1packs
   $ hg debugdata -c 3
   7fdb5a91151d114ca83c30c5cb4a1029ef9700ef
   test
@@ -134,8 +136,9 @@ Tree-only amend
        2       102      51     -1       2 0427baa4e948 85b359fdb09e 000000000000
 
 # Delete the original commits packs
-  $ rm -rf .hg/store/packs/manifests/26653c55cb54ab20aeb188315d736fb2ece04cd1*
-  $ rm -rf .hg/store/packs/manifests/2a492611dfb8fbde1652e7e54fa1f64b82bd8ff7*
+  $ cd .hg/store/packs/manifests
+  $ rm -rf `comm -3 $TESTTMP/origpacks $TESTTMP/aftercommit1packs`
+  $ cd ../../../..
   $ ls_l .hg/store/packs/manifests | wc -l
   \s*8 (re)
 

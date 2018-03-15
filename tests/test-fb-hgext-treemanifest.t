@@ -74,10 +74,19 @@ Test that commit creates local trees
   $ echo z >> subdir/z
   $ hg commit -qAm 'modify subdir/z'
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 57710544ca24ac4f36682ec279959879c92a3275.histidx
-  -r--r--r--     183 57710544ca24ac4f36682ec279959879c92a3275.histpack
+  -r--r--r--    1196 7c930adf1e81d971be4609f898b1c6948cd50023.histidx
+  -r--r--r--     183 7c930adf1e81d971be4609f898b1c6948cd50023.histpack
   -r--r--r--    1106 a7f7e084adff88a01cf76909345be1e56ee704a9.dataidx
   -r--r--r--     254 a7f7e084adff88a01cf76909345be1e56ee704a9.datapack
+  $ hg debughistorypack .hg/store/packs/manifests/7c930adf1e81d971be4609f898b1c6948cd50023.histpack
+  
+  
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  7a911436836f  70f2c6726cec  000000000000  7dd80139a0c9  
+  
+  subdir
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  ac728a786423  ddb35f099a64  000000000000  7dd80139a0c9  
   $ hg debugdatapack .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9
   .hg/store/packs/manifests/a7f7e084adff88a01cf76909345be1e56ee704a9:
   subdir:
@@ -165,13 +174,13 @@ Test rebase two commits with same changes
   rebasing 4:6052526a0d67 "modify subdir/y #1"
   rebasing 5:79a69a1547d7 "modify subdir/y #2"
   saved backup bundle to $TESTTMP/client/.hg/strip-backup/79a69a1547d7-fc6bc129-rebase.hg (glob)
-  $ hg debughistorypack .hg/store/packs/manifests/668716b2b93e2fa8151bca1a327a391746f0dcc0.histpack
+  $ hg debughistorypack .hg/store/packs/manifests/3ca08dde9cb570bfcaa028cef400b79c912fd49d.histidx
   
   
   Node          P1 Node       P2 Node       Link Node     Copy From
-  8026e03c5a35  8011431de863  000000000000  000000000000  
-  5ca06dca517c  8011431de863  000000000000  000000000000  
+  8026e03c5a35  8011431de863  000000000000  904f99ba5a9e  
+  5ca06dca517c  8011431de863  000000000000  36098647e229  
   
   subdir
   Node          P1 Node       P2 Node       Link Node     Copy From
-  ad0a48a2ec1e  a4e2f032ee0f  000000000000  000000000000  
+  ad0a48a2ec1e  a4e2f032ee0f  000000000000  904f99ba5a9e  
