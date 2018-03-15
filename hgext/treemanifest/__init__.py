@@ -368,6 +368,9 @@ def setuptreestores(repo, mfl):
     if ui.configbool('treemanifest', 'server'):
         packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
 
+        mutablestore = mutablemanifeststore(mfl)
+        ondemandstore = ondemandtreedatastore(repo)
+
         # Data store
         datastore = cstore.datapackstore(packpath)
         revlogstore = manifestrevlogstore(repo)
@@ -379,15 +382,19 @@ def setuptreestores(repo, mfl):
             revlogstore = cachestore(
                 revlogstore, repo.cachevfs, maxcachesize, evictionrate)
 
-        mfl.datastore = unioncontentstore(datastore, revlogstore)
+        mfl.datastore = unioncontentstore(datastore, revlogstore, mutablestore,
+                                          ondemandstore)
 
         # History store
         historystore = historypackstore(ui, packpath)
         mfl.historystore = unionmetadatastore(
             historystore,
             revlogstore,
+            mutablestore,
+            ondemandstore,
         )
         _prunesharedpacks(repo, packpath)
+        ondemandstore.setshared(mfl.datastore, mfl.historystore)
         return
 
     usecdatapack = ui.configbool('remotefilelog', 'fastdatapack')
@@ -1969,11 +1976,26 @@ class remotetreestore(generatingdatastore):
 class ondemandtreedatastore(generatingdatastore):
     def _generatetrees(self, name, node):
         repo = self._repo
-        with repo.wlock(), repo.lock(), repo.transaction('demandtreegen') as tr:
-            mfl = manifest.manifestlog(repo.svfs, repo)
-            tmfl = repo.manifestlog
+        def convert(tr):
+            if isinstance(repo.manifestlog, hybridmanifestlog):
+                mfl = repo.manifestlog
+                tmfl = mfl.treemanifestlog
+            else:
+                # TODO: treeonly bundlerepo's won't work here since the manifest
+                # bundle entries aren't being overlayed on the manifestrevlog.
+                mfl = manifest.manifestlog(repo.svfs, repo)
+                tmfl = repo.manifestlog
             mfctx = manifest.manifestctx(mfl, node)
             _converttotree(tr, mfl, tmfl, mfctx)
+
+        if isinstance(repo, bundlerepo.bundlerepository):
+            # bundlerepos do an entirely inmemory conversion. No transaction
+            # necessary.
+            convert(None)
+        else:
+            with repo.wlock(), repo.lock():
+                with repo.transaction('demandtreegen') as tr:
+                    convert(tr)
 
 def serverrepack(repo, incremental=False, options=None):
     packpath = repo.vfs.join('cache/packs/%s' % PACK_CATEGORY)
