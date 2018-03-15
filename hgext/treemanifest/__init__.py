@@ -1492,7 +1492,7 @@ def _registerbundle2parts():
         # Only add trees if we have them
         sendtrees = shallowbundle.cansendtrees(pushop.repo,
                                                pushop.outgoing.missing)
-        if sendtrees != shallowbundle.NoTrees:
+        if sendtrees != shallowbundle.NoTrees and pushop.outgoing.missing:
             part = createtreepackpart(pushop.repo, pushop.outgoing,
                                       TREEGROUP_PARTTYPE2,
                                       sendtrees=sendtrees)
