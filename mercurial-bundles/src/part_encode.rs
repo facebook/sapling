@@ -116,6 +116,7 @@ impl PartEncodeBuilder {
     where
         S: 'static + Stream<Item = Chunk, Error = Error> + Send,
     {
+        let stream = stream.filter(|chunk| !chunk.is_empty());
         self.data = PartEncodeData::Generated(ChunkStream(Box::new(stream)));
         self
     }
