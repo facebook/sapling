@@ -825,7 +825,8 @@ def _addservercaps(repo, caps):
     caps.add('gettreepack')
     if repo.ui.configbool('treemanifest', 'treeonly'):
         caps.add('treeonly')
-    return caps
+    # other code expects caps to be a list, not a set
+    return list(caps)
 
 def serverreposetup(repo):
     def _capabilities(orig, repo, proto):
