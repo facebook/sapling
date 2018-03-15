@@ -704,7 +704,7 @@ class state_update(object):
         calculated based on the oldnode and newnode in the leave method.'''
 
     def __init__(self, repo, name, oldnode=None, newnode=None, distance=None,
-                 partial=False):
+                 partial=False, metadata=None):
         self.repo = repo.unfiltered()
         self.name = name
         self.oldnode = oldnode
@@ -713,6 +713,7 @@ class state_update(object):
         self.partial = partial
         self._lock = None
         self.need_leave = False
+        self.metadata = metadata or {}
 
     def __enter__(self):
         self.enter()
@@ -761,18 +762,19 @@ class state_update(object):
         if not util.safehasattr(self.repo, '_watchmanclient'):
             return False
         try:
-            self.repo._watchmanclient.command(cmd, {
-                'name': self.name,
-                'metadata': {
-                    # the target revision
-                    'rev': commithash,
-                    # approximate number of commits between current and target
-                    'distance': self.distance if self.distance else 0,
-                    # success/failure (only really meaningful for state-leave)
-                    'status': status,
-                    # whether the working copy parent is changing
-                    'partial': self.partial,
-            }})
+            metadata = {
+                # the target revision
+                'rev': commithash,
+                # approximate number of commits between current and target
+                'distance': self.distance if self.distance else 0,
+                # success/failure (only really meaningful for state-leave)
+                'status': status,
+                # whether the working copy parent is changing
+                'partial': self.partial,
+            }
+            metadata.update(self.metadata)
+            self.repo._watchmanclient.command(cmd, {'name': self.name,
+                                                    'metadata': metadata})
             return True
         except Exception as e:
             # Swallow any errors; fire and forget
@@ -804,7 +806,8 @@ def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
         distance = calcdistance(repo.unfiltered(), oldnode, newnode)
 
     with state_update(repo, name="hg.update", oldnode=oldnode, newnode=newnode,
-                      distance=distance, partial=partial):
+                      distance=distance, partial=partial,
+                      metadata={'merge': branchmerge}):
         return orig(
             repo, node, branchmerge, force, ancestor, mergeancestor,
             labels, matcher, **kwargs)
