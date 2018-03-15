@@ -968,14 +968,10 @@ def sparse(ui, repo, *pats, **opts):
         _clear(ui, repo, pats, force=force)
 
     if refresh:
-        try:
-            wlock = repo.wlock()
-            fcounts = map(
-                len,
-                _refresh(ui, repo, repo.status(), repo.sparsematch(), force))
+        with repo.wlock():
+            c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+            fcounts = map(len, c)
             _verbose_output(ui, opts, 0, 0, 0, *fcounts)
-        finally:
-            wlock.release()
 
     if cwdlist:
         _cwdlist(repo)
