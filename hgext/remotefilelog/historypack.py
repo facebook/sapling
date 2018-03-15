@@ -565,3 +565,35 @@ class mutablehistorypack(basepack.mutablebasepack):
                 missing.append((name, node))
 
         return missing
+
+class memhistorypack(object):
+    def __init__(self):
+        self.history = {}
+
+    def add(self, name, node, p1, p2, linknode, copyfrom):
+        self.history.setdefault(name, {})[node] = (p1, p2, linknode, copyfrom)
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            filehistory = self.history.get(name)
+            if filehistory is None:
+                missing.append((name, node))
+            else:
+                if node not in filehistory:
+                    missing.append((name, node))
+        return missing
+
+    def getancestors(self, name, node, known=None):
+        ancestors = {}
+        try:
+            ancestors[node] = self.history[name][node]
+        except KeyError:
+            raise KeyError((name, node))
+        return ancestors
+
+    def getnodeinfo(self, name, node):
+        try:
+            return self.history[name][node]
+        except KeyError:
+            raise KeyError((name, node))

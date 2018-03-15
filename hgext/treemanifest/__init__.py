@@ -141,11 +141,13 @@ from ..remotefilelog.metadatastore import (
 from ..remotefilelog.datapack import (
     datapack,
     datapackstore,
+    memdatapack,
     mutabledatapack,
 )
 from ..remotefilelog.historypack import (
     historypack,
     historypackstore,
+    memhistorypack,
     mutablehistorypack,
 )
 from ..remotefilelog.repack import (
@@ -199,6 +201,8 @@ def uisetup(ui):
     extensions.wrapfunction(revlog.revlog, 'checkhash', _checkhash)
 
     wrappropertycache(localrepo.localrepository, 'manifestlog', getmanifestlog)
+    wrappropertycache(bundlerepo.bundlerepository, 'manifestlog',
+                      getbundlemanifestlog)
 
     extensions.wrapfunction(
         manifest.memmanifestctx, 'write', _writemanifestwrapper)
@@ -522,14 +526,17 @@ class basetreemanifestlog(object):
             return self._addtopack(ui, newtree, p1node, p2node,
                     overridenode=overridenode, overridep1node=overridep1node)
 
+    def _createmutablepack(self):
+        packpath = shallowutil.getlocalpackpath(
+                self._opener.vfs.base,
+                'manifests')
+        self._mutabledatapack = mutabledatapack(self.ui, packpath)
+        self._mutablehistorypack = mutablehistorypack(self.ui, packpath)
+
     def _addtopack(self, ui, newtree, p1node, p2node, overridenode=None,
                    overridep1node=None):
         if self._mutabledatapack is None:
-            packpath = shallowutil.getlocalpackpath(
-                    self._opener.vfs.base,
-                    'manifests')
-            self._mutabledatapack = mutabledatapack(ui, packpath)
-            self._mutablehistorypack = mutablehistorypack(ui, packpath)
+            self._createmutablepack()
 
         p1tree = self[p1node].read()
         if util.safehasattr(p1tree, '_treemanifest'):
@@ -852,6 +859,35 @@ def getmanifestlog(orig, self):
     else:
         mfl = hybridmanifestlog(self.svfs, self)
 
+    return mfl
+
+def getbundlemanifestlog(orig, self):
+    mfl = orig(self)
+    if not treeenabled(self.ui):
+        return mfl
+
+    wrapmfl = mfl
+    if isinstance(mfl, hybridmanifestlog):
+        wrapmfl = mfl.treemanifestlog
+
+    class bundlemanifestlog(wrapmfl.__class__):
+        def add(self, ui, newtree, p1node, p2node, overridenode=None,
+                overridep1node=None, tr=None, linkrev=None):
+            return self._addtopack(ui, newtree, p1node, p2node,
+                    overridenode=overridenode, overridep1node=overridep1node)
+
+        def _createmutablepack(self):
+            self._mutabledatapack = memdatapack()
+            self._mutablehistorypack = memhistorypack()
+
+        def commitpending(self):
+            pass
+
+        def abortpending(self):
+            self._mutabledatapack = None
+            self._mutablehistorypack = None
+
+    wrapmfl.__class__ = bundlemanifestlog
     return mfl
 
 def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):

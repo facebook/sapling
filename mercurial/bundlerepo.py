@@ -370,6 +370,10 @@ class bundlerepository(localrepo.localrepository):
         self.manstart = self._cgunpacker.tell()
         return c
 
+    @localrepo.unfilteredpropertycache
+    def manifestlog(self):
+        return super(bundlerepository, self).manifestlog
+
     def _constructmanifest(self):
         self._cgunpacker.seek(self.manstart)
         # consume the header if it exists
