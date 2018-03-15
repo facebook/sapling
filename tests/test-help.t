@@ -301,6 +301,8 @@ Test extension help:
        chistedit
        churn         command to display statistics about repository history
        cleanobsstore
+       clienttelemetry
+                     provide information about the client in server telemetry
        clonebundles  advertise pre-generated bundles to seed clones
        commitcloud   sync changesets via the cloud
        configwarn    warn unsupported user configs
