@@ -131,6 +131,31 @@ StringPiece fuseOpcodeName(FuseOpcode opcode) {
 using Handler = folly::Future<folly::Unit> (
     FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
 
+void sigusr2Handler(int /* signum */) {
+  // Do nothing.
+  // The purpose of this signal is only to interrupt the blocking read() calls
+  // in processSession() and readInitPacket()
+}
+
+void installSignalHandler() {
+  // We use SIGUSR2 to wake up our worker threads when we want to shut down.
+  // Install a signal handler for this signal.  The signal handler itself is a
+  // no-op, we simply want to use it to interrupt blocking read() calls.
+  //
+  // We will re-install this handler each time a FuseChannel object is called,
+  // but that should be fine.
+  //
+  // This must be installed using sigaction() rather than signal(), so we can
+  // ensure that the SA_RESTART flag is not ste.
+  struct sigaction action = {};
+  action.sa_handler = sigusr2Handler;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0; // We intentionally turn off SA_RESTART
+  struct sigaction oldAction;
+  folly::checkUnixError(
+      sigaction(SIGUSR2, &action, &oldAction), "failed to set SIGUSR2 handler");
+}
+
 } // namespace
 
 struct FuseChannel::HandlerEntry {
@@ -320,6 +345,7 @@ FuseChannel::FuseChannel(
       mountPath_(mountPath),
       fuseDevice_(std::move(fuseDevice)) {
   CHECK_GE(numThreads_, 1);
+  installSignalHandler();
 }
 
 folly::Future<folly::Unit> FuseChannel::initialize() {
@@ -501,16 +527,31 @@ void FuseChannel::requestSessionExit(
           std::memory_order_relaxed,
           std::memory_order_relaxed)) {
     // Knock our workers out of their blocking read() syscalls
+    // TODO: This code is slightly racy, since threads could receive the signal
+    // immediately before entering read()
     for (auto& thr : state->workerThreads) {
       if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
-        pthread_kill(thr.native_handle(), SIGPIPE);
+        pthread_kill(thr.native_handle(), SIGUSR2);
       }
     }
   }
 }
 
+void FuseChannel::setThreadSigmask() {
+  // Make sure our thread will receive SIGUSR2
+  sigset_t sigset;
+  sigemptyset(&sigset);
+  sigaddset(&sigset, SIGUSR2);
+
+  sigset_t oldset;
+  sigemptyset(&oldset);
+
+  folly::checkPosixError(pthread_sigmask(SIG_UNBLOCK, &sigset, &oldset));
+}
+
 void FuseChannel::initWorkerThread() noexcept {
   try {
+    setThreadSigmask();
     setThreadName(to<std::string>("fuse", mountPath_.basename()));
 
     // Read the INIT packet
@@ -536,6 +577,7 @@ void FuseChannel::initWorkerThread() noexcept {
 
 void FuseChannel::fuseWorkerThread() noexcept {
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
+  setThreadSigmask();
 
   try {
     processSession();

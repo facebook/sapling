@@ -18,8 +18,5 @@ int main(int argc, char* argv[]) {
   folly::init(&argc, &argv);
   folly::initLogging(FLAGS_logging);
 
-  // The FuseChannel code sends SIGPIPE and expects it to be ignored.
-  ::signal(SIGPIPE, SIG_IGN);
-
   return RUN_ALL_TESTS();
 }

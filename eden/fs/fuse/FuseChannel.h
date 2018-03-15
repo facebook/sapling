@@ -358,6 +358,7 @@ class FuseChannel {
       const fuse_in_header* header,
       const uint8_t* arg);
 
+  void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
   void maybeDispatchSessionComplete();
