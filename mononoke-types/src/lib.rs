@@ -34,5 +34,7 @@ extern crate serde_derive;
 pub mod errors;
 pub mod hash;
 pub mod path;
+pub mod unodehash;
 
 pub use path::{MPath, MPathElement, RepoPath};
+pub use unodehash::UnodeHash;
