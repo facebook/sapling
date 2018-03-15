@@ -25,7 +25,6 @@
 
 namespace folly {
 class RequestContext;
-class EventBase;
 } // namespace folly
 
 namespace facebook {
@@ -62,7 +61,6 @@ class FuseChannel {
   FuseChannel(
       folly::File&& fuseDevice,
       AbsolutePathPiece mountPath,
-      folly::EventBase* eventBase,
       size_t numThreads,
       Dispatcher* const dispatcher);
 
@@ -221,15 +219,20 @@ class FuseChannel {
   void finishRequest(const fuse_in_header& header);
 
   /**
-   * Returns a Future that will complete when all of the
-   * fuse threads have been joined and when all pending
-   * fuse requests initiated by the kernel have been
-   * responded to.
+   * Returns a SemiFuture that will complete when all of the fuse threads have
+   * been joined and when all pending fuse requests initiated by the kernel
+   * have been responded to.
    *
    * Will throw if called more than once.
    *
    * The session completion future will only be signaled if initialization
    * (via initialize() or takeoverInitialize()) has completed successfully.
+   *
+   * This future may be fulfilled inside one of the FUSE worker threads that is
+   * in the process of shutting down.  Therefore is not safe to call
+   * FuseChannel::destroy() directly in the thread where this future is
+   * fulfilled.  Callers should generally use Future::via() to move execution
+   * to another executor thread.
    */
   folly::Future<StopReason> getSessionCompleteFuture();
 
@@ -383,7 +386,6 @@ class FuseChannel {
   const size_t bufferSize_{0};
   const size_t numThreads_;
   Dispatcher* const dispatcher_{nullptr};
-  folly::EventBase* const eventBase_;
   const AbsolutePath mountPath_;
 
   /*

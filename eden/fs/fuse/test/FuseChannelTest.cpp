@@ -10,7 +10,6 @@
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <folly/experimental/logging/xlog.h>
-#include <folly/io/async/ScopedEventBaseThread.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include "eden/fs/fuse/Dispatcher.h"
@@ -22,7 +21,6 @@ using namespace facebook::eden::fusell;
 using namespace std::literals::chrono_literals;
 using folly::ByteRange;
 using folly::Future;
-using folly::ScopedEventBaseThread;
 using folly::Unit;
 using std::make_unique;
 
@@ -33,15 +31,10 @@ class TestDispatcher : public Dispatcher {
 
 class FuseChannelTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    eventBaseThread_ = make_unique<ScopedEventBaseThread>();
-  }
-
   std::unique_ptr<FuseChannel> createChannel(size_t numThreads = 2) {
     return make_unique<FuseChannel>(
         fuse_.start(),
         mountPath_,
-        eventBaseThread_->getEventBase(),
         numThreads,
         &dispatcher_);
   }
@@ -71,7 +64,6 @@ class FuseChannelTest : public ::testing::Test {
   ThreadLocalEdenStats stats_;
   TestDispatcher dispatcher_{&stats_};
   AbsolutePath mountPath_{"/fake/mount/path"};
-  std::unique_ptr<ScopedEventBaseThread> eventBaseThread_;
 };
 
 } // namespace

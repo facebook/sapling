@@ -714,13 +714,10 @@ void EdenMount::createFuseChannel(
   threadPool_ = std::move(threadPool);
 
   channel_ = std::make_unique<fusell::FuseChannel>(
-      std::move(fuseDevice),
-      path_,
-      eventBase_,
-      FLAGS_fuseNumThreads,
-      dispatcher_.get());
+      std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get());
 
   channel_->getSessionCompleteFuture()
+      .via(eventBase_)
       .then([this] {
         // In case we are performing a graceful restart,
         // extract the fuse device now.

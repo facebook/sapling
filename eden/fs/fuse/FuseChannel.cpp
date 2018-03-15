@@ -11,7 +11,6 @@
 
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/helpers.h>
-#include <folly/io/async/EventBase.h>
 #include <folly/io/async/Request.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
@@ -313,13 +312,11 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
 FuseChannel::FuseChannel(
     folly::File&& fuseDevice,
     AbsolutePathPiece mountPath,
-    folly::EventBase* eventBase,
     size_t numThreads,
     Dispatcher* const dispatcher)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(dispatcher),
-      eventBase_(eventBase),
       mountPath_(mountPath),
       fuseDevice_(std::move(fuseDevice)) {
   CHECK_GE(numThreads_, 1);
@@ -570,10 +567,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
   }
 
   if (complete) {
-    eventBase_->runInEventBaseThread([this]() {
-      sessionCompletePromise_.setValue(
-          runState_.load(std::memory_order_relaxed));
-    });
+    sessionCompletePromise_.setValue(runState_.load(std::memory_order_relaxed));
   }
 }
 
