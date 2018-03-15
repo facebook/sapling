@@ -96,5 +96,5 @@ Test bundling/unbundling
   c0196aba344d  000000000000  49            (missing)
   
 Test pushing
-  $ hg push -r tip --to master --debug | grep treegroup
-  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
+  $ hg push -r tip --to master --debug | grep rebasepackpart
+  bundle2-output-part: "b2x:rebasepackpart" (params: 3 mandatory) streamed payload

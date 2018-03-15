@@ -478,6 +478,7 @@ def rebasepartgen(pushop, bundler):
         return
 
     pushop.stepsdone.add('changesets')
+    pushop.stepsdone.add('treepack')
     if not pushop.outgoing.missing:
         # It's important that this text match the text found in upstream
         # Mercurial, since some tools rely on this string to know if a push

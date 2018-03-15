@@ -1500,7 +1500,8 @@ def _registerbundle2parts():
         # Treemanifest servers don't accept tree directly. They must go through
         # pushrebase, which uses it's own part type and handler.
         if repo.svfs.treemanifestserver:
-            return
+            raise error.ProgrammingError("treemanifest servers can't receive "
+                                         "normal tree packs (use pushrebase)")
 
         if part.params.get('cache', 'False') == 'True':
             packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
