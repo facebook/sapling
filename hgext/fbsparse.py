@@ -8,8 +8,22 @@
 """allow sparse checkouts of the working directory
 """
 
-from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error, hg, pathutil, registrar, patch, pycompat
+from mercurial import (
+    util,
+    cmdutil,
+    extensions,
+    context,
+    dirstate,
+    commands,
+    progress,
+    localrepo,
+    error,
+    hg,
+    pathutil,
+    registrar,
+    patch,
+    pycompat,
+)
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -1159,13 +1173,14 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
 
     # Calculate actions
     ui.note(_('calculating actions for refresh\n'))
-    dirstate = repo.dirstate
-    ctx = repo['.']
-    added = []
-    lookup = []
-    dropped = []
-    mf = ctx.manifest()
-    files = set(mf)
+    with progress.spinner(ui, 'populating file set'):
+        dirstate = repo.dirstate
+        ctx = repo['.']
+        added = []
+        lookup = []
+        dropped = []
+        mf = ctx.manifest()
+        files = set(mf)
 
     actions = {}
 
@@ -1218,9 +1233,13 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     typeactions = dict((m, [])
                        for m in 'a f g am cd dc r dm dg m e k p pr'.split())
     actioncount = 0
+    total = len(actions)
+    _applying = _('applying')
+    ui.progress(_applying, actioncount, total=total)
+
     for f, (m, args, msg) in actions.iteritems():
         actioncount += 1
-        ui.progress(_('applying'), actioncount, total=len(actions))
+        ui.progress(_applying, actioncount, total=total)
         if m not in typeactions:
             typeactions[m] = []
         typeactions[m].append((f, args, msg))
@@ -1232,20 +1251,20 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         ui.note(_('updating dirstate\n'))
     _recording = _('recording')
     _files = _('files')
-    progress = 0
+    prog = 0
     for file in added:
-        progress += 1
-        ui.progress(_recording, progress, total=filecount, unit=_files)
+        prog += 1
+        ui.progress(_recording, prog, total=filecount, unit=_files)
         dirstate.normal(file)
 
     for file in dropped:
-        progress += 1
-        ui.progress(_recording, progress, total=filecount, unit=_files)
+        prog += 1
+        ui.progress(_recording, prog, total=filecount, unit=_files)
         dirstate.drop(file)
 
     for file in lookup:
-        progress += 1
-        ui.progress(_recording, progress, total=filecount, unit=_files)
+        prog += 1
+        ui.progress(_recording, prog, total=filecount, unit=_files)
         # File exists on disk, and we're bringing it back in an unknown state.
         dirstate.normallookup(file)
 
