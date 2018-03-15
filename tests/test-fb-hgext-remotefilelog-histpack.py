@@ -15,11 +15,14 @@ import silenttestrunner
 from hgext.remotefilelog.historypack import historypack, mutablehistorypack
 
 from mercurial.node import nullid
-import mercurial.ui
+from mercurial import (
+    error,
+    ui as uimod,
+)
 
 from hgext.remotefilelog.basepack import (
-    SMALLFANOUTCUTOFF,
     LARGEFANOUTPREFIX,
+    SMALLFANOUTCUTOFF,
 )
 
 try:
@@ -57,7 +60,7 @@ class histpacktests(unittest.TestCase):
                           self.getFakeHash(), None)]
 
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(mercurial.ui.ui(), packdir,
+        packer = mutablehistorypack(uimod.ui(), packdir,
                                     version=1)
 
         for filename, node, p1, p2, linknode, copyfrom in revisions:
@@ -274,7 +277,7 @@ class histpacktests(unittest.TestCase):
         """Tests that the data written into a mutablehistorypack can be read out
         before it has been finalized."""
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(mercurial.ui.ui(), packdir, version=1)
+        packer = mutablehistorypack(uimod.ui(), packdir, version=1)
 
         revisions = []
 
@@ -305,6 +308,80 @@ class histpacktests(unittest.TestCase):
                         ('foo', self.getFakeHash())]
         missing = packer.getmissing(missingcheck)
         self.assertEquals(missing, missingcheck[1:])
+
+    def testWritingLinkRevs(self):
+        """Tests that we can add linkrevs and have them written as linknodes.
+        """
+        class fakechangelog(object):
+            def __init__(self):
+                self.commits = []
+            def __len__(self):
+                return len(self.commits)
+            def rev(self, node):
+                try:
+                    return self.commits.index(node)
+                except Exception:
+                    raise error.LookupError(hex(node), 'x', 'x')
+            def node(self, rev):
+                if rev >= len(self.commits):
+                    raise error.LookupError(rev, 'x', 'x')
+                return self.commits[rev]
+
+        cl = fakechangelog()
+        packdir = self.makeTempDir()
+        packer = mutablehistorypack(uimod.ui(), packdir, version=1,
+                changelog=cl)
+
+        revisions = []
+        commits = []
+
+        filename = "foo"
+        lastnode = nullid
+        for i in range(5):
+            node = self.getFakeHash()
+            linknode = self.getFakeHash()
+            commits.append(linknode)
+            revisions.append((filename, node, lastnode, nullid, linknode, ''))
+            lastnode = node
+
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            packer.add(filename, node, p1, p2, None, copyfrom,
+                       linkrev=commits.index(linknode))
+
+        # Test adding linknode and linkrev
+        try:
+            packer.add('', self.getFakeHash(), self.getFakeHash(), nullid,
+                    self.getFakeHash(), '', 5)
+            self.assertFalse(True, "Adding linknode and linkrev should've "
+                                   "thrown")
+        except error.ProgrammingError:
+            pass
+
+        # Test getancestors before finalizing
+        try:
+            filename, node = revisions[0][:2]
+            packer.getancestors(filename, node)
+            self.assertFalse(True, "Reading data before finalizing should've "
+                                   "thrown")
+        except error.ProgrammingError:
+            pass
+
+        # "Commit" the commits to the changelog
+        cl.commits = commits
+
+        # Verify reading from the mutable store
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            entry = packer.getnodeinfo(filename, node)
+            self.assertEquals(entry, (p1, p2, linknode, copyfrom))
+
+        path = packer.close()
+        pack = historypack(path)
+
+        # Verify reading from the on disk pack
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            entry = pack.getnodeinfo(filename, node)
+            copyfrom = None if not copyfrom else copyfrom
+            self.assertEquals(entry, (p1, p2, linknode, copyfrom))
 
 # TODO:
 # histpack store:

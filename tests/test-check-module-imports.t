@@ -250,7 +250,6 @@ outputs, which should be fixed later.
   tests/test-fb-hgext-remotefilelog-datapack.py:29: symbol import follows non-symbol import: mercurial.node
   tests/test-fb-hgext-remotefilelog-datapack.py:30: imports not lexically sorted: mercurial.ui < silenttestrunner
   tests/test-fb-hgext-remotefilelog-histpack.py:15: direct symbol import historypack, mutablehistorypack from hgext.remotefilelog.historypack
-  tests/test-fb-hgext-remotefilelog-histpack.py:18: imports not lexically sorted: mercurial.ui < silenttestrunner
-  tests/test-fb-hgext-remotefilelog-histpack.py:20: direct symbol import SMALLFANOUTCUTOFF, LARGEFANOUTPREFIX from hgext.remotefilelog.basepack
-  tests/test-fb-hgext-remotefilelog-histpack.py:20: imports from hgext.remotefilelog.basepack not lexically sorted: LARGEFANOUTPREFIX < SMALLFANOUTCUTOFF
+  tests/test-fb-hgext-remotefilelog-histpack.py:23: direct symbol import LARGEFANOUTPREFIX, SMALLFANOUTCUTOFF from hgext.remotefilelog.basepack
+  tests/test-fb-hgext-remotefilelog-histpack.py:23: symbol import follows non-symbol import: hgext.remotefilelog.basepack
   [1]
