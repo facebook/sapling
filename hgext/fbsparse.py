@@ -1185,9 +1185,12 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     actions = {}
 
     filecount = 0
+    _calculating = _('calculating')
+    total = len(files)
     for file in files:
         filecount += 1
-        ui.progress(_('calculating'), filecount, total=len(files))
+        ui.progress(_calculating, filecount, total=total)
+
         old = origsparsematch(file)
         new = sparsematch(file)
         # Add files that are newly included, or that don't exist in
@@ -1206,6 +1209,8 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
             dropped.append(file)
             if file not in pending:
                 actions[file] = ('r', [], '')
+
+    ui.progress(_calculating, None)
 
     # Verify there are no pending changes in newly included files
     if len(lookup) > 0:
@@ -1244,6 +1249,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
             typeactions[m] = []
         typeactions[m].append((f, args, msg))
     mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
+    ui.progress(_applying, None)
 
     # Fix dirstate
     filecount = len(added) + len(dropped) + len(lookup)
@@ -1267,6 +1273,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         ui.progress(_recording, prog, total=filecount, unit=_files)
         # File exists on disk, and we're bringing it back in an unknown state.
         dirstate.normallookup(file)
+    ui.progress(_recording, None)
 
     return added, dropped, lookup
 
