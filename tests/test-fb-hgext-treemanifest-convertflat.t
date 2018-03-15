@@ -147,14 +147,14 @@ able to view it even with 'treemanifest.demandgenerate' being False.
 - Check the tree manifest for commit '9055b56f3916' and 'b9b574be2f5d'.
 
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 028534a0bedee7c3d57bd6fd459f16abe971621b.histidx
-  -r--r--r--     183 028534a0bedee7c3d57bd6fd459f16abe971621b.histpack
   -r--r--r--    1106 4bb74ed3582b14a57f34a23c494496a4212af761.dataidx
   -r--r--r--     211 4bb74ed3582b14a57f34a23c494496a4212af761.datapack
+  -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
+  -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
+  -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
+  -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
   -r--r--r--    1106 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.dataidx
   -r--r--r--     211 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.datapack
-  -r--r--r--    1196 9a66f2052faa2af4f56b178a1c2958b52b676046.histidx
-  -r--r--r--     183 9a66f2052faa2af4f56b178a1c2958b52b676046.histpack
 
 - Tree manifest data for commit '9055b56f3916'.
 
@@ -202,18 +202,18 @@ manifest for commit 'f7febcf0f689'.
   +f12
   
   $ ls_l .hg/store/packs/manifests
-  -r--r--r--    1196 028534a0bedee7c3d57bd6fd459f16abe971621b.histidx
-  -r--r--r--     183 028534a0bedee7c3d57bd6fd459f16abe971621b.histpack
   -r--r--r--    1106 1074860af987f99d7c9e6d053852060e47ed05bd.dataidx
   -r--r--r--     211 1074860af987f99d7c9e6d053852060e47ed05bd.datapack
   -r--r--r--    1106 4bb74ed3582b14a57f34a23c494496a4212af761.dataidx
   -r--r--r--     211 4bb74ed3582b14a57f34a23c494496a4212af761.datapack
+  -r--r--r--    1196 4efbca00685bceff6359c358de842938789d6d3a.histidx
+  -r--r--r--     183 4efbca00685bceff6359c358de842938789d6d3a.histpack
+  -r--r--r--    1196 574eeaafb26148d853004c1617e6f8f11c743709.histidx
+  -r--r--r--     183 574eeaafb26148d853004c1617e6f8f11c743709.histpack
   -r--r--r--    1106 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.dataidx
   -r--r--r--     211 5a179c0bb6419ffadbed2c826f2e17b95b05bafb.datapack
-  -r--r--r--    1196 5ef2ade5f4492a25bed3204d2e5b6040e5f5f96e.histidx
-  -r--r--r--     183 5ef2ade5f4492a25bed3204d2e5b6040e5f5f96e.histpack
-  -r--r--r--    1196 9a66f2052faa2af4f56b178a1c2958b52b676046.histidx
-  -r--r--r--     183 9a66f2052faa2af4f56b178a1c2958b52b676046.histpack
+  -r--r--r--    1196 f2f83026385a0ae7128583b50734e5d09f0b66ec.histidx
+  -r--r--r--     183 f2f83026385a0ae7128583b50734e5d09f0b66ec.histpack
 
 - Tree manifest data for commit 'f7febcf0f689'.
 

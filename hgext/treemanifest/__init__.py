@@ -1026,15 +1026,19 @@ def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
 
     newtree = _getnewtree(newflat, parenttree, parentflat)[0]
 
-    # Existing manifests can have their linknode converted to a linkrev here.
-    # manifests that haven't been added to the changelog yet (and therefore
-    # maplinknode returns -1) should've had their linkrev provided as an
-    # argument.
-    if linkrev is None:
-        linkrev = mfl._maplinknode(mfctx.linknode)
-        assert linkrev != -1, "attempting to create manifest with null linkrev"
-
-    tmfl.add(mfl.ui, newtree, p1node, p2node, None,
+    # Let's use the provided ctx's linknode. We exclude memmanifestctx's because
+    # they haven't been committed yet and don't actually have a linknode yet.
+    linknode = None
+    if not isinstance(mfctx, manifest.memmanifestctx):
+        linknode = mfctx.linknode
+        if linkrev is not None:
+            if linknode != tmfl._maplinkrev(linkrev):
+                raise error.ProgrammingError(("linknode '%s' doesn't match "
+                    "linkrev '%s:%s' during tree conversion") %
+                    (hex(linknode), linkrev, hex(tmfl._maplinkrev(linkrev))))
+        # Since we have a linknode, let's not use the linkrev.
+        linkrev = None
+    tmfl.add(mfl.ui, newtree, p1node, p2node, linknode,
              overridenode=mfctx.node(),
              overridep1node=p1node,
              tr=tr, linkrev=linkrev)
