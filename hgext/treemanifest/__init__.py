@@ -917,7 +917,7 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
         # Since we're adding the root flat manifest, let's add the corresponding
         # root tree manifest.
         tmfl = mfl.treemanifestlog
-        _converttotree(tr, mfl, tmfl, self, link, torevlog=True)
+        _converttotree(tr, mfl, tmfl, self, linkrev=link, torevlog=True)
 
     return n
 
@@ -1098,7 +1098,8 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, prog, numchanges):
         tmfl = repo.manifestlog.treemanifestlog
         for mfnode in mfnodes:
             linkrev = mfrevlog.linkrev(mfrevlog.rev(mfnode))
-            _converttotree(trp, mfl, tmfl, mfl[mfnode], linkrev, torevlog=True)
+            _converttotree(trp, mfl, tmfl, mfl[mfnode], linkrev=linkrev,
+                           torevlog=True)
 
     if (util.safehasattr(repo.manifestlog, "datastore") and
         repo.ui.configbool('treemanifest', 'autocreatetrees')):
