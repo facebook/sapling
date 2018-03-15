@@ -506,7 +506,7 @@ def _includefilelogstobundle(bundlecaps, bundlerepo, bundlerevs, ui):
 
     return newcaps
 
-def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
+def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
     '''
     Bundle may include more revision then user requested. For example,
     if user asks for revision but bundle also consists its descendants.
@@ -516,7 +516,8 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion):
 
     outgoing = discovery.outgoing(bundlerepo, commonheads=bundleroots,
                                   missingheads=[unknownhead])
-    cgstream = changegroup.makestream(bundlerepo, outgoing, cgversion, 'pull')
+    cgstream = changegroup.makestream(bundlerepo, outgoing, cgversion, 'pull',
+            bundlecaps=bundlecaps)
     cgstream = util.chunkbuffer(cgstream).read()
     cgpart = bundle2.bundlepart('changegroup', data=cgstream)
     cgpart.addparam('version', cgversion)
@@ -577,7 +578,8 @@ def _getsupportedcgversion(repo, bundlecaps):
         cgversion = max(cgversions)
     return cgversion
 
-def _generateoutputparts(head, cgversion, bundlerepo, bundleroots, bundlefile):
+def _generateoutputparts(head, cgversion, bundlecaps, bundlerepo, bundleroots,
+                         bundlefile):
     '''generates bundle that will be send to the user
 
     returns tuple with raw bundle string and bundle type
@@ -609,7 +611,7 @@ def _generateoutputparts(head, cgversion, bundlerepo, bundleroots, bundlefile):
             else:
                 raise error.Abort('unknown bundle type')
     else:
-        parts = _rebundle(bundlerepo, bundleroots, head, cgversion)
+        parts = _rebundle(bundlerepo, bundleroots, head, cgversion, bundlecaps)
 
     return parts
 
@@ -655,7 +657,8 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                             newphases[bundlerepo[rev].hex()] = str(phases.draft)
 
                 scratchbundles.append(
-                    _generateoutputparts(head, cgversion, *nodestobundle[head]))
+                    _generateoutputparts(head, cgversion, bundlecaps,
+                                         *nodestobundle[head]))
                 newheads.extend(bundleroots)
                 scratchheads.append(head)
     finally:
