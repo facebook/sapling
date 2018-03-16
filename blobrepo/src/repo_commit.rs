@@ -13,6 +13,9 @@ use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::Stream;
 use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_stats::{Stats, Timed};
+use slog::Logger;
+use uuid::Uuid;
 
 use blobstore::Blobstore;
 use linknodes::{ErrorKind as LinknodeErrorKind, Linknodes};
@@ -296,6 +299,8 @@ pub fn compute_changed_files(
 }
 
 pub fn process_entries(
+    logger: Logger,
+    uuid: Uuid,
     repo: BlobRepo,
     entry_processor: &UploadEntries,
     root_manifest: BoxFuture<(BlobEntry, RepoPath), Error>,
@@ -328,7 +333,25 @@ pub fn process_entries(
             repo.get_manifest_by_nodeid(&root_hash)
                 .map(move |m| (m, HgManifestId::new(root_hash)))
         })
+        .timed(move |stats, result| {
+            if result.is_ok() {
+                log_cs_future_stats(&logger, "upload_entries", stats, uuid);
+            }
+        })
         .boxify()
+}
+
+pub fn log_cs_future_stats(logger: &Logger, phase: &str, stats: Stats, uuid: Uuid) {
+    let uuid = format!("{}", uuid);
+    debug!(logger, "Changeset creation";
+        "changeset_uuid" => uuid,
+        "phase" => String::from(phase),
+        "poll_count" => stats.poll_count,
+        "poll_time_us" => stats.poll_time.num_microseconds()
+                            .unwrap_or(i64::max_value()),
+        "completion_time_us" => stats.completion_time.num_microseconds()
+                                    .unwrap_or(i64::max_value())
+    );
 }
 
 pub fn extract_parents_complete(

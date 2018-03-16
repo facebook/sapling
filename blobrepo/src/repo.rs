@@ -19,6 +19,7 @@ use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
+use uuid::Uuid;
 
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
@@ -420,8 +421,13 @@ impl BlobRepo {
     ) -> ChangesetHandle {
         let entry_processor = UploadEntries::new(self.blobstore.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
+        // This is used for logging, so that we can tie up all our pieces without knowing about
+        // the final commit hash
+        let uuid = Uuid::new_v4();
 
         let upload_entries = process_entries(
+            self.logger.clone(),
+            uuid,
             self.clone(),
             &entry_processor,
             root_manifest,
