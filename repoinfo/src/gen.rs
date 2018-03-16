@@ -20,7 +20,7 @@ use futures_ext::FutureExt;
 
 use asyncmemo::{Asyncmemo, Filler};
 use blobrepo::BlobRepo;
-use mercurial_types::{ChangesetId, NodeHash, NULL_HASH};
+use mercurial_types::{HgChangesetId, NodeHash, NULL_HASH};
 
 use nodehashkey::Key;
 
@@ -85,7 +85,7 @@ impl Filler for GenFiller {
         _cache: &Asyncmemo<Self>,
         &Key(ref repo, ref nodeid): &Self::Key,
     ) -> Self::Value {
-        let cs = ChangesetId::new(*nodeid);
+        let cs = HgChangesetId::new(*nodeid);
         repo.get_generation_number(&cs)
             .and_then(move |genopt| genopt.ok_or_else(|| err_msg(format!("{} not found", cs))))
             .map(|gen| Generation(gen))

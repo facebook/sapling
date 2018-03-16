@@ -211,7 +211,7 @@ fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfi
             .ok_or_else(|| failure::err_msg("bookmark for config repo not found"))?
             .0
     } else {
-        mercurial_types::nodehash::ChangesetId::from_str(matches.value_of("crhash").unwrap())?
+        mercurial_types::nodehash::HgChangesetId::from_str(matches.value_of("crhash").unwrap())?
     };
 
     info!(

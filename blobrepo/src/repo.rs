@@ -34,10 +34,10 @@ use memblob::{EagerMemblob, LazyMemblob};
 use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
-use mercurial_types::{Blob, BlobNode, Changeset, ChangesetId, Entry, MPath, Manifest, NodeHash,
+use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, MPath, Manifest, NodeHash,
                       Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
-use mercurial_types::nodehash::ManifestId;
+use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
 use storage_types::Version;
 use tokio_core::reactor::Remote;
@@ -237,7 +237,7 @@ impl BlobRepo {
         self.heads.heads().boxify()
     }
 
-    pub fn changeset_exists(&self, changesetid: &ChangesetId) -> BoxFuture<bool, Error> {
+    pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> BoxFuture<bool, Error> {
         self.changesets
             .get(self.repoid, *changesetid)
             .map(|res| res.is_some())
@@ -246,7 +246,7 @@ impl BlobRepo {
 
     pub fn get_changeset_by_changesetid(
         &self,
-        changesetid: &ChangesetId,
+        changesetid: &HgChangesetId,
     ) -> BoxFuture<BlobChangeset, Error> {
         let chid = changesetid.clone();
         BlobChangeset::load(&self.blobstore, &chid)
@@ -259,14 +259,14 @@ impl BlobRepo {
         nodeid: &NodeHash,
     ) -> BoxFuture<Box<Manifest + Sync>, Error> {
         let nodeid = *nodeid;
-        let manifestid = ManifestId::new(nodeid);
+        let manifestid = HgManifestId::new(nodeid);
         BlobManifest::load(&self.blobstore, &manifestid)
             .and_then(move |mf| mf.ok_or(ErrorKind::ManifestMissing(nodeid).into()))
             .map(|m| m.boxed())
             .boxify()
     }
 
-    pub fn get_root_entry(&self, manifestid: &ManifestId) -> Box<Entry + Sync> {
+    pub fn get_root_entry(&self, manifestid: &HgManifestId) -> Box<Entry + Sync> {
         Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
@@ -277,7 +277,7 @@ impl BlobRepo {
     pub fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
+    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         self.bookmarks.get(key).boxify()
     }
 
@@ -285,7 +285,7 @@ impl BlobRepo {
         self.linknodes.get(path, node)
     }
 
-    pub fn get_generation_number(&self, cs: &ChangesetId) -> BoxFuture<Option<u64>, Error> {
+    pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
         self.changesets
             .get(self.repoid, *cs)
             .map(|res| res.map(|res| res.gen))
@@ -489,7 +489,7 @@ impl BlobRepo {
                         cs_id: cs.get_changeset_id(),
                         parents: cs.parents()
                             .into_iter()
-                            .map(|n| ChangesetId::new(n))
+                            .map(|n| HgChangesetId::new(n))
                             .collect(),
                     };
                     complete_changesets.add(&completion_record).map(|_| cs)
@@ -543,7 +543,7 @@ impl Stream for BlobChangesetStream {
                             WaitCS(
                                 next,
                                 self.repo
-                                    .get_changeset_by_changesetid(&ChangesetId::new(next)),
+                                    .get_changeset_by_changesetid(&HgChangesetId::new(next)),
                             )
                         } else {
                             Idle // already done it

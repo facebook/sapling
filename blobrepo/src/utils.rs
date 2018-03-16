@@ -10,7 +10,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use bincode;
 
 use blobstore::Blobstore;
-use mercurial_types::{BlobHash, NodeHash, Parents};
+use mercurial_types::{HgBlobHash, NodeHash, Parents};
 
 use errors::*;
 
@@ -18,7 +18,7 @@ use errors::*;
 #[derive(Serialize, Deserialize)]
 pub struct RawNodeBlob {
     pub parents: Parents,
-    pub blob: BlobHash,
+    pub blob: HgBlobHash,
 }
 
 pub fn get_node_key(nodeid: NodeHash) -> String {

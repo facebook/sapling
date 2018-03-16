@@ -17,7 +17,7 @@ use blobstore::Blobstore;
 
 use mercurial::revlogrepo::RevlogChangeset;
 use mercurial_types::{Blob, BlobNode, Changeset, MPath, Parents, Time};
-use mercurial_types::nodehash::{ChangesetId, ManifestId, NULL_HASH};
+use mercurial_types::nodehash::{HgChangesetId, HgManifestId, NULL_HASH};
 
 use errors::*;
 
@@ -35,11 +35,11 @@ struct RawCSBlob<'a> {
 }
 
 pub struct BlobChangeset {
-    changesetid: ChangesetId, // redundant - can be computed from revlogcs?
+    changesetid: HgChangesetId, // redundant - can be computed from revlogcs?
     revlogcs: RevlogChangeset,
 }
 
-fn cskey(changesetid: &ChangesetId) -> String {
+fn cskey(changesetid: &HgChangesetId) -> String {
     format!("changeset-{}.bincode", changesetid)
 }
 
@@ -48,7 +48,7 @@ impl BlobChangeset {
         let node = revlogcs.get_node()?;
         let nodeid = node.nodeid()
             .ok_or(Error::from(ErrorKind::NodeGenerationFailed))?;
-        let changesetid = ChangesetId::new(nodeid);
+        let changesetid = HgChangesetId::new(nodeid);
 
         Ok(Self {
             changesetid,
@@ -56,23 +56,23 @@ impl BlobChangeset {
         })
     }
 
-    pub fn new_with_id(changesetid: &ChangesetId, revlogcs: RevlogChangeset) -> Self {
+    pub fn new_with_id(changesetid: &HgChangesetId, revlogcs: RevlogChangeset) -> Self {
         Self {
             changesetid: *changesetid,
             revlogcs,
         }
     }
 
-    pub fn get_changeset_id(&self) -> ChangesetId {
+    pub fn get_changeset_id(&self) -> HgChangesetId {
         self.changesetid
     }
 
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        changesetid: &ChangesetId,
+        changesetid: &HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
         let changesetid = changesetid.clone();
-        if changesetid == ChangesetId::new(NULL_HASH) {
+        if changesetid == HgChangesetId::new(NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
             let cs = BlobChangeset {
                 changesetid,
@@ -125,7 +125,7 @@ impl BlobChangeset {
 }
 
 impl Changeset for BlobChangeset {
-    fn manifestid(&self) -> &ManifestId {
+    fn manifestid(&self) -> &HgManifestId {
         self.revlogcs.manifestid()
     }
 

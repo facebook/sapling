@@ -19,7 +19,7 @@ use serde;
 use sql_types::NodeHashSql;
 
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
-pub const NULL_CSID: ChangesetId = ChangesetId(NULL_HASH);
+pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
@@ -158,12 +158,12 @@ impl Arbitrary for NodeHash {
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
 #[sql_type = "NodeHashSql"]
-pub struct ChangesetId(NodeHash);
+pub struct HgChangesetId(NodeHash);
 
-impl ChangesetId {
+impl HgChangesetId {
     #[inline]
-    pub fn from_ascii_str(s: &AsciiStr) -> Result<ChangesetId> {
-        NodeHash::from_ascii_str(s).map(ChangesetId)
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<HgChangesetId> {
+        NodeHash::from_ascii_str(s).map(HgChangesetId)
     }
 
     #[inline]
@@ -176,7 +176,7 @@ impl ChangesetId {
     }
 
     pub const fn new(hash: NodeHash) -> Self {
-        ChangesetId(hash)
+        HgChangesetId(hash)
     }
 
     #[inline]
@@ -185,21 +185,21 @@ impl ChangesetId {
     }
 }
 
-impl FromStr for ChangesetId {
+impl FromStr for HgChangesetId {
     type Err = <NodeHash as FromStr>::Err;
 
-    fn from_str(s: &str) -> result::Result<ChangesetId, Self::Err> {
-        NodeHash::from_str(s).map(ChangesetId)
+    fn from_str(s: &str) -> result::Result<HgChangesetId, Self::Err> {
+        NodeHash::from_str(s).map(HgChangesetId)
     }
 }
 
-impl Display for ChangesetId {
+impl Display for HgChangesetId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
 }
 
-impl serde::ser::Serialize for ChangesetId {
+impl serde::ser::Serialize for HgChangesetId {
     fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -208,14 +208,14 @@ impl serde::ser::Serialize for ChangesetId {
     }
 }
 
-impl<'de> serde::de::Deserialize<'de> for ChangesetId {
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<ChangesetId, D::Error>
+impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<HgChangesetId, D::Error>
     where
         D: serde::de::Deserializer<'de>,
     {
         let hex = deserializer.deserialize_string(StringVisitor)?;
         match NodeHash::from_str(hex.as_str()) {
-            Ok(hash) => Ok(ChangesetId::new(hash)),
+            Ok(hash) => Ok(HgChangesetId::new(hash)),
             Err(error) => Err(serde::de::Error::custom(error)),
         }
     }
@@ -223,19 +223,19 @@ impl<'de> serde::de::Deserialize<'de> for ChangesetId {
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct ManifestId(NodeHash);
+pub struct HgManifestId(NodeHash);
 
-impl ManifestId {
+impl HgManifestId {
     pub fn into_nodehash(self) -> NodeHash {
         self.0
     }
 
     pub fn new(hash: NodeHash) -> Self {
-        ManifestId(hash)
+        HgManifestId(hash)
     }
 }
 
-impl Display for ManifestId {
+impl Display for HgManifestId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }

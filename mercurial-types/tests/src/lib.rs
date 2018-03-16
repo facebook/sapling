@@ -20,7 +20,7 @@ use mercurial_types::{Changeset, Entry, MPath, Manifest, RepoPath, Type, NULL_HA
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};
-use mercurial_types::nodehash::{ChangesetId, EntryId, NodeHash};
+use mercurial_types::nodehash::{EntryId, HgChangesetId, NodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
 use std::convert::TryFrom;
@@ -28,7 +28,7 @@ use std::iter::repeat;
 use std::str::FromStr;
 use std::sync::Arc;
 
-fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &ChangesetId) -> Box<Manifest> {
+fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Manifest> {
     let cs = repo.get_changeset_by_changesetid(changesetid)
         .wait()
         .unwrap();
@@ -254,8 +254,8 @@ fn do_check(
     expected_modified: Vec<&str>,
 ) {
     {
-        let manifest = get_root_manifest(repo.clone(), &ChangesetId::new(main_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &ChangesetId::new(base_hash));
+        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
+        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
 
         let res = find_changed_entry_status_stream(manifest, base_manifest);
 
@@ -270,8 +270,8 @@ fn do_check(
     // Vice-versa: compare base_hash to main_hash. Deleted paths become added, added become
     // deleted.
     {
-        let manifest = get_root_manifest(repo.clone(), &ChangesetId::new(base_hash));
-        let base_manifest = get_root_manifest(repo.clone(), &ChangesetId::new(main_hash));
+        let manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(base_hash));
+        let base_manifest = get_root_manifest(repo.clone(), &HgChangesetId::new(main_hash));
 
         let res = find_changed_entry_status_stream(manifest, base_manifest);
 

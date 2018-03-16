@@ -14,7 +14,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial::manifest::revlog::ManifestContent;
 use mercurial_types::{Entry, MPath, Manifest};
-use mercurial_types::nodehash::{ManifestId, NULL_HASH};
+use mercurial_types::nodehash::{HgManifestId, NULL_HASH};
 
 use blobstore::Blobstore;
 
@@ -30,7 +30,7 @@ pub struct BlobManifest {
 impl BlobManifest {
     pub fn load(
         blobstore: &Arc<Blobstore>,
-        manifestid: &ManifestId,
+        manifestid: &HgManifestId,
     ) -> BoxFuture<Option<Self>, Error> {
         let nodehash = manifestid.clone().into_nodehash();
         if nodehash == NULL_HASH {

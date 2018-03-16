@@ -36,7 +36,7 @@ use tokio_core::reactor::Remote;
 use bookmarks::{Bookmarks, BookmarksMut};
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, BoxFutureNonSend, BoxStream, FutureExt, StreamExt};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::HgChangesetId;
 use sendwrapper::SendWrapper;
 use storage_types::Version;
 
@@ -56,7 +56,7 @@ impl DbBookmarks {
 }
 
 impl Bookmarks for DbBookmarks {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         let key = key.as_ref().to_vec();
         self.wrapper
             .with_inner(move |pool| get_bookmark(pool, key))
@@ -77,7 +77,7 @@ impl BookmarksMut for DbBookmarks {
     fn set(
         &self,
         key: &AsRef<[u8]>,
-        value: &ChangesetId,
+        value: &HgChangesetId,
         version: &Version,
     ) -> BoxFuture<Option<Version>, Error> {
         let key = key.as_ref().to_vec();
@@ -103,9 +103,7 @@ fn list_keys(pool: Rc<Pool>) -> BoxFutureNonSend<BoxStream<Vec<u8>, Error>, Erro
     pool.get_conn()
         .and_then(|conn| conn.query("SELECT name FROM bookmarks"))
         .and_then(|res| res.collect::<(Vec<u8>,)>())
-        .map(|(_, rows)| {
-            stream::iter_ok(rows.into_iter().map(|row| row.0)).boxify()
-        })
+        .map(|(_, rows)| stream::iter_ok(rows.into_iter().map(|row| row.0)).boxify())
         .map_err(|e| SyncFailure::new(e).into())
         .boxify_nonsend()
 }
@@ -113,7 +111,7 @@ fn list_keys(pool: Rc<Pool>) -> BoxFutureNonSend<BoxStream<Vec<u8>, Error>, Erro
 fn get_bookmark(
     pool: Rc<Pool>,
     key: Vec<u8>,
-) -> BoxFutureNonSend<Option<(ChangesetId, Version)>, Error> {
+) -> BoxFutureNonSend<Option<(HgChangesetId, Version)>, Error> {
     pool.get_conn()
         .and_then(|conn| {
             conn.prep_exec(
@@ -123,12 +121,14 @@ fn get_bookmark(
         })
         .and_then(|res| res.collect::<(String, u64)>())
         .map_err(|e| SyncFailure::new(e).into())
-        .and_then(|(_, mut rows)| if let Some((value, version)) = rows.pop() {
-            let value = AsciiStr::from_ascii(&value)?;
-            let value = ChangesetId::from_ascii_str(&value)?;
-            Ok(Some((value, Version::from(version))))
-        } else {
-            Ok(None)
+        .and_then(|(_, mut rows)| {
+            if let Some((value, version)) = rows.pop() {
+                let value = AsciiStr::from_ascii(&value)?;
+                let value = HgChangesetId::from_ascii_str(&value)?;
+                Ok(Some((value, Version::from(version))))
+            } else {
+                Ok(None)
+            }
         })
         .boxify_nonsend()
 }
@@ -136,7 +136,7 @@ fn get_bookmark(
 fn set_bookmark(
     pool: Rc<Pool>,
     key: Vec<u8>,
-    value: ChangesetId,
+    value: HgChangesetId,
     version: Version,
 ) -> BoxFutureNonSend<Option<Version>, Error> {
     pool.get_conn()

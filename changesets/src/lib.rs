@@ -33,7 +33,7 @@ use futures::future;
 
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, FutureExt};
-use mercurial_types::{ChangesetId, RepositoryId};
+use mercurial_types::{HgChangesetId, RepositoryId};
 use mercurial_types::sql_types::NodeHashSql;
 
 mod errors;
@@ -48,16 +48,16 @@ use schema::{changesets, csparents};
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
-    pub cs_id: ChangesetId,
-    pub parents: Vec<ChangesetId>,
+    pub cs_id: HgChangesetId,
+    pub parents: Vec<HgChangesetId>,
     pub gen: u64,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetInsert {
     pub repo_id: RepositoryId,
-    pub cs_id: ChangesetId,
-    pub parents: Vec<ChangesetId>,
+    pub cs_id: HgChangesetId,
+    pub parents: Vec<HgChangesetId>,
 }
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
@@ -69,7 +69,7 @@ pub trait Changesets: Send + Sync {
     fn get(
         &self,
         repo_id: RepositoryId,
-        cs_id: ChangesetId,
+        cs_id: HgChangesetId,
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
 }
 
@@ -149,7 +149,7 @@ macro_rules! impl_changesets {
             fn get(
                 &self,
                 repo_id: RepositoryId,
-                cs_id: ChangesetId,
+                cs_id: HgChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
                 // TODO: don't block -- send this to another thread
                 let query = changeset_query(repo_id, cs_id);
@@ -269,7 +269,7 @@ impl_changesets!(SqliteChangesets, SqliteConnection);
 
 fn changeset_query<DB>(
     repo_id: RepositoryId,
-    cs_id: ChangesetId,
+    cs_id: HgChangesetId,
 ) -> changesets::BoxedQuery<'static, DB>
 where
     DB: Backend,
@@ -294,7 +294,7 @@ fn map_add_result(result: result::Result<usize, DieselError>) -> Result<()> {
 }
 
 fn check_missing_rows(
-    expected: &[ChangesetId],
+    expected: &[HgChangesetId],
     actual: &[ChangesetRow],
 ) -> result::Result<(), ErrorKind> {
     // Could just count the number here and report an error if any are missing, but the reporting

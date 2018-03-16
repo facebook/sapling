@@ -13,7 +13,7 @@ use errors::*;
 use failure;
 use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
 use mercurial_types::changeset::{Changeset, Time};
-use mercurial_types::nodehash::ManifestId;
+use mercurial_types::nodehash::HgManifestId;
 
 #[cfg(test)]
 mod test;
@@ -25,7 +25,7 @@ mod test;
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RevlogChangeset {
     parents: Parents,
-    manifestid: ManifestId,
+    manifestid: HgManifestId,
     user: Vec<u8>,
     time: Time,
     extra: Extra,
@@ -156,7 +156,7 @@ fn parsetimeextra<S: AsRef<[u8]>>(s: S) -> Result<(Time, Extra)> {
 impl RevlogChangeset {
     pub fn new_from_parts(
         parents: Parents,
-        manifestid: ManifestId,
+        manifestid: HgManifestId,
         user: Vec<u8>,
         time: Time,
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
@@ -181,7 +181,7 @@ impl RevlogChangeset {
     pub fn new_null() -> Self {
         Self {
             parents: Parents::new(None, None),
-            manifestid: ManifestId::new(NULL_HASH),
+            manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: Time { time: 0, tz: 0 },
             extra: Extra(BTreeMap::new()),
@@ -212,7 +212,7 @@ impl RevlogChangeset {
         // partially initialized RevlogChangeset then fill it in as we go.
         let mut ret = Self {
             parents: *node.parents(),
-            manifestid: ManifestId::new(NULL_HASH),
+            manifestid: HgManifestId::new(NULL_HASH),
             user: Vec::new(),
             time: Time { time: 0, tz: 0 },
             extra: Extra(BTreeMap::new()),
@@ -228,7 +228,7 @@ impl RevlogChangeset {
 
             let nodehash = parseline(&mut lines, |l| NodeHash::from_str(str::from_utf8(l)?))
                 .context("can't get hash")?;
-            ret.manifestid = ManifestId::new(nodehash);
+            ret.manifestid = HgManifestId::new(nodehash);
             ret.user =
                 parseline(&mut lines, |u| Ok::<_, Error>(u.to_vec())).context("can't get user")?;
             let (time, extra) =
@@ -282,7 +282,7 @@ impl RevlogChangeset {
 }
 
 impl Changeset for RevlogChangeset {
-    fn manifestid(&self) -> &ManifestId {
+    fn manifestid(&self) -> &HgManifestId {
         &self.manifestid
     }
 

@@ -19,9 +19,9 @@ pub enum Blob {
     /// Modified data with no corresponding hash
     Dirty(Bytes),
     /// Clean data paired with its hash
-    Clean(Bytes, BlobHash),
+    Clean(Bytes, HgBlobHash),
     /// External data; we only have its hash
-    Extern(BlobHash),
+    Extern(HgBlobHash),
     /// External data; we only have its nodeid
     NodeId(NodeHash),
 }
@@ -31,25 +31,25 @@ pub enum Blob {
 /// This is implemented as a `Sha1` hash.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
-pub struct BlobHash(Sha1);
+pub struct HgBlobHash(Sha1);
 
-impl BlobHash {
+impl HgBlobHash {
     #[inline]
-    pub fn new(sha1: Sha1) -> BlobHash {
-        BlobHash(sha1)
+    pub fn new(sha1: Sha1) -> HgBlobHash {
+        HgBlobHash(sha1)
     }
 
-    /// Construct a `BlobHash` from an array of 20 bytes containing a SHA-1 (i.e. *not* a hash of
+    /// Construct a `HgBlobHash` from an array of 20 bytes containing a SHA-1 (i.e. *not* a hash of
     /// the bytes).
     #[inline]
-    pub fn from_bytes(bytes: &[u8]) -> Result<BlobHash> {
-        Sha1::from_bytes(bytes).map(BlobHash)
+    pub fn from_bytes(bytes: &[u8]) -> Result<HgBlobHash> {
+        Sha1::from_bytes(bytes).map(HgBlobHash)
     }
 
-    /// Construct a `BlobHash` from a hex-encoded `AsciiStr`.
+    /// Construct a `HgBlobHash` from a hex-encoded `AsciiStr`.
     #[inline]
-    pub fn from_ascii_str(s: &AsciiStr) -> Result<BlobHash> {
-        Sha1::from_ascii_str(s).map(BlobHash)
+    pub fn from_ascii_str(s: &AsciiStr) -> Result<HgBlobHash> {
+        Sha1::from_ascii_str(s).map(HgBlobHash)
     }
 
     #[inline]
@@ -63,10 +63,10 @@ impl BlobHash {
     }
 }
 
-/// Compute the hash of a byte slice, resulting in a `BlobHash`
-impl<'a> From<&'a [u8]> for BlobHash {
+/// Compute the hash of a byte slice, resulting in a `HgBlobHash`
+impl<'a> From<&'a [u8]> for HgBlobHash {
     fn from(data: &'a [u8]) -> Self {
-        BlobHash(Sha1::from(data))
+        HgBlobHash(Sha1::from(data))
     }
 }
 
@@ -75,7 +75,7 @@ impl Blob {
     pub fn clean(self) -> Self {
         match self {
             Blob::Dirty(data) => {
-                let hash = BlobHash::from(data.as_ref());
+                let hash = HgBlobHash::from(data.as_ref());
                 Blob::Clean(data, hash)
             }
             b @ Blob::Clean(..) | b @ Blob::Extern(..) | b @ Blob::NodeId(..) => b,
@@ -98,7 +98,7 @@ impl Blob {
         }
     }
 
-    pub fn hash(&self) -> Option<BlobHash> {
+    pub fn hash(&self) -> Option<HgBlobHash> {
         match self {
             &Blob::Clean(_, hash) | &Blob::Extern(hash) => Some(hash),
             &Blob::Dirty(..) | &Blob::NodeId(..) => None,
@@ -139,9 +139,9 @@ impl<'a> Into<Option<&'a [u8]>> for &'a Blob {
     }
 }
 
-/// Construct an `Extern` `Blob` from a `BlobHash`
-impl From<BlobHash> for Blob {
-    fn from(bh: BlobHash) -> Self {
+/// Construct an `Extern` `Blob` from a `HgBlobHash`
+impl From<HgBlobHash> for Blob {
+    fn from(bh: HgBlobHash) -> Self {
         Blob::Extern(bh)
     }
 }
@@ -153,8 +153,8 @@ impl From<NodeHash> for Blob {
     }
 }
 
-/// Get a reference for the underlying Sha1 bytes of a `BlobHash`
-impl AsRef<[u8]> for BlobHash {
+/// Get a reference for the underlying Sha1 bytes of a `HgBlobHash`
+impl AsRef<[u8]> for HgBlobHash {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }

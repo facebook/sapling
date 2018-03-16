@@ -33,7 +33,7 @@ use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
 use bookmarks::Bookmarks;
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::HgChangesetId;
 use storage_types::Version;
 
 #[derive(Debug, Fail)]
@@ -51,13 +51,13 @@ pub enum ErrorKind {
 /// ...
 /// ```
 ///
-/// Bookmark names are arbitrary bytestrings, and hashes are always ChangesetIds.
+/// Bookmark names are arbitrary bytestrings, and hashes are always HgChangesetIds.
 ///
 /// This implementation is read-only -- implementing write support would require interacting with
 /// the locking mechanism Mercurial uses, and generally seems like it wouldn't be very useful.
 #[derive(Clone, Debug)]
 pub struct StockBookmarks {
-    bookmarks: HashMap<Vec<u8>, ChangesetId>,
+    bookmarks: HashMap<Vec<u8>, HgChangesetId>,
 }
 
 impl StockBookmarks {
@@ -98,7 +98,7 @@ impl StockBookmarks {
             ))?;
             bookmarks.insert(
                 bmname.into(),
-                ChangesetId::from_ascii_str(hash).context(ErrorKind::InvalidHash(
+                HgChangesetId::from_ascii_str(hash).context(ErrorKind::InvalidHash(
                     String::from_utf8_lossy(hash_slice).into_owned(),
                 ))?,
             );
@@ -109,7 +109,7 @@ impl StockBookmarks {
 }
 
 impl Bookmarks for StockBookmarks {
-    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
+    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
             Some(hash) => Some((*hash, Version::from(1))),
             None => None,
@@ -142,7 +142,7 @@ mod tests {
     fn assert_bookmark_get(
         bookmarks: &StockBookmarks,
         key: &AsRef<[u8]>,
-        expected: Option<ChangesetId>,
+        expected: Option<HgChangesetId>,
     ) {
         let expected = match expected {
             Some(hash) => Some((hash, Version::from(1))),
@@ -160,9 +160,21 @@ mod tests {
         let reader = Cursor::new(&disk_bookmarks[..]);
 
         let bookmarks = StockBookmarks::from_reader(reader).unwrap();
-        assert_bookmark_get(&bookmarks, &"abc", Some(ChangesetId::new(nodehash::ONES_HASH)));
-        assert_bookmark_get(&bookmarks, &"def", Some(ChangesetId::new(nodehash::TWOS_HASH)));
-        assert_bookmark_get(&bookmarks, &"test123", Some(ChangesetId::new(nodehash::ONES_HASH)));
+        assert_bookmark_get(
+            &bookmarks,
+            &"abc",
+            Some(HgChangesetId::new(nodehash::ONES_HASH)),
+        );
+        assert_bookmark_get(
+            &bookmarks,
+            &"def",
+            Some(HgChangesetId::new(nodehash::TWOS_HASH)),
+        );
+        assert_bookmark_get(
+            &bookmarks,
+            &"test123",
+            Some(HgChangesetId::new(nodehash::ONES_HASH)),
+        );
 
         // Bookmarks that aren't present
         assert_bookmark_get(&bookmarks, &"abcdef", None);

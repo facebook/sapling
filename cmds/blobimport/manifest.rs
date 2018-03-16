@@ -15,7 +15,7 @@ use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
 use mercurial::RevlogRepo;
 use mercurial::revlog::RevIdx;
-use mercurial_types::{self, Blob, BlobHash, Entry, MPath, NodeHash, Parents, RepoPath, Type};
+use mercurial_types::{self, Blob, Entry, HgBlobHash, MPath, NodeHash, Parents, RepoPath, Type};
 
 use BlobstoreEntry;
 
@@ -34,7 +34,7 @@ where
     bytes.and_then(move |bytes| {
         let nodeblob = RawNodeBlob {
             parents: parents,
-            blob: BlobHash::from(bytes.as_ref()),
+            blob: HgBlobHash::from(bytes.as_ref()),
         };
         // TODO: (jsgf) T21597565 Convert blobimport to use blobrepo methods to name and create
         // blobs.

@@ -24,7 +24,7 @@ use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
 use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, MPath, MPathElement, NodeHash,
                       RepoPath, NULL_HASH};
-use mercurial_types::nodehash::{ChangesetId, EntryId};
+use mercurial_types::nodehash::{EntryId, HgChangesetId};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
@@ -202,7 +202,7 @@ impl RevlogRepo {
         &self.changelog
     }
 
-    pub fn changeset_exists(&self, changesetid: &ChangesetId) -> FutureResult<bool> {
+    pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> FutureResult<bool> {
         let nodeid = changesetid.clone().into_nodehash();
         Ok(self.changelog.get_idx_by_nodeid(&nodeid).is_ok()).into_future()
     }
@@ -224,7 +224,7 @@ impl RevlogRepo {
 
     pub fn get_changeset_by_changesetid(
         &self,
-        changesetid: &ChangesetId,
+        changesetid: &HgChangesetId,
     ) -> BoxFuture<RevlogChangeset, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let nodeid = changesetid.clone().into_nodehash();
@@ -403,7 +403,7 @@ impl RevlogRepo {
     pub fn get_bookmark_value(
         &self,
         key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
+    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         match self.bookmarks() {
             Ok(b) => b.get(key).boxify(),
             Err(e) => future::err(e).boxify(),

@@ -19,7 +19,7 @@ use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::revlog::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{Changeset, ChangesetId, MPath, ManifestId, NodeHash, RepoPath};
+use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath, NodeHash, RepoPath};
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
@@ -352,7 +352,7 @@ fn get_parent(
     match p {
         None => ok(None).boxify(),
         Some(p) => match map.get(&p) {
-            None => repo.get_changeset_by_changesetid(&ChangesetId::new(p))
+            None => repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
                 .map(|cs| Some(cs.into()))
                 .boxify(),
             Some(cs) => ok(Some(cs.clone())).boxify(),
@@ -368,7 +368,7 @@ type BlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
 /// This function starts with the Root Manifest Id and returns Future for Root Manifest and Stream
 /// of all dependent Manifests and Filelogs that were provided in this push.
 fn walk_manifests(
-    manifest_root_id: ManifestId,
+    manifest_root_id: HgManifestId,
     manifests: &Manifests,
     filelogs: &Filelogs,
 ) -> Result<(BlobFuture, BlobStream)> {

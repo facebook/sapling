@@ -10,7 +10,7 @@ use bincode;
 
 pub use failure::Error;
 
-use mercurial_types::{Blob, BlobHash, ChangesetId, NodeHash, Parents, RepoPath, Type};
+use mercurial_types::{Blob, HgBlobHash, HgChangesetId, NodeHash, Parents, RepoPath, Type};
 
 #[derive(Debug)]
 pub enum StateOpenError {
@@ -40,11 +40,11 @@ pub type Result<T> = ::std::result::Result<T, Error>;
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "Error while opening state for {}", _0)] StateOpen(StateOpenError),
-    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(ChangesetId),
+    #[fail(display = "Changeset id {} is missing", _0)] ChangesetMissing(HgChangesetId),
     #[fail(display = "Manifest id {} is missing", _0)] ManifestMissing(NodeHash),
     #[fail(display = "Node id {} is missing", _0)] NodeMissing(NodeHash),
     #[fail(display = "Content missing nodeid {} (blob hash {:?})", _0, _1)]
-    ContentMissing(NodeHash, BlobHash),
+    ContentMissing(NodeHash, HgBlobHash),
     #[fail(display = "Uploaded blob is incomplete {:?}", _0)] BadUploadBlob(Blob),
     #[fail(display = "Parents are not in blob store {:?}", _0)] ParentsUnknown(Parents),
     #[fail(display = "Serialization of node failed {} ({})", _0, _1)]

@@ -59,7 +59,7 @@ use bytes::Bytes;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use membookmarks::MemBookmarks;
-use mercurial_types::{ChangesetId, NodeHash, RepositoryId};
+use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use blobrepo::BlobRepo;
@@ -99,14 +99,14 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     raise Exception("Incorrect commit graph topology")
 
                 commit_hash = split[0]
-                writeline('let cs_id = ChangesetId::new(NodeHash::from_str("{}").unwrap());'.format(commit_hash))
+                writeline('let cs_id = HgChangesetId::new(NodeHash::from_str("{}").unwrap());'.format(commit_hash))
                 writeline('let parents = vec![')
                 if len(split) > 1:
                     indent += 1
                     for p in split[1:-1]:
-                        writeline('ChangesetId::new(NodeHash::from_str("{}").unwrap()), '.format(p))
+                        writeline('HgChangesetId::new(NodeHash::from_str("{}").unwrap()), '.format(p))
 
-                    writeline('ChangesetId::new(NodeHash::from_str("{}").unwrap())'.format(split[-1]))
+                    writeline('HgChangesetId::new(NodeHash::from_str("{}").unwrap())'.format(split[-1]))
                     indent -= 1
                 writeline('];')
                 writeline('let cs_insert = ChangesetInsert {')

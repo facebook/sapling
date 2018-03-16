@@ -29,8 +29,8 @@ use bytes::Bytes;
 use futures::Future;
 
 use blobrepo::{compute_changed_files, BlobRepo};
-use mercurial_types::{manifest, Blob, Changeset, ChangesetId, Entry, EntryId, MPath, MPathElement,
-                      ManifestId, RepoPath};
+use mercurial_types::{manifest, Blob, Changeset, Entry, EntryId, HgChangesetId, HgManifestId,
+                      MPath, MPathElement, RepoPath};
 
 mod stats_units;
 #[macro_use]
@@ -139,7 +139,7 @@ fn create_one_changeset(repo: BlobRepo) {
     );
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &ManifestId::new(roothash));
+    assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
     let files: Vec<_> = cs.files().into();
@@ -193,7 +193,7 @@ fn create_two_changesets(repo: BlobRepo) {
             .join(commit2.get_completed_changeset()),
     ).unwrap();
 
-    assert!(commit2.manifestid() == &ManifestId::new(roothash));
+    assert!(commit2.manifestid() == &HgManifestId::new(roothash));
     assert!(commit2.user() == utf_author.as_bytes());
     let files: Vec<_> = commit2.files().into();
     let expected_files = vec![MPath::new("dir/file").unwrap(), MPath::new("file").unwrap()];
@@ -333,7 +333,7 @@ fn check_linknode_creation(repo: BlobRepo) {
     let commit = create_changeset_no_parents(&repo, root_manifest_future, uploads);
 
     let cs = run_future(commit.get_completed_changeset()).unwrap();
-    assert!(cs.manifestid() == &ManifestId::new(roothash));
+    assert!(cs.manifestid() == &HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
     assert!(cs.parents().get_nodes() == (None, None));
 
@@ -367,7 +367,7 @@ fn test_compute_changed_files_no_parents() {
         MPath::new(b"dir2/file_1_in_dir2").unwrap(),
     ];
 
-    let cs = run_future(repo.get_changeset_by_changesetid(&ChangesetId::new(nodehash))).unwrap();
+    let cs = run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
     let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
     let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
@@ -397,11 +397,11 @@ fn test_compute_changed_files_one_parent() {
         MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
     ];
 
-    let cs = run_future(repo.get_changeset_by_changesetid(&ChangesetId::new(nodehash))).unwrap();
+    let cs = run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
     let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
     let parent_cs =
-        run_future(repo.get_changeset_by_changesetid(&ChangesetId::new(parenthash))).unwrap();
+        run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
     let parent_mf =
         run_future(repo.get_manifest_by_nodeid(&parent_cs.manifestid().into_nodehash())).unwrap();
 

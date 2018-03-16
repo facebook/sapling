@@ -24,7 +24,7 @@ use futures::stream::iter_ok;
 
 use bookmarks::{Bookmarks, BookmarksMut};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use mercurial_types::nodehash::ChangesetId;
+use mercurial_types::nodehash::HgChangesetId;
 use storage_types::Version;
 
 static VERSION_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
@@ -35,7 +35,7 @@ fn version_next() -> Version {
 
 /// In-memory bookmark store backed by a HashMap, intended to be used in tests.
 pub struct MemBookmarks {
-    bookmarks: Mutex<HashMap<Vec<u8>, (ChangesetId, Version)>>,
+    bookmarks: Mutex<HashMap<Vec<u8>, (HgChangesetId, Version)>>,
 }
 
 impl MemBookmarks {
@@ -47,14 +47,13 @@ impl MemBookmarks {
 }
 
 impl Bookmarks for MemBookmarks {
-    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(ChangesetId, Version)>, Error> {
-        ok(
-            self.bookmarks
-                .lock()
-                .unwrap()
-                .get(key.as_ref())
-                .map(Clone::clone),
-        ).boxify()
+    fn get(&self, key: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
+        ok(self.bookmarks
+            .lock()
+            .unwrap()
+            .get(key.as_ref())
+            .map(Clone::clone))
+            .boxify()
     }
 
     fn keys(&self) -> BoxStream<Vec<u8>, Error> {
@@ -68,7 +67,7 @@ impl BookmarksMut for MemBookmarks {
     fn set(
         &self,
         key: &AsRef<[u8]>,
-        value: &ChangesetId,
+        value: &HgChangesetId,
         version: &Version,
     ) -> BoxFuture<Option<Version>, Error> {
         let mut bookmarks = self.bookmarks.lock().unwrap();

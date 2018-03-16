@@ -13,7 +13,7 @@ use diesel::deserialize::{self, FromSql};
 use diesel::serialize::{self, IsNull, Output, ToSql};
 use diesel::sql_types::{Binary, Integer};
 
-use {ChangesetId, NodeHash, RepositoryId};
+use {HgChangesetId, NodeHash, RepositoryId};
 use errors::*;
 
 #[derive(QueryId, SqlType)]
@@ -21,14 +21,14 @@ use errors::*;
 #[sqlite_type = "Binary"]
 pub struct NodeHashSql;
 
-impl<DB: Backend> ToSql<NodeHashSql, DB> for ChangesetId {
+impl<DB: Backend> ToSql<NodeHashSql, DB> for HgChangesetId {
     fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
         out.write_all(self.as_nodehash().as_ref())?;
         Ok(IsNull::No)
     }
 }
 
-impl<DB: Backend> FromSql<NodeHashSql, DB> for ChangesetId
+impl<DB: Backend> FromSql<NodeHashSql, DB> for HgChangesetId
 where
     *const [u8]: FromSql<Binary, DB>,
 {
@@ -37,7 +37,7 @@ where
         let raw_bytes: *const [u8] = FromSql::<Binary, DB>::from_sql(bytes)?;
         let raw_bytes: &[u8] = unsafe { &*raw_bytes };
         let hash = NodeHash::from_bytes(raw_bytes).compat()?;
-        Ok(ChangesetId::new(hash))
+        Ok(HgChangesetId::new(hash))
     }
 }
 

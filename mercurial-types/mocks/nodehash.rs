@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{ChangesetId, NodeHash};
+use mercurial_types::{HgChangesetId, NodeHash};
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 
@@ -28,18 +28,18 @@ pub const ES_HASH: NodeHash = NodeHash::new(hash::ES);
 pub const FS_HASH: NodeHash = NodeHash::new(hash::FS);
 
 // Definitions for changeset IDs 1111...ffff
-pub const ONES_CSID: ChangesetId = ChangesetId::new(ONES_HASH);
-pub const TWOS_CSID: ChangesetId = ChangesetId::new(TWOS_HASH);
-pub const THREES_CSID: ChangesetId = ChangesetId::new(THREES_HASH);
-pub const FOURS_CSID: ChangesetId = ChangesetId::new(FOURS_HASH);
-pub const FIVES_CSID: ChangesetId = ChangesetId::new(FIVES_HASH);
-pub const SIXES_CSID: ChangesetId = ChangesetId::new(SIXES_HASH);
-pub const SEVENS_CSID: ChangesetId = ChangesetId::new(SEVENS_HASH);
-pub const EIGHTS_CSID: ChangesetId = ChangesetId::new(EIGHTS_HASH);
-pub const NINES_CSID: ChangesetId = ChangesetId::new(NINES_HASH);
-pub const AS_CSID: ChangesetId = ChangesetId::new(AS_HASH);
-pub const BS_CSID: ChangesetId = ChangesetId::new(BS_HASH);
-pub const CS_CSID: ChangesetId = ChangesetId::new(CS_HASH);
-pub const DS_CSID: ChangesetId = ChangesetId::new(DS_HASH);
-pub const ES_CSID: ChangesetId = ChangesetId::new(ES_HASH);
-pub const FS_CSID: ChangesetId = ChangesetId::new(FS_HASH);
+pub const ONES_CSID: HgChangesetId = HgChangesetId::new(ONES_HASH);
+pub const TWOS_CSID: HgChangesetId = HgChangesetId::new(TWOS_HASH);
+pub const THREES_CSID: HgChangesetId = HgChangesetId::new(THREES_HASH);
+pub const FOURS_CSID: HgChangesetId = HgChangesetId::new(FOURS_HASH);
+pub const FIVES_CSID: HgChangesetId = HgChangesetId::new(FIVES_HASH);
+pub const SIXES_CSID: HgChangesetId = HgChangesetId::new(SIXES_HASH);
+pub const SEVENS_CSID: HgChangesetId = HgChangesetId::new(SEVENS_HASH);
+pub const EIGHTS_CSID: HgChangesetId = HgChangesetId::new(EIGHTS_HASH);
+pub const NINES_CSID: HgChangesetId = HgChangesetId::new(NINES_HASH);
+pub const AS_CSID: HgChangesetId = HgChangesetId::new(AS_HASH);
+pub const BS_CSID: HgChangesetId = HgChangesetId::new(BS_HASH);
+pub const CS_CSID: HgChangesetId = HgChangesetId::new(CS_HASH);
+pub const DS_CSID: HgChangesetId = HgChangesetId::new(DS_HASH);
+pub const ES_CSID: HgChangesetId = HgChangesetId::new(ES_HASH);
+pub const FS_CSID: HgChangesetId = HgChangesetId::new(FS_HASH);

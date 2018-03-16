@@ -94,14 +94,14 @@ pub mod repo;
 pub mod sql_types;
 mod node;
 
-pub use blob::{Blob, BlobHash};
+pub use blob::{Blob, HgBlobHash};
 pub use blobnode::{BlobNode, Parents};
 pub use changeset::{Changeset, Time};
 pub use delta::Delta;
 pub use fsencode::{fncache_fsencode, simple_fsencode};
 pub use manifest::{Entry, Manifest, Type};
 pub use node::Node;
-pub use nodehash::{ChangesetId, EntryId, ManifestId, NodeHash, NULL_HASH};
+pub use nodehash::{EntryId, HgChangesetId, HgManifestId, NodeHash, NULL_HASH};
 pub use repo::RepositoryId;
 pub use utils::percent_encode;
 

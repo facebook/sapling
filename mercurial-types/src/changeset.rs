@@ -9,10 +9,10 @@ use std::collections::BTreeMap;
 use mononoke_types::MPath;
 
 use blobnode::Parents;
-use nodehash::ManifestId;
+use nodehash::HgManifestId;
 
 pub trait Changeset: Send + 'static {
-    fn manifestid(&self) -> &ManifestId;
+    fn manifestid(&self) -> &HgManifestId;
     fn user(&self) -> &[u8];
     fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>>;
     fn comments(&self) -> &[u8];
@@ -29,7 +29,7 @@ pub trait Changeset: Send + 'static {
 }
 
 impl Changeset for Box<Changeset> {
-    fn manifestid(&self) -> &ManifestId {
+    fn manifestid(&self) -> &HgManifestId {
         (**self).manifestid()
     }
 
