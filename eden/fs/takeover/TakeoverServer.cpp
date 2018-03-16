@@ -143,7 +143,7 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           protocolVersion_ = supported.value();
           return server_->getTakeoverHandler()->startTakeoverShutdown();
         })
-        .then([this](folly::Try<TakeoverData>&& data) {
+        .then(server_->eventBase_, [this](folly::Try<TakeoverData>&& data) {
           return sendTakeoverData(std::move(data));
         });
   } catch (const std::exception& ex) {
