@@ -208,8 +208,8 @@ push to Mononoke
   running *scm/mononoke/tests/integration/dummyssh.par 'user@dummy' ''\''*scm/mononoke/hgcli/hgcli#binary/hgcli'\'' -R repo serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 194
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=HG20%0Alistkeys%0Achangegroup%3D02%0Ab2x%3Ainfinitepush%0Ab2x%3Ainfinitepushscratchbookmarks
+  remote: * (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
   remote: 1
   query 1; heads
   sending batch command

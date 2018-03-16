@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![feature(conservative_impl_trait)]
 
+extern crate ascii;
 extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;

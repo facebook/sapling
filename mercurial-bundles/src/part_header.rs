@@ -39,6 +39,9 @@ pub enum PartHeaderType {
     /// Contains bookmarks for infinitepush backups (won't be used in Mononoke,
     /// but they needs to be parsed).
     B2xInfinitepushBookmarks,
+    /// Pushkey part is used to update different namespaces: phases, bookmarks, etc.
+    /// In Mononoke it's used to update bookmarks.
+    Pushkey,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -71,6 +74,7 @@ impl PartHeaderType {
             "b2x:infinitepush" => Ok(B2xInfinitepush),
             "b2x:infinitepushscratchbookmarks" => Ok(B2xInfinitepushBookmarks),
             "check:heads" => Ok(CheckHeads),
+            "pushkey" => Ok(Pushkey),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -86,6 +90,7 @@ impl PartHeaderType {
             B2xInfinitepush => "b2x:infinitepush",
             B2xInfinitepushBookmarks => "b2x:infinitepushscratchbookmarks",
             CheckHeads => "check:heads",
+            Pushkey => "pushkey",
         }
     }
 }
@@ -363,13 +368,6 @@ impl PartHeaderBuilder {
                 u8::max_value()
             );
         }
-        if val.is_empty() {
-            bail_msg!(
-                "part '{:?}': value for key '{}' is empty",
-                self.part_type,
-                key
-            );
-        }
         if val.len() > u8::max_value() as usize {
             bail_msg!(
                 "part '{:?}': value for key '{}' exceeds max length {}",
@@ -411,7 +409,6 @@ mod test {
         let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, false).unwrap();
 
         assert_param(&mut header, "", &b"val"[..], false);
-        assert_param(&mut header, "key", &b""[..], false);
         assert_param(&mut header, "key", &b"val"[..], true);
         // if a key was already stored, reject it the second time
         assert_param(&mut header, "key", &b"val"[..], false);

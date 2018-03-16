@@ -89,6 +89,7 @@ pub enum Bundle2Item {
     // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
     B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes::Bytes, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
+    Pushkey(PartHeader, BoxFuture<(), Error>),
 }
 
 impl Bundle2Item {
@@ -117,13 +118,16 @@ impl fmt::Debug for Bundle2Item {
             &B2xInfinitepush(ref header, _) => {
                 write!(f, "Bundle2Item::B2xInfinitepush({:?}, ...)", header)
             }
-            &B2xInfinitepushBookmarks(ref header, _) => {
-                write!(f, "Bundle2Item::B2xInfinitepushBookmarks({:?}, ...)", header)
-            }
+            &B2xInfinitepushBookmarks(ref header, _) => write!(
+                f,
+                "Bundle2Item::B2xInfinitepushBookmarks({:?}, ...)",
+                header
+            ),
             &B2xTreegroup2(ref header, _) => {
                 write!(f, "Bundle2Item::B2xTreegroup2({:?}, ...)", header)
             }
             &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
+            &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
         }
     }
 }

@@ -157,6 +157,7 @@ fn bundle2caps() -> String {
         ("changegroup", vec!["02"]),
         ("b2x:infinitepush", vec![]),
         ("b2x:infinitepushscratchbookmarks", vec![]),
+        ("pushkey", vec![]),
     ];
 
     let mut encodedcaps = vec![];
@@ -455,6 +456,13 @@ impl HgCommands for RepoClient {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
             })
             .boxify()
+    }
+
+    // @wireprotocommand('branchmap')
+    fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<NodeHash>>> {
+        // We have no plans to support mercurial branches and hence no plans for branchmap,
+        // so just return fake response.
+        future::ok(HashMap::new()).boxify()
     }
 
     // @wireprotocommand('changegroup', 'roots')

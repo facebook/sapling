@@ -120,6 +120,12 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
 
         &Lookup(ref res) => res.clone(),
 
+        &Branchmap(ref _res) => {
+            // We have no plans to support mercurial branches and hence no plans for branchmap,
+            // so just return fake response.
+            Bytes::new()
+        },
+
         r => panic!("Response for {:?} unimplemented", r),
     }
 }

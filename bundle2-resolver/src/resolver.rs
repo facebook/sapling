@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::Arc;
 
+use ascii::AsciiString;
 use bytes::Bytes;
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, ok};
@@ -50,7 +51,15 @@ pub fn resolve(
 
     resolver
         .resolve_changegroup(bundle2)
-        .and_then(move |(cg_push, bundle2)| {
+        .and_then({
+            let resolver = resolver.clone();
+            move |(cg_push, bundle2)| {
+                resolver
+                    .maybe_resolve_bookmark_pushkey(bundle2)
+                    .map(move |(bookmark_push, bundle2)| (cg_push, bookmark_push, bundle2))
+            }
+        })
+        .and_then(move |(cg_push, _bookmark_push, bundle2)| {
             let changegroup_id = cg_push.part_id;
             let changesets = cg_push.changesets;
             let filelogs = cg_push.filelogs;
@@ -78,6 +87,7 @@ pub fn resolve(
                 .flatten_stream()
                 .boxify();
 
+            // TODO(stash): actually push bookmarks
             resolver
                 .ensure_stream_finished(bundle2)
                 .and_then(move |()| resolver.prepare_response(changegroup_id))
@@ -96,6 +106,13 @@ struct ChangegroupPush {
     part_id: PartId,
     changesets: Changesets,
     filelogs: Filelogs,
+}
+
+struct BookmarkPush {
+    _part_id: PartId,
+    _name: AsciiString,
+    _old: Option<HgChangesetId>,
+    _new: Option<HgChangesetId>,
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -167,6 +184,52 @@ impl Bundle2Resolver {
                 _ => err(format_err!("Expected Bundle2 Changegroup")).boxify(),
             })
             .map_err(|err| err.context("While resolving Changegroup").into())
+            .boxify()
+    }
+
+    /// Parses bookmark pushkey part if it exists
+    /// Errors if `namespace` is not "bookmarks"
+    fn maybe_resolve_bookmark_pushkey(
+        &self,
+        bundle2: BoxStream<Bundle2Item, Error>,
+    ) -> BoxFuture<(Option<BookmarkPush>, BoxStream<Bundle2Item, Error>), Error> {
+        next_item(bundle2)
+            .and_then(move |(newpart, bundle2)| match newpart {
+                Some(Bundle2Item::Pushkey(header, emptypart)) => {
+                    let part_id = header.part_id();
+                    let mparams = header.mparams();
+                    try_boxfuture!(
+                        mparams
+                            .get("namespace")
+                            .ok_or(format_err!("pushkey: `namespace` parameter is not set"))
+                            .and_then(|namespace| if namespace != "bookmarks".as_bytes() {
+                                Err(format_err!(
+                                    "pushkey: unexpected namespace: {:?}",
+                                    namespace
+                                ))
+                            } else {
+                                Ok(())
+                            })
+                    );
+
+                    let name = try_boxfuture!(get_ascii_param(mparams, "key"));
+                    let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
+                    let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
+
+                    let bookmark_push = BookmarkPush {
+                        _part_id: part_id,
+                        _name: name,
+                        _old: old,
+                        _new: new,
+                    };
+                    emptypart
+                        .map(move |_| (Some(bookmark_push), bundle2.boxify()))
+                        .boxify()
+                }
+                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                None => ok((None, bundle2.boxify())).boxify(),
+            })
+            .map_err(|err| err.context("While resolving Pushkey").into())
             .boxify()
     }
 
@@ -447,4 +510,25 @@ fn walk_manifests(
         })
             .boxify(),
     ))
+}
+
+fn get_ascii_param(params: &HashMap<String, Bytes>, param: &str) -> Result<AsciiString> {
+    let val = params
+        .get(param)
+        .ok_or(format_err!("`{}` parameter is not set", param))?;
+    AsciiString::from_ascii(val.to_vec())
+        .map_err(|err| format_err!("`{}` parameter is not ascii: {}", param, err))
+}
+
+fn get_optional_changeset_param(
+    params: &HashMap<String, Bytes>,
+    param: &str,
+) -> Result<Option<HgChangesetId>> {
+    let val = get_ascii_param(params, param)?;
+
+    if val.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(HgChangesetId::from_ascii_str(&val)?))
+    }
 }

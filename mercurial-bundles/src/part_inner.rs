@@ -13,10 +13,11 @@ use std::str;
 
 use slog;
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamWrapper};
 use tokio_io::AsyncRead;
+use tokio_io::codec::Decoder;
 
 use Bundle2Item;
 use capabilities;
@@ -43,6 +44,7 @@ lazy_static! {
         m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset!{});
         m.insert(PartHeaderType::B2xTreegroup2, hashset!{"version", "cache", "category"});
         m.insert(PartHeaderType::Replycaps, hashset!{});
+        m.insert(PartHeaderType::Pushkey, hashset!{ "namespace", "key", "old", "new" });
         m
     };
 }
@@ -122,6 +124,12 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
                 });
             Bundle2Item::Replycaps(header, Box::new(caps))
         }
+        &PartHeaderType::Pushkey => {
+            // Pushkey part has an empty part payload, but we still need to "parse" it
+            // Otherwise polling remainder stream may fail.
+            let empty = wrapped_stream.decode(EmptyUnpacker).for_each(|_| Ok(()));
+            Bundle2Item::Pushkey(header, Box::new(empty))
+        }
         _ => panic!("TODO: make this an error"),
     };
 
@@ -132,4 +140,16 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             .from_err()
             .boxify(),
     )
+}
+
+// Decoder for an empty part (for example, pushkey)
+pub struct EmptyUnpacker;
+
+impl Decoder for EmptyUnpacker {
+    type Item = ();
+    type Error = Error;
+
+    fn decode(&mut self, _buf: &mut BytesMut) -> Result<Option<Self::Item>> {
+        Ok(None)
+    }
 }

@@ -43,7 +43,7 @@ Do infinitepush (aka commit cloud) push
   running * (glob)
   sending hello command
   sending between command
-  remote: 194
+  remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
   remote: 1
   query 1; heads
@@ -86,7 +86,7 @@ Pushbackup also works
   running * (glob)
   sending hello command
   sending between command
-  remote: 194
+  remote: * (glob)
   remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
   remote: 1
   query 1; heads
@@ -122,6 +122,5 @@ Pushbackup that pushes only bookmarks doesn't work (T26428992)
   $ cd ../repo-push
   $ hg book newbook
 
-TODO(stash): stderr with error is not always sent from the server to the hg client T26109078
   $ hgmn pushbackup ssh://user@dummy/repo > /dev/null 2>&1
   [255]
