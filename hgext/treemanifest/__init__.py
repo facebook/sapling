@@ -1512,11 +1512,36 @@ def _registerbundle2parts():
             raise error.Abort(_("invalid treegroup pack category: %s") %
                               category)
 
-        # Treemanifest servers don't accept tree directly. They must go through
-        # pushrebase, which uses it's own part type and handler.
+        # Treemanifest servers don't accept trees directly. They must either go
+        # through pushrebase, or be processed manually.
         if repo.svfs.treemanifestserver:
-            raise error.ProgrammingError("treemanifest servers can't receive "
-                                         "normal tree packs (use pushrebase)")
+            if not repo.ui.configbool("treemanifest", "treeonly"):
+                # We can't accept non-pushrebase treeonly pushes to a hybrid
+                # server because the hashes will be wrong and we have no way of
+                # returning the new commits to the server.
+                raise error.Abort(_("cannot push only trees to a hybrid server "
+                                    "without pushrebase"))
+            data = part.read()
+            mfl = repo.manifestlog
+            if isinstance(mfl, hybridmanifestlog):
+                mfl = repo.manifestlog.treemanifestlog
+            wirepackstore = wirepack.wirepackstore(data)
+            datastore = unioncontentstore(wirepackstore, mfl.datastore)
+            tr = op.gettransaction()
+
+            # Sort the trees so they are added in topological
+            def parents(node):
+                p1, p2 = wirepackstore.getnodeinfo('', node)[:2]
+                return p1, p2
+            rootnodes = (node for name, node in wirepackstore if name == '')
+            rootnodes = shallowutil.sortnodes(rootnodes, parents)
+
+            for node in rootnodes:
+                p1, p2, linknode, copyfrom = wirepackstore.getnodeinfo('',
+                                                                       node)
+                newtree = cstore.treemanifest(datastore, node)
+                mfl.add(mfl.ui, newtree, p1, p2, linknode, tr=tr)
+            return
 
         if part.params.get('cache', 'False') == 'True':
             packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)

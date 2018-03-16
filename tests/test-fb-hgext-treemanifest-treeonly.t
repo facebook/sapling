@@ -548,6 +548,53 @@ Test pushing from a treeonly client to a treeonly server
   treemanifest.treeonly=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'
+
+Test pushing from a treeonly client to a treeonly server *without* pushrebase
+
+  $ hg log -Gf -l 4 -T '{shortest(node)} {manifest|short}\n'
+  @  11c4 14e2f802690d
+  |
+  o  2f8e e23b32620909
+  |
+  o  5b48 0ab0ab59dd6a
+  |
+  o  7ec3 ad4ae432d47f
+  |
+  ~
+  $ hg push -r . --config extensions.pushrebase=! -f
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 4 changesets with 3 changes to 2 files (+1 heads)
+  $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
+       4       216      55      1       4 ad4ae432d47f d9920715ba88 000000000000
+       5       271      61      4       5 0ab0ab59dd6a ad4ae432d47f 000000000000
+       6       332      80     -1       6 e23b32620909 0ab0ab59dd6a 000000000000
+       7       412      60      6       7 14e2f802690d e23b32620909 000000000000
+  $ hg --cwd ../master debugindex .hg/store/meta/subdir/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
+       1        44      44     -1       1 a18d21674e76 bc0c2c938b92 000000000000
+       2        88      44     -1       3 33b5c6e3c136 a18d21674e76 000000000000
+       3       132      44     -1       5 f4c373af9a41 a18d21674e76 000000000000
+       4       176      44     -1       7 d20854ad7783 f4c373af9a41 000000000000
+  $ hg -R ../master log -r tip --stat
+  changeset:   7:11c4fc95a874
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     pushable treeonly commit
+  
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg -R ../master strip -q -r tip~3
+  $ hg phase -dfr tip~3
+
+Test pushing from a treeonly client to a treeonly server *with* pushrebase
+
   $ hg push --to master
   pushing to ssh://user@dummy/master
   searching for changes

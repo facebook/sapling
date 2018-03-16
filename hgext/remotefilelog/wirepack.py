@@ -143,6 +143,10 @@ class wirepackstore(object):
         fh = StringIO(wirepack)
         self._load(fh)
 
+    def __iter__(self):
+        for key in self._data:
+            yield key
+
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with wirepackstore")
 

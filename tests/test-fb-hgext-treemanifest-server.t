@@ -230,6 +230,21 @@ Test stripping trees
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
 
+Test pushing only trees without pushrebase to a hybrid server
+  $ cd ../client
+  $ hg push -f -r . --config extensions.pushrebase=!
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 0 changes to 0 files (+1 heads)
+  remote: transaction abort!
+  remote: rollback completed
+  remote: cannot push only trees to a hybrid server without pushrebase
+  abort: push failed on remote
+  [255]
+
 Test fetching from the server populates the cache
   $ cd ../
   $ hgcloneshallow ssh://user@dummy/master client2 -q -U
