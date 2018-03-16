@@ -277,6 +277,9 @@ class historypack(basepack.basepack):
         return None
 
     def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_LOOSEONLY):
+            return
+
         for filename, node in self:
             ledger.markhistoryentry(self, filename, node)
 

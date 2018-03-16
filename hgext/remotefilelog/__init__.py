@@ -1036,6 +1036,7 @@ def prefetch(ui, repo, *pats, **opts):
      ('', 'background', None, _('run in a background process'), None),
      ('', 'incremental', None, _('do an incremental repack'), None),
      ('', 'packsonly', None, _('only repack packs (skip loose objects)'), None),
+     ('', 'looseonly', None, _('only repack loose objects (skip packs)'), None),
     ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     if opts.get('background'):
@@ -1043,7 +1044,13 @@ def repack(ui, repo, *pats, **opts):
                                    packsonly=opts.get('packsonly', False))
         return
 
-    options = {'packsonly': opts.get('packsonly')}
+    if opts['packsonly'] and opts['looseonly']:
+        raise error.Abort("can't specify both --packsonly and --looseonly")
+
+    options = {
+        'packsonly': opts['packsonly'],
+        'looseonly': opts['looseonly'],
+    }
 
     try:
         if opts.get('incremental'):

@@ -33,4 +33,5 @@ def getunits(category):
         return _("trees")
 
 # Repack options passed to ``markledger``.
+OPTION_LOOSEONLY = 'looseonly'
 OPTION_PACKSONLY = 'packsonly'

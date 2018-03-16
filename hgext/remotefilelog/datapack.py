@@ -244,6 +244,9 @@ class datapack(basepack.basepack):
         return struct.unpack(self.INDEXFORMAT, entry)
 
     def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_LOOSEONLY):
+            return
+
         for filename, node in self:
             ledger.markdataentry(self, filename, node)
 
@@ -385,6 +388,9 @@ class fastdatapack(basepack.basepack):
         raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
 
     def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_LOOSEONLY):
+            return
+
         for filename, node in self:
             ledger.markdataentry(self, filename, node)
 

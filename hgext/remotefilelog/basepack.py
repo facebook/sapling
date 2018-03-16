@@ -16,7 +16,10 @@ from mercurial import (
 )
 
 from ..extlib import litemmap
-from . import shallowutil
+from . import (
+    constants,
+    shallowutil,
+)
 
 osutil = policy.importmod(r'osutil')
 
@@ -233,8 +236,11 @@ class basepackstore(object):
         return missing
 
     def markledger(self, ledger, options=None):
+        if options and options.get(constants.OPTION_LOOSEONLY):
+            return
+
         for pack in self.packs:
-            pack.markledger(ledger)
+            pack.markledger(ledger, options)
 
     def markforrefresh(self):
         """Tells the store that there may be new pack files, so the next time it

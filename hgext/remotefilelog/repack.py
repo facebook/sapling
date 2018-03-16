@@ -37,14 +37,21 @@ except NameError:
 class RepackAlreadyRunning(error.Abort):
     pass
 
-def backgroundrepack(repo, incremental=True, packsonly=False):
+def backgroundrepack(repo, incremental=True, packsonly=False, looseonly=False):
     cmd = [util.hgexecutable(), '-R', repo.origroot, 'repack']
     msg = _("(running background repack)\n")
     if incremental:
         cmd.append('--incremental')
         msg = _("(running background incremental repack)\n")
+
+    if looseonly and packsonly:
+        raise error.Abort("can't specify both looseonly and packsonly")
+
     if packsonly:
         cmd.append('--packsonly')
+    if looseonly:
+        cmd.append('--looseonly')
+
     cmd = ' '.join(map(util.shellquote, cmd))
 
     repo.ui.warn(msg)

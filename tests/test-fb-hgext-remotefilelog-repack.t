@@ -96,6 +96,25 @@
   $TESTTMP/hgcache/master/packs/repacklock
   $TESTTMP/hgcache/repos
 
+# Now test that --looseonly will only repack the loose file, leaving
+# the old packs:
+
+  $ hg repack --looseonly --traceback
+
+  $ find $CACHEDIR -type f | sort
+  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
+  $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
+  $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
+  $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
+  $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.dataidx
+  $TESTTMP/hgcache/master/packs/8e25dec685d5e0bb1f1b39df3acebda0e0d75c6e.datapack
+  $TESTTMP/hgcache/master/packs/c7dbbb9c994bc2491614201a8004dc59d8b3136b.dataidx
+  $TESTTMP/hgcache/master/packs/c7dbbb9c994bc2491614201a8004dc59d8b3136b.datapack
+  $TESTTMP/hgcache/master/packs/repacklock
+  $TESTTMP/hgcache/repos
+
+# A full repack creates the optimal packing:
+
   $ hg repack --traceback
 
   $ find $CACHEDIR -type f | sort
