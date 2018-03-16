@@ -32,6 +32,8 @@
 typedef binary Blake2 (hs.newtype)
 
 typedef Blake2 UnodeHash (hs.newtype)
+typedef Blake2 ChangesetId (hs.newtype)
+typedef Blake2 BlobHash (hs.newtype)
 
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on

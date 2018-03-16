@@ -38,10 +38,10 @@ extern crate mononoke_types_thrift;
 pub mod errors;
 pub mod hash;
 pub mod path;
-pub mod unodehash;
+pub mod typed_hash;
 
 pub use path::{MPath, MPathElement, RepoPath};
-pub use unodehash::UnodeHash;
+pub use typed_hash::{BlobHash, ChangesetId, UnodeHash};
 
 mod thrift {
     pub use mononoke_types_thrift::*;
