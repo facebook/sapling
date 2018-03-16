@@ -416,7 +416,7 @@ mod test {
         assert_eq!(
             MPath::new(b"asdf")
                 .unwrap()
-                .join(&MPathElement::new(b"bdc".iter().cloned().collect()))
+                .join(&MPathElement::new(b"bdc".to_vec()).expect("valid MPathElement"))
                 .to_vec()
                 .len(),
             8
@@ -438,7 +438,7 @@ mod test {
         let p = b"///";
         let elements: Vec<_> = p.split(|c| *c == b'/')
             .filter(|e| !e.is_empty())
-            .map(|e| MPathElement::new(e.into()))
+            .map(|e| MPathElement::new(e.into()).expect("valid MPathElement"))
             .collect();
         assert_eq!(
             MPath::new(b"////")

@@ -185,11 +185,11 @@ pub fn diff_sorted_vecs(
                 let left_path = left_entry
                     .get_name()
                     .clone()
-                    .unwrap_or(MPathElement::new(vec![]));
+                    .unwrap_or(MPathElement::empty());
                 let right_path = right_entry
                     .get_name()
                     .clone()
-                    .unwrap_or(MPathElement::new(vec![]));
+                    .unwrap_or(MPathElement::empty());
 
                 if left_path < right_path {
                     res.push(ChangedEntry::new_added(path.clone(), left_entry));

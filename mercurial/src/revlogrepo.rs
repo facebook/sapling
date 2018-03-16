@@ -342,11 +342,11 @@ impl RevlogRepo {
     }
 
     fn get_tree_log_idx_path(&self, path: &MPath) -> PathBuf {
-        self.get_tree_log_path(path, "00manifest.i".as_bytes())
+        self.get_tree_log_path(path, &b"00manifest.i"[..])
     }
 
     fn get_tree_log_data_path(&self, path: &MPath) -> PathBuf {
-        self.get_tree_log_path(path, "00manifest.d".as_bytes())
+        self.get_tree_log_path(path, &b"00manifest.d"[..])
     }
 
     fn get_file_log_idx_path(&self, path: &MPath) -> PathBuf {
@@ -357,11 +357,15 @@ impl RevlogRepo {
         self.get_file_log_path(path, ".d")
     }
 
-    fn get_tree_log_path<E: AsRef<[u8]>>(&self, path: &MPath, filename: E) -> PathBuf {
-        let filename = filename.as_ref();
-        let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("meta".as_bytes()))];
+    // This will panic if the filename isn't a single component. (This is a private method so
+    // that's fine.)
+    fn get_tree_log_path<E: Into<Vec<u8>>>(&self, path: &MPath, filename: E) -> PathBuf {
+        let filename = filename.into();
+        let mut elements: Vec<MPathElement> = vec![
+            MPathElement::new(b"meta".to_vec()).expect("valid MPathElement"),
+        ];
         elements.extend(path.into_iter().cloned());
-        elements.push(MPathElement::new(Vec::from(filename)));
+        elements.push(MPathElement::new(filename).expect("expect filename to be a valid element"));
         self.basepath
             .join("store")
             .join(self.fsencode_path(&elements))
@@ -369,7 +373,9 @@ impl RevlogRepo {
 
     fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &MPath, extension: E) -> PathBuf {
         let extension = extension.as_ref();
-        let mut elements: Vec<MPathElement> = vec![MPathElement::new(Vec::from("data".as_bytes()))];
+        let mut elements: Vec<MPathElement> = vec![
+            MPathElement::new(b"data".to_vec()).expect("valid MPathElement"),
+        ];
         elements.extend(path.into_iter().cloned());
         if let Some(last) = elements.last_mut() {
             last.extend(extension);

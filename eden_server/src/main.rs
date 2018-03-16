@@ -179,7 +179,7 @@ impl TreeMetadata {
         let name = entry
             .get_name()
             .clone()
-            .unwrap_or(MPathElement::new(vec![]));
+            .unwrap_or(MPathElement::empty());
 
         TreeMetadata {
             hash: entry.get_hash().into_nodehash().clone(),
