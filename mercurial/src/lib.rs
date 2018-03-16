@@ -36,6 +36,8 @@ extern crate quickcheck;
 extern crate asyncmemo;
 extern crate bookmarks;
 extern crate mercurial_types;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 extern crate pylz4;
 extern crate stockbookmarks;
 extern crate storage_types;

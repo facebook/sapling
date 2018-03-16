@@ -34,6 +34,7 @@ pub struct Details {
 pub struct RevlogManifest {
     // This is None for testing only -- the public API ensures `repo` always exists.
     repo: Option<RevlogRepo>,
+    parents: Parents,
     content: ManifestContent,
 }
 
@@ -118,22 +119,34 @@ impl RevlogManifest {
         node.as_blob()
             .as_slice()
             .ok_or(failure::err_msg("node missing data"))
-            .and_then(|blob| Self::parse(Some(repo), blob))
+            .and_then(|blob| Self::parse(Some(repo), node.parents(), blob))
     }
 
-    fn parse(repo: Option<RevlogRepo>, data: &[u8]) -> Result<RevlogManifest> {
+    fn parse(repo: Option<RevlogRepo>, parents: &Parents, data: &[u8]) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
-        ManifestContent::parse(data).map(|content| RevlogManifest { repo, content })
+        ManifestContent::parse(data).map(|content| RevlogManifest {
+            repo,
+            parents: parents.clone(),
+            content,
+        })
     }
 
     fn parse_with_prefix(
         repo: Option<RevlogRepo>,
+        parents: &Parents,
         data: &[u8],
         prefix: &MPath,
     ) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
-        ManifestContent::parse_with_prefix(data, prefix)
-            .map(|content| RevlogManifest { repo, content })
+        ManifestContent::parse_with_prefix(data, prefix).map(|content| RevlogManifest {
+            repo,
+            parents: parents.clone(),
+            content,
+        })
+    }
+
+    pub fn parents(&self) -> &Parents {
+        &self.parents
     }
 
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
@@ -336,29 +349,32 @@ impl Entry for RevlogEntry {
 
         revlog
             .and_then(|revlog| revlog.get_rev_by_nodeid(&nodeid))
-            .map(|node| node.as_blob().clone())
-            .and_then(|data| match self.get_type() {
-                // Mercurial file blob can have metadata, but tree manifest can't
-                // So strip metdata from everything except for Tree
-                Type::File => Ok(Content::File(strip_file_metadata(&data))),
-                Type::Executable => Ok(Content::Executable(strip_file_metadata(&data))),
-                Type::Symlink => {
-                    let data = strip_file_metadata(&data);
-                    let data = data.as_slice()
-                        .ok_or(failure::err_msg("missing symlink blob data"))?;
-                    Ok(Content::Symlink(MPath::new(data)?))
-                }
-                Type::Tree => {
-                    let data = data.as_slice()
-                        .ok_or(failure::err_msg("missing tree blob data"))?;
-                    let revlog_manifest = RevlogManifest::parse_with_prefix(
-                        Some(self.repo.clone()),
-                        &data,
-                        self.get_path()
-                            .mpath()
-                            .expect("trees should always have a path"),
-                    )?;
-                    Ok(Content::Tree(Box::new(revlog_manifest)))
+            .and_then(|node| {
+                let data = node.as_blob();
+                match self.get_type() {
+                    // Mercurial file blob can have metadata, but tree manifest can't
+                    // So strip metdata from everything except for Tree
+                    Type::File => Ok(Content::File(strip_file_metadata(data))),
+                    Type::Executable => Ok(Content::Executable(strip_file_metadata(data))),
+                    Type::Symlink => {
+                        let data = strip_file_metadata(data);
+                        let data = data.as_slice()
+                            .ok_or(failure::err_msg("missing symlink blob data"))?;
+                        Ok(Content::Symlink(MPath::new(data)?))
+                    }
+                    Type::Tree => {
+                        let data = data.as_slice()
+                            .ok_or(failure::err_msg("missing tree blob data"))?;
+                        let revlog_manifest = RevlogManifest::parse_with_prefix(
+                            Some(self.repo.clone()),
+                            node.parents(),
+                            &data,
+                            self.get_path()
+                                .mpath()
+                                .expect("trees should always have a path"),
+                        )?;
+                        Ok(Content::Tree(Box::new(revlog_manifest)))
+                    }
                 }
             })
             .map_err(|err| {
@@ -406,6 +422,8 @@ fn strip_file_metadata(blob: &Blob) -> Blob {
 mod test {
     use super::*;
 
+    use mercurial_types_mocks::nodehash::*;
+
     #[test]
     fn test_find() {
         assert_eq!(find(b"abc123", &b'b'), Some(1));
@@ -417,9 +435,10 @@ mod test {
     #[test]
     fn empty() {
         assert_eq!(
-            RevlogManifest::parse(None, b"").unwrap(),
+            RevlogManifest::parse(None, &Parents::None, b"").unwrap(),
             RevlogManifest {
                 repo: None,
+                parents: Parents::None,
                 content: ManifestContent {
                     files: BTreeMap::new(),
                 },
@@ -429,7 +448,7 @@ mod test {
 
     #[test]
     fn bad_nonil() {
-        match RevlogManifest::parse(None, b"hello123") {
+        match RevlogManifest::parse(None, &Parents::None, b"hello123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -437,7 +456,7 @@ mod test {
 
     #[test]
     fn bad_nohash() {
-        match RevlogManifest::parse(None, b"hello123\0") {
+        match RevlogManifest::parse(None, &Parents::None, b"hello123\0") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -445,7 +464,7 @@ mod test {
 
     #[test]
     fn bad_badhash1() {
-        match RevlogManifest::parse(None, b"hello123\0abc123") {
+        match RevlogManifest::parse(None, &Parents::None, b"hello123\0abc123") {
             Ok(m) => panic!("unexpected manifest {:?}", m),
             Err(e) => println!("got expected error: {}", e),
         }
@@ -455,9 +474,11 @@ mod test {
     fn good_one() {
         match RevlogManifest::parse(
             None,
+            &Parents::One(THREES_HASH),
             b"hello123\0da39a3ee5e6b4b0d3255bfef95601890afd80709xltZZZ\n",
         ) {
             Ok(m) => {
+                assert_eq!(m.parents(), &Parents::One(THREES_HASH));
                 let expect = vec![
                     (
                         MPath::new(b"hello123").unwrap(),
@@ -479,7 +500,7 @@ mod test {
     fn one_roundtrip() {
         // Only one flag because its unclear how multiple flags should be ordered
         const RAW: &[u8] = b"hello123\0da39a3ee5e6b4b0d3255bfef95601890afd80709x\n";
-        let m = RevlogManifest::parse(None, RAW).expect("failed to parse");
+        let m = RevlogManifest::parse(None, &Parents::None, RAW).expect("failed to parse");
 
         let mut out = Vec::new();
         m.generate(&mut out).expect("generate failed");
@@ -493,18 +514,21 @@ mod test {
                 out.len()
             );
         }
+
+        assert_eq!(m.parents(), &Parents::None);
     }
 
     const MANIFEST: &[u8] = include_bytes!("flatmanifest.bin");
 
     #[test]
     fn fullmanifest() {
-        match RevlogManifest::parse(None, MANIFEST) {
+        match RevlogManifest::parse(None, &Parents::Two(ONES_HASH, TWOS_HASH), MANIFEST) {
             Ok(m) => {
                 println!("Got manifest:");
                 for (k, v) in &m.content.files {
                     println!("{:?} {:?}", k, v);
                 }
+                assert_eq!(m.parents(), &Parents::Two(ONES_HASH, TWOS_HASH));
             }
             Err(e) => panic!("Failed to load manifest: {}", e),
         }
@@ -512,7 +536,8 @@ mod test {
 
     #[test]
     fn roundtrip() {
-        let m = RevlogManifest::parse(None, MANIFEST).expect("parse failed");
+        let m =
+            RevlogManifest::parse(None, &Parents::One(ONES_HASH), MANIFEST).expect("parse failed");
 
         let mut out = Vec::new();
         m.generate(&mut out).expect("generate failed");
@@ -524,5 +549,7 @@ mod test {
                 out.len()
             )
         }
+
+        assert_eq!(m.parents(), &Parents::One(ONES_HASH));
     }
 }
