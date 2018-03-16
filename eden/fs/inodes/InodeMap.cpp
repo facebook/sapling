@@ -421,36 +421,6 @@ void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
   }
 }
 
-SerializedInodeMap InodeMap::save() {
-  auto data = data_.wlock();
-  if (data->loadedInodes_.size() != 1) {
-    EDEN_BUG() << "InodeMap::save() called with " << data->loadedInodes_.size()
-               << " inodes still loaded; they must all (except the root) "
-               << "have been unloaded for this to succeed!";
-  }
-
-  SerializedInodeMap result;
-  // Therefore, at this point, nobody is calling allocateInodeNumber().
-  result.nextInodeNumber = nextInodeNumber_.load();
-  result.unloadedInodes.reserve(data->unloadedInodes_.size());
-  for (const auto& it : data->unloadedInodes_) {
-    const auto& entry = it.second;
-    SerializedInodeMapEntry serializedEntry;
-
-    serializedEntry.inodeNumber = entry.number.get();
-    serializedEntry.parentInode = entry.parent.get();
-    serializedEntry.name = entry.name.stringPiece().str();
-    serializedEntry.isUnlinked = entry.isUnlinked;
-    serializedEntry.numFuseReferences = entry.numFuseReferences;
-    serializedEntry.hash = thriftHash(entry.hash);
-    serializedEntry.mode = entry.mode;
-
-    result.unloadedInodes.emplace_back(std::move(serializedEntry));
-  }
-
-  return result;
-}
-
 void InodeMap::load(const SerializedInodeMap& takeover) {
   auto data = data_.wlock();
   CHECK_EQ(data->loadedInodes_.size(), 0)
@@ -494,9 +464,9 @@ void InodeMap::load(const SerializedInodeMap& takeover) {
   }
 }
 
-Future<Unit> InodeMap::shutdown() {
+Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   // Record that we are in the process of shutting down.
-  auto future = Future<Unit>::makeEmpty();
+  auto future = Future<folly::Unit>::makeEmpty();
   {
     auto data = data_.wlock();
     CHECK(!data->shutdownPromise.hasValue())
@@ -555,7 +525,42 @@ Future<Unit> InodeMap::shutdown() {
   // we know that all inodes have been destroyed and we can complete shutdown.
   root_.manualDecRef();
 
-  return future;
+  return future.then([this, doTakeover] {
+    // TODO: This check could occur after the loadedInodes_ assertion below to
+    // maximize coverage of any invariants that are broken during shutdown.
+    if (!doTakeover) {
+      return SerializedInodeMap{};
+    }
+    auto data = data_.wlock();
+    if (data->loadedInodes_.size() != 1) {
+      EDEN_BUG() << "After InodeMap::shutdown() finished, "
+                 << data->loadedInodes_.size()
+                 << " inodes still loaded; they must all (except the root) "
+                 << "have been unloaded for this to succeed!";
+    }
+
+    SerializedInodeMap result;
+    // Therefore, at this point, nobody is calling allocateInodeNumber(), so
+    // it's safe to read nextInodeNumber_.
+    result.nextInodeNumber = nextInodeNumber_.load();
+    result.unloadedInodes.reserve(data->unloadedInodes_.size());
+    for (const auto& it : data->unloadedInodes_) {
+      const auto& entry = it.second;
+      SerializedInodeMapEntry serializedEntry;
+
+      serializedEntry.inodeNumber = entry.number.get();
+      serializedEntry.parentInode = entry.parent.get();
+      serializedEntry.name = entry.name.stringPiece().str();
+      serializedEntry.isUnlinked = entry.isUnlinked;
+      serializedEntry.numFuseReferences = entry.numFuseReferences;
+      serializedEntry.hash = thriftHash(entry.hash);
+      serializedEntry.mode = entry.mode;
+
+      result.unloadedInodes.emplace_back(std::move(serializedEntry));
+    }
+
+    return result;
+  });
 }
 
 void InodeMap::shutdownComplete(

@@ -177,7 +177,6 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
                               TakeoverData::MountInfo takeover) {
                 self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
                     edenMount->getPath().stringPiece());
-                takeover.inodeMap = edenMount->getInodeMap()->save();
                 return takeover;
               }));
         } else {
@@ -689,10 +688,15 @@ void EdenServer::mountFinished(
       .then([unmountPromise = std::move(unmountPromise),
              takeoverPromise = std::move(takeoverPromise),
              takeoverData = std::move(takeover)](
-                folly::Try<SerializedFileHandleMap>&& result) mutable {
+                folly::Try<
+                    std::tuple<SerializedFileHandleMap, SerializedInodeMap>>&&
+                    result) mutable {
         if (takeoverPromise) {
           takeoverPromise.value().setWith([&]() mutable {
-            takeoverData.value().fileHandleMap = std::move(result.value());
+            takeoverData.value().fileHandleMap =
+                std::move(std::get<0>(result.value()));
+            takeoverData.value().inodeMap =
+                std::move(std::get<1>(result.value()));
             return std::move(takeoverData.value());
           });
         }

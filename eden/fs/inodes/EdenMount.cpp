@@ -318,7 +318,8 @@ void EdenMount::destroy() {
               << " in unexpected state " << static_cast<uint32_t>(oldState);
 }
 
-Future<SerializedFileHandleMap> EdenMount::shutdown(bool doTakeover) {
+Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
+EdenMount::shutdown(bool doTakeover) {
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
@@ -331,7 +332,8 @@ Future<SerializedFileHandleMap> EdenMount::shutdown(bool doTakeover) {
   return shutdownImpl(doTakeover);
 }
 
-Future<SerializedFileHandleMap> EdenMount::shutdownImpl(bool doTakeover) {
+Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
+EdenMount::shutdownImpl(bool doTakeover) {
   journal_.cancelAllSubscribers();
   XLOG(DBG1) << "beginning shutdown for EdenMount " << getPath();
 
@@ -342,11 +344,12 @@ Future<SerializedFileHandleMap> EdenMount::shutdownImpl(bool doTakeover) {
       ? getDispatcher()->getFileHandles().serializeMap()
       : SerializedFileHandleMap{};
 
-  return inodeMap_->shutdown().then(
-      [this, fileHandleMap = std::move(fileHandleMap)] {
+  return inodeMap_->shutdown(doTakeover)
+      .then([this, fileHandleMap = std::move(fileHandleMap)](
+                SerializedInodeMap inodeMap) {
         XLOG(DBG1) << "shutdown complete for EdenMount " << getPath();
         state_.store(State::SHUT_DOWN);
-        return fileHandleMap;
+        return std::make_tuple(fileHandleMap, inodeMap);
       });
 }
 

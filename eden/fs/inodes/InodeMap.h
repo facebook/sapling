@@ -244,16 +244,6 @@ class InodeMap {
    */
   void decFuseRefcount(fusell::InodeNumber number, uint32_t count = 1);
 
-  /**
-   * Persist the inode number state to an instance of InodeMap::TakeoverData.
-   *
-   * This API supports gracefully restarting the eden server without unmounting
-   * the mount point.
-   *
-   * This persists sufficient data to reconstruct all inode state into the
-   * unloadedInodes_ map.
-   */
-  SerializedInodeMap save();
   void load(const SerializedInodeMap& takeover);
 
   /**
@@ -261,13 +251,15 @@ class InodeMap {
    *
    * The shutdown process must wait for all Inode objects in this InodeMap to
    * become unreferenced and be unloaded.  Returns a Future that will be
-   * fulfilled once the shutdown has completed.
+   * fulfilled once the shutdown has completed.  If doTakeover is true, the
+   * resulting SerializedInodeMap will include data sufficient for
+   * reconstructing all inode state in the new process.
    *
    * This function should generally only be invoked by EdenMount::shutdown().
    * Other callers should use EdenMount::shutdown() instead of invoking this
    * function directly.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> shutdown();
+  FOLLY_NODISCARD folly::Future<SerializedInodeMap> shutdown(bool doTakeover);
 
   /**
    * onInodeUnreferenced() will be called when an Inode's InodePtr reference
