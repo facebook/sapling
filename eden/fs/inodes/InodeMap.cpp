@@ -63,6 +63,57 @@ void InodeMap::initialize(TreeInodePtr root) {
   CHECK(ret.second);
 }
 
+void InodeMap::initializeFromTakeover(
+    TreeInodePtr root,
+    const SerializedInodeMap& takeover) {
+  auto data = data_.wlock();
+
+  CHECK_EQ(data->loadedInodes_.size(), 0)
+      << "cannot load InodeMap data over a populated instance";
+  CHECK_EQ(data->unloadedInodes_.size(), 0)
+      << "cannot load InodeMap data over a populated instance";
+  CHECK_EQ(nextInodeNumber_.load(), 0)
+      << "cannot load InodeMap data over a populated instance";
+
+  CHECK(!root_);
+  root_ = std::move(root);
+  auto ret = data->loadedInodes_.emplace(kRootNodeId, root_.get());
+  CHECK(ret.second);
+  nextInodeNumber_.store(takeover.nextInodeNumber);
+  for (const auto& entry : takeover.unloadedInodes) {
+    auto unloadedEntry = UnloadedInode(
+        fusell::InodeNumber::fromThrift(entry.inodeNumber),
+        fusell::InodeNumber::fromThrift(entry.parentInode),
+        PathComponentPiece{entry.name});
+    unloadedEntry.numFuseReferences = entry.numFuseReferences;
+    if (entry.numFuseReferences < 0) {
+      auto message = folly::to<std::string>(
+          "inode number ",
+          entry.inodeNumber,
+          " has a negative numFuseReferences number");
+      XLOG(ERR) << message;
+      throw std::runtime_error(message);
+    }
+    unloadedEntry.isUnlinked = entry.isUnlinked;
+    if (!entry.hash.empty()) {
+      unloadedEntry.hash = hashFromThrift(entry.hash);
+    }
+    unloadedEntry.mode = entry.mode;
+
+    auto result = data->unloadedInodes_.emplace(
+        fusell::InodeNumber::fromThrift(entry.inodeNumber),
+        std::move(unloadedEntry));
+    if (!result.second) {
+      auto message = folly::to<std::string>(
+          "failed to emplace inode number ",
+          entry.inodeNumber,
+          "; is it already present in the InodeMap?");
+      XLOG(ERR) << message;
+      throw std::runtime_error(message);
+    }
+  }
+}
+
 Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
   // Lock the data.
   // We hold it while doing most of our work below, but explicitly unlock it
@@ -418,49 +469,6 @@ void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
     XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
                << unloadedEntry.parent << ":" << unloadedEntry.name;
     data->unloadedInodes_.erase(unloadedIter);
-  }
-}
-
-void InodeMap::load(const SerializedInodeMap& takeover) {
-  auto data = data_.wlock();
-  CHECK_EQ(data->loadedInodes_.size(), 0)
-      << "cannot load InodeMap data over a populated instance";
-  CHECK_EQ(data->unloadedInodes_.size(), 0)
-      << "cannot load InodeMap data over a populated instance";
-  CHECK_EQ(nextInodeNumber_.load(), 0)
-      << "cannot load InodeMap data over a populated instance";
-  nextInodeNumber_.store(takeover.nextInodeNumber);
-  for (const auto& entry : takeover.unloadedInodes) {
-    auto unloadedEntry = UnloadedInode(
-        fusell::InodeNumber::fromThrift(entry.inodeNumber),
-        fusell::InodeNumber::fromThrift(entry.parentInode),
-        PathComponentPiece{entry.name});
-    unloadedEntry.numFuseReferences = entry.numFuseReferences;
-    if (entry.numFuseReferences < 0) {
-      auto message = folly::to<std::string>(
-          "inode number ",
-          entry.inodeNumber,
-          " has a negative numFuseReferences number");
-      XLOG(ERR) << message;
-      throw std::runtime_error(message);
-    }
-    unloadedEntry.isUnlinked = entry.isUnlinked;
-    if (!entry.hash.empty()) {
-      unloadedEntry.hash = hashFromThrift(entry.hash);
-    }
-    unloadedEntry.mode = entry.mode;
-
-    auto result = data->unloadedInodes_.emplace(
-        fusell::InodeNumber::fromThrift(entry.inodeNumber),
-        std::move(unloadedEntry));
-    if (!result.second) {
-      auto message = folly::to<std::string>(
-          "failed to emplace inode number ",
-          entry.inodeNumber,
-          "; is it already present in the InodeMap?");
-      XLOG(ERR) << message;
-      throw std::runtime_error(message);
-    }
   }
 }
 

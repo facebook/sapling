@@ -587,16 +587,12 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       &serverState_,
       std::make_shared<UnixClock>());
 
-  if (optionalTakeover) {
-    edenMount->getInodeMap()->load(optionalTakeover->inodeMap);
-  }
-
-  bool shouldSetMaxInodeNumber = !optionalTakeover;
-  return edenMount->initialize(shouldSetMaxInodeNumber)
-      .then([this,
-             doTakeover,
-             edenMount,
-             optionalTakeover = std::move(optionalTakeover)]() mutable {
+  auto initFuture = edenMount->initialize(optionalTakeover);
+  return initFuture.then(
+      [this,
+       doTakeover,
+       edenMount,
+       optionalTakeover = std::move(optionalTakeover)]() mutable {
         addToMountPoints(edenMount);
 
         return (optionalTakeover ? performTakeoverFuseStart(

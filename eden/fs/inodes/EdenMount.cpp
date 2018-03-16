@@ -185,13 +185,14 @@ EdenMount::EdenMount(
       gid_(getgid()),
       clock_(clock) {}
 
-folly::Future<folly::Unit> EdenMount::initialize(bool shouldSetMaxInodeNumber) {
+folly::Future<folly::Unit> EdenMount::initialize(
+    const folly::Optional<TakeoverData::MountInfo>& takeover) {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
   parentInfo_.wlock()->parents.setParents(*parents);
 
   // Do this before the root TreeInode is allocated in case it needs to allocate
   // any inode numbers.
-  if (shouldSetMaxInodeNumber) {
+  if (!takeover) {
     auto maxInodeNumber = overlay_->getMaxRecordedInode();
     XLOG(DBG2) << "Initializing eden mount " << getPath()
                << "; max existing inode number is " << maxInodeNumber;
@@ -201,8 +202,15 @@ folly::Future<folly::Unit> EdenMount::initialize(bool shouldSetMaxInodeNumber) {
   }
 
   return createRootInode(*parents).then(
-      [this, parents](TreeInodePtr initTreeNode) {
-        inodeMap_->initialize(std::move(initTreeNode));
+      [this,
+       parents,
+       inodeMap = takeover ? folly::make_optional(takeover->inodeMap)
+                           : folly::none](TreeInodePtr initTreeNode) {
+        if (inodeMap) {
+          inodeMap_->initializeFromTakeover(std::move(initTreeNode), *inodeMap);
+        } else {
+          inodeMap_->initialize(std::move(initTreeNode));
+        }
 
         // Record the transition from no snapshot to the current snapshot in
         // the journal.  This also sets things up so that we can carry the

@@ -107,11 +107,10 @@ class EdenMount {
   /**
    * Asynchronous EdenMount initialization - post instantiation.
    *
-   * In the case of a takeover, the InodeMap's inode number allocator has
-   * already been initialized, so pass false.
+   * If takeover data is specified, it is used to initialize the inode map.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      bool shouldSetMaxInodeNumber);
+      const folly::Optional<TakeoverData::MountInfo>& takeover = folly::none);
 
   /**
    * Destroy the EdenMount.

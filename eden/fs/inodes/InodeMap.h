@@ -139,6 +139,16 @@ class InodeMap {
   void initialize(TreeInodePtr root);
 
   /**
+   * Initialize the InodeMap from data handed over from a process being taken
+   * over.
+   *
+   * This method has the same constraints and concerns as initialize().
+   */
+  void initializeFromTakeover(
+      TreeInodePtr root,
+      const SerializedInodeMap& takeover);
+
+  /**
    * Get the root inode.
    */
   const TreeInodePtr& getRootInode() const {
@@ -243,8 +253,6 @@ class InodeMap {
    * avoid loading an Inode object just to decrement its reference count.
    */
   void decFuseRefcount(fusell::InodeNumber number, uint32_t count = 1);
-
-  void load(const SerializedInodeMap& takeover);
 
   /**
    * Shutdown the InodeMap.
