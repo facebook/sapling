@@ -348,7 +348,7 @@ FuseChannel::FuseChannel(
   installSignalHandler();
 }
 
-folly::Future<folly::Unit> FuseChannel::initialize() {
+Future<SemiFuture<FuseChannel::StopReason>> FuseChannel::initialize() {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success
   // once initialization completes.
@@ -360,12 +360,14 @@ folly::Future<folly::Unit> FuseChannel::initialize() {
   });
 }
 
-void FuseChannel::initializeFromTakeover(fuse_init_out connInfo) {
+SemiFuture<FuseChannel::StopReason> FuseChannel::initializeFromTakeover(
+    fuse_init_out connInfo) {
   connInfo_ = connInfo;
   XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
              << ", max_readahead=" << connInfo_->max_readahead
              << ", want=" << flagsToLabel(capsLabels, connInfo_->flags);
   startWorkerThreads();
+  return sessionCompletePromise_.getFuture();
 }
 
 void FuseChannel::startWorkerThreads() {
@@ -509,10 +511,6 @@ void FuseChannel::invalidateEntry(
   }
 }
 
-folly::Future<FuseChannel::StopReason> FuseChannel::getSessionCompleteFuture() {
-  return sessionCompletePromise_.getFuture();
-}
-
 void FuseChannel::requestSessionExit(StopReason reason) {
   requestSessionExit(state_.wlock(), reason);
 }
@@ -569,7 +567,7 @@ void FuseChannel::initWorkerThread() noexcept {
   }
 
   // Signal that initialization is complete.
-  initPromise_.setValue();
+  initPromise_.setValue(sessionCompletePromise_.getSemiFuture());
 
   // Continue to run like a normal FUSE worker thread.
   fuseWorkerThread();

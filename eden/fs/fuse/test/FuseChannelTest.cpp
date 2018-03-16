@@ -39,7 +39,7 @@ class FuseChannelTest : public ::testing::Test {
         &dispatcher_);
   }
 
-  void performInit(FuseChannel* channel) {
+  FuseChannel::StopFuture performInit(FuseChannel* channel) {
     auto initFuture = channel->initialize();
     EXPECT_FALSE(initFuture.isReady());
 
@@ -57,7 +57,7 @@ class FuseChannelTest : public ::testing::Test {
     // The init future should be ready very shortly after we receive the INIT
     // response.  The FuseChannel initialization thread makes the future ready
     // shortly after sending the INIT response.
-    initFuture.get(100ms);
+    return initFuture.get(100ms);
   }
 
   FakeFuse fuse_;
@@ -105,21 +105,20 @@ TEST_F(FuseChannelTest, testInitDestroyRace) {
 
 TEST_F(FuseChannelTest, testInitUnmount) {
   auto channel = createChannel();
-  performInit(channel.get());
+  auto completeFuture = performInit(channel.get());
 
   // Close the FakeFuse so that FuseChannel will think the mount point has been
   // unmounted.
   fuse_.close();
 
   // Wait for the FuseChannel to signal that it has finished.
-  auto stopReason = channel->getSessionCompleteFuture().get(100ms);
+  auto stopReason = std::move(completeFuture).get(100ms);
   EXPECT_EQ(stopReason, FuseChannel::StopReason::UNMOUNTED);
 }
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
   auto channel = createChannel();
-  performInit(channel.get());
-  auto completeFuture = channel->getSessionCompleteFuture();
+  auto completeFuture = performInit(channel.get());
 
   // Close the FakeFuse so that FuseChannel will think the mount point has been
   // unmounted.  We then immediately destroy the FuseChannel without waiting
@@ -128,7 +127,7 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
   channel.reset();
 
   // Wait for the session complete future now.
-  auto stopReason = completeFuture.get(100ms);
+  auto stopReason = std::move(completeFuture).get(100ms);
   EXPECT_TRUE(
       stopReason == FuseChannel::StopReason::UNMOUNTED ||
       stopReason == FuseChannel::StopReason::DESTRUCTOR)

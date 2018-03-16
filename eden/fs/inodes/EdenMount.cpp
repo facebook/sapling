@@ -44,6 +44,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
+using facebook::eden::fusell::FuseChannel;
 using facebook::eden::fusell::FuseChannelData;
 using folly::Future;
 using folly::makeFuture;
@@ -361,7 +362,7 @@ EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
-fusell::FuseChannel* EdenMount::getFuseChannel() const {
+FuseChannel* EdenMount::getFuseChannel() const {
   return channel_.get();
 }
 
@@ -687,8 +688,8 @@ folly::Future<folly::Unit> EdenMount::startFuse(
 
     createFuseChannel(std::move(fuseDevice), eventBase, threadPool);
     return channel_->initialize()
-        .then([this](folly::Unit&&) {
-          doStateTransition(State::STARTING, State::RUNNING);
+        .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+          fuseInitSuccessful(std::move(fuseCompleteFuture));
         })
         .onError([this](folly::exception_wrapper&& ew) {
           doStateTransition(State::STARTING, State::FUSE_ERROR);
@@ -709,8 +710,9 @@ void EdenMount::takeoverFuse(
       std::move(takeoverData.fd), eventBase, std::move(threadPool));
 
   try {
-    channel_->initializeFromTakeover(takeoverData.connInfo);
-    doStateTransition(State::STARTING, State::RUNNING);
+    auto fuseCompleteFuture =
+        channel_->initializeFromTakeover(takeoverData.connInfo);
+    fuseInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception& ex) {
     doStateTransition(State::STARTING, State::FUSE_ERROR);
     throw;
@@ -723,11 +725,15 @@ void EdenMount::createFuseChannel(
     std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
   eventBase_ = eventBase;
   threadPool_ = std::move(threadPool);
-
-  channel_ = std::make_unique<fusell::FuseChannel>(
+  channel_ = std::make_unique<FuseChannel>(
       std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get());
+}
 
-  channel_->getSessionCompleteFuture()
+void EdenMount::fuseInitSuccessful(
+    FuseChannel::StopFuture&& fuseCompleteFuture) {
+  doStateTransition(State::STARTING, State::RUNNING);
+
+  std::move(fuseCompleteFuture)
       .via(eventBase_)
       .then([this] {
         // In case we are performing a graceful restart,

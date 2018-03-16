@@ -46,6 +46,7 @@ class FuseChannel {
     FUSE_TRUNCATED_REQUEST,
     WORKER_EXCEPTION,
   };
+  using StopFuture = folly::SemiFuture<StopReason>;
 
   /**
    * Construct the fuse channel and session structures that are
@@ -85,10 +86,19 @@ class FuseChannel {
    * completed the INIT negotiation with the kernel we will start the remaining
    * FUSE worker threads and indicate success via the returned Future object.
    *
-   * Returns a folly::Future that will complete inside one of the FuseChannel
-   * worker threads.
+   * Returns a folly::Future that will become ready once the mount point has
+   * been initialized and is ready for I/O.  This Future will complete inside
+   * one of the FUSE worker threads.
+   *
+   * The initialization Future will return a new StopFuture object that will
+   * be fulfilled when the FuseChannel has stopped.  This StopFuture can be
+   * used to detect if the FuseChannel has been unmounted or stopped because of
+   * an error or any other reason.  The StopFuture may be fulfilled inside one
+   * of the FUSE worker threads that is in the process of shutting down.
+   * Callers should normally use via() to perform any additional work in
+   * another executor thread.
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> initialize();
+  FOLLY_NODISCARD folly::Future<StopFuture> initialize();
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -102,8 +112,12 @@ class FuseChannel {
    *
    * This function will immediately set up the thread pool used to service
    * incoming fuse requests.
+   *
+   * Returns a StopFuture that will be fulfilled when the FuseChannel has
+   * stopped.  This future can be used to detect if the FuseChannel has been
+   * unmounted or stopped because of an error or any other reason.
    */
-  void initializeFromTakeover(fuse_init_out connInfo);
+  StopFuture initializeFromTakeover(fuse_init_out connInfo);
 
   // Forbidden copy constructor and assignment operator
   FuseChannel(FuseChannel const&) = delete;
@@ -217,24 +231,6 @@ class FuseChannel {
    * shutting down.
    */
   void finishRequest(const fuse_in_header& header);
-
-  /**
-   * Returns a SemiFuture that will complete when all of the fuse threads have
-   * been joined and when all pending fuse requests initiated by the kernel
-   * have been responded to.
-   *
-   * Will throw if called more than once.
-   *
-   * The session completion future will only be signaled if initialization
-   * (via initialize() or takeoverInitialize()) has completed successfully.
-   *
-   * This future may be fulfilled inside one of the FUSE worker threads that is
-   * in the process of shutting down.  Therefore is not safe to call
-   * FuseChannel::destroy() directly in the thread where this future is
-   * fulfilled.  Callers should generally use Future::via() to move execution
-   * to another executor thread.
-   */
-  folly::Future<StopReason> getSessionCompleteFuture();
 
  private:
   struct HandlerEntry;
@@ -411,7 +407,7 @@ class FuseChannel {
    */
   std::atomic<StopReason> runState_{StopReason::RUNNING};
   folly::Synchronized<State> state_;
-  folly::Promise<folly::Unit> initPromise_;
+  folly::Promise<folly::SemiFuture<StopReason>> initPromise_;
   folly::Promise<StopReason> sessionCompletePromise_;
 
   // To prevent logging unsupported opcodes twice.

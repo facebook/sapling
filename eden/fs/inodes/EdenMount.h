@@ -563,13 +563,17 @@ class EdenMount {
 
   /**
    * Construct the channel_ member variable.
-   * This also sets up callbacks to clean up correctly when the channel
-   * is shut down.
    */
   void createFuseChannel(
       folly::File fuseDevice,
       folly::EventBase* eventBase,
       std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+
+  /**
+   * Once the FuseChannel has been initialized, set up callbacks to clean up
+   * correctly when the channel shuts down.
+   */
+  void fuseInitSuccessful(fusell::FuseChannel::StopFuture&& fuseCompleteFuture);
 
   /**
    * Private destructor.
@@ -697,7 +701,7 @@ class EdenMount {
   folly::EventBase* eventBase_{nullptr};
 
   /**
-   * The server's thread pool passed into startFuse().  Notably, it is always
+   * The server's thread pool.  Notably, it is always
    * safe to queue work into this pool.
    */
   std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
