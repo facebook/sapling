@@ -23,7 +23,8 @@ use pylz4;
 use scuba::{ScubaClient, ScubaSample};
 use tokio_core::reactor::Remote;
 
-use slog::Logger;
+use slog::{self, Drain, Logger};
+use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
@@ -185,7 +186,17 @@ impl HgRepo {
         scuba_table: Option<String>,
     ) -> Result<Self> {
         let path = repo.path().to_owned();
-        let logger = parent_logger.new(o!("repo" => format!("{}", path.display())));
+        let logger = {
+            let kv = o!("repo" => format!("{}", path.display()));
+            match scuba_table {
+                Some(ref table) => {
+                    let scuba_drain = ScubaDrain::new(table.clone());
+                    let duplicate_drain = slog::Duplicate::new(scuba_drain, parent_logger.clone());
+                    Logger::root(duplicate_drain.fuse(), kv)
+                }
+                None => parent_logger.new(kv),
+            }
+        };
 
         Ok(HgRepo {
             path: format!("{}", path.display()),
