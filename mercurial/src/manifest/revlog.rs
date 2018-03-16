@@ -168,20 +168,16 @@ impl Details {
     }
 
     fn parse(data: &[u8]) -> Result<Details> {
-        if data.len() < 40 {
-            bail_msg!("hash too small");
-        }
+        ensure_msg!(data.len() >= 40, "hash too small: {:?}", data);
 
         let (hash, flags) = data.split_at(40);
-        let hash = match str::from_utf8(hash) {
-            Err(_) => bail_msg!("malformed hash"),
-            Ok(hs) => hs,
-        };
-        let entryid = EntryId::new(hash.parse::<NodeHash>().context("malformed hash")?);
+        let hash = str::from_utf8(hash)
+            .map_err(|err| Error::from(err))
+            .and_then(|hash| hash.parse::<NodeHash>())
+            .with_context(|_| format!("malformed hash: {:?}", hash))?;
+        let entryid = EntryId::new(hash);
 
-        if flags.len() > 1 {
-            bail_msg!("More than 1 flag");
-        }
+        ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
         let flag = if flags.len() == 0 {
             Type::File
