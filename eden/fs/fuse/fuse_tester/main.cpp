@@ -114,11 +114,11 @@ int main(int argc, char** argv) {
   ThreadLocalEdenStats stats;
   TestDispatcher dispatcher(&stats, identity);
 
-  FuseChannel channel(
-      std::move(fuseDevice), mountPath, FLAGS_numFuseThreads, &dispatcher);
+  std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(
+      std::move(fuseDevice), mountPath, FLAGS_numFuseThreads, &dispatcher));
 
   XLOG(INFO) << "Starting FUSE...";
-  auto completionFuture = channel.initialize().get();
+  auto completionFuture = channel->initialize().get();
   XLOG(INFO) << "FUSE started";
 
   auto reason = std::move(completionFuture).get();

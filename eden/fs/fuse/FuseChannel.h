@@ -68,14 +68,19 @@ class FuseChannel {
   /**
    * Destroy the FuseChannel.
    *
-   * If the FUSE worker threads are still running, the destructor will stop
+   * If the FUSE worker threads are still running, the destroy() will stop
    * them and wait for them to exit.
    *
-   * The destructor must not be invoked from inside one of the worker threads.
-   * For instance, do not invoke the destructor from inside a Dispatcher
-   * callback.
+   * destroy() must not be invoked from inside one of the worker threads.  For
+   * instance, do not invoke the destructor from inside a Dispatcher callback.
+   *
+   * The FuseChannel object itself may not have been immediately deleted by the
+   * time that destroy() returns.  destroy() will wait for all outstanding FUSE
+   * requests to complete before it deletes the object.  However, it may return
+   * before this happens if some FUSE requests are still pending and will
+   * complete in a non-FUSE-worker thread.
    */
-  ~FuseChannel();
+  void destroy();
 
   /**
    * Initialize the FuseChannel; until this completes successfully,
@@ -256,9 +261,25 @@ class FuseChannel {
      * initialize() or takeoverInitialize() instead.
      */
     size_t stoppedThreads{0};
+
+    /**
+     * If destroyPending is true, the FuseChannel object should be
+     * automatically destroyed when the last outstanding request finishes.
+     */
+    bool destroyPending{false};
   };
 
-  static const HandlerMap handlerMap;
+  /**
+   * Private destructor.
+   *
+   * FuseChannel objects must always be allocated on the heap, and destroyed by
+   * calling FuseChannel::destroy().  Users are not allowed to destroy
+   * FuseChannel objects directly.
+   *
+   * FuseChannel::destroy() will delete the FuseChannel once all outstanding
+   * requests have completed.
+   */
+  ~FuseChannel();
 
   folly::Future<folly::Unit> fuseRead(
       const fuse_in_header* header,
@@ -412,6 +433,19 @@ class FuseChannel {
 
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
+
+  static const HandlerMap handlerMap_;
+};
+
+/**
+ * FuseChannelDeleter acts as a deleter argument for std::shared_ptr or
+ * std::unique_ptr.
+ */
+class FuseChannelDeleter {
+ public:
+  void operator()(FuseChannel* channel) {
+    channel->destroy();
+  }
 };
 } // namespace fusell
 } // namespace eden

@@ -163,7 +163,7 @@ struct FuseChannel::HandlerEntry {
   EdenStats::HistogramPtr histogram;
 };
 
-const FuseChannel::HandlerMap FuseChannel::handlerMap = {
+const FuseChannel::HandlerMap FuseChannel::handlerMap_ = {
     {FUSE_READ, {&FuseChannel::fuseRead, &EdenStats::read}},
     {FUSE_WRITE, {&FuseChannel::fuseWrite, &EdenStats::write}},
     {FUSE_LOOKUP, {&FuseChannel::fuseLookup, &EdenStats::lookup}},
@@ -348,6 +348,8 @@ FuseChannel::FuseChannel(
   installSignalHandler();
 }
 
+FuseChannel::~FuseChannel() {}
+
 Future<SemiFuture<FuseChannel::StopReason>> FuseChannel::initialize() {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success
@@ -397,7 +399,7 @@ void FuseChannel::startWorkerThreads() {
   }
 }
 
-FuseChannel::~FuseChannel() {
+void FuseChannel::destroy() {
   std::vector<std::thread> threads;
   {
     auto state = state_.wlock();
@@ -411,6 +413,22 @@ FuseChannel::~FuseChannel() {
                      "its own worker threads";
     }
     thread.join();
+  }
+
+  // Check to see if there are still outstanding requests.
+  // If so, delay actual deletion of the FuseChannel object until the
+  // last request completes.
+  bool allDone = false;
+  {
+    auto state = state_.wlock();
+    if (state->requests.empty()) {
+      allDone = true;
+    } else {
+      state->destroyPending = true;
+    }
+  }
+  if (allDone) {
+    delete this;
   }
 }
 
@@ -604,6 +622,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
       // method below.
       complete = state->requests.empty();
     }
+    DCHECK(!state->destroyPending) << "destroyPending cannot be set while "
+                                      "worker threads are still running";
   }
 
   if (complete) {
@@ -890,8 +910,8 @@ void FuseChannel::processSession() {
         break;
 
       default: {
-        const auto handlerIter = handlerMap.find(header->opcode);
-        if (handlerIter != handlerMap.end()) {
+        const auto handlerIter = handlerMap_.find(header->opcode);
+        if (handlerIter != handlerMap_.end()) {
           // Start a new request and associate it with the current thread.
           // It will be disassociated when we leave this scope, but will
           // propagate across any futures that are spawned as part of this
@@ -946,6 +966,7 @@ void FuseChannel::finishRequest(const fuse_in_header& header) {
   // Take care to avoid triggering the promise callbacks
   // while we hold a lock.
   bool complete = false;
+  bool destroy = false;
   {
     auto state = state_.wlock();
     const bool erased = state->requests.erase(header.unique) > 0;
@@ -955,9 +976,13 @@ void FuseChannel::finishRequest(const fuse_in_header& header) {
     // element in the map above.
     complete = erased && state->requests.empty() &&
         state->stoppedThreads == numThreads_;
+    destroy = state->destroyPending;
   }
   if (complete) {
     sessionCompletePromise_.setValue(runState_.load(std::memory_order_relaxed));
+    if (destroy) {
+      delete this;
+    }
   }
 }
 

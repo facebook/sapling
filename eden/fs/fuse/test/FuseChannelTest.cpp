@@ -9,34 +9,63 @@
  */
 #include "eden/fs/fuse/FuseChannel.h"
 
+#include <folly/Random.h>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include <unordered_map>
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/EdenStats.h"
+#include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/TestDispatcher.h"
 
 using namespace facebook::eden;
 using namespace facebook::eden::fusell;
 using namespace std::literals::chrono_literals;
 using folly::ByteRange;
 using folly::Future;
+using folly::Promise;
+using folly::Random;
 using folly::Unit;
 using std::make_unique;
+using std::unique_ptr;
 
 namespace {
-class TestDispatcher : public Dispatcher {
-  using Dispatcher::Dispatcher;
-};
+
+fuse_entry_out genRandomLookupResponse(uint64_t nodeid) {
+  fuse_entry_out response;
+  response.nodeid = nodeid;
+  response.generation = Random::rand64();
+  response.entry_valid = Random::rand64();
+  response.attr_valid = Random::rand64();
+  response.entry_valid_nsec = Random::rand32();
+  response.attr_valid_nsec = Random::rand32();
+  response.attr.ino = nodeid;
+  response.attr.size = Random::rand64();
+  response.attr.blocks = Random::rand64();
+  response.attr.atime = Random::rand64();
+  response.attr.mtime = Random::rand64();
+  response.attr.ctime = Random::rand64();
+  response.attr.atimensec = Random::rand32();
+  response.attr.mtimensec = Random::rand32();
+  response.attr.ctimensec = Random::rand32();
+  response.attr.mode = Random::rand32();
+  response.attr.nlink = Random::rand32();
+  response.attr.uid = Random::rand32();
+  response.attr.gid = Random::rand32();
+  response.attr.rdev = Random::rand32();
+  response.attr.blksize = Random::rand32();
+  response.attr.padding = Random::rand32();
+  return response;
+}
 
 class FuseChannelTest : public ::testing::Test {
  protected:
-  std::unique_ptr<FuseChannel> createChannel(size_t numThreads = 2) {
-    return make_unique<FuseChannel>(
-        fuse_.start(),
-        mountPath_,
-        numThreads,
-        &dispatcher_);
+  unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
+      size_t numThreads = 2) {
+    return unique_ptr<FuseChannel, FuseChannelDeleter>(
+        new FuseChannel(fuse_.start(), mountPath_, numThreads, &dispatcher_));
   }
 
   FuseChannel::StopFuture performInit(FuseChannel* channel) {
@@ -168,7 +197,7 @@ TEST_F(FuseChannelTest, testInitErrorOldVersion) {
   auto channel = createChannel();
   auto initFuture = channel->initialize();
 
-  // Use a fuse_init_in body, but FUSE_LOOKUP as the opcode
+  // Send 2.7 as the FUSE version, which is too old
   struct fuse_init_in initArg = {};
   initArg.major = 2;
   initArg.minor = 7;
@@ -187,8 +216,11 @@ TEST_F(FuseChannelTest, testInitErrorShortPacket) {
   auto channel = createChannel();
   auto initFuture = channel->initialize();
 
-  // Use a fuse_init_in body, but FUSE_LOOKUP as the opcode
+  // Send a short message
   uint32_t body = 5;
+  static_assert(
+      sizeof(body) < sizeof(struct fuse_init_in),
+      "we intend to send a body shorter than a fuse_init_in struct");
   fuse_.sendRequest(FUSE_INIT, FUSE_ROOT_ID, body);
 
   EXPECT_THROW_RE(
@@ -199,4 +231,89 @@ TEST_F(FuseChannelTest, testInitErrorShortPacket) {
   static_assert(
       sizeof(fuse_in_header) + sizeof(uint32_t) == 44,
       "validate the size in our error message check");
+}
+
+TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
+  auto channel = createChannel();
+  auto completeFuture = performInit(channel.get());
+
+  // Send several lookup requests
+  //
+  // Note: it is currently important that we wait for the dispatcher to receive
+  // each request before sending the next one.  The FuseChannel receive code
+  // expects to receive exactly 1 request per read() call on the FUSE device.
+  // Since we are sending over a socket rather than a real FUSE device we
+  // cannot guarantee that our writes will not be coalesced unless we confirm
+  // that the FuseChannel has read each request before sending the next one.
+  auto id1 = fuse_.sendLookup(FUSE_ROOT_ID, "foobar");
+  auto req1 = dispatcher_.waitForLookup(id1);
+
+  auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
+  auto req2 = dispatcher_.waitForLookup(id2);
+
+  auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
+  auto req3 = dispatcher_.waitForLookup(id3);
+
+  // Destroy the channel object
+  channel.reset();
+
+  // The completion future still should not be ready, since the lookup
+  // requests are still pending.
+  EXPECT_FALSE(completeFuture.isReady());
+
+  auto checkLookupResponse = [](const FakeFuse::Response& response,
+                                uint64_t requestID,
+                                fuse_entry_out expected) {
+    EXPECT_EQ(requestID, response.header.unique);
+    EXPECT_EQ(0, response.header.error);
+    EXPECT_EQ(
+        sizeof(fuse_out_header) + sizeof(fuse_entry_out), response.header.len);
+    EXPECT_EQ(
+        ByteRange(
+            reinterpret_cast<const uint8_t*>(&expected), sizeof(expected)),
+        ByteRange(response.body.data(), response.body.size()));
+  };
+
+  // Respond to the lookup requests
+  auto response1 = genRandomLookupResponse(9);
+  req1.promise.setValue(response1);
+  auto received = fuse_.recvResponse();
+  checkLookupResponse(received, id1, response1);
+
+  // We don't have to respond in order; respond to request 3 before 2
+  auto response3 = genRandomLookupResponse(19);
+  req3.promise.setValue(response3);
+  received = fuse_.recvResponse();
+  checkLookupResponse(received, id3, response3);
+
+  // The completion future still shouldn't be ready since there is still 1
+  // request outstanding.
+  EXPECT_FALSE(completeFuture.isReady());
+
+  auto response2 = genRandomLookupResponse(12);
+  req2.promise.setValue(response2);
+  received = fuse_.recvResponse();
+  checkLookupResponse(received, id2, response2);
+
+  // TODO: FuseChannel unfortunately doesn't mark requests as finished when it
+  // sends the response.  It doesn't clean up its outstanding request data
+  // until the folly::future::detail::Core object associated with the request
+  // is destroyed.
+  //
+  // Therefore completeFuture won't get invoked now until we destroy our
+  // promises, even though they have already been fulfilled.
+  //
+  // It would probably be better to make FuseChannel clean up the outstanding
+  // request data when it sends the reply.
+  req1.promise = Promise<fuse_entry_out>::makeEmpty();
+  req2.promise = Promise<fuse_entry_out>::makeEmpty();
+  EXPECT_FALSE(completeFuture.isReady())
+      << "remove this entire TODO block if/when we change FuseChannel "
+      << "to remove outstanding request data when it sends the response";
+  req3.promise = Promise<fuse_entry_out>::makeEmpty();
+
+  // The completion future should be ready now that the last request
+  // is done.
+  EXPECT_TRUE(completeFuture.isReady());
+  std::move(completeFuture).get(100ms);
 }

@@ -87,6 +87,8 @@ class FakeFuse {
       uint32_t maxReadahead = 0,
       uint32_t flags = 0);
 
+  uint32_t sendLookup(uint64_t inode, folly::StringPiece pathComponent);
+
  private:
   FakeFuse(FakeFuse const&) = delete;
   FakeFuse& operator=(FakeFuse const&) = delete;

@@ -714,8 +714,8 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 }
 
 void EdenMount::createFuseChannel(folly::File fuseDevice) {
-  channel_ = std::make_unique<FuseChannel>(
-      std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get());
+  channel_.reset(new FuseChannel(
+      std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get()));
 }
 
 void EdenMount::fuseInitSuccessful(

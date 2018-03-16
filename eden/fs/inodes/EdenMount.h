@@ -673,7 +673,7 @@ class EdenMount {
   /**
    * The associated fuse channel to the kernel.
    */
-  std::unique_ptr<fusell::FuseChannel> channel_;
+  std::unique_ptr<fusell::FuseChannel, fusell::FuseChannelDeleter> channel_;
 
   /**
    * The clock.  This is also available as serverState_->getClock().

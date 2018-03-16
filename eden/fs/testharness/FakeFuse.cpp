@@ -19,6 +19,7 @@
 
 using namespace std::literals::chrono_literals;
 using folly::ByteRange;
+using folly::StringPiece;
 using std::string;
 
 namespace facebook {
@@ -131,6 +132,10 @@ uint32_t FakeFuse::sendInitRequest(
   initArg.flags = flags;
 
   return sendRequest(FUSE_INIT, FUSE_ROOT_ID, initArg);
+}
+
+uint32_t FakeFuse::sendLookup(uint64_t inode, StringPiece pathComponent) {
+  return sendRequest(FUSE_LOOKUP, inode, folly::ByteRange(pathComponent));
 }
 
 } // namespace eden
