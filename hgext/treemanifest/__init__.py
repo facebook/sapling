@@ -263,6 +263,8 @@ def getrepocaps(orig, repo, *args, **kwargs):
     caps = orig(repo, *args, **kwargs)
     if treeenabled(repo.ui):
         caps['treemanifest'] = ('True',)
+        if repo.svfs.treemanifestserver:
+            caps['treemanifestserver'] = ('True',)
     return caps
 
 def _collectmanifest(orig, repo, striprev):
@@ -1575,7 +1577,8 @@ def _registerbundle2parts():
 
         # Only add trees if we have them
         sendtrees = shallowbundle.cansendtrees(pushop.repo,
-                                               pushop.outgoing.missing)
+                                               pushop.outgoing.missing,
+                                               b2caps=bundler.capabilities)
         if sendtrees != shallowbundle.NoTrees and pushop.outgoing.missing:
             part = createtreepackpart(pushop.repo, pushop.outgoing,
                                       TREEGROUP_PARTTYPE2,
@@ -1594,7 +1597,9 @@ def _registerbundle2parts():
             return
 
         outgoing = exchange._computeoutgoing(repo, heads, common)
-        sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing)
+        sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing,
+                                               bundlecaps=bundlecaps,
+                                               b2caps=b2caps)
         if sendtrees != shallowbundle.NoTrees:
             part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
                                       sendtrees=sendtrees)
@@ -2104,7 +2109,8 @@ def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
     orig(ui, repo, bundler, source, outgoing, opts)
 
     # Only add trees if we have them
-    sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing)
+    sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing,
+                                           b2caps=bundler.capabilities)
     if sendtrees != shallowbundle.NoTrees:
         part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
                                   sendtrees=sendtrees)

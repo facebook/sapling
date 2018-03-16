@@ -593,6 +593,30 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   $ hg -R ../master strip -q -r tip~3
   $ hg phase -dfr tip~3
 
+Test pushing from a public treeonly client to a treeonly server *with* pushrebase
+(it should send tree data, versus p2p pushes which wouldnt)
+  $ hg phase -pr tip~2
+  $ hg push -r . --config extensions.pushrebase=! -f
+  pushing to ssh://user@dummy/master
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 4 changesets with 3 changes to 2 files (+1 heads)
+  $ hg -R ../master log -r tip --stat
+  changeset:   7:11c4fc95a874
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     pushable treeonly commit
+  
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg -R ../master strip -r tip~3
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/7ec3c5c54734-d6767557-backup.hg
+  $ hg phase -dfr tip~3
+
 Test pushing from a treeonly client to a treeonly server *with* pushrebase
 
   $ hg push --to master

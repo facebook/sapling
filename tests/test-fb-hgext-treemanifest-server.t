@@ -75,7 +75,7 @@ Test committing auto-downloads server trees and produces local trees
   54cbf534b62b  000000000000  99            (missing)
   
 
-Test pushing flat manifests only without pushrebase creates trees
+Test pushing only flat manifests without pushrebase creates trees
   $ hg push --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes

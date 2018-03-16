@@ -109,7 +109,9 @@ class shallowcg1packer(changegroup.cg1packer):
         sendtrees = NoTrees
         if (not fastpathlinkrev and
             util.safehasattr(repo, 'prefetchtrees')):
-            sendtrees = cansendtrees(repo, mfs.values())
+            sendtrees = cansendtrees(repo, mfs.values(), source=source,
+                                     bundlecaps=self._bundlecaps,
+                                     b2caps=self._b2caps)
 
         if self._cansendflat(mfs.keys()):
             # In this code path, generating the manifests populates fnodes for
@@ -486,7 +488,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
     return len(revisiondatas), newfiles
 
-def cansendtrees(repo, nodes, source=None):
+def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     """Sending trees has the following rules:
 
     Clients:
@@ -500,6 +502,10 @@ def cansendtrees(repo, nodes, source=None):
     bulk downloaded.
     """
 
+    if b2caps is None:
+        b2caps = {}
+    if bundlecaps is None:
+        bundlecaps = set()
     sendtrees = repo.ui.configbool('treemanifest', 'sendtrees')
     treeonly = repo.ui.configbool('treemanifest', 'treeonly')
 
@@ -519,6 +525,11 @@ def cansendtrees(repo, nodes, source=None):
         # If we're not in treeonly mode, we will consult the manifests when
         # getting ready to send the flat manifests. This will cause tree
         # manifest lookups, so let's go ahead and bulk prefetch them.
+        prefetch = AllTrees
+    elif ('treemanifestserver' in bundlecaps or
+          'True' in b2caps.get('treemanifestserver', [])):
+        # If we're talking to the main server, always send everything.
+        result = AllTrees
         prefetch = AllTrees
     else:
         # If we are a client, don't send public commits since we probably
