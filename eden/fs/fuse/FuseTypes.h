@@ -41,15 +41,6 @@ struct InodeNumber {
     assert(0 != rawValue_);
   }
 
-  enum NoCheck { NO_CHECK };
-
-  /**
-   * Initializes the inode number without checking it so the constructor is
-   * guaranteed to be constexpr.
-   */
-  constexpr explicit InodeNumber(NoCheck, uint64_t ino) noexcept
-      : rawValue_{ino} {}
-
   /**
    * Thrift does not support unsigned numbers, so it's common to instantiate
    * InodeNumber from int64_t.
@@ -138,9 +129,12 @@ struct FuseChannelData {
 
 } // namespace fusell
 
+constexpr fusell::InodeNumber operator""_ino(unsigned long long ino) {
+  return fusell::InodeNumber{ino};
+}
+
 /// The inode number of the mount's root directory.
-constexpr fusell::InodeNumber kRootNodeId =
-    fusell::InodeNumber{fusell::InodeNumber::NO_CHECK, 1};
+constexpr fusell::InodeNumber kRootNodeId = 1_ino;
 
 } // namespace eden
 } // namespace facebook
