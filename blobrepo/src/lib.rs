@@ -47,6 +47,7 @@ extern crate memlinknodes;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
+extern crate rocksdb;
 extern crate storage_types;
 
 mod repo;

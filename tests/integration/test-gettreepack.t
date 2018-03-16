@@ -30,7 +30,7 @@ make a few commits on the server
 
 blobimport them into Mononoke storage and start Mononoke
   $ cd ..
-  $ blobimport --blobstore files --linknodes repo-hg repo
+  $ blobimport repo-hg repo
 
 start mononoke
 

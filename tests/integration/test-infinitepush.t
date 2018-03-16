@@ -17,7 +17,7 @@ setup repo-push and repo-pull
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
 
-  $ blobimport --blobstore files --linknodes repo-hg repo
+  $ blobimport repo-hg repo
 
 start mononoke
 

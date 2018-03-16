@@ -104,7 +104,7 @@ setup repo2
   o  3903775176ed a
   
   $ cd ..
-  $ blobimport --blobstore files --linknodes repo-hg repo
+  $ blobimport repo-hg repo
 
 start mononoke
 

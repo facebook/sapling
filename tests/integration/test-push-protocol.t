@@ -22,7 +22,7 @@ setup repo
   
 
   $ cd $TESTTMP
-  $ blobimport --blobstore files --linknodes repo-hg repo
+  $ blobimport repo-hg repo
 
 setup two repos: one will be used to push from, another will be used
 to pull these pushed commits

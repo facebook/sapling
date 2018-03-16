@@ -45,7 +45,7 @@ EOF
   mkdir repos
   cat > repos/repo <<CONFIG
 path="$TESTTMP/repo"
-repotype="blob:files"
+repotype="blob:rocks"
 repoid=0
 CONFIG
   hg add -q repos
@@ -56,7 +56,7 @@ CONFIG
 }
 
 function blobimport {
-  $MONONOKE_BLOBIMPORT "$@" >> "$TESTTMP/blobimport.out" 2>&1
+  $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes "$@" >> "$TESTTMP/blobimport.out" 2>&1
   reponame=$_
   mkdir -p "$reponame"/.hg
   mkdir -p "$reponame"/books

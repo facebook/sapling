@@ -40,6 +40,7 @@ use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, MPath, Ma
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
+use rocksdb;
 use storage_types::Version;
 use tokio_core::reactor::Remote;
 
@@ -109,7 +110,9 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
         let bookmarks = FileBookmarks::open(path.join("books"))
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-        let blobstore = Rocksblob::open(path.join("blobs"))
+
+        let options = rocksdb::Options::new().create_if_missing(true);
+        let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
         let linknodes = FileLinknodes::open(path.join("linknodes"))
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;

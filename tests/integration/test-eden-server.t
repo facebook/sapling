@@ -115,7 +115,7 @@ Add commit with a directory
   $ echo "private_key=\"$TESTDIR/edenservertest.key\"" >> $TESTTMP/config
   $ echo "ca_pem_file=\"$TESTDIR/edenservertest.crt\"" >> $TESTTMP/config
  
-  $ blobimport --postpone-compaction -d --blobstore rocksdb --linknodes repo $TESTTMP/blobrepo
+  $ blobimport --postpone-compaction -d repo $TESTTMP/blobrepo
   $ grep changeset < $TESTTMP/blobimport.out
   D* 0: changeset 3903775176ed42b1458a6281db4a0ccf4d9f287a (glob)
   D* 1: changeset 4dabaf45f54add88ca2797dfdeb00a7d55144243 (glob)
