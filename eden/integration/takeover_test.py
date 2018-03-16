@@ -20,8 +20,8 @@ class TakeoverTest:
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize
         self.page2 = "2" * self.pagesize
-        self.repo.write_file('hello', self.page1 + self.page2)
-        self.repo.write_file('deleted', self.page1 + self.page2)
+        self.repo.write_file('tree/hello', self.page1 + self.page2)
+        self.repo.write_file('tree/deleted', self.page1 + self.page2)
         self.repo.commit('Initial commit.')
 
     def select_storage_engine(self):
@@ -32,8 +32,8 @@ class TakeoverTest:
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
     def test_takeover(self):
-        hello = os.path.join(self.mount, 'hello')
-        deleted = os.path.join(self.mount, 'deleted')
+        hello = os.path.join(self.mount, 'tree/hello')
+        deleted = os.path.join(self.mount, 'tree/deleted')
         deleted_local = os.path.join(self.mount, 'deleted-local')
 
         # To test our handling of unlinked inodes, in addition
@@ -114,3 +114,22 @@ class TakeoverTest:
         with open(hello, 'r') as f:
             self.assertEqual(self.page1, f.read(self.pagesize))
             self.assertEqual(self.page2, f.read(self.pagesize))
+
+    def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(self):
+        hello = os.path.join(self.mount, 'tree/hello')
+
+        fd = os.open(hello, os.O_RDONLY)
+        try:
+            inode_number = os.fstat(fd).st_ino
+
+            self.eden.graceful_restart()
+
+            self.assertEqual(inode_number, os.fstat(fd).st_ino)
+        finally:
+            os.close(fd)
+
+        fd = os.open(hello, os.O_RDONLY)
+        try:
+            self.assertEqual(inode_number, os.fstat(fd).st_ino)
+        finally:
+            os.close(fd)
