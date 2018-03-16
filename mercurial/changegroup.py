@@ -512,7 +512,7 @@ class headerlessfixup(object):
 class cg1packer(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     version = '01'
-    def __init__(self, repo, bundlecaps=None):
+    def __init__(self, repo, bundlecaps=None, b2caps=None):
         """Given a source repo, construct a bundler.
 
         bundlecaps is optional and can be used to specify the set of
@@ -523,7 +523,10 @@ class cg1packer(object):
         # Set of capabilities we can use to build the bundle.
         if bundlecaps is None:
             bundlecaps = set()
+        if b2caps is None:
+            b2caps = {}
         self._bundlecaps = bundlecaps
+        self._b2caps = b2caps
         # experimental config: bundle.reorder
         reorder = repo.ui.config('bundle', 'reorder')
         if reorder == 'auto':
@@ -845,8 +848,8 @@ class cg2packer(cg1packer):
     version = '02'
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
 
-    def __init__(self, repo, bundlecaps=None):
-        super(cg2packer, self).__init__(repo, bundlecaps)
+    def __init__(self, repo, bundlecaps=None, b2caps=None):
+        super(cg2packer, self).__init__(repo, bundlecaps, b2caps=b2caps)
         if self._reorder is None:
             # Since generaldelta is directly supported by cg2, reordering
             # generally doesn't help, so we disable it by default (treating
@@ -951,9 +954,9 @@ def safeversion(repo):
     assert versions
     return min(versions)
 
-def getbundler(version, repo, bundlecaps=None):
+def getbundler(version, repo, bundlecaps=None, b2caps=None):
     assert version in supportedoutgoingversions(repo)
-    return _packermap[version][0](repo, bundlecaps)
+    return _packermap[version][0](repo, bundlecaps, b2caps=b2caps)
 
 def getunbundler(version, fh, alg, extras=None):
     return _packermap[version][1](fh, alg, extras=extras)
@@ -974,8 +977,8 @@ def makechangegroup(repo, outgoing, version, source, fastpath=False,
                         {'clcount': len(outgoing.missing) })
 
 def makestream(repo, outgoing, version, source, fastpath=False,
-               bundlecaps=None):
-    bundler = getbundler(version, repo, bundlecaps=bundlecaps)
+               bundlecaps=None, b2caps=None):
+    bundler = getbundler(version, repo, bundlecaps=bundlecaps, b2caps=b2caps)
 
     repo = repo.unfiltered()
     commonrevs = outgoing.common

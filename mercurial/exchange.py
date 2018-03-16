@@ -789,7 +789,7 @@ def _pushb2ctx(pushop, bundler):
             raise ValueError(_('no common changegroup version'))
         version = max(cgversions)
     cgstream = changegroup.makestream(pushop.repo, pushop.outgoing, version,
-                                      'push')
+                                      'push', b2caps=b2caps)
     cgpart = bundler.newpart('changegroup', data=cgstream)
     if cgversions:
         cgpart.addparam('version', version)
