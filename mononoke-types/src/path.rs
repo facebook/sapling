@@ -16,6 +16,7 @@ use bincode;
 use quickcheck::{Arbitrary, Gen};
 
 use errors::*;
+use thrift;
 
 lazy_static! {
     pub static ref DOT: MPathElement = MPathElement(b".".to_vec());
@@ -132,6 +133,15 @@ impl MPathElement {
         MPathElement(vec![])
     }
 
+    #[inline]
+    pub(crate) fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
+        Self::verify(&element.0).context(ErrorKind::InvalidThrift(
+            "MPathElement".into(),
+            "invalid path element".into(),
+        ))?;
+        Ok(MPathElement(element.0))
+    }
+
     fn verify(p: &[u8]) -> Result<()> {
         if p.contains(&0) {
             bail_err!(ErrorKind::InvalidPath(
@@ -165,6 +175,11 @@ impl MPathElement {
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[inline]
+    pub(crate) fn into_thrift(self) -> thrift::MPathElement {
+        thrift::MPathElement(self.0)
     }
 }
 
@@ -204,6 +219,17 @@ impl MPath {
     /// Create a new empty `MPath`.
     pub fn empty() -> Self {
         MPath { elements: vec![] }
+    }
+
+    pub(crate) fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
+        let elements: Result<Vec<_>> = mpath
+            .0
+            .into_iter()
+            .map(|elem| MPathElement::from_thrift(elem))
+            .collect();
+        Ok(MPath {
+            elements: elements?,
+        })
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -263,6 +289,15 @@ impl MPath {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.elements.is_empty()
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::MPath {
+        thrift::MPath(
+            self.elements
+                .into_iter()
+                .map(|elem| elem.into_thrift())
+                .collect(),
+        )
     }
 }
 
@@ -433,6 +468,20 @@ mod test {
         fn path_len(p: MPath) -> bool {
             p.len() == p.to_vec().len()
         }
+
+        fn path_thrift_roundtrip(p: MPath) -> bool {
+            let thrift_path = p.clone().into_thrift();
+            let p2 = MPath::from_thrift(thrift_path)
+                .expect("converting a valid Thrift structure should always work");
+            p == p2
+        }
+
+        fn pathelement_thrift_roundtrip(p: MPathElement) -> bool {
+            let thrift_pathelement = p.clone().into_thrift();
+            let p2 = MPathElement::from_thrift(thrift_pathelement)
+                .expect("converting a valid Thrift structure should always works");
+            p == p2
+        }
     }
 
     /// Verify that arbitrary instances with empty_allowed set to false are not empty.
@@ -497,6 +546,15 @@ mod test {
     #[test]
     fn bad_path3() {
         assert!(MPath::new(b"ab\0cde").is_err());
+    }
+
+    #[test]
+    fn bad_path_thrift() {
+        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"abc\0".to_vec())]);
+        MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded null");
+
+        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"def/ghi".to_vec())]);
+        MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded slash");
     }
 
     #[test]
