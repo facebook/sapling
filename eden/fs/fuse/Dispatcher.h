@@ -8,18 +8,20 @@
  *
  */
 #pragma once
-#include <errno.h>
-#include <folly/Exception.h>
+
 #include <folly/Portability.h>
 #include <folly/Range.h>
-#include <folly/ThreadLocal.h>
-#include <folly/futures/Future.h>
 #include <sys/statvfs.h>
-#include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FileHandleMap.h"
-#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+namespace folly {
+template <class T, class Tag, class AccessMode>
+class ThreadLocal;
+template <class T>
+class Future;
+}; // namespace folly
 
 namespace facebook {
 namespace eden {
@@ -32,10 +34,13 @@ namespace fusell {
   } while (0)
 
 class Dispatcher;
+class EdenStats;
+class EdenStatsTag;
 class RequestData;
 class FileHandle;
 class DirHandle;
 class MountPoint;
+using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
 
 class Dispatcher {
   fuse_init_out connInfo_;

@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <sysexits.h>
 #include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"

@@ -8,10 +8,9 @@
  *
  */
 #pragma once
-#include <folly/ThreadLocal.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
-#include <sys/stat.h>
+#include <atomic>
 #include <utility>
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/FuseChannel.h"

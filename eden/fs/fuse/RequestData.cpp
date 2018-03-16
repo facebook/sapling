@@ -7,10 +7,11 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "RequestData.h"
-#include "Dispatcher.h"
+#include "eden/fs/fuse/RequestData.h"
 
 #include <folly/experimental/logging/xlog.h>
+
+#include "eden/fs/fuse/Dispatcher.h"
 
 using namespace folly;
 using namespace std::chrono;
