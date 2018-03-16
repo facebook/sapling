@@ -156,7 +156,8 @@ EdenServer::EdenServer(
       configPath_(configPath),
       serverState_{std::move(userInfo),
                    std::move(privHelper),
-                   std::make_shared<EdenCPUThreadPool>()} {}
+                   std::make_shared<EdenCPUThreadPool>(),
+                   std::make_shared<UnixClock>()} {}
 
 EdenServer::~EdenServer() {}
 
@@ -582,10 +583,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   const bool doTakeover = optionalTakeover.hasValue();
 
   auto edenMount = EdenMount::create(
-      std::move(initialConfig),
-      std::move(objectStore),
-      &serverState_,
-      std::make_shared<UnixClock>());
+      std::move(initialConfig), std::move(objectStore), &serverState_);
 
   auto initFuture = edenMount->initialize(optionalTakeover);
   return initFuture.then(

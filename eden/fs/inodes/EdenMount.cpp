@@ -158,19 +158,16 @@ static std::atomic<uint16_t> mountGeneration{0};
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    ServerState* serverState,
-    std::shared_ptr<Clock> clock) {
+    ServerState* serverState) {
   return std::shared_ptr<EdenMount>{
-      new EdenMount{
-          std::move(config), std::move(objectStore), serverState, clock},
+      new EdenMount{std::move(config), std::move(objectStore), serverState},
       EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
     std::unique_ptr<ClientConfig> config,
     std::unique_ptr<ObjectStore> objectStore,
-    ServerState* serverState,
-    std::shared_ptr<Clock> clock)
+    ServerState* serverState)
     : serverState_(serverState),
       config_(std::move(config)),
       inodeMap_{new InodeMap(this)},
@@ -180,11 +177,11 @@ EdenMount::EdenMount(
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
-      lastCheckoutTime_{clock->getRealtime()},
+      lastCheckoutTime_{serverState_->getClock()->getRealtime()},
       path_(config_->getMountPath()),
       uid_(getuid()),
       gid_(getgid()),
-      clock_(clock) {}
+      clock_(serverState_->getClock()) {}
 
 folly::Future<folly::Unit> EdenMount::initialize(
     const folly::Optional<TakeoverData::MountInfo>& takeover) {

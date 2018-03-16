@@ -101,8 +101,7 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      ServerState* serverState,
-      std::shared_ptr<Clock> clock);
+      ServerState* serverState);
 
   /**
    * Asynchronous EdenMount initialization - post instantiation.
@@ -530,8 +529,7 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<ClientConfig> config,
       std::unique_ptr<ObjectStore> objectStore,
-      ServerState* serverState,
-      std::shared_ptr<Clock> clock);
+      ServerState* serverState);
 
   // Forbidden copy constructor and assignment operator
   EdenMount(EdenMount const&) = delete;
@@ -677,6 +675,11 @@ class EdenMount {
    */
   std::unique_ptr<fusell::FuseChannel> channel_;
 
+  /**
+   * The clock.  This is also available as serverState_->getClock().
+   * We still keep it as a separate member variable for now so that getClock()
+   * can be inline without having to include ServerState.h in this file.
+   */
   std::shared_ptr<Clock> clock_;
 };
 

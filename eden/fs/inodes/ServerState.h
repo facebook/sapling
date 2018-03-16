@@ -18,6 +18,7 @@
 namespace facebook {
 namespace eden {
 
+class Clock;
 class PrivHelper;
 class UnboundedQueueThreadPool;
 
@@ -32,7 +33,8 @@ class ServerState {
   ServerState(
       UserInfo userInfo,
       std::shared_ptr<PrivHelper> privHelper,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+      std::shared_ptr<Clock> clock);
   ~ServerState();
 
   /**
@@ -85,12 +87,20 @@ class ServerState {
     return threadPool_;
   }
 
+  /**
+   * Get the Clock.
+   */
+  const std::shared_ptr<Clock>& getClock() const {
+    return clock_;
+  }
+
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   fusell::ThreadLocalEdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
+  std::shared_ptr<Clock> clock_;
 };
 } // namespace eden
 } // namespace facebook

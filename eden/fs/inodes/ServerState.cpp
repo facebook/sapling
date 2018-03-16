@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/ServerState.h"
 
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 namespace facebook {
@@ -18,10 +19,12 @@ namespace eden {
 ServerState::ServerState(
     UserInfo userInfo,
     std::shared_ptr<PrivHelper> privHelper,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool)
+    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
+    std::shared_ptr<Clock> clock)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
-      threadPool_{std::move(threadPool)} {}
+      threadPool_{std::move(threadPool)},
+      clock_{std::move(clock)} {}
 
 ServerState::~ServerState() {}
 
