@@ -819,8 +819,8 @@ void FuseChannel::processSession() {
         XLOG(ERR) << "read truncated message from kernel fuse device: len="
                   << arg_size;
         requestSessionExit(StopReason::FUSE_TRUNCATED_REQUEST);
-        break;
       }
+      return;
     }
 
     const auto* header = reinterpret_cast<fuse_in_header*>(buf.data());
