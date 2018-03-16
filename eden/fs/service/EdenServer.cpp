@@ -154,8 +154,9 @@ EdenServer::EdenServer(
     : edenDir_(edenDir),
       etcEdenDir_(etcEdenDir),
       configPath_(configPath),
-      serverState_{std::move(userInfo), std::move(privHelper)},
-      threadPool_(std::make_shared<EdenCPUThreadPool>()) {}
+      serverState_{std::move(userInfo),
+                   std::move(privHelper),
+                   std::make_shared<EdenCPUThreadPool>()} {}
 
 EdenServer::~EdenServer() {}
 
@@ -510,7 +511,7 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
 folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
     std::shared_ptr<EdenMount> edenMount) {
   // Start up the fuse workers.
-  return edenMount->startFuse(getMainEventBase(), threadPool_);
+  return edenMount->startFuse();
 }
 
 folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
@@ -567,8 +568,7 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
   // Start up the fuse workers.
   return folly::collectAll(futures).then(
       [this, edenMount, channelData = std::move(channelData)]() mutable {
-        return edenMount->takeoverFuse(
-            getMainEventBase(), threadPool_, std::move(channelData));
+        return edenMount->takeoverFuse(std::move(channelData));
       });
 }
 
@@ -762,7 +762,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
     return make_shared<HgBackingStore>(
-        repoPath, localStore_.get(), threadPool_.get());
+        repoPath, localStore_.get(), serverState_.getThreadPool().get());
   } else if (type == "git") {
     const auto repoPath = realpath(name);
     return make_shared<GitBackingStore>(repoPath, localStore_.get());

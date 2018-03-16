@@ -23,8 +23,6 @@ using folly::ScopedEventBaseThread;
 using std::make_shared;
 
 TEST(FuseTest, initMount) {
-  ScopedEventBaseThread evbThread("test.main");
-
   auto builder1 = FakeTreeBuilder();
   builder1.setFile("src/main.c", "int main() { return 0; }\n");
   builder1.setFile("src/test/test.c", "testy tests");
@@ -33,11 +31,8 @@ TEST(FuseTest, initMount) {
   auto fuse = make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  constexpr size_t threadCount = 2;
-  auto threadPool =
-      make_shared<UnboundedQueueThreadPool>(threadCount, "EdenCPUThread");
   auto initFuture = testMount.getEdenMount()
-                        ->startFuse(evbThread.getEventBase(), threadPool)
+                        ->startFuse()
                         .then([] { XLOG(INFO) << "startFuse() succeeded"; })
                         .onError([&](const folly::exception_wrapper& ew) {
                           ADD_FAILURE() << "startFuse() failed: "

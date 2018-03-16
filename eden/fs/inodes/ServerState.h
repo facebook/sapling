@@ -9,6 +9,8 @@
  */
 #pragma once
 
+#include <memory>
+
 #include "eden/fs/fuse/EdenStats.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -17,6 +19,7 @@ namespace facebook {
 namespace eden {
 
 class PrivHelper;
+class UnboundedQueueThreadPool;
 
 /**
  * ServerState contains state shared across multiple mounts.
@@ -26,8 +29,10 @@ class PrivHelper;
  */
 class ServerState {
  public:
-  ServerState();
-  ServerState(UserInfo userInfo, std::shared_ptr<PrivHelper> privHelper);
+  ServerState(
+      UserInfo userInfo,
+      std::shared_ptr<PrivHelper> privHelper,
+      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
   ~ServerState();
 
   /**
@@ -71,11 +76,21 @@ class ServerState {
     return privHelper_.get();
   }
 
+  /**
+   * Get the thread pool.
+   *
+   * Adding new tasks to this thread pool executor will never block.
+   */
+  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const {
+    return threadPool_;
+  }
+
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
   fusell::ThreadLocalEdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
+  std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
 };
 } // namespace eden
 } // namespace facebook

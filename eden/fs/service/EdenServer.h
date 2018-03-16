@@ -50,7 +50,6 @@ namespace eden {
 
 class BackingStore;
 class Dirstate;
-class EdenCPUThreadPool;
 class EdenServiceHandler;
 class LocalStore;
 class MountInfo;
@@ -374,13 +373,6 @@ class EdenServer : private TakeoverHandler {
    * this, so we do not need synchronization when reading it.
    */
   folly::EventBase* mainEventBase_;
-
-  /**
-   * A CPU executor for running arbitrary tasks.
-   * This is here because we need to keep it alive for the duration
-   * of the server lifetime.
-   */
-  std::shared_ptr<EdenCPUThreadPool> threadPool_;
 };
 } // namespace eden
 } // namespace facebook

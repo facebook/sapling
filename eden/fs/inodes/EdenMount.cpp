@@ -361,6 +361,9 @@ EdenMount::shutdownImpl(bool doTakeover) {
         return std::make_tuple(fileHandleMap, inodeMap);
       });
 }
+const shared_ptr<UnboundedQueueThreadPool>& EdenMount::getThreadPool() const {
+  return serverState_->getThreadPool();
+}
 
 FuseChannel* EdenMount::getFuseChannel() const {
   return channel_.get();
@@ -675,9 +678,7 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
-folly::Future<folly::Unit> EdenMount::startFuse(
-    folly::EventBase* eventBase,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
+folly::Future<folly::Unit> EdenMount::startFuse() {
   return folly::makeFutureWith([&]() {
     if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
       throw std::runtime_error("mount point has already been started");
@@ -686,7 +687,7 @@ folly::Future<folly::Unit> EdenMount::startFuse(
     auto fuseDevice =
         serverState_->getPrivHelper()->fuseMount(path_.stringPiece());
 
-    createFuseChannel(std::move(fuseDevice), eventBase, threadPool);
+    createFuseChannel(std::move(fuseDevice));
     return channel_->initialize()
         .then([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
           fuseInitSuccessful(std::move(fuseCompleteFuture));
@@ -698,16 +699,12 @@ folly::Future<folly::Unit> EdenMount::startFuse(
   });
 }
 
-void EdenMount::takeoverFuse(
-    folly::EventBase* eventBase,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-    FuseChannelData takeoverData) {
+void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   if (!doStateTransition(State::UNINITIALIZED, State::STARTING)) {
     throw std::runtime_error("mount point has already been started");
   }
 
-  createFuseChannel(
-      std::move(takeoverData.fd), eventBase, std::move(threadPool));
+  createFuseChannel(std::move(takeoverData.fd));
 
   try {
     auto fuseCompleteFuture =
@@ -719,12 +716,7 @@ void EdenMount::takeoverFuse(
   }
 }
 
-void EdenMount::createFuseChannel(
-    folly::File fuseDevice,
-    folly::EventBase* eventBase,
-    std::shared_ptr<UnboundedQueueThreadPool> threadPool) {
-  eventBase_ = eventBase;
-  threadPool_ = std::move(threadPool);
+void EdenMount::createFuseChannel(folly::File fuseDevice) {
   channel_ = std::make_unique<FuseChannel>(
       std::move(fuseDevice), path_, FLAGS_fuseNumThreads, dispatcher_.get());
 }
@@ -734,7 +726,7 @@ void EdenMount::fuseInitSuccessful(
   doStateTransition(State::STARTING, State::RUNNING);
 
   std::move(fuseCompleteFuture)
-      .via(eventBase_)
+      .via(serverState_->getThreadPool().get())
       .then([this] {
         // In case we are performing a graceful restart,
         // extract the fuse device now.

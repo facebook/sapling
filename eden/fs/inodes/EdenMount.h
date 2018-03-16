@@ -216,18 +216,9 @@ class EdenMount {
   }
 
   /**
-   * Returns the EventBase for this mount.
-   */
-  folly::EventBase* getEventBase() const {
-    return eventBase_;
-  }
-
-  /**
    * Returns the server's thread pool.
    */
-  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const {
-    return threadPool_;
-  }
+  const std::shared_ptr<UnboundedQueueThreadPool>& getThreadPool() const;
 
   /**
    * Returns the Clock with which this mount was configured.
@@ -420,9 +411,7 @@ class EdenMount {
    * successfully mounted, or as soon as the mount fails (state transitions
    * to RUNNING or FUSE_ERROR).
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(
-      folly::EventBase* eventBase,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse();
 
   /**
    * Take over a FUSE channel for an existing mount point.
@@ -430,10 +419,7 @@ class EdenMount {
    * This spins up worker threads to service the existing FUSE channel and
    * returns immediately, or throws an exception on error.
    */
-  void takeoverFuse(
-      folly::EventBase* eventBase,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool,
-      fusell::FuseChannelData takeoverData);
+  void takeoverFuse(fusell::FuseChannelData takeoverData);
 
   /**
    * Obtains a future that will complete once the fuse channel has wound down.
@@ -564,10 +550,7 @@ class EdenMount {
   /**
    * Construct the channel_ member variable.
    */
-  void createFuseChannel(
-      folly::File fuseDevice,
-      folly::EventBase* eventBase,
-      std::shared_ptr<UnboundedQueueThreadPool> threadPool);
+  void createFuseChannel(folly::File fuseDevice);
 
   /**
    * Once the FuseChannel has been initialized, set up callbacks to clean up
@@ -693,18 +676,6 @@ class EdenMount {
    * The associated fuse channel to the kernel.
    */
   std::unique_ptr<fusell::FuseChannel> channel_;
-
-  /**
-   * The main eventBase of the program; this is used to join and dispatch
-   * promises when waiting for the fuse channel to wind down.
-   */
-  folly::EventBase* eventBase_{nullptr};
-
-  /**
-   * The server's thread pool.  Notably, it is always
-   * safe to queue work into this pool.
-   */
-  std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
 
   std::shared_ptr<Clock> clock_;
 };

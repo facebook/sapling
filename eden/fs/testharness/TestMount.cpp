@@ -33,6 +33,7 @@
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -48,6 +49,11 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+DEFINE_int32(
+    num_eden_test_threads,
+    2,
+    "the number of eden CPU worker threads to create during unit tests");
+
 namespace facebook {
 namespace eden {
 
@@ -58,7 +64,11 @@ bool TestMountFile::operator==(const TestMountFile& other) const {
 
 TestMount::TestMount()
     : privHelper_{make_shared<FakePrivHelper>()},
-      serverState_{UserInfo::lookup(), privHelper_} {
+      serverState_{UserInfo::lookup(),
+                   privHelper_,
+                   make_shared<UnboundedQueueThreadPool>(
+                       FLAGS_num_eden_test_threads,
+                       "EdenCPUThread")} {
   // Initialize the temporary directory.
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
