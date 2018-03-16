@@ -164,27 +164,44 @@ def _parsetemplate(tmpl, start, stop, quote=''):
     sepchars = '{' + quote
     pos = start
     p = parser.parser(elements)
-    while pos < stop:
-        n = min((tmpl.find(c, pos, stop) for c in sepchars),
-                key=lambda n: (n < 0, n))
-        if n < 0:
-            parsed.append(('string', parser.unescapestr(tmpl[pos:stop])))
-            pos = stop
-            break
-        c = tmpl[n:n + 1]
-        bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
-        if bs % 2 == 1:
-            # escaped (e.g. '\{', '\\\{', but not '\\{')
-            parsed.append(('string', parser.unescapestr(tmpl[pos:n - 1]) + c))
-            pos = n + 1
-            continue
-        if n > pos:
-            parsed.append(('string', parser.unescapestr(tmpl[pos:n])))
-        if c == quote:
-            return parsed, n + 1
+    try:
+        while pos < stop:
+            n = min((tmpl.find(c, pos, stop) for c in sepchars),
+                    key=lambda n: (n < 0, n))
+            if n < 0:
+                parsed.append(('string', parser.unescapestr(tmpl[pos:stop])))
+                pos = stop
+                break
+            c = tmpl[n:n + 1]
+            bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
+            if bs % 2 == 1:
+                # escaped (e.g. '\{', '\\\{', but not '\\{')
+                parsed.append(('string',
+                               parser.unescapestr(tmpl[pos:n - 1]) + c))
+                pos = n + 1
+                continue
+            if n > pos:
+                parsed.append(('string', parser.unescapestr(tmpl[pos:n])))
+            if c == quote:
+                return parsed, n + 1
 
-        parseres, pos = p.parse(tokenize(tmpl, n + 1, stop, '}'))
-        parsed.append(parseres)
+            parseres, pos = p.parse(tokenize(tmpl, n + 1, stop, '}'))
+            parsed.append(parseres)
+
+    except error.ParseError as inst:
+        if len(inst.args) > 1:  # has location
+            loc = inst.args[1]
+            # Offset the caret location by the number of newlines before the
+            # location of the error, since we will replace one-char newlines
+            # with the two-char literal r'\n'.
+            offset = tmpl[:loc].count('\n')
+            tmpl = tmpl.replace('\n', br'\n')
+            # We want the caret to point to the place in the template that
+            # failed to parse, but in a hint we get a open paren at the
+            # start. Therefore, we print "loc" spaces (instead of "loc - 1")
+            # to line up the caret with the location of the error.
+            inst.hint = tmpl + '\n' + ' ' * (loc + offset) + '^ ' + _('here')
+        raise
 
     if quote:
         raise error.ParseError(_("unterminated string"), start)

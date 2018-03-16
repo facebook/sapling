@@ -2157,6 +2157,25 @@ Check that adding an arbitrary name shows up in log automatically
   $ hg --config extensions.names=../names.py log -r 0 --template '{bars}\n'
   foo
 
+Templater parse errors:
+
+simple error
+  $ hg log -r . -T '{shortest(node}'
+  hg: parse error at 15: unexpected token: end
+  ({shortest(node}
+                 ^ here)
+  [255]
+
+multi-line template with error
+  $ hg log -r . -T 'line 1
+  > line2
+  > {shortest(node}
+  > line4\nline5'
+  hg: parse error at 28: unexpected token: end
+  (line 1\nline2\n{shortest(node}\nline4\nline5
+                                ^ here)
+  [255]
+
   $ cd ..
 
 hg log -f dir across branches
