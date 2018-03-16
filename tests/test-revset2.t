@@ -691,6 +691,8 @@ issue2654: report a parse error if the revset was not completely parsed
 
   $ log '1 OR 2'
   hg: parse error at 2: invalid token
+  (1 OR 2
+     ^ here)
   [255]
 
 or operator should preserve ordering:
@@ -1563,6 +1565,8 @@ test in problematic encoding
 test error message of bad revset
   $ hg log -r 'foo\\'
   hg: parse error at 3: syntax error in revset 'foo\\'
+  (foo\\
+      ^ here)
   [255]
 
   $ cd ..

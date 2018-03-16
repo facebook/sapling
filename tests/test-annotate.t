@@ -810,6 +810,8 @@ check error cases
   [255]
   $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=[1])'
   hg: parse error at 43: not a prefix: [
+  (followlines(baz, 2:4, startrev=20, descend=[1])
+                                              ^ here)
   [255]
   $ hg log -r 'followlines(baz, 2:4, startrev=20, descend=a)'
   hg: parse error: descend argument must be a boolean

@@ -142,6 +142,8 @@ Invalid :pushrev raises appropriately
   $ hg --config 'paths.default:pushrev=(' push
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
   hg: parse error at 1: not a prefix: end
+  ((
+    ^ here)
   [255]
 
   $ cd ..

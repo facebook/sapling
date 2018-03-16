@@ -400,6 +400,8 @@ quoting needed
   4
   $ log 'date(this is a test)'
   hg: parse error at 10: unexpected token: symbol
+  (date(this is a test)
+             ^ here)
   [255]
   $ log 'date()'
   hg: parse error: date requires a string
@@ -409,6 +411,8 @@ quoting needed
   [255]
   $ log 'date('
   hg: parse error at 5: not a prefix: end
+  (date(
+        ^ here)
   [255]
   $ log 'date("\xy")'
   hg: parse error: invalid \x escape
@@ -615,18 +619,28 @@ parse errors of relation, subscript and relation-subscript operators:
 
   $ hg debugrevspec '[0]'
   hg: parse error at 0: not a prefix: [
+  ([0]
+   ^ here)
   [255]
   $ hg debugrevspec '.#'
   hg: parse error at 2: not a prefix: end
+  (.#
+     ^ here)
   [255]
   $ hg debugrevspec '#rel'
   hg: parse error at 0: not a prefix: #
+  (#rel
+   ^ here)
   [255]
   $ hg debugrevspec '.#rel[0'
   hg: parse error at 7: unexpected token: end
+  (.#rel[0
+          ^ here)
   [255]
   $ hg debugrevspec '.]'
   hg: parse error at 1: invalid token
+  (.]
+    ^ here)
   [255]
 
   $ hg debugrevspec '.#generations[a]'
@@ -1294,6 +1308,8 @@ test author
   6
   $ try 'grep(r"\")'
   hg: parse error at 7: unterminated string
+  (grep(r"\")
+          ^ here)
   [255]
   $ log 'head()'
   0
@@ -2736,3 +2752,13 @@ topo.firstbranch should accept any kind of expressions:
 
   $ cd ..
   $ cd repo
+
+test multiline revset with errors
+
+  $ hg log -r '
+  > . +
+  > .^ +'
+  hg: parse error at 9: not a prefix: end
+  ( . + .^ +
+            ^ here)
+  [255]

@@ -599,7 +599,11 @@ Empty revset will error at the revset layer
 
   $ fileset "status(' ', '4', added())"
   hg: parse error at 1: not a prefix: end
+  ( 
+    ^ here)
   [255]
   $ fileset "status('2', ' ', added())"
   hg: parse error at 1: not a prefix: end
+  ( 
+    ^ here)
   [255]
