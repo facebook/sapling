@@ -795,8 +795,14 @@ def calcdistance(repo, oldnode, newnode):
 # settling during bulk file change scenarios
 # https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
 def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
-               mergeancestor=False, labels=None, matcher=None, **kwargs):
-
+               mergeancestor=False, labels=None, matcher=None, wc=None,
+               **kwargs):
+    if wc and wc.isinmemory():
+        # If the working context isn't on disk, there's no need to invoke
+        # watchman.
+        return orig(
+            repo, node, branchmerge, force, ancestor, mergeancestor,
+            labels, matcher, wc=wc, **kwargs)
     distance = 0
     partial = True
     oldnode = repo['.'].node()
