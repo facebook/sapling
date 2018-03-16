@@ -233,7 +233,7 @@ fn test_upload_blob_stats() {
 
 recover_logged_data!(ChangesetsData, ChangesetsTestDrain;
     changeset_uuid;
-    "upload_entries";
+    "upload_entries", "wait_for_parents_ready", "changeset_created", "parents_complete", "finished";
     "Changeset creation"
 );
 
@@ -254,7 +254,8 @@ fn test_create_changeset_stats() {
     let _ = run_future(commit.get_completed_changeset()).unwrap();
 
     let mut uuid = None;
-    check_stats!(records, data; "upload_entries";
+    check_stats!(records, data;
+        "upload_entries", "wait_for_parents_ready", "changeset_created", "parents_complete", "finished";
         {
             let changeset_uuid = Some(data.changeset_uuid.clone());
             if uuid.is_none() {

@@ -435,53 +435,74 @@ impl BlobRepo {
         );
 
         let parents_complete = extract_parents_complete(&p1, &p2);
-        let parents_data = handle_parents(self.clone(), p1, p2);
+        let parents_data = handle_parents(self.logger.clone(), uuid, self.clone(), p1, p2);
         let changeset = {
-            upload_entries.join(parents_data).and_then({
-                let linknodes = self.linknodes.clone();
-                let blobstore = self.blobstore.clone();
-                let heads = self.heads.clone();
+            let logger = self.logger.clone();
+            upload_entries
+                .join(parents_data)
+                .and_then({
+                    let linknodes = self.linknodes.clone();
+                    let blobstore = self.blobstore.clone();
+                    let heads = self.heads.clone();
+                    let logger = self.logger.clone();
 
-                move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
-                    compute_changed_files(
-                        &root_manifest,
-                        p1_manifest.as_ref(),
-                        p2_manifest.as_ref(),
-                    ).and_then({
-                        move |files| {
-                            let blobcs = try_boxfuture!(make_new_changeset(
-                                parents,
-                                root_hash,
-                                user,
-                                time,
-                                extra,
-                                files,
-                                comments,
-                            ));
+                    move |((root_manifest, root_hash), (parents, p1_manifest, p2_manifest))| {
+                        compute_changed_files(
+                            &root_manifest,
+                            p1_manifest.as_ref(),
+                            p2_manifest.as_ref(),
+                        ).and_then({
+                            move |files| {
+                                let blobcs = try_boxfuture!(make_new_changeset(
+                                    parents,
+                                    root_hash,
+                                    user,
+                                    time,
+                                    extra,
+                                    files,
+                                    comments,
+                                ));
 
-                            let cs_id = blobcs.get_changeset_id().into_nodehash();
-                            let manifest_id = *blobcs.manifestid();
+                                let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                let manifest_id = *blobcs.manifestid();
 
-                            blobcs
-                                .save(blobstore)
-                                .join(heads.add(&cs_id))
-                                .join(entry_processor.finalize(linknodes, cs_id))
-                                .map(move |_| {
-                                    // We deliberately eat this error - this is only so that
-                                    // another changeset can start uploading to the blob store
-                                    // while we complete this one
-                                    let _ = signal_parent_ready.send((cs_id, manifest_id));
-                                })
-                                .map(move |_| blobcs)
-                                .boxify()
-                        }
-                    })
-                }
-            })
+                                debug!(logger, "Changeset uuid to hash mapping";
+                                    "changeset_uuid" => format!("{}", uuid),
+                                    "changeset_id" => format!("{}", cs_id));
+
+                                blobcs
+                                    .save(blobstore)
+                                    .join(heads.add(&cs_id))
+                                    .join(entry_processor.finalize(linknodes, cs_id))
+                                    .map(move |_| {
+                                        // We deliberately eat this error - this is only so that
+                                        // another changeset can start uploading to the blob store
+                                        // while we complete this one
+                                        let _ = signal_parent_ready.send((cs_id, manifest_id));
+                                    })
+                                    .map(move |_| blobcs)
+                                    .boxify()
+                            }
+                        })
+                    }
+                })
+                .timed(move |stats, result| {
+                    if result.is_ok() {
+                        log_cs_future_stats(&logger, "changeset_created", stats, uuid);
+                    }
+                })
         };
 
-        let parents_complete =
-            parents_complete.map_err(|e| ErrorKind::ParentsFailed.context(e).into());
+        let parents_complete = parents_complete
+            .map_err(|e| ErrorKind::ParentsFailed.context(e).into())
+            .timed({
+                let logger = self.logger.clone();
+                move |stats, result| {
+                    if result.is_ok() {
+                        log_cs_future_stats(&logger, "parents_complete", stats, uuid);
+                    }
+                }
+            });
 
         let complete_changesets = self.changesets.clone();
         let repo_id = self.repoid;
@@ -501,6 +522,14 @@ impl BlobRepo {
                     complete_changesets.add(&completion_record).map(|_| cs)
                 })
                 .map_err(Error::compat)
+                .timed({
+                    let logger = self.logger.clone();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            log_cs_future_stats(&logger, "finished", stats, uuid);
+                        }
+                    }
+                })
                 .boxify()
                 .shared(),
         )

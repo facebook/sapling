@@ -373,6 +373,8 @@ pub fn extract_parents_complete(
 }
 
 pub fn handle_parents(
+    logger: Logger,
+    uuid: Uuid,
     repo: BlobRepo,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
@@ -412,6 +414,11 @@ pub fn handle_parents(
             p1_manifest
                 .join(p2_manifest)
                 .map(move |(p1_manifest, p2_manifest)| (parents, p1_manifest, p2_manifest))
+        })
+        .timed(move |stats, result| {
+            if result.is_ok() {
+                log_cs_future_stats(&logger, "wait_for_parents_ready", stats, uuid);
+            }
         })
         .boxify()
 }
