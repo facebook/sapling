@@ -7,6 +7,8 @@
 //! Base types used throughout Mononoke.
 
 #![deny(warnings)]
+// The allow(dead_code) is temporary until Thrift serialization is done.
+#![allow(dead_code)]
 #![feature(try_from)]
 #![feature(const_fn)]
 
@@ -31,6 +33,8 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate mononoke_types_thrift;
+
 pub mod errors;
 pub mod hash;
 pub mod path;
@@ -38,3 +42,7 @@ pub mod unodehash;
 
 pub use path::{MPath, MPathElement, RepoPath};
 pub use unodehash::UnodeHash;
+
+mod thrift {
+    pub use mononoke_types_thrift::*;
+}

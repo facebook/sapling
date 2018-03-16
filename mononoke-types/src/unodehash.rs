@@ -14,6 +14,7 @@ use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
 use hash::{self, Blake2};
+use thrift;
 
 // There is no NULL_HASH for NodeHash. Any places that need a null hash should use an
 // Option<UnodeHash>.
@@ -40,6 +41,11 @@ impl UnodeHash {
         UnodeHash(blake2)
     }
 
+    pub(crate) fn from_thrift(h: thrift::UnodeHash) -> Result<Self> {
+        // This assumes that a null hash is never serialized. This should always be the case.
+        Ok(UnodeHash(Blake2::from_thrift(h.0)?))
+    }
+
     #[inline]
     pub fn from_bytes(bytes: &[u8]) -> Result<Option<UnodeHash>> {
         Blake2::from_bytes(bytes).map(UnodeHash::new)
@@ -62,6 +68,10 @@ impl UnodeHash {
     #[inline]
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::UnodeHash {
+        thrift::UnodeHash(self.0.into_thrift())
     }
 }
 
@@ -101,5 +111,18 @@ impl Arbitrary for UnodeHash {
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
         empty_shrinker()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    quickcheck! {
+        fn thrift_roundtrip(h: UnodeHash) -> bool {
+            let v = h.into_thrift();
+            let sh = UnodeHash::from_thrift(v).expect("converting a valid Thrift structure should always work");
+            h == sh
+        }
     }
 }

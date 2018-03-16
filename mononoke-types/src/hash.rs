@@ -13,6 +13,7 @@ use blake2::digest::{Input, VariableOutput};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
+use thrift;
 
 pub const NULL: Blake2 = Blake2([0; 32]);
 
@@ -53,6 +54,22 @@ impl Blake2 {
         Blake2(arr)
     }
 
+    #[inline]
+    pub(crate) fn from_thrift(b: thrift::Blake2) -> Result<Self> {
+        // Currently this doesn't require consuming b, but hopefully with T26959816 this
+        // code will be able to convert a SmallVec directly into an array.
+        if b.0.len() != 32 {
+            bail_err!(ErrorKind::InvalidThrift(
+                "Blake2".into(),
+                format!("wrong length: expected 32, got {}", b.0.len())
+            ));
+        }
+        // BigEndian here is matched with `to_thrift` below.
+        let mut arr = [0u8; 32];
+        arr.copy_from_slice(&b.0[..]);
+        Ok(Blake2(arr))
+    }
+
     /// Construct a `Blake2` from a hex-encoded `AsciiStr`.
     #[inline]
     pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
@@ -70,6 +87,12 @@ impl Blake2 {
             // A hex string is always a pure ASCII string.
             AsciiString::from_ascii_unchecked(v)
         }
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::Blake2 {
+        // This doesn't need to consume self today, but once T26959816 is implemented it
+        // should be possible to do that without copying.
+        thrift::Blake2(self.0.to_vec())
     }
 }
 
@@ -214,6 +237,17 @@ mod test {
     }
 
     #[test]
+    fn parse_thrift() {
+        let null_thrift = thrift::Blake2(vec![0; 32]);
+        assert_eq!(NULL, Blake2::from_thrift(null_thrift.clone()).unwrap());
+        assert_eq!(NULL.into_thrift(), null_thrift);
+
+        let nil_thrift = thrift::Blake2(NILHASH.0.to_vec());
+        assert_eq!(NILHASH, Blake2::from_thrift(nil_thrift.clone()).unwrap());
+        assert_eq!(NILHASH.into_thrift(), nil_thrift);
+    }
+
+    #[test]
     fn test_display() {
         assert_eq!(
             format!("{}", NULL),
@@ -238,6 +272,13 @@ mod test {
             .expect_err("unexpected OK - badchar middle");
     }
 
+    #[test]
+    fn parse_thrift_bad() {
+        Blake2::from_thrift(thrift::Blake2(vec![])).expect_err("unexpected OK - zero len");
+        Blake2::from_thrift(thrift::Blake2(vec![0; 31])).expect_err("unexpected OK - too short");
+        Blake2::from_thrift(thrift::Blake2(vec![0; 33])).expect_err("unexpected Ok - too long");
+    }
+
     quickcheck! {
         fn parse_roundtrip(v: Vec<u8>) -> TestResult {
             if v.len() != 32 {
@@ -253,6 +294,12 @@ mod test {
         fn to_hex_roundtrip(h: Blake2) -> bool {
             let v = h.to_hex();
             let sh = Blake2::from_ascii_str(&v).unwrap();
+            h == sh
+        }
+
+        fn thrift_roundtrip(h: Blake2) -> bool {
+            let v = h.into_thrift();
+            let sh = Blake2::from_thrift(v).expect("converting a valid Thrift structure should always work");
             h == sh
         }
     }
