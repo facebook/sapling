@@ -52,7 +52,8 @@ folly::exception_wrapper EdenBug::toException() {
 }
 
 void EdenBug::logError() {
-  XLOG(CRITICAL) << "EDEN_BUG at " << file_ << lineNumber_ << ": " << message_;
+  XLOG(CRITICAL) << "EDEN_BUG at " << file_ << ":" << lineNumber_ << ": "
+                 << message_;
 
 #ifndef NDEBUG
   // Crash in debug builds.
