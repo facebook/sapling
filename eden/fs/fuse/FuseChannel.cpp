@@ -706,8 +706,8 @@ void FuseChannel::readInitPacket() {
   }
 
   fuse_init_out connInfo = {};
-  connInfo.major = FUSE_KERNEL_VERSION;
-  connInfo.minor = FUSE_KERNEL_MINOR_VERSION;
+  connInfo.major = init.init.major;
+  connInfo.minor = init.init.minor;
   connInfo.max_write = bufferSize_ - 4096;
 
   connInfo.max_readahead = init.init.max_readahead;

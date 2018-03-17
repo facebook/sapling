@@ -167,6 +167,8 @@ TEST_F(FuseChannelTest, testTakeoverStop) {
   EXPECT_EQ(stopData.reason, FuseChannel::StopReason::TAKEOVER);
   // We should have received the FUSE device and valid settings information
   EXPECT_TRUE(stopData.fuseDevice);
+  EXPECT_EQ(FUSE_KERNEL_VERSION, stopData.fuseSettings.major);
+  EXPECT_EQ(minorVersion, stopData.fuseSettings.minor);
   EXPECT_EQ(maxReadahead, stopData.fuseSettings.max_readahead);
   EXPECT_EQ(flags, stopData.fuseSettings.flags);
 }
