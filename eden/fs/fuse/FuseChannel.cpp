@@ -324,8 +324,7 @@ void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
     if (err == ENOENT) {
       // Interrupted by a signal.  We don't need to log this,
       // but will propagate it back to our caller.
-    } else if (
-        runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+    } else if (!isFuseDeviceValid(state_.rlock()->stopReason)) {
       XLOG(INFO) << "error writing to fuse device: session closed";
     } else {
       XLOG(WARNING) << "error writing to fuse device: " << folly::errnoStr(err);
@@ -350,7 +349,7 @@ FuseChannel::FuseChannel(
 
 FuseChannel::~FuseChannel() {}
 
-Future<SemiFuture<FuseChannel::StopReason>> FuseChannel::initialize() {
+Future<FuseChannel::StopFuture> FuseChannel::initialize() {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success
   // once initialization completes.
@@ -362,7 +361,7 @@ Future<SemiFuture<FuseChannel::StopReason>> FuseChannel::initialize() {
   });
 }
 
-SemiFuture<FuseChannel::StopReason> FuseChannel::initializeFromTakeover(
+FuseChannel::StopFuture FuseChannel::initializeFromTakeover(
     fuse_init_out connInfo) {
   connInfo_ = connInfo;
   XLOG(INFO) << "Takeover using max_write=" << connInfo_->max_write
@@ -382,7 +381,7 @@ void FuseChannel::startWorkerThreads() {
   // finish processing the INIT request.  In this case we don't want to start
   // the remaining worker threads if the destructor is trying to stop and join
   // them.
-  if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+  if (state->stopReason != StopReason::RUNNING) {
     return;
   }
 
@@ -430,16 +429,6 @@ void FuseChannel::destroy() {
   if (allDone) {
     delete this;
   }
-}
-
-FuseChannelData FuseChannel::stealFuseDevice() {
-  FuseChannelData data;
-
-  data.connInfo = connInfo_.value();
-  // Claim the fd
-  std::swap(data.fd, fuseDevice_);
-
-  return data;
 }
 
 void FuseChannel::invalidateInode(
@@ -536,19 +525,33 @@ void FuseChannel::requestSessionExit(StopReason reason) {
 void FuseChannel::requestSessionExit(
     const Synchronized<State>::LockedPtr& state,
     StopReason reason) {
-  StopReason expectedReason = StopReason::RUNNING;
-  if (runState_.compare_exchange_strong(
-          expectedReason,
-          reason,
-          std::memory_order_relaxed,
-          std::memory_order_relaxed)) {
-    // Knock our workers out of their blocking read() syscalls
-    // TODO: This code is slightly racy, since threads could receive the signal
-    // immediately before entering read()
-    for (auto& thr : state->workerThreads) {
-      if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
-        pthread_kill(thr.native_handle(), SIGUSR2);
-      }
+  // We have already been asked to stop before.
+  if (state->stopReason != StopReason::RUNNING) {
+    // Update state->stopReason only if the old stop reason left the FUSE
+    // device in a still usable state but the new reason does not.
+    if (isFuseDeviceValid(state->stopReason) &&
+        !isFuseDeviceValid(state->stopReason)) {
+      state->stopReason = reason;
+    }
+    return;
+  }
+
+  // This was the first time requestSessionExit has been called.
+  // Record the reason we are stopping and then notify worker threads to
+  // stop.
+  state->stopReason = reason;
+
+  // Update stop_ so that worker threads will break out of their loop.
+  stop_.store(true, std::memory_order_relaxed);
+
+  // Send a signal to knock our workers out of their blocking read() syscalls
+  // TODO: This code is slightly racy, since threads could receive the signal
+  // immediately before entering read().  In the long run it would be nicer to
+  // have the worker threads use epoll and then use an eventfd to signal them
+  // to stop.
+  for (auto& thr : state->workerThreads) {
+    if (thr.joinable() && thr.get_id() != std::this_thread::get_id()) {
+      pthread_kill(thr.native_handle(), SIGUSR2);
     }
   }
 }
@@ -606,28 +609,20 @@ void FuseChannel::fuseWorkerThread() noexcept {
     // Fall through and continue with the normal thread exit code.
   }
 
-  // We may be complete; check to see if there are any
-  // outstanding requests.  Take care to avoid triggering
-  // the promise callbacks while we hold a lock.
-  bool complete = false;
+  // Record that we have shut down.
   {
     auto state = state_.wlock();
     ++state->stoppedThreads;
-    if (state->stoppedThreads == numThreads_) {
-      // there may be outstanding requests even though we have
-      // now shut down all of the fuse device processing threads.
-      // If there are none outstanding then we can consider the
-      // FUSE requests all complete.  Otherwise, we have logic
-      // to detect the completion transition in the finishRequest()
-      // method below.
-      complete = state->requests.empty();
-    }
     DCHECK(!state->destroyPending) << "destroyPending cannot be set while "
                                       "worker threads are still running";
-  }
 
-  if (complete) {
-    sessionCompletePromise_.setValue(runState_.load(std::memory_order_relaxed));
+    // If we are the last thread to stop and there are no more requests
+    // outstanding then invoke sessionComplete().  If we are the last thread
+    // but there are still outstanding requests we will invoke
+    // sessionComplete() when finishRequest() is called for the last request.
+    if (state->stoppedThreads == numThreads_ && state->requests.empty()) {
+      sessionComplete(std::move(state));
+    }
   }
 }
 
@@ -639,7 +634,7 @@ void FuseChannel::readInitPacket() {
 
   // Loop until we receive the INIT packet, or until we are stopped.
   while (true) {
-    if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+    if (stop_.load(std::memory_order_relaxed)) {
       throw std::runtime_error(folly::to<string>(
           "FuseChannel for \"",
           mountPath_,
@@ -649,7 +644,7 @@ void FuseChannel::readInitPacket() {
     auto res = read(fuseDevice_.fd(), &init, sizeof(init));
     if (res < 0) {
       int errnum = errno;
-      if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+      if (stop_.load(std::memory_order_relaxed)) {
         throw std::runtime_error(folly::to<string>(
             "FuseChannel for \"",
             mountPath_,
@@ -770,7 +765,7 @@ void FuseChannel::processSession() {
   // additional syscalls on each loop iteration.
   auto myPid = getpid();
 
-  while (runState_.load(std::memory_order_relaxed) == StopReason::RUNNING) {
+  while (!stop_.load(std::memory_order_relaxed)) {
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
     // We can look at turning this on once the main plumbing is complete.
     auto res = read(fuseDevice_.fd(), buf.data(), buf.size());
@@ -778,7 +773,7 @@ void FuseChannel::processSession() {
       res = -errno;
     }
 
-    if (runState_.load(std::memory_order_relaxed) != StopReason::RUNNING) {
+    if (stop_.load(std::memory_order_relaxed)) {
       break;
     }
 
@@ -961,28 +956,37 @@ void FuseChannel::processSession() {
 
 void FuseChannel::finishRequest(const fuse_in_header& header) {
   // Remove the current request from the map.
+  auto state = state_.wlock();
+  const bool erased = state->requests.erase(header.unique) > 0;
+  DCHECK(erased);
+
   // We may be complete; check to see if all requests are
   // done and whether there are any threads remaining.
-  // Take care to avoid triggering the promise callbacks
-  // while we hold a lock.
-  bool complete = false;
-  bool destroy = false;
-  {
-    auto state = state_.wlock();
-    const bool erased = state->requests.erase(header.unique) > 0;
-
-    // We only want to fulfil on the transition, so we take
-    // care to gate this on whether we actually erased and
-    // element in the map above.
-    complete = erased && state->requests.empty() &&
-        state->stoppedThreads == numThreads_;
-    destroy = state->destroyPending;
+  if (state->requests.empty() && state->stoppedThreads == numThreads_) {
+    sessionComplete(std::move(state));
   }
-  if (complete) {
-    sessionCompletePromise_.setValue(runState_.load(std::memory_order_relaxed));
-    if (destroy) {
-      delete this;
-    }
+}
+
+void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
+  // Check to see if we should delete ourself after fulfilling
+  // sessionCompletePromise_
+  bool destroy = state->destroyPending;
+
+  // Build the StopData to return
+  StopData data;
+  data.reason = state->stopReason;
+  if (isFuseDeviceValid(data.reason) && connInfo_.hasValue()) {
+    data.fuseDevice = std::move(fuseDevice_);
+    data.fuseSettings = connInfo_.value();
+  }
+
+  // Unlock the state before fulfilling sessionCompletePromise_
+  state.unlock();
+  sessionCompletePromise_.setValue(std::move(data));
+
+  // Destroy ourself if desired
+  if (destroy) {
+    delete this;
   }
 }
 

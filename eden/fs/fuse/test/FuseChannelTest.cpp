@@ -68,12 +68,18 @@ class FuseChannelTest : public ::testing::Test {
         new FuseChannel(fuse_.start(), mountPath_, numThreads, &dispatcher_));
   }
 
-  FuseChannel::StopFuture performInit(FuseChannel* channel) {
+  FuseChannel::StopFuture performInit(
+      FuseChannel* channel,
+      uint32_t majorVersion = FUSE_KERNEL_VERSION,
+      uint32_t minorVersion = FUSE_KERNEL_MINOR_VERSION,
+      uint32_t maxReadahead = 0,
+      uint32_t flags = 0) {
     auto initFuture = channel->initialize();
     EXPECT_FALSE(initFuture.isReady());
 
     // Send the INIT packet
-    auto reqID = fuse_.sendInitRequest();
+    auto reqID =
+        fuse_.sendInitRequest(majorVersion, minorVersion, maxReadahead, flags);
 
     // Wait for the INIT response
     auto response = fuse_.recvResponse();
@@ -141,8 +147,28 @@ TEST_F(FuseChannelTest, testInitUnmount) {
   fuse_.close();
 
   // Wait for the FuseChannel to signal that it has finished.
-  auto stopReason = std::move(completeFuture).get(100ms);
-  EXPECT_EQ(stopReason, FuseChannel::StopReason::UNMOUNTED);
+  auto stopData = std::move(completeFuture).get(100ms);
+  EXPECT_EQ(stopData.reason, FuseChannel::StopReason::UNMOUNTED);
+  EXPECT_FALSE(stopData.fuseDevice);
+}
+
+TEST_F(FuseChannelTest, testTakeoverStop) {
+  const uint32_t minorVersion = Random::rand32();
+  const uint32_t maxReadahead = Random::rand32();
+  constexpr uint32_t flags = FUSE_ASYNC_READ;
+  auto channel = createChannel();
+  auto completeFuture = performInit(
+      channel.get(), FUSE_KERNEL_VERSION, minorVersion, maxReadahead, flags);
+
+  channel->takeoverStop();
+
+  // Wait for the FuseChannel to signal that it has finished.
+  auto stopData = std::move(completeFuture).get(100ms);
+  EXPECT_EQ(stopData.reason, FuseChannel::StopReason::TAKEOVER);
+  // We should have received the FUSE device and valid settings information
+  EXPECT_TRUE(stopData.fuseDevice);
+  EXPECT_EQ(maxReadahead, stopData.fuseSettings.max_readahead);
+  EXPECT_EQ(flags, stopData.fuseSettings.flags);
 }
 
 TEST_F(FuseChannelTest, testInitUnmountRace) {
@@ -156,11 +182,15 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
   channel.reset();
 
   // Wait for the session complete future now.
-  auto stopReason = std::move(completeFuture).get(100ms);
-  EXPECT_TRUE(
-      stopReason == FuseChannel::StopReason::UNMOUNTED ||
-      stopReason == FuseChannel::StopReason::DESTRUCTOR)
-      << "unexpected FuseChannel stop reason: " << static_cast<int>(stopReason);
+  auto stopData = std::move(completeFuture).get(100ms);
+  if (stopData.reason == FuseChannel::StopReason::UNMOUNTED) {
+    EXPECT_FALSE(stopData.fuseDevice);
+  } else if (stopData.reason == FuseChannel::StopReason::DESTRUCTOR) {
+    EXPECT_TRUE(stopData.fuseDevice);
+  } else {
+    FAIL() << "unexpected FuseChannel stop reason: "
+           << static_cast<int>(stopData.reason);
+  }
 }
 
 TEST_F(FuseChannelTest, testInitErrorClose) {

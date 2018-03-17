@@ -122,8 +122,9 @@ int main(int argc, char** argv) {
   auto completionFuture = channel->initialize().get();
   XLOG(INFO) << "FUSE started";
 
-  auto reason = std::move(completionFuture).get();
-  XLOG(INFO) << "FUSE channel done; stop_reason=" << static_cast<int>(reason);
+  auto stopData = std::move(completionFuture).get();
+  XLOG(INFO) << "FUSE channel done; stop_reason="
+             << static_cast<int>(stopData.reason);
 
   return EX_OK;
 }

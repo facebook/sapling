@@ -46,7 +46,36 @@ class FuseChannel {
     FUSE_TRUNCATED_REQUEST,
     WORKER_EXCEPTION,
   };
-  using StopFuture = folly::SemiFuture<StopReason>;
+  struct StopData {
+    /**
+     * The reason why the FUSE channel was stopped.
+     *
+     * If multiple events occurred that triggered shutdown, only one will be
+     * reported here.  (e.g., If a takeover was initiated and one of the worker
+     * threads saw that the device was unmounted before it stopped.)
+     */
+    StopReason reason{StopReason::RUNNING};
+
+    /**
+     * The FUSE device for communicating with the kernel, if it is still valid
+     * to use.
+     *
+     * This will be a closed File object if the FUSE device is no longer valid
+     * (e.g., if it has been unmounted or if an error occurred on the FUSE
+     * device).
+     */
+    folly::File fuseDevice;
+
+    /**
+     * The FUSE connection settings negotiated on the FUSE device.
+     *
+     * This will have valid data only when fuseDevice is also valid.
+     * This can be passed to initializeFromTakeover() to start a new
+     * FuseChannel object that uses this FuseDevice.
+     */
+    fuse_init_out fuseSettings = {};
+  };
+  using StopFuture = folly::SemiFuture<StopData>;
 
   /**
    * Construct the fuse channel and session structures that are
@@ -131,22 +160,10 @@ class FuseChannel {
   /**
    * Request that the FuseChannel stop processing new requests, and prepare
    * to hand over the FuseDevice to another process.
-   *
-   * TODO: This function should probably return a Future<FuseChannelData>,
-   * and we should get rid of the stealFuseDevice() method.
    */
   void takeoverStop() {
     requestSessionExit(StopReason::TAKEOVER);
   }
-
-  /**
-   * When performing a graceful restart, extract the fuse device
-   * descriptor from the channel, preventing it from being closed
-   * when we destroy this channel instance.
-   * Note that this method does not prevent the worker threads
-   * from continuing to use the fuse session.
-   */
-  FuseChannelData stealFuseDevice();
 
   /**
    * Notify to invalidate cache for an inode
@@ -267,6 +284,13 @@ class FuseChannel {
      * automatically destroyed when the last outstanding request finishes.
      */
     bool destroyPending{false};
+
+    /**
+     * If the FuseChannel is stopped or stopping, the reason why it is
+     * stopping.  This is set to RUNNING while the FuseDevice is initializing
+     * or running.
+     */
+    StopReason stopReason{StopReason::RUNNING};
   };
 
   /**
@@ -378,9 +402,29 @@ class FuseChannel {
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
-  void maybeDispatchSessionComplete();
   void readInitPacket();
   void startWorkerThreads();
+
+  /**
+   * sessionComplete() will fulfill the sessionCompletePromise_.
+   *
+   * Beware: calling sessionComplete() should be the very last statement in any
+   * method that calls it.  It may destroy the FuseChannel object before it
+   * returns.
+   */
+  void sessionComplete(folly::Synchronized<State>::LockedPtr state);
+
+  static bool isFuseDeviceValid(StopReason reason) {
+    // The FuseDevice may still be used if the FuseChannel was stopped due to a
+    // takeover request or because the FuseChannel object was destroyed without
+    // ever being unmounted.  It is also still valid if the FuseChannel is
+    // still running.
+    //
+    // In all other cases the FuseDevice should no longer be used.
+    return (
+        reason == StopReason::RUNNING || reason == StopReason::TAKEOVER ||
+        reason == StopReason::DESTRUCTOR);
+  }
 
   /**
    * Dispatches fuse requests until the session is torn down.
@@ -413,12 +457,20 @@ class FuseChannel {
   folly::Optional<fuse_init_out> connInfo_;
 
   /*
-   * TODO: fuseDevice_ needs better synchronization.
+   * fuseDevice_ is constant while the worker threads are running.
    *
-   * This is modified by stealFuseDevice().  There currently isn't
-   * synchronization enforced between the call to stealFuseDevice() and the
-   * destruction of the FuseChannel object, which destroys fuseDevice_ if it
-   * has not been modified by stealFuseDevice().
+   * This is constant for most of the lifetime of the FuseChannel object.
+   * It can be modified during shutdown so that it can be returned as part of
+   * the StopData.  However, there is guaranteed to be external synchronization
+   * around this event:
+   * - If the stop can occur as the last FUSE worker thread shuts down.
+   *   No other FUSE worker threads can access fuseDevice_ after this point,
+   *   and the FuseChannel destructor will join the threads before destryoing
+   *   fuseDevice_.
+   * - If the stop can occur as when the last outstanding FUSE request
+   *   completes, after all FUSE worker threads have stopped.  In this case no
+   *   other threads are accessing the FuseChannel and it will be immediately
+   *   destroyed in the same thread that creates the StopData object.
    */
   folly::File fuseDevice_;
 
@@ -426,10 +478,10 @@ class FuseChannel {
    * Mutable state that is accessed from the worker threads.
    * All of this state uses locking or other synchronization.
    */
-  std::atomic<StopReason> runState_{StopReason::RUNNING};
+  std::atomic<bool> stop_{false};
   folly::Synchronized<State> state_;
-  folly::Promise<folly::SemiFuture<StopReason>> initPromise_;
-  folly::Promise<StopReason> sessionCompletePromise_;
+  folly::Promise<StopFuture> initPromise_;
+  folly::Promise<StopData> sessionCompletePromise_;
 
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;

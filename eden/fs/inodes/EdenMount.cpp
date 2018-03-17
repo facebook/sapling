@@ -724,12 +724,7 @@ void EdenMount::fuseInitSuccessful(
 
   std::move(fuseCompleteFuture)
       .via(serverState_->getThreadPool().get())
-      .then([this] {
-        // In case we are performing a graceful restart,
-        // extract the fuse device now.
-        auto channelData = channel_->stealFuseDevice();
-        channel_.reset();
-
+      .then([this](FuseChannel::StopData&& stopData) {
         std::vector<AbsolutePath> bindMounts;
         for (const auto& entry : bindMounts_) {
           bindMounts.push_back(entry.pathInMountDir);
@@ -739,8 +734,8 @@ void EdenMount::fuseInitSuccessful(
             path_,
             config_->getClientDirectory(),
             bindMounts,
-            std::move(channelData.fd),
-            channelData.connInfo,
+            std::move(stopData.fuseDevice),
+            stopData.fuseSettings,
             SerializedFileHandleMap{}, // placeholder
             SerializedInodeMap{} // placeholder
             ));
