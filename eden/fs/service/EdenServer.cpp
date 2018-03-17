@@ -163,6 +163,7 @@ EdenServer::~EdenServer() {}
 
 folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
   std::vector<Future<Optional<TakeoverData::MountInfo>>> futures;
+  std::vector<AbsolutePath> mountPaths;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
@@ -170,13 +171,18 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
       auto& info = entry.second;
 
       try {
+        mountPaths.emplace_back(mountPath);
         if (doTakeover) {
           info.takeoverPromise.emplace();
           auto future = info.takeoverPromise->getFuture();
           info.edenMount->getFuseChannel()->takeoverStop();
-          futures.emplace_back(
-              future.then([self = this, edenMount = info.edenMount](
-                              TakeoverData::MountInfo takeover) {
+          futures.emplace_back(future.then(
+              [self = this,
+               edenMount = info.edenMount](TakeoverData::MountInfo takeover)
+                  -> Optional<TakeoverData::MountInfo> {
+                if (!takeover.fuseFD) {
+                  return folly::none;
+                }
                 self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
                     edenMount->getPath().stringPiece());
                 return takeover;
@@ -204,9 +210,25 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
           TakeoverData data;
           data.mountPoints.reserve(results.size());
           for (auto& result : results) {
-            // Note: .value() will throw if there was a problem;
-            // we want this to happen, so we don't need to do
-            // anything special to catch it here.
+            // If something went wrong shutting down a mount point,
+            // log the error but continue trying to perform graceful takeover
+            // of the other mount points.
+            if (!result.hasValue()) {
+              XLOG(ERR) << "error stopping mount during takeover shutdown: "
+                        << result.exception().what();
+              continue;
+            }
+
+            // result might be a successful Try with an empty Optional.
+            // This could happen if the mount point was unmounted while we were
+            // in the middle of stopping it for takeover.  Just skip this mount
+            // in this case.
+            if (!result.value().hasValue()) {
+              XLOG(WARN) << "mount point was unmounted during "
+                            "takeover shutdown";
+              continue;
+            }
+
             data.mountPoints.emplace_back(std::move(result.value().value()));
           }
           return data;
