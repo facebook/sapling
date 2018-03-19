@@ -133,8 +133,8 @@ earlygetopt short option without following space:
 
 earlygetopt with illegal abbreviations:
 
-  $ hg --confi "foo.bar=baz"
-  abort: option --config may not be abbreviated!
+  $ hg --configfi "foo.bar=baz"
+  abort: option --configfile may not be abbreviated!
   [255]
   $ hg --cw a tip
   abort: option --cwd may not be abbreviated!

@@ -88,6 +88,8 @@ globalopts = [
     ('', 'config', [],
      _('set/override config option (use \'section.name=value\')'),
      _('CONFIG')),
+    ('', 'configfile', [], _('enables the given config file'),
+     _('FILE')),
     ('', 'debug', None, _('enable debugging output')),
     ('', 'debugger', None, _('start debugger')),
     ('', 'encoding', encoding.encoding, _('set the charset encoding'),

@@ -288,11 +288,18 @@ def _runcatch(req):
                 'pdb': pdb.post_mortem
             }
 
+            # --config takes prescendence over --configfile, so process
+            # --configfile first --config second.
+            for configfile in req.earlyoptions['configfile']:
+                req.ui.readconfig(configfile)
+
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
             cfgs = _parseconfig(req.ui, req.earlyoptions['config'])
 
             if req.repo:
+                for configfile in req.earlyoptions['configfile']:
+                    req.repo.ui.readconfig(configfile)
                 # copy configs that were passed on the cmdline (--config) to
                 # the repo ui
                 for sec, name, val in cfgs:
@@ -800,6 +807,8 @@ def _dispatch(req):
 
         if options["config"] != req.earlyoptions["config"]:
             raise error.Abort(_("option --config may not be abbreviated!"))
+        if options["configfile"] != req.earlyoptions["configfile"]:
+            raise error.Abort(_("option --configfile may not be abbreviated!"))
         if options["cwd"] != req.earlyoptions["cwd"]:
             raise error.Abort(_("option --cwd may not be abbreviated!"))
         if options["repository"] != req.earlyoptions["repository"]:

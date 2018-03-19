@@ -142,6 +142,7 @@ Show the global options
   $ hg debugcomplete --options | sort
   --color
   --config
+  --configfile
   --cwd
   --debug
   --debugger
@@ -172,6 +173,7 @@ Show the options for the "serve" command
   --cmdserver
   --color
   --config
+  --configfile
   --cwd
   --daemon
   --daemon-postexec

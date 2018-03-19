@@ -602,28 +602,30 @@ hide outer repo
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 
 
@@ -642,28 +644,30 @@ hide outer repo
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 
 
@@ -924,28 +928,30 @@ extension help itself
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 Make sure that single '-v' option shows help and built-ins only for 'dodo' command
   $ hg help -v dodo
@@ -961,28 +967,30 @@ Make sure that single '-v' option shows help and built-ins only for 'dodo' comma
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 In case when extension name doesn't match any of its commands,
 help message should ask for '-v' to get list of built-in aliases
@@ -1036,28 +1044,30 @@ help options '-v' and '-v -e' should be equivalent
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
   $ hg help -v -e dudu
   dudu extension -
@@ -1072,28 +1082,30 @@ help options '-v' and '-v -e' should be equivalent
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 Disabled extension commands:
 

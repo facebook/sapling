@@ -447,28 +447,30 @@ Test short command list with verbose option
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
   
   (use 'hg help' for the full list of commands)
 
@@ -547,28 +549,30 @@ Verbose help for add
   
   global options ([+] can be repeated):
   
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --color TYPE        when to colorize (boolean, always, auto, never, or
-                          debug)
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-      --pager TYPE        when to paginate (boolean, always, auto, or never)
-                          (default: auto)
+   -R --repository REPO     repository root directory or name of overlay bundle
+                            file
+      --cwd DIR             change working directory
+   -y --noninteractive      do not prompt, automatically pick the first choice
+                            for all prompts
+   -q --quiet               suppress output
+   -v --verbose             enable additional output
+      --color TYPE          when to colorize (boolean, always, auto, never, or
+                            debug)
+      --config CONFIG [+]   set/override config option (use
+                            'section.name=value')
+      --configfile FILE [+] enables the given config file
+      --debug               enable debugging output
+      --debugger            start debugger
+      --encoding ENCODE     set the charset encoding (default: ascii)
+      --encodingmode MODE   set the charset encoding mode (default: strict)
+      --traceback           always print a traceback on exception
+      --time                time how long the command takes
+      --profile             print command execution profile
+      --version             output version information and exit
+   -h --help                display help and exit
+      --hidden              consider hidden changesets
+      --pager TYPE          when to paginate (boolean, always, auto, or never)
+                            (default: auto)
 
 Test the textwidth config option
 
@@ -2840,6 +2844,9 @@ Dish up an empty repo; serve it cold.
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>
   <tr><td></td>
+  <td>--configfile FILE [+]</td>
+  <td>enables the given config file</td></tr>
+  <tr><td></td>
   <td>--debug</td>
   <td>enable debugging output</td></tr>
   <tr><td></td>
@@ -3040,6 +3047,9 @@ Dish up an empty repo; serve it cold.
   <tr><td></td>
   <td>--config CONFIG [+]</td>
   <td>set/override config option (use 'section.name=value')</td></tr>
+  <tr><td></td>
+  <td>--configfile FILE [+]</td>
+  <td>enables the given config file</td></tr>
   <tr><td></td>
   <td>--debug</td>
   <td>enable debugging output</td></tr>
