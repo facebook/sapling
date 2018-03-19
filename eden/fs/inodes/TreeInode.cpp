@@ -243,6 +243,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
       entry.setInodeNumber(childNumber);
       allocatedInodeNumber = true;
     }
+    entry.setLoading();
     bool startLoad = getInodeMap()->shouldLoadChild(
         this, name, childNumber, std::move(promise));
     if (allocatedInodeNumber) {
@@ -2809,6 +2810,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     childNumber = getInodeMap()->allocateInodeNumber();
     entry.setInodeNumber(childNumber);
   }
+  entry.setLoading();
   bool startLoad = getInodeMap()->shouldLoadChild(
       this, name, childNumber, std::move(promise));
   if (startLoad) {

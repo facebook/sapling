@@ -82,13 +82,13 @@ class TreeInode : public InodeBase {
      * Create a hash for a non-materialized entry.
      */
     Entry(mode_t m, fusell::InodeNumber number, Hash hash)
-        : mode_(m), hash_{hash}, inodeNumber_(number) {}
+        : mode_(m), hash_{hash}, isLoading_(false), inodeNumber_(number) {}
 
     /**
      * Create a hash for a materialized entry.
      */
     Entry(mode_t m, fusell::InodeNumber number)
-        : mode_(m), inodeNumber_{number} {
+        : mode_(m), isLoading_(false), inodeNumber_{number} {
       DCHECK(number.hasValue());
     }
 
@@ -135,6 +135,15 @@ class TreeInode : public InodeBase {
       inodeNumber_ = inode;
       hash_.clear();
     }
+
+    void setLoading() {
+      isLoading_ = true;
+    }
+
+    bool isLoading() const {
+      return isLoading_;
+    }
+
     void setDematerialized(Hash hash) {
       hash_ = hash;
     }
@@ -200,10 +209,13 @@ class TreeInode : public InodeBase {
     void setInode(InodeBase* inode) {
       DCHECK(!inode_);
       DCHECK(inode);
+      isLoading_ = false;
       inode_ = inode;
     }
 
     void clearInode() {
+      DCHECK(inode_);
+      DCHECK(!isLoading_);
       inode_ = nullptr;
     }
 
@@ -224,6 +236,12 @@ class TreeInode : public InodeBase {
      * child InodeBase should be consulted instead.
      */
     folly::Optional<Hash> hash_;
+
+    /**
+     * If the InodeBase for this entry is in the process of being loaded, this
+     * bit is set true.  Once inode_ is set, it is reset to false.
+     */
+    bool isLoading_{false};
 
     /**
      * The inode number, if one is allocated for this entry, or 0 if one is not
