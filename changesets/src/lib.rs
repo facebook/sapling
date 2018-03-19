@@ -143,7 +143,7 @@ impl MysqlChangesets {
 /// Using a macro here is unfortunate, but it appears to be the only way to share this code
 /// between SQLite and MySQL.
 macro_rules! impl_changesets {
-    ($struct: ty, $conn: ty) => {
+    ($struct: ty) => {
         impl Changesets for $struct {
             /// Retrieve the changeset specified by this commit.
             fn get(
@@ -264,8 +264,8 @@ macro_rules! impl_changesets {
     }
 }
 
-impl_changesets!(MysqlChangesets, MysqlConnection);
-impl_changesets!(SqliteChangesets, SqliteConnection);
+impl_changesets!(MysqlChangesets);
+impl_changesets!(SqliteChangesets);
 
 fn changeset_query<DB>(
     repo_id: RepositoryId,
