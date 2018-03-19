@@ -337,41 +337,39 @@ test inline color diff
   [diff.deleted|-(to see if it works)]
   [diff.inserted|+three of those lines have]
   [diff.inserted|+collapsed onto one]
-#if false
   $ hg diff --config experimental.worddiff=True --color=debug
   [diff.diffline|diff --git a/file1 b/file1]
   [diff.file_a|--- a/file1]
   [diff.file_b|+++ b/file1]
   [diff.hunk|@@ -1,16 +1,17 @@]
-  [diff.deleted|-this is the ][diff.deleted.highlight|first][diff.deleted| line]
-  [diff.deleted|-this is the second line]
-  [diff.deleted|-][diff.deleted.highlight|    ][diff.deleted|third line starts with space]
-  [diff.deleted|-][diff.deleted.highlight|+][diff.deleted| starts with a ][diff.deleted.highlight|plus][diff.deleted| sign]
-  [diff.deleted|-][diff.tab|	][diff.deleted|this one with ][diff.deleted.highlight|one][diff.deleted| tab]
-  [diff.deleted|-][diff.tab|		][diff.deleted|now with full ][diff.deleted.highlight|two][diff.deleted| tabs]
-  [diff.deleted|-][diff.tab|	][diff.deleted|now tabs][diff.tab|		][diff.deleted|everywhere, much fun]
-  [diff.inserted|+that is the first paragraph]
-  [diff.inserted|+][diff.inserted.highlight|    ][diff.inserted|this is the ][diff.inserted.highlight|second][diff.inserted| line]
-  [diff.inserted|+third line starts with space]
-  [diff.inserted|+][diff.inserted.highlight|-][diff.inserted| starts with a ][diff.inserted.highlight|minus][diff.inserted| sign]
-  [diff.inserted|+][diff.tab|	][diff.inserted|this one with ][diff.inserted.highlight|two][diff.inserted| tab]
-  [diff.inserted|+][diff.tab|			][diff.inserted|now with full ][diff.inserted.highlight|three][diff.inserted| tabs]
-  [diff.inserted|+][diff.tab|	][diff.inserted|now][diff.inserted.highlight| there are][diff.inserted| tabs][diff.tab|		][diff.inserted|everywhere, much fun]
+  [diff.deleted|-][diff.deleted.changed|this][diff.deleted.unchanged| is the first ][diff.deleted.changed|line]
+  [diff.deleted|-][diff.deleted.unchanged|this is the second line]
+  [diff.deleted|-][diff.deleted.changed|    ][diff.deleted.unchanged|third line starts with space]
+  [diff.deleted|-][diff.deleted.changed|+][diff.deleted.unchanged| starts with a ][diff.deleted.changed|plus][diff.deleted.unchanged| sign]
+  [diff.deleted|-][diff.tab|	][diff.deleted.unchanged|this one with ][diff.deleted.changed|one][diff.deleted.unchanged| tab]
+  [diff.deleted|-][diff.tab|		][diff.deleted.unchanged|now with full ][diff.deleted.changed|two][diff.deleted.unchanged| tabs]
+  [diff.deleted|-][diff.tab|	][diff.deleted.unchanged|now ][diff.deleted.unchanged|tabs][diff.tab|		][diff.deleted.unchanged|everywhere, much fun]
+  [diff.inserted|+][diff.inserted.changed|that][diff.inserted.unchanged| is the first ][diff.inserted.changed|paragraph]
+  [diff.inserted|+][diff.inserted.changed|    ][diff.inserted.unchanged|this is the second line]
+  [diff.inserted|+][diff.inserted.unchanged|third line starts with space]
+  [diff.inserted|+][diff.inserted.changed|-][diff.inserted.unchanged| starts with a ][diff.inserted.changed|minus][diff.inserted.unchanged| sign]
+  [diff.inserted|+][diff.tab|	][diff.inserted.unchanged|this one with ][diff.inserted.changed|two][diff.inserted.unchanged| tab]
+  [diff.inserted|+][diff.tab|			][diff.inserted.unchanged|now with full ][diff.inserted.changed|three][diff.inserted.unchanged| tabs]
+  [diff.inserted|+][diff.tab|	][diff.inserted.unchanged|now ][diff.inserted.changed|there are ][diff.inserted.unchanged|tabs][diff.tab|		][diff.inserted.unchanged|everywhere, much fun]
    
    this line won't change
    
    two lines are going to
-  [diff.deleted|-be changed into ][diff.deleted.highlight|three][diff.deleted|!]
-  [diff.inserted|+(entirely magically,]
-  [diff.inserted|+ assuming this works)]
-  [diff.inserted|+be changed into ][diff.inserted.highlight|four][diff.inserted|!]
+  [diff.deleted|-][diff.deleted.unchanged|be changed into ][diff.deleted.changed|three][diff.deleted.unchanged|!]
+  [diff.inserted|+][diff.inserted.changed|(entirely magically,]
+  [diff.inserted|+][diff.inserted.changed| assuming this works)]
+  [diff.inserted|+][diff.inserted.unchanged|be changed into ][diff.inserted.changed|four][diff.inserted.unchanged|!]
    
-  [diff.deleted|-three of those lines ][diff.deleted.highlight|will]
-  [diff.deleted|-][diff.deleted.highlight|collapse][diff.deleted| onto one]
-  [diff.deleted|-(to see if it works)]
-  [diff.inserted|+three of those lines ][diff.inserted.highlight|have]
-  [diff.inserted|+][diff.inserted.highlight|collapsed][diff.inserted| onto one]
-#endif
+  [diff.deleted|-][diff.deleted.unchanged|three of those lines ][diff.deleted.changed|will]
+  [diff.deleted|-][diff.deleted.changed|collapse][diff.deleted.unchanged| onto one]
+  [diff.deleted|-][diff.deleted.changed|(to see if it works)]
+  [diff.inserted|+][diff.inserted.unchanged|three of those lines ][diff.inserted.changed|have]
+  [diff.inserted|+][diff.inserted.changed|collapsed][diff.inserted.unchanged| onto one]
 
 multibyte character shouldn't be broken up in word diff:
 
@@ -386,12 +384,10 @@ multibyte character shouldn't be broken up in word diff:
   > EOF
   $ hg ci -m 'slightly change utf8 char' utf8
 
-#if false
   $ hg diff --config experimental.worddiff=True --color=debug -c.
   [diff.diffline|diff --git a/utf8 b/utf8]
   [diff.file_a|--- a/utf8]
   [diff.file_b|+++ b/utf8]
   [diff.hunk|@@ -1,1 +1,1 @@]
-  [diff.deleted|-blah ][diff.deleted.highlight|\xe3\x82\xa2][diff.deleted| blah] (esc)
-  [diff.inserted|+blah ][diff.inserted.highlight|\xe3\x82\xa4][diff.inserted| blah] (esc)
-#endif
+  [diff.deleted|-][diff.deleted.unchanged|blah ][diff.deleted.changed|\xe3\x82\xa2][diff.deleted.unchanged| blah] (esc)
+  [diff.inserted|+][diff.inserted.unchanged|blah ][diff.inserted.changed|\xe3\x82\xa4][diff.inserted.unchanged| blah] (esc)

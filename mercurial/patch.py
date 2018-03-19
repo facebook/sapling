@@ -45,7 +45,8 @@ stringio = util.stringio
 
 gitre = re.compile(br'diff --git a/(.*) b/(.*)')
 tabsplitter = re.compile(br'(\t+|[^\t]+)')
-_nonwordre = re.compile(br'([^a-zA-Z0-9_\x80-\xff])')
+wordsplitter = re.compile(br'(\t+| +|[a-zA-Z0-9_\x80-\xff]+|'
+                          '[^ \ta-zA-Z0-9_\x80-\xff])')
 
 PatchError = error.PatchError
 
@@ -2491,8 +2492,78 @@ def diffsinglehunk(hunklines):
         if chompline != line:
             yield (line[len(chompline):], '')
 
+def diffsinglehunkinline(hunklines):
+    """yield tokens for a list of lines in a single hunk, with inline colors"""
+    # prepare deleted, and inserted content
+    a = ''
+    b = ''
+    for line in hunklines:
+        if line[0] == '-':
+            a += line[1:]
+        elif line[0] == '+':
+            b += line[1:]
+        else:
+            raise error.ProgrammingError('unexpected hunk line: %s' % line)
+    # fast path: if either side is empty, use diffsinglehunk
+    if not a or not b:
+        for t in diffsinglehunk(hunklines):
+            yield t
+        return
+    # re-split the content into words
+    al = wordsplitter.findall(a)
+    bl = wordsplitter.findall(b)
+    # re-arrange the words to lines since the diff algorithm is line-based
+    aln = [s if s == '\n' else s + '\n' for s in al]
+    bln = [s if s == '\n' else s + '\n' for s in bl]
+    an = ''.join(aln)
+    bn = ''.join(bln)
+    # run the diff algorithm, prepare atokens and btokens
+    atokens = []
+    btokens = []
+    blocks = mdiff.allblocks(an, bn, lines1=aln, lines2=bln)
+    for (a1, a2, b1, b2), btype in blocks:
+        changed = btype == '!'
+        for token in mdiff.splitnewlines(''.join(al[a1:a2])):
+            atokens.append((changed, token))
+        for token in mdiff.splitnewlines(''.join(bl[b1:b2])):
+            btokens.append((changed, token))
+
+    # yield deleted tokens, then inserted ones
+    for prefix, label, tokens in [('-', 'diff.deleted', atokens),
+                                  ('+', 'diff.inserted', btokens)]:
+        nextisnewline = True
+        for changed, token in tokens:
+            if nextisnewline:
+                yield (prefix, label)
+                nextisnewline = False
+            # special handling line end
+            isendofline = token.endswith('\n')
+            if isendofline:
+                chomp = token[:-1] # chomp
+                token = chomp.rstrip() # detect spaces at the end
+                endspaces = chomp[len(token):]
+            # scan tabs
+            for maybetab in tabsplitter.findall(token):
+                if '\t' == maybetab[0]:
+                    currentlabel = 'diff.tab'
+                else:
+                    if changed:
+                        currentlabel = label + '.changed'
+                    else:
+                        currentlabel = label + '.unchanged'
+                yield (maybetab, currentlabel)
+            if isendofline:
+                if endspaces:
+                    yield (endspaces, 'diff.trailingwhitespace')
+                yield ('\n', '')
+                nextisnewline = True
+
 def difflabel(func, *args, **kw):
     '''yields 2-tuples of (output, label) based on the output of func()'''
+    if kw.get(r'opts') and kw[r'opts'].worddiff:
+        dodiffhunk = diffsinglehunkinline
+    else:
+        dodiffhunk = diffsinglehunk
     headprefixes = [('diff', 'diff.diffline'),
                     ('copy', 'diff.extended'),
                     ('rename', 'diff.extended'),
@@ -2512,7 +2583,7 @@ def difflabel(func, *args, **kw):
     hunkbuffer = []
     def consumehunkbuffer():
         if hunkbuffer:
-            for token in diffsinglehunk(hunkbuffer):
+            for token in dodiffhunk(hunkbuffer):
                 yield token
             hunkbuffer[:] = []
 
