@@ -2492,9 +2492,8 @@ def difflabel(func, *args, **kw):
         matches = {}
         if inlinecolor:
             matches = _findmatches(lines)
+        linecount = len(lines)
         for i, line in enumerate(lines):
-            if i != 0:
-                yield ('\n', '')
             if head:
                 if line.startswith('@'):
                     head = False
@@ -2533,6 +2532,8 @@ def difflabel(func, *args, **kw):
                 yield (line, '')
             if line != stripline:
                 yield (line[len(stripline):], 'diff.trailingwhitespace')
+            if i + 1 < linecount:
+                yield ('\n', '')
 
 def _findmatches(slist):
     '''Look for insertion matches to deletion and returns a dict of
