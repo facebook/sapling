@@ -28,20 +28,20 @@ class BufVec;
 }
 
 class Blob;
-class FileHandle;
+class EdenFileHandle;
 class Hash;
 class ObjectStore;
 
 class FileInode : public InodeBase {
  public:
-  using FileHandlePtr = std::shared_ptr<FileHandle>;
+  using FileHandlePtr = std::shared_ptr<EdenFileHandle>;
 
   enum : int { WRONG_TYPE_ERRNO = EISDIR };
 
   /**
    * The FUSE create request wants both the inode and a file handle.  This
    * constructor simultaneously allocates a FileInode given the File and
-   * returns a new FileHandle to it.
+   * returns a new EdenFileHandle to it.
    */
   static std::tuple<FileInodePtr, FileHandlePtr> create(
       fusell::InodeNumber ino,
@@ -381,7 +381,7 @@ class FileInode : public InodeBase {
 
   folly::Synchronized<State> state_;
 
-  friend class ::facebook::eden::FileHandle;
+  friend class ::facebook::eden::EdenFileHandle;
 };
 } // namespace eden
 } // namespace facebook

@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "eden/fs/inodes/FileHandle.h"
+#include "eden/fs/inodes/EdenFileHandle.h"
 
 #include <folly/experimental/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
@@ -18,11 +18,11 @@
 namespace facebook {
 namespace eden {
 
-FileHandle::~FileHandle() {
+EdenFileHandle::~EdenFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
+folly::Future<fusell::Dispatcher::Attr> EdenFileHandle::getattr() {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -31,11 +31,11 @@ folly::Future<fusell::Dispatcher::Attr> FileHandle::getattr() {
   return inode_->getattr();
 }
 
-fusell::InodeNumber FileHandle::getInodeNumber() {
+fusell::InodeNumber EdenFileHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
 
-folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
+folly::Future<fusell::Dispatcher::Attr> EdenFileHandle::setattr(
     const fuse_setattr_in& attr) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
@@ -45,15 +45,15 @@ folly::Future<fusell::Dispatcher::Attr> FileHandle::setattr(
   return inode_->setattr(attr);
 }
 
-bool FileHandle::preserveCache() const {
+bool EdenFileHandle::preserveCache() const {
   return true;
 }
 
-bool FileHandle::isSeekable() const {
+bool EdenFileHandle::isSeekable() const {
   return true;
 }
 
-folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
+folly::Future<fusell::BufVec> EdenFileHandle::read(size_t size, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -64,7 +64,7 @@ folly::Future<fusell::BufVec> FileHandle::read(size_t size, off_t off) {
   return inode_->read(size, off);
 }
 
-folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
+folly::Future<size_t> EdenFileHandle::write(fusell::BufVec&& buf, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -82,7 +82,7 @@ folly::Future<size_t> FileHandle::write(fusell::BufVec&& buf, off_t off) {
   });
 }
 
-folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
+folly::Future<size_t> EdenFileHandle::write(folly::StringPiece str, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -100,7 +100,7 @@ folly::Future<size_t> FileHandle::write(folly::StringPiece str, off_t off) {
   });
 }
 
-folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
+folly::Future<folly::Unit> EdenFileHandle::flush(uint64_t lock_owner) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -110,7 +110,7 @@ folly::Future<folly::Unit> FileHandle::flush(uint64_t lock_owner) {
   return folly::Unit{};
 }
 
-folly::Future<folly::Unit> FileHandle::fsync(bool datasync) {
+folly::Future<folly::Unit> EdenFileHandle::fsync(bool datasync) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,

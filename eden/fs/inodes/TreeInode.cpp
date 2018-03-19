@@ -24,8 +24,8 @@
 #include "eden/fs/inodes/DeferredDiffEntry.h"
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/inodes/InodeError.h"
@@ -747,7 +747,7 @@ folly::Future<TreeInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
-  std::shared_ptr<FileHandle> handle;
+  std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
   materialize();
@@ -841,7 +841,7 @@ FileInodePtr TreeInode::symlink(
     folly::StringPiece symlinkTarget) {
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
-  std::shared_ptr<FileHandle> handle;
+  std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
   materialize();
@@ -933,7 +933,7 @@ FileInodePtr TreeInode::symlink(
 FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   // Compute the effective name of the node they want to create.
   RelativePath targetName;
-  std::shared_ptr<FileHandle> handle;
+  std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
   if (!S_ISSOCK(mode)) {

@@ -15,8 +15,8 @@
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
 #include <openssl/sha.h>
+#include "eden/fs/inodes/EdenFileHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -158,7 +158,7 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
       ino, parentInode, name, mode, std::move(file), ctime);
 
   return inode->state_.withWLock([&](auto& state) {
-    auto fileHandle = std::make_shared<FileHandle>(
+    auto fileHandle = std::make_shared<EdenFileHandle>(
         inode, [&state] { fileHandleDidOpen(state); });
     state.file = std::move(file);
     DCHECK_EQ(state.openCount, 1)
@@ -366,17 +366,17 @@ folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(int flags) {
   }
 
   auto fileHandle = state_.withWLock([&](auto& state) {
-    // Creating the FileHandle increments openCount, which causes the truncation
-    // and materialization paths to cache the overlay's file handle in the
-    // state.
-    return std::make_shared<FileHandle>(
+    // Creating the EdenFileHandle increments openCount, which causes the
+    // truncation and materialization paths to cache the overlay's file handle
+    // in the state.
+    return std::make_shared<EdenFileHandle>(
         inodePtrFromThis(), [&state] { fileHandleDidOpen(state); });
   });
 
   if (flags & O_TRUNC) {
     materializeAndTruncate();
   } else if (flags & (O_RDWR | O_WRONLY | O_CREAT)) {
-    // Begin materializing the data into the overlay, but return the FileHandle
+    // Begin materializing the data into the overlay, but return the file handle
     // immediately.
     (void)materializeForWrite();
   } else {
@@ -461,8 +461,8 @@ folly::Future<struct stat> FileInode::stat() {
       }
       st.st_size = overlayStat.st_size - Overlay::kHeaderLength;
     } else {
-      // blob is guaranteed set because ensureDataLoaded() returns a FileHandle
-      // so openCount > 0.
+      // blob is guaranteed set because ensureDataLoaded() returns a
+      // EdenFileHandle so openCount > 0.
       CHECK(state->blob);
       auto buf = state->blob->getContents();
       st.st_size = buf.computeChainDataLength();
@@ -679,7 +679,7 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
       case State::BLOB_LOADED:
       case State::MATERIALIZED_IN_OVERLAY:
         // Nothing to do if loaded or materialized.
-        return makeFuture(std::make_shared<FileHandle>(
+        return makeFuture(std::make_shared<EdenFileHandle>(
             inodePtrFromThis(), [&state] { fileHandleDidOpen(*state); }));
 
       case State::NOT_LOADED:
@@ -729,11 +729,11 @@ Future<FileInode::FileHandlePtr> FileInode::ensureDataLoaded() {
               state->blob = std::move(tryBlob.value());
               state->tag = State::BLOB_LOADED;
               state->checkInvariants();
-              // The FileHandle must be allocated while the lock is held so the
-              // blob field is set and the openCount incremented atomically, so
-              // that no other thread can cause the blob to get unset before
+              // The EdenFileHandle must be allocated while the lock is held so
+              // the blob field is set and the openCount incremented atomically,
+              // so that no other thread can cause the blob to get unset before
               // openCount is incremented.
-              auto result = std::make_shared<FileHandle>(
+              auto result = std::make_shared<EdenFileHandle>(
                   self, [&state] { fileHandleDidOpen(*state); });
               // Call the Future's subscribers while the state_ lock is not
               // held. Even if the FileInode has transitioned to a materialized
@@ -846,8 +846,8 @@ Future<Unit> FileInode::materializeForWrite() {
         // than to read the file out of the overlay later.
       }
 
-      // ensureDataLoaded() returns a FileHandle; therefore openCount must be
-      // positive; therefore it's okay to set file.
+      // ensureDataLoaded() returns an EdenFileHandle; therefore openCount must
+      // be positive; therefore it's okay to set file.
       CHECK_GT(state->openCount, 0);
 
       // Update the FileInode to indicate that we are materialized now.
@@ -920,7 +920,7 @@ void FileInode::materializeAndTruncate() {
     }
     storeSha1(state, file, Hash::sha1(ByteRange{}));
 
-    return std::make_shared<FileHandle>(
+    return std::make_shared<EdenFileHandle>(
         inodePtrFromThis(), [&state] { fileHandleDidOpen(*state); });
   });
 

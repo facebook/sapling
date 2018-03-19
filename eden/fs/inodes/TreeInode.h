@@ -23,8 +23,8 @@ namespace eden {
 class CheckoutAction;
 class CheckoutContext;
 class DiffContext;
+class EdenFileHandle;
 class EdenMount;
-class FileHandle;
 class GitIgnoreStack;
 class InodeDiffCallback;
 class InodeMap;
@@ -304,7 +304,7 @@ class TreeInode : public InodeBase {
     /// The newly created inode instance.
     InodePtr inode;
     /// The newly opened file handle.
-    std::shared_ptr<FileHandle> file;
+    std::shared_ptr<EdenFileHandle> file;
 
     explicit CreateResult(const EdenMount* mount);
   };

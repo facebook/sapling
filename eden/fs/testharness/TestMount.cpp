@@ -14,9 +14,9 @@
 #include <folly/io/IOBuf.h>
 #include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/FileHandle.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/model/Blob.h"

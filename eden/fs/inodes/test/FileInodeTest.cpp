@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
-#include "eden/fs/inodes/FileHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"

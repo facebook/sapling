@@ -18,7 +18,7 @@ class Blob;
 class FileInode;
 class LocalStore;
 
-class FileHandle : public fusell::FileHandle {
+class EdenFileHandle : public fusell::FileHandle {
  public:
   /**
    * The caller is responsible for incrementing any reference counts in the
@@ -26,17 +26,17 @@ class FileHandle : public fusell::FileHandle {
    * inode.
    *
    * Note that, for exception safety, the given function has to run during
-   * FileHandle construction - if it throws, we don't want ~FileHandle to call
-   * fileHandleDidClose.
+   * EdenFileHandle construction - if it throws, we don't want ~EdenFileHandle
+   * to call fileHandleDidClose.
    */
   template <typename Func>
-  explicit FileHandle(FileInodePtr inode, Func&& func)
+  explicit EdenFileHandle(FileInodePtr inode, Func&& func)
       : inode_(std::move(inode)) {
     func();
   }
 
   // Calls fileHandleDidClose on the associated inode.
-  ~FileHandle() override;
+  ~EdenFileHandle() override;
 
   fusell::InodeNumber getInodeNumber() override;
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -52,11 +52,11 @@ class FileHandle : public fusell::FileHandle {
   folly::Future<folly::Unit> fsync(bool datasync) override;
 
  private:
-  FileHandle() = delete;
-  FileHandle(const FileHandle&) = delete;
-  FileHandle(FileHandle&&) = delete;
-  FileHandle& operator=(const FileHandle&) = delete;
-  FileHandle& operator=(FileHandle&&) = delete;
+  EdenFileHandle() = delete;
+  EdenFileHandle(const EdenFileHandle&) = delete;
+  EdenFileHandle(EdenFileHandle&&) = delete;
+  EdenFileHandle& operator=(const EdenFileHandle&) = delete;
+  EdenFileHandle& operator=(EdenFileHandle&&) = delete;
 
   FileInodePtr inode_;
 };
