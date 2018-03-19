@@ -391,3 +391,13 @@ multibyte character shouldn't be broken up in word diff:
   [diff.hunk|@@ -1,1 +1,1 @@]
   [diff.deleted|-][diff.deleted.unchanged|blah ][diff.deleted.changed|\xe3\x82\xa2][diff.deleted.unchanged| blah] (esc)
   [diff.inserted|+][diff.inserted.unchanged|blah ][diff.inserted.changed|\xe3\x82\xa4][diff.inserted.unchanged| blah] (esc)
+
+word diff is disabled if HGPLAIN=1
+
+  $ HGPLAIN=1 hg diff --config experimental.worddiff=True --color=debug -c.
+  diff --git a/utf8 b/utf8
+  --- a/utf8
+  +++ b/utf8
+  @@ -1,1 +1,1 @@
+  -blah \xe3\x82\xa2 blah (esc)
+  +blah \xe3\x82\xa4 blah (esc)
