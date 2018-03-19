@@ -337,6 +337,7 @@ test inline color diff
   [diff.deleted|-(to see if it works)]
   [diff.inserted|+three of those lines have]
   [diff.inserted|+collapsed onto one]
+#if false
   $ hg diff --config experimental.worddiff=True --color=debug
   [diff.diffline|diff --git a/file1 b/file1]
   [diff.file_a|--- a/file1]
@@ -370,6 +371,7 @@ test inline color diff
   [diff.deleted|-(to see if it works)]
   [diff.inserted|+three of those lines ][diff.inserted.highlight|have]
   [diff.inserted|+][diff.inserted.highlight|collapsed][diff.inserted| onto one]
+#endif
 
 multibyte character shouldn't be broken up in word diff:
 
@@ -383,6 +385,8 @@ multibyte character shouldn't be broken up in word diff:
   >     f.write(b"blah \xe3\x82\xa4 blah\n")
   > EOF
   $ hg ci -m 'slightly change utf8 char' utf8
+
+#if false
   $ hg diff --config experimental.worddiff=True --color=debug -c.
   [diff.diffline|diff --git a/utf8 b/utf8]
   [diff.file_a|--- a/utf8]
@@ -390,3 +394,4 @@ multibyte character shouldn't be broken up in word diff:
   [diff.hunk|@@ -1,1 +1,1 @@]
   [diff.deleted|-blah ][diff.deleted.highlight|\xe3\x82\xa2][diff.deleted| blah] (esc)
   [diff.inserted|+blah ][diff.inserted.highlight|\xe3\x82\xa4][diff.inserted| blah] (esc)
+#endif

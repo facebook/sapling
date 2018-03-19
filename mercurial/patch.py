@@ -10,7 +10,6 @@ from __future__ import absolute_import, print_function
 
 import collections
 import copy
-import difflib
 import email
 import errno
 import hashlib
@@ -2468,11 +2467,32 @@ def diffhunks(repo, node1=None, node2=None, match=None, changes=None,
     else:
         return difffn(opts, None)
 
+def diffsinglehunk(hunklines):
+    """yield tokens for a list of lines in a single hunk"""
+    for line in hunklines:
+        # chomp
+        chompline = line.rstrip('\n')
+        # highlight tabs and trailing whitespace
+        stripline = chompline.rstrip()
+        if line[0] == '-':
+            label = 'diff.deleted'
+        elif line[0] == '+':
+            label = 'diff.inserted'
+        else:
+            raise error.ProgrammingError('unexpected hunk line: %s' % line)
+        for token in tabsplitter.findall(stripline):
+            if '\t' == token[0]:
+                yield (token, 'diff.tab')
+            else:
+                yield (token, label)
+
+        if chompline != stripline:
+            yield (chompline[len(stripline):], 'diff.trailingwhitespace')
+        if chompline != line:
+            yield (line[len(chompline):], '')
+
 def difflabel(func, *args, **kw):
     '''yields 2-tuples of (output, label) based on the output of func()'''
-    inlinecolor = False
-    if kw.get(r'opts'):
-        inlinecolor = kw[r'opts'].worddiff
     headprefixes = [('diff', 'diff.diffline'),
                     ('copy', 'diff.extended'),
                     ('rename', 'diff.extended'),
@@ -2484,14 +2504,20 @@ def difflabel(func, *args, **kw):
                     ('---', 'diff.file_a'),
                     ('+++', 'diff.file_b')]
     textprefixes = [('@', 'diff.hunk'),
-                    ('-', 'diff.deleted'),
-                    ('+', 'diff.inserted')]
+                    # - and + are handled by diffsinglehunk
+                   ]
     head = False
+
+    # buffers a hunk, i.e. adjacent "-", "+" lines without other changes.
+    hunkbuffer = []
+    def consumehunkbuffer():
+        if hunkbuffer:
+            for token in diffsinglehunk(hunkbuffer):
+                yield token
+            hunkbuffer[:] = []
+
     for chunk in func(*args, **kw):
         lines = chunk.split('\n')
-        matches = {}
-        if inlinecolor:
-            matches = _findmatches(lines)
         linecount = len(lines)
         for i, line in enumerate(lines):
             if head:
@@ -2500,109 +2526,37 @@ def difflabel(func, *args, **kw):
             else:
                 if line and line[0] not in ' +-@\\':
                     head = True
-            stripline = line
             diffline = False
             if not head and line and line[0] in '+-':
-                # highlight tabs and trailing whitespace, but only in
-                # changed lines
-                stripline = line.rstrip()
                 diffline = True
 
             prefixes = textprefixes
             if head:
                 prefixes = headprefixes
-            for prefix, label in prefixes:
-                if stripline.startswith(prefix):
-                    if diffline:
-                        if i in matches:
-                            for t, l in _inlinediff(lines[i].rstrip(),
-                                                    lines[matches[i]].rstrip(),
-                                                    label):
-                                yield (t, l)
-                        else:
-                            for token in tabsplitter.findall(stripline):
-                                if '\t' == token[0]:
-                                    yield (token, 'diff.tab')
-                                else:
-                                    yield (token, label)
-                    else:
-                        yield (stripline, label)
-                    break
+            if diffline:
+                # buffered
+                bufferedline = line
+                if i + 1 < linecount:
+                    bufferedline += "\n"
+                hunkbuffer.append(bufferedline)
             else:
-                yield (line, '')
-            if line != stripline:
-                yield (line[len(stripline):], 'diff.trailingwhitespace')
-            if i + 1 < linecount:
-                yield ('\n', '')
-
-def _findmatches(slist):
-    '''Look for insertion matches to deletion and returns a dict of
-    correspondences.
-    '''
-    lastmatch = 0
-    matches = {}
-    for i, line in enumerate(slist):
-        if line == '':
-            continue
-        if line[0] == '-':
-            lastmatch = max(lastmatch, i)
-            newgroup = False
-            for j, newline in enumerate(slist[lastmatch + 1:]):
-                if newline == '':
-                    continue
-                if newline[0] == '-' and newgroup: # too far, no match
-                    break
-                if newline[0] == '+': # potential match
-                    newgroup = True
-                    sim = difflib.SequenceMatcher(None, line, newline).ratio()
-                    if sim > 0.7:
-                        lastmatch = lastmatch + 1 + j
-                        matches[i] = lastmatch
-                        matches[lastmatch] = i
+                # unbuffered
+                for token in consumehunkbuffer():
+                    yield token
+                stripline = line.rstrip()
+                for prefix, label in prefixes:
+                    if stripline.startswith(prefix):
+                        yield (stripline, label)
+                        if line != stripline:
+                            yield (line[len(stripline):],
+                                   'diff.trailingwhitespace')
                         break
-    return matches
-
-def _inlinediff(s1, s2, operation):
-    '''Perform string diff to highlight specific changes.'''
-    operation_skip = '+?' if operation == 'diff.deleted' else '-?'
-    if operation == 'diff.deleted':
-        s2, s1 = s1, s2
-
-    buff = []
-    # we never want to higlight the leading +-
-    if operation == 'diff.deleted' and s2.startswith('-'):
-        label = operation
-        token = '-'
-        s2 = s2[1:]
-        s1 = s1[1:]
-    elif operation == 'diff.inserted' and s1.startswith('+'):
-        label = operation
-        token = '+'
-        s2 = s2[1:]
-        s1 = s1[1:]
-    else:
-        raise error.ProgrammingError("Case not expected, operation = %s" %
-                                     operation)
-
-    s = difflib.ndiff(_nonwordre.split(s2), _nonwordre.split(s1))
-    for part in s:
-        if part[0] in operation_skip or len(part) == 2:
-            continue
-        l = operation + '.highlight'
-        if part[0] in ' ':
-            l = operation
-        if part[2:] == '\t':
-            l = 'diff.tab'
-        if l == label: # contiguous token with same label
-            token += part[2:]
-            continue
-        else:
-            buff.append((token, label))
-            label = l
-            token = part[2:]
-    buff.append((token, label))
-
-    return buff
+                else:
+                    yield (line, '')
+                if i + 1 < linecount:
+                    yield ('\n', '')
+        for token in consumehunkbuffer():
+            yield token
 
 def diffui(*args, **kw):
     '''like diff(), but yields 2-tuples of (output, label) for ui.write()'''
