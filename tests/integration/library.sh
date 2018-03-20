@@ -62,6 +62,12 @@ function blobimport {
   mkdir -p "$reponame"/books
 }
 
+function newblobimport {
+  reponame=$2
+  mkdir -p "$reponame"
+  $MONONOKE_NEWBLOBIMPORT --repo_id 0 --blobstore rocksdb "$@" >> "$TESTTMP/blobimport.out" 2>&1
+}
+
 function edenserver {
   $MONONOKE_EDEN_SERVER "$@" >> "$TESTTMP/edenserver.out" 2>&1 &
   echo $! >> "$DAEMON_PIDS"
