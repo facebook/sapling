@@ -866,7 +866,7 @@ def _listprofiles(ui, repo, opts):
     ('', 'reset', False, _('makes the repo full again')),
     ('', 'cwd-list', False, _('list the full contents of the current '
                               'directory')),
-    ('', 'list-profiles', False, _('list available profiles')),
+    ('l', 'list-profiles', False, _('list available profiles')),
     ] + commands.templateopts,
     _('[--OPTION] PATTERN...'))
 def sparse(ui, repo, *pats, **opts):

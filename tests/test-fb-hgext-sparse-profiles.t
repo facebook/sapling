@@ -329,7 +329,7 @@ Test profile discovery
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs - Base profile including the profiles directory
   * profiles/foo/spam - Profile that only includes another
-  $ hg sparse --list-profiles -T json
+  $ hg sparse -l -T json
   [
    {
     "active": "included",
@@ -346,13 +346,13 @@ Test profile discovery
   > [sparse]
   > profile_directory = profiles/
   > EOF
-  $ hg sparse --list-profiles
+  $ hg sparse -l
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
-  $ hg sparse --list-profiles -T json
+  $ hg sparse -l -T json
   [
    {
     "active": "included",
@@ -380,7 +380,7 @@ The current working directory plays no role in listing profiles:
 
   $ mkdir otherdir
   $ cd otherdir
-  $ hg sparse --list-profiles
+  $ hg sparse -l
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
@@ -392,7 +392,7 @@ Profiles are loaded from the manifest, so excluding a profile directory should
 not hamper listing.
 
   $ hg sparse --exclude profiles/bar
-  $ hg sparse --list-profiles
+  $ hg sparse -l
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
@@ -409,7 +409,7 @@ warnings:
   > EOF
   $ hg add -q profiles
   $ hg commit -qm 'Broken profile added'
-  $ hg sparse --list-profiles
+  $ hg sparse -l
   symbols: * = active profile, ~ = transitively included
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
