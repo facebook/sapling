@@ -68,3 +68,26 @@ Test backfilling all at once
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
        1        44      61      0       1 70f2c6726cec bc0c2c938b92 000000000000
        2       105      55      1       2 68221fc1644f 70f2c6726cec 000000000000
+
+Test backfilling a commit with a null manifest
+  $ cd ../
+  $ hg init nullrepo
+  $ cd nullrepo
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > 
+  > [remotefilelog]
+  > name=master
+  > cachepath=$CACHEDIR
+  > usefastdatapack=True
+  > 
+  > [fastmanifest]
+  > usetree=True
+  > usecache=False
+  > 
+  > [treemanifest]
+  > server=True
+  > EOF
+  $ hg commit --config ui.allowemptycommit=True -m "Initial commit"
+  $ hg backfilltree

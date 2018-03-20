@@ -1355,17 +1355,11 @@ class manifestlog(object):
         """Turns a linknode into a linkrev. Only needed for revlog backed
         manifestlogs."""
         linkrev = self._changelog.rev(linknode)
-        if linkrev == revlog.nullrev:
-            raise error.ProgrammingError("attempting to convert null "
-                                         "linknode")
         return linkrev
 
     def _maplinkrev(self, linkrev):
         """Turns a linkrev into a linknode. Only needed for revlog backed
         manifestlogs."""
-        if linkrev == revlog.nullrev:
-            raise error.ProgrammingError("attempting to convert null "
-                                         "linkrev")
         if linkrev >= len(self._changelog):
             raise LookupError(_("linkrev %s not in changelog") % linkrev)
         return self._changelog.node(linkrev)

@@ -1009,6 +1009,11 @@ def _backfilltree(tr, repo, mfl, tmfl, revs):
     ui.progress(converting, None)
 
 def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
+    # A manifest can be the nullid if the first commit in the repo is an empty
+    # commit.
+    if mfctx.node() == nullid:
+        return
+
     p1node, p2node = mfctx.parents
     newflat = mfctx.read()
     if p1node != nullid:
