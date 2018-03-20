@@ -1,0 +1,89 @@
+// Copyright (c) 2018-present, Facebook, Inc.
+// All Rights Reserved.
+//
+// This software may be used and distributed according to the terms of the
+// GNU General Public License version 2 or any later version.
+
+use std::fmt::{self, Debug};
+
+use bytes::Bytes;
+use quickcheck::{single_shrinker, Arbitrary, Gen};
+
+use errors::*;
+use thrift;
+
+/// An enum representing contents for a file. In the future this may have
+/// special support for very large files.
+#[derive(Clone, Eq, PartialEq)]
+pub enum FileContents {
+    Bytes(Bytes),
+}
+
+impl FileContents {
+    pub fn new_bytes<B: Into<Bytes>>(b: B) -> Self {
+        FileContents::Bytes(b.into())
+    }
+
+    pub(crate) fn from_thrift(fc: thrift::FileContents) -> Result<Self> {
+        match fc {
+            thrift::FileContents::Bytes(bytes) => Ok(FileContents::Bytes(bytes.into())),
+            thrift::FileContents::UnknownField(x) => bail_err!(ErrorKind::InvalidThrift(
+                "FileContents".into(),
+                format!("unknown file contents field: {}", x)
+            )),
+        }
+    }
+
+    pub fn into_bytes(self) -> Bytes {
+        match self {
+            FileContents::Bytes(bytes) => bytes,
+        }
+    }
+
+    pub(crate) fn into_thrift(self) -> thrift::FileContents {
+        match self {
+            // TODO (T26959816) -- allow Thrift to represent binary as Bytes
+            FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes.to_vec()),
+        }
+    }
+}
+
+impl Debug for FileContents {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FileContents::Bytes(ref bytes) => {
+                write!(f, "FileContents::Bytes(length {})", bytes.len())
+            }
+        }
+    }
+}
+
+impl Arbitrary for FileContents {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        FileContents::new_bytes(Vec::arbitrary(g))
+    }
+
+    fn shrink(&self) -> Box<Iterator<Item = Self>> {
+        single_shrinker(FileContents::new_bytes(vec![]))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    quickcheck! {
+        fn thrift_roundtrip(fc: FileContents) -> bool {
+            let thrift_fc = fc.clone().into_thrift();
+            let fc2 = FileContents::from_thrift(thrift_fc)
+                .expect("thrift roundtrips should always be valid");
+            fc == fc2
+        }
+    }
+
+    #[test]
+    fn bad_thrift() {
+        let thrift_fc = thrift::FileContents::UnknownField(-1);
+        FileContents::from_thrift(thrift_fc).expect_err("unexpected OK - unknown field");
+    }
+}

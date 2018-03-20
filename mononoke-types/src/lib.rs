@@ -18,6 +18,7 @@ extern crate ascii;
 extern crate assert_matches;
 extern crate bincode;
 extern crate blake2;
+extern crate bytes;
 extern crate chrono;
 #[macro_use]
 extern crate failure_ext as failure;
@@ -38,11 +39,13 @@ extern crate mononoke_types_thrift;
 
 pub mod datetime;
 pub mod errors;
+pub mod file_contents;
 pub mod hash;
 pub mod path;
 pub mod typed_hash;
 
 pub use datetime::DateTime;
+pub use file_contents::FileContents;
 pub use path::{MPath, MPathElement, RepoPath};
 pub use typed_hash::{ChangesetId, ContentId, UnodeId};
 

@@ -47,3 +47,7 @@ struct DateTime {
   // an i16 can't fit them.
   2: required i32 tz_offset_secs,
 }
+
+union FileContents {
+  1: binary Bytes,
+}
