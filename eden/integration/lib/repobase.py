@@ -54,6 +54,12 @@ class Repository(object):
     def add_files(self, paths: List[str]) -> None:
         raise NotImplementedError('subclasses must implement add_files()')
 
+    def remove_file(self, path: str) -> None:
+        self.remove_files([path])
+
+    def remove_files(self, paths: List[str], force: bool = False) -> None:
+        raise NotImplementedError('subclasses must implement remove_files()')
+
     def get_path(self, *args: str) -> str:
         for arg in args:
             assert not os.path.isabs(arg), 'must not be absolute: %r' % (arg, )

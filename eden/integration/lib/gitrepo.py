@@ -17,6 +17,11 @@ import typing
 from typing import Dict, List, Optional
 
 from . import repobase
+from .error import CommandError
+
+
+class GitError(CommandError):
+    pass
 
 
 class GitRepository(repobase.Repository):
@@ -57,10 +62,13 @@ class GitRepository(repobase.Repository):
             git_env = os.environ.copy()
             git_env.update(env)
 
-        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE,
-                                           check=True, cwd=self.path,
-                                           env=git_env)
+        try:
+            completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE,
+                                               check=True, cwd=self.path,
+                                               env=git_env)
+        except subprocess.CalledProcessError as ex:
+            raise GitError(ex) from ex
         if completed_process.stdout is not None:
             return typing.cast(str, completed_process.stdout.decode(encoding))
         else:
@@ -80,6 +88,12 @@ class GitRepository(repobase.Repository):
 
     def add_files(self, paths: List[str]) -> None:
         self.git('add', *paths)
+
+    def remove_files(self, paths: List[str], force: bool = False) -> None:
+        if force:
+            self.git('rm', '--force', *paths)
+        else:
+            self.git('rm', *paths)
 
     def commit(
         self,

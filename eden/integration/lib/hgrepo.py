@@ -12,7 +12,6 @@ import datetime
 import distutils.spawn
 import logging
 import os
-import shlex
 import subprocess
 import sys
 import tempfile
@@ -20,35 +19,12 @@ import typing
 from typing import Any, List, Optional
 
 from . import repobase
+from .error import CommandError
 from libfb.py import pathutils
 
 
-class HgError(subprocess.CalledProcessError):
-    '''
-    A wrapper around subprocess.CalledProcessError that also includes
-    includes the process's stderr when converted to a string.
-    '''
-    def __init__(self, orig: subprocess.CalledProcessError) -> None:
-        super().__init__(orig.returncode, orig.cmd,
-                         output=orig.output, stderr=orig.stderr)
-
-    def __str__(self) -> str:
-        if not self.stderr:
-            return super().__str__()
-
-        cmd_str = ' '.join(shlex.quote(arg) for arg in self.cmd)
-
-        stderr_str = self.stderr
-        if isinstance(self.stderr, bytes):
-            stderr_str = self.stderr.decode('utf-8', errors='replace')
-
-        # Indent the stderr output just to help indicate where it starts
-        # and ends in the test output.
-        stderr_str = stderr_str.replace('\n', '\n  ')
-
-        msg = 'Command [%s] failed with status %s\nstderr:\n  %s' % (
-            cmd_str, self.returncode, stderr_str)
-        return msg
+class HgError(CommandError):
+    pass
 
 
 class HgRepository(repobase.Repository):
@@ -135,6 +111,12 @@ class HgRepository(repobase.Repository):
         # add_files() may be called for files that are already tracked.
         # hg will print a warning, but this is fine.
         self.hg('add', *paths)
+
+    def remove_files(self, paths: List[str], force: bool = False) -> None:
+        if force:
+            self.hg('remove', '--force', *paths)
+        else:
+            self.hg('remove', *paths)
 
     def commit(self,
                message: str,
