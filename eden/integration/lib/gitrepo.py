@@ -105,7 +105,7 @@ class GitRepository(repobase.Repository):
         committer_email: Optional[str] = None,
         committer_date: Optional[datetime.datetime] = None,
         amend: bool = False
-    ) -> None:
+    ) -> str:
         if author_name is None:
             author_name = self.author_name
         if author_email is None:
@@ -144,3 +144,6 @@ class GitRepository(repobase.Repository):
             if amend:
                 args.append('--amend')
             self.git(*args, env=git_commit_env)
+
+        # Get the commit ID and return it
+        return self.git('rev-parse', 'HEAD').strip()
