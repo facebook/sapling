@@ -273,15 +273,10 @@ pub fn diff_sorted_vecs(
     loop {
         match (left.pop_front(), right.pop_front()) {
             (Some(left_entry), Some(right_entry)) => {
-                let left_path = left_entry
-                    .get_name()
-                    .clone()
-                    .unwrap_or(MPathElement::empty());
-                let right_path = right_entry
-                    .get_name()
-                    .clone()
-                    .unwrap_or(MPathElement::empty());
+                let left_path: Option<MPathElement> = left_entry.get_name().clone();
+                let right_path: Option<MPathElement> = right_entry.get_name().clone();
 
+                // note that for Option types, None is less than any Some
                 if left_path < right_path {
                     res.push(ChangedEntry::new_added(path.clone(), left_entry));
                     right.push_front(right_entry);

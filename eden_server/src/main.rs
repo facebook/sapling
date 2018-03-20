@@ -66,7 +66,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, MPathElement, NodeHash, RepositoryId};
+use mercurial_types::{Changeset, NodeHash, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
@@ -176,14 +176,14 @@ struct TreeMetadata {
 
 impl TreeMetadata {
     fn new(size: Option<usize>, entry: Box<mercurial_types::Entry>) -> TreeMetadata {
-        let name = entry
-            .get_name()
-            .clone()
-            .unwrap_or(MPathElement::empty());
+        let name = match *entry.get_name() {
+            Some(ref name) => name.as_bytes(),
+            None => b"",
+        };
 
         TreeMetadata {
             hash: entry.get_hash().into_nodehash().clone(),
-            path: PathBuf::from(OsString::from_vec(Vec::from(name.as_bytes()))),
+            path: PathBuf::from(OsString::from_vec(Vec::from(name))),
             ty: entry.get_type(),
             size,
         }

@@ -127,12 +127,6 @@ impl MPathElement {
         Ok(MPathElement(element))
     }
 
-    /// Create a new empty `MPathElement`.
-    #[inline]
-    pub fn empty() -> MPathElement {
-        MPathElement(vec![])
-    }
-
     #[inline]
     pub(crate) fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
         Self::verify(&element.0).context(ErrorKind::InvalidThrift(
@@ -143,6 +137,12 @@ impl MPathElement {
     }
 
     fn verify(p: &[u8]) -> Result<()> {
+        if p.is_empty() {
+            bail_err!(ErrorKind::InvalidPath(
+                "".into(),
+                "path elements cannot be empty".into()
+            ));
+        }
         if p.contains(&0) {
             bail_err!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
@@ -208,7 +208,7 @@ impl MPath {
             .filter(|e| !e.is_empty())
             .map(|e| {
                 // These instances have already been checked to contain null bytes and also
-                // are split on '/' bytes, so they're valid by construction. Skip the
+                // are split on '/' bytes and non-empty, so they're valid by construction. Skip the
                 // verification in MPathElement::new.
                 MPathElement(e.into())
             })
