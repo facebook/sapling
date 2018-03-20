@@ -22,7 +22,13 @@ class TakeoverTest:
         self.page2 = "2" * self.pagesize
         self.repo.write_file('tree/hello', self.page1 + self.page2)
         self.repo.write_file('tree/deleted', self.page1 + self.page2)
-        self.repo.commit('Initial commit.')
+        self.repo.write_file('src/main.c', 'hello world')
+        self.commit1 = self.repo.commit('Initial commit.')
+
+        self.repo.write_file('src/main.c', 'hello world v2')
+        self.repo.write_file('src/test/test1.py', 'test1')
+        self.repo.write_file('src/test/test2.py', 'test2')
+        self.commit2 = self.repo.commit('Initial commit.')
 
     def select_storage_engine(self):
         ''' we need to persist data across restarts '''
@@ -31,7 +37,7 @@ class TakeoverTest:
     def edenfs_logging_settings(self):
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
-    def test_takeover(self):
+    def do_takeover_test(self):
         hello = os.path.join(self.mount, 'tree/hello')
         deleted = os.path.join(self.mount, 'tree/deleted')
         deleted_local = os.path.join(self.mount, 'deleted-local')
@@ -115,7 +121,24 @@ class TakeoverTest:
             self.assertEqual(self.page1, f.read(self.pagesize))
             self.assertEqual(self.page2, f.read(self.pagesize))
 
-    def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(self):
+    def test_takeover(self):
+        return self.do_takeover_test()
+
+    def test_takeover_after_diff_revisions(self):
+        # Make a getScmStatusBetweenRevisions() call to Eden.
+        # Previously this thrift call caused Eden to create temporary inode
+        # objects outside of the normal root inode tree, and this would cause
+        # Eden to crash when shutting down afterwards.
+        with self.get_thrift_client() as client:
+            client.getScmStatusBetweenRevisions(
+                self.mount, self.commit1, self.commit2
+            )
+
+        return self.do_takeover_test()
+
+    def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
+        self
+    ):
         hello = os.path.join(self.mount, 'tree/hello')
 
         fd = os.open(hello, os.O_RDONLY)
