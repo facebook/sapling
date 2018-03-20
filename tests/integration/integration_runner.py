@@ -16,7 +16,7 @@ import tempfile
 
 import click
 
-from libfb import parutil, pathutils
+from libfb.py import parutil, pathutils
 
 from .third_party import hg_run_tests
 
