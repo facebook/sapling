@@ -510,9 +510,10 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
       folly::LogLevel::DBG2,
       *mountPoint,
       folly::format("oldHash={}, newHash={}", *oldHash, *newHash));
+  auto id1 = hashFromThrift(*oldHash);
+  auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
-  return helper->wrapFuture(
-      diffRevisions(mount.get(), Hash{*oldHash}, Hash{*newHash}));
+  return helper->wrapFuture(diffRevisions(mount.get(), id1, id2));
 }
 
 void EdenServiceHandler::debugGetScmTree(

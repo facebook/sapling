@@ -12,7 +12,9 @@
 #include <folly/Optional.h>
 #include <folly/Range.h>
 #include <string>
+
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/service/EdenError.h"
 
 namespace facebook {
 namespace eden {
@@ -37,11 +39,24 @@ inline std::string thriftHash(const folly::Optional<Hash> hash) {
 }
 
 /**
- * Convert thrift BinaryHash data type (a std::string containing the binary
- * hash bytes) into a Hash object.
+ * Convert thrift BinaryHash data type into a Hash object.
+ *
+ * This allows the input to be either a 20-byte binary string, or a 40-byte
+ * hexadecimal string.
  */
 inline Hash hashFromThrift(const std::string& commitID) {
-  return Hash(folly::ByteRange(folly::StringPiece(commitID)));
+  if (commitID.size() == Hash::RAW_SIZE) {
+    // This looks like 20 bytes of binary data.
+    return Hash(folly::ByteRange(folly::StringPiece(commitID)));
+  } else if (commitID.size() == 2 * Hash::RAW_SIZE) {
+    // This looks like 40 bytes of hexadecimal data.
+    return Hash(commitID);
+  } else {
+    throw newEdenError(
+        "expected argument to be a 20-byte binary hash or "
+        "40-byte hexadecimal hash; got \"{}\"",
+        commitID);
+  }
 }
 } // namespace eden
 } // namespace facebook

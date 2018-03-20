@@ -16,7 +16,12 @@ namespace py facebook.eden
 typedef i64 /* (cpp.type = "std::uint64_t") */ unsigned64
 
 /**
- * A source control hash, as a 20-byte binary value.
+ * A source control hash.
+ *
+ * This should normally be a 20-byte binary value, however the edenfs server
+ * will accept BinaryHash arguments as 40-byte hexadecimal strings as well.
+ * Data returned by the edenfs server in a BinaryHash field will always be a
+ * 20-byte binary value.
  */
 typedef binary BinaryHash
 
@@ -431,14 +436,11 @@ service EdenService extends fb303.FacebookService {
   /**
    * Computes the status between two specified revisions.
    * This does not care about the state of the working copy.
-   *
-   * Note that unlike most of Eden's other thrift APIs this takes
-   * the hash arguments as 40-byte hexadecimal strings.
    */
   ScmStatus getScmStatusBetweenRevisions(
     1: string mountPoint,
-    2: string oldHash,
-    3: string newHash,
+    2: BinaryHash oldHash,
+    3: BinaryHash newHash,
   ) throws (1: EdenError ex)
 
   //////// SCM Commit-Related APIs ////////

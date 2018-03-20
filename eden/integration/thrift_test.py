@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import binascii
 import hashlib
 import os
 import time
@@ -204,6 +205,27 @@ class ThriftTest:
         self.assertEqual(lookups_1ls + 1, lookups_2ls)
 
     def test_diff_revisions(self):
+        # Convert the commit hashes to binary for the thrift call
+        with self.get_thrift_client() as client:
+            diff = client.getScmStatusBetweenRevisions(
+                self.mount,
+                binascii.unhexlify(self.commit1),
+                binascii.unhexlify(self.commit2)
+            )
+
+        # FIXME: getScmStatusBetweenRevisions() currently reports
+        # the ADDED and REMOVED statuses backwards.
+        self.assertDictEqual(
+            diff.entries, {
+                'cdir/subdir/new.txt': ScmFileStatus.REMOVED,  # should be ADDED
+                'bdir/file': ScmFileStatus.MODIFIED,
+                'README': ScmFileStatus.ADDED,  # should be REMOVED
+            }
+        )
+
+    def test_diff_revisions_hex(self):
+        # Watchman currently clals getScmStatusBetweenRevisions()
+        # with 40-byte hexadecimal commit IDs, so make sure that works.
         with self.get_thrift_client() as client:
             diff = client.getScmStatusBetweenRevisions(
                 self.mount, self.commit1, self.commit2
