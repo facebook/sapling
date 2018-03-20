@@ -12,6 +12,7 @@
 #include <folly/experimental/logging/xlog.h>
 
 #include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
 using namespace std::chrono;
@@ -124,7 +125,7 @@ void RequestData::replyNone() {
 
 void RequestData::systemErrorHandler(const std::system_error& err) {
   int errnum = EIO;
-  if (err.code().category() == std::system_category()) {
+  if (isErrnoError(err)) {
     errnum = err.code().value();
   }
   XLOG(DBG5) << folly::exceptionStr(err);

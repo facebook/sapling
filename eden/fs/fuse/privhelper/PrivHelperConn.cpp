@@ -22,7 +22,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #include "eden/fs/utils/ControlMsg.h"
+#include "eden/fs/utils/SystemError.h"
 
 using folly::ByteRange;
 using folly::checkUnixError;
@@ -408,7 +410,7 @@ void PrivHelperConn::serializeErrorResponse(
     const std::exception& ex) {
   int errnum = 0;
   auto* sysEx = dynamic_cast<const std::system_error*>(&ex);
-  if (sysEx != nullptr && sysEx->code().category() == std::system_category()) {
+  if (sysEx != nullptr && isErrnoError(*sysEx)) {
     errnum = sysEx->code().value();
   }
 

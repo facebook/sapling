@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
 using facebook::eden::PathComponent;
@@ -99,8 +100,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
         // Translate ENOENT into a successful response with an
         // inode number of 0 and a large entry_valid time, to let the kernel
         // cache this negative lookup result.
-        if (err.code().category() == std::system_category() &&
-            err.code().value() == ENOENT) {
+        if (isEnoent(err)) {
           fuse_entry_out entry = {};
           entry.attr_valid =
               std::numeric_limits<decltype(entry.attr_valid)>::max();

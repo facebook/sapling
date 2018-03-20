@@ -13,6 +13,7 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <system_error>
+#include "eden/fs/utils/SystemError.h"
 
 using folly::File;
 using folly::StringPiece;
@@ -91,8 +92,7 @@ bool PrivHelperTestServer::checkIfMarkerFileHasContents(
     folly::readFile(pathToMarkerFile.c_str(), data, 256);
     return data == contents;
   } catch (const std::system_error& ex) {
-    if (ex.code().category() == std::system_category() &&
-        ex.code().value() == ENOENT) {
+    if (isEnoent(ex)) {
       // Looks like this was never mounted
       return false;
     }

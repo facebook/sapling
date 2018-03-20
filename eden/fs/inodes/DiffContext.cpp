@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/DiffContext.h"
 #include "eden/fs/inodes/InodeDiffCallback.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/utils/SystemError.h"
 
 namespace facebook {
 namespace eden {
@@ -60,8 +61,7 @@ std::string DiffContext::tryIngestFile(AbsolutePathPiece fileName) {
       contents.clear();
     }
   } catch (const std::system_error& ex) {
-    if (ex.code().category() != std::system_category() ||
-        ex.code().value() != ENOENT) {
+    if (!isEnoent(ex)) {
       XLOG(WARNING) << "error reading gitignore file " << fileName
                     << folly::exceptionStr(ex);
     }

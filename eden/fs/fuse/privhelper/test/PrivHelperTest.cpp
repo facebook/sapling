@@ -8,9 +8,6 @@
  *
  */
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "PrivHelperTestServer.h"
-#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
@@ -22,6 +19,11 @@
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <vector>
+
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
+#include "eden/fs/utils/SystemError.h"
 
 using namespace folly::string_piece_literals;
 using namespace facebook::eden;
@@ -255,7 +257,8 @@ TEST(PrivHelper, SerializeError) {
     PrivHelperConn::parseEmptyResponse(&msg);
     FAIL() << "expected parseEmptyResponse() to throw";
   } catch (const std::system_error& ex) {
-    EXPECT_EQ(std::system_category(), ex.code().category());
+    EXPECT_TRUE(isErrnoError(ex))
+        << "unexpected error category: " << folly::exceptionStr(ex);
     EXPECT_EQ(ENOENT, ex.code().value());
     EXPECT_TRUE(strstr(ex.what(), "test error") != nullptr)
         << "unexpected error string: " << ex.what();

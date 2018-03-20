@@ -20,6 +20,7 @@
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
 using std::string;
@@ -459,8 +460,7 @@ void FuseChannel::invalidateInode(InodeNumber ino, off_t off, off_t len) {
               << " len=" << len << " FAIL: " << exc.what();
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
-    if (exc.code().category() == std::system_category() &&
-        exc.code().value() != ENOENT) {
+    if (!isEnoent(exc)) {
       throwSystemErrorExplicit(
           exc.code().value(), "error invalidating FUSE inode ", ino);
     }
@@ -523,8 +523,7 @@ void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
   } catch (const std::system_error& exc) {
     // Ignore ENOENT.  This can happen for inode numbers that we allocated on
     // our own and haven't actually told the kernel about yet.
-    if (exc.code().category() == std::system_category() &&
-        exc.code().value() != ENOENT) {
+    if (!isEnoent(exc)) {
       throwSystemErrorExplicit(
           exc.code().value(),
           "error invalidating FUSE entry ",
