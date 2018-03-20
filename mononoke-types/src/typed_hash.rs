@@ -17,20 +17,20 @@ use thrift;
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
 // Option type, or perhaps a list as desired.
 
-/// A Mononoke hash corresponding to a unode in a manifest or file.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
-pub struct UnodeHash(Blake2);
-
-/// A Mononoke hash corresponding to a changeset ID.
+/// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
 pub struct ChangesetId(Blake2);
 
-/// A Mononoke hash corresponding to a blob stored in the repo.
+/// An identifier for a unode in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf)]
-pub struct BlobHash(Blake2);
+pub struct UnodeId(Blake2);
+
+/// An identifier for file contents in Mononoke.
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf)]
+pub struct ContentId(Blake2);
 
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash {
@@ -130,18 +130,18 @@ macro_rules! impl_typed_hash {
     }
 }
 
-impl_typed_hash!(UnodeHash);
 impl_typed_hash!(ChangesetId);
-impl_typed_hash!(BlobHash);
+impl_typed_hash!(UnodeId);
+impl_typed_hash!(ContentId);
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     quickcheck! {
-        fn unodehash_thrift_roundtrip(h: UnodeHash) -> bool {
+        fn unodeid_thrift_roundtrip(h: UnodeId) -> bool {
             let v = h.into_thrift();
-            let sh = UnodeHash::from_thrift(v)
+            let sh = UnodeId::from_thrift(v)
                 .expect("converting a valid Thrift structure should always work");
             h == sh
         }
@@ -153,9 +153,9 @@ mod test {
             h == sh
         }
 
-        fn blobhash_thrift_roundtrip(h: BlobHash) -> bool {
+        fn contentid_thrift_roundtrip(h: ContentId) -> bool {
             let v = h.into_thrift();
-            let sh = BlobHash::from_thrift(v)
+            let sh = ContentId::from_thrift(v)
                 .expect("converting a valid Thrift structure should always work");
             h == sh
         }

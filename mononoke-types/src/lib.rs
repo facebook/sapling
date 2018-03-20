@@ -41,7 +41,7 @@ pub mod path;
 pub mod typed_hash;
 
 pub use path::{MPath, MPathElement, RepoPath};
-pub use typed_hash::{BlobHash, ChangesetId, UnodeHash};
+pub use typed_hash::{ChangesetId, ContentId, UnodeId};
 
 mod thrift {
     pub use mononoke_types_thrift::*;

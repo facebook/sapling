@@ -9,7 +9,7 @@
 
 extern crate mononoke_types;
 
-pub mod blobhash;
 pub mod changesetid;
+pub mod contentid;
 pub mod hash;
-pub mod unodehash;
+pub mod unodeid;
