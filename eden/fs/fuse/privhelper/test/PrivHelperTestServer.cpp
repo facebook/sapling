@@ -20,7 +20,6 @@ using std::string;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 PrivHelperTestServer::PrivHelperTestServer() {}
 
@@ -100,6 +99,6 @@ bool PrivHelperTestServer::checkIfMarkerFileHasContents(
     throw;
   }
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

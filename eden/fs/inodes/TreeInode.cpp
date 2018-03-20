@@ -91,7 +91,7 @@ class TreeInode::IncompleteInodeLoad {
       TreeInode* inode,
       Future<unique_ptr<InodeBase>>&& future,
       PathComponentPiece name,
-      fusell::InodeNumber number)
+      InodeNumber number)
       : treeInode_{inode},
         number_{number},
         name_{name},
@@ -132,13 +132,13 @@ class TreeInode::IncompleteInodeLoad {
   // to null in any IncompleteInodeLoad objects that are moved-away from.
   // We don't actually own the TreeInode and we don't destroy it.
   std::unique_ptr<TreeInode, NoopDeleter> treeInode_;
-  fusell::InodeNumber number_;
+  InodeNumber number_;
   PathComponent name_;
   Future<unique_ptr<InodeBase>> future_;
 };
 
 TreeInode::TreeInode(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     std::shared_ptr<const Tree>&& tree)
@@ -152,7 +152,7 @@ TreeInode::TreeInode(
               parent->getInodeMap())) {}
 
 TreeInode::TreeInode(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     TreeInodePtr parent,
     PathComponentPiece name,
     Dir&& dir)
@@ -173,12 +173,12 @@ TreeInode::TreeInode(EdenMount* mount, Dir&& dir)
 
 TreeInode::~TreeInode() {}
 
-folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
+folly::Future<Dispatcher::Attr> TreeInode::getattr() {
   return getAttrLocked(&*contents_.rlock());
 }
 
-fusell::Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
-  fusell::Dispatcher::Attr attr(getMount()->initStatData());
+Dispatcher::Attr TreeInode::getAttrLocked(const Dir* contents) {
+  Dispatcher::Attr attr(getMount()->initStatData());
 
   attr.st.st_mode = S_IFDIR | 0755;
   attr.st.st_ino = getNodeId().get();
@@ -209,7 +209,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   folly::Optional<Future<InodePtr>> returnFuture;
   InodePtr childInodePtr;
   InodeMap::PromiseVector promises;
-  fusell::InodeNumber childNumber;
+  InodeNumber childNumber;
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(name);
@@ -337,7 +337,7 @@ Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
   return future.ensure([p = std::move(processor)]() mutable { p.reset(); });
 }
 
-fusell::InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
+InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   auto contents = contents_.wlock();
   auto iter = contents->entries.find(name);
   if (iter == contents->entries.end()) {
@@ -360,7 +360,7 @@ fusell::InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
 
 void TreeInode::loadUnlinkedChildInode(
     PathComponentPiece name,
-    fusell::InodeNumber number,
+    InodeNumber number,
     folly::Optional<Hash> hash,
     mode_t mode) {
   try {
@@ -417,9 +417,7 @@ void TreeInode::loadUnlinkedChildInode(
   }
 }
 
-void TreeInode::loadChildInode(
-    PathComponentPiece name,
-    fusell::InodeNumber number) {
+void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
   folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
   {
     auto contents = contents_.rlock();
@@ -458,7 +456,7 @@ void TreeInode::loadChildInode(
 void TreeInode::registerInodeLoadComplete(
     folly::Future<unique_ptr<InodeBase>>& future,
     PathComponentPiece name,
-    fusell::InodeNumber number) {
+    InodeNumber number) {
   // This method should never be called with the contents_ lock held.  If the
   // future is already ready we will try to acquire the contents_ lock now.
   future
@@ -515,7 +513,7 @@ void TreeInode::inodeLoadComplete(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     const Entry& entry,
     PathComponentPiece name,
-    fusell::InodeNumber number) noexcept {
+    InodeNumber number) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -537,7 +535,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const Entry& entry,
     PathComponentPiece name,
-    fusell::InodeNumber number) {
+    InodeNumber number) {
   XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
              << " / \"" << name << "\"";
   DCHECK(entry.getInode() == nullptr);
@@ -581,7 +579,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
       number, inodePtrFromThis(), name, std::move(overlayDir.value()));
 }
 
-std::shared_ptr<fusell::DirHandle> TreeInode::opendir() {
+std::shared_ptr<DirHandle> TreeInode::opendir() {
   return std::make_shared<TreeInodeDirHandle>(inodePtrFromThis());
 }
 
@@ -648,7 +646,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
 void TreeInode::childMaterialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
-    fusell::InodeNumber childNodeId) {
+    InodeNumber childNodeId) {
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -824,7 +822,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
   // Now that we have the file handle, let's look up the attributes.
   auto getattrResult = handle->getattr();
   return getattrResult.then(
-      [=, handle = std::move(handle)](fusell::Dispatcher::Attr attr) mutable {
+      [=, handle = std::move(handle)](Dispatcher::Attr attr) mutable {
         CreateResult result(getMount());
 
         // Return all of the results back to the kernel.
@@ -1136,7 +1134,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // Set the flushKernelCache parameter to true unless this was triggered by a
   // FUSE request, in which case the kernel will automatically update its
   // cache correctly.
-  bool flushKernelCache = !fusell::RequestData::isFuseRequest();
+  bool flushKernelCache = !RequestData::isFuseRequest();
   int errnoValue =
       tryRemoveChild(renameLock, name, nullChildPtr, flushKernelCache);
   if (errnoValue == 0) {
@@ -2617,7 +2615,7 @@ void TreeInode::invalidateFuseCache(PathComponentPiece name) {
 }
 
 void TreeInode::invalidateFuseCacheIfRequired(PathComponentPiece name) {
-  if (fusell::RequestData::isFuseRequest()) {
+  if (RequestData::isFuseRequest()) {
     // no need to flush the cache if we are inside a FUSE request handler
     return;
   }
@@ -2801,7 +2799,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     std::vector<IncompleteInodeLoad>* pendingLoads) {
   DCHECK(!entry.getInode());
 
-  fusell::InodeNumber childNumber;
+  InodeNumber childNumber;
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
   if (entry.hasInodeNumber()) {
@@ -3127,10 +3125,10 @@ void TreeInode::updateOverlayHeader() const {
     Overlay::updateTimestampToHeader(file.fd(), contents->timeStamps);
   }
 }
-folly::Future<fusell::Dispatcher::Attr> TreeInode::setInodeAttr(
+folly::Future<Dispatcher::Attr> TreeInode::setInodeAttr(
     const fuse_setattr_in& attr) {
   materialize();
-  fusell::Dispatcher::Attr result(getMount()->initStatData());
+  Dispatcher::Attr result(getMount()->initStatData());
 
   // We do not have size field for directories and currently TreeInode does not
   // have any field like FileInode::state_::mode to set the mode. May be in the

@@ -49,7 +49,7 @@ InodeMap::~InodeMap() {
   // destroy the EdenMount.
 }
 
-void InodeMap::setMaximumExistingInodeNumber(fusell::InodeNumber max) {
+void InodeMap::setMaximumExistingInodeNumber(InodeNumber max) {
   DCHECK_GE(max, kRootNodeId);
   auto previous = nextInodeNumber_.exchange(max.get() + 1);
   DCHECK_EQ(0, previous) << "setMaximumExistingInodeNumber called twice";
@@ -82,8 +82,8 @@ void InodeMap::initializeFromTakeover(
   nextInodeNumber_.store(takeover.nextInodeNumber);
   for (const auto& entry : takeover.unloadedInodes) {
     auto unloadedEntry = UnloadedInode(
-        fusell::InodeNumber::fromThrift(entry.inodeNumber),
-        fusell::InodeNumber::fromThrift(entry.parentInode),
+        InodeNumber::fromThrift(entry.inodeNumber),
+        InodeNumber::fromThrift(entry.parentInode),
         PathComponentPiece{entry.name});
     unloadedEntry.numFuseReferences = entry.numFuseReferences;
     if (entry.numFuseReferences < 0) {
@@ -101,8 +101,7 @@ void InodeMap::initializeFromTakeover(
     unloadedEntry.mode = entry.mode;
 
     auto result = data->unloadedInodes_.emplace(
-        fusell::InodeNumber::fromThrift(entry.inodeNumber),
-        std::move(unloadedEntry));
+        InodeNumber::fromThrift(entry.inodeNumber), std::move(unloadedEntry));
     if (!result.second) {
       auto message = folly::to<std::string>(
           "failed to emplace inode number ",
@@ -114,7 +113,7 @@ void InodeMap::initializeFromTakeover(
   }
 }
 
-Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
+Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Lock the data.
   // We hold it while doing most of our work below, but explicitly unlock it
   // before triggering inode loading or before fulfilling any Promises.
@@ -136,9 +135,9 @@ Future<InodePtr> InodeMap::lookupInode(fusell::InodeNumber number) {
   // Look up the data in the unloadedInodes_ map.
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
-    // This generally shouldn't happen.  If a fusell::InodeNumber has been
-    // allocated we should always know about it.  It's a bug if our caller calls
-    // us with an invalid fusell::InodeNumber number.
+    // This generally shouldn't happen.  If a InodeNumber has been allocated we
+    // should always know about it.  It's a bug if our caller calls us with an
+    // invalid InodeNumber number.
     auto bug = EDEN_BUG() << "InodeMap called with unknown inode number "
                           << number;
     return folly::makeFuture<InodePtr>(bug.toException());
@@ -239,7 +238,7 @@ void InodeMap::setupParentLookupPromise(
     Promise<InodePtr>& promise,
     PathComponentPiece childName,
     bool isUnlinked,
-    fusell::InodeNumber childInodeNumber,
+    InodeNumber childInodeNumber,
     folly::Optional<Hash> hash,
     mode_t mode) {
   promise.getFuture()
@@ -261,7 +260,7 @@ void InodeMap::startChildLookup(
     const InodePtr& parent,
     PathComponentPiece childName,
     bool isUnlinked,
-    fusell::InodeNumber childInodeNumber,
+    InodeNumber childInodeNumber,
     folly::Optional<Hash> hash,
     mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
@@ -322,7 +321,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
 }
 
 void InodeMap::inodeLoadFailed(
-    fusell::InodeNumber number,
+    InodeNumber number,
     const folly::exception_wrapper& ex) {
   XLOG(ERR) << "failed to load inode " << number << ": "
             << folly::exceptionStr(ex);
@@ -332,8 +331,7 @@ void InodeMap::inodeLoadFailed(
   }
 }
 
-InodeMap::PromiseVector InodeMap::extractPendingPromises(
-    fusell::InodeNumber number) {
+InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
   PromiseVector promises;
   {
     auto data = data_.wlock();
@@ -346,17 +344,17 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(
   return promises;
 }
 
-Future<TreeInodePtr> InodeMap::lookupTreeInode(fusell::InodeNumber number) {
+Future<TreeInodePtr> InodeMap::lookupTreeInode(InodeNumber number) {
   return lookupInode(number).then(
       [](const InodePtr& inode) { return inode.asTreePtr(); });
 }
 
-Future<FileInodePtr> InodeMap::lookupFileInode(fusell::InodeNumber number) {
+Future<FileInodePtr> InodeMap::lookupFileInode(InodeNumber number) {
   return lookupInode(number).then(
       [](const InodePtr& inode) { return inode.asFilePtr(); });
 }
 
-InodePtr InodeMap::lookupLoadedInode(fusell::InodeNumber number) {
+InodePtr InodeMap::lookupLoadedInode(InodeNumber number) {
   auto data = data_.rlock();
   auto it = data->loadedInodes_.find(number);
   if (it == data->loadedInodes_.end()) {
@@ -365,7 +363,7 @@ InodePtr InodeMap::lookupLoadedInode(fusell::InodeNumber number) {
   return it->second.getPtr();
 }
 
-TreeInodePtr InodeMap::lookupLoadedTree(fusell::InodeNumber number) {
+TreeInodePtr InodeMap::lookupLoadedTree(InodeNumber number) {
   auto inode = lookupLoadedInode(number);
   if (!inode) {
     return nullptr;
@@ -373,7 +371,7 @@ TreeInodePtr InodeMap::lookupLoadedTree(fusell::InodeNumber number) {
   return inode.asTreePtr();
 }
 
-FileInodePtr InodeMap::lookupLoadedFile(fusell::InodeNumber number) {
+FileInodePtr InodeMap::lookupLoadedFile(InodeNumber number) {
   auto inode = lookupLoadedInode(number);
   if (!inode) {
     return nullptr;
@@ -381,13 +379,13 @@ FileInodePtr InodeMap::lookupLoadedFile(fusell::InodeNumber number) {
   return inode.asFilePtr();
 }
 
-UnloadedInodeData InodeMap::lookupUnloadedInode(fusell::InodeNumber number) {
+UnloadedInodeData InodeMap::lookupUnloadedInode(InodeNumber number) {
   auto data = data_.rlock();
   auto it = data->unloadedInodes_.find(number);
   if (it == data->unloadedInodes_.end()) {
-    // This generally shouldn't happen.  If a fusell::InodeNumber has been
-    // allocated we should always know about it.  It's a bug if our caller calls
-    // us with an invalid fusell::InodeNumber number.
+    // This generally shouldn't happen.  If a InodeNumber has been allocated we
+    // should always know about it.  It's a bug if our caller calls us with an
+    // invalid InodeNumber number.
     XLOG(ERR) << "InodeMap called with unknown inode number " << number;
     throwSystemErrorExplicit(EINVAL, "unknown inode number ", number);
   }
@@ -396,13 +394,13 @@ UnloadedInodeData InodeMap::lookupUnloadedInode(fusell::InodeNumber number) {
 }
 
 folly::Optional<RelativePath> InodeMap::getPathForInode(
-    fusell::InodeNumber inodeNumber) {
+    InodeNumber inodeNumber) {
   auto data = data_.rlock();
   return getPathForInodeHelper(inodeNumber, data);
 }
 
 folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
-    fusell::InodeNumber inodeNumber,
+    InodeNumber inodeNumber,
     const folly::Synchronized<Members>::ConstLockedPtr& data) {
   auto loadedIt = data->loadedInodes_.find(inodeNumber);
   if (loadedIt != data->loadedInodes_.cend()) {
@@ -433,7 +431,7 @@ folly::Optional<RelativePath> InodeMap::getPathForInodeHelper(
   }
 }
 
-void InodeMap::decFuseRefcount(fusell::InodeNumber number, uint32_t count) {
+void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
   auto data = data_.wlock();
 
   // First check in the loaded inode map
@@ -731,7 +729,7 @@ void InodeMap::unloadInode(
 bool InodeMap::shouldLoadChild(
     const TreeInode* parent,
     PathComponentPiece name,
-    fusell::InodeNumber childInode,
+    InodeNumber childInode,
     folly::Promise<InodePtr> promise) {
   auto data = data_.wlock();
   // This is a sanity check - no big deal if we race with allocateInodeNumber.
@@ -739,7 +737,7 @@ bool InodeMap::shouldLoadChild(
   auto iter = data->unloadedInodes_.find(childInode);
   UnloadedInode* unloadedData{nullptr};
   if (iter == data->unloadedInodes_.end()) {
-    fusell::InodeNumber parentNumber = parent->getNodeId();
+    InodeNumber parentNumber = parent->getNodeId();
     auto newUnloadedData = UnloadedInode(childInode, parentNumber, name);
     auto ret =
         data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
@@ -761,24 +759,23 @@ bool InodeMap::shouldLoadChild(
   return isFirstPromise;
 }
 
-fusell::InodeNumber InodeMap::allocateInodeNumber() {
-  // fusell::InodeNumber should generally be 64-bits wide, in which case it
-  // isn't even worth bothering to handle the case where nextInodeNumber_ wraps.
-  // We don't need to bother checking for conflicts with existing inode numbers
-  // since this can only happen if we wrap around.
-  // We don't currently support platforms with 32-bit inode numbers.
+InodeNumber InodeMap::allocateInodeNumber() {
+  // InodeNumber should generally be 64-bits wide, in which case it isn't even
+  // worth bothering to handle the case where nextInodeNumber_ wraps.  We don't
+  // need to bother checking for conflicts with existing inode numbers since
+  // this can only happen if we wrap around.  We don't currently support
+  // platforms with 32-bit inode numbers.
   static_assert(
-      sizeof(nextInodeNumber_) == sizeof(fusell::InodeNumber),
-      "expected nextInodeNumber_ and fusell::InodeNumber to have the same size");
+      sizeof(nextInodeNumber_) == sizeof(InodeNumber),
+      "expected nextInodeNumber_ and InodeNumber to have the same size");
   static_assert(
-      sizeof(fusell::InodeNumber) >= 8,
-      "expected fusell::InodeNumber to be at least 64 bits");
+      sizeof(InodeNumber) >= 8, "expected InodeNumber to be at least 64 bits");
 
   // This could be a relaxed atomic operation.  It doesn't matter on x86 but
   // might on ARM.
   auto previous = nextInodeNumber_++;
   DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
-  return fusell::InodeNumber{previous};
+  return InodeNumber{previous};
 }
 
 void InodeMap::inodeCreated(const InodePtr& inode) {

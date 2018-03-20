@@ -14,7 +14,6 @@
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 std::ostream& operator<<(std::ostream& os, InodeNumber ino) {
   return os << ino.getRawValue();
@@ -28,6 +27,5 @@ void toAppend(InodeNumber ino, folly::fbstring* result) {
   folly::toAppend(ino.getRawValue(), result);
 }
 
-} // namespace fusell
 } // namespace eden
 } // namespace facebook

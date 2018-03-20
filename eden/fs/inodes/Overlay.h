@@ -50,19 +50,17 @@ class Overlay {
   /** Returns the path to the root of the Overlay storage area */
   const AbsolutePath& getLocalDir() const;
 
-  void saveOverlayDir(
-      fusell::InodeNumber inodeNumber,
-      const TreeInode::Dir& dir) const;
+  void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir) const;
   folly::Optional<TreeInode::Dir> loadOverlayDir(
-      fusell::InodeNumber inodeNumber,
+      InodeNumber inodeNumber,
       InodeMap* inodeMap) const;
 
-  void removeOverlayData(fusell::InodeNumber inodeNumber) const;
+  void removeOverlayData(InodeNumber inodeNumber) const;
 
   /**
    * Get the path to the overlay file for the given inode
    */
-  AbsolutePath getFilePath(fusell::InodeNumber inodeNumber) const;
+  AbsolutePath getFilePath(InodeNumber inodeNumber) const;
   /**
    * Creates header for the files stored in Overlay
    */
@@ -84,9 +82,7 @@ class Overlay {
   /**
    * Helper function that creates a new overlay file and adds header to it
    */
-  folly::File createOverlayFile(
-      fusell::InodeNumber childNumber,
-      timespec ctime);
+  folly::File createOverlayFile(InodeNumber childNumber, timespec ctime);
 
   /**
    * Updates the timestamps of an overlay file appropriately
@@ -103,7 +99,7 @@ class Overlay {
    * handed out from this point forwards are always greater than any inodes
    * already tracked in the overlay.
    */
-  fusell::InodeNumber getMaxRecordedInode();
+  InodeNumber getMaxRecordedInode();
 
   /**
    * Constants for an header in overlay file.
@@ -119,7 +115,7 @@ class Overlay {
   void readExistingOverlay(int infoFD);
   void initNewOverlay();
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
-      fusell::InodeNumber inodeNumber,
+      InodeNumber inodeNumber,
       InodeTimestamps& timeStamps) const;
   /**
    * Helper function to add header to the overlay file

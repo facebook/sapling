@@ -14,13 +14,11 @@
 
 namespace facebook {
 namespace eden {
-class SerializedFileHandleMap;
 
-namespace fusell {
-
-class FileHandle;
 class DirHandle;
+class FileHandle;
 class FileHandleBase;
+class SerializedFileHandleMap;
 
 /** Keeps track of file handle numbers and their associate FileHandleBase
  *
@@ -83,6 +81,6 @@ class FileHandleMap {
       std::unordered_map<uint64_t, std::shared_ptr<FileHandleBase>>>
       handles_;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

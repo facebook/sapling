@@ -22,7 +22,7 @@ EdenFileHandle::~EdenFileHandle() {
   inode_->fileHandleDidClose();
 }
 
-folly::Future<fusell::Dispatcher::Attr> EdenFileHandle::getattr() {
+folly::Future<Dispatcher::Attr> EdenFileHandle::getattr() {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -31,11 +31,11 @@ folly::Future<fusell::Dispatcher::Attr> EdenFileHandle::getattr() {
   return inode_->getattr();
 }
 
-fusell::InodeNumber EdenFileHandle::getInodeNumber() {
+InodeNumber EdenFileHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
 
-folly::Future<fusell::Dispatcher::Attr> EdenFileHandle::setattr(
+folly::Future<Dispatcher::Attr> EdenFileHandle::setattr(
     const fuse_setattr_in& attr) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
@@ -53,7 +53,7 @@ bool EdenFileHandle::isSeekable() const {
   return true;
 }
 
-folly::Future<fusell::BufVec> EdenFileHandle::read(size_t size, off_t off) {
+folly::Future<BufVec> EdenFileHandle::read(size_t size, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,
@@ -64,7 +64,7 @@ folly::Future<fusell::BufVec> EdenFileHandle::read(size_t size, off_t off) {
   return inode_->read(size, off);
 }
 
-folly::Future<size_t> EdenFileHandle::write(fusell::BufVec&& buf, off_t off) {
+folly::Future<size_t> EdenFileHandle::write(BufVec&& buf, off_t off) {
   FB_LOGF(
       inode_->getMount()->getStraceLogger(),
       DBG7,

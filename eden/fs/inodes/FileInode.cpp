@@ -147,7 +147,7 @@ folly::File FileInode::getFile(FileInode::State& state) const {
 FileInode::State::~State() = default;
 
 std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
@@ -169,7 +169,7 @@ std::tuple<FileInodePtr, FileInode::FileHandlePtr> FileInode::create(
 
 // The FileInode is in NOT_LOADED or MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
@@ -184,7 +184,7 @@ FileInode::FileInode(
 
 // The FileInode is in MATERIALIZED_IN_OVERLAY state.
 FileInode::FileInode(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     TreeInodePtr parentInode,
     PathComponentPiece name,
     mode_t mode,
@@ -193,16 +193,16 @@ FileInode::FileInode(
     : InodeBase(ino, mode_to_dtype(mode), std::move(parentInode), name),
       state_(folly::in_place, this, mode, ctime) {}
 
-folly::Future<fusell::Dispatcher::Attr> FileInode::getattr() {
+folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry, we have to materialize it
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
   return stat().then(
-      [](const struct stat& st) { return fusell::Dispatcher::Attr{st}; });
+      [](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
-folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
+folly::Future<Dispatcher::Attr> FileInode::setInodeAttr(
     const fuse_setattr_in& attr) {
   // Minor optimization: if we know that the file is being completely truncated
   // as part of this operation, there's no need to fetch the underlying data,
@@ -214,7 +214,7 @@ folly::Future<fusell::Dispatcher::Attr> FileInode::setInodeAttr(
   return future.then([self = inodePtrFromThis(), attr]() {
     self->materializeInParent();
 
-    auto result = fusell::Dispatcher::Attr{self->getMount()->initStatData()};
+    auto result = Dispatcher::Attr{self->getMount()->initStatData()};
 
     auto state = self->state_.wlock();
     CHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
@@ -354,7 +354,7 @@ folly::Optional<Hash> FileInode::getBlobHash() const {
   return state_.rlock()->hash;
 }
 
-folly::Future<std::shared_ptr<fusell::FileHandle>> FileInode::open(int flags) {
+folly::Future<std::shared_ptr<FileHandle>> FileInode::open(int flags) {
   if (dtype_t::Symlink == getType()) {
     // Linux reports ELOOP if you try to open a symlink with O_NOFOLLOW set.
     // Since it isn't clear whether FUSE will allow this to happen, this
@@ -562,7 +562,7 @@ folly::Future<std::string> FileInode::readAll() {
   });
 }
 
-fusell::BufVec FileInode::read(size_t size, off_t off) {
+BufVec FileInode::read(size_t size, off_t off) {
   // It's potentially possible here to optimize a fast path here only requiring
   // a read lock.  However, since a write lock is required to update atime and
   // cache the file handle in the case of a materialized file, do the simple
@@ -582,7 +582,7 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
 
     checkUnixError(res);
     buf->append(res);
-    return fusell::BufVec{std::move(buf)};
+    return BufVec{std::move(buf)};
   } else {
     // read() is either called by the FileHandle or FileInode.  They must
     // guarantee openCount > 0.
@@ -592,7 +592,7 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
 
     if (!cursor.canAdvance(off)) {
       // Seek beyond EOF.  Return an empty result.
-      return fusell::BufVec{folly::IOBuf::wrapBuffer("", 0)};
+      return BufVec{folly::IOBuf::wrapBuffer("", 0)};
     }
 
     cursor.skip(off);
@@ -600,11 +600,11 @@ fusell::BufVec FileInode::read(size_t size, off_t off) {
     std::unique_ptr<folly::IOBuf> result;
     cursor.cloneAtMost(result, size);
 
-    return fusell::BufVec{std::move(result)};
+    return BufVec{std::move(result)};
   }
 }
 
-folly::Future<size_t> FileInode::write(fusell::BufVec&& buf, off_t off) {
+folly::Future<size_t> FileInode::write(BufVec&& buf, off_t off) {
   auto state = state_.wlock();
 
   if (State::MATERIALIZED_IN_OVERLAY != state->tag) {

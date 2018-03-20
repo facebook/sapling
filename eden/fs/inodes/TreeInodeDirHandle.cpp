@@ -10,6 +10,7 @@
 #include "TreeInodeDirHandle.h"
 
 #include "Overlay.h"
+#include "eden/fs/fuse/DirList.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/utils/DirType.h"
@@ -19,9 +20,7 @@ namespace eden {
 
 TreeInodeDirHandle::TreeInodeDirHandle(TreeInodePtr inode) : inode_(inode) {}
 
-folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
-    fusell::DirList&& list,
-    off_t off) {
+folly::Future<DirList> TreeInodeDirHandle::readdir(DirList&& list, off_t off) {
   // We will be called mulitple times for a given directory read.  The first
   // time through, the off parameter will be 0 to indicate that it is reading
   // from the start.  On subsequent calls it will hold the off value from the
@@ -53,12 +52,12 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
     folly::StringPiece name;
     dtype_t type;
     /// If 0, look up/assign it based on name
-    fusell::InodeNumber ino;
+    InodeNumber ino;
 
     Entry(
         folly::StringPiece name,
         dtype_t type,
-        fusell::InodeNumber ino = fusell::InodeNumber{})
+        InodeNumber ino = InodeNumber{})
         : name(name), type(type), ino(ino) {}
   };
   folly::fbvector<Entry> entries;
@@ -120,7 +119,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
   return std::move(list);
 }
 
-folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::setattr(
+folly::Future<Dispatcher::Attr> TreeInodeDirHandle::setattr(
     const fuse_setattr_in& attr) {
   return inode_->setattr(attr);
 }
@@ -130,11 +129,11 @@ folly::Future<folly::Unit> TreeInodeDirHandle::fsyncdir(bool /*datasync*/) {
   return folly::Unit{};
 }
 
-folly::Future<fusell::Dispatcher::Attr> TreeInodeDirHandle::getattr() {
+folly::Future<Dispatcher::Attr> TreeInodeDirHandle::getattr() {
   return inode_->getattr();
 }
 
-fusell::InodeNumber TreeInodeDirHandle::getInodeNumber() {
+InodeNumber TreeInodeDirHandle::getInodeNumber() {
   return inode_->getNodeId();
 }
 } // namespace eden

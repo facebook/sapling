@@ -194,7 +194,7 @@ class EdenServer : private TakeoverHandler {
   ServerState* getServerState() {
     return &serverState_;
   }
-  fusell::ThreadLocalEdenStats* getStats() {
+  ThreadLocalEdenStats* getStats() {
     return &serverState_.getStats();
   }
 

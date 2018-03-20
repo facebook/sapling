@@ -8,12 +8,12 @@
  *
  */
 #pragma once
-#include "DirList.h"
-#include "FileHandleBase.h"
+#include "eden/fs/fuse/FileHandleBase.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
+
+class DirList;
 
 class DirHandle : public FileHandleBase {
  public:
@@ -35,6 +35,6 @@ class DirHandle : public FileHandleBase {
    */
   virtual folly::Future<folly::Unit> fsyncdir(bool datasync) = 0;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

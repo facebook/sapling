@@ -25,7 +25,6 @@ using namespace std::chrono;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 Dispatcher::Attr::Attr(const struct stat& st, uint64_t timeout)
     : st(st), timeout_seconds(timeout) {}
@@ -81,35 +80,34 @@ void Dispatcher::initConnection(const fuse_init_out& out) {
 void Dispatcher::destroy() {}
 
 folly::Future<fuse_entry_out> Dispatcher::lookup(
-    fusell::InodeNumber /*parent*/,
+    InodeNumber /*parent*/,
     PathComponentPiece /*name*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
 folly::Future<folly::Unit> Dispatcher::forget(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     unsigned long /*nlookup*/) {
   return Unit{};
 }
 
-folly::Future<Dispatcher::Attr> Dispatcher::getattr(
-    fusell::InodeNumber /*ino*/) {
+folly::Future<Dispatcher::Attr> Dispatcher::getattr(InodeNumber /*ino*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
 folly::Future<Dispatcher::Attr> Dispatcher::setattr(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     const fuse_setattr_in& /*attr*/
 ) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::string> Dispatcher::readlink(fusell::InodeNumber /*ino*/) {
+folly::Future<std::string> Dispatcher::readlink(InodeNumber /*ino*/) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<fuse_entry_out> Dispatcher::mknod(
-    fusell::InodeNumber /*parent*/,
+    InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
     mode_t /*mode*/,
     dev_t /*rdev*/) {
@@ -117,56 +115,49 @@ folly::Future<fuse_entry_out> Dispatcher::mknod(
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::mkdir(fusell::InodeNumber, PathComponentPiece, mode_t) {
+Dispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::unlink(
-    fusell::InodeNumber,
-    PathComponentPiece) {
+folly::Future<folly::Unit> Dispatcher::unlink(InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::rmdir(
-    fusell::InodeNumber,
-    PathComponentPiece) {
+folly::Future<folly::Unit> Dispatcher::rmdir(InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out> Dispatcher::symlink(
-    fusell::InodeNumber,
-    PathComponentPiece,
-    folly::StringPiece) {
+folly::Future<fuse_entry_out>
+Dispatcher::symlink(InodeNumber, PathComponentPiece, folly::StringPiece) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<folly::Unit> Dispatcher::rename(
-    fusell::InodeNumber,
+    InodeNumber,
     PathComponentPiece,
-    fusell::InodeNumber,
+    InodeNumber,
     PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::link(fusell::InodeNumber, fusell::InodeNumber, PathComponentPiece) {
+Dispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<std::shared_ptr<FileHandle>> Dispatcher::open(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<std::shared_ptr<DirHandle>> Dispatcher::opendir(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<struct fuse_kstatfs> Dispatcher::statfs(
-    fusell::InodeNumber /*ino*/) {
+folly::Future<struct fuse_kstatfs> Dispatcher::statfs(InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 
   // Suggest a large blocksize to software that looks at that kind of thing
@@ -189,7 +180,7 @@ folly::Future<struct fuse_kstatfs> Dispatcher::statfs(
 }
 
 folly::Future<folly::Unit> Dispatcher::setxattr(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,
     int /*flags*/) {
@@ -205,24 +196,24 @@ const int Dispatcher::kENOATTR =
     ;
 
 folly::Future<std::string> Dispatcher::getxattr(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 
 folly::Future<std::vector<std::string>> Dispatcher::listxattr(
-    fusell::InodeNumber /*ino*/) {
+    InodeNumber /*ino*/) {
   return std::vector<std::string>();
 }
 
 folly::Future<folly::Unit> Dispatcher::removexattr(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<folly::Unit> Dispatcher::access(
-    fusell::InodeNumber /*ino*/,
+    InodeNumber /*ino*/,
     int /*mask*/) {
   // Note that if you mount with the "default_permissions" kernel mount option,
   // the kernel will perform all permissions checks for you, and will never
@@ -234,14 +225,12 @@ folly::Future<folly::Unit> Dispatcher::access(
 }
 
 folly::Future<Dispatcher::Create>
-Dispatcher::create(fusell::InodeNumber, PathComponentPiece, mode_t, int) {
+Dispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t> Dispatcher::bmap(
-    fusell::InodeNumber /*ino*/,
-    size_t /*blocksize*/,
-    uint64_t /*idx*/) {
+folly::Future<uint64_t>
+Dispatcher::bmap(InodeNumber /*ino*/, size_t /*blocksize*/, uint64_t /*idx*/) {
   FUSELL_NOT_IMPL();
 }
 
@@ -252,6 +241,6 @@ const fuse_init_out& Dispatcher::getConnInfo() const {
 ThreadLocalEdenStats* Dispatcher::getStats() const {
   return stats_;
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

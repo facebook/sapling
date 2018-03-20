@@ -8,11 +8,10 @@
  *
  */
 #pragma once
-#include "FileHandleBase.h"
+#include "eden/fs/fuse/FileHandleBase.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 class FileHandle : public FileHandleBase {
  public:
@@ -90,6 +89,6 @@ class FileHandle : public FileHandleBase {
    */
   virtual folly::Future<folly::Unit> fsync(bool datasync) = 0;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

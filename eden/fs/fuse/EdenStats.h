@@ -32,7 +32,6 @@ class ThreadLocal;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /**
  * A tag class for using with folly::ThreadLocal when storing EdenStats.
@@ -128,6 +127,6 @@ class EdenStats
   folly::TimeseriesHistogram<int64_t> createHistogram(const std::string& name);
 #endif
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

@@ -39,7 +39,6 @@ using std::string;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 PrivHelperServer::PrivHelperServer() {}
 
@@ -432,6 +431,6 @@ void PrivHelperServer::run() {
   // Unmount all active mount points
   cleanupMountPoints();
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

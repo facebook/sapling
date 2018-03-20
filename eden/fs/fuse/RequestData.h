@@ -18,7 +18,6 @@
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 class Dispatcher;
 
@@ -129,6 +128,6 @@ class RequestData : public folly::RequestData {
   folly::Future<folly::Unit> interrupter_;
   std::atomic<bool> interrupted_{false};
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

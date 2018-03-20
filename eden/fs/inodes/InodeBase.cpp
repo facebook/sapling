@@ -42,7 +42,7 @@ InodeBase::InodeBase(EdenMount* mount)
 }
 
 InodeBase::InodeBase(
-    fusell::InodeNumber ino,
+    InodeNumber ino,
     dtype_t type,
     TreeInodePtr parent,
     PathComponentPiece name)
@@ -58,7 +58,7 @@ InodeBase::InodeBase(
 }
 
 // See Dispatcher::getattr
-folly::Future<fusell::Dispatcher::Attr> InodeBase::getattr() {
+folly::Future<Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
 }
 folly::Future<folly::Unit> InodeBase::setxattr(
@@ -316,7 +316,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
 }
 
 // See Dispatcher::setattr
-folly::Future<fusell::Dispatcher::Attr> InodeBase::setattr(
+folly::Future<Dispatcher::Attr> InodeBase::setattr(
     const fuse_setattr_in& attr) {
   // Check if gid and uid are same or not.
   if (attr.valid & (FATTR_UID | FATTR_GID)) {

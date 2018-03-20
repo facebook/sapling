@@ -28,16 +28,16 @@ namespace eden {
  * It allows the test code to generate responses to specific requests on
  * demand.
  */
-class TestDispatcher : public fusell::Dispatcher {
+class TestDispatcher : public Dispatcher {
  public:
   /**
    * Data for a pending FUSE_LOOKUP request.
    */
   struct PendingLookup {
-    PendingLookup(fusell::InodeNumber parent, PathComponentPiece name)
+    PendingLookup(InodeNumber parent, PathComponentPiece name)
         : parent(parent), name(name.copy()) {}
 
-    fusell::InodeNumber parent;
+    InodeNumber parent;
     PathComponent name;
     folly::Promise<fuse_entry_out> promise;
   };
@@ -45,7 +45,7 @@ class TestDispatcher : public fusell::Dispatcher {
   using Dispatcher::Dispatcher;
 
   folly::Future<fuse_entry_out> lookup(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name) override;
 
   /**

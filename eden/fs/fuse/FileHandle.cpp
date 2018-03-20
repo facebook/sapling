@@ -7,13 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "FileHandle.h"
+#include "eden/fs/fuse/FileHandle.h"
 
 using namespace folly;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 bool FileHandle::usesDirectIO() const {
   return false;
@@ -25,6 +24,5 @@ bool FileHandle::isSeekable() const {
   return true;
 }
 
-} // namespace fusell
 } // namespace eden
 } // namespace facebook

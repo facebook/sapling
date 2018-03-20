@@ -10,11 +10,11 @@
 #pragma once
 #include <folly/Range.h>
 #include <sys/stat.h>
+#include <memory>
 #include "eden/fs/utils/DirType.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /**
  * Helper for populating directory listings.
@@ -46,6 +46,6 @@ class DirList {
 
   folly::StringPiece getBuf() const;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

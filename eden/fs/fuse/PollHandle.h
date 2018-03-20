@@ -13,7 +13,6 @@
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 // Some compatibility cruft for working with OSX Fuse
 #if FUSE_MINOR_VERSION < 8
@@ -37,6 +36,6 @@ class PollHandle {
   // Requests that the kernel poll the associated file
   void notify();
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

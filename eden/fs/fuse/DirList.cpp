@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "DirList.h"
+#include "eden/fs/fuse/DirList.h"
 
 #include "eden/fs/fuse/FuseTypes.h"
 
@@ -15,7 +15,6 @@ using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 DirList::DirList(size_t maxSize)
     : buf_(new char[maxSize]), end_(buf_.get() + maxSize), cur_(buf_.get()) {}
@@ -51,6 +50,6 @@ bool DirList::add(StringPiece name, const struct stat& st, off_t off) {
 StringPiece DirList::getBuf() const {
   return StringPiece(buf_.get(), cur_ - buf_.get());
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

@@ -7,11 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "BufVec.h"
+#include "eden/fs/fuse/BufVec.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 BufVec::Buf::Buf(std::unique_ptr<folly::IOBuf> buf) : buf(std::move(buf)) {}
 
@@ -51,6 +50,6 @@ std::string BufVec::copyData() const {
   }
   return rv;
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

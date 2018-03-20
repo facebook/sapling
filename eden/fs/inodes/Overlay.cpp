@@ -205,7 +205,7 @@ void Overlay::initNewOverlay() {
 }
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(
-    fusell::InodeNumber inodeNumber,
+    InodeNumber inodeNumber,
     InodeMap* /*inodeMap*/) const {
   TreeInode::Dir result;
   auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
@@ -225,16 +225,15 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
       result.entries.emplace(
           PathComponentPiece{name},
           value.mode,
-          fusell::InodeNumber::fromThrift(value.inodeNumber));
+          InodeNumber::fromThrift(value.inodeNumber));
     }
   }
 
   return folly::Optional<TreeInode::Dir>(std::move(result));
 }
 
-void Overlay::saveOverlayDir(
-    fusell::InodeNumber inodeNumber,
-    const TreeInode::Dir& dir) const {
+void Overlay::saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir)
+    const {
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
@@ -278,14 +277,14 @@ void Overlay::saveOverlayDir(
       getFilePath(inodeNumber).stringPiece(), iov.data(), iov.size());
 }
 
-void Overlay::removeOverlayData(fusell::InodeNumber inodeNumber) const {
+void Overlay::removeOverlayData(InodeNumber inodeNumber) const {
   auto path = getFilePath(inodeNumber);
   if (::unlink(path.value().c_str()) != 0 && errno != ENOENT) {
     folly::throwSystemError("error unlinking overlay file: ", path);
   }
 }
 
-fusell::InodeNumber Overlay::getMaxRecordedInode() {
+InodeNumber Overlay::getMaxRecordedInode() {
   // TODO: We should probably store the max inode number in the header file
   // during graceful unmount.  When opening an overlay we can then simply read
   // back the max inode number from this file if the overlay was shut down
@@ -304,7 +303,7 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
   // simpler scan of opening every single file.  For now we have to walk the
   // directory tree from the root downwards.
   auto maxInode = kRootNodeId;
-  std::vector<fusell::InodeNumber> toProcess;
+  std::vector<InodeNumber> toProcess;
   toProcess.push_back(maxInode);
   while (!toProcess.empty()) {
     auto dirInodeNumber = toProcess.back();
@@ -320,8 +319,7 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
       if (entry.second.inodeNumber == 0) {
         continue;
       }
-      auto entryInode =
-          fusell::InodeNumber::fromThrift(entry.second.inodeNumber);
+      auto entryInode = InodeNumber::fromThrift(entry.second.inodeNumber);
       maxInode = std::max(maxInode, entryInode);
       if (mode_to_dtype(entry.second.mode) == dtype_t::Dir) {
         toProcess.push_back(entryInode);
@@ -343,8 +341,7 @@ fusell::InodeNumber Overlay::getMaxRecordedInode() {
       auto entryInodeNumber =
           folly::tryTo<uint64_t>(entry.path().filename().string());
       if (entryInodeNumber.hasValue()) {
-        maxInode =
-            std::max(maxInode, fusell::InodeNumber{entryInodeNumber.value()});
+        maxInode = std::max(maxInode, InodeNumber{entryInodeNumber.value()});
       }
     }
   }
@@ -356,7 +353,7 @@ const AbsolutePath& Overlay::getLocalDir() const {
   return localDir_;
 }
 
-AbsolutePath Overlay::getFilePath(fusell::InodeNumber inodeNumber) const {
+AbsolutePath Overlay::getFilePath(InodeNumber inodeNumber) const {
   std::array<char, 2> subdir;
   formatSubdirPath(
       MutableStringPiece{subdir.data(), subdir.size()}, inodeNumber.get());
@@ -367,7 +364,7 @@ AbsolutePath Overlay::getFilePath(fusell::InodeNumber inodeNumber) const {
 }
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
-    fusell::InodeNumber inodeNumber,
+    InodeNumber inodeNumber,
     InodeTimestamps& timeStamps) const {
   auto path = getFilePath(inodeNumber);
 
@@ -467,7 +464,7 @@ void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
 
 // Helper function to create an overlay file
 folly::File Overlay::createOverlayFile(
-    fusell::InodeNumber childNumber,
+    InodeNumber childNumber,
     timespec ctime) {
   auto filePath = getFilePath(childNumber);
   folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);

@@ -41,14 +41,14 @@ class InodeBase {
    * Constructor for all non-root inodes.
    */
   InodeBase(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       dtype_t type,
       TreeInodePtr parent,
       PathComponentPiece name);
 
   virtual ~InodeBase();
 
-  fusell::InodeNumber getNodeId() const {
+  InodeNumber getNodeId() const {
     return ino_;
   }
 
@@ -102,11 +102,10 @@ class InodeBase {
   }
 
   // See Dispatcher::getattr
-  virtual folly::Future<fusell::Dispatcher::Attr> getattr();
+  virtual folly::Future<Dispatcher::Attr> getattr();
 
   // See Dispatcher::setattr
-  virtual folly::Future<fusell::Dispatcher::Attr> setattr(
-      const fuse_setattr_in& attr);
+  virtual folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr);
 
   virtual folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);
@@ -402,10 +401,10 @@ class InodeBase {
    * present and  fills timestamps and other FileInode related fields or
    * TreeInode related fields.
    */
-  virtual folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+  virtual folly::Future<Dispatcher::Attr> setInodeAttr(
       const fuse_setattr_in& attr) = 0;
 
-  fusell::InodeNumber const ino_;
+  InodeNumber const ino_;
 
   dtype_t const type_;
 
@@ -423,8 +422,8 @@ class InodeBase {
    * API has performed on this inode.  We must remember this inode number
    * for as long as the FUSE API has references to it.  (However, we may unload
    * the Inode object itself, destroying ourself and letting the InodeMap
-   * simply remember the association of the fusell::InodeNumber with our
-   * location in the file system.)
+   * simply remember the association of the InodeNumber with our location in
+   * the file system.)
    */
   std::atomic<uint32_t> numFuseReferences_{0};
 

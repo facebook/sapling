@@ -96,9 +96,7 @@ class PrivHelper {
   virtual int stop() = 0;
 };
 
-namespace fusell {
 class PrivHelperServer;
-}
 
 /**
  * Fork a separate privileged helper process, for performing mounts.
@@ -115,7 +113,7 @@ std::unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo);
  * This is really only intended for use in unit tests.
  */
 std::unique_ptr<PrivHelper> startPrivHelper(
-    fusell::PrivHelperServer* server,
+    PrivHelperServer* server,
     const UserInfo& userInfo);
 
 } // namespace eden

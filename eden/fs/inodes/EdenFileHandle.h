@@ -18,7 +18,7 @@ class Blob;
 class FileInode;
 class LocalStore;
 
-class EdenFileHandle : public fusell::FileHandle {
+class EdenFileHandle : public FileHandle {
  public:
   /**
    * The caller is responsible for incrementing any reference counts in the
@@ -38,15 +38,14 @@ class EdenFileHandle : public fusell::FileHandle {
   // Calls fileHandleDidClose on the associated inode.
   ~EdenFileHandle() override;
 
-  fusell::InodeNumber getInodeNumber() override;
-  folly::Future<fusell::Dispatcher::Attr> getattr() override;
-  folly::Future<fusell::Dispatcher::Attr> setattr(
-      const fuse_setattr_in& attr) override;
+  InodeNumber getInodeNumber() override;
+  folly::Future<Dispatcher::Attr> getattr() override;
+  folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   bool preserveCache() const override;
   bool isSeekable() const override;
-  folly::Future<fusell::BufVec> read(size_t size, off_t off) override;
+  folly::Future<BufVec> read(size_t size, off_t off) override;
 
-  folly::Future<size_t> write(fusell::BufVec&& buf, off_t off) override;
+  folly::Future<size_t> write(BufVec&& buf, off_t off) override;
   folly::Future<size_t> write(folly::StringPiece data, off_t off) override;
   folly::Future<folly::Unit> flush(uint64_t lock_owner) override;
   folly::Future<folly::Unit> fsync(bool datasync) override;
@@ -60,5 +59,6 @@ class EdenFileHandle : public fusell::FileHandle {
 
   FileInodePtr inode_;
 };
+
 } // namespace eden
 } // namespace facebook

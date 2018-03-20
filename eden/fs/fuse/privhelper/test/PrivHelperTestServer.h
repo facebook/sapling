@@ -15,7 +15,6 @@
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /*
  * A subclass of PrivHelperServer that doesn't actually perform
@@ -53,6 +52,6 @@ class PrivHelperTestServer : public PrivHelperServer {
       const std::string pathToMarkerFile,
       const std::string contents) const;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

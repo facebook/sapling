@@ -14,18 +14,16 @@
 namespace facebook {
 namespace eden {
 
-class TreeInodeDirHandle : public fusell::DirHandle {
+class TreeInodeDirHandle : public DirHandle {
  public:
   explicit TreeInodeDirHandle(TreeInodePtr inode);
 
-  folly::Future<fusell::DirList> readdir(fusell::DirList&& list, off_t off)
-      override;
+  folly::Future<DirList> readdir(DirList&& list, off_t off) override;
 
-  folly::Future<fusell::Dispatcher::Attr> setattr(
-      const fuse_setattr_in& attr) override;
+  folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
   folly::Future<folly::Unit> fsyncdir(bool datasync) override;
-  folly::Future<fusell::Dispatcher::Attr> getattr() override;
-  fusell::InodeNumber getInodeNumber() override;
+  folly::Future<Dispatcher::Attr> getattr() override;
+  InodeNumber getInodeNumber() override;
 
  private:
   TreeInodePtr inode_;

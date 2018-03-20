@@ -40,10 +40,6 @@ class Future;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
-class FuseChannel;
-class MountPoint;
-} // namespace fusell
 
 class BindMount;
 class CheckoutConflict;
@@ -51,9 +47,11 @@ class ClientConfig;
 class Clock;
 class DiffContext;
 class EdenDispatcher;
+class FuseChannel;
 class InodeDiffCallback;
 class InodeMap;
 class Journal;
+class MountPoint;
 class ObjectStore;
 class Overlay;
 class ServerState;
@@ -81,8 +79,7 @@ enum class CounterName {
  * EdenMount contains all of the data about a specific eden mount point.
  *
  * This contains:
- * - The fusell::MountPoint object which manages our FUSE interactions with the
- *   kernel.
+ * - The MountPoint object which manages our FUSE interactions with the kernel.
  * - The ObjectStore object used for retreiving/storing object data.
  * - The Overlay object used for storing local changes (that have not been
  *   committed/snapshotted yet).
@@ -154,7 +151,7 @@ class EdenMount {
    * synchronization here with the mount start operation.  This method provides
    * no internal synchronization of its own.)
    */
-  fusell::FuseChannel* getFuseChannel() const;
+  FuseChannel* getFuseChannel() const;
 
   /**
    * Return the path to the mount point.
@@ -230,7 +227,7 @@ class EdenMount {
   TreeInodePtr getRootInode() const;
 
   /** Get the inode number for the .eden dir */
-  fusell::InodeNumber getDotEdenInodeNumber() const;
+  InodeNumber getDotEdenInodeNumber() const;
 
   /** Convenience method for getting the Tree for the root of the mount. */
   std::shared_ptr<const Tree> getRootTree() const;
@@ -375,7 +372,7 @@ class EdenMount {
    * Today this is the global stats instance, but in the future it will be
    * a mount point specific instance.
    */
-  fusell::ThreadLocalEdenStats* getStats() const;
+  ThreadLocalEdenStats* getStats() const;
 
   folly::Logger& getStraceLogger() {
     return straceLogger_;
@@ -418,7 +415,7 @@ class EdenMount {
    * This spins up worker threads to service the existing FUSE channel and
    * returns immediately, or throws an exception on error.
    */
-  void takeoverFuse(fusell::FuseChannelData takeoverData);
+  void takeoverFuse(FuseChannelData takeoverData);
 
   /**
    * Obtains a future that will complete once the fuse channel has wound down.
@@ -554,7 +551,7 @@ class EdenMount {
    * Once the FuseChannel has been initialized, set up callbacks to clean up
    * correctly when the channel shuts down.
    */
-  void fuseInitSuccessful(fusell::FuseChannel::StopFuture&& fuseCompleteFuture);
+  void fuseInitSuccessful(FuseChannel::StopFuture&& fuseCompleteFuture);
 
   /**
    * Private destructor.
@@ -580,7 +577,7 @@ class EdenMount {
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
-  fusell::InodeNumber dotEdenInodeNumber_{};
+  InodeNumber dotEdenInodeNumber_{};
 
   /**
    * A mutex around all name-changing operations in this mount point.
@@ -673,7 +670,7 @@ class EdenMount {
   /**
    * The associated fuse channel to the kernel.
    */
-  std::unique_ptr<fusell::FuseChannel, fusell::FuseChannelDeleter> channel_;
+  std::unique_ptr<FuseChannel, FuseChannelDeleter> channel_;
 
   /**
    * The clock.  This is also available as serverState_->getClock().

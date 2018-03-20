@@ -7,11 +7,10 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "PollHandle.h"
+#include "eden/fs/fuse/PollHandle.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 void PollHandle::Deleter::operator()(fuse_pollhandle* /*h*/) {
 #if FUSE_MAJOR_VERSION >= 8
@@ -26,6 +25,6 @@ void PollHandle::notify() {
   fuse_lowlevel_notify_poll(h_.get());
 #endif
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

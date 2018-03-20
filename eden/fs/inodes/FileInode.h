@@ -23,11 +23,8 @@ class File;
 namespace facebook {
 namespace eden {
 
-namespace fusell {
-class BufVec;
-}
-
 class Blob;
+class BufVec;
 class EdenFileHandle;
 class Hash;
 class ObjectStore;
@@ -44,7 +41,7 @@ class FileInode : public InodeBase {
    * returns a new EdenFileHandle to it.
    */
   static std::tuple<FileInodePtr, FileHandlePtr> create(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
@@ -57,7 +54,7 @@ class FileInode : public InodeBase {
    * NOT_LOADED state.
    */
   FileInode(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
@@ -69,19 +66,19 @@ class FileInode : public InodeBase {
    * Overlay::openFile.
    */
   FileInode(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
       folly::File&& file,
       timespec ctime);
 
-  folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  folly::Future<Dispatcher::Attr> getattr() override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink();
 
-  folly::Future<std::shared_ptr<fusell::FileHandle>> open(int flags);
+  folly::Future<std::shared_ptr<FileHandle>> open(int flags);
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
@@ -359,9 +356,9 @@ class FileInode : public InodeBase {
    * Precondition: openCount > 0.  This is held because read is only called by
    * FileInode or FileHandle.
    */
-  fusell::BufVec read(size_t size, off_t off);
+  BufVec read(size_t size, off_t off);
 
-  folly::Future<size_t> write(fusell::BufVec&& buf, off_t off);
+  folly::Future<size_t> write(BufVec&& buf, off_t off);
 
   folly::Future<struct stat> stat();
   void flush(uint64_t lock_owner);
@@ -376,7 +373,7 @@ class FileInode : public InodeBase {
    * Helper function used in setattr to perform FileInode specific operations
    * during setattr.
    */
-  folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+  folly::Future<Dispatcher::Attr> setInodeAttr(
       const fuse_setattr_in& attr) override;
 
   folly::Synchronized<State> state_;

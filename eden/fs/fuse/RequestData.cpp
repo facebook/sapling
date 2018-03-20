@@ -18,9 +18,8 @@ using namespace std::chrono;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
-const std::string RequestData::kKey("fusell");
+const std::string RequestData::kKey("fuse");
 
 RequestData::RequestData(
     FuseChannel* channel,
@@ -130,6 +129,6 @@ void RequestData::genericErrorHandler(const std::exception& err) {
   XLOG(DBG5) << folly::exceptionStr(err);
   RequestData::get().replyError(EIO);
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

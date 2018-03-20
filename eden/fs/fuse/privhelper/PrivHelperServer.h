@@ -14,7 +14,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include "PrivHelperConn.h"
+#include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 namespace folly {
 class File;
@@ -22,7 +22,6 @@ class File;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /*
  * PrivHelperServer runs the main loop for the privhelper server process.
@@ -70,6 +69,6 @@ class PrivHelperServer {
   std::set<std::string> mountPoints_;
   std::unordered_multimap<std::string, std::string> bindMountPoints_;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

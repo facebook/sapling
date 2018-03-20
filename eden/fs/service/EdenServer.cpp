@@ -85,7 +85,7 @@ DEFINE_int64(
     "Minimum age of the inodes to be unloaded");
 
 using apache::thrift::ThriftServer;
-using facebook::eden::fusell::FuseChannelData;
+using facebook::eden::FuseChannelData;
 using folly::File;
 using folly::Future;
 using folly::makeFuture;
@@ -558,13 +558,11 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
           // SerializedFileHandleMap so that we can restore
           // the correct flags here.
           dispatcher
-              ->opendir(
-                  fusell::InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
+              ->opendir(InodeNumber::fromThrift(handleEntry.inodeNumber), 0)
               .then([dispatcher, number = handleEntry.handleId](
-                        std::shared_ptr<fusell::DirHandle> handle) {
+                        std::shared_ptr<DirHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<fusell::FileHandleBase>(handle),
-                    number);
+                    std::static_pointer_cast<FileHandleBase>(handle), number);
               }));
     } else {
       futures.emplace_back(
@@ -572,14 +570,11 @@ folly::Future<folly::Unit> EdenServer::performTakeoverFuseStart(
           // SerializedFileHandleMap so that we can restore
           // the correct flags here.
           dispatcher
-              ->open(
-                  fusell::InodeNumber::fromThrift(handleEntry.inodeNumber),
-                  O_RDWR)
+              ->open(InodeNumber::fromThrift(handleEntry.inodeNumber), O_RDWR)
               .then([dispatcher, number = handleEntry.handleId](
-                        std::shared_ptr<fusell::FileHandle> handle) {
+                        std::shared_ptr<FileHandle> handle) {
                 dispatcher->getFileHandles().recordHandle(
-                    std::static_pointer_cast<fusell::FileHandleBase>(handle),
-                    number);
+                    std::static_pointer_cast<FileHandleBase>(handle), number);
               }));
     }
   }

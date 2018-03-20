@@ -7,7 +7,7 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "EdenStats.h"
+#include "eden/fs/fuse/EdenStats.h"
 
 #include <folly/container/Array.h>
 #include <chrono>
@@ -29,7 +29,6 @@ constexpr auto kDurations = folly::make_array(
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 EdenStats::EdenStats() {}
 
@@ -70,6 +69,6 @@ void EdenStats::recordLatency(
   (this->*item)->addValue(now, elapsed.count());
 #endif
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

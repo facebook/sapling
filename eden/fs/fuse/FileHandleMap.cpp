@@ -23,7 +23,6 @@ using apache::thrift::CompactSerializer;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 std::shared_ptr<FileHandleBase> FileHandleMap::getGenericFileHandle(
     uint64_t fh) {
@@ -144,6 +143,5 @@ SerializedFileHandleMap FileHandleMap::serializeMap() {
   return result;
 }
 
-} // namespace fusell
 } // namespace eden
 } // namespace facebook

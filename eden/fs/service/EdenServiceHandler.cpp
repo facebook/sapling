@@ -620,7 +620,7 @@ void EdenServiceHandler::debugGetInodePath(
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
   auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
-  auto inodeNum = static_cast<fusell::InodeNumber>(inodeNumber);
+  auto inodeNum = static_cast<InodeNumber>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
   folly::Optional<RelativePath> relativePath =

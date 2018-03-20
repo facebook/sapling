@@ -41,7 +41,6 @@ DEFINE_int32(
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 namespace {
 
@@ -475,6 +474,6 @@ void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
 
 PrivHelperError::PrivHelperError(StringPiece remoteExType, StringPiece msg)
     : message_(folly::to<string>(remoteExType, ": ", msg)) {}
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

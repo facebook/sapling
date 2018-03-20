@@ -21,9 +21,9 @@ namespace facebook {
 namespace eden {
 
 Future<fuse_entry_out> TestDispatcher::lookup(
-    fusell::InodeNumber parent,
+    InodeNumber parent,
     PathComponentPiece name) {
-  auto requestID = fusell::RequestData::get().getReq().unique;
+  auto requestID = RequestData::get().getReq().unique;
   XLOG(DBG5) << "received lookup " << requestID << ": parent=" << parent
              << ", name=" << name;
   auto result = Future<fuse_entry_out>::makeEmpty();

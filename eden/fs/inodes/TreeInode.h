@@ -76,18 +76,18 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a non-materialized entry.
      */
-    Entry(mode_t m, Hash hash) : Entry(m, fusell::InodeNumber{}, hash) {}
+    Entry(mode_t m, Hash hash) : Entry(m, InodeNumber{}, hash) {}
 
     /**
      * Create a hash for a non-materialized entry.
      */
-    Entry(mode_t m, fusell::InodeNumber number, Hash hash)
+    Entry(mode_t m, InodeNumber number, Hash hash)
         : mode_(m), hash_{hash}, isLoading_(false), inodeNumber_(number) {}
 
     /**
      * Create a hash for a materialized entry.
      */
-    Entry(mode_t m, fusell::InodeNumber number)
+    Entry(mode_t m, InodeNumber number)
         : mode_(m), isLoading_(false), inodeNumber_{number} {
       DCHECK(number.hasValue());
     }
@@ -119,18 +119,18 @@ class TreeInode : public InodeBase {
     bool hasInodeNumber() const {
       return inodeNumber_.hasValue();
     }
-    fusell::InodeNumber getInodeNumber() const {
+    InodeNumber getInodeNumber() const {
       DCHECK(inodeNumber_.hasValue());
       return inodeNumber_;
     }
-    void setInodeNumber(fusell::InodeNumber number) {
+    void setInodeNumber(InodeNumber number) {
       DCHECK(number.hasValue());
       DCHECK(!inodeNumber_.hasValue());
       DCHECK(!inode_);
       inodeNumber_ = number;
     }
 
-    void setMaterialized(fusell::InodeNumber inode) {
+    void setMaterialized(InodeNumber inode) {
       DCHECK(inodeNumber_.empty() || inode == inodeNumber_);
       inodeNumber_ = inode;
       hash_.clear();
@@ -251,7 +251,7 @@ class TreeInode : public InodeBase {
      * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
      * is set.)
      */
-    fusell::InodeNumber inodeNumber_{};
+    InodeNumber inodeNumber_{};
 
     /**
      * A pointer to the child inode, if it is loaded, or null if it is not
@@ -300,7 +300,7 @@ class TreeInode : public InodeBase {
   /** Holds the results of a create operation. */
   struct CreateResult {
     /// file attributes and cache ttls.
-    fusell::Dispatcher::Attr attr;
+    Dispatcher::Attr attr;
     /// The newly created inode instance.
     InodePtr inode;
     /// The newly opened file handle.
@@ -310,14 +310,14 @@ class TreeInode : public InodeBase {
   };
 
   TreeInode(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       std::shared_ptr<const Tree>&& tree);
 
   /// Construct an inode that only has backing in the Overlay area
   TreeInode(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       TreeInodePtr parent,
       PathComponentPiece name,
       Dir&& dir);
@@ -328,10 +328,10 @@ class TreeInode : public InodeBase {
 
   ~TreeInode() override;
 
-  folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<folly::Unit> prefetch() override;
   void updateOverlayHeader() const override;
-  fusell::Dispatcher::Attr getAttrLocked(const Dir* contents);
+  Dispatcher::Attr getAttrLocked(const Dir* contents);
 
   /** Implements the InodeBase method used by the Dispatcher
    * to create the Inode instance for a given name */
@@ -353,9 +353,9 @@ class TreeInode : public InodeBase {
    */
   folly::Future<InodePtr> getChildRecursive(RelativePathPiece name);
 
-  fusell::InodeNumber getChildInodeNumber(PathComponentPiece name);
+  InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  std::shared_ptr<fusell::DirHandle> opendir();
+  std::shared_ptr<DirHandle> opendir();
   folly::Future<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
@@ -483,7 +483,7 @@ class TreeInode : public InodeBase {
   void childMaterialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
-      fusell::InodeNumber childNodeId);
+      InodeNumber childNodeId);
 
   /**
    * Update this directory when a child entry is dematerialized.
@@ -511,7 +511,7 @@ class TreeInode : public InodeBase {
    * The TreeInode will call InodeMap::inodeLoadComplete() or
    * InodeMap::inodeLoadFailed() when the load finishes.
    */
-  void loadChildInode(PathComponentPiece name, fusell::InodeNumber number);
+  void loadChildInode(PathComponentPiece name, InodeNumber number);
 
   /**
    * Internal API only for use by InodeMap.
@@ -524,7 +524,7 @@ class TreeInode : public InodeBase {
    */
   void loadUnlinkedChildInode(
       PathComponentPiece name,
-      fusell::InodeNumber number,
+      InodeNumber number,
       folly::Optional<Hash> hash,
       mode_t mode);
 
@@ -620,7 +620,7 @@ class TreeInode : public InodeBase {
   void registerInodeLoadComplete(
       folly::Future<std::unique_ptr<InodeBase>>& future,
       PathComponentPiece name,
-      fusell::InodeNumber number);
+      InodeNumber number);
   void inodeLoadComplete(
       PathComponentPiece childName,
       std::unique_ptr<InodeBase> childInode);
@@ -628,12 +628,12 @@ class TreeInode : public InodeBase {
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       const Entry& entry,
       PathComponentPiece name,
-      fusell::InodeNumber number) noexcept;
+      InodeNumber number) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
       const Entry& entry,
       PathComponentPiece name,
-      fusell::InodeNumber number);
+      InodeNumber number);
 
   /**
    * Materialize this directory in the overlay.
@@ -837,7 +837,7 @@ class TreeInode : public InodeBase {
    * Helper function called inside InodeBase::setattr to perform TreeInode
    * specific operation during setattr.
    */
-  folly::Future<fusell::Dispatcher::Attr> setInodeAttr(
+  folly::Future<Dispatcher::Attr> setInodeAttr(
       const fuse_setattr_in& attr) override;
 
   folly::Synchronized<Dir> contents_;

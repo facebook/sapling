@@ -36,7 +36,6 @@ DEFINE_string(
 // eden, and WARNING for all other categories.
 DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
 
-using namespace facebook::eden::fusell;
 using namespace facebook::eden;
 
 int main(int argc, char** argv) {

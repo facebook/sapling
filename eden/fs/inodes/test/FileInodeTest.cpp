@@ -78,7 +78,7 @@ bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
 
 namespace {
 
-fusell::Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
+Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
   auto attrFuture = inode->getattr();
   // We unfortunately can't use an ASSERT_* check here, since it tries
   // to return from the function normally, rather than throwing.
@@ -91,7 +91,7 @@ fusell::Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
   return attrFuture.get();
 }
 
-fusell::Dispatcher::Attr setFileAttr(
+Dispatcher::Attr setFileAttr(
     const FileInodePtr& inode,
     const fuse_setattr_in& desired) {
   auto attrFuture = inode->setattr(desired);
@@ -105,9 +105,7 @@ fusell::Dispatcher::Attr setFileAttr(
 /**
  * Helper function used by BASIC_ATTR_CHECKS()
  */
-void basicAttrChecks(
-    const FileInodePtr& inode,
-    const fusell::Dispatcher::Attr& attr) {
+void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
   EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
   EXPECT_EQ(1, attr.st.st_nlink);
   EXPECT_EQ(inode->getMount()->getUid(), attr.st.st_uid);
@@ -135,7 +133,7 @@ void basicAttrChecks(
 /**
  * Helper function used by BASIC_ATTR_CHECKS()
  */
-fusell::Dispatcher::Attr basicAttrChecks(const FileInodePtr& inode) {
+Dispatcher::Attr basicAttrChecks(const FileInodePtr& inode) {
   auto attr = getFileAttr(inode);
   basicAttrChecks(inode, attr);
   return attr;

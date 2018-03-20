@@ -13,7 +13,6 @@
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /**
  * Represents data that may come from a buffer or a file descriptor.
@@ -63,6 +62,6 @@ class BufVec {
    */
   std::string copyData() const;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

@@ -24,7 +24,7 @@
 #include <vector>
 
 using namespace folly::string_piece_literals;
-using namespace facebook::eden::fusell;
+using namespace facebook::eden;
 using facebook::eden::UserInfo;
 using folly::ByteRange;
 using folly::checkUnixError;

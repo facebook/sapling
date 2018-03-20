@@ -20,7 +20,6 @@
 #endif
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /**
  * Represents ino_t behind a slightly safer API.  In general, it is a bug if
@@ -127,22 +126,20 @@ struct FuseChannelData {
   fuse_init_out connInfo;
 };
 
-} // namespace fusell
-
-constexpr fusell::InodeNumber operator""_ino(unsigned long long ino) {
-  return fusell::InodeNumber{ino};
+constexpr InodeNumber operator""_ino(unsigned long long ino) {
+  return InodeNumber{ino};
 }
 
 /// The inode number of the mount's root directory.
-constexpr fusell::InodeNumber kRootNodeId = 1_ino;
+constexpr InodeNumber kRootNodeId = 1_ino;
 
 } // namespace eden
 } // namespace facebook
 
 namespace std {
 template <>
-struct hash<facebook::eden::fusell::InodeNumber> {
-  size_t operator()(facebook::eden::fusell::InodeNumber n) const {
+struct hash<facebook::eden::InodeNumber> {
+  size_t operator()(facebook::eden::InodeNumber n) const {
     // TODO: It may be worth using a different hash function.  The default
     // std::hash for integers is the identity function.  But since we allocate
     // inode numbers monotonically, this should be okay.
@@ -153,9 +150,9 @@ struct hash<facebook::eden::fusell::InodeNumber> {
 
 namespace folly {
 template <>
-class FormatValue<facebook::eden::fusell::InodeNumber> {
+class FormatValue<facebook::eden::InodeNumber> {
  public:
-  explicit FormatValue(facebook::eden::fusell::InodeNumber ino) : ino_(ino) {}
+  explicit FormatValue(facebook::eden::InodeNumber ino) : ino_(ino) {}
 
   template <class FormatCallback>
   void format(FormatArg& arg, FormatCallback& cb) const {
@@ -163,6 +160,6 @@ class FormatValue<facebook::eden::fusell::InodeNumber> {
   }
 
  private:
-  const facebook::eden::fusell::InodeNumber ino_;
+  const facebook::eden::InodeNumber ino_;
 };
 } // namespace folly

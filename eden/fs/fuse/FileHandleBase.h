@@ -9,13 +9,12 @@
  */
 #pragma once
 #include <folly/futures/Future.h>
-#include "BufVec.h"
-#include "Dispatcher.h"
-#include "PollHandle.h"
+#include "eden/fs/fuse/BufVec.h"
+#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/PollHandle.h"
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 class Dispatcher;
 
@@ -27,7 +26,7 @@ class FileHandleBase {
    * Return the inode number.
    * This is used in lieu of getattr() by the code that serializes
    * the FileHandleMap. */
-  virtual fusell::InodeNumber getInodeNumber() = 0;
+  virtual InodeNumber getInodeNumber() = 0;
 
   /**
    * Get file attributes
@@ -87,6 +86,6 @@ class FileHandleBase {
    */
   virtual folly::Future<unsigned> poll(std::unique_ptr<PollHandle> ph);
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

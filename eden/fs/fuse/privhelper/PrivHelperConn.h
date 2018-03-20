@@ -20,7 +20,6 @@ class File;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 /*
  * A helper class for sending and receiving messages on the privhelper socket.
@@ -200,6 +199,6 @@ class PrivHelperError : public std::exception {
  private:
   std::string message_;
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

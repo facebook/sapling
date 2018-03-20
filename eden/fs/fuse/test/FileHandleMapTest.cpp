@@ -15,7 +15,6 @@
 #include "eden/fs/fuse/gen-cpp2/handlemap_types.h"
 
 using namespace facebook::eden;
-using namespace facebook::eden::fusell;
 using folly::Future;
 using folly::test::TemporaryFile;
 
@@ -23,9 +22,9 @@ namespace {
 
 class FakeDirHandle : public DirHandle {
  public:
-  explicit FakeDirHandle(fusell::InodeNumber inode) : inode_(inode) {}
+  explicit FakeDirHandle(InodeNumber inode) : inode_(inode) {}
 
-  fusell::InodeNumber getInodeNumber() override {
+  InodeNumber getInodeNumber() override {
     return inode_;
   }
   folly::Future<Dispatcher::Attr> getattr() override {
@@ -44,14 +43,14 @@ class FakeDirHandle : public DirHandle {
   }
 
  private:
-  fusell::InodeNumber inode_;
+  InodeNumber inode_;
 };
 
 class FakeFileHandle : public FileHandle {
  public:
-  explicit FakeFileHandle(fusell::InodeNumber inode) : inode_(inode) {}
+  explicit FakeFileHandle(InodeNumber inode) : inode_(inode) {}
 
-  fusell::InodeNumber getInodeNumber() override {
+  InodeNumber getInodeNumber() override {
     return inode_;
   }
   folly::Future<Dispatcher::Attr> getattr() override {
@@ -79,7 +78,7 @@ class FakeFileHandle : public FileHandle {
   }
 
  private:
-  fusell::InodeNumber inode_;
+  InodeNumber inode_;
 };
 } // namespace
 

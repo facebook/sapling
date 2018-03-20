@@ -30,9 +30,6 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-using facebook::eden::fusell::PrivHelperConn;
-using facebook::eden::fusell::PrivHelperServer;
-
 namespace facebook {
 namespace eden {
 

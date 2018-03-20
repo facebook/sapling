@@ -23,7 +23,7 @@ class TreeInode;
 /**
  * A FUSE request dispatcher for eden mount points.
  */
-class EdenDispatcher : public fusell::Dispatcher {
+class EdenDispatcher : public Dispatcher {
  public:
   /*
    * Create an EdenDispatcher.
@@ -31,64 +31,54 @@ class EdenDispatcher : public fusell::Dispatcher {
    */
   explicit EdenDispatcher(EdenMount* mount);
 
-  folly::Future<Attr> getattr(fusell::InodeNumber ino) override;
-  folly::Future<Attr> setattr(
-      fusell::InodeNumber ino,
-      const fuse_setattr_in& attr) override;
-  folly::Future<std::shared_ptr<fusell::DirHandle>> opendir(
-      fusell::InodeNumber ino,
-      int flags) override;
+  folly::Future<Attr> getattr(InodeNumber ino) override;
+  folly::Future<Attr> setattr(InodeNumber ino, const fuse_setattr_in& attr)
+      override;
+  folly::Future<std::shared_ptr<DirHandle>> opendir(InodeNumber ino, int flags)
+      override;
   folly::Future<fuse_entry_out> lookup(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name) override;
 
-  folly::Future<folly::Unit> forget(
-      fusell::InodeNumber ino,
-      unsigned long nlookup) override;
-  folly::Future<std::shared_ptr<fusell::FileHandle>> open(
-      fusell::InodeNumber ino,
-      int flags) override;
-  folly::Future<std::string> readlink(fusell::InodeNumber ino) override;
+  folly::Future<folly::Unit> forget(InodeNumber ino, unsigned long nlookup)
+      override;
+  folly::Future<std::shared_ptr<FileHandle>> open(InodeNumber ino, int flags)
+      override;
+  folly::Future<std::string> readlink(InodeNumber ino) override;
   folly::Future<fuse_entry_out> mknod(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
       dev_t rdev) override;
-  folly::Future<fuse_entry_out> mkdir(
-      fusell::InodeNumber parent,
-      PathComponentPiece name,
-      mode_t mode) override;
-  folly::Future<folly::Unit> unlink(
-      fusell::InodeNumber parent,
-      PathComponentPiece name) override;
-  folly::Future<folly::Unit> rmdir(
-      fusell::InodeNumber parent,
-      PathComponentPiece name) override;
+  folly::Future<fuse_entry_out>
+  mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode) override;
+  folly::Future<folly::Unit> unlink(InodeNumber parent, PathComponentPiece name)
+      override;
+  folly::Future<folly::Unit> rmdir(InodeNumber parent, PathComponentPiece name)
+      override;
   folly::Future<fuse_entry_out> symlink(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name,
       folly::StringPiece link) override;
   folly::Future<folly::Unit> rename(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name,
-      fusell::InodeNumber newparent,
+      InodeNumber newparent,
       PathComponentPiece newname) override;
 
   folly::Future<fuse_entry_out> link(
-      fusell::InodeNumber ino,
-      fusell::InodeNumber newparent,
+      InodeNumber ino,
+      InodeNumber newparent,
       PathComponentPiece newname) override;
 
   folly::Future<Dispatcher::Create> create(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name,
       mode_t mode,
       int flags) override;
-  folly::Future<std::string> getxattr(
-      fusell::InodeNumber ino,
-      folly::StringPiece name) override;
-  folly::Future<std::vector<std::string>> listxattr(
-      fusell::InodeNumber ino) override;
+  folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
+      override;
+  folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;
 
  private:
   // The EdenMount that owns this EdenDispatcher.

@@ -25,7 +25,6 @@ class Future;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 #define FUSELL_NOT_IMPL()                                               \
   do {                                                                  \
@@ -80,7 +79,7 @@ class Dispatcher {
    * Lookup a directory entry by name and get its attributes
    */
   virtual folly::Future<fuse_entry_out> lookup(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name);
 
   /**
@@ -103,7 +102,7 @@ class Dispatcher {
    * @param nlookup the number of lookups to forget
    */
   virtual folly::Future<folly::Unit> forget(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       unsigned long nlookup);
 
   /**
@@ -129,7 +128,7 @@ class Dispatcher {
    *
    * @param ino the inode number
    */
-  virtual folly::Future<Attr> getattr(fusell::InodeNumber ino);
+  virtual folly::Future<Attr> getattr(InodeNumber ino);
 
   /**
    * Set file attributes
@@ -146,7 +145,7 @@ class Dispatcher {
    *     file information filled in for ftruncate
    */
   virtual folly::Future<Attr> setattr(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       const fuse_setattr_in& attr);
 
   /**
@@ -154,7 +153,7 @@ class Dispatcher {
    *
    * @param ino the inode number
    */
-  virtual folly::Future<std::string> readlink(fusell::InodeNumber ino);
+  virtual folly::Future<std::string> readlink(InodeNumber ino);
 
   /**
    * Create file node
@@ -167,11 +166,8 @@ class Dispatcher {
    * @param mode file type and mode with which to create the new file
    * @param rdev the device number (only valid if created file is a device)
    */
-  virtual folly::Future<fuse_entry_out> mknod(
-      fusell::InodeNumber parent,
-      PathComponentPiece name,
-      mode_t mode,
-      dev_t rdev);
+  virtual folly::Future<fuse_entry_out>
+  mknod(InodeNumber parent, PathComponentPiece name, mode_t mode, dev_t rdev);
 
   /**
    * Create a directory
@@ -181,7 +177,7 @@ class Dispatcher {
    * @param mode with which to create the new file
    */
   virtual folly::Future<fuse_entry_out>
-  mkdir(fusell::InodeNumber parent, PathComponentPiece name, mode_t mode);
+  mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode);
 
   /**
    * Remove a file
@@ -190,7 +186,7 @@ class Dispatcher {
    * @param name to remove
    */
   virtual folly::Future<folly::Unit> unlink(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name);
 
   /**
@@ -200,7 +196,7 @@ class Dispatcher {
    * @param name to remove
    */
   virtual folly::Future<folly::Unit> rmdir(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name);
 
   /**
@@ -210,10 +206,8 @@ class Dispatcher {
    * @param name to create
    * @param link the contents of the symbolic link
    */
-  virtual folly::Future<fuse_entry_out> symlink(
-      fusell::InodeNumber parent,
-      PathComponentPiece name,
-      folly::StringPiece link);
+  virtual folly::Future<fuse_entry_out>
+  symlink(InodeNumber parent, PathComponentPiece name, folly::StringPiece link);
 
   /**
    * Rename a file
@@ -224,9 +218,9 @@ class Dispatcher {
    * @param newname new name
    */
   virtual folly::Future<folly::Unit> rename(
-      fusell::InodeNumber parent,
+      InodeNumber parent,
       PathComponentPiece name,
-      fusell::InodeNumber newparent,
+      InodeNumber newparent,
       PathComponentPiece newname);
 
   /**
@@ -236,10 +230,8 @@ class Dispatcher {
    * @param newparent inode number of the new parent directory
    * @param newname new name to create
    */
-  virtual folly::Future<fuse_entry_out> link(
-      fusell::InodeNumber ino,
-      fusell::InodeNumber newparent,
-      PathComponentPiece newname);
+  virtual folly::Future<fuse_entry_out>
+  link(InodeNumber ino, InodeNumber newparent, PathComponentPiece newname);
 
   /**
    * Open a file
@@ -248,7 +240,7 @@ class Dispatcher {
    * O_TRUNC) are available in the flags parameter.
    */
   virtual folly::Future<std::shared_ptr<FileHandle>> open(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       int flags);
 
   /**
@@ -257,7 +249,7 @@ class Dispatcher {
    * open(2) flags are available in the flags parameter.
    */
   virtual folly::Future<std::shared_ptr<DirHandle>> opendir(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       int flags);
 
   /**
@@ -265,13 +257,13 @@ class Dispatcher {
    *
    * @param ino the inode number, zero means "undefined"
    */
-  virtual folly::Future<struct fuse_kstatfs> statfs(fusell::InodeNumber ino);
+  virtual folly::Future<struct fuse_kstatfs> statfs(InodeNumber ino);
 
   /**
    * Set an extended attribute
    */
   virtual folly::Future<folly::Unit> setxattr(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       folly::StringPiece name,
       folly::StringPiece value,
       int flags);
@@ -279,15 +271,14 @@ class Dispatcher {
    * Get an extended attribute
    */
   virtual folly::Future<std::string> getxattr(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       folly::StringPiece name);
   static const int kENOATTR;
 
   /**
    * List extended attribute names
    */
-  virtual folly::Future<std::vector<std::string>> listxattr(
-      fusell::InodeNumber ino);
+  virtual folly::Future<std::vector<std::string>> listxattr(InodeNumber ino);
 
   /**
    * Remove an extended attribute
@@ -296,7 +287,7 @@ class Dispatcher {
    * @param name of the extended attribute
    */
   virtual folly::Future<folly::Unit> removexattr(
-      fusell::InodeNumber ino,
+      InodeNumber ino,
       folly::StringPiece name);
 
   /**
@@ -313,7 +304,7 @@ class Dispatcher {
    * @param ino the inode number
    * @param mask requested access mode
    */
-  virtual folly::Future<folly::Unit> access(fusell::InodeNumber ino, int mask);
+  virtual folly::Future<folly::Unit> access(InodeNumber ino, int mask);
 
   struct Create {
     fuse_entry_out entry;
@@ -339,11 +330,8 @@ class Dispatcher {
    * @param name to create
    * @param mode file type and mode with which to create the new file
    */
-  virtual folly::Future<Create> create(
-      fusell::InodeNumber parent,
-      PathComponentPiece name,
-      mode_t mode,
-      int flags);
+  virtual folly::Future<Create>
+  create(InodeNumber parent, PathComponentPiece name, mode_t mode, int flags);
 
   /**
    * Map block index within file to block index within device
@@ -358,9 +346,8 @@ class Dispatcher {
    * @param idx block index within file
    */
   virtual folly::Future<uint64_t>
-  bmap(fusell::InodeNumber ino, size_t blocksize, uint64_t idx);
+  bmap(InodeNumber ino, size_t blocksize, uint64_t idx);
 };
 
-} // namespace fusell
 } // namespace eden
 } // namespace facebook

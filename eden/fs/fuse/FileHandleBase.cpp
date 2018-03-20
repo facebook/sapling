@@ -7,13 +7,12 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "FileHandleBase.h"
+#include "eden/fs/fuse/FileHandleBase.h"
 
 using namespace folly;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 FileHandleBase::~FileHandleBase() {}
 
@@ -29,6 +28,6 @@ folly::Future<unsigned> FileHandleBase::poll(
     std::unique_ptr<PollHandle> /*ph*/) {
   FUSELL_NOT_IMPL();
 }
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

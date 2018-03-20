@@ -23,7 +23,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
-using namespace facebook::eden::fusell;
 using folly::exceptionStr;
 using folly::makeFuture;
 using std::string;
@@ -43,7 +42,7 @@ class TestDispatcher : public Dispatcher {
   TestDispatcher(ThreadLocalEdenStats* stats, const UserInfo& identity)
       : Dispatcher(stats), identity_(identity) {}
 
-  folly::Future<Attr> getattr(fusell::InodeNumber ino) override {
+  folly::Future<Attr> getattr(InodeNumber ino) override {
     if (ino == kRootNodeId) {
       struct stat st = {};
       st.st_ino = ino.get();

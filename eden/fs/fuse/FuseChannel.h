@@ -29,7 +29,6 @@ class RequestContext;
 
 namespace facebook {
 namespace eden {
-namespace fusell {
 
 class Dispatcher;
 
@@ -173,7 +172,7 @@ class FuseChannel {
    *            or negative to invalidate attributes only
    * @param len the amount of cache to invalidate or 0 for all
    */
-  void invalidateInode(fusell::InodeNumber ino, off_t off, off_t len);
+  void invalidateInode(InodeNumber ino, off_t off, off_t len);
 
   /**
    * Notify to invalidate parent attributes and the dentry matching
@@ -182,7 +181,7 @@ class FuseChannel {
    * @param parent inode number
    * @param name file name
    */
-  void invalidateEntry(fusell::InodeNumber parent, PathComponentPiece name);
+  void invalidateEntry(InodeNumber parent, PathComponentPiece name);
 
   /**
    * Sends a reply to a kernel request that consists only of the error
@@ -499,6 +498,6 @@ class FuseChannelDeleter {
     channel->destroy();
   }
 };
-} // namespace fusell
+
 } // namespace eden
 } // namespace facebook

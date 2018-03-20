@@ -59,7 +59,7 @@ class ServerState {
    * Get the ThreadLocalEdenStats object that tracks process-wide (rather than
    * per-mount) statistics.
    */
-  fusell::ThreadLocalEdenStats& getStats() {
+  ThreadLocalEdenStats& getStats() {
     return edenStats_;
   }
 
@@ -97,7 +97,7 @@ class ServerState {
  private:
   AbsolutePath socketPath_;
   UserInfo userInfo_;
-  fusell::ThreadLocalEdenStats edenStats_;
+  ThreadLocalEdenStats edenStats_;
   std::shared_ptr<PrivHelper> privHelper_;
   std::shared_ptr<UnboundedQueueThreadPool> threadPool_;
   std::shared_ptr<Clock> clock_;

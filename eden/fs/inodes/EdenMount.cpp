@@ -44,8 +44,6 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
-using facebook::eden::fusell::FuseChannel;
-using facebook::eden::fusell::FuseChannelData;
 using folly::Future;
 using folly::makeFuture;
 using folly::setThreadName;
@@ -370,7 +368,7 @@ const AbsolutePath& EdenMount::getPath() const {
   return path_;
 }
 
-fusell::ThreadLocalEdenStats* EdenMount::getStats() const {
+ThreadLocalEdenStats* EdenMount::getStats() const {
   return &serverState_->getStats();
 }
 
@@ -388,7 +386,7 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTreeFuture()
   return objectStore_->getTreeForCommit(commitHash);
 }
 
-fusell::InodeNumber EdenMount::getDotEdenInodeNumber() const {
+InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
 }
 
