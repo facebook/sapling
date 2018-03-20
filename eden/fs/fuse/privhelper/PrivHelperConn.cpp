@@ -469,7 +469,7 @@ void PrivHelperConn::rethrowErrorResponse(const Message* msg) {
     // so for now we just live with it.  (We could explicitly search for the
     // error string at the end of errmsg and strip it off if found, but this
     // seems more complicated than it's worth at the moment.)
-    throw std::system_error(errnum, std::system_category(), errmsg);
+    throw std::system_error(errnum, std::generic_category(), errmsg);
   }
   throw PrivHelperError(errtype, errmsg);
 }

@@ -35,7 +35,7 @@ folly::Future<int> IoFuture::wait(
   // I/O wait was canceled.
   if (!promise_.isFulfilled()) {
     promise_.setException(std::system_error(
-        ECANCELED, std::system_category(), "I/O wait canceled"));
+        ECANCELED, std::generic_category(), "I/O wait canceled"));
   }
   promise_ = Promise<int>{};
 
@@ -50,14 +50,14 @@ folly::Future<int> IoFuture::wait(
   // credentials soon.
   if (!scheduleTimeout(timeout)) {
     promise_.setException(std::system_error(
-        EIO, std::system_category(), "error registering for socket I/O"));
+        EIO, std::generic_category(), "error registering for socket I/O"));
     return future;
   }
 
   // Register for the requested I/O event
   if (!registerHandler(eventFlags)) {
     promise_.setException(std::system_error(
-        EIO, std::system_category(), "error registering for socket I/O"));
+        EIO, std::generic_category(), "error registering for socket I/O"));
     return future;
   }
 
@@ -72,7 +72,7 @@ void IoFuture::handlerReady(uint16_t events) noexcept {
 void IoFuture::timeoutExpired() noexcept {
   unregisterHandler();
   promise_.setException(std::system_error(
-      ETIMEDOUT, std::system_category(), "timed out waiting for socket I/O"));
+      ETIMEDOUT, std::generic_category(), "timed out waiting for socket I/O"));
 }
 
 folly::Future<int> waitForIO(

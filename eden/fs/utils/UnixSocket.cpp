@@ -223,7 +223,7 @@ void UnixSocket::closeNow() {
 
   if (sendQueue_) {
     auto error = make_exception_wrapper<std::system_error>(
-        ENOTCONN, std::system_category(), "unix socket closed");
+        ENOTCONN, std::generic_category(), "unix socket closed");
     failAllSends(error);
   }
 

@@ -16,7 +16,7 @@ namespace facebook {
 namespace eden {
 
 InodeError::InodeError(int errnum, TreeInodePtr inode, PathComponentPiece child)
-    : std::system_error(errnum, std::system_category()),
+    : std::system_error(errnum, std::generic_category()),
       inode_(std::move(inode)),
       child_(PathComponent{child}) {}
 
@@ -25,7 +25,7 @@ InodeError::InodeError(
     TreeInodePtr inode,
     PathComponentPiece child,
     std::string&& message)
-    : std::system_error(errnum, std::system_category()),
+    : std::system_error(errnum, std::generic_category()),
       inode_(std::move(inode)),
       child_(PathComponent{child}),
       message_(std::move(message)) {}

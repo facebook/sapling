@@ -209,7 +209,7 @@ void FutureUnixSocket::receiveTimeout() {
   socket_.reset();
 
   auto error = make_exception_wrapper<std::system_error>(
-      ETIMEDOUT, std::system_category(), "receive timeout on unix socket");
+      ETIMEDOUT, std::generic_category(), "receive timeout on unix socket");
   failReceiveQueue(std::move(q), error);
 }
 

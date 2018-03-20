@@ -31,11 +31,11 @@ namespace eden {
 class InodeError : public std::system_error {
  public:
   InodeError(int errnum, InodePtr inode)
-      : std::system_error(errnum, std::system_category()),
+      : std::system_error(errnum, std::generic_category()),
         inode_(std::move(inode)) {}
   InodeError(int errnum, TreeInodePtr inode, PathComponentPiece child);
   InodeError(int errnum, InodePtr inode, std::string message)
-      : std::system_error(errnum, std::system_category()),
+      : std::system_error(errnum, std::generic_category()),
         inode_(std::move(inode)),
         message_(std::move(message)) {}
   InodeError(
