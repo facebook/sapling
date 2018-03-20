@@ -16,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import typing
 from typing import Any, List, Optional
 
 from . import repobase
@@ -27,7 +28,7 @@ class HgError(subprocess.CalledProcessError):
     A wrapper around subprocess.CalledProcessError that also includes
     includes the process's stderr when converted to a string.
     '''
-    def __init__(self, orig):
+    def __init__(self, orig: subprocess.CalledProcessError) -> None:
         super().__init__(orig.returncode, orig.cmd,
                          output=orig.output, stderr=orig.stderr)
 
@@ -85,25 +86,26 @@ class HgRepository(repobase.Repository):
             env = dict(env)
             env['HGEDITOR'] = hgeditor
 
+        input_bytes = None
         if input is not None:
-            input = input.encode(encoding)
+            input_bytes = input.encode(encoding)
 
         if cwd is None:
             cwd = self.path
         try:
             completed_process = subprocess.run(cmd, stdout=stdout,
                                                stderr=stderr,
-                                               input=input,
+                                               input=input_bytes,
                                                check=check, cwd=cwd,
                                                env=env)
         except subprocess.CalledProcessError as ex:
             raise HgError(ex) from ex
         if completed_process.stdout is not None:
-            return completed_process.stdout.decode(encoding)
+            return typing.cast(str, completed_process.stdout.decode(encoding))
         else:
             return None
 
-    def init(self, hgrc: configparser.ConfigParser = None) -> None:
+    def init(self, hgrc: Optional[configparser.ConfigParser] = None) -> None:
         '''
         Initialize a new hg repository by running 'hg init'
 

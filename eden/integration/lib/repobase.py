@@ -10,10 +10,11 @@
 import datetime
 import errno
 import os
+from typing import List, Optional
 
 
 class Repository(object):
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
 
         # Default author and timestamp info for commits
@@ -36,35 +37,35 @@ class Repository(object):
         self.commit_time += self.commit_time_delta
         return current
 
-    def init(self):
+    def init(self) -> None:
         raise NotImplementedError('subclasses must implement init()')
 
-    def get_type(self):
+    def get_type(self) -> str:
         '''Returns the type of this repo as a string: "git" or "hg".'''
         raise NotImplementedError('subclasses must implement get_type()')
 
-    def get_head_hash(self):
+    def get_head_hash(self) -> str:
         '''Returns the 40-character hex hash for HEAD.'''
         raise NotImplementedError('subclasses must implement get_head_hash()')
 
-    def add_file(self, path):
+    def add_file(self, path: str) -> None:
         self.add_files([path])
 
-    def add_files(self, path):
+    def add_files(self, paths: List[str]) -> None:
         raise NotImplementedError('subclasses must implement add_files()')
 
-    def get_path(self, *args):
+    def get_path(self, *args: str) -> str:
         for arg in args:
             assert not os.path.isabs(arg), 'must not be absolute: %r' % (arg, )
         return os.path.join(self.path, *args)
 
-    def get_canonical_root(self):
+    def get_canonical_root(self) -> str:
         '''Returns cwd to use when calling scm commands.'''
         raise NotImplementedError(
             'subclasses must implement get_canonical_root()'
         )
 
-    def mkdir(self, path):
+    def mkdir(self, path: str) -> None:
         full_path = self.get_path(path)
         try:
             os.makedirs(full_path)
@@ -72,13 +73,17 @@ class Repository(object):
             if ex.errno != errno.EEXIST:
                 raise
 
-    def make_parent_dir(self, path):
+    def make_parent_dir(self, path: str) -> None:
         dirname = os.path.dirname(path)
         if dirname:
             self.mkdir(dirname)
 
     def write_file(
-        self, path: str, contents: str, mode: int=None, add: bool=True
+        self,
+        path: str,
+        contents: str,
+        mode: Optional[int] = None,
+        add: bool = True
     ) -> None:
         '''
         Create or overwrite a file with the given contents.
@@ -97,7 +102,7 @@ class Repository(object):
         if add:
             self.add_file(path)
 
-    def symlink(self, path, contents, add=True):
+    def symlink(self, path: str, contents: str, add: bool = True) -> None:
         '''
         Create a symlink at the specified path, pointed at the given
         destination path contents.

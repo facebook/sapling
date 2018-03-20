@@ -7,22 +7,33 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import datetime
 import distutils.spawn
 import os
 import subprocess
 import tempfile
 import time
+import typing
+from typing import Dict, List, Optional
 
 from . import repobase
 
 
 class GitRepository(repobase.Repository):
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         super().__init__(path)
-        self.git_bin = distutils.spawn.find_executable(
+        git_bin = distutils.spawn.find_executable(
             'git.real') or distutils.spawn.find_executable('git')
+        if git_bin is None:
+            raise Exception('unable to find git binary')
+        self.git_bin = git_bin
 
-    def git(self, *args, encoding='utf-8', **kwargs):
+    def git(
+        self,
+        *args: str,
+        encoding: str = 'utf-8',
+        env: Optional[Dict[str, str]] = None
+    ) -> Optional[str]:
         '''
         Invoke a git command inside the repository.
 
@@ -41,45 +52,46 @@ class GitRepository(repobase.Repository):
         '''
         cmd = [self.git_bin] + list(args)
 
-        env = os.environ.copy()
-        env_args = kwargs.pop('env', None)
-        if env_args is not None:
-            env.update(env_args)
-
-        if kwargs:
-            raise Exception('unexpected keyword argumnts to git(): %r' %
-                            list(kwargs.keys))
+        git_env = None
+        if env is not None:
+            git_env = os.environ.copy()
+            git_env.update(env)
 
         completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE,
                                            check=True, cwd=self.path,
-                                           env=env)
-        return completed_process.stdout.decode(encoding)
+                                           env=git_env)
+        if completed_process.stdout is not None:
+            return typing.cast(str, completed_process.stdout.decode(encoding))
+        else:
+            return None
 
-    def init(self):
+    def init(self) -> None:
         self.git('init')
 
-    def get_type(self):
+    def get_type(self) -> str:
         return 'git'
 
-    def get_head_hash(self):
+    def get_head_hash(self) -> str:
         return self.git('rev-parse', 'HEAD').rstrip()
 
-    def get_canonical_root(self):
+    def get_canonical_root(self) -> str:
         return os.path.join(self.path, '.git')
 
-    def add_files(self, paths):
+    def add_files(self, paths: List[str]) -> None:
         self.git('add', *paths)
 
-    def commit(self,
-               message,
-               author_name=None,
-               author_email=None,
-               date=None,
-               committer_name=None,
-               committer_email=None,
-               committer_date=None,
-               amend=False):
+    def commit(
+        self,
+        message: str,
+        author_name: Optional[str] = None,
+        author_email: Optional[str] = None,
+        date: Optional[datetime.datetime] = None,
+        committer_name: Optional[str] = None,
+        committer_email: Optional[str] = None,
+        committer_date: Optional[datetime.datetime] = None,
+        amend: bool = False
+    ) -> None:
         if author_name is None:
             author_name = self.author_name
         if author_email is None:
