@@ -4,13 +4,16 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use std::collections::{HashSet, VecDeque};
+use std::hash::{Hash, Hasher};
+use std::iter::FromIterator;
+
 use futures::future::Future;
 use futures::stream::{empty, iter_ok, once, Stream};
 use futures_ext::{BoxStream, StreamExt};
-use std::collections::VecDeque;
 
 use super::{Entry, MPath, MPathElement, Manifest};
-use super::manifest::{Content, Type};
+use super::manifest::{Content, EmptyManifest, Type};
 
 use errors::*;
 
@@ -47,6 +50,94 @@ impl ChangedEntry {
             path,
             status: EntryStatus::Modified(left, right),
         }
+    }
+}
+
+struct NewEntry {
+    path: MPath,
+    entry: Box<Entry + Sync>,
+}
+
+impl NewEntry {
+    fn from_changed_entry(ce: ChangedEntry) -> Option<Self> {
+        let path = ce.path;
+        match ce.status {
+            EntryStatus::Deleted(_) => None,
+            EntryStatus::Added(entry) | EntryStatus::Modified(entry, _) => {
+                Some(Self { path, entry })
+            }
+        }
+    }
+
+    fn into_tuple(self) -> (MPath, Box<Entry + Sync>) {
+        (self.path, self.entry)
+    }
+}
+
+impl PartialEq for NewEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path
+    }
+}
+impl Eq for NewEntry {}
+
+impl Hash for NewEntry {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.path.hash(state);
+    }
+}
+
+/// For a given Manifests and list of parents this function recursively compares their content and
+/// returns a intersection of entries that the given Manifest had added (both newly added and
+/// replacement for modified entries) compared to it's parents
+///
+/// TODO(luk, T26981580) This implementation is not efficient, because in order to find the
+///                      intersection of parents it first produces the full difference of root vs
+///                      each parent, then puts /// one parent in a HashSet and performs the
+///                      intersection.
+///                      A better approach would be to traverse the manifest tree of root and both
+///                      parents simultaniously and produce the intersection result while
+///                      traversing
+pub fn new_entry_intersection_stream<M, P1M, P2M>(
+    root: &M,
+    p1: Option<&P1M>,
+    p2: Option<&P2M>,
+) -> BoxStream<(MPath, Box<Entry + Sync>), Error>
+where
+    M: Manifest,
+    P1M: Manifest,
+    P2M: Manifest,
+{
+    if p1.is_none() || p2.is_none() {
+        let ces = if let Some(p1) = p1 {
+            changed_entry_stream(root, p1, MPath::empty())
+        } else if let Some(p2) = p2 {
+            changed_entry_stream(root, p2, MPath::empty())
+        } else {
+            changed_entry_stream(root, &EmptyManifest {}, MPath::empty())
+        };
+
+        ces.filter_map(NewEntry::from_changed_entry)
+            .map(NewEntry::into_tuple)
+            .boxify()
+    } else {
+        let p1 = changed_entry_stream(root, p1.unwrap(), MPath::empty())
+            .filter_map(NewEntry::from_changed_entry);
+        let p2 = changed_entry_stream(root, p2.unwrap(), MPath::empty())
+            .filter_map(NewEntry::from_changed_entry);
+
+        p2.collect()
+            .map(move |p2| {
+                let p2: HashSet<_> = HashSet::from_iter(p2.into_iter());
+
+                p1.filter_map(move |ne| if p2.contains(&ne) { Some(ne) } else { None })
+            })
+            .flatten_stream()
+            .map(NewEntry::into_tuple)
+            .boxify()
     }
 }
 
