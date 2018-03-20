@@ -33,7 +33,7 @@ const MAXSTOREPATHLEN: usize = 120;
 /// Perform the mapping to a filesystem path used in a .hg directory
 /// Assumes that this path is a file.
 /// This encoding is used when both 'store' and 'fncache' requirements are in the repo.
-pub fn fncache_fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBuf {
+pub fn fncache_fsencode(elements: &[MPathElement], dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let path = path.rev();
@@ -60,7 +60,7 @@ pub fn fncache_fsencode(elements: &Vec<MPathElement>, dotencode: bool) -> PathBu
 /// Assumes that this path is a file.
 /// This encoding is used when 'store' requirement is present in the repo, but 'fncache'
 /// requirement is not present.
-pub fn simple_fsencode(elements: &Vec<MPathElement>) -> PathBuf {
+pub fn simple_fsencode(elements: &[MPathElement]) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let directory_elements = path.rev();

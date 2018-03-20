@@ -217,8 +217,7 @@ where
         let fut = repo.changesets()
             .and_then(|node| {
                 let node = HgChangesetId::new(node);
-                repo.get_changeset_by_changesetid(&node)
-                    .map(move |cs| (cs, node))
+                repo.get_changeset(&node).map(move |cs| (cs, node))
             })
             .for_each(|(cs, node)| {
                 let parents = cs.parents()

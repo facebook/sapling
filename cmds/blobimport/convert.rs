@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![allow(deprecated)]
+
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
@@ -19,6 +21,7 @@ use heads::Heads;
 use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
+use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{Changeset, MPath, Manifest, NodeHash, RepoPath};
 use mercurial_types::nodehash::{EntryId, HgChangesetId};
 use stats::Timeseries;
@@ -129,7 +132,7 @@ where
         let csid = csid;
 
         revlog_repo
-            .get_changeset_by_changesetid(&csid)
+            .get_changeset(&csid)
             .from_err()
             .and_then(move |cs| {
                 let bcs = BlobChangeset::new_with_id(&csid, cs);
@@ -142,8 +145,8 @@ where
     let nodeid = csid.clone().into_nodehash();
     let entryid = EntryId::new(nodeid);
     let manifest = revlog_repo
-        .get_changeset_by_changesetid(&csid)
-        .join(revlog_repo.get_changelog_revlog_entry_by_id(&entryid))
+        .get_changeset(&csid)
+        .join(revlog_repo.get_changelog_entry_by_id(&entryid))
         .from_err()
         .and_then(move |(cs, entry)| {
             let mfid = *cs.manifestid();
@@ -179,10 +182,13 @@ fn put_blobs<L>(
 where
     L: Linknodes,
 {
-    let cs_entry_fut = revlog_repo.get_changelog().get_entry(linkrev).into_future();
+    let cs_entry_fut = revlog_repo
+        .get_changelog_entry_by_idx(linkrev)
+        .into_future();
 
     revlog_repo
-        .get_manifest_blob_by_nodeid(&mfid)
+        .get_manifest_blob_by_id(&mfid)
+        .into_future()
         .join(cs_entry_fut)
         .from_err()
         .and_then(move |(blob, cs_entry)| {

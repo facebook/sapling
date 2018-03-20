@@ -11,6 +11,7 @@
 extern crate bytes;
 extern crate flate2;
 extern crate futures;
+#[macro_use]
 extern crate futures_ext;
 
 #[macro_use]

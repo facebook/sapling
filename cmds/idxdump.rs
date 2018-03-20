@@ -44,7 +44,7 @@ fn run() -> Result<()> {
     };
 
     // Construct a `Revlog` from the index file
-    let revlog = match Revlog::from_idx(idxpath) {
+    let revlog = match Revlog::from_idx_no_data(idxpath) {
         Ok(revlog) => revlog,
         Err(err) => bail_msg!("failed to load idx {}: {:?}", idxpath, err),
     };

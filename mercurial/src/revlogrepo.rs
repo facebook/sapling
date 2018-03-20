@@ -15,26 +15,23 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use futures::{Async, Future, IntoFuture, Poll, Stream};
+use bytes::Bytes;
+use futures::{Async, IntoFuture, Poll, Stream};
 use futures::future;
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use asyncmemo::{Asyncmemo, Filler};
 use bookmarks::Bookmarks;
-use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, MPath, MPathElement, NodeHash,
-                      RepoPath, NULL_HASH};
+use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, HgManifestId, MPath,
+                      MPathElement, NodeHash, RepoPath, NULL_HASH};
 use mercurial_types::nodehash::{EntryId, HgChangesetId};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
-use bytes::Bytes;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
-use revlog::{self, Revlog, RevlogIter};
-
-type FutureResult<T> = future::FutureResult<T, Error>;
+use revlog::{self, RevIdx, Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;
 
@@ -122,7 +119,6 @@ pub struct RevlogRepo {
     basepath: PathBuf,               // path to .hg directory
     requirements: HashSet<Required>, // requirements
     changelog: Revlog,               // changes
-    manifest: Revlog,                // manifest
     inner: Arc<RwLock<RevlogInner>>, // Inner parts
     inmemory_logs_capacity: usize,   // Limit on the number of filelogs and tree revlogs in memory.
                                      // Note: there can be 2 * inmemory_logs_capacity revlogs in
@@ -162,26 +158,19 @@ impl RevlogRepo {
         let base = base.into();
         let store = base.as_path().join("store");
 
-        let changelog = Revlog::from_idx_data(store.join("00changelog.i"), None as Option<String>)?;
-        let tree_manifest_path = store.join("00manifesttree.i");
-        let manifest = if tree_manifest_path.exists() {
-            Revlog::from_idx_data(tree_manifest_path, None as Option<String>)?
-        } else {
-            // Fallback to flat manifest
-            Revlog::from_idx_data(store.join("00manifest.i"), None as Option<String>)?
-        };
+        let changelog =
+            Revlog::from_idx_with_data(store.join("00changelog.i"), None as Option<String>)?;
 
-        let mut req = HashSet::new();
+        let mut requirements = HashSet::new();
         let file = fs::File::open(base.join("requires")).context("Can't open `requires`")?;
         for line in BufReader::new(file).lines() {
-            req.insert(line.context("Line read failed")?.parse()?);
+            requirements.insert(line.context("Line read failed")?.parse()?);
         }
 
         Ok(RevlogRepo {
             basepath: base.into(),
-            requirements: req,
-            changelog: changelog,
-            manifest: manifest,
+            requirements,
+            changelog,
             inner: Arc::new(RwLock::new(RevlogInner {
                 filelogcache: HashMap::new(),
                 treelogcache: HashMap::new(),
@@ -197,80 +186,45 @@ impl RevlogRepo {
         }
     }
 
-    #[inline]
-    pub fn get_changelog(&self) -> &Revlog {
-        &self.changelog
+    pub fn get_bookmarks(&self) -> Result<StockBookmarks> {
+        Ok(StockBookmarks::read(self.basepath.clone())?)
     }
 
-    pub fn changeset_exists(&self, changesetid: &HgChangesetId) -> FutureResult<bool> {
+    pub fn get_bookmark_value(
+        &self,
+        key: &AsRef<[u8]>,
+    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
+        match self.get_bookmarks() {
+            Ok(b) => b.get(key).boxify(),
+            Err(e) => future::err(e).boxify(),
+        }
+    }
+
+    pub fn changesets(&self) -> ChangesetStream {
+        ChangesetStream::new(&self.changelog)
+    }
+
+    pub fn get_changeset(&self, changesetid: &HgChangesetId) -> BoxFuture<RevlogChangeset, Error> {
+        // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
         let nodeid = changesetid.clone().into_nodehash();
-        Ok(self.changelog.get_idx_by_nodeid(&nodeid).is_ok()).into_future()
-    }
-
-    pub fn get_changeset_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {
         self.changelog
-            .get_idx_by_nodeid(nodeid)
+            .get_idx_by_nodeid(&nodeid)
             .and_then(|idx| self.changelog.get_rev(idx))
-            .into_future()
-    }
-
-    /// This method will soon be deleted, please use `get_changeset_by_changesetid` instead.
-    pub fn get_changeset_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<RevlogChangeset, Error> {
-        // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
-        self.get_changeset_blob_by_nodeid(nodeid)
             .and_then(|rev| RevlogChangeset::new(rev))
+            .into_future()
             .boxify()
     }
 
-    pub fn get_changeset_by_changesetid(
-        &self,
-        changesetid: &HgChangesetId,
-    ) -> BoxFuture<RevlogChangeset, Error> {
+    pub fn get_root_manifest(&self, manifestid: &HgManifestId) -> BoxFuture<RevlogManifest, Error> {
         // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
-        let nodeid = changesetid.clone().into_nodehash();
-        self.get_changeset_blob_by_nodeid(&nodeid)
-            .and_then(|rev| RevlogChangeset::new(rev))
-            .boxify()
-    }
-
-    pub fn get_changelog_revlog_entry_by_id(
-        &self,
-        entryid: &EntryId,
-    ) -> FutureResult<revlog::Entry> {
-        self.changelog.get_entry_by_id(&entryid).into_future()
-    }
-
-    pub fn get_manifest_blob_by_nodeid(&self, nodeid: &NodeHash) -> FutureResult<BlobNode> {
-        // It's possible that commit has null pointer to manifest hash.
-        // In that case we want to return empty blobnode
-        let blobnode = if nodeid == &NULL_HASH {
-            Ok(BlobNode::new(Bytes::new(), None, None))
-        } else {
-            self.manifest
-                .get_idx_by_nodeid(nodeid)
-                .and_then(|idx| self.manifest.get_rev(idx))
-        };
-        blobnode.into_future()
-    }
-
-    pub fn get_tree_manifest_blob_by_nodeid(
-        &self,
-        nodeid: &NodeHash,
-        path: &MPath,
-    ) -> FutureResult<BlobNode> {
-        self.get_tree_revlog(path)
-            .and_then(|tree_revlog| {
-                let idx = tree_revlog.get_idx_by_nodeid(nodeid)?;
-                tree_revlog.get_rev(idx)
-            })
-            .into_future()
-    }
-
-    pub fn get_manifest_by_nodeid(&self, nodeid: &NodeHash) -> BoxFuture<RevlogManifest, Error> {
-        // TODO: (jsgf) T17932873 distinguish between not existing vs some other error
+        let nodeid = manifestid.clone().into_nodehash();
         let repo = self.clone();
-        self.get_manifest_blob_by_nodeid(nodeid)
-            .and_then(|rev| RevlogManifest::new(repo, rev))
+        let revlog = try_boxfuture!(self.get_path_revlog(&RepoPath::root()));
+        revlog
+            .get_idx_by_nodeid(&nodeid)
+            .and_then(|idx| revlog.get_rev(idx))
+            .and_then(move |rev| RevlogManifest::new(repo, rev))
+            .into_future()
             .boxify()
     }
 
@@ -278,114 +232,95 @@ impl RevlogRepo {
         &self.requirements
     }
 
-    pub fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog> {
-        match *path {
+    /// This method is used by RevlogManifest to traverse the Revlogs in search of manifests and
+    /// files. Users of this crate should rely on RevlogManifest traversal or use
+    /// RevlogRepo::get_manifest directly.
+    pub(crate) fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog> {
+        use mercurial_types::RepoPath::*;
+
+        if let Some(revlog) = self.get_path_revlog_from_cache(path) {
+            return Ok(revlog);
+        }
+        let mut inner = self.inner.write().expect("poisoned lock");
+
+        // TODO avoid creating a new MPath here
+        let mpath = MPath::empty();
+        let mpath = path.mpath().unwrap_or(&mpath);
+
+        let logcache = match *path {
+            RootPath | DirectoryPath(_) => &mut inner.treelogcache,
+            FilePath(_) => &mut inner.filelogcache,
+        };
+
+        // We may have memory issues if we are keeping too many revlogs in memory.
+        // Let's clear them when we have too much
+        if logcache.len() > self.inmemory_logs_capacity {
+            logcache.clear();
+        }
+
+        match logcache.entry(mpath.clone()) {
+            Entry::Occupied(log) => Ok(log.get().clone()),
+
+            Entry::Vacant(missing) => {
+                let revlog_path = match *path {
+                    // .hg/store/00manifesttree
+                    RootPath => mpath.join(&MPath::new("00manifesttree")?),
+                    // .hg/store/meta/<path>/00manifest
+                    DirectoryPath(_) => MPath::new("meta")?
+                        .join(mpath)
+                        .join(&MPath::new("00manifest")?),
+                    // .hg/store/data/<path>
+                    FilePath(_) => MPath::new("data")?.join(mpath),
+                };
+                Ok(missing
+                    .insert(self.init_revlog_from_path(revlog_path)?)
+                    .clone())
+            }
+        }
+    }
+
+    fn get_path_revlog_from_cache(&self, path: &RepoPath) -> Option<Revlog> {
+        use mercurial_types::RepoPath::*;
+        let inner = self.inner.read().expect("poisoned lock");
+
+        let res = match *path {
             // TODO avoid creating a new MPath here
-            RepoPath::RootPath => self.get_tree_revlog(&MPath::empty()),
-            RepoPath::DirectoryPath(ref path) => self.get_tree_revlog(path),
-            RepoPath::FilePath(ref path) => self.get_file_revlog(path),
-        }
+            RootPath => inner.treelogcache.get(&MPath::empty()),
+            DirectoryPath(ref path) => inner.treelogcache.get(path),
+            FilePath(ref path) => inner.filelogcache.get(path),
+        };
+        res.cloned()
     }
 
-    pub fn get_tree_revlog(&self, path: &MPath) -> Result<Revlog> {
-        {
-            let inner = self.inner.read().expect("poisoned lock");
-            let res = inner.treelogcache.get(path);
-            if res.is_some() {
-                return Ok(res.unwrap().clone());
-            }
-        }
-        let mut inner = self.inner.write().expect("poisoned lock");
+    /// path is the path to the revlog files, but without the .i or .d extensions
+    fn init_revlog_from_path(&self, path: MPath) -> Result<Revlog> {
+        let mut elements: Vec<MPathElement> = path.into_iter().collect();
+        let mut basename = elements.pop().ok_or_else(|| {
+            format_err!("empty path provided to RevlogRepo::init_revlog_from_path")
+        })?;
 
-        // We may have memory issues if we are keeping too many revlogs in memory.
-        // Let's clear them when we have too much
-        if inner.treelogcache.len() > self.inmemory_logs_capacity {
-            inner.treelogcache.clear();
-        }
-        match inner.treelogcache.entry(path.clone()) {
-            Entry::Occupied(log) => Ok(log.get().clone()),
+        let index_path = {
+            let mut basename = basename.clone();
+            basename.extend(b".i");
+            elements.push(basename);
+            self.fsencode_path(&elements)
+        };
+        elements.pop();
 
-            Entry::Vacant(missing) => {
-                let idxpath = self.get_tree_log_idx_path(path);
-                let datapath = self.get_tree_log_data_path(path);
-                let revlog = Revlog::from_idx_data(idxpath, Some(datapath))?;
-                Ok(missing.insert(revlog).clone())
-            }
-        }
+        let data_path = {
+            basename.extend(b".d");
+            elements.push(basename);
+            self.fsencode_path(&elements)
+        };
+
+        let store_path = self.basepath.join("store");
+        Revlog::from_idx_with_data(
+            store_path.join(index_path),
+            Some(store_path.join(data_path)),
+        )
     }
 
-    pub fn get_file_revlog(&self, path: &MPath) -> Result<Revlog> {
-        {
-            let inner = self.inner.read().expect("poisoned lock");
-            let res = inner.filelogcache.get(path);
-            if res.is_some() {
-                return Ok(res.unwrap().clone());
-            }
-        }
-        let mut inner = self.inner.write().expect("poisoned lock");
-
-        // We may have memory issues if we are keeping too many revlogs in memory.
-        // Let's clear them when we have too much
-        if inner.filelogcache.len() > self.inmemory_logs_capacity {
-            inner.filelogcache.clear();
-        }
-        match inner.filelogcache.entry(path.clone()) {
-            Entry::Occupied(log) => Ok(log.get().clone()),
-
-            Entry::Vacant(missing) => {
-                let idxpath = self.get_file_log_idx_path(path);
-                let datapath = self.get_file_log_data_path(path);
-                let revlog = Revlog::from_idx_data(idxpath, Some(datapath))?;
-                Ok(missing.insert(revlog).clone())
-            }
-        }
-    }
-
-    fn get_tree_log_idx_path(&self, path: &MPath) -> PathBuf {
-        self.get_tree_log_path(path, &b"00manifest.i"[..])
-    }
-
-    fn get_tree_log_data_path(&self, path: &MPath) -> PathBuf {
-        self.get_tree_log_path(path, &b"00manifest.d"[..])
-    }
-
-    fn get_file_log_idx_path(&self, path: &MPath) -> PathBuf {
-        self.get_file_log_path(path, ".i")
-    }
-
-    fn get_file_log_data_path(&self, path: &MPath) -> PathBuf {
-        self.get_file_log_path(path, ".d")
-    }
-
-    // This will panic if the filename isn't a single component. (This is a private method so
-    // that's fine.)
-    fn get_tree_log_path<E: Into<Vec<u8>>>(&self, path: &MPath, filename: E) -> PathBuf {
-        let filename = filename.into();
-        let mut elements: Vec<MPathElement> = vec![
-            MPathElement::new(b"meta".to_vec()).expect("valid MPathElement"),
-        ];
-        elements.extend(path.into_iter().cloned());
-        elements.push(MPathElement::new(filename).expect("expect filename to be a valid element"));
-        self.basepath
-            .join("store")
-            .join(self.fsencode_path(&elements))
-    }
-
-    fn get_file_log_path<E: AsRef<[u8]>>(&self, path: &MPath, extension: E) -> PathBuf {
-        let extension = extension.as_ref();
-        let mut elements: Vec<MPathElement> = vec![
-            MPathElement::new(b"data".to_vec()).expect("valid MPathElement"),
-        ];
-        elements.extend(path.into_iter().cloned());
-        if let Some(last) = elements.last_mut() {
-            last.extend(extension);
-        }
-        self.basepath
-            .join("store")
-            .join(self.fsencode_path(&elements))
-    }
-
-    fn fsencode_path(&self, elements: &Vec<MPathElement>) -> PathBuf {
+    fn fsencode_path(&self, elements: &[MPathElement]) -> PathBuf {
         // Mercurial has a complicated logic of path encoding.
         // Code below matches core Mercurial logic from the commit
         // 75013952d8d9608f73cd45f68405fbd6ec112bf2 from file mercurial/store.py from the function
@@ -401,61 +336,44 @@ impl RevlogRepo {
             unimplemented!();
         }
     }
+}
 
-    pub fn bookmarks(&self) -> Result<StockBookmarks> {
-        Ok(StockBookmarks::read(self.basepath.clone())?)
+#[deprecated(note = "This is going to be deleted soon. It is used only in blobimport crate")]
+pub trait RevlogRepoBlobimportExt {
+    fn get_changelog_entry_by_id(&self, id: &EntryId) -> Result<revlog::Entry>;
+
+    fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry>;
+
+    fn get_manifest_blob_by_id(&self, nodeid: &NodeHash) -> Result<BlobNode>;
+
+    fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog>;
+}
+
+#[allow(deprecated)]
+impl RevlogRepoBlobimportExt for RevlogRepo {
+    fn get_changelog_entry_by_id(&self, id: &EntryId) -> Result<revlog::Entry> {
+        self.changelog.get_entry_by_id(&id)
     }
 
-    pub fn get_bookmark_value(
-        &self,
-        key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
-        match self.bookmarks() {
-            Ok(b) => b.get(key).boxify(),
-            Err(e) => future::err(e).boxify(),
+    fn get_changelog_entry_by_idx(&self, revidx: RevIdx) -> Result<revlog::Entry> {
+        self.changelog.get_entry(revidx)
+    }
+
+    fn get_manifest_blob_by_id(&self, nodeid: &NodeHash) -> Result<BlobNode> {
+        // It's possible that commit has null pointer to manifest hash.
+        // In that case we want to return empty blobnode
+        if nodeid == &NULL_HASH {
+            Ok(BlobNode::new(Bytes::new(), None, None))
+        } else {
+            let manifest = self.get_path_revlog(&RepoPath::root())?;
+            manifest
+                .get_idx_by_nodeid(nodeid)
+                .and_then(|idx| manifest.get_rev(idx))
         }
     }
 
-    pub fn changesets(&self) -> ChangesetStream {
-        ChangesetStream::new(&self.changelog)
-    }
-}
-
-pub struct ChangesetBlobFiller(RevlogRepo);
-impl ChangesetBlobFiller {
-    pub fn new(revlog: &RevlogRepo) -> Self {
-        ChangesetBlobFiller(revlog.clone())
-    }
-}
-
-impl Filler for ChangesetBlobFiller {
-    type Key = NodeHash;
-    type Value = BoxFuture<Arc<BlobNode>, Error>;
-
-    fn fill(&self, _: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
-        self.0
-            .get_changeset_blob_by_nodeid(&key)
-            .map(Arc::new)
-            .boxify()
-    }
-}
-
-pub struct ManifestBlobFiller(RevlogRepo);
-impl ManifestBlobFiller {
-    pub fn new(revlog: &RevlogRepo) -> Self {
-        ManifestBlobFiller(revlog.clone())
-    }
-}
-
-impl Filler for ManifestBlobFiller {
-    type Key = NodeHash;
-    type Value = BoxFuture<Arc<BlobNode>, Error>;
-
-    fn fill(&self, _: &Asyncmemo<Self>, key: &Self::Key) -> Self::Value {
-        self.0
-            .get_manifest_blob_by_nodeid(&key)
-            .map(Arc::new)
-            .boxify()
+    fn get_path_revlog(&self, path: &RepoPath) -> Result<Revlog> {
+        RevlogRepo::get_path_revlog(self, path)
     }
 }
 

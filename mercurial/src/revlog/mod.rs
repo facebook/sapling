@@ -153,7 +153,7 @@ impl Revlog {
 
     /// Construct a `Revlog` from an index file at the given path. Data may be inlined
     /// not not required.
-    pub fn from_idx<IP>(idxpath: IP) -> Result<Revlog>
+    pub fn from_idx_no_data<IP>(idxpath: IP) -> Result<Revlog>
     where
         IP: AsRef<Path>,
     {
@@ -168,13 +168,13 @@ impl Revlog {
     /// (`None`), and the index file is not inlined, then it will replace the index file's
     /// extension with `.d` and attempt to open that. The operation will fail if that file can't
     /// be opened.
-    pub fn from_idx_data<IP, DP>(idxpath: IP, datapath: Option<DP>) -> Result<Revlog>
+    pub fn from_idx_with_data<IP, DP>(idxpath: IP, datapath: Option<DP>) -> Result<Revlog>
     where
         IP: AsRef<Path> + Debug,
         DP: AsRef<Path> + Debug,
     {
-        let mut revlog =
-            Self::from_idx(&idxpath).with_context(|_| format!("Can't open index {:?}", idxpath))?;
+        let mut revlog = Self::from_idx_no_data(&idxpath)
+            .with_context(|_| format!("Can't open index {:?}", idxpath))?;
         let datapath = datapath.as_ref().map(DP::as_ref);
         let idxpath = idxpath.as_ref();
 
@@ -525,9 +525,9 @@ impl RevlogInner {
     }
 
     fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
-        self.get_idx_by_nodeid(id).and_then(|idx| {
+        self.get_idx_by_nodeid(&id).and_then(move |idx| {
             self.get_rev(idx)
-                .with_context(|_| format_err!("can't get rev for id {}", id))
+                .with_context(|_| format!("can't get rev for id {}", id))
                 .map_err(Error::from)
         })
     }

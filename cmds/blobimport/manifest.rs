@@ -4,6 +4,8 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+#![allow(deprecated)]
+
 use std::sync::mpsc::SyncSender;
 
 use bincode;
@@ -15,6 +17,7 @@ use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
 use mercurial::RevlogRepo;
 use mercurial::revlog::RevIdx;
+use mercurial::revlogrepo::RevlogRepoBlobimportExt;
 use mercurial_types::{self, Blob, Entry, HgBlobHash, MPath, NodeHash, Parents, RepoPath, Type};
 
 use BlobstoreEntry;
@@ -40,8 +43,7 @@ where
         // blobs.
         let nodekey = format!("node-{}.bincode", entry_hash);
         let blobkey = format!("sha1-{}", nodeblob.blob.sha1());
-        let nodeblob = bincode::serialize(&nodeblob)
-            .expect("bincode serialize failed");
+        let nodeblob = bincode::serialize(&nodeblob).expect("bincode serialize failed");
 
         let res1 = sender.send(BlobstoreEntry::ManifestEntry((
             nodekey,

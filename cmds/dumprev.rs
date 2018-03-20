@@ -45,16 +45,14 @@ fn run() -> Result<()> {
     // Get non-optional revision
     let revidx = FromStr::from_str(matches.value_of("REV").unwrap())
         .map_err(Error::from)
-        .with_context(|_| "idx malformed")?;
+        .context("idx malformed")?;
 
     // Construct a `Revlog`
     let revlog =
-        Revlog::from_idx_data(idxpath, datapath).with_context(|_| "failed to load idx and data")?;
+        Revlog::from_idx_with_data(idxpath, datapath).context("failed to load idx and data")?;
     println!("made revlog {:?}", revlog.get_header());
 
-    let entry = revlog
-        .get_entry(revidx)
-        .with_context(|_| "failed to get entry")?;
+    let entry = revlog.get_entry(revidx).context("failed to get entry")?;
 
     println!("Revlog[{:?}] = {:?}", revidx, entry);
     match revlog.get_rev(revidx) {

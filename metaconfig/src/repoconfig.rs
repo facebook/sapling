@@ -88,10 +88,8 @@ impl RepoConfigs {
         changesetid: HgChangesetId,
     ) -> Box<Future<Item = Self, Error = Error> + Send> {
         Box::new(
-            repo.get_changeset_by_changesetid(&changesetid)
-                .and_then(move |changeset| {
-                    repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
-                })
+            repo.get_changeset(&changesetid)
+                .and_then(move |changeset| repo.get_root_manifest(&changeset.manifestid()))
                 .map_err(|err| err.context("failed to get manifest from changeset").into())
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
