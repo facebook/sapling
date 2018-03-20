@@ -1,7 +1,6 @@
-  $ . $TESTDIR/require-ext.sh remotenames
-
 Setup
 
+  $ setconfig experimental.bundle2-exp=True
 
   $ cat >> $HGRCPATH << EOF
   > [ui]
@@ -30,6 +29,27 @@ Set up server repository
 Set up client repository
 
   $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server client -q
+  $ cp -R server server1
+  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server1 client1 -q
+
+Test that pushing to a remotename preserves commit hash if no rebase happens
+
+  $ cd client1
+  $ setconfig extensions.remotenames= extensions.pushrebase=
+  $ hg up -q master
+  $ echo x >> a && hg commit -qm 'add a'
+  $ hg commit --amend -qm 'changed message'
+  $ hg log -r . -T '{node}\n'
+  a4f02306629b883c3499865b4c0f1312743a15ca
+  $ hg push --to master
+  pushing rev a4f02306629b to destination ssh://user@dummy/server1 bookmark master
+  searching for changes
+  remote: pushing 1 changeset:
+  remote:     a4f02306629b  changed message
+  updating bookmark master
+  $ hg log -r . -T '{node}\n'
+  a4f02306629b883c3499865b4c0f1312743a15ca
+  $ cd ..
 
 Test that pushing to a remotename gets rebased
 
