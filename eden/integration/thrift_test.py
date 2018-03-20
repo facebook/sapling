@@ -11,7 +11,7 @@ import hashlib
 import os
 import time
 
-from facebook.eden.ttypes import SHA1Result, EdenError
+from facebook.eden.ttypes import EdenError, ScmFileStatus, SHA1Result
 from facebook.eden.ttypes import TimeSpec
 from .lib import testcase
 
@@ -20,10 +20,16 @@ from .lib import testcase
 class ThriftTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
+        self.repo.write_file('README', 'docs\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.write_file('bdir/file', 'bar!\n')
         self.repo.symlink('slink', 'hello')
-        self.repo.commit('Initial commit.')
+        self.commit1 = self.repo.commit('Initial commit.')
+
+        self.repo.write_file('bdir/file', 'bar?\n')
+        self.repo.write_file('cdir/subdir/new.txt', 'and improved')
+        self.repo.remove_file('README')
+        self.commit2 = self.repo.commit('Commit 2.')
 
     def setUp(self):
         super().setUp()
@@ -107,7 +113,9 @@ class ThriftTest:
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['a*/file']))
         self.assertCountEqual(
-            ['adir/file', 'bdir/file'], self.client.glob(self.mount, ['**/file']))
+            ['adir/file', 'bdir/file'],
+            self.client.glob(self.mount, ['**/file'])
+        )
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['adir/*']))
         self.assertCountEqual(
@@ -165,7 +173,7 @@ class ThriftTest:
         filename = os.path.join(self.mount, 'bdir/file')
         dirname = os.path.join(self.mount, 'bdir/')
 
-#       Exercise eden a bit to make sure counters are ready
+        # Exercise eden a bit to make sure counters are ready
         for _ in range(20):
             fn = os.path.join(self.mount, '_tmp_')
             with open(fn, 'w') as f:
@@ -185,12 +193,28 @@ class ThriftTest:
         self.assertEqual(reads_2read + 1, reads_3read)
 
         lookups = self.get_counter("fuse.lookup_us.count")
-#        -hl makes ls to do a lookup of the file to determine type
+        # -hl makes ls to do a lookup of the file to determine type
         os.system("ls -hl " + dirname + " > /dev/null")
         lookups_1ls = self.get_counter("fuse.lookup_us.count")
-#        equal, the file was lookup'ed above.
+        # equal, the file was lookup'ed above.
         self.assertEqual(lookups, lookups_1ls)
         self.client.invalidateKernelInodeCache(self.mount, 'bdir')
         os.system("ls -hl " + dirname + " > /dev/null")
         lookups_2ls = self.get_counter("fuse.lookup_us.count")
         self.assertEqual(lookups_1ls + 1, lookups_2ls)
+
+    def test_diff_revisions(self):
+        with self.get_thrift_client() as client:
+            diff = client.getScmStatusBetweenRevisions(
+                self.mount, self.commit1, self.commit2
+            )
+
+        # FIXME: getScmStatusBetweenRevisions() currently reports
+        # the ADDED and REMOVED statuses backwards.
+        self.assertDictEqual(
+            diff.entries, {
+                'cdir/subdir/new.txt': ScmFileStatus.REMOVED,  # should be ADDED
+                'bdir/file': ScmFileStatus.MODIFIED,
+                'README': ScmFileStatus.ADDED,  # should be REMOVED
+            }
+        )

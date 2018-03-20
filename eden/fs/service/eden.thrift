@@ -431,11 +431,14 @@ service EdenService extends fb303.FacebookService {
   /**
    * Computes the status between two specified revisions.
    * This does not care about the state of the working copy.
+   *
+   * Note that unlike most of Eden's other thrift APIs this takes
+   * the hash arguments as 40-byte hexadecimal strings.
    */
   ScmStatus getScmStatusBetweenRevisions(
     1: string mountPoint,
-    2: BinaryHash oldHash,
-    3: BinaryHash newHash,
+    2: string oldHash,
+    3: string newHash,
   ) throws (1: EdenError ex)
 
   //////// SCM Commit-Related APIs ////////
