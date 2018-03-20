@@ -39,12 +39,14 @@ extern crate mononoke_types_thrift;
 
 pub mod datetime;
 pub mod errors;
+pub mod file_change;
 pub mod file_contents;
 pub mod hash;
 pub mod path;
 pub mod typed_hash;
 
 pub use datetime::DateTime;
+pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use path::{MPath, MPathElement, RepoPath};
 pub use typed_hash::{ChangesetId, ContentId, UnodeId};

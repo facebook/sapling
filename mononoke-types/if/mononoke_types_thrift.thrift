@@ -51,3 +51,17 @@ struct DateTime {
 union FileContents {
   1: binary Bytes,
 }
+
+enum FileType {
+  Regular = 0,
+  Executable = 1,
+  Symlink = 2,
+}
+
+struct FileChange {
+  1: required ContentId content_id,
+  2: required FileType file_type,
+  // size is a u64 stored as an i64
+  3: required i64 size,
+  4: optional MPath copy_from,
+}
