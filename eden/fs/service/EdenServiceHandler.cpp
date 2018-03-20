@@ -198,10 +198,8 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
   for (const auto& edenMount : server_->getMountPoints()) {
     MountInfo info;
-    info.mountPoint = edenMount->getPath().stringPiece().str();
-    // TODO: Fill in info.edenClientPath.
-    // I'll add that in a future diff, once we have a custom MountPoint
-    // subclass that isn't in the low-level fusell namespace.
+    info.mountPoint = edenMount->getPath().value();
+    info.edenClientPath = edenMount->getConfig()->getClientDirectory().value();
     results.push_back(info);
   }
 }

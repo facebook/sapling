@@ -49,8 +49,9 @@ class ThriftTest:
 
         mount = mounts[0]
         self.assertEqual(self.mount, mount.mountPoint)
-        # Currently, edenClientPath is not set.
-        self.assertEqual('', mount.edenClientPath)
+        # The client path should always be inside the main eden directory
+        self.assertTrue(mount.edenClientPath.startswith(self.eden.eden_dir),
+                        msg='unexpected client path: %r' % mount.edenClientPath)
 
     def test_get_sha1(self):
         expected_sha1_for_hello = hashlib.sha1(b'hola\n').digest()
