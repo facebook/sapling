@@ -40,3 +40,10 @@ typedef Blake2 ContentId (hs.newtype)
 // manifests can be applied in a streaming way.
 typedef binary MPathElement (hs.newtype)
 typedef list<MPathElement> MPath (hs.newtype)
+
+struct DateTime {
+  1: required i64 timestamp_secs,
+  // Timezones can go up to UTC+13 (which would be represented as -46800), so
+  // an i16 can't fit them.
+  2: required i32 tz_offset_secs,
+}

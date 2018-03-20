@@ -14,6 +14,7 @@ pub enum ErrorKind {
     #[fail(display = "invalid path '{}': {}", _0, _1)] InvalidPath(String, String),
     #[fail(display = "invalid Mononoke path '{}': {}", _0, _1)] InvalidMPath(MPath, String),
     #[fail(display = "invalid Thrift structure '{}': {}", _0, _1)] InvalidThrift(String, String),
+    #[fail(display = "invalid changeset date: {}", _0)] InvalidDateTime(String),
 }
 
 pub type Result<T> = ::std::result::Result<T, Error>;
