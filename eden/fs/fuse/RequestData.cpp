@@ -100,6 +100,12 @@ const fuse_in_header& RequestData::getReq() const {
   return fuseHeader_;
 }
 
+const fuse_in_header& RequestData::examineReq() const {
+  // Will just return the fuseHeader_ and not throw(unlike getReq)
+  // The caller is responsible to check the opcode and ignore if zero
+  return fuseHeader_;
+}
+
 Dispatcher* RequestData::getDispatcher() const {
   return dispatcher_;
 }

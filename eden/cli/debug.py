@@ -283,6 +283,27 @@ def do_inode(args: argparse.Namespace, out: IO[bytes] = None):
         _print_inode_info(inode_info, out)
 
 
+def do_outstanding_fuse_calls(args: argparse.Namespace, out: IO[bytes] = None):
+    if out is None:
+        out = sys.stdout.buffer
+    config = cmd_util.create_config(args)
+    mount, rel_path = get_mount_path(args.path)
+    with config.get_thrift_client() as client:
+        outstanding_call = client.debugOutstandingFuseCalls(mount)
+
+    out.write(b'Number of outstanding Calls: %d\n' % len(outstanding_call))
+    for count, call in enumerate(outstanding_call):
+        out.write(b'Call %d\n' % count+1)
+        out.write(b'\tlen: %d\n' % call.len)
+        out.write(b'\topcode: %d\n' % call.opcode)
+        out.write(b'\tunique: %d\n' % call.unique)
+        out.write(b'\tnodeid: %d\n' % call.nodeid)
+        out.write(b'\tuid: %d\n' % call.uid)
+        out.write(b'\tgid: %d\n' % call.gid)
+        out.write(b'\tpid: %d\n' % call.pid)
+
+
+
 def _print_inode_info(inode_info, out: IO[bytes]):
     out.write(inode_info.path + b'\n')
     out.write(b'  Inode number:  %d\n' % inode_info.inodeNumber)
@@ -572,6 +593,13 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'a mount point is specified, only data about inodes under the '
         'specified subdirectory will be reported.')
     parser.set_defaults(func=do_inode)
+
+    parser = subparsers.add_parser(
+        'fuse_calls', help='Show data about outstanding fuse calls')
+    parser.add_argument(
+        'path',
+        help='The path to the eden mount point.')
+    parser.set_defaults(func=do_outstanding_fuse_calls)
 
     parser = subparsers.add_parser(
         'overlay', help='Show data about the overlay')

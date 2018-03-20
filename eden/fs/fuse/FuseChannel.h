@@ -253,6 +253,11 @@ class FuseChannel {
    */
   void finishRequest(const fuse_in_header& header);
 
+  /**
+   * Function to get outstanding fuse requests.
+   */
+  std::vector<fuse_in_header> getOutstandingRequests();
+
  private:
   struct HandlerEntry;
   using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;

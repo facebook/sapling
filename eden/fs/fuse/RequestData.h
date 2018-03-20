@@ -69,6 +69,11 @@ class RequestData : public folly::RequestData {
   // already been released
   const fuse_in_header& getReq() const;
 
+  // Returns the underlying fuse request. Unlike getReq this function doesn't
+  // throw. The caller is responsible to verify that the fuse_in_header is valid
+  // by checking if (fuseHeader.opcode != 0)
+  const fuse_in_header& examineReq() const;
+
   // Check whether the request has already been interrupted
   bool wasInterrupted() const;
 

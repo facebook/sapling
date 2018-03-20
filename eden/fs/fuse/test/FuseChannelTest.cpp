@@ -348,3 +348,38 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   EXPECT_TRUE(completeFuture.isReady());
   std::move(completeFuture).get(100ms);
 }
+
+// Test for getOutstandingRequest().
+// It will generate few fuse request and verify the output of
+// getOutstandingRequests() against them.
+TEST_F(FuseChannelTest, getOutstandingRequests) {
+  auto channel = createChannel();
+  auto completeFuture = performInit(channel.get());
+
+  // Send several lookup requests
+  //
+  // Note: it is currently important that we wait for the dispatcher to receive
+  // each request before sending the next one.  The FuseChannel receive code
+  // expects to receive exactly 1 request per read() call on the FUSE device.
+  // Since we are sending over a socket rather than a real FUSE device we
+  // cannot guarantee that our writes will not be coalesced unless we confirm
+  // that the FuseChannel has read each request before sending the next one.
+  auto id1 = fuse_.sendLookup(FUSE_ROOT_ID, "foobar");
+  auto req1 = dispatcher_.waitForLookup(id1);
+
+  auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
+  auto req2 = dispatcher_.waitForLookup(id2);
+
+  auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
+  auto req3 = dispatcher_.waitForLookup(id3);
+
+  std::vector<fuse_in_header> outstandingCalls =
+      channel->getOutstandingRequests();
+
+  EXPECT_EQ(outstandingCalls.size(), 3);
+
+  for (const auto& call : outstandingCalls) {
+    EXPECT_EQ(FUSE_ROOT_ID, call.nodeid);
+    EXPECT_EQ(FUSE_LOOKUP, call.opcode);
+  }
+}

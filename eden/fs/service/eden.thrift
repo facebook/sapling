@@ -308,6 +308,16 @@ struct ManifestEntry {
   1: i32 mode
 }
 
+struct FuseCall {
+  1: i32 len
+  2: i32 opcode
+  3: i64 unique
+  4: i64 nodeid
+  5: i32 uid
+  6: i32 gid
+  7: i32 pid
+}
+
 service EdenService extends fb303.FacebookService {
   list<MountInfo> listMounts() throws (1: EdenError ex)
   void mount(1: MountInfo info) throws (1: EdenError ex)
@@ -518,6 +528,16 @@ service EdenService extends fb303.FacebookService {
     1: string mountPoint,
     2: string path,
   ) throws (1: EdenError ex)
+
+  /**
+   * Get the list of outstanding fuse requests
+   *
+   * This will return the list of FuseCall structure containing the data from
+   * fuse_in_header.
+   */
+  list<FuseCall> debugOutstandingFuseCalls(
+    1: string mountPoint,
+  )
 
   /**
    * Get the InodePathDebugInfo for the inode that corresponds to the given

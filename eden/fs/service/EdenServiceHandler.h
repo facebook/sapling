@@ -125,6 +125,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> path) override;
 
+  void debugOutstandingFuseCalls(
+      std::vector<FuseCall>& outstandingCalls,
+      std::unique_ptr<std::string> mountPoint) override;
+
   void debugGetInodePath(
       InodePathDebugInfo& inodePath,
       std::unique_ptr<std::string> mountPoint,

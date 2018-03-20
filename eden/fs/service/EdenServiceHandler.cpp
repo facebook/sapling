@@ -613,6 +613,34 @@ void EdenServiceHandler::debugInodeStatus(
   inode->getDebugStatus(inodeInfo);
 }
 
+void EdenServiceHandler::debugOutstandingFuseCalls(
+    std::vector<FuseCall>& outstandingCalls,
+    std::unique_ptr<std::string> mountPoint) {
+  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG2);
+
+  auto edenMount = server_->getMount(*mountPoint);
+  auto* fuseChannel = edenMount->getFuseChannel();
+  std::vector<fuse_in_header> fuseOutstandingCalls =
+      fuseChannel->getOutstandingRequests();
+  FuseCall fuseCall;
+
+  for (const auto& call : fuseOutstandingCalls) {
+    // Convert from fuse_in_header to fuseCall
+    // Conversion is done here to avoid building a dependency between
+    // FuseChannel and thrift
+
+    fuseCall.len = call.len;
+    fuseCall.opcode = call.opcode;
+    fuseCall.unique = call.unique;
+    fuseCall.nodeid = call.nodeid;
+    fuseCall.uid = call.uid;
+    fuseCall.gid = call.gid;
+    fuseCall.pid = call.pid;
+
+    outstandingCalls.push_back(fuseCall);
+  }
+} // namespace eden
+
 void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,

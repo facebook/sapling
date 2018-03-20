@@ -9,6 +9,7 @@
  */
 #include "eden/fs/fuse/FuseChannel.h"
 
+#include <boost/cast.hpp>
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/helpers.h>
 #include <folly/io/async/Request.h>
@@ -464,6 +465,27 @@ void FuseChannel::invalidateInode(InodeNumber ino, off_t off, off_t len) {
           exc.code().value(), "error invalidating FUSE inode ", ino);
     }
   }
+}
+
+std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
+  auto state = state_.wlock();
+  const auto& requests = state->requests;
+  std::vector<fuse_in_header> outstandingCalls;
+
+  for (const auto& entry : requests) {
+    auto ctx = entry.second.lock();
+    if (ctx) {
+      // Get the fuse_in_header from the ctx and push a copy of it on the
+      // outstandingCalls collection
+      auto rdata = boost::polymorphic_downcast<RequestData*>(
+          ctx->getContextData(RequestData::kKey));
+      const fuse_in_header& fuseHeader = rdata->examineReq();
+      if (fuseHeader.opcode != 0) {
+        outstandingCalls.push_back(fuseHeader);
+      }
+    }
+  }
+  return outstandingCalls;
 }
 
 void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
