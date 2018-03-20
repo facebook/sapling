@@ -111,15 +111,5 @@ folly::Future<std::unique_ptr<ScmStatus>> diffMountForStatus(
       });
 }
 
-folly::Future<std::unique_ptr<ScmStatus>>
-diffRevisions(EdenMount* mount, const Hash& fromHash, const Hash& toHash) {
-  auto callback = std::make_unique<ThriftStatusCallback>();
-  auto callbackPtr = callback.get();
-  return mount->diffRevisions(callbackPtr, fromHash, toHash)
-      .then([callback = std::move(callback)]() {
-        return std::make_unique<ScmStatus>(callback->extractStatus());
-      });
-}
-
 } // namespace eden
 } // namespace facebook

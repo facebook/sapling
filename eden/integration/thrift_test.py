@@ -213,13 +213,12 @@ class ThriftTest:
                 binascii.unhexlify(self.commit2)
             )
 
-        # FIXME: getScmStatusBetweenRevisions() currently reports
-        # the ADDED and REMOVED statuses backwards.
+        self.assertDictEqual(diff.errors, {})
         self.assertDictEqual(
             diff.entries, {
-                'cdir/subdir/new.txt': ScmFileStatus.REMOVED,  # should be ADDED
+                'cdir/subdir/new.txt': ScmFileStatus.ADDED,
                 'bdir/file': ScmFileStatus.MODIFIED,
-                'README': ScmFileStatus.ADDED,  # should be REMOVED
+                'README': ScmFileStatus.REMOVED,
             }
         )
 
@@ -231,12 +230,11 @@ class ThriftTest:
                 self.mount, self.commit1, self.commit2
             )
 
-        # FIXME: getScmStatusBetweenRevisions() currently reports
-        # the ADDED and REMOVED statuses backwards.
+        self.assertDictEqual(diff.errors, {})
         self.assertDictEqual(
             diff.entries, {
-                'cdir/subdir/new.txt': ScmFileStatus.REMOVED,  # should be ADDED
+                'cdir/subdir/new.txt': ScmFileStatus.ADDED,
                 'bdir/file': ScmFileStatus.MODIFIED,
-                'README': ScmFileStatus.ADDED,  # should be REMOVED
+                'README': ScmFileStatus.REMOVED,
             }
         )

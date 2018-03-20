@@ -586,37 +586,6 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
   return diff(ctxPtr).ensure(std::move(stateHolder));
 }
 
-folly::Future<folly::Unit> EdenMount::diffRevisions(
-    InodeDiffCallback* callback,
-    Hash fromHash,
-    Hash toHash) {
-  auto fromTreeFuture = objectStore_->getTreeForCommit(fromHash);
-  auto toTreeFuture = objectStore_->getTreeForCommit(toHash);
-
-  auto context = createDiffContext(callback, /*listIgnored=*/false);
-  const DiffContext* ctxPtr = context.get();
-  // stateHolder() exists to ensure that the DiffContext and GitIgnoreStack
-  // exists until the diff completes.
-  auto stateHolder = [ctx = std::move(context)]() {};
-
-  return collectAll(fromTreeFuture, toTreeFuture)
-      .then([this, ctxPtr](std::tuple<
-                           folly::Try<std::shared_ptr<const Tree>>,
-                           folly::Try<std::shared_ptr<const Tree>>>& tup) {
-        auto fromTree = std::get<0>(tup).value();
-        auto toTree = std::get<1>(tup).value();
-        auto rootInode = TreeInodePtr::makeNew(this, std::move(fromTree));
-
-        return rootInode->diff(
-            ctxPtr,
-            RelativePathPiece{},
-            std::move(toTree),
-            ctxPtr->getToplevelIgnore(),
-            false);
-      })
-      .ensure(std::move(stateHolder));
-}
-
 void EdenMount::resetParents(const ParentCommits& parents) {
   // Hold the snapshot lock around the entire operation.
   auto parentsLock = parentInfo_.wlock();

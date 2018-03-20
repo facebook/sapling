@@ -38,6 +38,7 @@
 #include "eden/fs/service/StreamingSubscriber.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 
@@ -513,7 +514,11 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto id1 = hashFromThrift(*oldHash);
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
-  return helper->wrapFuture(diffRevisions(mount.get(), id1, id2));
+  return helper->wrapFuture(diffCommits(mount->getObjectStore(), id1, id2)
+                                .then([](ScmStatus&& result) {
+                                  return make_unique<ScmStatus>(
+                                      std::move(result));
+                                }));
 }
 
 void EdenServiceHandler::debugGetScmTree(

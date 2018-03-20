@@ -1056,37 +1056,3 @@ TEST(DiffTest, ignoreHidden) {
   EXPECT_THAT(
       result.getModified(), UnorderedElementsAre(RelativePath{"a/c/1.txt"}));
 }
-
-TEST(DiffTest, diffRevisions) {
-  DiffTest test;
-
-  auto firstCommitHash = makeTestHash("a");
-  auto secondCommitHash = makeTestHash("b");
-
-  auto firstRoot = test.getBuilder().getRoot();
-  auto firstCommit =
-      test.getMount().getBackingStore()->putCommit(firstCommitHash, firstRoot);
-  firstCommit->setReady();
-
-  auto b2 = test.getBuilder().clone();
-  b2.replaceFile("src/1.txt", "This file has been updated.\n");
-  auto newRoot =
-      b2.finalize(test.getMount().getBackingStore(), /*setReady=*/true);
-
-  auto secondCommit =
-      test.getMount().getBackingStore()->putCommit(secondCommitHash, newRoot);
-  secondCommit->setReady();
-
-  DiffResultsCallback callback;
-  auto diffFuture = test.getMount().getEdenMount()->diffRevisions(
-      &callback, firstCommitHash, secondCommitHash);
-  EXPECT_FUTURE_RESULT(diffFuture);
-  auto result = callback.extractResults();
-
-  EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
-  EXPECT_THAT(result.getUntracked(), UnorderedElementsAre());
-  EXPECT_THAT(result.getIgnored(), UnorderedElementsAre());
-  EXPECT_THAT(result.getRemoved(), UnorderedElementsAre());
-  EXPECT_THAT(
-      result.getModified(), UnorderedElementsAre(RelativePath{"src/1.txt"}));
-}
