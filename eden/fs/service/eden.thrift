@@ -142,6 +142,17 @@ enum ScmFileStatus {
 
 struct ScmStatus {
   1: map<string, ScmFileStatus> entries
+
+  /**
+   * A map of { path -> error message }
+   *
+   * If any errors occured while computing the diff they will be reported here.
+   * The results listed in the entries field may not be accurate for any paths
+   * listed in this error field.
+   *
+   * This map will be empty if no errors occurred.
+   */
+  2: map<string, string> errors
 }
 
 /** Option for use with checkOutRevision(). */

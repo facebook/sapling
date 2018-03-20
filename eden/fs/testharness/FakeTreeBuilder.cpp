@@ -87,10 +87,13 @@ void FakeTreeBuilder::setFileImpl(
   }
 }
 
-void FakeTreeBuilder::removeFile(RelativePathPiece path) {
+void FakeTreeBuilder::removeFile(
+    RelativePathPiece path,
+    bool removeEmptyParents) {
   CHECK(!finalizedRoot_);
 
-  auto dir = getDirEntry(path.dirname(), true);
+  auto parentPath = path.dirname();
+  auto dir = getDirEntry(parentPath, false);
   auto name = path.basename();
   auto iter = dir->entries->find(name);
   if (iter == dir->entries->end()) {
@@ -100,6 +103,10 @@ void FakeTreeBuilder::removeFile(RelativePathPiece path) {
         " but no entry present with this name"));
   }
   dir->entries->erase(iter);
+
+  if (removeEmptyParents && dir->entries->empty()) {
+    removeFile(parentPath, true);
+  }
 }
 
 void FakeTreeBuilder::setReady(RelativePathPiece path) {
@@ -122,6 +129,11 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
 void FakeTreeBuilder::setAllReady() {
   CHECK(finalizedRoot_);
   setAllReadyUnderTree(finalizedRoot_);
+}
+
+void FakeTreeBuilder::setAllReadyUnderTree(RelativePathPiece path) {
+  auto tree = getStoredTree(path);
+  return setAllReadyUnderTree(tree);
 }
 
 void FakeTreeBuilder::setAllReadyUnderTree(StoredTree* tree) {

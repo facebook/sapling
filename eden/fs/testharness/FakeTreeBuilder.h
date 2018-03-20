@@ -155,10 +155,10 @@ class FakeTreeBuilder {
   /**
    * Remove a file or symlink at the given path.
    */
-  void removeFile(folly::StringPiece path) {
-    removeFile(RelativePathPiece{path});
+  void removeFile(folly::StringPiece path, bool removeEmptyParents = true) {
+    removeFile(RelativePathPiece{path}, removeEmptyParents);
   }
-  void removeFile(RelativePathPiece path);
+  void removeFile(RelativePathPiece path, bool removeEmptyParents = true);
 
   /**
    * Make sure a directory exists at the given path.
@@ -196,6 +196,10 @@ class FakeTreeBuilder {
    * This also calls setReady() in the input Tree itself.
    */
   void setAllReadyUnderTree(StoredTree* tree);
+  void setAllReadyUnderTree(RelativePathPiece path);
+  void setAllReadyUnderTree(folly::StringPiece path) {
+    setAllReadyUnderTree(RelativePathPiece{path});
+  }
 
   /**
    * Call triggerError() on the StoredTree or StoredBlob at the given path.

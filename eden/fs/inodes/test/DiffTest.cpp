@@ -655,7 +655,7 @@ void testResetReplaceFileWithDir(bool loadInodes) {
   auto b2 = t.getBuilder().clone();
   b2.removeFile("src/a/b/3.txt");
   b2.removeFile("src/a/b/c/4.txt");
-  b2.replaceFile("src/a", "a is now a file");
+  b2.setFile("src/a", "a is now a file");
 
   auto result = t.resetCommitAndDiff(b2, loadInodes);
   EXPECT_THAT(result.getErrors(), UnorderedElementsAre());
