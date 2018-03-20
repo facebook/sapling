@@ -376,6 +376,18 @@ Test profile discovery
    }
   ]
 
+The current working directory plays no role in listing profiles:
+
+  $ mkdir otherdir
+  $ cd otherdir
+  $ hg sparse --list-profiles
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/python
+    profiles/foo/monty 
+  * profiles/foo/spam   - Profile that only includes another
+  $ cd ..
+
 Profiles are loaded from the manifest, so excluding a profile directory should
 not hamper listing.
 

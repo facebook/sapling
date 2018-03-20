@@ -814,7 +814,7 @@ def _discover(ui, repo):
         matcher = matchmod.match(
             repo.root, repo.getcwd(),
             patterns=['path:' + profile_directory],
-            exclude=['**/README.*', '**/README'])
+            exclude=['relglob:README.*', 'relglob:README'])
         available.update(mf.matches(matcher))
 
     # sort profiles and read profile metadata as we iterate
