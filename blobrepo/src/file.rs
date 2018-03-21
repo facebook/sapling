@@ -165,7 +165,7 @@ impl Entry for BlobEntry {
         &self.id
     }
 
-    fn get_name(&self) -> &Option<MPathElement> {
-        &self.name
+    fn get_name(&self) -> Option<&MPathElement> {
+        self.name.as_ref()
     }
 }

@@ -57,7 +57,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     assert!(entry.get_hash() == &EntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File);
     assert!(
-        entry.get_name() == &Some(MPathElement::new("file".into()).expect("valid MPathElement"))
+        entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
     let content = run_future(entry.get_content()).unwrap();
@@ -97,7 +97,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
     assert!(entry.get_hash() == &EntryId::new(expected_hash));
     assert!(entry.get_type() == manifest::Type::File);
     assert!(
-        entry.get_name() == &Some(MPathElement::new("file".into()).expect("valid MPathElement"))
+        entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
     let content = run_future(entry.get_content()).unwrap();

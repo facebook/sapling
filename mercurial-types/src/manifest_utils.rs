@@ -179,7 +179,7 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             let substream = if left.get_type() == Type::Tree {
                 let contents = left.get_content().join(right.get_content());
                 let path = changed_entry.path.clone();
-                let entry_path = left.get_name().clone();
+                let entry_path = left.get_name().cloned();
 
                 let substream = contents
                     .map(move |(left_content, right_content)| {
@@ -187,7 +187,7 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
                         let right_manifest = get_tree_content(right_content);
 
                         diff_manifests(
-                            path.join_element(&entry_path),
+                            path.join_element(entry_path.as_ref()),
                             &left_manifest,
                             &right_manifest,
                         ).map(recursive_changed_entry_stream)
@@ -273,8 +273,8 @@ pub fn diff_sorted_vecs(
     loop {
         match (left.pop_front(), right.pop_front()) {
             (Some(left_entry), Some(right_entry)) => {
-                let left_path: Option<MPathElement> = left_entry.get_name().clone();
-                let right_path: Option<MPathElement> = right_entry.get_name().clone();
+                let left_path: Option<MPathElement> = left_entry.get_name().cloned();
+                let right_path: Option<MPathElement> = right_entry.get_name().cloned();
 
                 // note that for Option types, None is less than any Some
                 if left_path < right_path {

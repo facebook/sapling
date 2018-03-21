@@ -179,7 +179,7 @@ pub trait Entry: Send + 'static {
     fn get_hash(&self) -> &EntryId;
 
     /// Get the name of the entry. None means that this is a root entry
-    fn get_name(&self) -> &Option<MPathElement>;
+    fn get_name(&self) -> Option<&MPathElement>;
 
     /// Return an Entry as a type-erased trait object.
     /// (Do we still need this as a trait method? T25577105)
@@ -238,7 +238,7 @@ where
         self.entry.get_hash()
     }
 
-    fn get_name(&self) -> &Option<MPathElement> {
+    fn get_name(&self) -> Option<&MPathElement> {
         self.entry.get_name()
     }
 }
@@ -268,7 +268,7 @@ impl Entry for Box<Entry + Sync> {
         (**self).get_hash()
     }
 
-    fn get_name(&self) -> &Option<MPathElement> {
+    fn get_name(&self) -> Option<&MPathElement> {
         (**self).get_name()
     }
 }

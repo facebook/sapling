@@ -176,8 +176,8 @@ struct TreeMetadata {
 
 impl TreeMetadata {
     fn new(size: Option<usize>, entry: Box<mercurial_types::Entry>) -> TreeMetadata {
-        let name = match *entry.get_name() {
-            Some(ref name) => name.as_bytes(),
+        let name = match entry.get_name() {
+            Some(name) => name.as_bytes(),
             None => b"",
         };
 

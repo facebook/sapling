@@ -45,7 +45,7 @@ where
             let mut path_tree = Tree::new();
             let mut entries = vec![];
             for (entry_idx, (path, entry)) in pathentries.into_iter().enumerate() {
-                let name = entry.get_name().clone();
+                let name = entry.get_name().cloned();
                 let name = name.ok_or_else(|| {
                     ErrorKind::ManifestInvalidPath("name shouldn't be empty".into())
                 })?;

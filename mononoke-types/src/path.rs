@@ -258,10 +258,10 @@ impl MPath {
         }
     }
 
-    pub fn join_element(&self, element: &Option<MPathElement>) -> MPath {
+    pub fn join_element(&self, element: Option<&MPathElement>) -> MPath {
         match element {
-            &Some(ref element) => self.join(element),
-            &None => self.clone(),
+            Some(element) => self.join(element),
+            None => self.clone(),
         }
     }
 

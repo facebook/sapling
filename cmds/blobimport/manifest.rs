@@ -76,7 +76,7 @@ pub(crate) fn get_entry_stream(
     cs_rev: RevIdx,
     basepath: MPath,
 ) -> Box<Stream<Item = (Box<Entry>, RepoPath), Error = Error> + Send> {
-    let path = basepath.join_element(&entry.get_name());
+    let path = basepath.join_element(entry.get_name());
     let repopath = if entry.get_type() == Type::Tree {
         RepoPath::DirectoryPath(path.clone())
     } else {

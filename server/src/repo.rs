@@ -752,7 +752,7 @@ fn fetch_linknode(
     basepath: MPath,
 ) -> BoxFuture<(Box<Entry + Sync>, NodeHash, MPath), Error> {
     let path = match entry.get_name() {
-        &Some(ref name) => {
+        Some(name) => {
             let path = basepath.clone().join(name.clone().into_iter());
             if entry.get_type() == Type::Tree {
                 RepoPath::DirectoryPath(path)
@@ -760,7 +760,7 @@ fn fetch_linknode(
                 RepoPath::FilePath(path)
             }
         }
-        &None => RepoPath::RootPath,
+        None => RepoPath::RootPath,
     };
 
     let linknode_fut = repo.get_linknode(path, &entry.get_hash().into_nodehash());

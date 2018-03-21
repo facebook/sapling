@@ -139,7 +139,7 @@ impl Entry for MockEntry {
             None => panic!("hash is not set!"),
         }
     }
-    fn get_name(&self) -> &Option<MPathElement> {
-        &self.name
+    fn get_name(&self) -> Option<&MPathElement> {
+        self.name.as_ref()
     }
 }

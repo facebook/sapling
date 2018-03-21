@@ -399,8 +399,8 @@ impl Entry for RevlogEntry {
         &self.details.entryid
     }
 
-    fn get_name(&self) -> &Option<MPathElement> {
-        &self.name
+    fn get_name(&self) -> Option<&MPathElement> {
+        self.name.as_ref()
     }
 }
 

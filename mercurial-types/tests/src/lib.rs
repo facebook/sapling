@@ -204,14 +204,14 @@ fn check_changed_paths(
     for changed_entry in actual {
         match changed_entry.status {
             EntryStatus::Added(entry) => {
-                paths_added.push(changed_entry.path.join_element(&entry.get_name()));
+                paths_added.push(changed_entry.path.join_element(entry.get_name()));
             }
             EntryStatus::Deleted(entry) => {
-                paths_deleted.push(changed_entry.path.join_element(&entry.get_name()));
+                paths_deleted.push(changed_entry.path.join_element(entry.get_name()));
             }
             EntryStatus::Modified(left_entry, right_entry) => {
                 assert_eq!(left_entry.get_type(), right_entry.get_type());
-                paths_modified.push(changed_entry.path.join_element(&left_entry.get_name()));
+                paths_modified.push(changed_entry.path.join_element(left_entry.get_name()));
             }
         }
     }
