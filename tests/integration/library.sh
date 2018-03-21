@@ -14,6 +14,10 @@ function wait_for_mononoke {
     attempts=$((attempts - 1))
     sleep 0.1
   done
+  if [[ ! -S "$socket" ]]; then
+    echo "Mononoke did not start" >&2
+    exit 1
+  fi
 }
 
 function setup_common_config {
