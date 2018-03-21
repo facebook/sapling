@@ -533,19 +533,26 @@ First, create that condition in the repository.
 Test archive
 
   $ hg archive -S ../archive-all --debug --config progress.debug=true
-  archiving: .hgsub 1/2 files (50.00%)
-  archiving: .hgsubstate 2/2 files (100.00%)
-  archiving (obstruct): 1/1 files (100.00%)
-  archiving (recreated): 1/1 files (100.00%)
-  archiving (s): 1/2 files (50.00%)
-  archiving (s): 2/2 files (100.00%)
+  progress: archiving: .hgsub 1/2 files (50.00%)
+  progress: archiving: .hgsubstate 2/2 files (100.00%)
+  progress: archiving (end)
+  progress: archiving (obstruct): 1/1 files (100.00%)
+  progress: archiving (obstruct) (end)
+  progress: archiving (recreated): 1/1 files (100.00%)
+  progress: archiving (recreated) (end)
+  progress: archiving (s): 1/2 files (50.00%)
+  progress: archiving (s): 2/2 files (100.00%)
+  progress: archiving (s) (end)
 
   $ hg archive -S ../archive-exclude --debug --config progress.debug=true -X **old
-  archiving: .hgsub 1/2 files (50.00%)
-  archiving: .hgsubstate 2/2 files (100.00%)
-  archiving (obstruct): 1/1 files (100.00%)
-  archiving (s): 1/2 files (50.00%)
-  archiving (s): 2/2 files (100.00%)
+  progress: archiving: .hgsub 1/2 files (50.00%)
+  progress: archiving: .hgsubstate 2/2 files (100.00%)
+  progress: archiving (end)
+  progress: archiving (obstruct): 1/1 files (100.00%)
+  progress: archiving (obstruct) (end)
+  progress: archiving (s): 1/2 files (50.00%)
+  progress: archiving (s): 2/2 files (100.00%)
+  progress: archiving (s) (end)
   $ find ../archive-exclude | sort
   ../archive-exclude
   ../archive-exclude/.hg_archival.txt

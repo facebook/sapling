@@ -320,9 +320,7 @@ class ui(object):
 
     def resetstate(self):
         """Clear internal state that shouldn't persist across commands"""
-        if haveprogbar():
-            # reset last-print time of progress bar
-            getprogbar(self).resetstate()
+        progress.resetstate()
         self.httppasswordmgrdb = httppasswordmgrdbproxy()
 
     @contextlib.contextmanager
@@ -914,31 +912,31 @@ class ui(object):
             self._write(*msgs, **opts)
 
     def _write(self, *msgs, **opts):
-        self._progclear()
-        # opencode timeblockedsection because this is a critical path
-        starttime = util.timer()
-        try:
-            self.fout.write(''.join(msgs))
-        except IOError as err:
-            raise error.StdioError(err)
-        finally:
-            self._blockedtimes['stdio_blocked'] += \
-                (util.timer() - starttime) * 1000
+        with progress.suspend():
+            # opencode timeblockedsection because this is a critical path
+            starttime = util.timer()
+            try:
+                self.fout.write(''.join(msgs))
+            except IOError as err:
+                raise error.StdioError(err)
+            finally:
+                self._blockedtimes['stdio_blocked'] += \
+                    (util.timer() - starttime) * 1000
 
     def write_err(self, *args, **opts):
-        self._progclear()
-        if self._bufferstates and self._bufferstates[-1][0]:
-            self.write(*args, **opts)
-        elif self._colormode == 'win32':
-            # windows color printing is its own can of crab, defer to
-            # the color module and that is it.
-            color.win32print(self, self._write_err, *args, **opts)
-        else:
-            msgs = args
-            if self._colormode is not None:
-                label = opts.get(r'label', '')
-                msgs = [self.label(a, label) for a in args]
-            self._write_err(*msgs, **opts)
+        with progress.suspend():
+            if self._bufferstates and self._bufferstates[-1][0]:
+                self.write(*args, **opts)
+            elif self._colormode == 'win32':
+                # windows color printing is its own can of crab, defer to
+                # the color module and that is it.
+                color.win32print(self, self._write_err, *args, **opts)
+            else:
+                msgs = args
+                if self._colormode is not None:
+                    label = opts.get(r'label', '')
+                    msgs = [self.label(a, label) for a in args]
+                self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
         try:
@@ -1531,67 +1529,9 @@ class ui(object):
         return (encoding.environ.get("HGEDITOR") or
                 self.config("ui", "editor", editor))
 
-    def _progclear(self):
-        """clear progress bar output if any. use it before any output"""
-        if haveprogbar():
-            progbar = getprogbar(self)
-            if progbar is not None and progbar.printed:
-                progbar.clear()
-
-    @util.propertycache
     def progress(self):
-        '''show a progress message
-
-        By default a textual progress bar will be displayed if an operation
-        takes too long. 'topic' is the current operation, 'item' is a
-        non-numeric marker of the current position (i.e. the currently
-        in-process file), 'pos' is the current numeric position (i.e.
-        revision, bytes, etc.), unit is a corresponding unit label,
-        and total is the highest expected pos.
-
-        Multiple nested topics may be active at a time.
-
-        All topics should be marked closed by setting pos to None at
-        termination.
-        '''
-        # This is a hot path.  Perform config checks once to find the method
-        # that should be called, and cache the exact method using
-        # util.propertycache.
-        if (self.quiet or self.debugflag
-                or self.configbool('progress', 'disable')
-                or not progress.shouldprint(self)):
-            progbar = None
-        else:
-            progbar = getprogbar(self)
-
-        if self.configbool('progress', 'debug'):
-            return self._debugprogress(progbar)
-        elif progbar is None:
-            def emptyprogress(*args, **kwargs):
-                pass
-            return emptyprogress
-        else:
-            # Non-debug fastpath.  Shortcut directly through to the progress
-            # method of the progress bar.
-            return progbar.progress
-
-    def _debugprogress(self, progbar):
-        def debugprogress(topic, pos, item="", unit="", total=None):
-            if progbar is not None:
-                progbar.progress(topic, pos, item=item, unit=unit, total=total)
-            if pos is None:
-                return
-            if unit:
-                unit = ' ' + unit
-            if item:
-                item = ' ' + item
-            if total:
-                pct = 100.0 * pos / total
-                self.debug('%s:%s %d/%d%s (%4.2f%%)\n'
-                         % (topic, item, pos, total, unit, pct))
-            else:
-                self.debug('%s:%s %d%s\n' % (topic, item, pos, unit))
-        return debugprogress
+        '''deprecated method for displaying progress'''
+        raise NotImplementedError()
 
     def log(self, service, *msg, **opts):
         '''hook for logging facility extensions
@@ -1847,18 +1787,3 @@ class path(object):
             if value is not None:
                 d[subopt] = value
         return d
-
-# we instantiate one globally shared progress bar to avoid
-# competing progress bars when multiple UI objects get created
-_progresssingleton = None
-
-def getprogbar(ui):
-    global _progresssingleton
-    if _progresssingleton is None:
-        # passing 'ui' object to the singleton is fishy,
-        # this is how the extension used to work but feel free to rework it.
-        _progresssingleton = progress.progbar(ui)
-    return _progresssingleton
-
-def haveprogbar():
-    return _progresssingleton is not None

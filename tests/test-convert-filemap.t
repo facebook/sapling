@@ -441,13 +441,15 @@ Test rebuilding of map with unknown revisions in shamap - it used to crash
   run hg source pre-conversion action
   run hg sink pre-conversion action
   scanning source...
-  scanning: 1 revisions
+  progress: scanning: 1 revisions
+  progress: scanning (end)
   sorting...
   converting...
   0 merging something
   source: 2503605b178fe50e8fbbb0e77b97939540aa8c87
-  converting: 0/1 revisions (0.00%)
+  progress: converting: 0/1 revisions (0.00%)
   unknown revmap source: 53792d18237d2b64971fa571936869156655338d
+  progress: converting (end)
   run hg sink post-conversion action
   run hg source post-conversion action
 

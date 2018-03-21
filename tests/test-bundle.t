@@ -776,13 +776,16 @@ bundle single branch
   057f4db07f61970e1c11e83be79e9d08adc4dc31
   bundle2-output-bundle: "HG20", (1 params) 1 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
-  bundling: 1/2 changesets (50.00%)
-  bundling: 2/2 changesets (100.00%)
-  bundling: 1/2 manifests (50.00%)
-  bundling: 2/2 manifests (100.00%)
-  bundling: b 1/3 files (33.33%)
-  bundling: b1 2/3 files (66.67%)
-  bundling: x 3/3 files (100.00%)
+  progress: bundling: 1/2 changesets (50.00%)
+  progress: bundling: 2/2 changesets (100.00%)
+  progress: bundling (end)
+  progress: bundling: 1/2 manifests (50.00%)
+  progress: bundling: 2/2 manifests (100.00%)
+  progress: bundling (end)
+  progress: bundling: b 1/3 files (33.33%)
+  progress: bundling: b1 2/3 files (66.67%)
+  progress: bundling: x 3/3 files (100.00%)
+  progress: bundling (end)
 
 == Test for issue3441
 

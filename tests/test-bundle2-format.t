@@ -873,17 +873,20 @@ Support for changegroup
   bundle2-output-part: "changegroup" (advisory) streamed payload
   bundle2-output: part 0: "changegroup"
   bundle2-output: header chunk size: 18
-  bundling: 1/4 changesets (25.00%)
-  bundling: 2/4 changesets (50.00%)
-  bundling: 3/4 changesets (75.00%)
-  bundling: 4/4 changesets (100.00%)
-  bundling: 1/4 manifests (25.00%)
-  bundling: 2/4 manifests (50.00%)
-  bundling: 3/4 manifests (75.00%)
-  bundling: 4/4 manifests (100.00%)
-  bundling: D 1/3 files (33.33%)
-  bundling: E 2/3 files (66.67%)
-  bundling: H 3/3 files (100.00%)
+  progress: bundling: 1/4 changesets (25.00%)
+  progress: bundling: 2/4 changesets (50.00%)
+  progress: bundling: 3/4 changesets (75.00%)
+  progress: bundling: 4/4 changesets (100.00%)
+  progress: bundling (end)
+  progress: bundling: 1/4 manifests (25.00%)
+  progress: bundling: 2/4 manifests (50.00%)
+  progress: bundling: 3/4 manifests (75.00%)
+  progress: bundling: 4/4 manifests (100.00%)
+  progress: bundling (end)
+  progress: bundling: D 1/3 files (33.33%)
+  progress: bundling: E 2/3 files (66.67%)
+  progress: bundling: H 3/3 files (100.00%)
+  progress: bundling (end)
   bundle2-output: payload chunk size: 1555
   bundle2-output: closing payload chunk
   bundle2-output: end of bundle

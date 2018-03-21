@@ -76,14 +76,15 @@ No update, with debug option:
 
 #if hardlink
   $ hg --debug clone -U . ../c --config progress.debug=true
-  linking: 1
-  linking: 2
-  linking: 3
-  linking: 4
-  linking: 5
-  linking: 6
-  linking: 7
-  linking: 8
+  progress: linking: 1
+  progress: linking: 2
+  progress: linking: 3
+  progress: linking: 4
+  progress: linking: 5
+  progress: linking: 6
+  progress: linking: 7
+  progress: linking: 8
+  progress: linking (end)
   linked 8 files
 #else
   $ hg --debug clone -U . ../c --config progress.debug=true

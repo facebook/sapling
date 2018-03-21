@@ -102,8 +102,9 @@ Many new:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: bebd167eb94d
   
@@ -112,8 +113,9 @@ Many new:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -128,8 +130,9 @@ Many new:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 2, sample size is: 2
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: bebd167eb94d
   
@@ -138,8 +141,9 @@ Many new:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 2, sample size is: 2
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: bebd167eb94d
 
@@ -160,8 +164,9 @@ Both sides many new with stub:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
   
@@ -170,8 +175,9 @@ Both sides many new with stub:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -186,8 +192,9 @@ Both sides many new with stub:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
   
@@ -196,8 +203,9 @@ Both sides many new with stub:
   query 1; heads
   searching for changes
   taking initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 29, sample size is: 29
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 2dc09a01254d
 
@@ -219,8 +227,9 @@ Both many new:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -229,8 +238,9 @@ Both many new:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -245,8 +255,9 @@ Both many new:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -255,8 +266,9 @@ Both many new:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
 
@@ -278,8 +290,9 @@ Both many new skewed:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 51, sample size is: 51
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -288,8 +301,9 @@ Both many new skewed:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 51, sample size is: 51
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -304,8 +318,9 @@ Both many new skewed:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
   
@@ -314,8 +329,9 @@ Both many new skewed:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 31, sample size is: 31
+  progress: searching (end)
   2 total queries in *.????s (glob)
   common heads: 66f7d451a68b
 
@@ -337,11 +353,12 @@ Both many new on top of long history:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 1049, sample size is: 11
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 31, sample size is: 31
+  progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
   
@@ -350,11 +367,12 @@ Both many new on top of long history:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 1049, sample size is: 11
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 31, sample size is: 31
+  progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
   
@@ -369,11 +387,12 @@ Both many new on top of long history:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 1029, sample size is: 11
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 15, sample size is: 15
+  progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
   
@@ -382,11 +401,12 @@ Both many new on top of long history:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 1029, sample size is: 11
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 15, sample size is: 15
+  progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 7ead0cba2838
 
@@ -438,20 +458,21 @@ One with >200 heads, which used to use up all of the sample:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 1240, sample size is: 100
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 1140, sample size is: 200
   sampling from both directions
-  searching: 4 queries
+  progress: searching: 4 queries
   query 4; still undecided: \d+, sample size is: 200 (re)
   sampling from both directions
-  searching: 5 queries
+  progress: searching: 5 queries
   query 5; still undecided: \d+, sample size is: 200 (re)
   sampling from both directions
-  searching: 6 queries
+  progress: searching: 6 queries
   query 6; still undecided: \d+, sample size is: \d+ (re)
+  progress: searching (end)
   6 total queries in *.????s (glob)
   common heads: 3ee37d65064a
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
@@ -459,11 +480,12 @@ One with >200 heads, which used to use up all of the sample:
   query 1; heads
   searching for changes
   taking quick initial sample
-  searching: 2 queries
+  progress: searching: 2 queries
   query 2; still undecided: 303, sample size is: 9
   sampling from both directions
-  searching: 3 queries
+  progress: searching: 3 queries
   query 3; still undecided: 3, sample size is: 3
+  progress: searching (end)
   3 total queries in *.????s (glob)
   common heads: 3ee37d65064a
 

@@ -9,15 +9,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [progress]
-  > disable=False
   > debug=True
-  > assume-tty = 1
-  > delay = 0
-  > # set changedelay to 0 so we see all topics
-  > changedelay = 0
-  > format = topic bar number
-  > refresh = 0
-  > width = 60
   > EOF
 
   $ hg init a
@@ -27,9 +19,8 @@
 file not managed
 
   $ remove foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   not removing foo: file is untracked
   exit code: 1
   ? foo
@@ -45,84 +36,70 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove bar
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
   not removing bar: file has been marked for add (use 'hg forget' to undo add)
   exit code: 1
   A bar
   ./bar
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: bar 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 01 state clean, options none
 
   $ remove foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
   ? bar
   ./bar
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 02 state modified, options none
 
   $ echo b >> foo
   $ remove foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
   not removing foo: file is modified (use -f to force removal)
   exit code: 1
   M foo
   ? bar
   ./bar
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 03 state missing, options none
 
   $ rm foo
   $ remove foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
   ? bar
   ./bar
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 10 state added, options -f
@@ -130,9 +107,8 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -f bar
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   ? bar
   ./bar
@@ -143,51 +119,42 @@ the table cases
 11 state clean, options -f
 
   $ remove -f foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 12 state modified, options -f
 
   $ echo b >> foo
   $ remove -f foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 13 state missing, options -f
 
   $ rm foo
   $ remove -f foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 20 state added, options -A
@@ -195,34 +162,28 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -A bar
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
   not removing bar: file still exists
   exit code: 1
   A bar
   ./bar
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: bar 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 21 state clean, options -Av
 
   $ remove -Av foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
   not removing foo: file still exists
   exit code: 1
   ? bar
@@ -234,43 +195,36 @@ the table cases
 
   $ echo b >> foo
   $ remove -Av foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
   not removing foo: file still exists
   exit code: 1
   M foo
   ? bar
   ./bar
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 23 state missing, options -A
 
   $ rm foo
   $ remove -A foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
   ? bar
   ./bar
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 30 state added, options -Af
@@ -278,9 +232,8 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -Af bar
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   ? bar
   ./bar
@@ -291,53 +244,44 @@ the table cases
 31 state clean, options -Af
 
   $ remove -Af foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 32 state modified, options -Af
 
   $ echo b >> foo
   $ remove -Af foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 33 state missing, options -Af
 
   $ rm foo
   $ remove -Af foo
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   exit code: 0
   R foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: foo 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test some directory stuff
@@ -353,160 +297,128 @@ dir, options none
 
   $ rm test/bar
   $ remove test
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/2 files (50.00%)
   removing test/bar
+  progress: deleting: 2/2 files (100.00%)
   removing test/foo
+  progress: deleting (end)
   exit code: 0
   R test/bar
   R test/foo
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [====================>                      ] 1/2\r (no-eol) (esc)
-  recording [==========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/foo 2/2 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/2 files (50.00%)
+  progress: recording: 2/2 files (100.00%)
+  progress: recording (end)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -f
 
   $ rm test/bar
   $ remove -f test
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/2 files (50.00%)
   removing test/bar
+  progress: deleting: 2/2 files (100.00%)
   removing test/foo
+  progress: deleting (end)
   exit code: 0
   R test/bar
   R test/foo
   ./foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [====================>                      ] 1/2\r (no-eol) (esc)
-  recording [==========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/foo 2/2 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/2 files (50.00%)
+  progress: recording: 2/2 files (100.00%)
+  progress: recording (end)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -Av
 
   $ rm test/bar
   $ remove -Av test
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
+  progress: deleting: 1/1 files (100.00%)
   removing test/bar
+  progress: deleting (end)
   not removing test/foo: file still exists
   exit code: 1
   R test/bar
   ./foo
   ./test/foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/bar 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -A <dir>
   $ rm test/bar
   $ remove -A test
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  skipping [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: skipping: 1/1 files (100.00%)
+  progress: skipping (end)
+  progress: deleting: 1/1 files (100.00%)
   removing test/bar
+  progress: deleting (end)
   exit code: 1
   R test/bar
   ./foo
   ./test/foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/bar 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 without any files/dirs, options -A
   $ rm test/bar
   $ remove -A
-  \r (no-eol) (esc)
-  skipping [=====================>                      ] 1/2\r (no-eol) (esc)
-  skipping [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: skipping: 1/2 files (50.00%)
+  progress: skipping: 2/2 files (100.00%)
+  progress: skipping (end)
+  progress: deleting: 1/1 files (100.00%)
   removing test/bar
+  progress: deleting (end)
   exit code: 1
   R test/bar
   ./foo
   ./test/foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [==========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/bar 1/1 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/1 files (100.00%)
+  progress: recording (end)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -Af
 
   $ rm test/bar
   $ remove -Af test
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/2 files (50.00%)
   removing test/bar
+  progress: deleting: 2/2 files (100.00%)
   removing test/foo
+  progress: deleting (end)
   exit code: 0
   R test/bar
   R test/foo
   ./foo
   ./test/foo
-  \r (no-eol) (esc)
-  updating [===========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  recording [====================>                      ] 1/2\r (no-eol) (esc)
-  recording [==========================================>] 2/2\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: updating: test/foo 2/2 files (100.00%)
+  progress: updating (end)
+  progress: recording: 1/2 files (50.00%)
+  progress: recording: 2/2 files (100.00%)
+  progress: recording (end)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test remove dropping empty trees (issue1861)
@@ -518,13 +430,11 @@ test remove dropping empty trees (issue1861)
   adding issue1861/b/c/y
   adding issue1861/x
   $ hg rm issue1861/b
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/1 files (100.00%)
   removing issue1861/b/c/y
+  progress: deleting (end)
   $ hg ci -m remove
   $ ls issue1861
   x
@@ -544,25 +454,21 @@ handling of untracked directories and missing files
   $ mkdir d1
   $ echo a > d1/a
   $ hg rm --after d1
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   not removing d1: no tracked files
   [1]
   $ hg add d1/a
   $ rm d1/a
   $ hg rm --after d1
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
+  progress: deleting: 1/1 files (100.00%)
   removing d1/a
+  progress: deleting (end)
 
   $ hg rm --after nosuch
   nosuch: * (glob)
-  \r (no-eol) (esc)
-  deleting [===========================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: deleting: 1/1 files (100.00%)
+  progress: deleting (end)
   [1]

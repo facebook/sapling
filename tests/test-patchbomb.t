@@ -321,27 +321,20 @@ Test breaking format changes aren't
   a precious introductory message
 
   $ hg email -m test.mbox -f quux -t foo -c bar -s test 0:tip \
-  > --config extensions.progress= --config progress.assume-tty=1 \
-  > --config progress.delay=0 --config progress.refresh=0 \
-  > --config progress.width=60 --config progress.debug=1 \
-  > --config extensions.mocktime=$TESTDIR/mocktime.py
+  > --config extensions.progress= --config progress.debug=1
   this patch series consists of 2 patches.
   
   
   Write the introductory message for the patch series.
   
-  \r (no-eol) (esc)
-  sending [                                             ] 0/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  sending [============>                            ] 1/3 01s\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  sending [==========================>              ] 2/3 01s\r (no-eol) (esc)
-                                                              \r (esc)
+  
   sending [PATCH 0 of 2] test ...
+  progress: sending: [PATCH 0 of 2] test 0/3 email (0.00%)
   sending [PATCH 1 of 2] a ...
+  progress: sending: [PATCH 1 of 2] a 1/3 email (33.33%)
   sending [PATCH 2 of 2] b ...
+  progress: sending: [PATCH 2 of 2] b 2/3 email (66.67%)
+  progress: sending (end)
 
   $ cd ..
 

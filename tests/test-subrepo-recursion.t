@@ -258,7 +258,7 @@ Status between revisions:
   $ rm .p
   $ cat hg1.pid >> $DAEMON_PIDS
 
-  $ hg clone http://localhost:$HGPORT clone  --config progress.disable=True
+  $ hg clone http://localhost:$HGPORT clone
   requesting all changes
   adding changesets
   adding manifests
@@ -303,19 +303,11 @@ Status between revisions:
   $ cd repo
 #endif
 
-Enable progress extension for archive tests:
+Enable progress debugging archive tests:
 
   $ cp $HGRCPATH $HGRCPATH.no-progress
   $ cat >> $HGRCPATH <<EOF
   > [progress]
-  > disable=False
-  > assume-tty = 1
-  > delay = 0
-  > # set changedelay really large so we don't see nested topics
-  > changedelay = 30000
-  > format = topic bar number
-  > refresh = 0
-  > width = 60
   > debug = True
   > EOF
 
@@ -323,19 +315,16 @@ Test archiving to a directory tree (the doubled lines in the output
 only show up in the test output, not in real usage):
 
   $ hg archive --subrepos ../archive
-  \r (no-eol) (esc)
-  archiving [=============>                             ] 1/3\r (no-eol) (esc)
-  archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [==========================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
-  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
-  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: archiving: .hgsub 1/3 files (33.33%)
+  progress: archiving: .hgsubstate 2/3 files (66.67%)
+  progress: archiving: x.txt 3/3 files (100.00%)
+  progress: archiving (end)
+  progress: archiving (foo): 1/3 files (33.33%)
+  progress: archiving (foo): 2/3 files (66.67%)
+  progress: archiving (foo): 3/3 files (100.00%)
+  progress: archiving (foo) (end)
+  progress: archiving (foo/bar): 1/1 files (100.00%)
+  progress: archiving (foo/bar) (end)
   $ find ../archive | sort
   ../archive
   ../archive/.hg_archival.txt
@@ -352,19 +341,16 @@ only show up in the test output, not in real usage):
 Test archiving to zip file (unzip output is unstable):
 
   $ hg archive --subrepos --prefix '.' ../archive.zip
-  \r (no-eol) (esc)
-  archiving [=============>                             ] 1/3\r (no-eol) (esc)
-  archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [==========================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
-  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
-  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: archiving: .hgsub 1/3 files (33.33%)
+  progress: archiving: .hgsubstate 2/3 files (66.67%)
+  progress: archiving: x.txt 3/3 files (100.00%)
+  progress: archiving (end)
+  progress: archiving (foo): 1/3 files (33.33%)
+  progress: archiving (foo): 2/3 files (66.67%)
+  progress: archiving (foo): 3/3 files (100.00%)
+  progress: archiving (foo) (end)
+  progress: archiving (foo/bar): 1/1 files (100.00%)
+  progress: archiving (foo/bar) (end)
 
 (unzip date formating is unstable, we do not care about it and glob it out)
 
@@ -385,71 +371,61 @@ cloned:
 
 #if hardlink
   $ hg clone -U . ../empty
-  \r (no-eol) (esc)
-  linking [ <=>                                           ] 1\r (no-eol) (esc)
-  linking [  <=>                                          ] 2\r (no-eol) (esc)
-  linking [   <=>                                         ] 3\r (no-eol) (esc)
-  linking [    <=>                                        ] 4\r (no-eol) (esc)
-  linking [     <=>                                       ] 5\r (no-eol) (esc)
-  linking [      <=>                                      ] 6\r (no-eol) (esc)
-  linking [       <=>                                     ] 7\r (no-eol) (esc)
-  linking [        <=>                                    ] 8\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: linking: 1
+  progress: linking: 2
+  progress: linking: 3
+  progress: linking: 4
+  progress: linking: 5
+  progress: linking: 6
+  progress: linking: 7
+  progress: linking: 8
+  progress: linking (end)
 #else
   $ hg clone -U . ../empty
-  \r (no-eol) (esc)
-  linking [ <=>                                           ] 1 (no-eol)
+  progress: linking: 1
 #endif
 
   $ cd ../empty
 #if hardlink
   $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
-  \r (no-eol) (esc)
-  archiving [=============>                             ] 1/3\r (no-eol) (esc)
-  archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [==========================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  linking [ <=>                                           ] 1\r (no-eol) (esc)
-  linking [  <=>                                          ] 2\r (no-eol) (esc)
-  linking [   <=>                                         ] 3\r (no-eol) (esc)
-  linking [    <=>                                        ] 4\r (no-eol) (esc)
-  linking [     <=>                                       ] 5\r (no-eol) (esc)
-  linking [      <=>                                      ] 6\r (no-eol) (esc)
-  linking [       <=>                                     ] 7\r (no-eol) (esc)
-  linking [        <=>                                    ] 8\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
-  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
-  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  linking [ <=>                                           ] 1\r (no-eol) (esc)
-  linking [  <=>                                          ] 2\r (no-eol) (esc)
-  linking [   <=>                                         ] 3\r (no-eol) (esc)
-  linking [    <=>                                        ] 4\r (no-eol) (esc)
-  linking [     <=>                                       ] 5\r (no-eol) (esc)
-  linking [      <=>                                      ] 6\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  progress: archiving: .hgsub 1/3 files (33.33%)
+  progress: archiving: .hgsubstate 2/3 files (66.67%)
+  progress: archiving: x.txt 3/3 files (100.00%)
+  progress: archiving (end)
   cloning subrepo foo from $TESTTMP/repo/foo
+  progress: linking: 1
+  progress: linking: 2
+  progress: linking: 3
+  progress: linking: 4
+  progress: linking: 5
+  progress: linking: 6
+  progress: linking: 7
+  progress: linking: 8
+  progress: linking (end)
+  progress: archiving (foo): 1/3 files (33.33%)
+  progress: archiving (foo): 2/3 files (66.67%)
+  progress: archiving (foo): 3/3 files (100.00%)
+  progress: archiving (foo) (end)
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
+  progress: linking: 1
+  progress: linking: 2
+  progress: linking: 3
+  progress: linking: 4
+  progress: linking: 5
+  progress: linking: 6
+  progress: linking (end)
+  progress: archiving (foo/bar): 1/1 files (100.00%)
+  progress: archiving (foo/bar) (end)
 #else
 Note there's a slight output glitch on non-hardlink systems: the last
 "linking" progress topic never gets closed, leading to slight output corruption on that platform.
   $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
-  \r (no-eol) (esc)
-  archiving [                                           ] 0/3\r (no-eol) (esc)
-  archiving [=============>                             ] 1/3\r (no-eol) (esc)
-  archiving [===========================>               ] 2/3\r (no-eol) (esc)
-  archiving [==========================================>] 3/3\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  linking [ <=>                                           ] 1\r (no-eol) (esc)
+  progress: archiving: .hgsub 1/3 files (33.33%)
+  progress: archiving: .hgsubstate 2/3 files (66.67%)
+  progress: archiving: x.txt 3/3 files (100.00%)
+  progress: archiving (end)
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar
+  progress: linking: 1
 #endif
 
 Archive + subrepos uses '/' for all component separators

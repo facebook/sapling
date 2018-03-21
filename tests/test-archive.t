@@ -265,10 +265,11 @@ test that we reject unsafe patterns
   test/foo
 
   $ hg archive --debug -t tbz2 -X baz test.tar.bz2 --config progress.debug=true
-  archiving: .hgsub 1/4 files (25.00%)
-  archiving: .hgsubstate 2/4 files (50.00%)
-  archiving: bar 3/4 files (75.00%)
-  archiving: foo 4/4 files (100.00%)
+  progress: archiving: .hgsub 1/4 files (25.00%)
+  progress: archiving: .hgsubstate 2/4 files (50.00%)
+  progress: archiving: bar 3/4 files (75.00%)
+  progress: archiving: foo 4/4 files (100.00%)
+  progress: archiving (end)
   $ bunzip2 -dc test.tar.bz2 | tar tf - 2>/dev/null
   test/.hg_archival.txt
   test/.hgsub
@@ -380,32 +381,6 @@ test .hg_archival.txt
   $ hg archive -t bogus test.bogus
   abort: unknown archive type 'bogus'
   [255]
-
-enable progress extension:
-
-  $ cp $HGRCPATH $HGRCPATH.no-progress
-  $ cat >> $HGRCPATH <<EOF
-  > [progress]
-  > assume-tty = 1
-  > format = topic bar number
-  > delay = 0
-  > refresh = 0
-  > width = 60
-  > EOF
-
-  $ hg archive ../with-progress --config progress.debug=true
-  \r (no-eol) (esc)
-  archiving [======>                                    ] 1/6\r (no-eol) (esc)
-  archiving [=============>                             ] 2/6\r (no-eol) (esc)
-  archiving [====================>                      ] 3/6\r (no-eol) (esc)
-  archiving [===========================>               ] 4/6\r (no-eol) (esc)
-  archiving [==================================>        ] 5/6\r (no-eol) (esc)
-  archiving [==========================================>] 6/6\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-
-cleanup after progress extension test:
-
-  $ cp $HGRCPATH.no-progress $HGRCPATH
 
 server errors
 

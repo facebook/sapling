@@ -60,13 +60,14 @@ Prepare repo r1:
 Create hardlinked clone r2:
 
   $ hg clone -U --debug r1 r2 --config progress.debug=true
-  linking: 1
-  linking: 2
-  linking: 3
-  linking: 4
-  linking: 5
-  linking: 6
-  linking: 7
+  progress: linking: 1
+  progress: linking: 2
+  progress: linking: 3
+  progress: linking: 4
+  progress: linking: 5
+  progress: linking: 6
+  progress: linking: 7
+  progress: linking (end)
   linked 7 files
 
 Create non-hardlinked clone r3:

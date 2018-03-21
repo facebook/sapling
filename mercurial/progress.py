@@ -304,6 +304,25 @@ class progbar(object):
         finally:
             self._refreshlock.release()
 
+_progresssingleton = None
+def _getprogbar(ui):
+    global _progresssingleton
+    if _progresssingleton is None:
+        # passing 'ui' object to the singleton is fishy,
+        # this is how the extension used to work but feel free to rework it.
+        _progresssingleton = progbar(ui)
+    return _progresssingleton
+
+class suspend(object):
+    """context manager to suspend progress output"""
+    def __enter__(self):
+        if _progresssingleton is not None and _progresssingleton.printed:
+            _progresssingleton.clear()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
+
 def _progvalue(value):
     """split a progress bar value into a position and item"""
     if isinstance(value, tuple):
@@ -323,6 +342,7 @@ class normalbar(object):
     """
     def __init__(self, ui, topic, unit="", total=None):
         self._ui = ui
+        self._progbar = _getprogbar(ui)
         self._topic = topic
         self._unit = unit
         self._total = total
@@ -332,7 +352,7 @@ class normalbar(object):
     def reset(self, topic, unit="", total=None):
         self._cond.acquire()
         try:
-            self._ui.progress(self._topic, None)
+            self._progbar.progress(self._topic, None)
             self._topic = topic
             self._unit = unit
             self._total = total
@@ -347,7 +367,7 @@ class normalbar(object):
                 self._cond.wait(0.1)
                 if self._shouldshow:
                     self._show()
-            self._ui.progress(self._topic, None)
+            self._progbar.progress(self._topic, None)
         finally:
             self._cond.release()
 
@@ -356,7 +376,8 @@ class normalbar(object):
         if value != self._lastvalue:
             self._lastvalue = value
             pos, item = _progvalue(value)
-            self._ui.progress(self._topic, pos, item, self._unit, self._total)
+            self._progbar.progress(self._topic, pos, item, self._unit,
+                                   self._total)
 
     def __enter__(self):
         self.value = 0
@@ -372,7 +393,7 @@ class normalbar(object):
         self._cond.release()
         self._thread.join()
 
-class spinner(normalbar):
+class normalspinner(normalbar):
     """context manager that adds a progress spinner to slow operations
 
     This context manager should be used when there are no items to count
@@ -384,7 +405,7 @@ class spinner(normalbar):
 
     def _show(self):
         self._time += 0.1
-        self._ui.progress(self._topic, self._time, unit="s")
+        self._progbar.progress(self._topic, self._time, unit="s")
 
 class debugbar(object):
     def __init__(self, ui, topic, unit="", total=None):
@@ -392,29 +413,81 @@ class debugbar(object):
         self._topic = topic
         self._unit = unit
         self._total = total
+        self._started = False
 
     def reset(self, topic, unit="", total=None):
-        self._ui.progress(self._topic, None)
+        if self._started:
+            self._ui.write(('progress: %s (reset)\n') % self._topic)
         self._topic = topic
         self._unit = unit
         self._total = total
         self.value = 0
+        self._started = False
 
     def __enter__(self):
         super(debugbar, self).__setattr__('value', 0)
         return self
 
     def __exit__(self, type, value, traceback):
-        self._ui.progress(self._topic, None)
+        if self._started:
+            self._ui.write(('progress: %s (end)\n') % self._topic)
 
     def __setattr__(self, name, value):
         if name == 'value':
+            self._started = True
             pos, item = _progvalue(value)
-            self._ui.progress(self._topic, pos, item, self._unit, self._total)
+            unit = (' %s' % self._unit) if self._unit else ''
+            item = (' %s' % item) if item else ''
+            if self._total:
+                pct = 100.0 * pos / self._total
+                self._ui.write(('progress: %s:%s %d/%d%s (%4.2f%%)\n')
+                               % (self._topic, item, pos, self._total, unit,
+                                  pct))
+            else:
+                self._ui.write(('progress: %s:%s %d%s\n')
+                               % (self._topic, item, pos, unit))
         super(debugbar, self).__setattr__(name, value)
+
+class nullbar(object):
+    """A progress bar context manager that does nothing."""
+    def __init__(self, ui, topic, unit="", total=None):
+        self._topic = topic
+        self._unit = unit
+        self._total = total
+
+    def reset(self, topic, unit="", total=None):
+        self._topic = topic
+        self._unit = unit
+        self._total = total
+        self.value = 0
+
+    def __enter__(self):
+        self.value = 0
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
 
 def bar(ui, *args, **kwargs):
     if ui.configbool('progress', 'debug'):
         return debugbar(ui, *args, **kwargs)
+    elif (ui.quiet or ui.debugflag
+            or ui.configbool('progress', 'disable')
+            or not shouldprint(ui)):
+        return nullbar(ui, *args, **kwargs)
     else:
         return normalbar(ui, *args, **kwargs)
+
+def spinner(ui, *args, **kwargs):
+    if ui.configbool('progress', 'debug'):
+        return debugbar(ui, *args, **kwargs)
+    elif (ui.quiet or ui.debugflag
+            or ui.configbool('progress', 'disable')
+            or not shouldprint(ui)):
+        return nullbar(ui, *args, **kwargs)
+    else:
+        return normalspinner(ui, *args, **kwargs)
+
+def resetstate():
+    if _progresssingleton is not None:
+        _progresssingleton.resetstate()

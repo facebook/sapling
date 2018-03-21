@@ -3,29 +3,24 @@ plain
 
   $ hg init
   $ hg debugbuilddag '+2:f +3:p2 @temp <f+4 @default /p2 +2' \
-  > --config extensions.progress= --config progress.assume-tty=1 \
-  > --config progress.delay=0 --config progress.refresh=0 \
-  > --config progress.format=topic,bar,number \
-  > --config progress.width=60 \
-  > --config progress.debug=true
-  \r (no-eol) (esc)
-  building [                                          ]  0/12\r (no-eol) (esc)
-  building [==>                                       ]  1/12\r (no-eol) (esc)
-  building [==>                                       ]  1/12\r (no-eol) (esc)
-  building [======>                                   ]  2/12\r (no-eol) (esc)
-  building [=========>                                ]  3/12\r (no-eol) (esc)
-  building [=============>                            ]  4/12\r (no-eol) (esc)
-  building [=============>                            ]  4/12\r (no-eol) (esc)
-  building [=============>                            ]  4/12\r (no-eol) (esc)
-  building [================>                         ]  5/12\r (no-eol) (esc)
-  building [====================>                     ]  6/12\r (no-eol) (esc)
-  building [=======================>                  ]  7/12\r (no-eol) (esc)
-  building [===========================>              ]  8/12\r (no-eol) (esc)
-  building [===========================>              ]  8/12\r (no-eol) (esc)
-  building [==============================>           ]  9/12\r (no-eol) (esc)
-  building [==================================>       ] 10/12\r (no-eol) (esc)
-  building [=====================================>    ] 11/12\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
+  > --config extensions.progress= --config progress.debug=true
+  progress: building: 0/12 revisions (0.00%)
+  progress: building: 1/12 revisions (8.33%)
+  progress: building: 1/12 revisions (8.33%)
+  progress: building: 2/12 revisions (16.67%)
+  progress: building: 3/12 revisions (25.00%)
+  progress: building: 4/12 revisions (33.33%)
+  progress: building: 4/12 revisions (33.33%)
+  progress: building: 4/12 revisions (33.33%)
+  progress: building: 5/12 revisions (41.67%)
+  progress: building: 6/12 revisions (50.00%)
+  progress: building: 7/12 revisions (58.33%)
+  progress: building: 8/12 revisions (66.67%)
+  progress: building: 8/12 revisions (66.67%)
+  progress: building: 9/12 revisions (75.00%)
+  progress: building: 10/12 revisions (83.33%)
+  progress: building: 11/12 revisions (91.67%)
+  progress: building (end)
 
 tags
   $ cat .hg/localtags
