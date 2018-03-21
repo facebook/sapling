@@ -1184,33 +1184,29 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
 
     actions = {}
 
-    filecount = 0
-    _calculating = _('calculating')
-    total = len(files)
-    for file in files:
-        filecount += 1
-        ui.progress(_calculating, filecount, total=total)
+    with progress.bar(ui, _('calculating'), total=len(files)) as prog:
+        for file in files:
+            prog.value += 1
 
-        old = origsparsematch(file)
-        new = sparsematch(file)
-        # Add files that are newly included, or that don't exist in
-        # the dirstate yet.
-        if (new and not old) or (old and new and not file in dirstate):
-            fl = mf.flags(file)
-            if repo.wvfs.exists(file):
-                actions[file] = ('e', (fl,), '')
-                lookup.append(file)
-            else:
-                actions[file] = ('g', (fl, False), '')
-                added.append(file)
-        # Drop files that are newly excluded, or that still exist in
-        # the dirstate.
-        elif (old and not new) or (not old and not new and file in dirstate):
-            dropped.append(file)
-            if file not in pending:
-                actions[file] = ('r', [], '')
-
-    ui.progress(_calculating, None)
+            old = origsparsematch(file)
+            new = sparsematch(file)
+            # Add files that are newly included, or that don't exist in
+            # the dirstate yet.
+            if (new and not old) or (old and new and not file in dirstate):
+                fl = mf.flags(file)
+                if repo.wvfs.exists(file):
+                    actions[file] = ('e', (fl,), '')
+                    lookup.append(file)
+                else:
+                    actions[file] = ('g', (fl, False), '')
+                    added.append(file)
+            # Drop files that are newly excluded, or that still exist in
+            # the dirstate.
+            elif ((old and not new)
+                  or (not (old or new) and file in dirstate)):
+                dropped.append(file)
+                if file not in pending:
+                    actions[file] = ('r', [], '')
 
     # Verify there are no pending changes in newly included files
     if len(lookup) > 0:
@@ -1237,43 +1233,33 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         ui.note(_('applying changes to disk (%d actions)\n') % len(actions))
     typeactions = dict((m, [])
                        for m in 'a f g am cd dc r dm dg m e k p pr'.split())
-    actioncount = 0
-    total = len(actions)
-    _applying = _('applying')
-    ui.progress(_applying, actioncount, total=total)
 
-    for f, (m, args, msg) in actions.iteritems():
-        actioncount += 1
-        ui.progress(_applying, actioncount, total=total)
-        if m not in typeactions:
-            typeactions[m] = []
-        typeactions[m].append((f, args, msg))
-    mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
-    ui.progress(_applying, None)
+    with progress.bar(ui, _('applying'), total=len(actions)) as prog:
+        for f, (m, args, msg) in actions.iteritems():
+            prog.value += 1
+            if m not in typeactions:
+                typeactions[m] = []
+            typeactions[m].append((f, args, msg))
+        mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
 
     # Fix dirstate
     filecount = len(added) + len(dropped) + len(lookup)
     if filecount > 0:
         ui.note(_('updating dirstate\n'))
-    _recording = _('recording')
-    _files = _('files')
-    prog = 0
-    for file in added:
-        prog += 1
-        ui.progress(_recording, prog, total=filecount, unit=_files)
-        dirstate.normal(file)
+    with progress.bar(ui, _('recording'), _('files'), filecount) as prog:
+        for file in added:
+            prog.value += 1
+            dirstate.normal(file)
 
-    for file in dropped:
-        prog += 1
-        ui.progress(_recording, prog, total=filecount, unit=_files)
-        dirstate.drop(file)
+        for file in dropped:
+            prog.value += 1
+            dirstate.drop(file)
 
-    for file in lookup:
-        prog += 1
-        ui.progress(_recording, prog, total=filecount, unit=_files)
-        # File exists on disk, and we're bringing it back in an unknown state.
-        dirstate.normallookup(file)
-    ui.progress(_recording, None)
+        for file in lookup:
+            prog.value += 1
+            # File exists on disk, and we're bringing it back in an unknown
+            # state.
+            dirstate.normallookup(file)
 
     return added, dropped, lookup
 
