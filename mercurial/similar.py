@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from .i18n import _
 from . import (
     mdiff,
+    progress,
 )
 
 def _findexactmatches(repo, added, removed):
@@ -20,32 +21,29 @@ def _findexactmatches(repo, added, removed):
     '''
     numfiles = len(added) + len(removed)
 
-    # Build table of removed files: {hash(fctx.data()): [fctx, ...]}.
-    # We use hash() to discard fctx.data() from memory.
-    hashes = {}
-    for i, fctx in enumerate(removed):
-        repo.ui.progress(_('searching for exact renames'), i, total=numfiles,
-                         unit=_('files'))
-        h = hash(fctx.data())
-        if h not in hashes:
-            hashes[h] = [fctx]
-        else:
-            hashes[h].append(fctx)
+    with progress.bar(repo.ui, _('searching for exact renames'), _('files'),
+                      numfiles) as prog:
+        # Build table of removed files: {hash(fctx.data()): [fctx, ...]}.
+        # We use hash() to discard fctx.data() from memory.
+        hashes = {}
+        for fctx in removed:
+            prog.value += 1
+            h = hash(fctx.data())
+            if h not in hashes:
+                hashes[h] = [fctx]
+            else:
+                hashes[h].append(fctx)
 
-    # For each added file, see if it corresponds to a removed file.
-    for i, fctx in enumerate(added):
-        repo.ui.progress(_('searching for exact renames'), i + len(removed),
-                total=numfiles, unit=_('files'))
-        adata = fctx.data()
-        h = hash(adata)
-        for rfctx in hashes.get(h, []):
-            # compare between actual file contents for exact identity
-            if adata == rfctx.data():
-                yield (rfctx, fctx)
-                break
-
-    # Done
-    repo.ui.progress(_('searching for exact renames'), None)
+        # For each added file, see if it corresponds to a removed file.
+        for fctx in added:
+            prog.value += 1
+            adata = fctx.data()
+            h = hash(adata)
+            for rfctx in hashes.get(h, []):
+                # compare between actual file contents for exact identity
+                if adata == rfctx.data():
+                    yield (rfctx, fctx)
+                    break
 
 def _ctxdata(fctx):
     # lazily load text
@@ -76,19 +74,19 @@ def _findsimilarmatches(repo, added, removed, threshold):
     (before, after, score) tuples of partial matches.
     '''
     copies = {}
-    for i, r in enumerate(removed):
-        repo.ui.progress(_('searching for similar files'), i,
-                         total=len(removed), unit=_('files'))
+    with progress.bar(repo.ui, _('searching for similar files'), _('files'),
+                      len(removed)) as prog:
+        for r in removed:
+            prog.value += 1
 
-        data = None
-        for a in added:
-            bestscore = copies.get(a, (None, threshold))[1]
-            if data is None:
-                data = _ctxdata(r)
-            myscore = _score(a, data)
-            if myscore > bestscore:
-                copies[a] = (r, myscore)
-    repo.ui.progress(_('searching'), None)
+            data = None
+            for a in added:
+                bestscore = copies.get(a, (None, threshold))[1]
+                if data is None:
+                    data = _ctxdata(r)
+                myscore = _score(a, data)
+                if myscore > bestscore:
+                    copies[a] = (r, myscore)
 
     for dest, v in copies.iteritems():
         source, bscore = v
