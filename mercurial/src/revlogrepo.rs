@@ -131,8 +131,7 @@ pub struct RevlogRepoOptions {
 
 #[derive(Debug)]
 struct RevlogInner {
-    filelogcache: HashMap<MPath, Revlog>, // filelog cache
-    treelogcache: HashMap<MPath, Revlog>,
+    logcache: HashMap<RepoPath, Revlog>,
 }
 
 impl PartialEq<Self> for RevlogRepo {
@@ -172,8 +171,7 @@ impl RevlogRepo {
             requirements,
             changelog,
             inner: Arc::new(RwLock::new(RevlogInner {
-                filelogcache: HashMap::new(),
-                treelogcache: HashMap::new(),
+                logcache: HashMap::new(),
             })),
             inmemory_logs_capacity: options.inmemory_logs_capacity,
         })
@@ -243,34 +241,25 @@ impl RevlogRepo {
         }
         let mut inner = self.inner.write().expect("poisoned lock");
 
-        // TODO avoid creating a new MPath here
-        let mpath = MPath::empty();
-        let mpath = path.mpath().unwrap_or(&mpath);
-
-        let logcache = match *path {
-            RootPath | DirectoryPath(_) => &mut inner.treelogcache,
-            FilePath(_) => &mut inner.filelogcache,
-        };
-
         // We may have memory issues if we are keeping too many revlogs in memory.
         // Let's clear them when we have too much
-        if logcache.len() > self.inmemory_logs_capacity {
-            logcache.clear();
+        if inner.logcache.len() > self.inmemory_logs_capacity {
+            inner.logcache.clear();
         }
 
-        match logcache.entry(mpath.clone()) {
+        match inner.logcache.entry(path.clone()) {
             Entry::Occupied(log) => Ok(log.get().clone()),
 
             Entry::Vacant(missing) => {
                 let revlog_path = match *path {
                     // .hg/store/00manifesttree
-                    RootPath => mpath.join(&MPath::new("00manifesttree")?),
+                    RootPath => MPath::new("00manifesttree")?,
                     // .hg/store/meta/<path>/00manifest
                     DirectoryPath(_) => MPath::new("meta")?
-                        .join(mpath)
+                        .join(MPath::iter_opt(path.mpath()))
                         .join(&MPath::new("00manifest")?),
                     // .hg/store/data/<path>
-                    FilePath(_) => MPath::new("data")?.join(mpath),
+                    FilePath(_) => MPath::new("data")?.join(MPath::iter_opt(path.mpath())),
                 };
                 Ok(missing
                     .insert(self.init_revlog_from_path(revlog_path)?)
@@ -280,16 +269,8 @@ impl RevlogRepo {
     }
 
     fn get_path_revlog_from_cache(&self, path: &RepoPath) -> Option<Revlog> {
-        use mercurial_types::RepoPath::*;
         let inner = self.inner.read().expect("poisoned lock");
-
-        let res = match *path {
-            // TODO avoid creating a new MPath here
-            RootPath => inner.treelogcache.get(&MPath::empty()),
-            DirectoryPath(ref path) => inner.treelogcache.get(path),
-            FilePath(ref path) => inner.filelogcache.get(path),
-        };
-        res.cloned()
+        inner.logcache.get(path).cloned()
     }
 
     /// path is the path to the revlog files, but without the .i or .d extensions
