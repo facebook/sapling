@@ -362,6 +362,12 @@ class InodeBase {
   friend class InodePtrImpl;
   friend class InodePtrTestHelper;
 
+  // Forbid copies and moves (we cannot be moved since we contain mutexes)
+  InodeBase(InodeBase const&) = delete;
+  InodeBase& operator=(InodeBase const&) = delete;
+  InodeBase(InodeBase&&) = delete;
+  InodeBase& operator=(InodeBase&&) = delete;
+
   bool getPathHelper(std::vector<PathComponent>& names, bool stopOnUnlinked)
       const;
 
