@@ -995,18 +995,12 @@ def _getbackfillrange(repo, limit):
     return (start, end)
 
 def _backfilltree(tr, repo, mfl, tmfl, revs):
-    ui = repo.ui
-    converting = _("converting flat manifest to tree manifest")
-    ui.progress(converting, 0, total=len(revs))
-    count = 0
-    for rev in revs:
-        ui.progress(converting, count, total=len(revs))
-        count += 1
-
-        _converttotree(tr, mfl, tmfl, repo[rev].manifestctx(),
-                       torevlog=True)
-
-    ui.progress(converting, None)
+    with progress.bar(repo.ui, _("converting flat manifest to tree manifest"),
+                      total=len(revs)) as prog:
+        for rev in revs:
+            prog.value += 1
+            _converttotree(tr, mfl, tmfl, repo[rev].manifestctx(),
+                           torevlog=True)
 
 def _converttotree(tr, mfl, tmfl, mfctx, linkrev=None, torevlog=False):
     # A manifest can be the nullid if the first commit in the repo is an empty
@@ -1205,8 +1199,6 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
     total = newtip - oldtip
     ui = repo.ui
     builttrees = {}
-    message = _('priming tree cache')
-    ui.progress(message, 0, total=total)
 
     refcount = {}
     for rev in xrange(oldtip, newtip):
@@ -1220,177 +1212,184 @@ def recordmanifest(datapack, historypack, repo, oldtip, newtip, verify=False):
             allowedtreeroots.add(repo[name].manifestnode())
 
     includedentries = set()
-    for rev in xrange(oldtip, newtip):
-        ui.progress(message, rev - oldtip, total=total)
-        p1, p2 = mfrevlog.parentrevs(rev)
-        p1node = mfrevlog.node(p1)
-        p2node = mfrevlog.node(p2)
-        linkrev = mfrevlog.linkrev(rev)
-        linknode = cl.node(linkrev)
+    with progress.bar(ui, _('priming tree cache'), total=total) as prog:
+        for rev in xrange(oldtip, newtip):
+            prog.value = rev - oldtip
+            p1, p2 = mfrevlog.parentrevs(rev)
+            p1node = mfrevlog.node(p1)
+            p2node = mfrevlog.node(p2)
+            linkrev = mfrevlog.linkrev(rev)
+            linknode = cl.node(linkrev)
 
-        if p1node == nullid:
-            origtree = cstore.treemanifest(mfl.datastore)
-        elif p1node in builttrees:
-            origtree = builttrees[p1node]
-        else:
-            origtree = mfl[p1node].read()._treemanifest()
-
-        if origtree is None:
-            if allowedtreeroots and p1node not in allowedtreeroots:
-                continue
-
-            p1mf = mfl[p1node].read()
-            p1linknode = cl.node(mfrevlog.linkrev(p1))
-            origtree = cstore.treemanifest(mfl.datastore)
-            for filename, node, flag in p1mf.iterentries():
-                origtree.set(filename, node, flag)
-
-            tempdatapack = InterceptedMutableDataPack(datapack, p1node, nullid)
-            temphistorypack = InterceptedMutableHistoryPack(historypack, p1node,
-                                                            nullid)
-            for nname, nnode, ntext, np1text, np1, np2 in origtree.finalize():
-                # No need to compute a delta, since we know the parent isn't
-                # already a tree.
-                tempdatapack.add(nname, nnode, nullid, ntext)
-                temphistorypack.add(nname, nnode, np1, np2, p1linknode, '')
-                includedentries.add((nname, nnode))
-
-            builttrees[p1node] = origtree
-
-        # Remove the tree from the cache once we've processed its final use.
-        # Otherwise memory explodes
-        p1refcount = refcount[p1node] - 1
-        if p1refcount == 0:
-            builttrees.pop(p1node, None)
-        refcount[p1node] = p1refcount
-
-        if p2node != nullid:
-            node = mfrevlog.node(rev)
-            diff = mfl[p1node].read().diff(mfl[node].read())
-            deletes = []
-            adds = []
-            for filename, ((anode, aflag), (bnode, bflag)) in diff.iteritems():
-                if bnode is None:
-                    deletes.append(filename)
-                else:
-                    adds.append((filename, bnode, bflag))
-        else:
-            # This will generally be very quick, since p1 == deltabase
-            delta = mfrevlog.revdiff(p1, rev)
-
-            deletes = []
-            adds = []
-
-            # Inspect the delta and read the added files from it
-            current = 0
-            end = len(delta)
-            while current < end:
-                try:
-                    block = ''
-                    # Deltas are of the form:
-                    #   <start><end><datalen><data>
-                    # Where start and end say what bytes to delete, and data
-                    # says what bytes to insert in their place. So we can just
-                    # read <data> to figure out all the added files.
-                    byte1, byte2, blocklen = struct.unpack(">lll",
-                            delta[current:current + 12])
-                    current += 12
-                    if blocklen:
-                        block = delta[current:current + blocklen]
-                        current += blocklen
-                except struct.error:
-                    raise RuntimeError("patch cannot be decoded")
-
-                # An individual delta block may contain multiple newline
-                # delimited entries.
-                for line in block.split('\n'):
-                    if not line:
-                        continue
-                    fname, rest = line.split('\0')
-                    fnode = rest[:40]
-                    fflag = rest[40:]
-                    adds.append((fname, bin(fnode), fflag))
-
-            allfiles = set(repo.changelog.readfiles(linkrev))
-            deletes = allfiles.difference(fname for fname, fnode, fflag in adds)
-
-        # Apply the changes on top of the parent tree
-        newtree = origtree.copy()
-        for fname in deletes:
-            newtree.set(fname, None, None)
-
-        for fname, fnode, fflags in adds:
-            newtree.set(fname, fnode, fflags)
-
-        tempdatapack = InterceptedMutableDataPack(datapack, mfrevlog.node(rev),
-                                                  p1node)
-        temphistorypack = InterceptedMutableHistoryPack(historypack,
-                                                        mfrevlog.node(rev),
-                                                        p1node)
-        mfdatastore = mfl.datastore
-        newtreeiter = newtree.finalize(origtree if p1node != nullid else None)
-        for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
-            if verify:
-                # Verify all children of the tree already exist in the store
-                # somewhere.
-                lines = ntext.split('\n')
-                for line in lines:
-                    if not line:
-                        continue
-                    childname, nodeflag = line.split('\0')
-                    childpath = os.path.join(nname, childname)
-                    cnode = nodeflag[:40]
-                    cflag = nodeflag[40:]
-                    if (cflag == 't' and
-                        (childpath + '/', bin(cnode)) not in includedentries and
-                        mfdatastore.getmissing([(childpath, bin(cnode))])):
-                        import pdb
-                        pdb.set_trace()
-
-            # Only use deltas if the delta base is in this same pack file
-            if np1 != nullid and (nname, np1) in includedentries:
-                delta = mdiff.textdiff(np1text, ntext)
-                deltabase = np1
+            if p1node == nullid:
+                origtree = cstore.treemanifest(mfl.datastore)
+            elif p1node in builttrees:
+                origtree = builttrees[p1node]
             else:
-                delta = ntext
-                deltabase = nullid
-            tempdatapack.add(nname, nnode, deltabase, delta)
-            temphistorypack.add(nname, nnode, np1, np2, linknode, '')
-            includedentries.add((nname, nnode))
+                origtree = mfl[p1node].read()._treemanifest()
 
-        if ui.configbool('treemanifest', 'verifyautocreate', False):
-            diff = newtree.diff(origtree)
+            if origtree is None:
+                if allowedtreeroots and p1node not in allowedtreeroots:
+                    continue
+
+                p1mf = mfl[p1node].read()
+                p1linknode = cl.node(mfrevlog.linkrev(p1))
+                origtree = cstore.treemanifest(mfl.datastore)
+                for filename, node, flag in p1mf.iterentries():
+                    origtree.set(filename, node, flag)
+
+                tempdatapack = InterceptedMutableDataPack(datapack, p1node,
+                                                          nullid)
+                temphistorypack = InterceptedMutableHistoryPack(historypack,
+                                                                p1node, nullid)
+                for nname, nnode, ntext, np1text, np1, np2 in (
+                        origtree.finalize()):
+                    # No need to compute a delta, since we know the parent isn't
+                    # already a tree.
+                    tempdatapack.add(nname, nnode, nullid, ntext)
+                    temphistorypack.add(nname, nnode, np1, np2, p1linknode, '')
+                    includedentries.add((nname, nnode))
+
+                builttrees[p1node] = origtree
+
+            # Remove the tree from the cache once we've processed its final use.
+            # Otherwise memory explodes
+            p1refcount = refcount[p1node] - 1
+            if p1refcount == 0:
+                builttrees.pop(p1node, None)
+            refcount[p1node] = p1refcount
+
+            if p2node != nullid:
+                node = mfrevlog.node(rev)
+                diff = mfl[p1node].read().diff(mfl[node].read())
+                deletes = []
+                adds = []
+                for filename, ((anode, aflag), (bnode, bflag)) in (
+                        diff.iteritems()):
+                    if bnode is None:
+                        deletes.append(filename)
+                    else:
+                        adds.append((filename, bnode, bflag))
+            else:
+                # This will generally be very quick, since p1 == deltabase
+                delta = mfrevlog.revdiff(p1, rev)
+
+                deletes = []
+                adds = []
+
+                # Inspect the delta and read the added files from it
+                current = 0
+                end = len(delta)
+                while current < end:
+                    try:
+                        block = ''
+                        # Deltas are of the form:
+                        #   <start><end><datalen><data>
+                        # Where start and end say what bytes to delete, and data
+                        # says what bytes to insert in their place. So we can
+                        # just read <data> to figure out all the added files.
+                        byte1, byte2, blocklen = struct.unpack(">lll",
+                                delta[current:current + 12])
+                        current += 12
+                        if blocklen:
+                            block = delta[current:current + blocklen]
+                            current += blocklen
+                    except struct.error:
+                        raise RuntimeError("patch cannot be decoded")
+
+                    # An individual delta block may contain multiple newline
+                    # delimited entries.
+                    for line in block.split('\n'):
+                        if not line:
+                            continue
+                        fname, rest = line.split('\0')
+                        fnode = rest[:40]
+                        fflag = rest[40:]
+                        adds.append((fname, bin(fnode), fflag))
+
+                allfiles = set(repo.changelog.readfiles(linkrev))
+                deletes = allfiles.difference(fname
+                                              for fname, fnode, fflag in adds)
+
+            # Apply the changes on top of the parent tree
+            newtree = origtree.copy()
             for fname in deletes:
-                fdiff = diff.get(fname)
-                if fdiff is None:
-                    import pdb
-                    pdb.set_trace()
-                else:
-                    l, r = fdiff
-                    if l != (None, ''):
-                        import pdb
-                        pdb.set_trace()
+                newtree.set(fname, None, None)
 
             for fname, fnode, fflags in adds:
-                fdiff = diff.get(fname)
-                if fdiff is None:
-                    # Sometimes adds are no-ops, so they don't show up in the
-                    # diff.
-                    if origtree.get(fname) != newtree.get(fname):
-                        import pdb
-                        pdb.set_trace()
+                newtree.set(fname, fnode, fflags)
+
+            tempdatapack = InterceptedMutableDataPack(datapack,
+                                                      mfrevlog.node(rev),
+                                                      p1node)
+            temphistorypack = InterceptedMutableHistoryPack(historypack,
+                                                            mfrevlog.node(rev),
+                                                            p1node)
+            mfdatastore = mfl.datastore
+            newtreeiter = newtree.finalize(origtree if p1node != nullid
+                                           else None)
+            for nname, nnode, ntext, np1text, np1, np2 in newtreeiter:
+                if verify:
+                    # Verify all children of the tree already exist in the store
+                    # somewhere.
+                    lines = ntext.split('\n')
+                    for line in lines:
+                        if not line:
+                            continue
+                        childname, nodeflag = line.split('\0')
+                        childpath = os.path.join(nname, childname)
+                        cnode = nodeflag[:40]
+                        cflag = nodeflag[40:]
+                        if (cflag == 't' and
+                                (childpath + '/', bin(cnode))
+                                    not in includedentries and
+                                    mfdatastore.getmissing([(childpath,
+                                                             bin(cnode))])):
+                            import pdb
+                            pdb.set_trace()
+
+                # Only use deltas if the delta base is in this same pack file
+                if np1 != nullid and (nname, np1) in includedentries:
+                    delta = mdiff.textdiff(np1text, ntext)
+                    deltabase = np1
                 else:
-                    l, r = fdiff
-                    if l != (fnode, fflags):
+                    delta = ntext
+                    deltabase = nullid
+                tempdatapack.add(nname, nnode, deltabase, delta)
+                temphistorypack.add(nname, nnode, np1, np2, linknode, '')
+                includedentries.add((nname, nnode))
+
+            if ui.configbool('treemanifest', 'verifyautocreate', False):
+                diff = newtree.diff(origtree)
+                for fname in deletes:
+                    fdiff = diff.get(fname)
+                    if fdiff is None:
                         import pdb
                         pdb.set_trace()
-        builttrees[mfrevlog.node(rev)] = newtree
+                    else:
+                        l, r = fdiff
+                        if l != (None, ''):
+                            import pdb
+                            pdb.set_trace()
 
-        mfnode = mfrevlog.node(rev)
-        if refcount.get(mfnode) > 0:
-            builttrees[mfnode] = newtree
+                for fname, fnode, fflags in adds:
+                    fdiff = diff.get(fname)
+                    if fdiff is None:
+                        # Sometimes adds are no-ops, so they don't show up in
+                        # the diff.
+                        if origtree.get(fname) != newtree.get(fname):
+                            import pdb
+                            pdb.set_trace()
+                    else:
+                        l, r = fdiff
+                        if l != (fnode, fflags):
+                            import pdb
+                            pdb.set_trace()
+            builttrees[mfrevlog.node(rev)] = newtree
 
-    ui.progress(message, None)
+            mfnode = mfrevlog.node(rev)
+            if refcount.get(mfnode) > 0:
+                builttrees[mfnode] = newtree
 
 def _checkhash(orig, self, *args, **kwargs):
     # Don't validate root hashes during the transition to treemanifest
