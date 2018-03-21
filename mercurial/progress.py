@@ -246,8 +246,119 @@ class classicrenderer(baserenderer):
         self._writeerr('\r' + encoding.trim(out, termwidth))
         self._flusherr()
 
+class fancyrenderer(baserenderer):
+    def __init__(self, bar):
+        super(fancyrenderer, self).__init__(bar)
+
+    def _mergespans(self, leftspans, rightspans):
+        spans = []
+        leftspans.reverse()
+        rightspans.reverse()
+        while leftspans and rightspans:
+            leftwidth, leftlabel = leftspans.pop()
+            rightwidth, rightlabel = rightspans.pop()
+            if leftwidth < rightwidth:
+                spans.append((leftwidth, spacejoin(leftlabel, rightlabel)))
+                rightspans.append((rightwidth - leftwidth, rightlabel))
+            elif leftwidth == rightwidth:
+                spans.append((leftwidth, spacejoin(leftlabel, rightlabel)))
+            elif leftwidth > rightwidth:
+                spans.append((rightwidth, spacejoin(leftlabel, rightlabel)))
+                leftspans.append((leftwidth - rightwidth, leftlabel))
+        spans.extend(reversed(leftspans))
+        spans.extend(reversed(rightspans))
+        return spans
+
+    def _applyspans(self, ui, line, spans):
+        out = []
+        outpos = 0
+        outdebt = 0
+        linebyte = 0
+        linewidth = encoding.colwidth(line)
+        spans.reverse()
+        while outpos < linewidth:
+            if not spans:
+                out.append(line[linebyte:])
+                break
+            spanwidth, spanlabel = spans.pop()
+            spantext = encoding.trim(line[linebyte:], spanwidth + outdebt)
+            outdebt += spanwidth - encoding.colwidth(spantext)
+            linebyte += len(spantext)
+            out.append(ui.label(spantext, spanlabel))
+            outpos += spanwidth
+        return ''.join(out)
+
+    def show(self, now):
+        topic = self._bar._topic
+        total = self._bar._total
+        pos, item = _progvalue(self._bar.value)
+        if total:
+            style = 'normal'
+        else:
+            if pos is None:
+                style = 'spinner'
+                pos = round(now - self._bar._enginestarttime, 1)
+            else:
+                style = 'indet'
+            spinpos = int((now - self._bar._enginestarttime) * 20)
+        termwidth = self.width()
+        self.printed = True
+        if total:
+            number = ('% ' + str(len(str(total))) + 's/%s') % (pos, total)
+            remaining = ' ' + fmtremaining(estimateremaining(self._bar))
+        else:
+            number = str(pos)
+            remaining = ''
+
+        start = " %s" % topic
+        if item:
+            start += ': '
+        end = "  %s%s " % (number, remaining)
+        startwidth = encoding.colwidth(start)
+        endwidth = encoding.colwidth(end)
+        midwidth = termwidth - startwidth - endwidth
+        mid = encoding.trim(item + ' ' * midwidth, midwidth)
+        line = encoding.trim(start + mid + end, termwidth)
+        if style == 'normal':
+            progpos = termwidth * pos // total
+            spans = [(progpos, 'progress.fancy.bar.normal'),
+                     (termwidth - progpos, 'progress.fancy.bar.background')]
+        elif style == 'indet':
+            spinnerwidth = min(10, termwidth / 2)
+            progpos = spinpos % ((termwidth - spinnerwidth) * 2)
+            if progpos >= (termwidth - spinnerwidth):
+                progpos = 2 * (termwidth - spinnerwidth) - progpos
+            spans = [(progpos, 'progress.fancy.bar.background'),
+                     (spinnerwidth, 'progress.fancy.bar.indeterminate'),
+                     (termwidth - spinnerwidth - progpos,
+                          'progress.fancy.bar.background')]
+        elif style == 'spinner':
+            spinnerwidth = 10
+            progpos = spinpos % spinnerwidth
+            on = spinpos % (2 * spinnerwidth) < spinnerwidth
+            spans = [(progpos, 'progress.fancy.bar.spinner' if on else
+                                   'progress.fancy.bar.background')]
+            while progpos < termwidth:
+                on = not on
+                spans.append((min(spinnerwidth, termwidth - progpos),
+                              'progress.fancy.bar.spinner' if on else
+                                  'progress.fancy.bar.background'))
+                progpos += spinnerwidth
+        spans = self._mergespans(spans, [(startwidth, 'progress.fancy.topic'),
+                                         (midwidth, 'progress.fancy.item'),
+                                         (endwidth, 'progress.fancy.count')])
+        line = self._applyspans(self._bar._ui, line, spans)
+        self._writeerr('\r' + line)
+        self._flusherr()
+
+renderers = {
+    "classic": classicrenderer,
+    "fancy": fancyrenderer,
+}
+
 def getrenderer(bar):
-    return classicrenderer(bar)
+    renderername = bar._ui.config('progress', 'renderer')
+    return renderers.get(renderername, classicrenderer)(bar)
 
 class engine(object):
     def __init__(self):

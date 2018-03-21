@@ -2570,8 +2570,8 @@ def debugprogress(ui, number, spinner=False, nototal=False):
     elif nototal:
         with progress.bar(ui, _spinning) as p:
             for i in xrange(num):
-                p.value = i
+                p.value = (i, 'item %s' % i)
     else:
         with progress.bar(ui, _spinning, total=num) as p:
             for i in xrange(num):
-                p.value = i
+                p.value = (i, 'item %s' % i)

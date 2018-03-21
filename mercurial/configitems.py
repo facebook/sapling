@@ -838,6 +838,9 @@ coreconfigitem('progress', 'format',
 coreconfigitem('progress', 'refresh',
     default=0.1,
 )
+coreconfigitem('progress', 'renderer',
+    default='classic',
+)
 coreconfigitem('progress', 'width',
     default=dynamicdefault,
 )
