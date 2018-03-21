@@ -15,6 +15,8 @@ from mercurial import (
     error,
     extensions,
     patch,
+    progress,
+    pycompat,
     registrar,
     scmutil,
     util,
@@ -40,7 +42,7 @@ def _matchpaths(repo, rev, pats, opts, aopts=facontext.defaultopts):
     if perfhack:
         # cwd related to reporoot
         reporoot = os.path.dirname(repo.path)
-        reldir = os.path.relpath(os.getcwd(), reporoot)
+        reldir = os.path.relpath(pycompat.getcwd(), reporoot)
         if reldir == '.':
             reldir = ''
         if any(opts.get(o[1]) for o in commands.walkopts): # a)
@@ -256,25 +258,25 @@ def debugbuildannotatecache(ui, repo, *pats, **opts):
         repo.prefetchfastannotate(paths)
     else:
         # server, or full repo
-        for i, path in enumerate(paths):
-            ui.progress(_('building'), i, total=len(paths))
-            with facontext.annotatecontext(repo, path) as actx:
-                try:
-                    if actx.isuptodate(rev):
-                        continue
-                    actx.annotate(rev, rev)
-                except (faerror.CannotReuseError, faerror.CorruptedFileError):
-                    # the cache is broken (could happen with renaming so the
-                    # file history gets invalidated). rebuild and try again.
-                    ui.debug('fastannotate: %s: rebuilding broken cache\n'
-                             % path)
-                    actx.rebuild()
+        with progress.bar(ui, _('building'), total=len(paths)) as prog:
+            for i, path in enumerate(paths):
+                prog.value = i
+                with facontext.annotatecontext(repo, path) as actx:
                     try:
+                        if actx.isuptodate(rev):
+                            continue
                         actx.annotate(rev, rev)
-                    except Exception as ex:
-                        # possibly a bug, but should not stop us from building
-                        # cache for other files.
-                        ui.warn(_('fastannotate: %s: failed to '
-                                  'build cache: %r\n') % (path, ex))
-        # clear the progress bar
-        ui.write()
+                    except (faerror.CannotReuseError,
+                            faerror.CorruptedFileError):
+                        # the cache is broken (could happen with renaming so the
+                        # file history gets invalidated). rebuild and try again.
+                        ui.debug('fastannotate: %s: rebuilding broken cache\n'
+                                 % path)
+                        actx.rebuild()
+                        try:
+                            actx.annotate(rev, rev)
+                        except Exception as ex:
+                            # possibly a bug, but should not stop us from
+                            # building cache for other files.
+                            ui.warn(_('fastannotate: %s: failed to '
+                                      'build cache: %r\n') % (path, ex))

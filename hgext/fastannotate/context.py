@@ -19,6 +19,7 @@ from mercurial import (
     lock as lockmod,
     mdiff,
     node,
+    progress,
     scmutil,
     util,
 )
@@ -388,60 +389,55 @@ class _annotatecontext(object):
 
         # 3rd DFS does the actual annotate
         visit = initvisit[:]
-        progress = 0
-        while visit:
-            f = visit[-1]
-            if f in hist:
+        with progress.bar(self.ui, _('building cache'),
+                          total=len(newmainbranch)) as prog:
+            while visit:
+                f = visit[-1]
+                if f in hist:
+                    visit.pop()
+                    continue
+
+                ready = True
+                pl = pcache[f]
+                for p in pl:
+                    if p not in hist:
+                        ready = False
+                        visit.append(p)
+                if not ready:
+                    continue
+
                 visit.pop()
-                continue
+                blocks = None # mdiff blocks, used for appending linelog
+                ismainbranch = (f in newmainbranch)
+                # curr is the same as the traditional annotate algorithm,
+                # if we only care about linear history (do not follow merge),
+                # then curr is not actually used.
+                assert f not in hist
+                curr = _decorate(f)
+                for i, p in enumerate(pl):
+                    bs = list(self._diffblocks(hist[p][1], curr[1]))
+                    if i == 0 and ismainbranch:
+                        blocks = bs
+                    curr = _pair(hist[p], curr, bs)
+                    if needed[p] == 1:
+                        del hist[p]
+                        del needed[p]
+                    else:
+                        needed[p] -= 1
 
-            ready = True
-            pl = pcache[f]
-            for p in pl:
-                if p not in hist:
-                    ready = False
-                    visit.append(p)
-            if not ready:
-                continue
+                hist[f] = curr
+                del pcache[f]
 
-            visit.pop()
-            blocks = None # mdiff blocks, used for appending linelog
-            ismainbranch = (f in newmainbranch)
-            # curr is the same as the traditional annotate algorithm,
-            # if we only care about linear history (do not follow merge),
-            # then curr is not actually used.
-            assert f not in hist
-            curr = _decorate(f)
-            for i, p in enumerate(pl):
-                bs = list(self._diffblocks(hist[p][1], curr[1]))
-                if i == 0 and ismainbranch:
-                    blocks = bs
-                curr = _pair(hist[p], curr, bs)
-                if needed[p] == 1:
-                    del hist[p]
-                    del needed[p]
-                else:
-                    needed[p] -= 1
-
-            hist[f] = curr
-            del pcache[f]
-
-            if ismainbranch: # need to write to linelog
-                if not self.ui.quiet:
-                    progress += 1
-                    self.ui.progress(_('building cache'), progress,
-                                     total=len(newmainbranch))
-                bannotated = None
-                if len(pl) == 2 and self.opts.followmerge: # merge
-                    bannotated = curr[0]
-                if blocks is None: # no parents, add an empty one
-                    blocks = list(self._diffblocks('', curr[1]))
-                self._appendrev(f, blocks, bannotated)
-            elif showpath: # not append linelog, but we need to record path
-                self._node2path[f.node()] = f.path()
-
-        if progress: # clean progress bar
-            self.ui.write()
+                if ismainbranch: # need to write to linelog
+                    prog.value += 1
+                    bannotated = None
+                    if len(pl) == 2 and self.opts.followmerge: # merge
+                        bannotated = curr[0]
+                    if blocks is None: # no parents, add an empty one
+                        blocks = list(self._diffblocks('', curr[1]))
+                    self._appendrev(f, blocks, bannotated)
+                elif showpath: # not append linelog, but we need to record path
+                    self._node2path[f.node()] = f.path()
 
         result = [
             ((self.revmap.rev2hsh(fr) if isinstance(fr, int) else fr.node()), l)
