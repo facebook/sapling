@@ -47,7 +47,6 @@ class httpsendfile(object):
     def read(self, *args, **kwargs):
         ret = self._data.read(*args, **kwargs)
         if not ret:
-            self.ui.progress(_('sending'), None)
             return ret
         self._pos += len(ret)
         # We pass double the max for total because we currently have
@@ -55,8 +54,6 @@ class httpsendfile(object):
         # requires authentication. Since we can't know until we try
         # once whether authentication will be required, just lie to
         # the user and maybe the push succeeds suddenly at 50%.
-        self.ui.progress(_('sending'), self._pos // 1024,
-                         unit=_('kb'), total=self._total)
         return ret
 
     def __enter__(self):
