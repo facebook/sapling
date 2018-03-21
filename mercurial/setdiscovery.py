@@ -53,6 +53,7 @@ from .node import (
 from . import (
     dagutil,
     error,
+    progress,
     util,
 )
 
@@ -194,48 +195,51 @@ def findcommonheads(ui, local, remote,
     missing = set()
 
     full = False
-    while undecided:
+    with progress.bar(ui, _('searching'), _('queries')) as prog:
+        while undecided:
 
-        if sample:
-            missinginsample = [n for i, n in enumerate(sample) if not yesno[i]]
-            missing.update(dag.descendantset(missinginsample, missing))
+            if sample:
+                missinginsample = [n for i, n in enumerate(sample)
+                                   if not yesno[i]]
+                missing.update(dag.descendantset(missinginsample, missing))
 
-            undecided.difference_update(missing)
+                undecided.difference_update(missing)
 
-        if not undecided:
-            break
+            if not undecided:
+                break
 
-        if full or common.hasbases():
-            if full:
-                ui.note(_("sampling from both directions\n"))
+            if full or common.hasbases():
+                if full:
+                    ui.note(_("sampling from both directions\n"))
+                else:
+                    ui.debug("taking initial sample\n")
+                samplefunc = _takefullsample
+                targetsize = fullsamplesize
             else:
-                ui.debug("taking initial sample\n")
-            samplefunc = _takefullsample
-            targetsize = fullsamplesize
-        else:
-            # use even cheaper initial sample
-            ui.debug("taking quick initial sample\n")
-            samplefunc = _takequicksample
-            targetsize = initialsamplesize
-        if len(undecided) < targetsize:
-            sample = list(undecided)
-        else:
-            sample = samplefunc(dag, undecided, targetsize)
-            sample = _limitsample(sample, targetsize)
+                # use even cheaper initial sample
+                ui.debug("taking quick initial sample\n")
+                samplefunc = _takequicksample
+                targetsize = initialsamplesize
+            if len(undecided) < targetsize:
+                sample = list(undecided)
+            else:
+                sample = samplefunc(dag, undecided, targetsize)
+                sample = _limitsample(sample, targetsize)
 
-        roundtrips += 1
-        ui.progress(_('searching'), roundtrips, unit=_('queries'))
-        ui.debug("query %i; still undecided: %i, sample size is: %i\n"
-                 % (roundtrips, len(undecided), len(sample)))
-        # indices between sample and externalized version must match
-        sample = list(sample)
-        yesno = remote.known(dag.externalizeall(sample))
-        full = True
+            roundtrips += 1
+            prog.value = roundtrips
+            ui.debug("query %i; still undecided: %i, sample size is: %i\n"
+                     % (roundtrips, len(undecided), len(sample)))
+            # indices between sample and externalized version must match
+            sample = list(sample)
+            yesno = remote.known(dag.externalizeall(sample))
+            full = True
 
-        if sample:
-            commoninsample = set(n for i, n in enumerate(sample) if yesno[i])
-            common.addbases(commoninsample)
-            common.removeancestorsfrom(undecided)
+            if sample:
+                commoninsample = set(n for i, n in enumerate(sample)
+                                     if yesno[i])
+                common.addbases(commoninsample)
+                common.removeancestorsfrom(undecided)
 
     # heads(common) == heads(common.bases) since common represents common.bases
     # and all its ancestors
@@ -244,7 +248,6 @@ def findcommonheads(ui, local, remote,
     # return any heads in that case, so discard that
     result.discard(nullrev)
     elapsed = util.timer() - start
-    ui.progress(_('searching'), None)
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
     msg = ('found %d common and %d unknown server heads,'
            ' %d roundtrips in %.4fs\n')
