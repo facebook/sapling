@@ -29,7 +29,7 @@ The following configuration options are available:
 '''
 
 from mercurial.i18n import _
-from mercurial import commands, extensions, revlog, util
+from mercurial import commands, extensions, progress, revlog, util
 import os, weakref
 
 def wrappull(orig, ui, repo, *args, **kwargs):
@@ -74,20 +74,21 @@ def _upgrade(ui, repo):
         i = oldmf.index
         chunk = oldmf._chunk
 
-        for rev in oldmf:
-            ui.progress(_('upgrading'), rev, total=len(oldmf))
-            e = i[rev]
-            # if the delta base is the rev, this rev is a fulltext
-            isdelta = (rev != e[3])
-            revchunk = chunk(rev)
-            if isdelta:
-                newmf.addrevision(None, trp, e[4], i[e[5]][7], i[e[6]][7],
-                                  cachedelta=(rev - 1, revchunk),
-                                  node=e[7])
-            else:
-                newmf.addrevision(revchunk, trp, e[4], i[e[5]][7], i[e[6]][7],
-                                  node=e[7])
-        tr.close()
+        with progress.bar(ui, _('upgrading'), total=len(oldmf)) as prog:
+            for rev in oldmf:
+                prog.value = rev
+                e = i[rev]
+                # if the delta base is the rev, this rev is a fulltext
+                isdelta = (rev != e[3])
+                revchunk = chunk(rev)
+                if isdelta:
+                    newmf.addrevision(None, trp, e[4], i[e[5]][7], i[e[6]][7],
+                                      cachedelta=(rev - 1, revchunk),
+                                      node=e[7])
+                else:
+                    newmf.addrevision(revchunk, trp, e[4], i[e[5]][7],
+                                      i[e[6]][7], node=e[7])
+            tr.close()
         if not ui.configbool('upgradegeneraldelta', 'dryrun', default=False):
             manifesti = repo.sjoin('00manifest.i')
             manifestd = repo.sjoin('00manifest.d')
@@ -107,7 +108,6 @@ def _upgrade(ui, repo):
                 f.write('generaldelta\n')
         repo.invalidate()
     finally:
-        ui.progress(_('upgrading'), None)
         if tr:
             tr.release()
         lock.release()
