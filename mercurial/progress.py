@@ -12,7 +12,10 @@ import threading
 import time
 
 from .i18n import _
-from . import encoding
+from . import (
+    encoding,
+    util,
+)
 
 def spacejoin(*args):
     return ' '.join(s for s in args if s)
@@ -25,6 +28,9 @@ def fmtremaining(seconds):
     """format a number of remaining seconds in human readable way
 
     This will properly display seconds, minutes, hours, days if needed"""
+    if seconds is None:
+        return ''
+
     if seconds < 60:
         # i18n: format XX seconds as "XXs"
         return _("%02ds") % (seconds)
@@ -61,6 +67,48 @@ def fmtremaining(seconds):
     # i18n: format X years and YY weeks as "XyYYw"
     return _("%dy%02dw") % (years, weeks)
 
+def estimateremaining(bar):
+    if not bar._total:
+        return None
+    bounds = bar._getestimatebounds()
+    if bounds is None:
+        return None
+    startpos, starttime = bounds[0]
+    endpos, endtime = bounds[1]
+    if startpos is None or endpos is None:
+        return None
+    if startpos == endpos:
+        return None
+    target = bar._total - startpos
+    delta = endpos - startpos
+    if target >= delta and delta > 0.1:
+        elapsed = endtime - starttime
+        seconds = (elapsed * (target - delta)) // delta + 1
+        return seconds
+    return None
+
+def fmtspeed(speed, unit):
+    if speed is None:
+        return ''
+    if unit:
+        return _('%d %s/sec') % (speed, unit)
+    else:
+        return _('%d per sec') % speed
+
+def estimatespeed(bar):
+    bounds = bar._getestimatebounds()
+    if bounds is None:
+        return None
+    startpos, starttime = bounds[0]
+    endpos, endtime = bounds[1]
+    if startpos is None or endpos is None:
+        return None
+    delta = endpos - startpos
+    elapsed = endtime - starttime
+    if elapsed > 0:
+        return delta / elapsed
+    return None
+
 # file_write() and file_flush() of Python 2 do not restart on EINTR if
 # the file is attached to a "slow" device (e.g. a terminal) and raise
 # IOError. We cannot know how many bytes would be written by file_write(),
@@ -79,35 +127,53 @@ def _eintrretry(func, *args):
                 continue
             raise
 
-class progbar(object):
-    def __init__(self, ui):
-        self.ui = ui
-        self._refreshlock = threading.Lock()
-        self.resetstate()
-
-    def resetstate(self):
-        self.topics = []
-        self.topicstates = {}
-        self.starttimes = {}
-        self.startvals = {}
+class baserenderer(object):
+    """progress bar renderer for classic-style progress bars"""
+    def __init__(self, bar):
+        self._bar = bar
         self.printed = False
-        self.lastprint = time.time() + float(self.ui.config(
-            'progress', 'delay'))
-        self.curtopic = None
-        self.lasttopic = None
-        self.indetcount = 0
-        self.refresh = float(self.ui.config(
-            'progress', 'refresh'))
-        self.changedelay = max(3 * self.refresh,
-                               float(self.ui.config(
-                                   'progress', 'changedelay')))
-        self.order = self.ui.configlist('progress', 'format')
-        self.estimateinterval = self.ui.configwith(
-            float, 'progress', 'estimateinterval')
+        self.configwidth = bar._ui.config('progress', 'width', default=None)
 
-    def show(self, now, topic, pos, item, unit, total):
-        if not shouldprint(self.ui):
+    def _flusherr(self):
+        _eintrretry(self._bar._ui.ferr.flush)
+
+    def _writeerr(self, msg):
+        _eintrretry(self._bar._ui.ferr.write, msg)
+
+    def width(self):
+        ui = self._bar._ui
+        tw = ui.termwidth()
+        if self.configwidth is not None:
+            return min(int(self.configwidth), tw)
+        else:
+            return tw
+
+    def show(self):
+        raise NotImplementedError()
+
+    def clear(self):
+        if not self.printed:
             return
+        self._writeerr('\r%s\r' % (' ' * self.width()))
+
+    def complete(self):
+        if not self.printed:
+            return
+        self.show(time.time())
+        self._writeerr('\n')
+
+class classicrenderer(baserenderer):
+    def __init__(self, bar):
+        super(classicrenderer, self).__init__(bar)
+        self.order = bar._ui.configlist('progress', 'format')
+
+    def show(self, now):
+        pos, item = _progvalue(self._bar.value)
+        if pos is None:
+            pos = round(now - self._bar._enginestarttime, 1)
+        topic = self._bar._topic
+        unit = self._bar._unit
+        total = self._bar._total
         termwidth = self.width()
         self.printed = True
         head = ''
@@ -143,9 +209,9 @@ class progbar(object):
             elif indicator == 'unit' and unit:
                 add = unit
             elif indicator == 'estimate':
-                add = self.estimate(topic, pos, total, now)
+                add = fmtremaining(estimateremaining(self._bar))
             elif indicator == 'speed':
-                add = self.speed(topic, pos, unit, now)
+                add = fmtspeed(estimatespeed(self._bar), self._bar._unit)
             if not needprogress:
                 head = spacejoin(head, add)
             else:
@@ -157,18 +223,19 @@ class progbar(object):
             if tail:
                 used += encoding.colwidth(tail) + 1
             progwidth = termwidth - used - 3
-            if total and pos <= total:
+            if pos is not None and total and pos <= total:
                 amt = pos * progwidth // total
                 bar = '=' * (amt - 1)
                 if amt > 0:
                     bar += '>'
                 bar += ' ' * (progwidth - amt)
             else:
+                elapsed = now - self._bar._enginestarttime
+                indetpos = int(elapsed / self._bar._refresh)
                 progwidth -= 3
-                self.indetcount += 1
                 # mod the count by twice the width so we can make the
                 # cursor bounce between the right and left sides
-                amt = self.indetcount % (2 * progwidth)
+                amt = indetpos % (2 * progwidth)
                 amt -= progwidth
                 bar = (' ' * int(progwidth - abs(amt)) + '<=>' +
                        ' ' * int(abs(amt)))
@@ -177,151 +244,174 @@ class progbar(object):
         else:
             out = spacejoin(head, tail)
         self._writeerr('\r' + encoding.trim(out, termwidth))
-        self.lasttopic = topic
         self._flusherr()
 
-    def clear(self):
-        if not self.printed or not self.lastprint or not shouldprint(self.ui):
-            return
-        self._writeerr('\r%s\r' % (' ' * self.width()))
-        if self.printed:
-            # force immediate re-paint of progress bar
-            self.lastprint = 0
+def getrenderer(bar):
+    return classicrenderer(bar)
 
-    def complete(self):
-        if not shouldprint(self.ui):
-            return
-        if self.ui.configbool('progress', 'clear-complete'):
-            self.clear()
-        else:
-            self._writeerr('\n')
-        self._flusherr()
+class engine(object):
+    def __init__(self):
+        self._cond = threading.Condition()
+        self._active = False
+        self._refresh = None
+        self._delay = None
+        self._bars = []
+        self._currentbarindex = None
 
-    def _flusherr(self):
-        _eintrretry(self.ui.ferr.flush)
+    def lock(self):
+        class lockguard(object):
+            def __init__(self, engine):
+                self.engine = engine
 
-    def _writeerr(self, msg):
-        _eintrretry(self.ui.ferr.write, msg)
+            def __enter__(self):
+                self.engine._cond.acquire()
+                return self
 
-    def width(self):
-        tw = self.ui.termwidth()
-        return min(int(self.ui.config('progress', 'width', default=tw)), tw)
+            def __exit__(self, type, value, traceback):
+                self.engine._cond.release()
 
-    def estimate(self, topic, pos, total, now):
-        if total is None:
-            return ''
-        initialpos = self.startvals[topic]
-        target = total - initialpos
-        delta = pos - initialpos
-        if delta > 0:
-            elapsed = now - self.starttimes[topic]
-            seconds = (elapsed * (target - delta)) // delta + 1
-            return fmtremaining(seconds)
-        return ''
+        return lockguard(self)
 
-    def speed(self, topic, pos, unit, now):
-        initialpos = self.startvals[topic]
-        delta = pos - initialpos
-        elapsed = now - self.starttimes[topic]
-        if elapsed > 0:
-            return _('%d %s/sec') % (delta / elapsed, unit)
-        return ''
+    def resetstate(self):
+        with self.lock():
+            self._clear()
+            self._bars = []
+            self._currentbarindex = None
+            self._refresh = None
+            self._cond.notify_all()
 
-    def _oktoprint(self, now):
-        '''Check if conditions are met to print - e.g. changedelay elapsed'''
-        if (self.lasttopic is None # first time we printed
-            # not a topic change
-            or self.curtopic == self.lasttopic
-            # it's been long enough we should print anyway
-            or now - self.lastprint >= self.changedelay):
-            return True
-        else:
-            return False
+    def register(self, bar):
+        with self.lock():
+            self._activate()
+            now = time.time()
+            bar._enginestarttime = now
+            bar._enginerenderer = getrenderer(bar)
+            self._bars.append(bar)
+            self._recalculatedisplay(now)
+            self._cond.notify_all()
 
-    def _calibrateestimate(self, topic, now, pos):
-        '''Adjust starttimes and startvals for topic so ETA works better
-
-        If progress is non-linear (ex. get much slower in the last minute),
-        it's more friendly to only use a recent time span for ETA and speed
-        calculation.
-
-            [======================================>       ]
-                                             ^^^^^^^
-                           estimateinterval, only use this for estimation
-        '''
-        interval = self.estimateinterval
-        if interval <= 0:
-            return
-        elapsed = now - self.starttimes[topic]
-        if elapsed > interval:
-            delta = pos - self.startvals[topic]
-            newdelta = delta * interval / elapsed
-            # If a stall happens temporarily, ETA could change dramatically
-            # frequently. This is to avoid such dramatical change and make ETA
-            # smoother.
-            if newdelta < 0.1:
-                return
-            self.startvals[topic] = pos - newdelta
-            self.starttimes[topic] = now - interval
-
-    def progress(self, topic, pos, item='', unit='', total=None):
-        now = time.time()
-        if pos is not None and now - self.lastprint < self.refresh:
-            return
-        self._refreshlock.acquire()
-        try:
-            if pos is None:
-                self.starttimes.pop(topic, None)
-                self.startvals.pop(topic, None)
-                self.topicstates.pop(topic, None)
-                # reset the progress bar if this is the outermost topic
-                if self.topics and self.topics[0] == topic and self.printed:
-                    self.complete()
-                    self.resetstate()
-                # truncate the list of topics assuming all topics within
-                # this one are also closed
-                if topic in self.topics:
-                    self.topics = self.topics[:self.topics.index(topic)]
-                    # reset the last topic to the one we just unwound to,
-                    # so that higher-level topics will be stickier than
-                    # lower-level topics
-                    if self.topics:
-                        self.lasttopic = self.topics[-1]
-                    else:
-                        self.lasttopic = None
+    def unregister(self, bar):
+        with self.lock():
+            try:
+                index = self._bars.index(bar)
+            except ValueError:
+                pass
             else:
-                if topic not in self.topics:
-                    self.starttimes[topic] = now
-                    self.startvals[topic] = pos
-                    self.topics.append(topic)
-                self.topicstates[topic] = pos, item, unit, total
-                self.curtopic = topic
-                self._calibrateestimate(topic, now, pos)
-                if now - self.lastprint >= self.refresh and self.topics:
-                    if self._oktoprint(now):
-                        self.lastprint = now
-                        self.show(now, topic, *self.topicstates[topic])
-        finally:
-            self._refreshlock.release()
+                if index == self._currentbarindex:
+                    if index == 0:
+                        self._complete()
+                    else:
+                        self._clear()
+                del self._bars[index:]
+                self._recalculatedisplay(time.time())
+                self._cond.notify_all()
+            bar._enginerenderer = None
 
-_progresssingleton = None
-def _getprogbar(ui):
-    global _progresssingleton
-    if _progresssingleton is None:
-        # passing 'ui' object to the singleton is fishy,
-        # this is how the extension used to work but feel free to rework it.
-        _progresssingleton = progbar(ui)
-    return _progresssingleton
+    def _activate(self):
+        with self.lock():
+            if not self._active:
+                self._active = True
+                self._thread = threading.Thread(target=self._run,
+                                                name="progress")
+                self._thread.daemon = True
+                self._thread.start()
+
+    def _deactivate(self):
+        with self.lock():
+            self._active = False
+            self._cond.notify_all()
+            self._thread.join()
+
+    def _run(self):
+        with self.lock():
+            while self._active:
+                self._cond.wait(self._refresh)
+                if self._active:
+                    now = time.time()
+                    self._recalculatedisplay(now)
+                    self._updateestimation(now)
+                    self._show(now)
+
+    def _show(self, now):
+        with self.lock():
+            bar = self._currentbar()
+            if bar is not None:
+                bar._enginerenderer.show(now)
+
+    def _clear(self):
+        with self.lock():
+            bar = self._currentbar()
+            if bar is not None:
+                bar._enginerenderer.clear()
+
+    def _complete(self):
+        with self.lock():
+            bar = self._currentbar()
+            if bar is not None:
+                if bar._ui.configbool('progress', 'clear-complete'):
+                    bar._enginerenderer.clear()
+                else:
+                    bar._enginerenderer.complete()
+
+    def _currentbar(self):
+        if self._currentbarindex is not None:
+            return self._bars[self._currentbarindex]
+        return None
+
+    def _recalculatedisplay(self, now):
+        """determine which bar should be displayed, if any"""
+        with self.lock():
+            if not self._bars:
+                self._currentbarindex = None
+                self._refresh = None
+                return
+
+            # Look to see if there is a new bar to show, or how long until
+            # another bar should be shown.
+            if self._currentbarindex is None:
+                nextbarindex = 0
+                newbarindex = None
+            else:
+                newbarindex = min(self._currentbarindex, len(self._bars) - 1)
+                nextbarindex = self._currentbarindex + 1
+            changetimes = []
+            for b in reversed(range(nextbarindex, len(self._bars))):
+                bar = self._bars[b]
+                if self._currentbarindex is None:
+                    startdelay = bar._delay
+                else:
+                    startdelay = bar._changedelay
+                if bar._enginestarttime + startdelay < now:
+                    newbarindex = b
+                else:
+                    changetimes.append(bar._enginestarttime + startdelay - now)
+            self._currentbarindex = newbarindex
+
+            # Update the refresh time.
+            bar = self._currentbar()
+            if bar is not None:
+                changetimes.append(bar._refresh)
+            if changetimes:
+                self._refresh = min(changetimes)
+            else:
+                self._refresh = None
+
+    def _updateestimation(self, now):
+        with self.lock():
+            for bar in self._bars:
+                bar._updateestimation(now)
+
+_engine = engine()
 
 class suspend(object):
     """context manager to suspend progress output"""
     def __enter__(self):
-        if _progresssingleton is not None and _progresssingleton.printed:
-            _progresssingleton.clear()
+        _engine._cond.acquire()
+        _engine._clear()
         return self
 
     def __exit__(self, type, value, traceback):
-        pass
+        _engine._cond.release()
 
 def _progvalue(value):
     """split a progress bar value into a position and item"""
@@ -340,79 +430,56 @@ class normalbar(object):
         prog.value = pos
         # alternatively: prog.value = (pos, item)
     """
-    def __init__(self, ui, topic, unit="", total=None):
+    def __init__(self, ui, topic, unit="", total=None, start=0):
         self._ui = ui
-        self._progbar = _getprogbar(ui)
         self._topic = topic
         self._unit = unit
         self._total = total
-        self._lastvalue = None
-        self._cond = threading.Condition()
+        self._start = start
+        self._delay = ui.configwith(float, 'progress', 'delay')
+        self._refresh = ui.configwith(float, 'progress', 'refresh')
+        self._changedelay = ui.configwith(float, 'progress', 'changedelay')
+        self._estimateinterval = ui.configwith(float, 'progress',
+                                               'estimateinterval')
+        self._estimatecount = max(20, int(self._estimateinterval))
+        self._estimatetick = self._estimateinterval / self._estimatecount
+        self._estimatering = util.ring(self._estimatecount)
 
     def reset(self, topic, unit="", total=None):
-        self._cond.acquire()
-        try:
-            self._progbar.progress(self._topic, None)
+        with _engine.lock():
             self._topic = topic
             self._unit = unit
             self._total = total
-            self.value = 0
-        finally:
-            self._cond.release()
+            self.value = self._start
+            self._estimatering = util.ring(self._estimatecount)
 
-    def _update(self):
-        self._cond.acquire()
-        try:
-            while self._shouldshow:
-                self._cond.wait(0.1)
-                if self._shouldshow:
-                    self._show()
-            self._progbar.progress(self._topic, None)
-        finally:
-            self._cond.release()
+    def _getestimatebounds(self):
+        if len(self._estimatering) < 2:
+            return None
+        else:
+            return self._estimatering[0], self._estimatering[-1]
 
-    def _show(self):
-        value = self.value
-        if value != self._lastvalue:
-            self._lastvalue = value
-            pos, item = _progvalue(value)
-            self._progbar.progress(self._topic, pos, item, self._unit,
-                                   self._total)
+    def _updateestimation(self, now):
+        ring = self._estimatering
+        if len(ring) == 0 or ring[-1][1] + self._estimatetick <= now:
+            pos, _item = _progvalue(self.value)
+            ring.push((pos, now))
 
     def __enter__(self):
-        self.value = 0
-        self._shouldshow = True
-        self._thread = threading.Thread(target=self._update, name="progress")
-        self._thread.start()
+        self.value = self._start
+        _engine.register(self)
         return self
 
     def __exit__(self, type, value, traceback):
-        self._cond.acquire()
-        self._shouldshow = False
-        self._cond.notify_all()
-        self._cond.release()
-        self._thread.join()
-
-class normalspinner(normalbar):
-    """context manager that adds a progress spinner to slow operations
-
-    This context manager should be used when there are no items to count
-    through.
-    """
-    def __enter__(self):
-        self._time = 0
-        return super(spinner, self).__enter__()
-
-    def _show(self):
-        self._time += 0.1
-        self._progbar.progress(self._topic, self._time, unit="s")
+        _engine.unregister(self)
 
 class debugbar(object):
-    def __init__(self, ui, topic, unit="", total=None):
+    def __init__(self, ui, topic, unit="", total=None, start=0):
         self._ui = ui
         self._topic = topic
         self._unit = unit
         self._total = total
+        self._start = start
         self._started = False
 
     def reset(self, topic, unit="", total=None):
@@ -421,11 +488,11 @@ class debugbar(object):
         self._topic = topic
         self._unit = unit
         self._total = total
-        self.value = 0
+        self.value = self._start
         self._started = False
 
     def __enter__(self):
-        super(debugbar, self).__setattr__('value', 0)
+        super(debugbar, self).__setattr__('value', self._start)
         return self
 
     def __exit__(self, type, value, traceback):
@@ -449,45 +516,38 @@ class debugbar(object):
         super(debugbar, self).__setattr__(name, value)
 
 class nullbar(object):
-    """A progress bar context manager that does nothing."""
-    def __init__(self, ui, topic, unit="", total=None):
+    """A progress bar context manager that just keeps track of state."""
+    def __init__(self, ui, topic, unit="", total=None, start=0):
         self._topic = topic
         self._unit = unit
         self._total = total
+        self._start = start
 
     def reset(self, topic, unit="", total=None):
         self._topic = topic
         self._unit = unit
         self._total = total
-        self.value = 0
+        self.value = self._start
 
     def __enter__(self):
-        self.value = 0
+        self.value = self._start
         return self
 
     def __exit__(self, type, value, traceback):
         pass
 
-def bar(ui, *args, **kwargs):
+def bar(ui, topic, unit="", total=None, start=0):
     if ui.configbool('progress', 'debug'):
-        return debugbar(ui, *args, **kwargs)
+        return debugbar(ui, topic, unit, total, start)
     elif (ui.quiet or ui.debugflag
             or ui.configbool('progress', 'disable')
             or not shouldprint(ui)):
-        return nullbar(ui, *args, **kwargs)
+        return nullbar(ui, topic, unit, total, start)
     else:
-        return normalbar(ui, *args, **kwargs)
+        return normalbar(ui, topic, unit, total, start)
 
-def spinner(ui, *args, **kwargs):
-    if ui.configbool('progress', 'debug'):
-        return debugbar(ui, *args, **kwargs)
-    elif (ui.quiet or ui.debugflag
-            or ui.configbool('progress', 'disable')
-            or not shouldprint(ui)):
-        return nullbar(ui, *args, **kwargs)
-    else:
-        return normalspinner(ui, *args, **kwargs)
+def spinner(ui, topic):
+    return bar(ui, topic, start=None)
 
 def resetstate():
-    if _progresssingleton is not None:
-        _progresssingleton.resetstate()
+    _engine.resetstate()

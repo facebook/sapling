@@ -26,17 +26,17 @@ config example::
     [progress]
     # Where to write progress information
     statefile = /some/path/to/file
+    # Append to the progress file, rather than replace
+    statefileappend = true
 """
 
 from __future__ import absolute_import
 
 import json
-import time
 
 from mercurial import (
     progress,
     registrar,
-    util,
 )
 
 testedwith = 'ships-with-fb-hgext'
@@ -46,80 +46,59 @@ configitem = registrar.configitem(configtable)
 
 configitem('progress', 'statefile', default='')
 
-class progbarwithfile(progress.progbar):
-    def progress(self, topic, pos, item='', unit='', total=None):
-        super(progbarwithfile, self).progress(topic, pos, item, unit, total)
-        self.writeprogress(time.time())
+def writeprogress(self, progressfile, filemode, bars):
+    topics = {}
+    for index, bar in enumerate(bars):
+        pos, item = progress._progvalue(bar.value)
+        topic = bar._topic
+        unit = bar._unit
+        total = bar._total
+        isactive = index == self._currentbarindex
+        cullempty = lambda str: str if str else None
+        info = {
+            'topic': topic,
+            'pos': pos,
+            'total': total,
+            'unit': cullempty(unit),
+            'item': cullempty(item),
 
-    def writeprogress(self, now):
-        progressfile = self.ui.config('progress', 'statefile')
-        if not progressfile:
-            return
+            'active': isactive,
+            'units_per_sec': None,
+            'speed_str': None,
+            'estimate_sec': None,
+            'estimate_str': None,
+        }
+        if isactive:
+            speed = progress.estimatespeed(bar)
+            remaining = progress.estimateremaining(bar) if total else None
+            info['units_per_sec'] = cullempty(speed)
+            info['estimate_sec'] = cullempty(remaining)
+            info['speed_str'] = cullempty(progress.fmtspeed(speed, unit))
+            info['estimate_str'] = cullempty(progress.fmtremaining(remaining))
+        topics[topic] = info
 
-        topics = {}
-        for topic in self.topicstates.keys():
-            pos, item, unit, total = self.topicstates[topic]
-            isactive = topic == self.curtopic
-            cullempty = lambda str: str if str else None
-            info = {
-                'topic': topic,
-                'pos': pos,
-                'total': total,
-                'unit': cullempty(unit),
-                'item': cullempty(item),
-
-                'active': isactive,
-                'units_per_sec': None,
-                'speed_str': None,
-                'estimate_sec': None,
-                'estimate_str': None,
-            }
-            if isactive:
-                info['units_per_sec'] = cullempty(self._speed(topic, pos, now))
-                info['estimate_sec'] = cullempty(self._estimate(
-                    topic, pos, total, now))
-                info['speed_str'] = cullempty(self.speed(topic, pos, unit, now))
-                info['estimate_str'] = cullempty(self.estimate(
-                    topic, pos, total, now))
-            topics[topic] = info
-
-        text = json.dumps({
-            'state': topics,
-            'topics': self.topics,
-        }, sort_keys=True)
-        try:
-            with open(progressfile, 'w+') as f:
-                f.write(text)
-        except (IOError, OSError):
-            pass
-
-    # These duplicate some logic in progress.py.
-    def _estimate(self, topic, pos, total, now):
-        if total is None:
-            return None
-        initialpos = self.startvals[topic]
-        target = total - initialpos
-        delta = pos - initialpos
-        if delta > 0:
-            elapsed = now - self.starttimes[topic]
-            return int((elapsed * (target - delta)) // delta + 1)
-        return None
-
-    def _speed(self, topic, pos, now):
-        initialpos = self.startvals[topic]
-        delta = pos - initialpos
-        elapsed = now - self.starttimes[topic]
-        return int(delta / elapsed)
+    text = json.dumps({
+        'state': topics,
+        'topics': [bar._topic for bar in bars],
+    }, sort_keys=True)
+    try:
+        with open(progressfile, filemode) as f:
+            f.write(text + '\n')
+    except (IOError, OSError):
+        pass
 
 def uisetup(ui):
-    class progressfileui(ui.__class__):
-        """Redirects _progbar to our version, which always outputs if the config
-        is set, and calls the default progbar if plain mode is off.
-        """
-        @util.propertycache
-        def progress(self):
-            if self.config('progress', 'statefile'):
-                return progbarwithfile(self).progress
-            else:
-                return super(progressfileui, self).progress
-    ui.__class__ = progressfileui
+    progressfile = ui.config('progress', 'statefile')
+    append = ui.configbool('progress', 'statefileappend', False)
+    filemode = 'a+' if append else 'w+'
+    if progressfile:
+        class fileengine(progress._engine.__class__):
+            def _show(self, now):
+                super(fileengine, self)._show(now)
+                writeprogress(self, progressfile, filemode, self._bars)
+
+            def _complete(self):
+                super(fileengine, self)._complete()
+                writeprogress(self, progressfile, filemode, [])
+
+        progress._engine.__class__ = fileengine

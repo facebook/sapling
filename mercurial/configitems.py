@@ -830,7 +830,7 @@ coreconfigitem('progress', 'disable',
     default=False,
 )
 coreconfigitem('progress', 'estimateinterval',
-    default=60.0,
+    default=10.0,
 )
 coreconfigitem('progress', 'format',
     default=lambda: ['topic', 'bar', 'number', 'estimate'],

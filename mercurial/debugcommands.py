@@ -2551,9 +2551,9 @@ def debugdrawdag(ui, repo, **opts):
 
 @command(b'debugprogress',
     [('s', 'spinner', False, _('use a progress spinner')),
-     ('b', 'bar', False, _('use a new-style progress bar'))],
+     ('n', 'nototal', False, _('don\'t include the total'))],
     _('NUMBER'), norepo=True)
-def debugprogress(ui, number, spinner=False, bar=False):
+def debugprogress(ui, number, spinner=False, nototal=False):
     """
     Initiate a progress bar and increment the progress NUMBER times.
 
@@ -2567,11 +2567,11 @@ def debugprogress(ui, number, spinner=False, bar=False):
         with progress.spinner(ui, _spinning):
             for i in xrange(num):
                 pass
-    elif bar:
-        with progress.bar(ui, _spinning, total=num) as p:
+    elif nototal:
+        with progress.bar(ui, _spinning) as p:
             for i in xrange(num):
                 p.value = i
     else:
-        for i in xrange(num):
-            ui.progress(_spinning, i, total=num)
-        ui.progress(_spinning, None)
+        with progress.bar(ui, _spinning, total=num) as p:
+            for i in xrange(num):
+                p.value = i
