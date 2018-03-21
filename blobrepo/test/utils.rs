@@ -16,14 +16,16 @@ use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
+use dbbookmarks::SqliteDbBookmarks;
 use memblob::{EagerMemblob, LazyMemblob};
-use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{manifest, Blob, NodeHash, RepoPath, RepositoryId, Time};
+use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
+    let bookmarks =
+        Arc::new(SqliteDbBookmarks::in_memory().expect("cannot create in-memory bookmarks table"));
     let heads: MemHeads = MemHeads::new();
     let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();
@@ -34,7 +36,8 @@ pub fn get_empty_eager_repo() -> BlobRepo {
 }
 
 pub fn get_empty_lazy_repo() -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
+    let bookmarks =
+        Arc::new(SqliteDbBookmarks::in_memory().expect("cannot create in-memory bookmarks table"));
     let heads: MemHeads = MemHeads::new();
     let blobs = LazyMemblob::new();
     let linknodes = MemLinknodes::new();

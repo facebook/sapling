@@ -300,23 +300,9 @@ impl RepoClient {
         // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
         if args.listkeys.contains(&b"bookmarks".to_vec()) {
             let hgrepo = self.repo.hgrepo.clone();
-            let bookmark_names = hgrepo.get_bookmark_keys();
-            let items = bookmark_names.and_then(move |name| {
-                // For each bookmark name, grab the corresponding value.
-                hgrepo.get_bookmark_value(&name).and_then(|result| {
-                    // If the name somehow wasn't found, it's possible a race happened. where the
-                    // bookmark was deleted from underneath. Skip it.
-                    // Boxing is necessary here to make the match arms return the same types.
-                    match result {
-                        Some((hash, _version)) => {
-                            // AsciiString doesn't currently implement AsRef<[u8]>, so switch to
-                            // Vec which does
-                            let hash: Vec<u8> = hash.to_hex().into();
-                            Ok((name, hash)).into_future().boxify()
-                        }
-                        None => future::empty().boxify(),
-                    }
-                })
+            let items = hgrepo.get_bookmarks().map(|(name, cs)| {
+                let hash: Vec<u8> = cs.to_hex().into();
+                (name, hash)
             });
             bundle.add_part(parts::listkey_part("bookmarks", items)?);
         }

@@ -9,6 +9,7 @@ use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 
+use ascii::AsciiString;
 use bincode;
 use bytes::Bytes;
 use failure::{Fail, ResultExt};
@@ -24,15 +25,14 @@ use uuid::Uuid;
 use blobstore::Blobstore;
 use bookmarks::Bookmarks;
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
+use dbbookmarks::SqliteDbBookmarks;
 use fileblob::Fileblob;
-use filebookmarks::FileBookmarks;
 use fileheads::FileHeads;
 use filelinknodes::FileLinknodes;
 use heads::Heads;
 use linknodes::Linknodes;
 use manifoldblob::ManifoldBlob;
 use memblob::{EagerMemblob, LazyMemblob};
-use membookmarks::MemBookmarks;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, MPath, Manifest, NodeHash,
@@ -41,7 +41,6 @@ use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
 use rocksdb;
-use storage_types::Version;
 use tokio_core::reactor::Remote;
 
 use BlobChangeset;
@@ -85,7 +84,8 @@ impl BlobRepo {
     pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        let bookmarks = FileBookmarks::open(path.join("books"))
+        // TODO(stash): read bookmarks from file when blobimport supports it
+        let bookmarks = SqliteDbBookmarks::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
         let blobstore = Fileblob::open(path.join("blobs"))
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
@@ -108,7 +108,8 @@ impl BlobRepo {
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
         let heads = FileHeads::open(path.join("heads"))
             .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        let bookmarks = FileBookmarks::open(path.join("books"))
+        // TODO(stash): read bookmarks from file when blobimport supports it
+        let bookmarks = SqliteDbBookmarks::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
         let options = rocksdb::Options::new().create_if_missing(true);
@@ -135,7 +136,7 @@ impl BlobRepo {
     pub fn new_memblob(
         logger: Option<Logger>,
         heads: MemHeads,
-        bookmarks: MemBookmarks,
+        bookmarks: Arc<Bookmarks>,
         blobstore: EagerMemblob,
         linknodes: MemLinknodes,
         changesets: SqliteChangesets,
@@ -144,7 +145,7 @@ impl BlobRepo {
         Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(heads),
-            Arc::new(bookmarks),
+            bookmarks,
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
@@ -155,7 +156,7 @@ impl BlobRepo {
     pub fn new_lazymemblob(
         logger: Option<Logger>,
         heads: MemHeads,
-        bookmarks: MemBookmarks,
+        bookmarks: Arc<Bookmarks>,
         blobstore: LazyMemblob,
         linknodes: MemLinknodes,
         changesets: SqliteChangesets,
@@ -164,7 +165,7 @@ impl BlobRepo {
         Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(heads),
-            Arc::new(bookmarks),
+            bookmarks,
             Arc::new(blobstore),
             Arc::new(linknodes),
             Arc::new(changesets),
@@ -176,7 +177,7 @@ impl BlobRepo {
         Ok(Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(MemHeads::new()),
-            Arc::new(MemBookmarks::new()),
+            Arc::new(SqliteDbBookmarks::in_memory()?),
             Arc::new(EagerMemblob::new()),
             Arc::new(MemLinknodes::new()),
             Arc::new(SqliteChangesets::in_memory()
@@ -193,7 +194,8 @@ impl BlobRepo {
         repoid: RepositoryId,
     ) -> Result<Self> {
         let heads = MemHeads::new();
-        let bookmarks = MemBookmarks::new();
+        // TODO(stash): use real bookmarks
+        let bookmarks = SqliteDbBookmarks::in_memory()?;
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
         let linknodes = MemLinknodes::new();
         let changesets = SqliteChangesets::in_memory()
@@ -274,15 +276,9 @@ impl BlobRepo {
         Box::new(BlobEntry::new_root(self.blobstore.clone(), *manifestid))
     }
 
-    pub fn get_bookmark_keys(&self) -> BoxStream<Vec<u8>, Error> {
-        self.bookmarks.keys().boxify()
-    }
-
-    pub fn get_bookmark_value(
-        &self,
-        key: &AsRef<[u8]>,
-    ) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
-        self.bookmarks.get(key).boxify()
+    pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, HgChangesetId), Error> {
+        let empty_prefix = AsciiString::new();
+        self.bookmarks.list_by_prefix(&empty_prefix, &self.repoid)
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {

@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
 extern crate changesets;
 extern crate memblob;
-extern crate membookmarks;
+extern crate dbbookmarks;
 extern crate mercurial_types;
 extern crate memheads;
 extern crate memlinknodes;
@@ -58,7 +58,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
-use membookmarks::MemBookmarks;
+use dbbookmarks::SqliteDbBookmarks;
 use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
@@ -68,9 +68,11 @@ use blobstore::Blobstore;
 use heads::Heads;
 use futures::future::Future;
 use slog::Logger;
+use std::sync::Arc;
 
 pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
-    let bookmarks: MemBookmarks = MemBookmarks::new();
+    let bookmarks = Arc::new(SqliteDbBookmarks::in_memory()
+        .expect("cannot create in-memory bookmarks table"));
     let heads: MemHeads = MemHeads::new();
     let blobs = EagerMemblob::new();
     let linknodes = MemLinknodes::new();

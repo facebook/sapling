@@ -28,11 +28,12 @@ extern crate heapsize_derive;
 
 extern crate futures_stats;
 
+extern crate ascii;
 extern crate blobstore;
 extern crate bookmarks;
 extern crate changesets;
+extern crate dbbookmarks;
 extern crate fileblob;
-extern crate filebookmarks;
 extern crate fileheads;
 extern crate filelinknodes;
 #[macro_use]
@@ -41,14 +42,12 @@ extern crate heads;
 extern crate linknodes;
 extern crate manifoldblob;
 extern crate memblob;
-extern crate membookmarks;
 extern crate memheads;
 extern crate memlinknodes;
 extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
 extern crate rocksdb;
-extern crate storage_types;
 
 mod repo;
 mod changeset;

@@ -18,9 +18,9 @@ extern crate slog;
 
 extern crate blobrepo;
 extern crate changesets;
+extern crate dbbookmarks;
 extern crate many_files_dirs;
 extern crate memblob;
-extern crate membookmarks;
 extern crate memheads;
 extern crate memlinknodes;
 extern crate mercurial_types;
