@@ -203,6 +203,7 @@ from mercurial import (
     mergeutil,
     node,
     obsolete,
+    progress,
     pycompat,
     registrar,
     repair,
@@ -1155,22 +1156,21 @@ def _continuehistedit(ui, repo, state):
         # and reopen a transaction. For example, if the action executes an
         # external process it may choose to commit the transaction first.
         tr = repo.transaction('histedit')
-    with util.acceptintervention(tr):
-        while state.actions:
-            state.write(tr=tr)
-            actobj = state.actions[0]
-            pos += 1
-            ui.progress(_("editing"), pos, actobj.torule(),
-                        _('changes'), total)
-            ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
-                                                       actobj.torule()))
-            parentctx, replacement_ = actobj.run()
-            state.parentctxnode = parentctx.node()
-            state.replacements.extend(replacement_)
-            state.actions.pop(0)
+    with progress.bar(ui, _('editing'), _('changes'), total) as prog:
+        with util.acceptintervention(tr):
+            while state.actions:
+                state.write(tr=tr)
+                actobj = state.actions[0]
+                pos += 1
+                prog.value = (pos, actobj.torule())
+                ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
+                                                           actobj.torule()))
+                parentctx, replacement_ = actobj.run()
+                state.parentctxnode = parentctx.node()
+                state.replacements.extend(replacement_)
+                state.actions.pop(0)
 
-    state.write()
-    ui.progress(_("editing"), None)
+        state.write()
 
 def _finishhistedit(ui, repo, state, fm):
     """This action runs when histedit is finishing its session"""
