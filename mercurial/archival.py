@@ -21,6 +21,7 @@ from . import (
     error,
     formatter,
     match as matchmod,
+    progress,
     util,
     vfs as vfsmod,
 )
@@ -339,13 +340,11 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     total = len(files)
     if total:
         files.sort()
-        repo.ui.progress(_('archiving'), 0, unit=_('files'), total=total)
-        for i, f in enumerate(files):
-            ff = ctx.flags(f)
-            write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, ctx[f].data)
-            repo.ui.progress(_('archiving'), i + 1, item=f,
-                             unit=_('files'), total=total)
-        repo.ui.progress(_('archiving'), None)
+        with progress.bar(repo.ui, _('archiving'), _('files'), total) as prog:
+            for i, f in enumerate(files, 1):
+                ff = ctx.flags(f)
+                write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, ctx[f].data)
+                prog.value = (i, f)
 
     if subrepos:
         for subpath in sorted(ctx.substate):

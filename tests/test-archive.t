@@ -265,7 +265,6 @@ test that we reject unsafe patterns
   test/foo
 
   $ hg archive --debug -t tbz2 -X baz test.tar.bz2 --config progress.debug=true
-  archiving: 0/4 files (0.00%)
   archiving: .hgsub 1/4 files (25.00%)
   archiving: .hgsubstate 2/4 files (50.00%)
   archiving: bar 3/4 files (75.00%)
@@ -394,9 +393,8 @@ enable progress extension:
   > width = 60
   > EOF
 
-  $ hg archive ../with-progress
+  $ hg archive ../with-progress --config progress.debug=true
   \r (no-eol) (esc)
-  archiving [                                           ] 0/6\r (no-eol) (esc)
   archiving [======>                                    ] 1/6\r (no-eol) (esc)
   archiving [=============>                             ] 2/6\r (no-eol) (esc)
   archiving [====================>                      ] 3/6\r (no-eol) (esc)

@@ -324,7 +324,6 @@ only show up in the test output, not in real usage):
 
   $ hg archive --subrepos ../archive
   \r (no-eol) (esc)
-  archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [=============>                             ] 1/3\r (no-eol) (esc)
   archiving [===========================>               ] 2/3\r (no-eol) (esc)
   archiving [==========================================>] 3/3\r (no-eol) (esc)
@@ -356,7 +355,6 @@ Test archiving to zip file (unzip output is unstable):
 
   $ hg archive --subrepos --prefix '.' ../archive.zip
   \r (no-eol) (esc)
-  archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [=============>                             ] 1/3\r (no-eol) (esc)
   archiving [===========================>               ] 2/3\r (no-eol) (esc)
   archiving [==========================================>] 3/3\r (no-eol) (esc)
@@ -411,7 +409,6 @@ cloned:
 #if hardlink
   $ hg archive --subrepos -r tip --prefix './' ../archive.tar.gz
   \r (no-eol) (esc)
-  archiving [                                           ] 0/3\r (no-eol) (esc)
   archiving [=============>                             ] 1/3\r (no-eol) (esc)
   archiving [===========================>               ] 2/3\r (no-eol) (esc)
   archiving [==========================================>] 3/3\r (no-eol) (esc)
