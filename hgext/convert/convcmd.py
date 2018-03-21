@@ -15,6 +15,7 @@ from mercurial import (
     encoding,
     error,
     hg,
+    progress,
     scmutil,
     util,
 )
@@ -53,7 +54,7 @@ svn_source = subversion.svn_source
 orig_encoding = 'ascii'
 
 def recode(s):
-    if isinstance(s, unicode):
+    if isinstance(s, unicode): # noqa
         return s.encode(orig_encoding, 'replace')
     else:
         return s.decode('utf-8').encode(orig_encoding, 'replace')
@@ -137,16 +138,14 @@ def convertsink(ui, path, type):
     raise error.Abort(_('%s: unknown repository type') % path)
 
 class progresssource(object):
-    def __init__(self, ui, source, filecount):
-        self.ui = ui
+    def __init__(self, source, prog):
         self.source = source
-        self.filecount = filecount
+        self.prog = prog
         self.retrieved = 0
 
     def getfile(self, file, rev):
         self.retrieved += 1
-        self.ui.progress(_('getting files'), self.retrieved,
-                         item=file, total=self.filecount, unit=_('files'))
+        self.prog.value = (self.retrieved, file)
         return self.source.getfile(file, rev)
 
     def targetfilebelongstosource(self, targetfilename):
@@ -154,9 +153,6 @@ class progresssource(object):
 
     def lookuprev(self, rev):
         return self.source.lookuprev(rev)
-
-    def close(self):
-        self.ui.progress(_('getting files'), None)
 
 class converter(object):
     def __init__(self, ui, source, dest, revmapfile, opts):
@@ -236,23 +232,23 @@ class converter(object):
         known = set()
         parents = {}
         numcommits = self.source.numcommits()
-        while visit:
-            n = visit.pop(0)
-            if n in known:
-                continue
-            if n in self.map:
-                m = self.map[n]
-                if m == SKIPREV or self.dest.hascommitfrommap(m):
+        with progress.bar(self.ui, _('scanning'), _('revisions'),
+                          numcommits) as prog:
+            while visit:
+                n = visit.pop(0)
+                if n in known:
                     continue
-            known.add(n)
-            self.ui.progress(_('scanning'), len(known), unit=_('revisions'),
-                             total=numcommits)
-            commit = self.cachecommit(n)
-            parents[n] = []
-            for p in commit.parents:
-                parents[n].append(p)
-                visit.append(p)
-        self.ui.progress(_('scanning'), None)
+                if n in self.map:
+                    m = self.map[n]
+                    if m == SKIPREV or self.dest.hascommitfrommap(m):
+                        continue
+                known.add(n)
+                prog.value = len(known)
+                commit = self.cachecommit(n)
+                parents[n] = []
+                for p in commit.parents:
+                    parents[n].append(p)
+                    visit.append(p)
 
         return parents
 
@@ -478,17 +474,19 @@ class converter(object):
         if len(pbranches) != 2:
             cleanp2 = set()
         if len(parents) < 3:
-            source = progresssource(self.ui, self.source, len(files))
+            sourcelength = len(files)
         else:
             # For an octopus merge, we end up traversing the list of
             # changed files N-1 times. This tweak to the number of
             # files makes it so the progress bar doesn't overflow
             # itself.
-            source = progresssource(self.ui, self.source,
-                                    len(files) * (len(parents) - 1))
-        newnode = self.dest.putcommit(files, copies, parents, commit,
-                                      source, self.map, full, cleanp2)
-        source.close()
+            sourcelength = len(files) * (len(parents) - 1)
+
+        with progress.bar(self.ui, _('getting files'), _('files'),
+                          sourcelength) as prog:
+            source = progresssource(self.source, prog)
+            newnode = self.dest.putcommit(files, copies, parents, commit,
+                                          source, self.map, full, cleanp2)
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
 
@@ -507,20 +505,20 @@ class converter(object):
             c = None
 
             self.ui.status(_("converting...\n"))
-            for i, c in enumerate(t):
-                num -= 1
-                desc = self.commitcache[c].desc
-                if "\n" in desc:
-                    desc = desc.splitlines()[0]
-                # convert log message to local encoding without using
-                # tolocal() because the encoding.encoding convert()
-                # uses is 'utf-8'
-                self.ui.status("%d %s\n" % (num, recode(desc)))
-                self.ui.note(_("source: %s\n") % recode(c))
-                self.ui.progress(_('converting'), i, unit=_('revisions'),
-                                 total=len(t))
-                self.copy(c)
-            self.ui.progress(_('converting'), None)
+            with progress.bar(self.ui, _('converting'), _('revisions'),
+                              len(t)) as prog:
+                for i, c in enumerate(t):
+                    num -= 1
+                    desc = self.commitcache[c].desc
+                    if "\n" in desc:
+                        desc = desc.splitlines()[0]
+                    # convert log message to local encoding without using
+                    # tolocal() because the encoding.encoding convert()
+                    # uses is 'utf-8'
+                    self.ui.status("%d %s\n" % (num, recode(desc)))
+                    self.ui.note(_("source: %s\n") % recode(c))
+                    prog.value = i
+                    self.copy(c)
 
             if not self.ui.configbool('convert', 'skiptags'):
                 tags = self.source.gettags()

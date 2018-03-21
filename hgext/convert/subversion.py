@@ -12,6 +12,7 @@ from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
+    progress,
     pycompat,
     util,
     vfs as vfsmod,
@@ -745,95 +746,97 @@ class svn_source(converter_source):
             self.module = new_module
             self.reparent(self.module)
 
-        for i, (path, ent) in enumerate(paths):
-            self.ui.progress(_('scanning paths'), i, item=path,
-                             total=len(paths), unit=_('paths'))
-            entrypath = self.getrelpath(path)
+        with progress.bar(self.ui, _('scanning paths'), _('paths'),
+                          len(paths)) as prog:
+            for i, (path, ent) in enumerate(paths):
+                prog.value = (i, path)
+                entrypath = self.getrelpath(path)
 
-            kind = self._checkpath(entrypath, revnum)
-            if kind == svn.core.svn_node_file:
-                changed.add(self.recode(entrypath))
-                if not ent.copyfrom_path or not parents:
-                    continue
-                # Copy sources not in parent revisions cannot be
-                # represented, ignore their origin for now
-                pmodule, prevnum = revsplit(parents[0])[1:]
-                if ent.copyfrom_rev < prevnum:
-                    continue
-                copyfrom_path = self.getrelpath(ent.copyfrom_path, pmodule)
-                if not copyfrom_path:
-                    continue
-                self.ui.debug("copied to %s from %s@%s\n" %
-                              (entrypath, copyfrom_path, ent.copyfrom_rev))
-                copies[self.recode(entrypath)] = self.recode(copyfrom_path)
-            elif kind == 0: # gone, but had better be a deleted *file*
-                self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
-                pmodule, prevnum = revsplit(parents[0])[1:]
-                parentpath = pmodule + "/" + entrypath
-                fromkind = self._checkpath(entrypath, prevnum, pmodule)
-
-                if fromkind == svn.core.svn_node_file:
-                    removed.add(self.recode(entrypath))
-                elif fromkind == svn.core.svn_node_dir:
-                    oroot = parentpath.strip('/')
-                    nroot = path.strip('/')
-                    children = self._iterfiles(oroot, prevnum)
-                    for childpath in children:
-                        childpath = childpath.replace(oroot, nroot)
-                        childpath = self.getrelpath("/" + childpath, pmodule)
-                        if childpath:
-                            removed.add(self.recode(childpath))
-                else:
-                    self.ui.debug('unknown path in revision %d: %s\n' % \
-                                  (revnum, path))
-            elif kind == svn.core.svn_node_dir:
-                if ent.action == 'M':
-                    # If the directory just had a prop change,
-                    # then we shouldn't need to look for its children.
-                    continue
-                if ent.action == 'R' and parents:
-                    # If a directory is replacing a file, mark the previous
-                    # file as deleted
-                    pmodule, prevnum = revsplit(parents[0])[1:]
-                    pkind = self._checkpath(entrypath, prevnum, pmodule)
-                    if pkind == svn.core.svn_node_file:
-                        removed.add(self.recode(entrypath))
-                    elif pkind == svn.core.svn_node_dir:
-                        # We do not know what files were kept or removed,
-                        # mark them all as changed.
-                        for childpath in self._iterfiles(pmodule, prevnum):
-                            childpath = self.getrelpath("/" + childpath)
-                            if childpath:
-                                changed.add(self.recode(childpath))
-
-                for childpath in self._iterfiles(path, revnum):
-                    childpath = self.getrelpath("/" + childpath)
-                    if childpath:
-                        changed.add(self.recode(childpath))
-
-                # Handle directory copies
-                if not ent.copyfrom_path or not parents:
-                    continue
-                # Copy sources not in parent revisions cannot be
-                # represented, ignore their origin for now
-                pmodule, prevnum = revsplit(parents[0])[1:]
-                if ent.copyfrom_rev < prevnum:
-                    continue
-                copyfrompath = self.getrelpath(ent.copyfrom_path, pmodule)
-                if not copyfrompath:
-                    continue
-                self.ui.debug("mark %s came from %s:%d\n"
-                              % (path, copyfrompath, ent.copyfrom_rev))
-                children = self._iterfiles(ent.copyfrom_path, ent.copyfrom_rev)
-                for childpath in children:
-                    childpath = self.getrelpath("/" + childpath, pmodule)
-                    if not childpath:
+                kind = self._checkpath(entrypath, revnum)
+                if kind == svn.core.svn_node_file:
+                    changed.add(self.recode(entrypath))
+                    if not ent.copyfrom_path or not parents:
                         continue
-                    copytopath = path + childpath[len(copyfrompath):]
-                    copytopath = self.getrelpath(copytopath)
-                    copies[self.recode(copytopath)] = self.recode(childpath)
+                    # Copy sources not in parent revisions cannot be
+                    # represented, ignore their origin for now
+                    pmodule, prevnum = revsplit(parents[0])[1:]
+                    if ent.copyfrom_rev < prevnum:
+                        continue
+                    copyfrom_path = self.getrelpath(ent.copyfrom_path, pmodule)
+                    if not copyfrom_path:
+                        continue
+                    self.ui.debug("copied to %s from %s@%s\n" %
+                                  (entrypath, copyfrom_path, ent.copyfrom_rev))
+                    copies[self.recode(entrypath)] = self.recode(copyfrom_path)
+                elif kind == 0: # gone, but had better be a deleted *file*
+                    self.ui.debug("gone from %s\n" % ent.copyfrom_rev)
+                    pmodule, prevnum = revsplit(parents[0])[1:]
+                    parentpath = pmodule + "/" + entrypath
+                    fromkind = self._checkpath(entrypath, prevnum, pmodule)
 
-        self.ui.progress(_('scanning paths'), None)
+                    if fromkind == svn.core.svn_node_file:
+                        removed.add(self.recode(entrypath))
+                    elif fromkind == svn.core.svn_node_dir:
+                        oroot = parentpath.strip('/')
+                        nroot = path.strip('/')
+                        children = self._iterfiles(oroot, prevnum)
+                        for childpath in children:
+                            childpath = childpath.replace(oroot, nroot)
+                            childpath = self.getrelpath("/" + childpath,
+                                                        pmodule)
+                            if childpath:
+                                removed.add(self.recode(childpath))
+                    else:
+                        self.ui.debug('unknown path in revision %d: %s\n' % \
+                                      (revnum, path))
+                elif kind == svn.core.svn_node_dir:
+                    if ent.action == 'M':
+                        # If the directory just had a prop change,
+                        # then we shouldn't need to look for its children.
+                        continue
+                    if ent.action == 'R' and parents:
+                        # If a directory is replacing a file, mark the previous
+                        # file as deleted
+                        pmodule, prevnum = revsplit(parents[0])[1:]
+                        pkind = self._checkpath(entrypath, prevnum, pmodule)
+                        if pkind == svn.core.svn_node_file:
+                            removed.add(self.recode(entrypath))
+                        elif pkind == svn.core.svn_node_dir:
+                            # We do not know what files were kept or removed,
+                            # mark them all as changed.
+                            for childpath in self._iterfiles(pmodule, prevnum):
+                                childpath = self.getrelpath("/" + childpath)
+                                if childpath:
+                                    changed.add(self.recode(childpath))
+
+                    for childpath in self._iterfiles(path, revnum):
+                        childpath = self.getrelpath("/" + childpath)
+                        if childpath:
+                            changed.add(self.recode(childpath))
+
+                    # Handle directory copies
+                    if not ent.copyfrom_path or not parents:
+                        continue
+                    # Copy sources not in parent revisions cannot be
+                    # represented, ignore their origin for now
+                    pmodule, prevnum = revsplit(parents[0])[1:]
+                    if ent.copyfrom_rev < prevnum:
+                        continue
+                    copyfrompath = self.getrelpath(ent.copyfrom_path, pmodule)
+                    if not copyfrompath:
+                        continue
+                    self.ui.debug("mark %s came from %s:%d\n"
+                                  % (path, copyfrompath, ent.copyfrom_rev))
+                    children = self._iterfiles(ent.copyfrom_path,
+                                               ent.copyfrom_rev)
+                    for childpath in children:
+                        childpath = self.getrelpath("/" + childpath, pmodule)
+                        if not childpath:
+                            continue
+                        copytopath = path + childpath[len(copyfrompath):]
+                        copytopath = self.getrelpath(copytopath)
+                        copies[self.recode(copytopath)] = self.recode(childpath)
+
         changed.update(removed)
         return (list(changed), removed, copies)
 

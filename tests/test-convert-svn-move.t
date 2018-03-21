@@ -161,6 +161,7 @@ Test convert progress bar
   > format = topic bar number
   > refresh = 0
   > width = 60
+  > debug = true
   > EOF
 
   $ hg convert svn-repo hg-progress
