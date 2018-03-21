@@ -326,6 +326,7 @@ class normalbar(object):
         self._topic = topic
         self._unit = unit
         self._total = total
+        self._lastvalue = None
         self._cond = threading.Condition()
 
     def reset(self, topic, unit="", total=None):
@@ -351,8 +352,11 @@ class normalbar(object):
             self._cond.release()
 
     def _show(self):
-        pos, item = _progvalue(self.value)
-        self._ui.progress(self._topic, pos, item, self._unit, self._total)
+        value = self.value
+        if value != self._lastvalue:
+            self._lastvalue = value
+            pos, item = _progvalue(value)
+            self._ui.progress(self._topic, pos, item, self._unit, self._total)
 
     def __enter__(self):
         self.value = 0
