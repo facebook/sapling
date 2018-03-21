@@ -7,9 +7,12 @@
 
 import stat
 
-from mercurial import error
-from mercurial import util as hgutil
 from mercurial.i18n import _
+from mercurial import (
+    error,
+    progress,
+    util as hgutil,
+)
 
 from dulwich import diff_tree
 from dulwich.objects import Commit, S_IFGITLINK
@@ -54,35 +57,34 @@ def verify(ui, repo, hgctx):
     gitfiles = set()
 
     i = 0
-    for gitfile, dummy in diff_tree.walk_trees(handler.git.object_store,
-                                               gitcommit.tree, None):
-        if gitfile.mode == dirkind:
-            continue
-        # TODO deal with submodules
-        if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate' or
-            gitfile.path == '.hgsub'):
-            continue
-        ui.progress(_('verify'), i, total=len(hgfiles))
-        i += 1
-        gitfiles.add(gitfile.path)
+    with progress.bar(ui, _('verify'), total=len(hgfiles)) as prog:
+        for gitfile, dummy in diff_tree.walk_trees(handler.git.object_store,
+                                                   gitcommit.tree, None):
+            if gitfile.mode == dirkind:
+                continue
+            # TODO deal with submodules
+            if (gitfile.mode == S_IFGITLINK or gitfile.path == '.hgsubstate' or
+                gitfile.path == '.hgsub'):
+                continue
+            prog.value = i
+            i += 1
+            gitfiles.add(gitfile.path)
 
-        try:
-            fctx = hgctx[gitfile.path]
-        except error.LookupError:
-            # we'll deal with this at the end
-            continue
+            try:
+                fctx = hgctx[gitfile.path]
+            except error.LookupError:
+                # we'll deal with this at the end
+                continue
 
-        hgflags = fctx.flags()
-        gitflags = handler.convert_git_int_mode(gitfile.mode)
-        if hgflags != gitflags:
-            ui.write(_("file has different flags: %s (hg '%s', git '%s')\n") %
-                     (gitfile.path, hgflags, gitflags))
-            failed = True
-        if fctx.data() != handler.git[gitfile.sha].data:
-            ui.write(_('difference in: %s\n') % gitfile.path)
-            failed = True
-
-    ui.progress(_('verify'), None, total=len(hgfiles))
+            hgflags = fctx.flags()
+            gitflags = handler.convert_git_int_mode(gitfile.mode)
+            if hgflags != gitflags:
+                ui.write(_("file has different flags: %s (hg '%s', git '%s')\n")
+                         % (gitfile.path, hgflags, gitflags))
+                failed = True
+            if fctx.data() != handler.git[gitfile.sha].data:
+                ui.write(_('difference in: %s\n') % gitfile.path)
+                failed = True
 
     if hgfiles != gitfiles:
         failed = True

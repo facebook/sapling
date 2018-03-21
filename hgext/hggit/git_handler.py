@@ -21,6 +21,7 @@ from mercurial import (
     encoding,
     error,
     phases,
+    progress,
     pycompat,
     util as hgutil,
     vfs as vfsmod,
@@ -57,8 +58,9 @@ CALLBACK_BUFFER = ''
 
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
-    def __init__(self, ui):
+    def __init__(self, ui, prog):
         self.ui = ui
+        self.prog = prog
 
         self.lasttopic = None
         self.msgbuf = ''
@@ -73,27 +75,19 @@ class GitProgress(object):
             td = msg.split(':', 1)
             data = td.pop()
             if not td:
-                self.flush(data)
+                self.ui.note(data + '\n')
                 continue
             topic = td[0]
 
             m = RE_GIT_PROGRESS.search(data)
             if m:
-                if self.lasttopic and self.lasttopic != topic:
-                    self.flush()
-                self.lasttopic = topic
-
                 pos, total = map(int, m.group(1, 2))
-                self.ui.progress(topic, pos, total=total)
+                if topic != self.lasttopic:
+                    self.prog.reset(topic, total=total)
+                    self.lasttopic = topic
+                self.prog.value = pos
             else:
-                self.flush(msg)
-
-    def flush(self, msg=None):
-        if self.lasttopic:
-            self.ui.progress(self.lasttopic, None)
-        self.lasttopic = None
-        if msg:
-            self.ui.note(msg + '\n')
+                self.ui.note(msg + '\n')
 
 class GitHandler(object):
     map_file = 'git-mapfile'
@@ -478,17 +472,16 @@ class GitHandler(object):
                   self._map_hg)
 
         todo_total = len(repo) - len(self._map_hg)
-        topic = 'find commits to export'
         pos = 0
-        unit = 'commits'
-
         export = []
-        for ctx in to_export:
-            item = hex(ctx.node())
-            pos += 1
-            repo.ui.progress(topic, pos, item, unit, todo_total)
-            if ctx.extra().get('hg-git', None) != 'octopus':
-                export.append(ctx)
+        with progress.bar(repo.ui, 'find commits to export', 'commits',
+                          todo_total) as prog:
+            for ctx in to_export:
+                item = hex(ctx.node())
+                pos += 1
+                prog.value = (pos, item)
+                if ctx.extra().get('hg-git', None) != 'octopus':
+                    export.append(ctx)
 
         total = len(export)
         if not total:
@@ -519,13 +512,13 @@ class GitHandler(object):
 
         mapsavefreq = compat.config(self.ui, 'int', 'hggit',
                                           'mapsavefrequency')
-        for i, ctx in enumerate(export):
-            self.ui.progress(_('exporting'), i, total=total)
-            self.export_hg_commit(ctx.node(), exporter)
-            if mapsavefreq and i % mapsavefreq == 0:
-                self.ui.debug("saving mapfile\n")
-                self.save_map(self.map_file)
-        self.ui.progress(_('exporting'), None, total=total)
+        with progress.bar(self.ui, _('exporting'), total=total) as prog:
+            for i, ctx in enumerate(export):
+                prog.value = i
+                self.export_hg_commit(ctx.node(), exporter)
+                if mapsavefreq and i % mapsavefreq == 0:
+                    self.ui.debug("saving mapfile\n")
+                    self.save_map(self.map_file)
 
     def set_commiter_from_author(self, commit):
         commit.committer = commit.author
@@ -808,14 +801,15 @@ class GitHandler(object):
 
         mapsavefreq = compat.config(self.ui, 'int', 'hggit',
                                           'mapsavefrequency')
-        for i, csha in enumerate(commits):
-            self.ui.progress(_('importing'), i, total=total, unit='commits')
-            commit = commit_cache[csha]
-            self.import_git_commit(commit)
-            if mapsavefreq and i % mapsavefreq == 0:
-                self.ui.debug("saving mapfile\n")
-                self.save_map(self.map_file)
-        self.ui.progress(_('importing'), None, total=total, unit='commits')
+        with progress.bar(self.ui, _('importing'), 'commits',
+                          total=total) as prog:
+            for i, csha in enumerate(commits):
+                prog.value = i
+                commit = commit_cache[csha]
+                self.import_git_commit(commit)
+                if mapsavefreq and i % mapsavefreq == 0:
+                    self.ui.debug("saving mapfile\n")
+                    self.save_map(self.map_file)
 
         # TODO if the tags cache is used, remove any dangling tag references
         return total
@@ -1230,18 +1224,18 @@ class GitHandler(object):
             return [x for x in filteredrefs.itervalues() if x not in self.git]
 
         try:
-            progress = GitProgress(self.ui)
-            f = StringIO.StringIO()
+            with progress.bar(self.ui, "") as prog:
+                gitprogress = GitProgress(self.ui, prog)
+                f = StringIO.StringIO()
 
-            # monkey patch dulwich's read_pkt_refs so that we can determine on
-            # clone which bookmark to activate
-            client.read_pkt_refs = compat.read_pkt_refs
-            ret = localclient.fetch_pack(path, determine_wants, graphwalker,
-                                         f.write, progress.progress)
-            if f.pos != 0:
-                f.seek(0)
-                self.git.object_store.add_thin_pack(f.read, None)
-            progress.flush()
+                # monkey patch dulwich's read_pkt_refs so that we can determine
+                # on clone which bookmark to activate
+                client.read_pkt_refs = compat.read_pkt_refs
+                ret = localclient.fetch_pack(path, determine_wants, graphwalker,
+                                             f.write, gitprogress.progress)
+                if f.pos != 0:
+                    f.seek(0)
+                    self.git.object_store.add_thin_pack(f.read, None)
 
             # For empty repos dulwich gives us None, but since later
             # we want to iterate over this, we really want an empty
