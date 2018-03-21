@@ -89,6 +89,7 @@ from mercurial import (
     mail,
     node as nodemod,
     patch,
+    progress,
     pycompat,
     registrar,
     repair,
@@ -748,55 +749,52 @@ def email(ui, repo, *revs, **opts):
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
     sendmail = None
     firstpatch = None
-    for i, (m, subj, ds) in enumerate(msgs):
-        try:
-            m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
-            if not firstpatch:
-                firstpatch = m['Message-Id']
-            m['X-Mercurial-Series-Id'] = firstpatch
-        except TypeError:
-            m['Message-Id'] = genmsgid('patchbomb')
-        if parent:
-            m['In-Reply-To'] = parent
-            m['References'] = parent
-        if not parent or 'X-Mercurial-Node' not in m:
-            parent = m['Message-Id']
-
-        m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
-        m['Date'] = emailmod.Utils.formatdate(start_time[0], localtime=True)
-
-        start_time = (start_time[0] + 1, start_time[1])
-        m['From'] = sender
-        m['To'] = ', '.join(to)
-        if cc:
-            m['Cc']  = ', '.join(cc)
-        if bcc:
-            m['Bcc'] = ', '.join(bcc)
-        if replyto:
-            m['Reply-To'] = ', '.join(replyto)
-        if opts.get('test'):
-            ui.status(_('displaying '), subj, ' ...\n')
-            ui.pager('email')
-            generator = emailmod.Generator.Generator(ui, mangle_from_=False)
+    with progress.bar(ui, _('sending'), _('email'), len(msgs)) as prog:
+        for i, (m, subj, ds) in enumerate(msgs):
             try:
-                generator.flatten(m, 0)
-                ui.write('\n')
-            except IOError as inst:
-                if inst.errno != errno.EPIPE:
-                    raise
-        else:
-            if not sendmail:
-                sendmail = mail.connect(ui, mbox=mbox)
-            ui.status(_('sending '), subj, ' ...\n')
-            ui.progress(_('sending'), i, item=subj, total=len(msgs),
-                        unit=_('emails'))
-            if not mbox:
-                # Exim does not remove the Bcc field
-                del m['Bcc']
-            fp = stringio()
-            generator = emailmod.Generator.Generator(fp, mangle_from_=False)
-            generator.flatten(m, 0)
-            sendmail(sender_addr, to + bcc + cc, fp.getvalue())
+                m['Message-Id'] = genmsgid(m['X-Mercurial-Node'])
+                if not firstpatch:
+                    firstpatch = m['Message-Id']
+                m['X-Mercurial-Series-Id'] = firstpatch
+            except TypeError:
+                m['Message-Id'] = genmsgid('patchbomb')
+            if parent:
+                m['In-Reply-To'] = parent
+                m['References'] = parent
+            if not parent or 'X-Mercurial-Node' not in m:
+                parent = m['Message-Id']
 
-    ui.progress(_('writing'), None)
-    ui.progress(_('sending'), None)
+            m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
+            m['Date'] = emailmod.Utils.formatdate(start_time[0], localtime=True)
+
+            start_time = (start_time[0] + 1, start_time[1])
+            m['From'] = sender
+            m['To'] = ', '.join(to)
+            if cc:
+                m['Cc']  = ', '.join(cc)
+            if bcc:
+                m['Bcc'] = ', '.join(bcc)
+            if replyto:
+                m['Reply-To'] = ', '.join(replyto)
+            if opts.get('test'):
+                ui.status(_('displaying '), subj, ' ...\n')
+                ui.pager('email')
+                generator = emailmod.Generator.Generator(ui, mangle_from_=False)
+                try:
+                    generator.flatten(m, 0)
+                    ui.write('\n')
+                except IOError as inst:
+                    if inst.errno != errno.EPIPE:
+                        raise
+            else:
+                if not sendmail:
+                    sendmail = mail.connect(ui, mbox=mbox)
+                ui.status(_('sending '), subj, ' ...\n')
+                prog.value = (i, subj)
+                if not mbox:
+                    # Exim does not remove the Bcc field
+                    del m['Bcc']
+                fp = stringio()
+                generator = emailmod.Generator.Generator(fp, mangle_from_=False)
+                generator.flatten(m, 0)
+                sendmail(sender_addr, to + bcc + cc, fp.getvalue())
