@@ -37,7 +37,7 @@ where
             let error: Error = err.context("failed while listing the manifest").into();
             error
         })
-        .map(|entry| recursive_entry_stream(MPath::empty(), entry))
+        .map(|entry| recursive_entry_stream(None, entry))
         .flatten()
         .filter(|pathentry| pathentry.1.get_type() != Type::Tree)
         .collect()
@@ -49,7 +49,7 @@ where
                 let name = name.ok_or_else(|| {
                     ErrorKind::ManifestInvalidPath("name shouldn't be empty".into())
                 })?;
-                path_tree.insert(path, name, TEntryId(entry_idx))?;
+                path_tree.insert(MPath::into_iter_opt(path), name, TEntryId(entry_idx))?;
                 entries.push(entry);
             }
             Ok(ManifestVfsDir {

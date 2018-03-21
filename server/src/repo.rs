@@ -713,13 +713,13 @@ fn get_changed_entry_stream(
     repo: Arc<BlobRepo>,
     mfid: &NodeHash,
     basemfid: &NodeHash,
-) -> BoxStream<(Box<Entry + Sync>, NodeHash, MPath), Error> {
+) -> BoxStream<(Box<Entry + Sync>, NodeHash, Option<MPath>), Error> {
     let manifest = repo.get_manifest_by_nodeid(mfid);
     let basemanifest = repo.get_manifest_by_nodeid(basemfid);
 
     let changed_entries = manifest
         .join(basemanifest)
-        .map(|(mf, basemf)| changed_entry_stream(&mf, &basemf, MPath::empty()))
+        .map(|(mf, basemf)| changed_entry_stream(&mf, &basemf, None))
         .flatten_stream();
 
     let changed_entries = changed_entries
@@ -751,7 +751,7 @@ fn get_changed_entry_stream(
         .into_future()
         .and_then({
             let hgrepo = repo.clone();
-            move |entry| fetch_linknode(hgrepo.clone(), entry, MPath::empty())
+            move |entry| fetch_linknode(hgrepo.clone(), entry, None)
         })
         .map(|(entry, linknode, basepath)| stream::once(Ok((entry, linknode, basepath))))
         .flatten_stream();
@@ -762,11 +762,11 @@ fn get_changed_entry_stream(
 fn fetch_linknode(
     repo: Arc<BlobRepo>,
     entry: Box<Entry + Sync>,
-    basepath: MPath,
-) -> BoxFuture<(Box<Entry + Sync>, NodeHash, MPath), Error> {
-    let path = match entry.get_name() {
-        Some(name) => {
-            let path = basepath.clone().join(name.clone().into_iter());
+    basepath: Option<MPath>,
+) -> BoxFuture<(Box<Entry + Sync>, NodeHash, Option<MPath>), Error> {
+    let path = MPath::join_element_opt(basepath.as_ref(), entry.get_name());
+    let repo_path = match path {
+        Some(path) => {
             if entry.get_type() == Type::Tree {
                 RepoPath::DirectoryPath(path)
             } else {
@@ -776,7 +776,7 @@ fn fetch_linknode(
         None => RepoPath::RootPath,
     };
 
-    let linknode_fut = repo.get_linknode(path, &entry.get_hash().into_nodehash());
+    let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash());
     linknode_fut
         .map(|linknode| (entry, linknode, basepath))
         .boxify()

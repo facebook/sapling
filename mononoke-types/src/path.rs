@@ -81,6 +81,14 @@ impl RepoPath {
         }
     }
 
+    pub fn into_mpath(self) -> Option<MPath> {
+        match self {
+            RepoPath::RootPath => None,
+            RepoPath::DirectoryPath(path) => Some(path),
+            RepoPath::FilePath(path) => Some(path),
+        }
+    }
+
     /// Serialize this RepoPath into a string. This shouldn't (yet) be considered stable if the
     /// definition of RepoPath changes.
     pub fn serialize(&self) -> Vec<u8> {
@@ -262,6 +270,48 @@ impl MPath {
         match element {
             Some(element) => self.join(element),
             None => self.clone(),
+        }
+    }
+
+    pub fn join_opt<'a, Elements: IntoIterator<Item = &'a MPathElement>>(
+        path: Option<&Self>,
+        another: Elements,
+    ) -> Option<Self> {
+        match path {
+            Some(path) => Some(path.join(another)),
+            None => {
+                let elements: Vec<MPathElement> = another
+                    .into_iter()
+                    .filter(|elem| !elem.0.is_empty())
+                    .cloned()
+                    .collect();
+                if elements.is_empty() {
+                    None
+                } else {
+                    Some(MPath { elements })
+                }
+            }
+        }
+    }
+
+    pub fn join_element_opt(path: Option<&Self>, element: Option<&MPathElement>) -> Option<Self> {
+        match element {
+            Some(element) => Self::join_opt(path, element),
+            None => path.cloned(),
+        }
+    }
+
+    pub fn iter_opt(path: Option<&Self>) -> Iter<MPathElement> {
+        match path {
+            Some(path) => path.into_iter(),
+            None => [].into_iter(),
+        }
+    }
+
+    pub fn into_iter_opt(path: Option<Self>) -> ::std::vec::IntoIter<MPathElement> {
+        match path {
+            Some(path) => path.into_iter(),
+            None => (vec![]).into_iter(),
         }
     }
 

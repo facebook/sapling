@@ -13,6 +13,8 @@ extern crate many_files_dirs;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
 
+use std::collections::HashSet;
+
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
@@ -23,7 +25,6 @@ use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, Ch
 use mercurial_types::nodehash::{EntryId, HgChangesetId, NodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
-use std::convert::TryFrom;
 use std::iter::repeat;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -80,7 +81,7 @@ fn test_diff_sorted_vecs_simple() {
 
     let left_entry = get_entry(Type::File, get_hash('1'), path.clone());
     let right_entry = get_entry(Type::File, get_hash('2'), path.clone());
-    let res = diff_sorted_vecs(MPath::empty(), vec![left_entry], vec![right_entry]);
+    let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
     assert_eq!(res.len(), 1);
     let (_, modified, _) = count_entries(&res);
@@ -89,7 +90,7 @@ fn test_diff_sorted_vecs_simple() {
     // With different types we should get added and deleted entries
     let left_entry = get_entry(Type::File, get_hash('1'), path.clone());
     let right_entry = get_entry(Type::Tree, get_hash('2'), path.clone());
-    let res = diff_sorted_vecs(MPath::empty(), vec![left_entry], vec![right_entry]);
+    let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
     assert_eq!(res.len(), 2);
     let (added, _, deleted) = count_entries(&res);
@@ -104,7 +105,7 @@ fn test_diff_sorted_vecs_added_deleted() {
 
     let left_entry = get_entry(Type::File, get_hash('1'), left_path);
     let right_entry = get_entry(Type::File, get_hash('2'), right_path);
-    let res = diff_sorted_vecs(MPath::empty(), vec![left_entry], vec![right_entry]);
+    let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
     assert_eq!(res.len(), 2);
     let (added, _, deleted) = count_entries(&res);
@@ -123,7 +124,7 @@ fn test_diff_sorted_vecs_one_added_one_same() {
         let right_entry = get_entry(Type::File, get_hash('2'), path_second);
 
         let res = diff_sorted_vecs(
-            MPath::empty(),
+            None,
             vec![left_entry_first, left_entry_second],
             vec![right_entry],
         );
@@ -143,7 +144,7 @@ fn test_diff_sorted_vecs_one_added_one_same() {
         let right_entry = get_entry(Type::File, get_hash('1'), path_first);
 
         let res = diff_sorted_vecs(
-            MPath::empty(),
+            None,
             vec![left_entry_first, left_entry_second],
             vec![right_entry],
         );
@@ -159,7 +160,7 @@ fn test_diff_sorted_vecs_one_empty() {
     let path = RepoPath::file("file.txt").unwrap();
 
     let entry = get_entry(Type::File, get_hash('1'), path);
-    let res = diff_sorted_vecs(MPath::empty(), vec![entry], vec![]);
+    let res = diff_sorted_vecs(None, vec![entry], vec![]);
 
     assert_eq!(res.len(), 1);
     let (added, ..) = count_entries(&res);
@@ -170,11 +171,7 @@ fn find_changed_entry_status_stream(
     manifest: Box<Manifest>,
     basemanifest: Box<Manifest>,
 ) -> Vec<ChangedEntry> {
-    let mut stream = spawn(changed_entry_stream(
-        &manifest,
-        &basemanifest,
-        MPath::empty(),
-    ));
+    let mut stream = spawn(changed_entry_stream(&manifest, &basemanifest, None));
     let mut res = vec![];
     loop {
         let new_elem = stream.wait_stream();
@@ -204,39 +201,44 @@ fn check_changed_paths(
     for changed_entry in actual {
         match changed_entry.status {
             EntryStatus::Added(entry) => {
-                paths_added.push(changed_entry.path.join_element(entry.get_name()));
+                paths_added.push(MPath::join_element_opt(
+                    changed_entry.path.as_ref(),
+                    entry.get_name(),
+                ));
             }
             EntryStatus::Deleted(entry) => {
-                paths_deleted.push(changed_entry.path.join_element(entry.get_name()));
+                paths_deleted.push(MPath::join_element_opt(
+                    changed_entry.path.as_ref(),
+                    entry.get_name(),
+                ));
             }
             EntryStatus::Modified(left_entry, right_entry) => {
                 assert_eq!(left_entry.get_type(), right_entry.get_type());
-                paths_modified.push(changed_entry.path.join_element(left_entry.get_name()));
+                paths_modified.push(MPath::join_element_opt(
+                    changed_entry.path.as_ref(),
+                    left_entry.get_name(),
+                ));
             }
         }
     }
 
-    fn compare(change_name: &str, mut actual: Vec<MPath>, expected: Vec<&str>) {
-        actual.sort_by(|a, b| a.to_vec().cmp(&b.to_vec()));
-        let mut expected: Vec<_> = expected
-            .into_iter()
-            .map(|s| MPath::try_from(s).unwrap())
-            .collect();
-        expected.sort_by(|a, b| a.to_vec().cmp(&b.to_vec()));
-
-        let actual_strs: Vec<_> = actual
+    fn compare(change_name: &str, actual: Vec<Option<MPath>>, expected: Vec<&str>) {
+        let actual_set: HashSet<_> = actual
             .iter()
-            .map(|path| String::from_utf8(path.to_vec()).unwrap())
+            .map(|path| match *path {
+                Some(ref path) => path.to_vec(),
+                None => vec![],
+            })
             .collect();
-        let expected_strs: Vec<_> = expected
+        let expected_set: HashSet<_> = expected
             .iter()
-            .map(|path| String::from_utf8(path.to_vec()).unwrap())
+            .map(|s| (*s).to_owned().into_bytes())
             .collect();
 
         assert_eq!(
-            actual, expected,
+            actual_set, expected_set,
             "{} check failed! expected: {:?}, got: {:?}",
-            change_name, expected_strs, actual_strs
+            change_name, expected, actual,
         );
     }
 

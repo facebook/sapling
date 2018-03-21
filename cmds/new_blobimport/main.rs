@@ -13,7 +13,6 @@ extern crate changesets;
 extern crate clap;
 extern crate failure_ext;
 extern crate futures;
-#[macro_use]
 extern crate futures_ext;
 extern crate mercurial;
 extern crate mercurial_types;
@@ -30,7 +29,7 @@ use bytes::Bytes;
 use clap::{App, Arg};
 use failure_ext::{err_msg, Error, Fail, ResultExt};
 use futures::{Future, IntoFuture};
-use futures::future::SharedItem;
+use futures::future::{self, SharedItem};
 use futures::stream::Stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use slog::Drain;
@@ -47,7 +46,7 @@ use mercurial_types::manifest_utils::new_entry_intersection_stream;
 struct ParseChangeset {
     blobcs: BoxFuture<SharedItem<BlobChangeset>, Error>,
     rootmf: BoxFuture<(Blob, Option<NodeHash>, Option<NodeHash>), Error>,
-    entries: BoxStream<(MPath, Box<Entry + Sync>), Error>,
+    entries: BoxStream<(Option<MPath>, Box<Entry + Sync>), Error>,
 }
 
 // Extracts all the data from revlog repo that commit API may need.
@@ -131,7 +130,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 fn upload_entry(
     blobrepo: &BlobRepo,
     entry: Box<Entry>,
-    path: MPath,
+    path: Option<MPath>,
 ) -> BoxFuture<(BlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
@@ -139,10 +138,19 @@ fn upload_entry(
 
     let ty = entry.get_type();
 
-    let path = path.join_element(entry.get_name());
+    let path = MPath::join_element_opt(path.as_ref(), entry.get_name());
+    let path = match path {
+        // XXX this shouldn't be possible -- encode this in the type system
+        None => {
+            return future::err(err_msg(
+                "internal error: joined root path with root manifest",
+            )).boxify()
+        }
+        Some(path) => path,
+    };
     let path = match ty {
-        Type::Tree => try_boxfuture!(RepoPath::dir(path)),
-        Type::File | Type::Symlink | Type::Executable => try_boxfuture!(RepoPath::file(path)),
+        Type::Tree => RepoPath::DirectoryPath(path),
+        Type::File | Type::Symlink | Type::Executable => RepoPath::FilePath(path),
     };
 
     let content = entry.get_raw_content().and_then(move |content| {

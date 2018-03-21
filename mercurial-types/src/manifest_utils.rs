@@ -26,26 +26,30 @@ pub enum EntryStatus {
 }
 
 pub struct ChangedEntry {
-    pub path: MPath,
+    pub path: Option<MPath>,
     pub status: EntryStatus,
 }
 
 impl ChangedEntry {
-    pub fn new_added(path: MPath, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_added(path: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Added(entry),
         }
     }
 
-    pub fn new_deleted(path: MPath, entry: Box<Entry + Sync>) -> Self {
+    pub fn new_deleted(path: Option<MPath>, entry: Box<Entry + Sync>) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Deleted(entry),
         }
     }
 
-    pub fn new_modified(path: MPath, left: Box<Entry + Sync>, right: Box<Entry + Sync>) -> Self {
+    pub fn new_modified(
+        path: Option<MPath>,
+        left: Box<Entry + Sync>,
+        right: Box<Entry + Sync>,
+    ) -> Self {
         ChangedEntry {
             path,
             status: EntryStatus::Modified(left, right),
@@ -54,7 +58,7 @@ impl ChangedEntry {
 }
 
 struct NewEntry {
-    path: MPath,
+    path: Option<MPath>,
     entry: Box<Entry + Sync>,
 }
 
@@ -69,7 +73,7 @@ impl NewEntry {
         }
     }
 
-    fn into_tuple(self) -> (MPath, Box<Entry + Sync>) {
+    fn into_tuple(self) -> (Option<MPath>, Box<Entry + Sync>) {
         (self.path, self.entry)
     }
 }
@@ -105,7 +109,7 @@ pub fn new_entry_intersection_stream<M, P1M, P2M>(
     root: &M,
     p1: Option<&P1M>,
     p2: Option<&P2M>,
-) -> BoxStream<(MPath, Box<Entry + Sync>), Error>
+) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error>
 where
     M: Manifest,
     P1M: Manifest,
@@ -113,21 +117,21 @@ where
 {
     if p1.is_none() || p2.is_none() {
         let ces = if let Some(p1) = p1 {
-            changed_entry_stream(root, p1, MPath::empty())
+            changed_entry_stream(root, p1, None)
         } else if let Some(p2) = p2 {
-            changed_entry_stream(root, p2, MPath::empty())
+            changed_entry_stream(root, p2, None)
         } else {
-            changed_entry_stream(root, &EmptyManifest {}, MPath::empty())
+            changed_entry_stream(root, &EmptyManifest {}, None)
         };
 
         ces.filter_map(NewEntry::from_changed_entry)
             .map(NewEntry::into_tuple)
             .boxify()
     } else {
-        let p1 = changed_entry_stream(root, p1.unwrap(), MPath::empty())
-            .filter_map(NewEntry::from_changed_entry);
-        let p2 = changed_entry_stream(root, p2.unwrap(), MPath::empty())
-            .filter_map(NewEntry::from_changed_entry);
+        let p1 =
+            changed_entry_stream(root, p1.unwrap(), None).filter_map(NewEntry::from_changed_entry);
+        let p2 =
+            changed_entry_stream(root, p2.unwrap(), None).filter_map(NewEntry::from_changed_entry);
 
         p2.collect()
             .map(move |p2| {
@@ -150,7 +154,7 @@ where
 pub fn changed_entry_stream<TM, FM>(
     to: &TM,
     from: &FM,
-    path: MPath,
+    path: Option<MPath>,
 ) -> BoxStream<ChangedEntry, Error>
 where
     TM: Manifest,
@@ -187,7 +191,7 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
                         let right_manifest = get_tree_content(right_content);
 
                         diff_manifests(
-                            path.join_element(entry_path.as_ref()),
+                            MPath::join_element_opt(path.as_ref(), entry_path.as_ref()),
                             &left_manifest,
                             &right_manifest,
                         ).map(recursive_changed_entry_stream)
@@ -214,14 +218,14 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
 /// their path from the root of the repo.
 /// For a non-tree entry returns a stream with a single (entry, path) pair.
 pub fn recursive_entry_stream(
-    rootpath: MPath,
+    rootpath: Option<MPath>,
     entry: Box<Entry + Sync>,
-) -> BoxStream<(MPath, Box<Entry + Sync>), Error> {
+) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error> {
     let subentries = match entry.get_type() {
         Type::File | Type::Symlink | Type::Executable => empty().boxify(),
         Type::Tree => {
             let entry_basename = entry.get_name();
-            let path = rootpath.join(entry_basename);
+            let path = MPath::join_opt(rootpath.as_ref(), entry_basename);
 
             entry
                 .get_content()
@@ -241,7 +245,11 @@ pub fn recursive_entry_stream(
 
 /// Difference between manifests, non-recursive.
 /// It fetches manifest content, sorts it and compares.
-fn diff_manifests<LM, RM>(path: MPath, left: &LM, right: &RM) -> BoxStream<ChangedEntry, Error>
+fn diff_manifests<LM, RM>(
+    path: Option<MPath>,
+    left: &LM,
+    right: &RM,
+) -> BoxStream<ChangedEntry, Error>
 where
     LM: Manifest,
     RM: Manifest,
@@ -262,7 +270,7 @@ where
 // This causing compilation failure.
 // We need to find a workaround for an issue.
 pub fn diff_sorted_vecs(
-    path: MPath,
+    path: Option<MPath>,
     left: Vec<Box<Entry + Sync>>,
     right: Vec<Box<Entry + Sync>>,
 ) -> Vec<ChangedEntry> {

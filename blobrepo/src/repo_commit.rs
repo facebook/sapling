@@ -251,7 +251,7 @@ fn compute_changed_files_pair(
     to: &Box<Manifest + Sync>,
     from: &Box<Manifest + Sync>,
 ) -> BoxFuture<HashSet<MPath>, Error> {
-    changed_entry_stream(to, from, MPath::empty())
+    changed_entry_stream(to, from, None)
         .filter_map(|change| match change.status {
             EntryStatus::Deleted(entry)
             | EntryStatus::Added(entry)
@@ -259,7 +259,7 @@ fn compute_changed_files_pair(
                 if entry.get_type() == manifest::Type::Tree {
                     None
                 } else {
-                    Some(change.path.join_element(entry.get_name()))
+                    MPath::join_element_opt(change.path.as_ref(), entry.get_name())
                 }
             }
         })

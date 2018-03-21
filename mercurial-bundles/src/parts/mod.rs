@@ -63,7 +63,11 @@ where
         let base = NULL_HASH;
         // Linknode is the same as node
         let linknode = node;
-        let text = blobnode.as_blob().as_inner().unwrap_or(&Bytes::new()).clone();
+        let text = blobnode
+            .as_blob()
+            .as_inner()
+            .unwrap_or(&Bytes::new())
+            .clone();
         let delta = Delta::new_fulltext(text.to_vec());
 
         let deltachunk = CgDeltaChunk {
@@ -92,7 +96,7 @@ where
 
 pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
 where
-    S: Stream<Item = (Box<Entry + Sync>, NodeHash, MPath), Error = Error> + Send + 'static,
+    S: Stream<Item = (Box<Entry + Sync>, NodeHash, Option<MPath>), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xTreegroup2)?;
     builder.add_mparam("version", "1")?;
@@ -111,14 +115,12 @@ where
                 .get_parents()
                 .map(move |parents| (entry, parents, content, linknode, basepath))
         })
-        .and_then(|(entry, parents, content, linknode, basepath)| {
-            let path = basepath.join_element(entry.get_name());
-            let path = if path.is_empty() {
-                Ok(RepoPath::RootPath)
-            } else {
-                RepoPath::dir(path)
+        .map(|(entry, parents, content, linknode, basepath)| {
+            let path = match MPath::join_element_opt(basepath.as_ref(), entry.get_name()) {
+                Some(path) => RepoPath::DirectoryPath(path),
+                None => RepoPath::RootPath,
             };
-            path.map(|path| (entry, parents, content, linknode, path))
+            (entry, parents, content, linknode, path)
         })
         .map(|(entry, parents, content, linknode, path)| {
             let history_meta = wirepack::Part::HistoryMeta {
