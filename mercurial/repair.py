@@ -24,6 +24,7 @@ from . import (
     exchange,
     obsolete,
     obsutil,
+    progress,
     util,
 )
 
@@ -356,26 +357,24 @@ def rebuildfncache(ui, repo):
         seenfiles = set()
 
         repolen = len(repo)
-        for rev in repo:
-            ui.progress(_('rebuilding'), rev, total=repolen,
-                        unit=_('changesets'))
+        with progress.bar(ui, _('rebuilding'), _('changesets'),
+                          repolen) as prog:
+            for rev in repo:
+                prog.value = rev
+                ctx = repo[rev]
+                for f in ctx.files():
+                    # This is to minimize I/O.
+                    if f in seenfiles:
+                        continue
+                    seenfiles.add(f)
 
-            ctx = repo[rev]
-            for f in ctx.files():
-                # This is to minimize I/O.
-                if f in seenfiles:
-                    continue
-                seenfiles.add(f)
+                    i = 'data/%s.i' % f
+                    d = 'data/%s.d' % f
 
-                i = 'data/%s.i' % f
-                d = 'data/%s.d' % f
-
-                if repo.store._exists(i):
-                    newentries.add(i)
-                if repo.store._exists(d):
-                    newentries.add(d)
-
-        ui.progress(_('rebuilding'), None)
+                    if repo.store._exists(i):
+                        newentries.add(i)
+                    if repo.store._exists(d):
+                        newentries.add(d)
 
         if 'treemanifest' in repo.requirements: # safe but unnecessary otherwise
             for dir in util.dirs(seenfiles):
