@@ -200,8 +200,8 @@ def _getfilesbatch(
         for m, r in itertools.izip(missed, b.results()):
             file_ = idmap[m]
             node = m[-40:]
+            progresstick(file_)
             receivemissing(io.BytesIO('%d\n%s' % (len(r), r)), file_, node)
-            progresstick()
         return
     while missed:
         chunk, missed = missed[:batchsize], missed[batchsize:]
@@ -214,8 +214,8 @@ def _getfilesbatch(
         for m, v in zip(chunk, b.results()):
             file_ = idmap[m]
             node = m[-40:]
+            progresstick(file_)
             receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), file_, node)
-            progresstick()
 
 def _getfiles_optimistic(
     remote, receivemissing, progresstick, missed, idmap, step):
@@ -240,8 +240,8 @@ def _getfiles_optimistic(
         for missingid in missed[start:end]:
             versionid = missingid[-40:]
             file = idmap[missingid]
+            progresstick(file)
             receivemissing(pipei, file, versionid)
-            progresstick()
 
     # End the command
     pipeo.write('\n')
@@ -267,8 +267,8 @@ def _getfiles_threaded(
     for missingid in missed:
         versionid = missingid[-40:]
         file = idmap[missingid]
+        progresstick(file)
         receivemissing(pipei, file, versionid)
-        progresstick()
 
     writerthread.join()
     # End the command
@@ -370,9 +370,9 @@ class fileserverclient(object):
             try:
                 # receive cache misses from master
                 if missed:
-                    def progresstick():
+                    def progresstick(name=""):
                         count[0] += 1
-                        prog.value = count[0]
+                        prog.value = (count[0], name)
                     # When verbose is true, sshpeer prints 'running ssh...'
                     # to stdout, which can interfere with some command
                     # outputs
