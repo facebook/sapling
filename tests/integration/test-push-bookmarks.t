@@ -36,14 +36,23 @@ Push with bookmark
   running * (glob)
   sending hello command
   sending between command
-  remote: 204
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
+  remote: * (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
   pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
   query 1; heads
   sending batch command
   searching for changes
   all remote heads known locally
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
   1 changesets found
   list of changesets:
   11f53bbd855ac06521a8895bd57e6ce5f46a9980
@@ -58,4 +67,10 @@ Push with bookmark
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
   server ignored bookmark withbook update
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
   sending branchmap command

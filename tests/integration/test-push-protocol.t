@@ -209,13 +209,19 @@ push to Mononoke
   sending hello command
   sending between command
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
   query 1; heads
   sending batch command
   searching for changes
   all remote heads known locally
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
   checking for updated bookmarks
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
   6 changesets found
   list of changesets:
   bb0985934a0f8a493887892173b68940ceb40b4f
@@ -232,6 +238,9 @@ push to Mononoke
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
 
 Now pull what was just pushed TODO(T25252425) make this work
 

@@ -120,11 +120,22 @@ fn encode_cmd(response: &SingleResponse) -> Bytes {
 
         &Lookup(ref res) => res.clone(),
 
+        &Listkeys(ref res) => {
+            let mut bytes = BytesMut::new();
+            for (name, key) in res.iter() {
+                bytes.extend_from_slice(&name);
+                bytes.extend_from_slice("\t".as_bytes());
+                bytes.extend_from_slice(key);
+                bytes.extend_from_slice(&"\n".as_bytes());
+            }
+            bytes.freeze()
+        }
+
         &Branchmap(ref _res) => {
             // We have no plans to support mercurial branches and hence no plans for branchmap,
             // so just return fake response.
             Bytes::new()
-        },
+        }
 
         r => panic!("Response for {:?} unimplemented", r),
     }

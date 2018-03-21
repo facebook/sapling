@@ -44,13 +44,19 @@ Do infinitepush (aka commit cloud) push
   sending hello command
   sending between command
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
   query 1; heads
   sending batch command
   searching for changes
   all remote heads known locally
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
   checking for updated bookmarks
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
   1 changesets found
   list of changesets:
   47da8b81097c5534f3eb7947a8764dd323cffe3d
@@ -62,6 +68,9 @@ Do infinitepush (aka commit cloud) push
   bundle2-input-bundle: 1 params no-transaction
   bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
   bundle2-input-bundle: 0 parts total
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 0 bytes
 
   $ cd ../repo-pull
   $ hgmn pull
@@ -87,7 +96,7 @@ Pushbackup also works
   sending hello command
   sending between command
   remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog bundle2=* (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
   remote: 1
   query 1; heads
   sending batch command
@@ -118,9 +127,8 @@ Pushbackup also works
   $ cat aa
   aa
 
-Pushbackup that pushes only bookmarks doesn't work (T26428992)
+Pushbackup that pushes only bookmarks
   $ cd ../repo-push
   $ hg book newbook
-
   $ hgmn pushbackup ssh://user@dummy/repo > /dev/null 2>&1
   [255]

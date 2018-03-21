@@ -9,6 +9,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::{self, Debug};
 use std::io::{Cursor, Write};
+use std::iter::FromIterator;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -148,6 +149,7 @@ fn wireprotocaps() -> Vec<String> {
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
         "gettreepack".to_string(),
         "remotefilelog".to_string(),
+        "pushkey".to_string(),
     ]
 }
 
@@ -631,6 +633,31 @@ impl HgCommands for RepoClient {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
             })
             .boxify()
+    }
+
+    // @wireprotocommand('listkeys', 'namespace')
+    fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
+        if namespace == "bookmarks" {
+            self.repo
+                .hgrepo
+                .get_bookmarks()
+                .map(|(name, cs)| {
+                    let hash: Vec<u8> = cs.to_hex().into();
+                    (name, hash)
+                })
+                .collect()
+                .map(|bookmarks| {
+                    let bookiter = bookmarks.into_iter().map(|(name, value)| {
+                        let name: &[u8] = name.as_ref();
+                        (Vec::from(name), value)
+                    });
+                    HashMap::from_iter(bookiter)
+                })
+                .boxify()
+        } else {
+            info!(self.get_logger(), "unsupported listkeys namespace: {}", namespace);
+            future::ok(HashMap::new()).boxify()
+        }
     }
 
     // @wireprotocommand('unbundle')
