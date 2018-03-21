@@ -16,6 +16,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     pathutil,
+    progress,
     url as urlmod,
     util,
     vfs as vfsmod,
@@ -302,7 +303,6 @@ class _gitlfsremote(object):
         if self.ui.verbose and len(objects) > 1:
             self.ui.write(_('lfs: need to transfer %d objects (%s)\n')
                           % (len(objects), util.bytecount(total)))
-        self.ui.progress(topic, 0, total=total)
         def transfer(chunk):
             for obj in chunk:
                 objsize = obj.get('size', 0)
@@ -335,13 +335,11 @@ class _gitlfsremote(object):
         else:
             oids = transfer(objects)
 
-        processed = 0
-        for _one, oid in oids:
-            processed += sizes[oid]
-            self.ui.progress(topic, processed, total=total)
-            if self.ui.verbose:
-                self.ui.write(_('lfs: processed: %s\n') % oid)
-        self.ui.progress(topic, pos=None, total=total)
+        with progress.bar(self.ui, topic, total=total) as prog:
+            for _one, oid in oids:
+                prog.value += sizes[oid]
+                if self.ui.verbose:
+                    self.ui.write(_('lfs: processed: %s\n') % oid)
 
     def __del__(self):
         # copied from mercurial/httppeer.py
