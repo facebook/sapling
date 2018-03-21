@@ -14,6 +14,7 @@ from . import (
     branchmap,
     error,
     phases,
+    progress,
     store,
     util,
 )
@@ -291,16 +292,10 @@ def generatebundlev1(repo, compression='UN'):
         # This is where we'll add compression in the future.
         assert compression == 'UN'
 
-        seen = 0
-        repo.ui.progress(_('bundle'), 0, total=bytecount, unit=_('bytes'))
-
-        for chunk in it:
-            seen += len(chunk)
-            repo.ui.progress(_('bundle'), seen, total=bytecount,
-                             unit=_('bytes'))
-            yield chunk
-
-        repo.ui.progress(_('bundle'), None)
+        with progress.bar(repo.ui, _('bundle'), _('bytes'), bytecount) as prog:
+            for chunk in it:
+                prog.value += len(chunk)
+                yield chunk
 
     return requirements, gen()
 
@@ -316,8 +311,6 @@ def consumev1(repo, fp, filecount, bytecount):
     with repo.lock():
         repo.ui.status(_('%d files to transfer, %s of data\n') %
                        (filecount, util.bytecount(bytecount)))
-        handled_bytes = 0
-        repo.ui.progress(_('clone'), 0, total=bytecount, unit=_('bytes'))
         start = util.timer()
 
         # TODO: get rid of (potential) inconsistency
@@ -334,37 +327,36 @@ def consumev1(repo, fp, filecount, bytecount):
         # nesting occurs also in ordinary case (e.g. enabling
         # clonebundles).
 
-        with repo.transaction('clone'):
-            with repo.svfs.backgroundclosing(repo.ui, expectedcount=filecount):
-                for i in xrange(filecount):
-                    # XXX doesn't support '\n' or '\r' in filenames
-                    l = fp.readline()
-                    try:
-                        name, size = l.split('\0', 1)
-                        size = int(size)
-                    except (ValueError, TypeError):
-                        raise error.ResponseError(
-                            _('unexpected response from remote server:'), l)
-                    if repo.ui.debugflag:
-                        repo.ui.debug('adding %s (%s)\n' %
-                                      (name, util.bytecount(size)))
-                    # for backwards compat, name was partially encoded
-                    path = store.decodedir(name)
-                    with repo.svfs(path, 'w', backgroundclose=True) as ofp:
-                        for chunk in util.filechunkiter(fp, limit=size):
-                            handled_bytes += len(chunk)
-                            repo.ui.progress(_('clone'), handled_bytes,
-                                             total=bytecount, unit=_('bytes'))
-                            ofp.write(chunk)
+        with progress.bar(repo.ui, _('clone'), _('bytes'), bytecount) as prog:
+            with repo.transaction('clone'):
+                with repo.svfs.backgroundclosing(repo.ui,
+                                                 expectedcount=filecount):
+                    for i in xrange(filecount):
+                        # XXX doesn't support '\n' or '\r' in filenames
+                        l = fp.readline()
+                        try:
+                            name, size = l.split('\0', 1)
+                            size = int(size)
+                        except (ValueError, TypeError):
+                            msg = _('unexpected response from remote server:')
+                            raise error.ResponseError(msg, l)
+                        if repo.ui.debugflag:
+                            repo.ui.debug('adding %s (%s)\n' %
+                                          (name, util.bytecount(size)))
+                        # for backwards compat, name was partially encoded
+                        path = store.decodedir(name)
+                        with repo.svfs(path, 'w', backgroundclose=True) as ofp:
+                            for chunk in util.filechunkiter(fp, limit=size):
+                                prog.value += len(chunk)
+                                ofp.write(chunk)
 
-            # force @filecache properties to be reloaded from
-            # streamclone-ed file at next access
-            repo.invalidate(clearfilecache=True)
+                # force @filecache properties to be reloaded from
+                # streamclone-ed file at next access
+                repo.invalidate(clearfilecache=True)
 
         elapsed = util.timer() - start
         if elapsed <= 0:
             elapsed = 0.001
-        repo.ui.progress(_('clone'), None)
         repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(bytecount), elapsed,
                         util.bytecount(bytecount / elapsed)))
