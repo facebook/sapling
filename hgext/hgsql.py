@@ -33,6 +33,7 @@ from mercurial import (
     localrepo,
     mdiff,
     phases,
+    progress,
     registrar,
     repair,
     revlog,
@@ -1777,51 +1778,53 @@ def sqlverify(ui, repo, *args, **opts):
 
         insql = set()
         revlogcache = {}
-        ui.progress('verifying', 0, total=maxrev - minrev)
-        while True:
-            insql.update(_sqlverify(repo, firstrev, lastrev, revlogcache))
-            ui.progress('verifying', maxrev - firstrev, total=maxrev - minrev)
-            if firstrev == minrev:
-                break
-            lastrev = firstrev - 1
-            firstrev = max(minrev, firstrev - stepsize)
+        with progress.bar(ui, 'verifying', total=maxrev - minrev) as prog:
+            while True:
+                insql.update(_sqlverify(repo, firstrev, lastrev, revlogcache))
+                prog.value = maxrev - firstrev
+                if firstrev == minrev:
+                    break
+                lastrev = firstrev - 1
+                firstrev = max(minrev, firstrev - stepsize)
 
         # Check that on disk revlogs don't have extra information that isn't in
         # hgsql
         earliestmtime = time.time() - (3600 * 24 * 7)
         corrupted = False
-        for filepath, x, x in repo.store.walk():
-            if filepath[-2:] != '.i':
-                continue
+        with progress.bar(ui, 'verifying revlogs') as prog:
+            for filepath, x, x in repo.store.walk():
+                prog.value += 1
+                if filepath[-2:] != '.i':
+                    continue
 
-            # If the revlog is recent, check it
-            stat = repo.svfs.lstat(path=filepath)
-            if stat.st_mtime <= earliestmtime:
-                continue
+                # If the revlog is recent, check it
+                stat = repo.svfs.lstat(path=filepath)
+                if stat.st_mtime <= earliestmtime:
+                    continue
 
-            rl = revlogcache.get(filepath)
-            if rl is None:
-                if filepath == '00changelog.i':
-                    rl = repo.unfiltered().changelog
-                elif filepath == '00manifest.i':
-                    rl = repo.manifestlog._revlog
-                else:
-                    rl = revlog.revlog(repo.svfs, filepath)
-            for rev in xrange(len(rl) - 1, -1, -1):
-                node = rl.node(rev)
-                linkrev = rl.linkrev(rev)
-                if linkrev < minrev:
-                    break
-                if (filepath, node) not in insql:
-                    corrupted = True
-                    repo.ui.status(("corruption: '%s:%s' with linkrev %s "
-                                    "exists on local disk, but not in sql\n") %
-                                    (filepath, hex(node), linkrev))
+                rl = revlogcache.get(filepath)
+                if rl is None:
+                    if filepath == '00changelog.i':
+                        rl = repo.unfiltered().changelog
+                    elif filepath == '00manifest.i':
+                        rl = repo.manifestlog._revlog
+                    else:
+                        rl = revlog.revlog(repo.svfs, filepath)
+                for rev in xrange(len(rl) - 1, -1, -1):
+                    node = rl.node(rev)
+                    linkrev = rl.linkrev(rev)
+                    if linkrev < minrev:
+                        break
+                    if (filepath, node) not in insql:
+                        corrupted = True
+                        msg = (("corruption: '%s:%s' with linkrev %s "
+                                "exists on local disk, but not in sql\n") %
+                                (filepath, hex(node), linkrev))
+                        repo.ui.status(msg)
 
         if corrupted:
             raise error.Abort("Verification failed")
 
-        ui.progress('verifying', None)
         ui.status("Verification passed\n")
 
     executewithsql(repo, _helper, False)
