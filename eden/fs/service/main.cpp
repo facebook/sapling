@@ -36,10 +36,12 @@ DEFINE_string(logging, "", "Logging configuration");
 
 using namespace facebook::eden;
 
-// Set the default log level for everything under the eden/ directory to DBG2
 namespace folly {
 const char* getBaseLoggingConfig() {
-  return "eden=DBG2";
+  // Set the default log level for all eden logs to DBG2
+  // Also change the "default" log handler (which logs to stderr) to log
+  // messages asynchronously rather than blocking in the logging thread.
+  return "eden=DBG2; default:async=true";
 }
 } // namespace folly
 
