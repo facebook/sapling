@@ -42,6 +42,8 @@ pub enum PartHeaderType {
     /// Pushkey part is used to update different namespaces: phases, bookmarks, etc.
     /// In Mononoke it's used to update bookmarks.
     Pushkey,
+    /// Respond to a corresponding pushkey part
+    ReplyPushkey,
     // RemoteChangegroup,       // We don't wish to support this functionality
     // CheckBookmarks,          // TODO Do we want to support this?
     // CheckHeads,              // TODO Do we want to support this?
@@ -75,6 +77,7 @@ impl PartHeaderType {
             "b2x:infinitepushscratchbookmarks" => Ok(B2xInfinitepushBookmarks),
             "check:heads" => Ok(CheckHeads),
             "pushkey" => Ok(Pushkey),
+            "reply:pushkey" => Ok(ReplyPushkey),
             bad => bail_msg!("unknown header type {}", bad),
         }
     }
@@ -91,6 +94,7 @@ impl PartHeaderType {
             B2xInfinitepushBookmarks => "b2x:infinitepushscratchbookmarks",
             CheckHeads => "check:heads",
             Pushkey => "pushkey",
+            ReplyPushkey => "reply:pushkey",
         }
     }
 }

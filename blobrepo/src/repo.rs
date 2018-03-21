@@ -23,7 +23,7 @@ use slog::{Discard, Drain, Logger};
 use uuid::Uuid;
 
 use blobstore::Blobstore;
-use bookmarks::Bookmarks;
+use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use fileblob::Fileblob;
@@ -279,6 +279,10 @@ impl BlobRepo {
     pub fn get_bookmarks(&self) -> BoxStream<(AsciiString, HgChangesetId), Error> {
         let empty_prefix = AsciiString::new();
         self.bookmarks.list_by_prefix(&empty_prefix, &self.repoid)
+    }
+
+    pub fn update_bookmark_transaction(&self) -> Box<bookmarks::Transaction> {
+        self.bookmarks.create_transaction(&self.repoid)
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {

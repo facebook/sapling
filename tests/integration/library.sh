@@ -127,6 +127,13 @@ shallowtrees=True
 EOF
 }
 
+function enableextension() {
+  cat >> .hg/hgrc <<EOF
+[extensions]
+$1=
+EOF
+}
+
 function setup_hg_server() {
   cat >> .hg/hgrc <<EOF
 [extensions]

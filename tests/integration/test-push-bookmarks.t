@@ -30,47 +30,37 @@ start mononoke
 
 Push with bookmark
   $ cd repo-push
+  $ enableextension remotenames
   $ echo withbook > withbook && hg addremove && hg ci -m withbook
   adding withbook
-  $ hgmn push --config extensions.remotenames= --to withbook --create --debug
-  running * (glob)
-  sending hello command
-  sending between command
-  remote: * (glob)
-  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
-  remote: 1
+  $ hgmn push --to withbook --create
   pushing rev 11f53bbd855a to destination ssh://user@dummy/repo bookmark withbook
-  query 1; heads
-  sending batch command
   searching for changes
-  all remote heads known locally
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 0 bytes
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 0 bytes
-  1 changesets found
-  list of changesets:
-  11f53bbd855ac06521a8895bd57e6ce5f46a9980
-  sending unbundle command
-  bundle2-output-bundle: "HG20", 5 parts total
-  bundle2-output-part: "replycaps" 196 bytes payload
-  bundle2-output-part: "check:heads" streamed payload
-  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
-  bundle2-output-part: "pushkey" (params: 4 mandatory) empty payload
-  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
-  bundle2-input-bundle: 1 params no-transaction
-  bundle2-input-part: "reply:changegroup" (params: 2 mandatory) supported
-  bundle2-input-bundle: 0 parts total
-  server ignored bookmark withbook update
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 0 bytes
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 0 bytes
-  sending branchmap command
+  exporting bookmark withbook
+
+Pull the bookmark
+  $ cd ../repo-pull
+  $ enableextension remotenames
+
+  $ hgmn pull -q
+  $ hg book --remote
+     default/withbook          1:11f53bbd855a
+
+Update the bookmark
+  $ cd ../repo-push
+  $ echo update > update && hg addremove && hg ci -m update
+  adding update
+  $ hgmn push --to withbook
+  pushing rev 66b9c137712a to destination ssh://user@dummy/repo bookmark withbook
+  searching for changes
+  remote has heads that are not known locally
+  updating bookmark withbook
+  $ cd ../repo-pull
+  $ hgmn pull -q
+  $ hg book --remote
+     default/withbook          2:66b9c137712a
+
+TODO(stash): Deleting the bookmark doesn't work yet
+  $ cd ../repo-push
+  $ hgmn push --delete withbook > /dev/null 2>&1
+  [255]

@@ -59,7 +59,7 @@ pub fn resolve(
                     .map(move |(bookmark_push, bundle2)| (cg_push, bookmark_push, bundle2))
             }
         })
-        .and_then(move |(cg_push, _bookmark_push, bundle2)| {
+        .and_then(move |(cg_push, bookmark_push, bundle2)| {
             let changegroup_id = cg_push.part_id;
             let changesets = cg_push.changesets;
             let filelogs = cg_push.filelogs;
@@ -87,10 +87,19 @@ pub fn resolve(
                 .flatten_stream()
                 .boxify();
 
-            // TODO(stash): actually push bookmarks
             resolver
                 .ensure_stream_finished(bundle2)
-                .and_then(move |()| resolver.prepare_response(changegroup_id))
+                .and_then({
+                    let resolver = resolver.clone();
+                    move |()| match bookmark_push {
+                        Some(bookmark_push) => resolver
+                            .update_bookmark(&bookmark_push)
+                            .map(move |()| Some(bookmark_push.part_id))
+                            .boxify(),
+                        None => ok(None).boxify(),
+                    }
+                })
+                .and_then(move |bookmark_id| resolver.prepare_response(changegroup_id, bookmark_id))
         })
         .map_err(|err| err.context("bundle2-resolver error").into())
         .boxify()
@@ -109,10 +118,10 @@ struct ChangegroupPush {
 }
 
 struct BookmarkPush {
-    _part_id: PartId,
-    _name: AsciiString,
-    _old: Option<HgChangesetId>,
-    _new: Option<HgChangesetId>,
+    part_id: PartId,
+    name: AsciiString,
+    old: Option<HgChangesetId>,
+    new: Option<HgChangesetId>,
 }
 
 /// Holds repo and logger for convienience access from it's methods
@@ -217,10 +226,10 @@ impl Bundle2Resolver {
                     let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
                     let bookmark_push = BookmarkPush {
-                        _part_id: part_id,
-                        _name: name,
-                        _old: old,
-                        _new: new,
+                        part_id,
+                        name,
+                        old,
+                        new,
                     };
                     emptypart
                         .map(move |_| (Some(bookmark_push), bundle2.boxify()))
@@ -231,6 +240,27 @@ impl Bundle2Resolver {
             })
             .map_err(|err| err.context("While resolving Pushkey").into())
             .boxify()
+    }
+
+    fn update_bookmark(&self, bookmark_push: &BookmarkPush) -> BoxFuture<(), Error> {
+        let mut txn = self.repo.update_bookmark_transaction();
+
+        match (bookmark_push.new, bookmark_push.old) {
+            (Some(new), Some(old)) => {
+                try_boxfuture!(txn.update(&bookmark_push.name, &new, &old));
+            }
+            (Some(new), None) => {
+                try_boxfuture!(txn.create(&bookmark_push.name, &new));
+            }
+            (None, Some(old)) => {
+                try_boxfuture!(txn.delete(&bookmark_push.name, &old));
+            }
+            _ => {
+                return ok(()).boxify();
+            }
+        }
+
+        txn.commit()
     }
 
     /// Parse b2xtreegroup2.
@@ -387,7 +417,11 @@ impl Bundle2Resolver {
 
     /// Takes a changegroup id and prepares a Bytes response containing Bundle2 with reply to
     /// changegroup part saying that the push was successful
-    fn prepare_response(&self, changegroup_id: PartId) -> BoxFuture<Bytes, Error> {
+    fn prepare_response(
+        &self,
+        changegroup_id: PartId,
+        bookmark_id: Option<PartId>,
+    ) -> BoxFuture<Bytes, Error> {
         let writer = Cursor::new(Vec::new());
         let mut bundle = Bundle2EncodeBuilder::new(writer);
         // Mercurial currently hangs while trying to read compressed bundles over the wire:
@@ -398,6 +432,9 @@ impl Bundle2Resolver {
             parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
             changegroup_id,
         )));
+        if let Some(part_id) = bookmark_id {
+            bundle.add_part(try_boxfuture!(parts::replypushkey_part(true, part_id)));
+        }
         bundle
             .build()
             .map(|cursor| Bytes::from(cursor.into_inner()))
