@@ -24,10 +24,9 @@ try:
 except NameError:
     xrange = range
 
-def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
+def shallowgroup(cls, self, nodelist, rlog, lookup, prog=None, reorder=None):
     if not isinstance(rlog, remotefilelog.remotefilelog):
-        for c in super(cls, self).group(nodelist, rlog, lookup,
-                                        units=units):
+        for c in super(cls, self).group(nodelist, rlog, lookup, prog=prog):
             yield c
         return
 
@@ -64,9 +63,9 @@ class shallowcg1packer(changegroup.cg1packer):
         return super(shallowcg1packer, self).generate(commonrevs, clnodes,
             fastpathlinkrev, source)
 
-    def group(self, nodelist, rlog, lookup, units=None, reorder=None):
+    def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
         return shallowgroup(shallowcg1packer, self, nodelist, rlog, lookup,
-                            units=units)
+                            prog=prog)
 
     def _cansendflat(self, mfnodes):
         repo = self._repo
@@ -278,7 +277,7 @@ if util.safehasattr(changegroup, 'cg2packer'):
     # Mercurial >= 3.3
     @shallowutil.interposeclass(changegroup, 'cg2packer')
     class shallowcg2packer(changegroup.cg2packer):
-        def group(self, nodelist, rlog, lookup, units=None, reorder=None):
+        def group(self, nodelist, rlog, lookup, prog=None, reorder=None):
             # for revlogs, shallowgroup will be called twice in the same stack
             # -- once here, once up the inheritance hierarchy in
             # shallowcg1packer. That's fine though because for revlogs,
@@ -286,7 +285,7 @@ if util.safehasattr(changegroup, 'cg2packer'):
             # function. If that assumption changes this will have to be
             # revisited.
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
-                                units=units)
+                                prog=prog)
 
 if util.safehasattr(changegroup, 'cg3packer'):
     @shallowutil.interposeclass(changegroup, 'cg3packer')

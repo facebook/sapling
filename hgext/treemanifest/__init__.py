@@ -1079,9 +1079,9 @@ def _unpackmanifestscg3(orig, self, repo, *args, **kwargs):
         return
     return orig(self, repo, *args, **kwargs)
 
-def _unpackmanifestscg1(orig, self, repo, revmap, trp, prog, numchanges):
+def _unpackmanifestscg1(orig, self, repo, revmap, trp, numchanges):
     if not treeenabled(repo.ui):
-        return orig(self, repo, revmap, trp, prog, numchanges)
+        return orig(self, repo, revmap, trp, numchanges)
 
     if repo.ui.configbool('treemanifest', 'treeonly'):
         self.manifestheader()
@@ -1096,7 +1096,7 @@ def _unpackmanifestscg1(orig, self, repo, revmap, trp, prog, numchanges):
     mfrevlog = repo.manifestlog._revlog
     oldtip = len(mfrevlog)
 
-    mfnodes = orig(self, repo, revmap, trp, prog, numchanges)
+    mfnodes = orig(self, repo, revmap, trp, numchanges)
 
     if repo.svfs.treemanifestserver:
         mfl = repo.manifestlog

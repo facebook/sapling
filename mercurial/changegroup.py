@@ -24,6 +24,7 @@ from . import (
     error,
     mdiff,
     phases,
+    progress,
     pycompat,
     util,
 )
@@ -138,7 +139,7 @@ class cg1unpacker(object):
         self._stream = compengine.decompressorreader(fh)
         self._type = alg
         self.extras = extras or {}
-        self.callback = None
+        self.progress = None
 
     # These methods (compressed, read, seek, tell) all appear to only
     # be used by bundlerepo, but it's a little hard to tell.
@@ -160,8 +161,8 @@ class cg1unpacker(object):
             if l:
                 raise error.Abort(_("invalid chunk length %d") % l)
             return 0
-        if self.callback:
-            self.callback()
+        if self.progress is not None:
+            self.progress.value += 1
         return l - 4
 
     def changelogheader(self):
@@ -244,19 +245,19 @@ class cg1unpacker(object):
                     pos = next
             yield closechunk()
 
-    def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
+    def _unpackmanifests(self, repo, revmap, trp, numchanges):
         # We know that we'll never have more manifests than we had
         # changesets.
-        self.callback = prog(_('manifests'), numchanges)
-        # no need to check for empty manifest group here:
-        # if the result of the merge of 1 and 2 is the same in 3 and 4,
-        # no new manifest will be created and the manifest group will
-        # be empty during the pull
-        self.manifestheader()
-        deltas = self.deltaiter()
-        mfnodes = repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
-        repo.ui.progress(_('manifests'), None)
-        self.callback = None
+        with progress.bar(repo.ui, _('manifests'), total=numchanges) as prog:
+            self.progress = prog
+            # no need to check for empty manifest group here:
+            # if the result of the merge of 1 and 2 is the same in 3 and 4,
+            # no new manifest will be created and the manifest group will
+            # be empty during the pull
+            self.manifestheader()
+            deltas = self.deltaiter()
+            mfnodes = repo.manifestlog._revlog.addgroup(deltas, revmap, trp)
+        self.progress = None
         return mfnodes
 
     def apply(self, repo, tr, srctype, url, targetphase=phases.draft,
@@ -301,37 +302,29 @@ class cg1unpacker(object):
             # pull off the changeset group
             repo.ui.status(_("adding changesets\n"))
             clstart = len(cl)
-            class prog(object):
-                def __init__(self, step, total):
-                    self._step = step
-                    self._total = total
-                    self._count = 1
-                def __call__(self):
-                    repo.ui.progress(self._step, self._count, unit=_('chunks'),
-                                     total=self._total)
-                    self._count += 1
-            self.callback = prog(_('changesets'), expectedtotal)
+            with progress.bar(repo.ui, _('changesets'),
+                              total=expectedtotal) as prog:
+                self.progress = prog
+                efiles = set()
+                def onchangelog(cl, node):
+                    efiles.update(cl.readfiles(node))
 
-            efiles = set()
-            def onchangelog(cl, node):
-                efiles.update(cl.readfiles(node))
-
-            self.changelogheader()
-            deltas = self.deltaiter()
-            cgnodes = cl.addgroup(deltas, csmap, trp, addrevisioncb=onchangelog)
-            efiles = len(efiles)
+                self.changelogheader()
+                deltas = self.deltaiter()
+                cgnodes = cl.addgroup(deltas, csmap, trp,
+                                      addrevisioncb=onchangelog)
+                efiles = len(efiles)
+            self.progress = None
 
             if not cgnodes:
                 repo.ui.develwarn('applied empty changegroup',
                                   config='warn-empty-changegroup')
             clend = len(cl)
             changesets = clend - clstart
-            repo.ui.progress(_('changesets'), None)
-            self.callback = None
 
             # pull off the manifest group
             repo.ui.status(_("adding manifests\n"))
-            self._unpackmanifests(repo, revmap, trp, prog, changesets)
+            self._unpackmanifests(repo, revmap, trp, changesets)
 
             needfiles = {}
             if repo.ui.configbool('server', 'validate'):
@@ -483,9 +476,9 @@ class cg3unpacker(cg2unpacker):
         node, p1, p2, deltabase, cs, flags = headertuple
         return node, p1, p2, deltabase, cs, flags
 
-    def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
+    def _unpackmanifests(self, repo, revmap, trp, numchanges):
         mfnodes = super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp,
-                                                            prog, numchanges)
+                                                            numchanges)
         for chunkdata in iter(self.filelogheader, {}):
             # If we get here, there are directory manifests in the changegroup
             d = chunkdata["filename"]
@@ -535,7 +528,6 @@ class cg1packer(object):
             reorder = util.parsebool(reorder)
         self._repo = repo
         self._reorder = reorder
-        self._progress = repo.ui.progress
         if self._repo.ui.verbose and not self._repo.ui.debugflag:
             self._verbosenote = self._repo.ui.note
         else:
@@ -566,7 +558,7 @@ class cg1packer(object):
         else:
             return sorted([revlog.rev(n) for n in nodelist])
 
-    def group(self, nodelist, revlog, lookup, units=None):
+    def group(self, nodelist, revlog, lookup, prog=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -577,8 +569,7 @@ class cg1packer(object):
         these changesets. In the case firstparent is nullrev the
         changegroup starts with a full revision.
 
-        If units is not None, progress detail will be generated, units specifies
-        the type of revlog that is touched (changelog, manifest, etc.).
+        If prog is not None, its value attribute will be updated with progress.
         """
         # if we don't have any revisions touched by these changesets, bail
         if len(nodelist) == 0:
@@ -592,11 +583,11 @@ class cg1packer(object):
         revs.insert(0, p)
 
         # build deltas
-        total = len(revs) - 1
-        msgbundling = _('bundling')
+        if prog is not None:
+            prog._total = len(revs) - 1
         for r in xrange(len(revs) - 1):
-            if units is not None:
-                self._progress(msgbundling, r + 1, unit=units, total=total)
+            if prog is not None:
+                prog.value = r + 1
             prev, curr = revs[r], revs[r + 1]
             linknode = lookup(revlog.node(curr))
             if self._cgdeltaconfig == CFG_CGDELTA_ALWAYS_NULL:
@@ -606,8 +597,6 @@ class cg1packer(object):
             for c in self.revchunk(revlog, curr, prev, linknode):
                 yield c
 
-        if units is not None:
-            self._progress(msgbundling, None)
         yield self.close()
 
     # filter any nodes that claim to be part of the known set
@@ -618,9 +607,10 @@ class cg1packer(object):
     def _packmanifests(self, dir, mfnodes, lookuplinknode):
         """Pack flat manifests into a changegroup stream."""
         assert not dir
-        for chunk in self.group(mfnodes, self._repo.manifestlog._revlog,
-                                lookuplinknode, units=_('manifests')):
-            yield chunk
+        with progress.bar(self._repo.ui, _('bundling'), _('manifests')) as prog:
+            for chunk in self.group(mfnodes, self._repo.manifestlog._revlog,
+                                    lookuplinknode, prog):
+                yield chunk
 
     def _manifestsdone(self):
         return ''
@@ -651,9 +641,10 @@ class cg1packer(object):
 
         self._verbosenote(_('uncompressed size of bundle content:\n'))
         size = 0
-        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets')):
-            size += len(chunk)
-            yield chunk
+        with progress.bar(repo.ui, _('bundling'), _('changesets')) as prog:
+            for chunk in self.group(clnodes, cl, lookupcl, prog):
+                size += len(chunk)
+                yield chunk
         self._verbosenote(_('%8.i (changelog)\n') % size)
 
         # We need to make sure that the linkrev in the changegroup refers to
@@ -773,35 +764,31 @@ class cg1packer(object):
     # The 'source' parameter is useful for extensions
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         repo = self._repo
-        progress = self._progress
-        msgbundling = _('bundling')
-
         total = len(changedfiles)
-        # for progress output
-        msgfiles = _('files')
-        for i, fname in enumerate(sorted(changedfiles)):
-            filerevlog = repo.file(fname)
-            if not filerevlog:
-                raise error.Abort(_("empty or missing revlog for %s") % fname)
+        with progress.bar(repo.ui, _('bundling'), _('files'), total) as prog:
+            for i, fname in enumerate(sorted(changedfiles)):
+                filerevlog = repo.file(fname)
+                if not filerevlog:
+                    msg = _("empty or missing revlog for %s") % fname
+                    raise error.Abort(msg)
 
-            linkrevnodes = linknodes(filerevlog, fname)
-            # Lookup for filenodes, we collected the linkrev nodes above in the
-            # fastpath case and with lookupmf in the slowpath case.
-            def lookupfilelog(x):
-                return linkrevnodes[x]
+                linkrevnodes = linknodes(filerevlog, fname)
+                # Lookup for filenodes, we collected the linkrev nodes above in
+                # the fastpath case and with lookupmf in the slowpath case.
+                def lookupfilelog(x):
+                    return linkrevnodes[x]
 
-            filenodes = self.prune(filerevlog, linkrevnodes, commonrevs)
-            if filenodes:
-                progress(msgbundling, i + 1, item=fname, unit=msgfiles,
-                         total=total)
-                h = self.fileheader(fname)
-                size = len(h)
-                yield h
-                for chunk in self.group(filenodes, filerevlog, lookupfilelog):
-                    size += len(chunk)
-                    yield chunk
-                self._verbosenote(_('%8.i  %s\n') % (size, fname))
-        progress(msgbundling, None)
+                filenodes = self.prune(filerevlog, linkrevnodes, commonrevs)
+                if filenodes:
+                    prog.value = (i + 1, fname)
+                    h = self.fileheader(fname)
+                    size = len(h)
+                    yield h
+                    for chunk in self.group(filenodes, filerevlog,
+                                            lookupfilelog):
+                        size += len(chunk)
+                        yield chunk
+                    self._verbosenote(_('%8.i  %s\n') % (size, fname))
 
     def deltaparent(self, revlog, rev, p1, p2, prev):
         if (not revlog.candelta(prev, rev)
@@ -896,9 +883,9 @@ class cg3packer(cg2packer):
             yield self.fileheader(dir)
 
         dirlog = self._repo.manifestlog._revlog.dirlog(dir)
-        for chunk in self.group(mfnodes, dirlog, lookuplinknode,
-                                units=_('manifests')):
-            yield chunk
+        with progress.bar(self._repo.ui, _('bundling'), _('manifests')) as prog:
+            for chunk in self.group(mfnodes, dirlog, lookuplinknode, prog):
+                yield chunk
 
     def _manifestsdone(self):
         return self.close()
@@ -998,33 +985,32 @@ def makestream(repo, outgoing, version, source, fastpath=False,
 def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0
-    for chunkdata in iter(source.filelogheader, {}):
-        files += 1
-        f = chunkdata["filename"]
-        repo.ui.debug("adding %s revisions\n" % f)
-        repo.ui.progress(_('files'), files, unit=_('files'),
-                         total=expectedfiles)
-        fl = repo.file(f)
-        o = len(fl)
-        try:
-            deltas = source.deltaiter()
-            if not fl.addgroup(deltas, revmap, trp):
-                raise error.Abort(_("received file revlog group is empty"))
-        except error.CensoredBaseError as e:
-            raise error.Abort(_("received delta base is censored: %s") % e)
-        revisions += len(fl) - o
-        if f in needfiles:
-            needs = needfiles[f]
-            for new in xrange(o, len(fl)):
-                n = fl.node(new)
-                if n in needs:
-                    needs.remove(n)
-                else:
-                    raise error.Abort(
-                        _("received spurious file revlog entry"))
-            if not needs:
-                del needfiles[f]
-    repo.ui.progress(_('files'), None)
+    with progress.bar(repo.ui, _('files'), _('files'), expectedfiles) as prog:
+        for chunkdata in iter(source.filelogheader, {}):
+            files += 1
+            f = chunkdata["filename"]
+            repo.ui.debug("adding %s revisions\n" % f)
+            prog.value = files
+            fl = repo.file(f)
+            o = len(fl)
+            try:
+                deltas = source.deltaiter()
+                if not fl.addgroup(deltas, revmap, trp):
+                    raise error.Abort(_("received file revlog group is empty"))
+            except error.CensoredBaseError as e:
+                raise error.Abort(_("received delta base is censored: %s") % e)
+            revisions += len(fl) - o
+            if f in needfiles:
+                needs = needfiles[f]
+                for new in xrange(o, len(fl)):
+                    n = fl.node(new)
+                    if n in needs:
+                        needs.remove(n)
+                    else:
+                        raise error.Abort(
+                            _("received spurious file revlog entry"))
+                if not needs:
+                    del needfiles[f]
 
     for f, needs in needfiles.iteritems():
         fl = repo.file(f)
