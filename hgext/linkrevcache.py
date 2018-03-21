@@ -58,6 +58,7 @@ from mercurial import (
     extensions,
     filelog,
     node,
+    progress,
     registrar,
     util,
 )
@@ -330,59 +331,58 @@ def _buildlinkrevcache(ui, repo, db, end):
     # the changelog index every time) algorithm.
     ancestorcountthreshold = 10
 
-    for rev in xrange(start, end + 1):
-        ui.progress(_('building'), rev, total=end, unit=_('changesets'))
-        clr = cl.changelogrevision(rev)
-        md = ml[clr.manifest].readfast()
-
-        if checkancestor:
-            if len(clr.files) >= ancestorcountthreshold:
-                # we may need to frequently test ancestors against rev,
-                # in this case, pre-calculating rev's ancestors helps.
-                ancestors = cl.ancestors([rev])
-
-                def isancestor(x):
-                    return x in ancestors
-            else:
-                # the C index ancestor testing is faster than Python's
-                # lazyancestors.
-                def isancestor(x):
-                    return x in idx.commonancestorsheads(x, rev)
-
-        for path in clr.files:
-            if path not in md:
-                continue
-
-            fnode = md[path]
-
-            if readfilelog:
-                fl = _getfilelog(path)
-                frev = fl.rev(fnode)
-                lrev = fl.linkrev(frev)
-                if lrev == rev:
-                    continue
-            else:
-                lrev = None
+    with progress.bar(ui, _('building'), _('changesets'), end) as prog:
+        for rev in xrange(start, end + 1):
+            prog.value = rev
+            clr = cl.changelogrevision(rev)
+            md = ml[clr.manifest].readfast()
 
             if checkancestor:
-                linkrevs = set(db.getlinkrevs(path, fnode))
-                if lrev is not None:
-                    linkrevs.add(lrev)
-                if rev in linkrevs:
+                if len(clr.files) >= ancestorcountthreshold:
+                    # we may need to frequently test ancestors against rev,
+                    # in this case, pre-calculating rev's ancestors helps.
+                    ancestors = cl.ancestors([rev])
+
+                    def isancestor(x):
+                        return x in ancestors
+                else:
+                    # the C index ancestor testing is faster than Python's
+                    # lazyancestors.
+                    def isancestor(x):
+                        return x in idx.commonancestorsheads(x, rev)
+
+            for path in clr.files:
+                if path not in md:
                     continue
-                if any(isancestor(l) for l in linkrevs):
-                    continue
 
-            # found a new linkrev!
-            if ui.debugflag:
-                ui.debug('%s@%s: new linkrev %s\n'
-                         % (path, node.hex(fnode), rev))
+                fnode = md[path]
 
-            db.appendlinkrev(path, fnode, rev)
+                if readfilelog:
+                    fl = _getfilelog(path)
+                    frev = fl.rev(fnode)
+                    lrev = fl.linkrev(frev)
+                    if lrev == rev:
+                        continue
+                else:
+                    lrev = None
 
-        db.setlastrev(rev)
+                if checkancestor:
+                    linkrevs = set(db.getlinkrevs(path, fnode))
+                    if lrev is not None:
+                        linkrevs.add(lrev)
+                    if rev in linkrevs:
+                        continue
+                    if any(isancestor(l) for l in linkrevs):
+                        continue
 
-    ui.write()  # clear progress bar
+                # found a new linkrev!
+                if ui.debugflag:
+                    ui.debug('%s@%s: new linkrev %s\n'
+                             % (path, node.hex(fnode), rev))
+
+                db.appendlinkrev(path, fnode, rev)
+
+            db.setlastrev(rev)
 
 @command('debugverifylinkrevcache', [])
 def debugverifylinkrevcache(ui, repo, *pats, **opts):
@@ -407,32 +407,33 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     readfilelog = ui.configbool('linkrevcache', 'readfilelog', True)
 
     total = len(lrevs)
-    for i, (k, v) in enumerate(lrevs.iteritems()):
-        ui.progress(_('verifying'), i, total=total)
-        pathid, nodeid = k.split('\0')
-        path = pathsrev[pathid]
-        fnode = nodesrev[nodeid]
-        linkrevs = _str2intlist(v)
-        linkrevs.sort()
+    with progress.bar(ui, _('verifying'), total=total) as prog:
+        for i, (k, v) in enumerate(lrevs.iteritems()):
+            prog.value = i
+            pathid, nodeid = k.split('\0')
+            path = pathsrev[pathid]
+            fnode = nodesrev[nodeid]
+            linkrevs = _str2intlist(v)
+            linkrevs.sort()
 
-        for linkrev in linkrevs:
-            fctx = repo[linkrev][path]
-            introrev = fctx.introrev()
-            fctx.linkrev()
-            if readfilelog:
-                flinkrev = fctx.linkrev()
-            else:
-                flinkrev = None
-            if introrev == linkrev:
-                continue
-            if (introrev in idx.commonancestorsheads(introrev, linkrev) and
-                (introrev in linkrevs or introrev == flinkrev)):
-                adjective = _('unnecessary')
-            else:
-                adjective = _('incorrect')
-            ui.warn(_('%s linkrev %s for %s @ %s (expected: %s)\n')
-                    % (adjective, linkrev, path, node.hex(fnode),
-                       introrev))
+            for linkrev in linkrevs:
+                fctx = repo[linkrev][path]
+                introrev = fctx.introrev()
+                fctx.linkrev()
+                if readfilelog:
+                    flinkrev = fctx.linkrev()
+                else:
+                    flinkrev = None
+                if introrev == linkrev:
+                    continue
+                if (introrev in idx.commonancestorsheads(introrev, linkrev) and
+                    (introrev in linkrevs or introrev == flinkrev)):
+                    adjective = _('unnecessary')
+                else:
+                    adjective = _('incorrect')
+                ui.warn(_('%s linkrev %s for %s @ %s (expected: %s)\n')
+                        % (adjective, linkrev, path, node.hex(fnode),
+                           introrev))
 
     ui.write(_('%d entries verified\n') % total)
 
