@@ -29,6 +29,7 @@ from . import (
     filemerge,
     match as matchmod,
     obsutil,
+    progress,
     pycompat,
     scmutil,
     subrepo,
@@ -1427,10 +1428,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         if f1 != f and move:
             moves.append(f1)
 
-    _updating = _('updating')
-    _files = _('files')
-    progress = repo.ui.progress
-
     # remove renamed files after safely stored
     for f in moves:
         if wctx[f].lexists():
@@ -1445,224 +1442,225 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
 
     # record path conflicts
-    for f, args, msg in actions['p']:
-        f1, fo = args
-        s = repo.ui.status
-        s(_("%s: path conflict - a file or link has the same name as a "
-            "directory\n") % f)
-        if fo == 'l':
-            s(_("the local file has been renamed to %s\n") % f1)
-        else:
-            s(_("the remote file has been renamed to %s\n") % f1)
-        s(_("resolve manually then use 'hg resolve --mark %s'\n") % f)
-        ms.addpath(f, f1, fo)
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
+    with progress.bar(repo.ui, _('updating'), _('files'), numupdates) as prog:
+        for f, args, msg in actions['p']:
+            f1, fo = args
+            s = repo.ui.status
+            s(_("%s: path conflict - a file or link has the same name as a "
+                "directory\n") % f)
+            if fo == 'l':
+                s(_("the local file has been renamed to %s\n") % f1)
+            else:
+                s(_("the remote file has been renamed to %s\n") % f1)
+            s(_("resolve manually then use 'hg resolve --mark %s'\n") % f)
+            ms.addpath(f, f1, fo)
+            z += 1
+            prog.value = (z, f)
 
-    # When merging in-memory, we can't support worker processes, so set the
-    # per-item cost at 0 in that case.
-    cost = 0 if wctx.isinmemory() else 0.001
+        # When merging in-memory, we can't support worker processes, so set the
+        # per-item cost at 0 in that case.
+        cost = 0 if wctx.isinmemory() else 0.001
 
-    # remove in parallel (must come before resolving path conflicts and getting)
-    prog = worker.worker(repo.ui, cost, batchremove, (repo, wctx),
-                         actions['r'])
-    for i, item in prog:
-        z += i
-        progress(_updating, z, item=item, total=numupdates, unit=_files)
-    removed = len(actions['r'])
+        # remove in parallel (must come before resolving path conflicts and
+        # getting)
+        workerprog = worker.worker(repo.ui, cost, batchremove, (repo, wctx),
+                             actions['r'])
+        for i, item in workerprog:
+            z += i
+            prog.value = (z, item)
+        removed = len(actions['r'])
 
-    # resolve path conflicts (must come before getting)
-    for f, args, msg in actions['pr']:
-        repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
-        f0, = args
-        if wctx[f0].lexists():
+        # resolve path conflicts (must come before getting)
+        for f, args, msg in actions['pr']:
+            repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
+            f0, = args
+            if wctx[f0].lexists():
+                repo.ui.note(_("moving %s to %s\n") % (f0, f))
+                wctx[f].audit()
+                wctx[f].write(wctx.filectx(f0).data(), wctx.filectx(f0).flags())
+                wctx[f0].remove()
+            z += 1
+            prog.value = (z, f)
+
+        # get in parallel
+        workerprog = worker.worker(repo.ui, cost, batchget, (repo, mctx, wctx),
+                             actions['g'])
+        for i, item in workerprog:
+            z += i
+            prog.value = (z, item)
+        updated = len(actions['g'])
+
+        if [a for a in actions['g'] if a[0] == '.hgsubstate']:
+            subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
+
+        # forget (manifest only, just log it) (must come first)
+        for f, args, msg in actions['f']:
+            repo.ui.debug(" %s: %s -> f\n" % (f, msg))
+            z += 1
+            prog.value = (z, f)
+
+        # re-add (manifest only, just log it)
+        for f, args, msg in actions['a']:
+            repo.ui.debug(" %s: %s -> a\n" % (f, msg))
+            z += 1
+            prog.value = (z, f)
+
+        # re-add/mark as modified (manifest only, just log it)
+        for f, args, msg in actions['am']:
+            repo.ui.debug(" %s: %s -> am\n" % (f, msg))
+            z += 1
+            prog.value = (z, f)
+
+        # keep (noop, just log it)
+        for f, args, msg in actions['k']:
+            repo.ui.debug(" %s: %s -> k\n" % (f, msg))
+            # no progress
+
+        # directory rename, move local
+        for f, args, msg in actions['dm']:
+            repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
+            z += 1
+            prog.value = (z, f)
+            f0, flags = args
             repo.ui.note(_("moving %s to %s\n") % (f0, f))
             wctx[f].audit()
-            wctx[f].write(wctx.filectx(f0).data(), wctx.filectx(f0).flags())
+            wctx[f].write(wctx.filectx(f0).data(), flags)
             wctx[f0].remove()
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
+            updated += 1
 
-    # get in parallel
-    prog = worker.worker(repo.ui, cost, batchget, (repo, mctx, wctx),
-                         actions['g'])
-    for i, item in prog:
-        z += i
-        progress(_updating, z, item=item, total=numupdates, unit=_files)
-    updated = len(actions['g'])
-
-    if [a for a in actions['g'] if a[0] == '.hgsubstate']:
-        subrepo.submerge(repo, wctx, mctx, wctx, overwrite, labels)
-
-    # forget (manifest only, just log it) (must come first)
-    for f, args, msg in actions['f']:
-        repo.ui.debug(" %s: %s -> f\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-
-    # re-add (manifest only, just log it)
-    for f, args, msg in actions['a']:
-        repo.ui.debug(" %s: %s -> a\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-
-    # re-add/mark as modified (manifest only, just log it)
-    for f, args, msg in actions['am']:
-        repo.ui.debug(" %s: %s -> am\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-
-    # keep (noop, just log it)
-    for f, args, msg in actions['k']:
-        repo.ui.debug(" %s: %s -> k\n" % (f, msg))
-        # no progress
-
-    # directory rename, move local
-    for f, args, msg in actions['dm']:
-        repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        f0, flags = args
-        repo.ui.note(_("moving %s to %s\n") % (f0, f))
-        wctx[f].audit()
-        wctx[f].write(wctx.filectx(f0).data(), flags)
-        wctx[f0].remove()
-        updated += 1
-
-    # local directory rename, get
-    for f, args, msg in actions['dg']:
-        repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        f0, flags = args
-        repo.ui.note(_("getting %s to %s\n") % (f0, f))
-        wctx[f].write(mctx.filectx(f0).data(), flags)
-        updated += 1
-
-    # exec
-    for f, args, msg in actions['e']:
-        repo.ui.debug(" %s: %s -> e\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        flags, = args
-        wctx[f].audit()
-        wctx[f].setflags('l' in flags, 'x' in flags)
-        updated += 1
-
-    # the ordering is important here -- ms.mergedriver will raise if the merge
-    # driver has changed, and we want to be able to bypass it when overwrite is
-    # True
-    usemergedriver = not overwrite and mergeactions and ms.mergedriver
-
-    if usemergedriver:
-        ms.commit()
-        proceed = driverpreprocess(repo, ms, wctx, labels=labels)
-        driverresolved = [f for f in ms.driverresolved()]
-
-        # Note which files were marked as driver-resolved but not matched by
-        # experimental.inmemorydisallowedpaths. This will allow us to keep
-        # inmemorydisallowedpaths up to date so in-memory rebases are not
-        # restarted late in the merge.
-        pathsconfig = repo.ui.config("rebase",
-            "experimental.inmemorydisallowedpaths")
-        # Make sure the the default value (.^) doesn't match anything, since an
-        # empty string matches everything -- not what we want:
-        if not pathsconfig:
-            pathsconfig = ".^"
-        regex = util.re.compile(pathsconfig)
-        unmatched = [f for f in driverresolved if not regex.match(f)]
-        repo.ui.log('imm_mergedriver', '',
-            driver_resolved_missed="|".join(sorted(unmatched)),
-            in_memory=wctx.isinmemory())
-
-        # If preprocess() marked any files as driver-resolved and we're merging
-        # in-memory, abort on the assumption that driver scripts require the
-        # working directory.
-        if driverresolved and wctx.isinmemory():
-            errorstr = ("some of your files require mergedriver to run, which "
-                       "in-memory merge does not support")
-            raise error.InMemoryMergeConflictsError(errorstr)
-
-        # the driver might leave some files unresolved
-        unresolvedf = set(ms.unresolved())
-        if not proceed:
-            # XXX setting unresolved to at least 1 is a hack to make sure we
-            # error out
-            return updated, merged, removed, max(len(unresolvedf), 1)
-        newactions = []
-        for f, args, msg in mergeactions:
-            if f in unresolvedf:
-                newactions.append((f, args, msg))
-        mergeactions = newactions
-
-    try:
-        # premerge
-        tocomplete = []
-        for f, args, msg in mergeactions:
-            repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
+        # local directory rename, get
+        for f, args, msg in actions['dg']:
+            repo.ui.debug(" %s: %s -> dg\n" % (f, msg))
             z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                                 overwrite, labels)
-                continue
+            prog.value = (z, f)
+            f0, flags = args
+            repo.ui.note(_("getting %s to %s\n") % (f0, f))
+            wctx[f].write(mctx.filectx(f0).data(), flags)
+            updated += 1
+
+        # exec
+        for f, args, msg in actions['e']:
+            repo.ui.debug(" %s: %s -> e\n" % (f, msg))
+            z += 1
+            prog.value = (z, f)
+            flags, = args
             wctx[f].audit()
-            complete, r = ms.preresolve(f, wctx)
-            if not complete:
-                numupdates += 1
-                tocomplete.append((f, args, msg))
+            wctx[f].setflags('l' in flags, 'x' in flags)
+            updated += 1
 
-        # merge
-        for f, args, msg in tocomplete:
-            repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
-            z += 1
-            progress(_updating, z, item=f, total=numupdates, unit=_files)
-            ms.resolve(f, wctx)
+        # the ordering is important here -- ms.mergedriver will raise if the
+        # merge driver has changed, and we want to be able to bypass it when
+        # overwrite is True
+        usemergedriver = not overwrite and mergeactions and ms.mergedriver
 
-    finally:
-        ms.commit()
+        if usemergedriver:
+            ms.commit()
+            proceed = driverpreprocess(repo, ms, wctx, labels=labels)
+            driverresolved = [f for f in ms.driverresolved()]
 
-    unresolved = ms.unresolvedcount()
+            # Note which files were marked as driver-resolved but not matched by
+            # experimental.inmemorydisallowedpaths. This will allow us to keep
+            # inmemorydisallowedpaths up to date so in-memory rebases are not
+            # restarted late in the merge.
+            pathsconfig = repo.ui.config("rebase",
+                "experimental.inmemorydisallowedpaths")
+            # Make sure the the default value (.^) doesn't match anything, since
+            # an empty string matches everything -- not what we want:
+            if not pathsconfig:
+                pathsconfig = ".^"
+            regex = util.re.compile(pathsconfig)
+            unmatched = [f for f in driverresolved if not regex.match(f)]
+            repo.ui.log('imm_mergedriver', '',
+                driver_resolved_missed="|".join(sorted(unmatched)),
+                in_memory=wctx.isinmemory())
 
-    if usemergedriver and not unresolved and ms.mdstate() != 's':
-        if not driverconclude(repo, ms, wctx, labels=labels):
-            # XXX setting unresolved to at least 1 is a hack to make sure we
-            # error out
-            unresolved = max(unresolved, 1)
+            # If preprocess() marked any files as driver-resolved and we're
+            # merging in-memory, abort on the assumption that driver scripts
+            # require the working directory.
+            if driverresolved and wctx.isinmemory():
+                errorstr = ("some of your files require mergedriver to run, "
+                            "which in-memory merge does not support")
+                raise error.InMemoryMergeConflictsError(errorstr)
 
-        ms.commit()
+            # the driver might leave some files unresolved
+            unresolvedf = set(ms.unresolved())
+            if not proceed:
+                # XXX setting unresolved to at least 1 is a hack to make sure we
+                # error out
+                return updated, merged, removed, max(len(unresolvedf), 1)
+            newactions = []
+            for f, args, msg in mergeactions:
+                if f in unresolvedf:
+                    newactions.append((f, args, msg))
+            mergeactions = newactions
 
-    msupdated, msmerged, msremoved = ms.counts()
-    updated += msupdated
-    merged += msmerged
-    removed += msremoved
+        try:
+            # premerge
+            tocomplete = []
+            for f, args, msg in mergeactions:
+                repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
+                z += 1
+                prog.value = (z, f)
+                if f == '.hgsubstate': # subrepo states need updating
+                    subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
+                                     overwrite, labels)
+                    continue
+                wctx[f].audit()
+                complete, r = ms.preresolve(f, wctx)
+                if not complete:
+                    numupdates += 1
+                    tocomplete.append((f, args, msg))
 
-    extraactions = ms.actions()
-    if extraactions:
-        mfiles = set(a[0] for a in actions['m'])
-        for k, acts in extraactions.iteritems():
-            actions[k].extend(acts)
-            # Remove these files from actions['m'] as well. This is important
-            # because in recordupdates, files in actions['m'] are processed
-            # after files in other actions, and the merge driver might add
-            # files to those actions via extraactions above. This can lead to a
-            # file being recorded twice, with poor results. This is especially
-            # problematic for actions['r'] (currently only possible with the
-            # merge driver in the initial merge process; interrupted merges
-            # don't go through this flow).
-            #
-            # The real fix here is to have indexes by both file and action so
-            # that when the action for a file is changed it is automatically
-            # reflected in the other action lists. But that involves a more
-            # complex data structure, so this will do for now.
-            #
-            # We don't need to do the same operation for 'dc' and 'cd' because
-            # those lists aren't consulted again.
-            mfiles.difference_update(a[0] for a in acts)
+            # merge
+            for f, args, msg in tocomplete:
+                repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
+                z += 1
+                prog.value = (z, f)
+                ms.resolve(f, wctx)
 
-        actions['m'] = [a for a in actions['m'] if a[0] in mfiles]
+        finally:
+            ms.commit()
 
-    progress(_updating, None, total=numupdates, unit=_files)
+        unresolved = ms.unresolvedcount()
+
+        if usemergedriver and not unresolved and ms.mdstate() != 's':
+            if not driverconclude(repo, ms, wctx, labels=labels):
+                # XXX setting unresolved to at least 1 is a hack to make sure we
+                # error out
+                unresolved = max(unresolved, 1)
+
+            ms.commit()
+
+        msupdated, msmerged, msremoved = ms.counts()
+        updated += msupdated
+        merged += msmerged
+        removed += msremoved
+
+        extraactions = ms.actions()
+        if extraactions:
+            mfiles = set(a[0] for a in actions['m'])
+            for k, acts in extraactions.iteritems():
+                actions[k].extend(acts)
+                # Remove these files from actions['m'] as well. This is
+                # important because in recordupdates, files in actions['m'] are
+                # processed after files in other actions, and the merge driver
+                # might add files to those actions via extraactions above. This
+                # can lead to a file being recorded twice, with poor results.
+                # This is especially problematic for actions['r'] (currently
+                # only possible with the merge driver in the initial merge
+                # process; interrupted merges don't go through this flow).
+                #
+                # The real fix here is to have indexes by both file and action
+                # so that when the action for a file is changed it is
+                # automatically reflected in the other action lists. But that
+                # involves a more complex data structure, so this will do for
+                # now.
+                #
+                # We don't need to do the same operation for 'dc' and 'cd'
+                # because those lists aren't consulted again.
+                mfiles.difference_update(a[0] for a in acts)
+
+            actions['m'] = [a for a in actions['m'] if a[0] in mfiles]
 
     return updated, merged, removed, unresolved
 
@@ -1670,124 +1668,110 @@ def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
 
     total = sum(map(len, actions.values()))
-    prog = 0
-    progress = repo.ui.progress
-    _recording = _('recording')
-    _files = _('files')
 
-    # remove (must come first)
-    for f, args, msg in actions.get('r', []):
-        if branchmerge:
-            repo.dirstate.remove(f)
-        else:
+    with progress.bar(repo.ui, _('recording'), _('files'), total) as prog:
+        # remove (must come first)
+        for f, args, msg in actions.get('r', []):
+            if branchmerge:
+                repo.dirstate.remove(f)
+            else:
+                repo.dirstate.drop(f)
+            prog.value += 1
+
+        # forget (must come first)
+        for f, args, msg in actions.get('f', []):
             repo.dirstate.drop(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+            prog.value += 1
 
-    # forget (must come first)
-    for f, args, msg in actions.get('f', []):
-        repo.dirstate.drop(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
-
-    # resolve path conflicts
-    for f, args, msg in actions.get('pr', []):
-        f0, = args
-        origf0 = repo.dirstate.copied(f0) or f0
-        repo.dirstate.add(f)
-        repo.dirstate.copy(origf0, f)
-        if f0 == origf0:
-            repo.dirstate.remove(f0)
-        else:
-            repo.dirstate.drop(f0)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
-
-    # re-add
-    for f, args, msg in actions.get('a', []):
-        repo.dirstate.add(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
-
-    # re-add/mark as modified
-    for f, args, msg in actions.get('am', []):
-        if branchmerge:
-            repo.dirstate.normallookup(f)
-        else:
+        # resolve path conflicts
+        for f, args, msg in actions.get('pr', []):
+            f0, = args
+            origf0 = repo.dirstate.copied(f0) or f0
             repo.dirstate.add(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+            repo.dirstate.copy(origf0, f)
+            if f0 == origf0:
+                repo.dirstate.remove(f0)
+            else:
+                repo.dirstate.drop(f0)
+            prog.value += 1
 
-    # exec change
-    for f, args, msg in actions.get('e', []):
-        repo.dirstate.normallookup(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+        # re-add
+        for f, args, msg in actions.get('a', []):
+            repo.dirstate.add(f)
+            prog.value += 1
 
-    # keep
-    for f, args, msg in actions.get('k', []):
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
-
-    # get
-    for f, args, msg in actions.get('g', []):
-        if branchmerge:
-            repo.dirstate.otherparent(f)
-        else:
-            repo.dirstate.normal(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
-
-    # merge
-    for f, args, msg in actions.get('m', []):
-        f1, f2, fa, move, anc = args
-        if branchmerge:
-            # We've done a branch merge, mark this file as merged
-            # so that we properly record the merger later
-            repo.dirstate.merge(f)
-            if f1 != f2: # copy/rename
-                if move:
-                    repo.dirstate.remove(f1)
-                if f1 != f:
-                    repo.dirstate.copy(f1, f)
-                else:
-                    repo.dirstate.copy(f2, f)
-        else:
-            # We've update-merged a locally modified file, so
-            # we set the dirstate to emulate a normal checkout
-            # of that file some time in the past. Thus our
-            # merge will appear as a normal local file
-            # modification.
-            if f2 == f: # file not locally copied/moved
+        # re-add/mark as modified
+        for f, args, msg in actions.get('am', []):
+            if branchmerge:
                 repo.dirstate.normallookup(f)
-            if move:
-                repo.dirstate.drop(f1)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+            else:
+                repo.dirstate.add(f)
+            prog.value += 1
 
-    # directory rename, move local
-    for f, args, msg in actions.get('dm', []):
-        f0, flag = args
-        if branchmerge:
-            repo.dirstate.add(f)
-            repo.dirstate.remove(f0)
-            repo.dirstate.copy(f0, f)
-        else:
-            repo.dirstate.normal(f)
-            repo.dirstate.drop(f0)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+        # exec change
+        for f, args, msg in actions.get('e', []):
+            repo.dirstate.normallookup(f)
+            prog.value += 1
 
-    # directory rename, get
-    for f, args, msg in actions.get('dg', []):
-        f0, flag = args
-        if branchmerge:
-            repo.dirstate.add(f)
-            repo.dirstate.copy(f0, f)
-        else:
-            repo.dirstate.normal(f)
-        prog += 1
-        progress(_recording, prog, total=total, unit=_files)
+        # keep
+        for f, args, msg in actions.get('k', []):
+            prog.value += 1
+
+        # get
+        for f, args, msg in actions.get('g', []):
+            if branchmerge:
+                repo.dirstate.otherparent(f)
+            else:
+                repo.dirstate.normal(f)
+            prog.value += 1
+
+        # merge
+        for f, args, msg in actions.get('m', []):
+            f1, f2, fa, move, anc = args
+            if branchmerge:
+                # We've done a branch merge, mark this file as merged
+                # so that we properly record the merger later
+                repo.dirstate.merge(f)
+                if f1 != f2: # copy/rename
+                    if move:
+                        repo.dirstate.remove(f1)
+                    if f1 != f:
+                        repo.dirstate.copy(f1, f)
+                    else:
+                        repo.dirstate.copy(f2, f)
+            else:
+                # We've update-merged a locally modified file, so
+                # we set the dirstate to emulate a normal checkout
+                # of that file some time in the past. Thus our
+                # merge will appear as a normal local file
+                # modification.
+                if f2 == f: # file not locally copied/moved
+                    repo.dirstate.normallookup(f)
+                if move:
+                    repo.dirstate.drop(f1)
+            prog.value += 1
+
+        # directory rename, move local
+        for f, args, msg in actions.get('dm', []):
+            f0, flag = args
+            if branchmerge:
+                repo.dirstate.add(f)
+                repo.dirstate.remove(f0)
+                repo.dirstate.copy(f0, f)
+            else:
+                repo.dirstate.normal(f)
+                repo.dirstate.drop(f0)
+            prog.value += 1
+
+        # directory rename, get
+        for f, args, msg in actions.get('dg', []):
+            f0, flag = args
+            if branchmerge:
+                repo.dirstate.add(f)
+                repo.dirstate.copy(f0, f)
+            else:
+                repo.dirstate.normal(f)
+            prog.value += 1
 
 def update(repo, node, branchmerge, force, ancestor=None,
            mergeancestor=False, labels=None, matcher=None, mergeforce=False,
