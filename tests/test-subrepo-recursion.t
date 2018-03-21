@@ -316,6 +316,7 @@ Enable progress extension for archive tests:
   > format = topic bar number
   > refresh = 0
   > width = 60
+  > debug = True
   > EOF
 
 Test archiving to a directory tree (the doubled lines in the output
