@@ -205,21 +205,50 @@ class verifier(object):
         ui.progress(_('checking'), None)
         return mflinkrevs, filelinkrevs
 
-    def _verifymanifest(self, mflinkrevs, dir="", storefiles=None,
-                        progress=None):
+    def _verifymanifest(self, mflinkrevs):
         if self.ui.configbool("verify", "skipmanifests", False):
             self.ui.warn(_("verify.skipmanifests is enabled; skipping "
                            "verification of manifests\n"))
             return []
 
-        repo = self.repo
+        self.ui.status(_("checking manifests\n"))
+
+        filenodes, subdirnodes = self._verifymanifestpart(mflinkrevs)
+
+        if subdirnodes:
+            self.ui.status(_("checking directory manifests\n"))
+            storefiles = set()
+            subdirs = set()
+            revlogv1 = self.revlogv1
+            for f, f2, size in self.repo.store.datafiles():
+                if not f:
+                    self.err(None, _("cannot decode filename '%s'") % f2)
+                elif (size > 0 or not revlogv1) and f.startswith('meta/'):
+                    storefiles.add(_normpath(f))
+                    subdirs.add(os.path.dirname(f))
+            subdircount = len(subdirs)
+            currentsubdir = [0]
+            def progress():
+                currentsubdir[0] += 1
+                self.ui.progress(_('checking'), currentsubdir[0],
+                                 total=subdircount, unit=_('manifests'))
+
+            self._verifymanifesttree(filenodes, subdirnodes, storefiles,
+                                     progress)
+
+            self.ui.progress(_('checking'), None)
+            for f in sorted(storefiles):
+                self.warn(_("warning: orphan revlog '%s'") % f)
+
+        return filenodes
+
+    def _verifymanifestpart(self, mflinkrevs, dir="", storefiles=None,
+                            progress=None):
+
         ui = self.ui
         match = self.match
         mfl = self.repo.manifestlog
         mf = mfl._revlog.dirlog(dir)
-
-        if not dir:
-            self.ui.status(_("checking manifests\n"))
 
         filenodes = {}
         subdirnodes = {}
@@ -283,36 +312,17 @@ class verifier(object):
                     self.err(c, _("changeset refers to unknown revision %s") %
                              short(m), label)
 
-        if not dir and subdirnodes:
-            self.ui.status(_("checking directory manifests\n"))
-            storefiles = set()
-            subdirs = set()
-            revlogv1 = self.revlogv1
-            for f, f2, size in repo.store.datafiles():
-                if not f:
-                    self.err(None, _("cannot decode filename '%s'") % f2)
-                elif (size > 0 or not revlogv1) and f.startswith('meta/'):
-                    storefiles.add(_normpath(f))
-                    subdirs.add(os.path.dirname(f))
-            subdircount = len(subdirs)
-            currentsubdir = [0]
-            def progress():
-                currentsubdir[0] += 1
-                ui.progress(_('checking'), currentsubdir[0], total=subdircount,
-                            unit=_('manifests'))
+        return filenodes, subdirnodes
 
+    def _verifymanifesttree(self, filenodes, subdirnodes, storefiles, progress):
         for subdir, linkrevs in subdirnodes.iteritems():
-            subdirfilenodes = self._verifymanifest(linkrevs, subdir, storefiles,
-                                                   progress)
+            subdirfilenodes, subsubdirnodes = (
+                    self._verifymanifestpart(linkrevs, subdir, storefiles,
+                                             progress))
             for f, onefilenodes in subdirfilenodes.iteritems():
                 filenodes.setdefault(f, {}).update(onefilenodes)
-
-        if not dir and subdirnodes:
-            ui.progress(_('checking'), None)
-            for f in sorted(storefiles):
-                self.warn(_("warning: orphan revlog '%s'") % f)
-
-        return filenodes
+            self._verifymanifesttree(filenodes, subsubdirnodes, storefiles,
+                                     progress)
 
     def _crosscheckfiles(self, filelinkrevs, filenodes):
         if self.ui.configbool("verify", "skipmanifests", False):
