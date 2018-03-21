@@ -31,6 +31,7 @@ from . import (
     node,
     pathutil,
     phases,
+    progress,
     pycompat,
     scmutil,
     util,
@@ -673,17 +674,15 @@ class abstractsubrepo(object):
             files = self.files()
         total = len(files)
         relpath = subrelpath(self)
-        self.ui.progress(_('archiving (%s)') % relpath, 0,
-                         unit=_('files'), total=total)
-        for i, name in enumerate(files):
-            flags = self.fileflags(name)
-            mode = 'x' in flags and 0o755 or 0o644
-            symlink = 'l' in flags
-            archiver.addfile(prefix + self._path + '/' + name,
-                             mode, symlink, self.filedata(name, decode))
-            self.ui.progress(_('archiving (%s)') % relpath, i + 1,
-                             unit=_('files'), total=total)
-        self.ui.progress(_('archiving (%s)') % relpath, None)
+        with progress.bar(self.ui, _('archiving (%s)') % relpath, _('files'),
+                          total) as prog:
+            for i, name in enumerate(files, 1):
+                flags = self.fileflags(name)
+                mode = 'x' in flags and 0o755 or 0o644
+                symlink = 'l' in flags
+                archiver.addfile(prefix + self._path + '/' + name,
+                                 mode, symlink, self.filedata(name, decode))
+                prog.value = i
         return total
 
     def walk(self, match):
@@ -1950,22 +1949,21 @@ class gitsubrepo(abstractsubrepo):
         tarstream = self._gitcommand(['archive', revision], stream=True)
         tar = tarfile.open(fileobj=tarstream, mode='r|')
         relpath = subrelpath(self)
-        self.ui.progress(_('archiving (%s)') % relpath, 0, unit=_('files'))
-        for i, info in enumerate(tar):
-            if info.isdir():
-                continue
-            if match and not match(info.name):
-                continue
-            if info.issym():
-                data = info.linkname
-            else:
-                data = tar.extractfile(info).read()
-            archiver.addfile(prefix + self._path + '/' + info.name,
-                             info.mode, info.issym(), data)
-            total += 1
-            self.ui.progress(_('archiving (%s)') % relpath, i + 1,
-                             unit=_('files'))
-        self.ui.progress(_('archiving (%s)') % relpath, None)
+        with progress.bar(self.ui, _('archiving (%s)') %relpath,
+                          _('files')) as prog:
+            for info in tar:
+                if info.isdir():
+                    continue
+                if match and not match(info.name):
+                    continue
+                if info.issym():
+                    data = info.linkname
+                else:
+                    data = tar.extractfile(info).read()
+                archiver.addfile(prefix + self._path + '/' + info.name,
+                                 info.mode, info.issym(), data)
+                total += 1
+                prog.value = total
         return total
 
     @annotatesubrepoerror

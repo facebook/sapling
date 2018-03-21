@@ -535,21 +535,15 @@ Test archive
   $ hg archive -S ../archive-all --debug --config progress.debug=true
   archiving: .hgsub 1/2 files (50.00%)
   archiving: .hgsubstate 2/2 files (100.00%)
-  archiving (obstruct): 0/1 files (0.00%)
   archiving (obstruct): 1/1 files (100.00%)
-  archiving (recreated): 0/1 files (0.00%)
   archiving (recreated): 1/1 files (100.00%)
-  archiving (s): 0/2 files (0.00%)
   archiving (s): 1/2 files (50.00%)
   archiving (s): 2/2 files (100.00%)
 
   $ hg archive -S ../archive-exclude --debug --config progress.debug=true -X **old
   archiving: .hgsub 1/2 files (50.00%)
   archiving: .hgsubstate 2/2 files (100.00%)
-  archiving (obstruct): 0/1 files (0.00%)
   archiving (obstruct): 1/1 files (100.00%)
-  archiving (recreated): 0 files
-  archiving (s): 0/2 files (0.00%)
   archiving (s): 1/2 files (50.00%)
   archiving (s): 2/2 files (100.00%)
   $ find ../archive-exclude | sort
