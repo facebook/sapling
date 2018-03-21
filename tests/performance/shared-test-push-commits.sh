@@ -21,7 +21,7 @@ cd "$REPO_PATH/source"
 $REPOSYNTHESIZER --fill-existing-repo \
                  --path "$REPO_PATH/source" \
                  --seed 0 \
-                 --commits-num 1 \
+                 --commits-num "$COMMIT_NUM" \
                  --non-ascii
 
 echo "Pushing to Mononoke"

@@ -11,6 +11,6 @@ source ./library.sh
 
 common_setup
 
-export COMMIT_NUM=1
+export COMMIT_NUM=2
 
 source ./shared-test-push-commits.sh
