@@ -12,6 +12,7 @@ use std::convert::{TryFrom, TryInto};
 use std::path::PathBuf;
 use std::str::from_utf8;
 
+use failure::FutureFailureErrorExt;
 use futures::{future, Future, IntoFuture};
 
 use blobrepo::BlobRepo;
@@ -77,7 +78,8 @@ impl RepoConfigs {
                 .and_then(move |changeset| {
                     repo.get_manifest_by_nodeid(&changeset.manifestid().clone().into_nodehash())
                 })
-                .map_err(|err| err.context("failed to get manifest from changeset").into())
+                .context("failed to get manifest from changeset")
+                .from_err()
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
     }
