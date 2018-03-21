@@ -3887,3 +3887,46 @@ def safename(f, tag, ctx, others=None):
         fn = '%s~%s~%s' % (f, tag, n)
         if fn not in ctx and fn not in others:
             return fn
+
+class ring(object):
+    def __init__(self, maxsize):
+        self._maxsize = maxsize
+        self._data = [None] * maxsize
+        self._offset = 0
+        self._len = 0
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(self, index):
+        if index < -self._len or index >= self._len:
+            raise IndexError
+        if index < 0:
+            return self._data[(self._offset + self._len + index)
+                              % self._maxsize]
+        else:
+            return self._data[(self._offset + index) % self._maxsize]
+
+    def push(self, item):
+        self._data[(self._offset + self._len) % self._maxsize] = item
+        if self._len >= self._maxsize:
+            # new item has pushed the oldest one out
+            self._offset += 1
+        else:
+            self._len += 1
+
+    def pop(self):
+        if self._len <= 0:
+            raise IndexError
+        item = self._data[self._offset]
+        self._offset = (self._offset + 1) % self._maxsize
+        return item
+
+    def items(self):
+        end = self._offset + self._len
+        if end <= self._maxsize:
+            return self._data[self._offset:end]
+        else:
+            head = self._data[self.offset:self._maxsize]
+            tail = self._data[:(end % self._maxsize)]
+            return head + tail
