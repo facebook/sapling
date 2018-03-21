@@ -44,6 +44,7 @@ from mercurial.node import short, hex
 from mercurial import (
     error,
     extensions,
+    progress,
     registrar,
     revlog,
     scmutil,
@@ -256,12 +257,12 @@ def p4fastimport(ui, repo, client, **opts):
     importset = importer.ImportSet(repo, client, changelists,
             filelist, basepath, isbranchpoint=isbranchpoint)
     p4filelogs = []
-    for i, f in enumerate(importset.filelogs()):
-        ui.debug('reading filelog %s\n' % f.depotfile)
-        ui.progress(_('reading filelog'), i, unit=_('filelogs'),
-                total=len(filelist))
-        p4filelogs.append(f)
-    ui.progress(_('reading filelog'), None)
+    with progress.bar(ui, _('reading filelog'), _('filelogs'),
+                            len(filelist)) as prog:
+        for i, f in enumerate(importset.filelogs()):
+            ui.debug('reading filelog %s\n' % f.depotfile)
+            prog.value = i
+            p4filelogs.append(f)
 
     # runlist is used to topologically order files which were branched (Perforce
     # uses per-file branching, not per-repo branching).  If we do copytracing a
@@ -285,25 +286,24 @@ def p4fastimport(ui, repo, client, **opts):
         largefiles = []
         ftr = repo.transaction('importer')
         try:
-            for filelogs in map(sorted, runlist.values()):
-                wargs = (ftr, ui, repo, importset, p1ctx)
-                for i, serialized in runworker(ui, create, wargs, filelogs):
-                    data = json.loads(serialized)
-                    ui.progress(_('importing filelogs'), count,
-                            item=data['depotname'], unit='file',
-                            total=len(p4filelogs))
-                    # Json converts to UTF8 and int keys to strings, so we
-                    # have to convert back.
-                    # TODO: Find a better way to handle this.
-                    fileinfo[data['depotname']] = {
-                        'localname': data['localname'].encode('utf-8'),
-                        'flags': decodefileflags(data['fileflags']),
-                        'baserevatcl': data['baserevatcl'],
-                    }
-                    largefiles.extend(data['largefiles'])
-                    count += i
-                ui.progress(_('importing filelogs'), None)
-            ftr.close()
+            with progress.bar(_('importing filelogs'), 'file',
+                              len(p4filelogs)) as prog:
+                for filelogs in map(sorted, runlist.values()):
+                    wargs = (ftr, ui, repo, importset, p1ctx)
+                    for i, serialized in runworker(ui, create, wargs, filelogs):
+                        data = json.loads(serialized)
+                        prog.value = (count, data['depotname'])
+                        # Json converts to UTF8 and int keys to strings, so we
+                        # have to convert back.
+                        # TODO: Find a better way to handle this.
+                        fileinfo[data['depotname']] = {
+                            'localname': data['localname'].encode('utf-8'),
+                            'flags': decodefileflags(data['fileflags']),
+                            'baserevatcl': data['baserevatcl'],
+                        }
+                        largefiles.extend(data['largefiles'])
+                        count += i
+                ftr.close()
 
             tr = repo.transaction('import')
             try:

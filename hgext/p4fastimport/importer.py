@@ -13,6 +13,7 @@ from mercurial import (
     error,
     extensions,
     manifest,
+    progress,
     util,
 )
 
@@ -125,106 +126,108 @@ class ChangeManifestImporter(object):
             mf = manifest.manifestdict()
         else:
             mf = p1.manifest().copy()
-        for i, change in enumerate(self._importset.changelists):
-            self._ui.progress(_('importing change'), pos=i, item=change,
-                    unit='changes', total=len(self._importset.changelists))
+        with progress.bar(self._ui, _('importing change'), 'changes',
+                          len(self._importset.changelists)) as prog:
+            for i, change in enumerate(self._importset.changelists):
+                prog.value = (i, change)
 
-            added, modified, removed = change.files
+                added, modified, removed = change.files
 
-            changed = set()
+                changed = set()
 
-            # generate manifest mappings of filenames to filenodes
-            for depotname in removed:
-                if depotname not in self._importset.filelist:
-                    continue
-                localname = fileinfo[depotname]['localname']
-                if localname in mf:
-                    changed.add(localname)
-                    del mf[localname]
-
-            for depotname in added + modified:
-                if depotname not in self._importset.filelist:
-                    continue
-                info = fileinfo[depotname]
-                localname, baserev = (
-                        info['localname'], info['baserevatcl'][str(change.cl)])
-
-                if self._ui.configbool('p4fastimport', 'checksymlinks', True):
-                    # Under rare situations, when a symlink points to a
-                    # directory, the P4 server can report a file "under" it (as
-                    # if it really were a directory). 'p4 sync' reports this as
-                    # an error and continues, but 'hg update' will abort if it
-                    # encounters this.  We need to keep such damage out of the
-                    # hg repository.
-                    depotparentname = os.path.dirname(depotname)
-
-                    # The manifest's flags for the parent haven't been updated
-                    # to reflect this changelist yet. If the parent's flags are
-                    # changing right now, use them. Otherwise, use the
-                    # manifest's flags.
-                    parentflags = None
-                    parentinfo = fileinfo.get(depotparentname, None)
-                    if parentinfo:
-                        parentflags = parentinfo['flags'].get(change.cl, None)
-
-                    localparentname = localname
-                    while parentflags is None:
-                        # This P4 commit didn't change parent's flags at all.
-                        # Therefore, we can consult the Hg metadata.
-                        localparentname = os.path.dirname(localparentname)
-                        if localparentname == '':
-                            # There was no parent file above localname; only
-                            # directories. That's good/expected.
-                            parentflags = ''
-                            break
-                        parentflags = mf.flags(localparentname, None)
-
-                    if 'l' in parentflags:
-                        # It turns out that some parent is a symlink, so this
-                        # file can't exist. However, we already wrote the
-                        # filelog! Oh well. Just don't reference it in the
-                        # manifest.
-                        # TODO: hgfilelog.strip()?
-                        msg = _("warning: ignoring {} because it's under a "
-                                "symlink ({})\n").format(localname,
-                                                         localparentname)
-                        self._ui.warn(msg)
+                # generate manifest mappings of filenames to filenodes
+                for depotname in removed:
+                    if depotname not in self._importset.filelist:
                         continue
+                    localname = fileinfo[depotname]['localname']
+                    if localname in mf:
+                        changed.add(localname)
+                        del mf[localname]
 
-                hgfilelog = self._repo.file(localname)
-                try:
-                    mf[localname] = hgfilelog.node(baserev)
-                except (error.LookupError, IndexError):
-                    raise error.Abort("can't find rev %d for %s cl %d" % (
-                        baserev, localname, change.cl))
-                changed.add(localname)
-                flags = info['flags'].get(change.cl, '')
-                if flags != mf.flags(localname):
-                    mf.setflag(localname, flags)
+                for depotname in added + modified:
+                    if depotname not in self._importset.filelist:
+                        continue
+                    info = fileinfo[depotname]
+                    localname = info['localname']
+                    baserev = info['baserevatcl'][str(change.cl)]
 
-            linkrev = self._importset.linkrev(change.cl)
-            oldmp1 = mp1
-            mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
-                                      linkrev, mp1, mp2)
-            self._ui.debug('changelist %d: writing manifest. '
-                'node: %s p1: %s p2: %s linkrev: %d\n' % (
-                change.cl, short(mp1), short(oldmp1), short(mp2), linkrev))
+                    if self._ui.configbool('p4fastimport', 'checksymlinks',
+                                           True):
+                        # Under rare situations, when a symlink points to a
+                        # directory, the P4 server can report a file "under" it
+                        # (as if it really were a directory). 'p4 sync' reports
+                        # this as an error and continues, but 'hg update' will
+                        # abort if it encounters this.  We need to keep such
+                        # damage out of the hg repository.
+                        depotparentname = os.path.dirname(depotname)
 
-            desc = change.parsed['desc']
-            if desc == '':
-                desc = '** empty changelist description **'
-            desc = desc.decode('ascii', 'ignore')
+                        # The manifest's flags for the parent haven't been
+                        # updated to reflect this changelist yet. If the
+                        # parent's flags are changing right now, use them.
+                        # Otherwise, use the manifest's flags.
+                        parentflags = None
+                        parentinfo = fileinfo.get(depotparentname, None)
+                        if parentinfo:
+                            parentflags = parentinfo['flags'].get(change.cl,
+                                                                  None)
 
-            shortdesc = desc.splitlines()[0]
-            username = change.parsed['user']
-            username = self.usermap.get(username, username)
-            self._ui.debug('changelist %d: writing changelog: %s\n' % (
-                change.cl, shortdesc))
-            cp1 = self.writechangelog(
-                    clog, mp1, changed, desc, tr, cp1, cp2,
-                    username, (change.parsed['time'], 0), change.cl)
-            yield change.cl, cp1
-        self._ui.progress(_('importing change'), pos=None)
+                        localparentname = localname
+                        while parentflags is None:
+                            # This P4 commit didn't change parent's flags at
+                            # all. Therefore, we can consult the Hg metadata.
+                            localparentname = os.path.dirname(localparentname)
+                            if localparentname == '':
+                                # There was no parent file above localname; only
+                                # directories. That's good/expected.
+                                parentflags = ''
+                                break
+                            parentflags = mf.flags(localparentname, None)
+
+                        if 'l' in parentflags:
+                            # It turns out that some parent is a symlink, so
+                            # this file can't exist. However, we already wrote
+                            # the filelog! Oh well. Just don't reference it in
+                            # the manifest.
+                            # TODO: hgfilelog.strip()?
+                            msg = _("warning: ignoring {} because it's under a "
+                                    "symlink ({})\n").format(localname,
+                                                             localparentname)
+                            self._ui.warn(msg)
+                            continue
+
+                    hgfilelog = self._repo.file(localname)
+                    try:
+                        mf[localname] = hgfilelog.node(baserev)
+                    except (error.LookupError, IndexError):
+                        raise error.Abort("can't find rev %d for %s cl %d" % (
+                            baserev, localname, change.cl))
+                    changed.add(localname)
+                    flags = info['flags'].get(change.cl, '')
+                    if flags != mf.flags(localname):
+                        mf.setflag(localname, flags)
+
+                linkrev = self._importset.linkrev(change.cl)
+                oldmp1 = mp1
+                mp1 = mrevlog.addrevision(mf.text(mrevlog._usemanifestv2), tr,
+                                          linkrev, mp1, mp2)
+                self._ui.debug('changelist %d: writing manifest. '
+                    'node: %s p1: %s p2: %s linkrev: %d\n' % (
+                    change.cl, short(mp1), short(oldmp1), short(mp2), linkrev))
+
+                desc = change.parsed['desc']
+                if desc == '':
+                    desc = '** empty changelist description **'
+                desc = desc.decode('ascii', 'ignore')
+
+                shortdesc = desc.splitlines()[0]
+                username = change.parsed['user']
+                username = self.usermap.get(username, username)
+                self._ui.debug('changelist %d: writing changelog: %s\n' % (
+                    change.cl, shortdesc))
+                cp1 = self.writechangelog(
+                        clog, mp1, changed, desc, tr, cp1, cp2,
+                        username, (change.parsed['time'], 0), change.cl)
+                yield change.cl, cp1
 
     def writechangelog(
             self, clog, mp1, changed, desc, tr, cp1, cp2, username, date, cl):
