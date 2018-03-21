@@ -6,9 +6,9 @@ plain
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0 \
   > --config progress.format=topic,bar,number \
-  > --config progress.width=60
+  > --config progress.width=60 \
+  > --config progress.debug=true
   \r (no-eol) (esc)
-  building [                                          ]  0/12\r (no-eol) (esc)
   building [                                          ]  0/12\r (no-eol) (esc)
   building [==>                                       ]  1/12\r (no-eol) (esc)
   building [==>                                       ]  1/12\r (no-eol) (esc)

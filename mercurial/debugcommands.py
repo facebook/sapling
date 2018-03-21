@@ -185,86 +185,86 @@ def debugbuilddag(ui, repo, text=None,
         atbranch = 'default'
         nodeids = []
         id = 0
-        ui.progress(_('building'), id, unit=_('revisions'), total=total)
-        for type, data in dagparser.parsedag(text):
-            if type == 'n':
-                ui.note(('node %s\n' % str(data)))
-                id, ps = data
+        with progress.bar(ui, _('building'), _('revisions'), total) as prog:
+            for type, data in dagparser.parsedag(text):
+                if type == 'n':
+                    ui.note(('node %s\n' % str(data)))
+                    id, ps = data
 
-                files = []
-                filecontent = {}
+                    files = []
+                    filecontent = {}
 
-                p2 = None
-                if mergeable_file:
-                    fn = "mf"
-                    p1 = repo[ps[0]]
-                    if len(ps) > 1:
-                        p2 = repo[ps[1]]
-                        pa = p1.ancestor(p2)
-                        base, local, other = [x[fn].data() for x in (pa, p1,
-                                                                     p2)]
-                        m3 = simplemerge.Merge3Text(base, local, other)
-                        ml = [l.strip() for l in m3.merge_lines()]
-                        ml.append("")
-                    elif at > 0:
-                        ml = p1[fn].data().split("\n")
-                    else:
-                        ml = initialmergedlines
-                    ml[id * linesperrev] += " r%i" % id
-                    mergedtext = "\n".join(ml)
-                    files.append(fn)
-                    filecontent[fn] = mergedtext
-
-                if overwritten_file:
-                    fn = "of"
-                    files.append(fn)
-                    filecontent[fn] = "r%i\n" % id
-
-                if new_file:
-                    fn = "nf%i" % id
-                    files.append(fn)
-                    filecontent[fn] = "r%i\n" % id
-                    if len(ps) > 1:
-                        if not p2:
+                    p2 = None
+                    if mergeable_file:
+                        fn = "mf"
+                        p1 = repo[ps[0]]
+                        if len(ps) > 1:
                             p2 = repo[ps[1]]
-                        for fn in p2:
-                            if fn.startswith("nf"):
-                                files.append(fn)
-                                filecontent[fn] = p2[fn].data()
+                            pa = p1.ancestor(p2)
+                            base, local, other = [x[fn].data()
+                                                  for x in (pa, p1, p2)]
+                            m3 = simplemerge.Merge3Text(base, local, other)
+                            ml = [l.strip() for l in m3.merge_lines()]
+                            ml.append("")
+                        elif at > 0:
+                            ml = p1[fn].data().split("\n")
+                        else:
+                            ml = initialmergedlines
+                        ml[id * linesperrev] += " r%i" % id
+                        mergedtext = "\n".join(ml)
+                        files.append(fn)
+                        filecontent[fn] = mergedtext
 
-                def fctxfn(repo, cx, path):
-                    if path in filecontent:
-                        return context.memfilectx(repo, cx, path,
-                                                  filecontent[path])
-                    return None
+                    if overwritten_file:
+                        fn = "of"
+                        files.append(fn)
+                        filecontent[fn] = "r%i\n" % id
 
-                if len(ps) == 0 or ps[0] < 0:
-                    pars = [None, None]
-                elif len(ps) == 1:
-                    pars = [nodeids[ps[0]], None]
-                else:
-                    pars = [nodeids[p] for p in ps]
-                cx = context.memctx(repo, pars, "r%i" % id, files, fctxfn,
-                                    date=(id, 0),
-                                    user="debugbuilddag",
-                                    extra={'branch': atbranch})
-                nodeid = repo.commitctx(cx)
-                nodeids.append(nodeid)
-                at = id
-            elif type == 'l':
-                id, name = data
-                ui.note(('tag %s\n' % name))
-                tags.append("%s %s\n" % (hex(repo.changelog.node(id)), name))
-            elif type == 'a':
-                ui.note(('branch %s\n' % data))
-                atbranch = data
-            ui.progress(_('building'), id, unit=_('revisions'), total=total)
+                    if new_file:
+                        fn = "nf%i" % id
+                        files.append(fn)
+                        filecontent[fn] = "r%i\n" % id
+                        if len(ps) > 1:
+                            if not p2:
+                                p2 = repo[ps[1]]
+                            for fn in p2:
+                                if fn.startswith("nf"):
+                                    files.append(fn)
+                                    filecontent[fn] = p2[fn].data()
+
+                    def fctxfn(repo, cx, path):
+                        if path in filecontent:
+                            return context.memfilectx(repo, cx, path,
+                                                      filecontent[path])
+                        return None
+
+                    if len(ps) == 0 or ps[0] < 0:
+                        pars = [None, None]
+                    elif len(ps) == 1:
+                        pars = [nodeids[ps[0]], None]
+                    else:
+                        pars = [nodeids[p] for p in ps]
+                    cx = context.memctx(repo, pars, "r%i" % id, files, fctxfn,
+                                        date=(id, 0),
+                                        user="debugbuilddag",
+                                        extra={'branch': atbranch})
+                    nodeid = repo.commitctx(cx)
+                    nodeids.append(nodeid)
+                    at = id
+                elif type == 'l':
+                    id, name = data
+                    ui.note(('tag %s\n' % name))
+                    tags.append("%s %s\n" %
+                                (hex(repo.changelog.node(id)), name))
+                elif type == 'a':
+                    ui.note(('branch %s\n' % data))
+                    atbranch = data
+                prog.value = id
         tr.close()
 
         if tags:
             repo.vfs.write("localtags", "".join(tags))
     finally:
-        ui.progress(_('building'), None)
         release(tr, lock, wlock)
 
 def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
