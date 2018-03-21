@@ -433,6 +433,25 @@ Switch back to hybrid mode
   $ cp .hg/store/00manifest.i .hg/store/00manifest.i.bak
   $ cp .hg/store/00changelog.i .hg/store/00changelog.i.bak
 
+- Test that accessing a public commit doesnt require the flat manifest
+  $ clearcache
+  $ hg log -r 'last(public())' --stat
+  2 trees fetched over * (glob)
+  2 trees fetched over * (glob)
+  changeset:   4:2937cde31c19
+  parent:      0:2278cc8c6ce6
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     modify subdir/x
+  
+   subdir/x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+
+
+  $ clearcache
+
 - Auto-backfill on pull
   $ hg pull
   backfilling missing flat manifests

@@ -2007,13 +2007,16 @@ class remotetreestore(generatingdatastore):
         # Only look at the server if not root or is public
         basemfnodes = []
         if name == '':
+            linkrev = None
             if util.safehasattr(self._repo.manifestlog, '_revlog'):
                 mfrevlog = self._repo.manifestlog._revlog
-                rev = mfrevlog.rev(node)
-                linkrev = mfrevlog.linkrev(rev)
-                if self._repo[linkrev].phase() != phases.public:
-                    raise KeyError((name, node))
-            else:
+                if node in mfrevlog.nodemap:
+                    rev = mfrevlog.rev(node)
+                    linkrev = mfrevlog.linkrev(rev)
+                    if self._repo[linkrev].phase() != phases.public:
+                        raise KeyError((name, node))
+
+            if linkrev is None:
                 # TODO: improve linkrev guessing when the revlog isn't available
                 linkrev = self._repo['tip'].rev()
 
