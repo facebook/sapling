@@ -15,6 +15,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     hg,
+    progress,
     registrar,
     util,
 )
@@ -91,23 +92,23 @@ def collect(src, ui):
     # mozilla-central as of 2010-06-10 had a ratio of just over 7:5.
     total = live * 3 // 2
     src = src.store.path
-    pos = 0
     ui.status(_("tip has %d files, estimated total number of files: %d\n")
               % (live, total))
-    for dirpath, dirnames, filenames in os.walk(src):
-        dirnames.sort()
-        relpath = dirpath[len(src) + seplen:]
-        for filename in sorted(filenames):
-            if filename[-2:] not in ('.d', '.i'):
-                continue
-            st = os.stat(os.path.join(dirpath, filename))
-            if not stat.S_ISREG(st.st_mode):
-                continue
-            pos += 1
-            candidates.append((os.path.join(relpath, filename), st))
-            ui.progress(_('collecting'), pos, filename, _('files'), total)
+    pos = 0
+    with progress.bar(ui, _('collecting'), _('files'), total) as prog:
+        for dirpath, dirnames, filenames in os.walk(src):
+            dirnames.sort()
+            relpath = dirpath[len(src) + seplen:]
+            for filename in sorted(filenames):
+                if filename[-2:] not in ('.d', '.i'):
+                    continue
+                st = os.stat(os.path.join(dirpath, filename))
+                if not stat.S_ISREG(st.st_mode):
+                    continue
+                pos += 1
+                candidates.append((os.path.join(relpath, filename), st))
+                prog.value = (pos, filename)
 
-    ui.progress(_('collecting'), None)
     ui.status(_('collected %d candidate storage files\n') % len(candidates))
     return candidates
 
@@ -129,20 +130,19 @@ def prune(candidates, src, dst, ui):
         return st
 
     targets = []
-    total = len(candidates)
     pos = 0
-    for fn, st in candidates:
-        pos += 1
-        srcpath = os.path.join(src, fn)
-        tgt = os.path.join(dst, fn)
-        ts = linkfilter(srcpath, tgt, st)
-        if not ts:
-            ui.debug('not linkable: %s\n' % fn)
-            continue
-        targets.append((fn, ts.st_size))
-        ui.progress(_('pruning'), pos, fn, _('files'), total)
+    with progress.bar(ui, _('pruning'), _('files'), len(candidates)) as prog:
+        for fn, st in candidates:
+            pos += 1
+            srcpath = os.path.join(src, fn)
+            tgt = os.path.join(dst, fn)
+            ts = linkfilter(srcpath, tgt, st)
+            if not ts:
+                ui.debug('not linkable: %s\n' % fn)
+                continue
+            targets.append((fn, ts.st_size))
+            prog.value = (pos, fn)
 
-    ui.progress(_('pruning'), None)
     ui.status(_('pruned down to %d probably relinkable files\n') % len(targets))
     return targets
 
@@ -162,34 +162,32 @@ def do_relink(src, dst, files, ui):
     savedbytes = 0
 
     pos = 0
-    total = len(files)
-    for f, sz in files:
-        pos += 1
-        source = os.path.join(src, f)
-        tgt = os.path.join(dst, f)
-        # Binary mode, so that read() works correctly, especially on Windows
-        sfp = file(source, 'rb') # noqa
-        dfp = file(tgt, 'rb') # noqa
-        sin = sfp.read(CHUNKLEN)
-        while sin:
-            din = dfp.read(CHUNKLEN)
-            if sin != din:
-                break
+    with progress.bar(ui, _('relinking'), _('files'), len(files)) as prog:
+        for f, sz in files:
+            pos += 1
+            source = os.path.join(src, f)
+            tgt = os.path.join(dst, f)
+            # Binary mode, so that read() works correctly, especially on Windows
+            sfp = file(source, 'rb') # noqa
+            dfp = file(tgt, 'rb') # noqa
             sin = sfp.read(CHUNKLEN)
-        sfp.close()
-        dfp.close()
-        if sin:
-            ui.debug('not linkable: %s\n' % f)
-            continue
-        try:
-            relinkfile(source, tgt)
-            ui.progress(_('relinking'), pos, f, _('files'), total)
-            relinked += 1
-            savedbytes += sz
-        except OSError as inst:
-            ui.warn('%s: %s\n' % (tgt, str(inst)))
-
-    ui.progress(_('relinking'), None)
+            while sin:
+                din = dfp.read(CHUNKLEN)
+                if sin != din:
+                    break
+                sin = sfp.read(CHUNKLEN)
+            sfp.close()
+            dfp.close()
+            if sin:
+                ui.debug('not linkable: %s\n' % f)
+                continue
+            try:
+                relinkfile(source, tgt)
+                prog.value = (pos, f)
+                relinked += 1
+                savedbytes += sz
+            except OSError as inst:
+                ui.warn('%s: %s\n' % (tgt, str(inst)))
 
     ui.status(_('relinked %d files (%s reclaimed)\n') %
               (relinked, util.bytecount(savedbytes)))
