@@ -19,6 +19,7 @@ from mercurial import (
     cmdutil,
     encoding,
     patch,
+    progress,
     pycompat,
     registrar,
     scmutil,
@@ -60,12 +61,12 @@ def countrate(ui, repo, amap, *pats, **opts):
             tmpl.show(ctx)
             return ui.popbuffer()
 
-    state = {'count': 0}
     rate = {}
     df = False
     if opts.get('date'):
         df = util.matchdate(opts['date'])
 
+    prog = progress.bar(ui, _('analyzing'), _('revisions'), len(repo))
     m = scmutil.match(repo[None], pats, opts)
     def prep(ctx, fns):
         rev = ctx.rev()
@@ -86,14 +87,11 @@ def countrate(ui, repo, amap, *pats, **opts):
             lines = changedlines(ui, repo, ctx1, ctx, fns)
             rate[key] = [r + l for r, l in zip(rate.get(key, (0, 0)), lines)]
 
-        state['count'] += 1
-        ui.progress(_('analyzing'), state['count'], total=len(repo),
-                    unit=_('revisions'))
+        prog.value += 1
 
-    for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
-        continue
-
-    ui.progress(_('analyzing'), None)
+    with prog:
+        for ctx in cmdutil.walkchangerevs(repo, m, opts, prep):
+            continue
 
     return rate
 
