@@ -18,6 +18,7 @@ from . import (
     hg,
     localrepo,
     manifest,
+    progress,
     revlog,
     scmutil,
     util,
@@ -497,73 +498,72 @@ def _copyrevlogs(ui, srcrepo, dstrepo, tr, deltareuse, aggressivemergedeltas):
              (util.bytecount(srcsize), util.bytecount(srcrawsize))))
 
     # Used to keep track of progress.
-    progress = []
+    prog = progress.bar(ui, _('migrating'))
     def oncopiedrevision(rl, rev, node):
-        progress[1] += 1
-        srcrepo.ui.progress(progress[0], progress[1], total=progress[2])
+        prog.value += 1
 
     # Do the actual copying.
     # FUTURE this operation can be farmed off to worker processes.
     seen = set()
-    for unencoded, encoded, size in srcrepo.store.walk():
-        if unencoded.endswith('.d'):
-            continue
+    with prog:
+        for unencoded, encoded, size in srcrepo.store.walk():
+            if unencoded.endswith('.d'):
+                continue
 
-        oldrl = _revlogfrompath(srcrepo, unencoded)
-        newrl = _revlogfrompath(dstrepo, unencoded)
+            oldrl = _revlogfrompath(srcrepo, unencoded)
+            newrl = _revlogfrompath(dstrepo, unencoded)
 
-        if isinstance(oldrl, changelog.changelog) and 'c' not in seen:
-            ui.write(_('finished migrating %d manifest revisions across %d '
-                       'manifests; change in size: %s\n') %
-                     (mrevcount, mcount, util.bytecount(mdstsize - msrcsize)))
+            if isinstance(oldrl, changelog.changelog) and 'c' not in seen:
+                ui.write(_('finished migrating %d manifest revisions across %d '
+                           'manifests; change in size: %s\n') %
+                         (mrevcount, mcount,
+                          util.bytecount(mdstsize - msrcsize)))
 
-            ui.write(_('migrating changelog containing %d revisions '
-                       '(%s in store; %s tracked data)\n') %
-                     (crevcount, util.bytecount(csrcsize),
-                      util.bytecount(crawsize)))
-            seen.add('c')
-            progress[:] = [_('changelog revisions'), 0, crevcount]
-        elif isinstance(oldrl, manifest.manifestrevlog) and 'm' not in seen:
-            ui.write(_('finished migrating %d filelog revisions across %d '
-                       'filelogs; change in size: %s\n') %
-                     (frevcount, fcount, util.bytecount(fdstsize - fsrcsize)))
+                ui.write(_('migrating changelog containing %d revisions '
+                           '(%s in store; %s tracked data)\n') %
+                         (crevcount, util.bytecount(csrcsize),
+                          util.bytecount(crawsize)))
+                seen.add('c')
+                prog.reset(_('changelog revisions'), total=crevcount)
+            elif isinstance(oldrl, manifest.manifestrevlog) and 'm' not in seen:
+                ui.write(_('finished migrating %d filelog revisions across %d '
+                           'filelogs; change in size: %s\n') %
+                         (frevcount, fcount,
+                          util.bytecount(fdstsize - fsrcsize)))
 
-            ui.write(_('migrating %d manifests containing %d revisions '
-                       '(%s in store; %s tracked data)\n') %
-                     (mcount, mrevcount, util.bytecount(msrcsize),
-                      util.bytecount(mrawsize)))
-            seen.add('m')
-            progress[:] = [_('manifest revisions'), 0, mrevcount]
-        elif 'f' not in seen:
-            ui.write(_('migrating %d filelogs containing %d revisions '
-                       '(%s in store; %s tracked data)\n') %
-                     (fcount, frevcount, util.bytecount(fsrcsize),
-                      util.bytecount(frawsize)))
-            seen.add('f')
-            progress[:] = [_('file revisions'), 0, frevcount]
+                ui.write(_('migrating %d manifests containing %d revisions '
+                           '(%s in store; %s tracked data)\n') %
+                         (mcount, mrevcount, util.bytecount(msrcsize),
+                          util.bytecount(mrawsize)))
+                seen.add('m')
+                prog.reset(_('manifest revisions'), total=crevcount)
+            elif 'f' not in seen:
+                ui.write(_('migrating %d filelogs containing %d revisions '
+                           '(%s in store; %s tracked data)\n') %
+                         (fcount, frevcount, util.bytecount(fsrcsize),
+                          util.bytecount(frawsize)))
+                seen.add('f')
+                prog.reset(_('file revisions'), total=crevcount)
 
-        ui.progress(progress[0], progress[1], total=progress[2])
+            ui.note(_('cloning %d revisions from %s\n') %
+                    (len(oldrl), unencoded))
+            oldrl.clone(tr, newrl, addrevisioncb=oncopiedrevision,
+                        deltareuse=deltareuse,
+                        aggressivemergedeltas=aggressivemergedeltas)
 
-        ui.note(_('cloning %d revisions from %s\n') % (len(oldrl), unencoded))
-        oldrl.clone(tr, newrl, addrevisioncb=oncopiedrevision,
-                    deltareuse=deltareuse,
-                    aggressivemergedeltas=aggressivemergedeltas)
+            datasize = 0
+            idx = newrl.index
+            for rev in newrl:
+                datasize += idx[rev][1]
 
-        datasize = 0
-        idx = newrl.index
-        for rev in newrl:
-            datasize += idx[rev][1]
+            dstsize += datasize
 
-        dstsize += datasize
-
-        if isinstance(newrl, changelog.changelog):
-            cdstsize += datasize
-        elif isinstance(newrl, manifest.manifestrevlog):
-            mdstsize += datasize
-        else:
-            fdstsize += datasize
-
-    ui.progress(progress[0], None)
+            if isinstance(newrl, changelog.changelog):
+                cdstsize += datasize
+            elif isinstance(newrl, manifest.manifestrevlog):
+                mdstsize += datasize
+            else:
+                fdstsize += datasize
 
     ui.write(_('finished migrating %d changelog revisions; change in size: '
                '%s\n') % (crevcount, util.bytecount(cdstsize - csrcsize)))
