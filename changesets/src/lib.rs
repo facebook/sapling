@@ -34,7 +34,7 @@ use futures::future;
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{HgChangesetId, RepositoryId};
-use mercurial_types::sql_types::NodeHashSql;
+use mercurial_types::sql_types::HgChangesetIdSql;
 
 mod errors;
 mod schema;
@@ -142,6 +142,7 @@ impl MysqlChangesets {
 
 /// Using a macro here is unfortunate, but it appears to be the only way to share this code
 /// between SQLite and MySQL.
+/// See https://github.com/diesel-rs/diesel/issues/882#issuecomment-300257476
 macro_rules! impl_changesets {
     ($struct: ty) => {
         impl Changesets for $struct {
@@ -273,7 +274,7 @@ fn changeset_query<DB>(
 ) -> changesets::BoxedQuery<'static, DB>
 where
     DB: Backend,
-    DB: HasSqlType<NodeHashSql>,
+    DB: HasSqlType<HgChangesetIdSql>,
 {
     changesets::table
         .filter(changesets::repo_id.eq(repo_id))

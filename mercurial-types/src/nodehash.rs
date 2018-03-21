@@ -16,7 +16,7 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
-use sql_types::NodeHashSql;
+use sql_types::{HgChangesetIdSql, HgManifestIdSql};
 
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
@@ -157,7 +157,7 @@ impl Arbitrary for NodeHash {
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(HeapSizeOf, FromSqlRow, AsExpression)]
-#[sql_type = "NodeHashSql"]
+#[sql_type = "HgChangesetIdSql"]
 pub struct HgChangesetId(NodeHash);
 
 impl HgChangesetId {
@@ -167,7 +167,7 @@ impl HgChangesetId {
     }
 
     #[inline]
-    pub fn as_nodehash(&self) -> &NodeHash {
+    pub(crate) fn as_nodehash(&self) -> &NodeHash {
         &self.0
     }
 
@@ -222,15 +222,21 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[sql_type = "HgManifestIdSql"]
 pub struct HgManifestId(NodeHash);
 
 impl HgManifestId {
+    #[inline]
+    pub(crate) fn as_nodehash(&self) -> &NodeHash {
+        &self.0
+    }
+
     pub fn into_nodehash(self) -> NodeHash {
         self.0
     }
 
-    pub fn new(hash: NodeHash) -> Self {
+    pub const fn new(hash: NodeHash) -> Self {
         HgManifestId(hash)
     }
 }

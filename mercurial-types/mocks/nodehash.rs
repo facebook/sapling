@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{HgChangesetId, NodeHash};
+use mercurial_types::{HgChangesetId, HgManifestId, NodeHash};
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 
@@ -43,3 +43,20 @@ pub const CS_CSID: HgChangesetId = HgChangesetId::new(CS_HASH);
 pub const DS_CSID: HgChangesetId = HgChangesetId::new(DS_HASH);
 pub const ES_CSID: HgChangesetId = HgChangesetId::new(ES_HASH);
 pub const FS_CSID: HgChangesetId = HgChangesetId::new(FS_HASH);
+
+// Definitions for manifest IDs 1111...ffff
+pub const ONES_MID: HgManifestId = HgManifestId::new(ONES_HASH);
+pub const TWOS_MID: HgManifestId = HgManifestId::new(TWOS_HASH);
+pub const THREES_MID: HgManifestId = HgManifestId::new(THREES_HASH);
+pub const FOURS_MID: HgManifestId = HgManifestId::new(FOURS_HASH);
+pub const FIVES_MID: HgManifestId = HgManifestId::new(FIVES_HASH);
+pub const SIXES_MID: HgManifestId = HgManifestId::new(SIXES_HASH);
+pub const SEVENS_MID: HgManifestId = HgManifestId::new(SEVENS_HASH);
+pub const EIGHTS_MID: HgManifestId = HgManifestId::new(EIGHTS_HASH);
+pub const NINES_MID: HgManifestId = HgManifestId::new(NINES_HASH);
+pub const AS_MID: HgManifestId = HgManifestId::new(AS_HASH);
+pub const BS_MID: HgManifestId = HgManifestId::new(BS_HASH);
+pub const CS_MID: HgManifestId = HgManifestId::new(CS_HASH);
+pub const DS_MID: HgManifestId = HgManifestId::new(DS_HASH);
+pub const ES_MID: HgManifestId = HgManifestId::new(ES_HASH);
+pub const FS_MID: HgManifestId = HgManifestId::new(FS_HASH);
