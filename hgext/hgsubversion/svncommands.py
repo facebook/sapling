@@ -8,6 +8,7 @@ import errno
 from mercurial import commands
 from mercurial import hg
 from mercurial import node
+from mercurial import progress
 from mercurial import util as hgutil
 from mercurial import error
 
@@ -106,167 +107,166 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     # it would make us use O(revisions^2) time, so we perform an extra traversal
     # of the repository instead. During this traversal, we find all converted
     # changesets that close a branch, and store their first parent
-    for ctx in util.get_contexts(repo, startrev):
-        ui.progress('prepare', ctx.rev() - startrev, total=numrevs)
+    with progress.bar(ui, 'prepare', total=numrevs) as prog:
+        for ctx in util.get_contexts(repo, startrev):
+            prog.value = ctx.rev() - startrev
 
-        convinfo = util.getsvnrev(ctx, None)
-        if not convinfo:
-            continue
-        svnrevnum = int(convinfo.rsplit('@', 1)[1])
-        youngest = max(youngest, svnrevnum)
+            convinfo = util.getsvnrev(ctx, None)
+            if not convinfo:
+                continue
+            svnrevnum = int(convinfo.rsplit('@', 1)[1])
+            youngest = max(youngest, svnrevnum)
 
-        if ctx.extra().get('close', None) is None:
-            continue
+            if ctx.extra().get('close', None) is None:
+                continue
 
-        droprev = lambda x: x.rsplit('@', 1)[0]
-        parentctx = ctx.parents()[0]
-        parentinfo = util.getsvnrev(parentctx, '@')
+            droprev = lambda x: x.rsplit('@', 1)[0]
+            parentctx = ctx.parents()[0]
+            parentinfo = util.getsvnrev(parentctx, '@')
 
-        if droprev(parentinfo) == droprev(convinfo):
-            if parentctx.rev() < startrev:
-                parentbranch = parentctx.branch()
-                if parentbranch == 'default':
-                    parentbranch = None
-                branchinfo.pop(parentbranch)
-            else:
-                closed.add(parentctx.rev())
-
-    ui.progress('prepare', None, total=numrevs)
+            if droprev(parentinfo) == droprev(convinfo):
+                if parentctx.rev() < startrev:
+                    parentbranch = parentctx.branch()
+                    if parentbranch == 'default':
+                        parentbranch = None
+                    branchinfo.pop(parentbranch)
+                else:
+                    closed.add(parentctx.rev())
 
     revmapbuf = []
-    for ctx in util.get_contexts(repo, startrev):
-        ui.progress('rebuild', ctx.rev() - startrev, total=numrevs)
+    with progress.bar(ui, 'rebuild', total=numrevs) as prog:
+        for ctx in util.get_contexts(repo, startrev):
+            prog.value = ctx.rev() - startrev
 
-        convinfo = util.getsvnrev(ctx, None)
-        if not convinfo:
-            continue
-        if '.hgtags' in ctx.files():
-            parent = ctx.parents()[0]
-            parentdata = ''
-            if '.hgtags' in parent:
-                parentdata = parent.filectx('.hgtags').data()
-            newdata = ctx.filectx('.hgtags').data()
-            for newtag in newdata[len(parentdata):-1].split('\n'):
-                ha, tag = newtag.split(' ', 1)
-                tagged = util.getsvnrev(repo[ha], None)
-                if tagged is None:
-                    tagged = -1
+            convinfo = util.getsvnrev(ctx, None)
+            if not convinfo:
+                continue
+            if '.hgtags' in ctx.files():
+                parent = ctx.parents()[0]
+                parentdata = ''
+                if '.hgtags' in parent:
+                    parentdata = parent.filectx('.hgtags').data()
+                newdata = ctx.filectx('.hgtags').data()
+                for newtag in newdata[len(parentdata):-1].split('\n'):
+                    ha, tag = newtag.split(' ', 1)
+                    tagged = util.getsvnrev(repo[ha], None)
+                    if tagged is None:
+                        tagged = -1
+                    else:
+                        tagged = int(tagged[40:].split('@')[1])
+                    # This is max(tagged rev, tagging rev) because if it is a
+                    # normal tag, the tagging revision has the right rev number.
+                    # However, if it was an edited tag, then the tagged revision
+                    # has the correct revision number.
+                    tagging = int(convinfo[40:].split('@')[1])
+                    tagrev = max(tagged, tagging)
+                    meta.tags[tag] = node.bin(ha), tagrev
+
+            # check that the conversion metadata matches expectations
+            assert convinfo.startswith('svn:')
+            revpath, revision = convinfo[40:].split('@')
+            # use tmp variable for testing
+            subdir = meta.subdir
+            if subdir and subdir[0] != '/':
+                subdir = '/' + subdir
+            if subdir and subdir[-1] == '/':
+                subdir = subdir[:-1]
+            assert revpath.startswith(subdir), ('That does not look like the '
+                                                'right location in the repo.')
+
+            # meta.layout is a config-cached property so instead of testing for
+            # None we test to see if the layout is 'auto' and, if so, try to
+            # guess the layout based on the commits (where subdir is compared to
+            # the revpath extracted from the commit)
+            if meta.layout == 'auto':
+                meta.layout = meta.layout_from_commit(subdir, revpath,
+                                                      ctx.branch())
+            elif meta.layout == 'single':
+                assert (subdir or '/') == revpath, ('Possible layout detection'
+                                                    ' defect in replay')
+
+            # write repository uuid if required
+            if meta.uuid is None or validateuuid:
+                validateuuid = False
+                uuid = convinfo[4:40]
+                if not skipuuid:
+                    if svn is None:
+                        svn = svnrepo.svnremoterepo(ui, url).svn
+                    if uuid != svn.uuid:
+                        raise hgutil.Abort('remote svn repository identifier '
+                                           'does not match')
+                meta.uuid = uuid
+
+            # don't reflect closed branches
+            if (ctx.extra().get('close') and not ctx.files() or
+                ctx.parents()[0].node() in skipped):
+                skipped.add(ctx.node())
+                continue
+
+            # find commitpath, write to revmap
+            commitpath = revpath[len(subdir)+1:]
+
+            tag_locations = meta.layoutobj.taglocations
+            found_tag = False
+            for location in tag_locations:
+                if commitpath.startswith(location + '/'):
+                    found_tag = True
+                    break
+            if found_tag and ctx.extra().get('close'):
+                continue
+
+            branch = meta.layoutobj.localname(commitpath)
+            revmapbuf.append((revision, branch, ctx.node()))
+
+            revision = int(revision)
+            if revision > last_rev:
+                last_rev = revision
+
+            # deal with branches
+            if branch and branch.startswith('../'):
+                parent = ctx
+                while parent.node() != node.nullid:
+                    parentextra = parent.extra()
+                    parentinfo = util.getsvnrev(parent)
+                    assert parentinfo
+                    parent = parent.parents()[0]
+
+                    parentpath = parentinfo[40:].split('@')[0][len(subdir) + 1:]
+
+                    found_tag = False
+                    for location in tag_locations:
+                        if parentpath.startswith(location + '/'):
+                            found_tag = True
+                            break
+                    if found_tag and parentextra.get('close'):
+                        continue
+
+                    branch = meta.layoutobj.localname(parentpath)
+                    break
+
+            if ctx.rev() in closed:
+                # a direct child of this changeset closes the branch; drop it
+                branchinfo.pop(branch, None)
+            elif ctx.extra().get('close'):
+                pass
+            elif branch not in branchinfo:
+                parent = ctx.parents()[0]
+                if (parent.node() not in skipped
+                    and util.getsvnrev(parent, '').startswith('svn:')
+                    and parent.branch() != ctx.branch()):
+                    parentbranch = parent.branch()
+                    if parentbranch == 'default':
+                        parentbranch = None
                 else:
-                    tagged = int(tagged[40:].split('@')[1])
-                # This is max(tagged rev, tagging rev) because if it is a normal
-                # tag, the tagging revision has the right rev number. However, if it
-                # was an edited tag, then the tagged revision has the correct revision
-                # number.
-                tagging = int(convinfo[40:].split('@')[1])
-                tagrev = max(tagged, tagging)
-                meta.tags[tag] = node.bin(ha), tagrev
-
-        # check that the conversion metadata matches expectations
-        assert convinfo.startswith('svn:')
-        revpath, revision = convinfo[40:].split('@')
-        # use tmp variable for testing
-        subdir = meta.subdir
-        if subdir and subdir[0] != '/':
-            subdir = '/' + subdir
-        if subdir and subdir[-1] == '/':
-            subdir = subdir[:-1]
-        assert revpath.startswith(subdir), ('That does not look like the '
-                                            'right location in the repo.')
-
-        # meta.layout is a config-cached property so instead of testing for
-        # None we test to see if the layout is 'auto' and, if so, try to guess
-        # the layout based on the commits (where subdir is compared to the
-        # revpath extracted from the commit)
-        if meta.layout == 'auto':
-            meta.layout = meta.layout_from_commit(subdir, revpath,
-                                                  ctx.branch())
-        elif meta.layout == 'single':
-            assert (subdir or '/') == revpath, ('Possible layout detection'
-                                                ' defect in replay')
-
-        # write repository uuid if required
-        if meta.uuid is None or validateuuid:
-            validateuuid = False
-            uuid = convinfo[4:40]
-            if not skipuuid:
-                if svn is None:
-                    svn = svnrepo.svnremoterepo(ui, url).svn
-                if uuid != svn.uuid:
-                    raise hgutil.Abort('remote svn repository identifier '
-                                       'does not match')
-            meta.uuid = uuid
-
-        # don't reflect closed branches
-        if (ctx.extra().get('close') and not ctx.files() or
-            ctx.parents()[0].node() in skipped):
-            skipped.add(ctx.node())
-            continue
-
-        # find commitpath, write to revmap
-        commitpath = revpath[len(subdir)+1:]
-
-        tag_locations = meta.layoutobj.taglocations
-        found_tag = False
-        for location in tag_locations:
-            if commitpath.startswith(location + '/'):
-                found_tag = True
-                break
-        if found_tag and ctx.extra().get('close'):
-            continue
-
-        branch = meta.layoutobj.localname(commitpath)
-        revmapbuf.append((revision, branch, ctx.node()))
-
-        revision = int(revision)
-        if revision > last_rev:
-            last_rev = revision
-
-        # deal with branches
-        if branch and branch.startswith('../'):
-            parent = ctx
-            while parent.node() != node.nullid:
-                parentextra = parent.extra()
-                parentinfo = util.getsvnrev(parent)
-                assert parentinfo
-                parent = parent.parents()[0]
-
-                parentpath = parentinfo[40:].split('@')[0][len(subdir) + 1:]
-
-                found_tag = False
-                for location in tag_locations:
-                    if parentpath.startswith(location + '/'):
-                        found_tag = True
-                        break
-                if found_tag and parentextra.get('close'):
-                    continue
-
-                branch = meta.layoutobj.localname(parentpath)
-                break
-
-        if ctx.rev() in closed:
-            # a direct child of this changeset closes the branch; drop it
-            branchinfo.pop(branch, None)
-        elif ctx.extra().get('close'):
-            pass
-        elif branch not in branchinfo:
-            parent = ctx.parents()[0]
-            if (parent.node() not in skipped
-                and util.getsvnrev(parent, '').startswith('svn:')
-                and parent.branch() != ctx.branch()):
-                parentbranch = parent.branch()
-                if parentbranch == 'default':
                     parentbranch = None
-            else:
-                parentbranch = None
-            # branchinfo is a map from mercurial branch to a
-            # (svn branch, svn parent revision, svn revision) tuple
-            parentrev = util.getsvnrev(parent, '@').split('@')[1] or 0
-            branchinfo[branch] = (parentbranch,
-                                  int(parentrev),
-                                  revision)
+                # branchinfo is a map from mercurial branch to a
+                # (svn branch, svn parent revision, svn revision) tuple
+                parentrev = util.getsvnrev(parent, '@').split('@')[1] or 0
+                branchinfo[branch] = (parentbranch,
+                                      int(parentrev),
+                                      revision)
 
-    revmap.batchset(revmapbuf, youngest)
-    ui.progress('rebuild', None, total=numrevs)
+        revmap.batchset(revmapbuf, youngest)
 
     # save off branch info
     util.dump(branchinfo, meta.branch_info_file)

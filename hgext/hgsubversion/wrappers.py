@@ -14,6 +14,7 @@ except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
 from mercurial import patch
+from mercurial import progress
 from mercurial import hg
 from mercurial import util as hgutil
 from mercurial import node
@@ -21,7 +22,6 @@ from mercurial import i18n
 from mercurial import extensions
 from mercurial import scmutil
 
-import inspect
 import replay
 import pushmod
 import stupid as stupidmod
@@ -463,63 +463,64 @@ def pull(repo, source, heads=None, force=False, meta=None):
         try:
             # start converting revisions
             firstrun = True
-            for r in svn.revisions(start=start, stop=stopat_rev):
-                if (r.revnum in skiprevs or
-                    (r.author is None and
-                     r.message == 'This is an empty revision for padding.')):
+            with progress.bar(ui, 'pull', total=total) as prog:
+                for r in svn.revisions(start=start, stop=stopat_rev):
+                    if (r.revnum in skiprevs
+                            or (r.author is None
+                                and r.message ==
+                                    'This is an empty revision for padding.')):
+                        lastpulled = r.revnum
+                        continue
+                    tbdelta = meta.update_branch_tag_map_for_rev(r)
+                    # got a 502? Try more than once!
+                    tries = 0
+                    converted = False
+                    while not converted:
+                        try:
+                            msg = meta.getmessage(r).strip()
+                            if msg:
+                                msg = [s.strip()
+                                       for s in msg.splitlines() if s][0]
+                            if getattr(ui, 'termwidth', False):
+                                w = ui.termwidth()
+                            else:
+                                w = hgutil.termwidth()
+                            bits = (r.revnum, r.author, msg)
+                            ui.status(('[r%d] %s: %s' % bits)[:w] + '\n')
+                            prog.value = r.revnum - start
+
+                            meta.save_tbdelta(tbdelta)
+                            close = pullfuns[have_replay](ui, meta, svn, r,
+                                                          tbdelta, firstrun)
+                            meta.committags(r, close)
+                            for branch, parent in close.iteritems():
+                                if parent in (None, node.nullid):
+                                    continue
+                                meta.delbranch(branch, parent, r)
+
+                            meta.save()
+                            converted = True
+                            firstrun = False
+
+                        except svnwrap.SubversionRepoCanNotReplay as e:
+                            ui.status('%s\n' % e.message)
+                            stupidmod.print_your_svn_is_old_message(ui)
+                            have_replay = False
+                        except svnwrap.SubversionException as e:
+                            if (e.args[1] == svnwrap.ERR_RA_DAV_REQUEST_FAILED
+                                and '502' in str(e)
+                                and tries < 3):
+                                tries += 1
+                                ui.status('Got a 502, retrying (%s)\n' % tries)
+                            else:
+                                ui.traceback()
+                                raise hgutil.Abort(*e.args)
+
                     lastpulled = r.revnum
-                    continue
-                tbdelta = meta.update_branch_tag_map_for_rev(r)
-                # got a 502? Try more than once!
-                tries = 0
-                converted = False
-                while not converted:
-                    try:
-                        msg = meta.getmessage(r).strip()
-                        if msg:
-                            msg = [s.strip() for s in msg.splitlines() if s][0]
-                        if getattr(ui, 'termwidth', False):
-                            w = ui.termwidth()
-                        else:
-                            w = hgutil.termwidth()
-                        bits = (r.revnum, r.author, msg)
-                        ui.status(('[r%d] %s: %s' % bits)[:w] + '\n')
-                        ui.progress('pull', r.revnum - start, total=total)
-
-                        meta.save_tbdelta(tbdelta)
-                        close = pullfuns[have_replay](ui, meta, svn, r, tbdelta,
-                                                      firstrun)
-                        meta.committags(r, close)
-                        for branch, parent in close.iteritems():
-                            if parent in (None, node.nullid):
-                                continue
-                            meta.delbranch(branch, parent, r)
-
-                        meta.save()
-                        converted = True
-                        firstrun = False
-
-                    except svnwrap.SubversionRepoCanNotReplay, e: # pragma: no cover
-                        ui.status('%s\n' % e.message)
-                        stupidmod.print_your_svn_is_old_message(ui)
-                        have_replay = False
-                    except svnwrap.SubversionException, e: # pragma: no cover
-                        if (e.args[1] == svnwrap.ERR_RA_DAV_REQUEST_FAILED
-                            and '502' in str(e)
-                            and tries < 3):
-                            tries += 1
-                            ui.status('Got a 502, retrying (%s)\n' % tries)
-                        else:
-                            ui.traceback()
-                            raise hgutil.Abort(*e.args)
-
-                lastpulled = r.revnum
 
         except KeyboardInterrupt:
             ui.traceback()
     finally:
-        if total is not None:
-            ui.progress('pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
     if lastpulled is not None:
