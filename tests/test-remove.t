@@ -10,6 +10,7 @@
   $ cat >> $HGRCPATH <<EOF
   > [progress]
   > disable=False
+  > debug=True
   > assume-tty = 1
   > delay = 0
   > # set changedelay to 0 so we see all topics

@@ -37,6 +37,7 @@ from . import (
     obsolete,
     patch,
     pathutil,
+    progress,
     pycompat,
     registrar,
     revlog,
@@ -2946,52 +2947,46 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
         warn = False
 
     subs = sorted(wctx.substate)
-    total = len(subs)
-    count = 0
-    for subpath in subs:
-        count += 1
-        submatch = matchmod.subdirmatcher(subpath, m)
-        if subrepos or m.exact(subpath) or any(submatch.files()):
-            ui.progress(_('searching'), count, total=total, unit=_('subrepos'))
-            sub = wctx.sub(subpath)
-            try:
-                if sub.removefiles(submatch, prefix, after, force, subrepos,
-                                   warnings):
-                    ret = 1
-            except error.LookupError:
-                warnings.append(_("skipping missing subrepository: %s\n")
-                               % join(subpath))
-    ui.progress(_('searching'), None)
+    with progress.bar(ui, _('searching'), _('subrepos'), len(subs)) as prog:
+        for subpath in subs:
+            prog.value += 1
+            submatch = matchmod.subdirmatcher(subpath, m)
+            if subrepos or m.exact(subpath) or any(submatch.files()):
+                sub = wctx.sub(subpath)
+                try:
+                    if sub.removefiles(submatch, prefix, after, force, subrepos,
+                                       warnings):
+                        ret = 1
+                except error.LookupError:
+                    warnings.append(_("skipping missing subrepository: %s\n")
+                                   % join(subpath))
 
     # warn about failure to delete explicit files/dirs
     deleteddirs = util.dirs(deleted)
     files = m.files()
-    total = len(files)
-    count = 0
-    for f in files:
-        def insubrepo():
-            for subpath in wctx.substate:
-                if f.startswith(subpath + '/'):
-                    return True
-            return False
+    with progress.bar(ui, _('deleting'), _('files'), len(files)) as prog:
+        for f in files:
+            def insubrepo():
+                for subpath in wctx.substate:
+                    if f.startswith(subpath + '/'):
+                        return True
+                return False
 
-        count += 1
-        ui.progress(_('deleting'), count, total=total, unit=_('files'))
-        isdir = f in deleteddirs or wctx.hasdir(f)
-        if (f in repo.dirstate or isdir or f == '.'
-            or insubrepo() or f in subs):
-            continue
+            prog.value += 1
+            isdir = f in deleteddirs or wctx.hasdir(f)
+            if (f in repo.dirstate or isdir or f == '.'
+                or insubrepo() or f in subs):
+                continue
 
-        if repo.wvfs.exists(f):
-            if repo.wvfs.isdir(f):
-                warnings.append(_('not removing %s: no tracked files\n')
-                        % m.rel(f))
-            else:
-                warnings.append(_('not removing %s: file is untracked\n')
-                        % m.rel(f))
-        # missing files will generate a warning elsewhere
-        ret = 1
-    ui.progress(_('deleting'), None)
+            if repo.wvfs.exists(f):
+                if repo.wvfs.isdir(f):
+                    warnings.append(_('not removing %s: no tracked files\n')
+                            % m.rel(f))
+                else:
+                    warnings.append(_('not removing %s: file is untracked\n')
+                            % m.rel(f))
+            # missing files will generate a warning elsewhere
+            ret = 1
 
     if force:
         list = modified + deleted + clean + added
@@ -2999,42 +2994,34 @@ def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
         list = deleted
         remaining = modified + added + clean
         total = len(remaining)
-        count = 0
-        for f in remaining:
-            count += 1
-            ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            if ui.verbose or (f in files):
-                warnings.append(_('not removing %s: file still exists\n')
-                                % m.rel(f))
-            ret = 1
-        ui.progress(_('skipping'), None)
+        with progress.bar(ui, _('skipping'), _('files'), total) as prog:
+            for f in remaining:
+                prog.value += 1
+                if ui.verbose or (f in files):
+                    warnings.append(_('not removing %s: file still exists\n')
+                                    % m.rel(f))
+                ret = 1
     else:
         list = deleted + clean
         total = len(modified) + len(added)
-        count = 0
-        for f in modified:
-            count += 1
-            ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            warnings.append(_('not removing %s: file is modified (use -f'
-                      ' to force removal)\n') % m.rel(f))
-            ret = 1
-        for f in added:
-            count += 1
-            ui.progress(_('skipping'), count, total=total, unit=_('files'))
-            warnings.append(_("not removing %s: file has been marked for add"
-                      " (use 'hg forget' to undo add)\n") % m.rel(f))
-            ret = 1
-        ui.progress(_('skipping'), None)
+        with progress.bar(ui, _('skipping'), _('files'), total) as prog:
+            for f in modified:
+                prog.value += 1
+                warnings.append(_('not removing %s: file is modified (use -f'
+                          ' to force removal)\n') % m.rel(f))
+                ret = 1
+            for f in added:
+                prog.value += 1
+                warnings.append(_("not removing %s: file has been marked for"
+                          " add (use 'hg forget' to undo add)\n") % m.rel(f))
+                ret = 1
 
     list = sorted(list)
-    total = len(list)
-    count = 0
-    for f in list:
-        count += 1
-        if ui.verbose or not m.exact(f):
-            ui.progress(_('deleting'), count, total=total, unit=_('files'))
-            ui.status(_('removing %s\n') % m.rel(f))
-    ui.progress(_('deleting'), None)
+    with progress.bar(ui, _('deleting'), _('files'), len(list)) as prog:
+        for i, f in enumerate(list, 1):
+            if ui.verbose or not m.exact(f):
+                prog.value = i
+                ui.status(_('removing %s\n') % m.rel(f))
 
     with repo.wlock():
         if not after:
