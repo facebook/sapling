@@ -60,7 +60,15 @@ Update the bookmark
   $ hg book --remote
      default/withbook          2:66b9c137712a
 
-TODO(stash): Deleting the bookmark doesn't work yet
+Delete the bookmark
   $ cd ../repo-push
-  $ hgmn push --delete withbook > /dev/null 2>&1
-  [255]
+  $ hgmn push --delete withbook
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  no changes found
+  deleting remote bookmark withbook
+  [1]
+  $ cd ../repo-pull
+  $ hgmn pull -q
+  devel-warn: applied empty changegroup * (glob)
+  $ hg book --remote

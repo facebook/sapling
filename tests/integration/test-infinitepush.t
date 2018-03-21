@@ -130,5 +130,16 @@ Pushbackup also works
 Pushbackup that pushes only bookmarks
   $ cd ../repo-push
   $ hg book newbook
-  $ hgmn pushbackup ssh://user@dummy/repo > /dev/null 2>&1
-  [255]
+  $ hgmn pushbackup ssh://user@dummy/repo --debug
+  starting backup* (glob)
+  running * (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: capabilities: lookup known getbundle unbundle=HG10GZ,HG10BZ,HG10UN gettreepack remotefilelog pushkey bundle2=* (glob)
+  remote: 1
+  sending unbundle command
+  bundle2-output-bundle: "HG20", (1 params) 2 parts total
+  bundle2-output-part: "replycaps" 250 bytes payload
+  bundle2-output-part: "B2X:INFINITEPUSHSCRATCHBOOKMARKS" * bytes payload (glob)
+  finished in * seconds (glob)

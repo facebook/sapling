@@ -50,7 +50,7 @@ pub fn resolve(
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
-        .resolve_changegroup(bundle2)
+        .maybe_resolve_changegroup(bundle2)
         .and_then({
             let resolver = resolver.clone();
             move |(cg_push, bundle2)| {
@@ -60,35 +60,35 @@ pub fn resolve(
             }
         })
         .and_then(move |(cg_push, bookmark_push, bundle2)| {
-            let changegroup_id = cg_push.part_id;
-            let changesets = cg_push.changesets;
-            let filelogs = cg_push.filelogs;
+            let mut changegroup_id = None;
+            let bundle2 = if let Some(cg_push) = cg_push {
+                changegroup_id = Some(cg_push.part_id);
+                let changesets = cg_push.changesets;
+                let filelogs = cg_push.filelogs;
 
-            let bundle2 = resolver
-                .resolve_b2xtreegroup2(bundle2)
-                .and_then({
-                    let resolver = resolver.clone();
+                resolver
+                    .resolve_b2xtreegroup2(bundle2)
+                    .and_then({
+                        let resolver = resolver.clone();
 
-                    move |(manifests, bundle2)| {
-                        resolver
-                            .maybe_resolve_infinitepush_bookmarks(bundle2)
-                            .map(|(_, bundle2)| (manifests, bundle2))
-                    }
-                })
-                .and_then({
-                    let resolver = resolver.clone();
-
-                    move |(manifests, bundle2)| {
-                        resolver
-                            .upload_changesets(changesets, filelogs, manifests)
-                            .map(|()| bundle2)
-                    }
-                })
-                .flatten_stream()
-                .boxify();
+                        move |(manifests, bundle2)| {
+                            resolver
+                                .upload_changesets(changesets, filelogs, manifests)
+                                .map(|()| bundle2)
+                        }
+                    })
+                    .flatten_stream()
+                    .boxify()
+            } else {
+                bundle2
+            };
 
             resolver
-                .ensure_stream_finished(bundle2)
+                .maybe_resolve_infinitepush_bookmarks(bundle2)
+                .and_then({
+                    let resolver = resolver.clone();
+                    move |(_, bundle2)| resolver.ensure_stream_finished(bundle2)
+                })
                 .and_then({
                     let resolver = resolver.clone();
                     move |()| match bookmark_push {
@@ -159,10 +159,10 @@ impl Bundle2Resolver {
     /// The Changesets should be parsed as RevlogChangesets and used for uploading changesets
     /// The Filelogs should be scheduled for uploading to BlobRepo and the Future resolving in
     /// their upload should be used for uploading changesets
-    fn resolve_changegroup(
+    fn maybe_resolve_changegroup(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(ChangegroupPush, BoxStream<Bundle2Item, Error>), Error> {
+    ) -> BoxFuture<(Option<ChangegroupPush>, BoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
         next_item(bundle2)
@@ -186,11 +186,12 @@ impl Bundle2Resolver {
                                 changesets,
                                 filelogs,
                             };
-                            (cg_push, bundle2)
+                            (Some(cg_push), bundle2)
                         })
                         .boxify()
                 }
-                _ => err(format_err!("Expected Bundle2 Changegroup")).boxify(),
+                Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
+                _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
             })
             .map_err(|err| err.context("While resolving Changegroup").into())
             .boxify()
@@ -419,7 +420,7 @@ impl Bundle2Resolver {
     /// changegroup part saying that the push was successful
     fn prepare_response(
         &self,
-        changegroup_id: PartId,
+        changegroup_id: Option<PartId>,
         bookmark_id: Option<PartId>,
     ) -> BoxFuture<Bytes, Error> {
         let writer = Cursor::new(Vec::new());
@@ -428,10 +429,12 @@ impl Bundle2Resolver {
         // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
         // TODO: possibly enable compression support once this is fixed.
         bundle.set_compressor_type(None);
-        bundle.add_part(try_boxfuture!(parts::replychangegroup_part(
-            parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
-            changegroup_id,
-        )));
+        if let Some(changegroup_id) = changegroup_id {
+            bundle.add_part(try_boxfuture!(parts::replychangegroup_part(
+                parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
+                changegroup_id,
+            )));
+        }
         if let Some(part_id) = bookmark_id {
             bundle.add_part(try_boxfuture!(parts::replypushkey_part(true, part_id)));
         }
