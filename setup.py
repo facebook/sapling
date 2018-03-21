@@ -1188,7 +1188,15 @@ for root in ('templates',):
             f = os.path.join(curdir, f)
             packagedata['mercurial'].append(f)
 
-datafiles = []
+datafiles = [
+    ('', ['CONTRIBUTING','CONTRIBUTORS']),
+]
+templatesdir = 'mercurial/templates'
+for parent, dirs, files in  os.walk(templatesdir):
+    dirfiles = [os.path.join(parent, fn) for fn in files]
+    datafiles.append((os.path.join('templates', parent),
+                      dirfiles))
+
 
 # distutils expects version to be str/unicode. Converting it to
 # unicode on Python 2 still works because it won't contain any
