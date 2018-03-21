@@ -304,7 +304,14 @@ class progbar(object):
         finally:
             self._refreshlock.release()
 
-class bar(object):
+def _progvalue(value):
+    """split a progress bar value into a position and item"""
+    if isinstance(value, tuple):
+        return value
+    else:
+        return value, ""
+
+class normalbar(object):
     """context manager that adds a progress bar to slow operations
 
     To use this, wrap a section of code that takes a long time like this:
@@ -344,12 +351,7 @@ class bar(object):
             self._cond.release()
 
     def _show(self):
-        value = self.value
-        if isinstance(value, tuple):
-            pos, item = value
-        else:
-            pos = value
-            item = ""
+        pos, item = _progvalue(self.value)
         self._ui.progress(self._topic, pos, item, self._unit, self._total)
 
     def __enter__(self):
@@ -366,7 +368,7 @@ class bar(object):
         self._cond.release()
         self._thread.join()
 
-class spinner(bar):
+class spinner(normalbar):
     """context manager that adds a progress spinner to slow operations
 
     This context manager should be used when there are no items to count
@@ -379,3 +381,36 @@ class spinner(bar):
     def _show(self):
         self._time += 0.1
         self._ui.progress(self._topic, self._time, unit="s")
+
+class debugbar(object):
+    def __init__(self, ui, topic, unit="", total=None):
+        self._ui = ui
+        self._topic = topic
+        self._unit = unit
+        self._total = total
+
+    def reset(self, topic, unit="", total=None):
+        self._ui.progress(self._topic, None)
+        self._topic = topic
+        self._unit = unit
+        self._total = total
+        self.value = 0
+
+    def __enter__(self):
+        super(debugbar, self).__setattr__('value', 0)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._ui.progress(self._topic, None)
+
+    def __setattr__(self, name, value):
+        if name == 'value':
+            pos, item = _progvalue(value)
+            self._ui.progress(self._topic, pos, item, self._unit, self._total)
+        super(debugbar, self).__setattr__(name, value)
+
+def bar(ui, *args, **kwargs):
+    if ui.configbool('progress', 'debug'):
+        return debugbar(ui, *args, **kwargs)
+    else:
+        return normalbar(ui, *args, **kwargs)

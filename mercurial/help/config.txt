@@ -1718,6 +1718,10 @@ have a definite end point.
 ``assume-tty``
     If true, ALWAYS show a progress bar, unless disable is given.
 
+``debug``
+    Enables debug mode for progress bars.  Progress output will be printed line
+    by line for each item that is processed.
+
 ``rebase``
 ----------
 
