@@ -14,6 +14,7 @@ from mercurial.node import nullid
 from mercurial import (
     encoding,
     error,
+    progress,
     registrar,
     revlog,
 )
@@ -34,37 +35,39 @@ def quickchecklog(ui, log, name, knownbroken):
     rev = max(0, len(log) - lookback)
     numchecked = 0
     seengood = False
-    topic = _('checking %s') % name
-    while rev < len(log):
-        numchecked += 1
-        ui.progress(topic, numchecked, item=rev)
-        startflags, clen, ulen, baserev, linkrev, p1, p2, node = log.index[rev]
-        if linkrev in knownbroken:
-            ui.write(_('%s: marked corrupted at rev %d (linkrev=%d)\n')
-                     % (name, rev, linkrev))
-            return rev, linkrev
-        try:
-            log.revision(rev, raw=True)
-            if rev != 0:
-                if (startflags == 0 or linkrev == 0 or (p1 == 0 and p2 == 0) or
-                    clen == 0 or ulen == 0 or node == nullid):
-                    # In theory no 100% correct. But those fields being 0 is
-                    # almost always a corruption practically.
-                    raise ValueError('suspected bad revision data')
-            seengood = True
-            rev += 1
-        except Exception: #  RevlogError, mpatchError, ValueError, etc
-            if rev == 0:
-                raise error.RevlogError(_('all %s entries appear corrupt!') %
-                                        (name,))
-            if not seengood:
-                # If the earliest rev we looked at is bad, look back farther
-                lookback *= 2
-                rev = max(0, len(log) - lookback)
-                continue
-            ui.write(_('%s: corrupted at rev %d (linkrev=%d)\n')
-                     % (name, rev, linkrev))
-            return rev, linkrev
+    with progress.bar(ui, _('checking %s') % name) as prog:
+        while rev < len(log):
+            numchecked += 1
+            prog.value = (numchecked, rev)
+            (startflags, clen, ulen, baserev, linkrev, p1, p2,
+                    node) = log.index[rev]
+            if linkrev in knownbroken:
+                ui.write(_('%s: marked corrupted at rev %d (linkrev=%d)\n')
+                         % (name, rev, linkrev))
+                return rev, linkrev
+            try:
+                log.revision(rev, raw=True)
+                if rev != 0:
+                    if (startflags == 0 or linkrev == 0 or
+                        (p1 == 0 and p2 == 0) or clen == 0 or ulen == 0 or
+                        node == nullid):
+                        # In theory no 100% correct. But those fields being 0 is
+                        # almost always a corruption practically.
+                        raise ValueError('suspected bad revision data')
+                seengood = True
+                rev += 1
+            except Exception: #  RevlogError, mpatchError, ValueError, etc
+                if rev == 0:
+                    msg = _('all %s entries appear corrupt!') % (name,)
+                    raise error.RevlogError(msg)
+                if not seengood:
+                    # If the earliest rev we looked at is bad, look back farther
+                    lookback *= 2
+                    rev = max(0, len(log) - lookback)
+                    continue
+                ui.write(_('%s: corrupted at rev %d (linkrev=%d)\n')
+                         % (name, rev, linkrev))
+                return rev, linkrev
     ui.write(_('%s looks okay\n') % name)
     return None, None
 
