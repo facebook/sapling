@@ -17,6 +17,7 @@ from .node import (
 
 from . import (
     error,
+    progress,
     revlog,
     scmutil,
     util,
@@ -186,23 +187,23 @@ class verifier(object):
 
         self.checklog(cl, "changelog", 0)
         total = len(revs)
-        for i in revs:
-            ui.progress(_('checking'), i, total=total, unit=_('changesets'))
-            n = cl.node(i)
-            self.checkentry(cl, i, n, seen, [i], "changelog")
+        with progress.bar(ui, _('checking'), _('changesets'), total) as prog:
+            for i in revs:
+                prog.value = i
+                n = cl.node(i)
+                self.checkentry(cl, i, n, seen, [i], "changelog")
 
-            try:
-                changes = cl.read(n)
-                if changes[0] != nullid:
-                    mflinkrevs.setdefault(changes[0], []).append(i)
+                try:
+                    changes = cl.read(n)
+                    if changes[0] != nullid:
+                        mflinkrevs.setdefault(changes[0], []).append(i)
+                        self.refersmf = True
+                    for f in changes[3]:
+                        if match(f):
+                            filelinkrevs.setdefault(_normpath(f), []).append(i)
+                except Exception as inst:
                     self.refersmf = True
-                for f in changes[3]:
-                    if match(f):
-                        filelinkrevs.setdefault(_normpath(f), []).append(i)
-            except Exception as inst:
-                self.refersmf = True
-                self.exc(i, _("unpacking changeset %s") % short(n), inst)
-        ui.progress(_('checking'), None)
+                    self.exc(i, _("unpacking changeset %s") % short(n), inst)
         return mflinkrevs, filelinkrevs
 
     def _verifymanifest(self, mflinkrevs):
@@ -213,7 +214,9 @@ class verifier(object):
 
         self.ui.status(_("checking manifests\n"))
 
-        filenodes, subdirnodes = self._verifymanifestpart(mflinkrevs)
+        with progress.bar(self.ui, _('checking'), _('manifests')) as prog:
+            filenodes, subdirnodes = self._verifymanifestpart(mflinkrevs,
+                                                              progress=prog)
 
         if subdirnodes:
             self.ui.status(_("checking directory manifests\n"))
@@ -227,16 +230,11 @@ class verifier(object):
                     storefiles.add(_normpath(f))
                     subdirs.add(os.path.dirname(f))
             subdircount = len(subdirs)
-            currentsubdir = [0]
-            def progress():
-                currentsubdir[0] += 1
-                self.ui.progress(_('checking'), currentsubdir[0],
-                                 total=subdircount, unit=_('manifests'))
+            with progress.bar(self.ui, _('checking'), _('manifests'),
+                              subdircount) as prog:
+                self._verifymanifesttree(filenodes, subdirnodes, storefiles,
+                                         prog)
 
-            self._verifymanifesttree(filenodes, subdirnodes, storefiles,
-                                     progress)
-
-            self.ui.progress(_('checking'), None)
             for f in sorted(storefiles):
                 self.warn(_("warning: orphan revlog '%s'") % f)
 
@@ -245,7 +243,6 @@ class verifier(object):
     def _verifymanifestpart(self, mflinkrevs, dir="", storefiles=None,
                             progress=None):
 
-        ui = self.ui
         match = self.match
         mfl = self.repo.manifestlog
         mf = mfl._revlog.dirlog(dir)
@@ -258,18 +255,17 @@ class verifier(object):
             label = dir
             revlogfiles = mf.files()
             storefiles.difference_update(revlogfiles)
-            if progress: # should be true since we're in a subdirectory
-                progress()
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
             self.checklog(mf, label, 0)
-        total = len(mf)
+        if progress:
+            progress._total = len(mf)
         for i in mf:
             if self.revs is not None and mf.linkrev(i) not in self.revs:
                 continue
-            if not dir:
-                ui.progress(_('checking'), i, total=total, unit=_('manifests'))
+            if progress:
+                progress.value = i
             n = mf.node(i)
             lr = self.checkentry(mf, i, n, seen, mflinkrevs.get(n, []), label)
             if n in mflinkrevs:
@@ -299,8 +295,6 @@ class verifier(object):
                         filenodes.setdefault(fullpath, {}).setdefault(fn, lr)
             except Exception as inst:
                 self.exc(lr, _("reading delta %s") % short(n), inst, label)
-        if not dir:
-            ui.progress(_('checking'), None)
 
         if self.havemf:
             for c, m in sorted([(c, m) for m in mflinkrevs
@@ -316,6 +310,7 @@ class verifier(object):
 
     def _verifymanifesttree(self, filenodes, subdirnodes, storefiles, progress):
         for subdir, linkrevs in subdirnodes.iteritems():
+            progress.value += 1
             subdirfilenodes, subsubdirnodes = (
                     self._verifymanifestpart(linkrevs, subdir, storefiles,
                                              progress))
@@ -333,30 +328,27 @@ class verifier(object):
         ui.status(_("crosschecking files in changesets and manifests\n"))
 
         total = len(filelinkrevs) + len(filenodes)
-        count = 0
-        if self.havemf and self.revs is None:
-            # only check whether changed files from changesets exist
-            # in manifests when verifying the entire repo
-            for f in sorted(filelinkrevs):
-                count += 1
-                ui.progress(_('crosschecking'), count, total=total)
-                if f not in filenodes:
-                    lr = filelinkrevs[f][0]
-                    self.err(lr, _("in changeset but not in manifest"), f)
+        with progress.bar(ui, _('crosschecking'), total=total) as prog:
+            if self.havemf and self.revs is None:
+                # only check whether changed files from changesets exist
+                # in manifests when verifying the entire repo
+                for f in sorted(filelinkrevs):
+                    prog.value += 1
+                    if f not in filenodes:
+                        lr = filelinkrevs[f][0]
+                        self.err(lr, _("in changeset but not in manifest"), f)
 
-        if self.havecl:
-            for f in sorted(filenodes):
-                count += 1
-                ui.progress(_('crosschecking'), count, total=total)
-                if f not in filelinkrevs:
-                    try:
-                        fl = repo.file(f)
-                        lr = min([fl.linkrev(fl.rev(n)) for n in filenodes[f]])
-                    except Exception:
-                        lr = None
-                    self.err(lr, _("in manifest but not in changeset"), f)
-
-        ui.progress(_('crosschecking'), None)
+            if self.havecl:
+                for f in sorted(filenodes):
+                    prog.value += 1
+                    if f not in filelinkrevs:
+                        try:
+                            fl = repo.file(f)
+                            lr = min([fl.linkrev(fl.rev(n))
+                                      for n in filenodes[f]])
+                        except Exception:
+                            lr = None
+                        self.err(lr, _("in manifest but not in changeset"), f)
 
     def _verifyfiles(self, filenodes, filelinkrevs):
         if self.ui.configbool("verify", "skipmanifests", False):
@@ -364,9 +356,7 @@ class verifier(object):
 
         repo = self.repo
         ui = self.ui
-        lrugetctx = self.lrugetctx
         revlogv1 = self.revlogv1
-        havemf = self.havemf
         ui.status(_("checking files\n"))
 
         storefiles = set()
@@ -379,9 +369,24 @@ class verifier(object):
                     storefiles.add(_normpath(f))
         files = sorted(set(filenodes) | set(filelinkrevs))
         total = len(files)
+        with progress.bar(ui, _('checking'), _('files'), total) as prog:
+            revisions = self._verifyfilelist(filenodes, files, filelinkrevs,
+                                             storefiles, prog)
+
+        if self.revs is None:
+            for f in sorted(storefiles):
+                self.warn(_("warning: orphan revlog '%s'") % f)
+
+        return len(files), revisions
+
+    def _verifyfilelist(self, filenodes, files, filelinkrevs, storefiles, prog):
+        repo = self.repo
+        ui = self.ui
+        lrugetctx = self.lrugetctx
+        havemf = self.havemf
         revisions = 0
         for i, f in enumerate(files):
-            ui.progress(_('checking'), i, item=f, total=total, unit=_('files'))
+            prog.value = (i, f)
             try:
                 linkrevs = filelinkrevs[f]
             except KeyError:
@@ -523,10 +528,5 @@ class verifier(object):
                 for lr, node in sorted(fns):
                     self.err(lr, _("manifest refers to unknown revision %s") %
                              short(node), f)
-        ui.progress(_('checking'), None)
 
-        if self.revs is None:
-            for f in sorted(storefiles):
-                self.warn(_("warning: orphan revlog '%s'") % f)
-
-        return len(files), revisions
+        return revisions
