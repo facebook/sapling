@@ -32,11 +32,16 @@ DEFINE_string(
     "",
     "If set, redirects stdout and stderr to the log file given.");
 
-// The logging configuration parameter.  We default to DBG2 for everything in
-// eden, and WARNING for all other categories.
-DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
+DEFINE_string(logging, "", "Logging configuration");
 
 using namespace facebook::eden;
+
+// Set the default log level for everything under the eden/ directory to DBG2
+namespace folly {
+const char* getBaseLoggingConfig() {
+  return "eden=DBG2";
+}
+} // namespace folly
 
 int main(int argc, char** argv) {
   // Make sure to run this before any flag values are read.

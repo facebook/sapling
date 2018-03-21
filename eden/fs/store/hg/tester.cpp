@@ -28,7 +28,7 @@
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(rev, "", "The revision ID to import");
-DEFINE_string(logging, "eden=DBG2", "The logging configuration string");
+DEFINE_string(logging, "", "The logging configuration string");
 DEFINE_string(
     import_type,
     "flat",
@@ -60,6 +60,12 @@ using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Cursor;
 using std::string;
+
+namespace folly {
+const char* getBaseLoggingConfig() {
+  return "eden=DBG2";
+}
+} // namespace folly
 
 namespace {
 

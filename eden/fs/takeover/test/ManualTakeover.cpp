@@ -16,7 +16,13 @@
 #include "eden/fs/takeover/TakeoverData.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
-DEFINE_string(logging, ".=WARNING,eden=DBG2", "Logging configuration");
+DEFINE_string(logging, "", "Logging configuration");
+
+namespace folly {
+const char* getBaseLoggingConfig() {
+  return "eden=DBG2";
+}
+} // namespace folly
 
 /*
  * This is a small tool for manually exercising the edenfs takover code.

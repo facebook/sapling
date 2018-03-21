@@ -18,9 +18,15 @@
 
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 
-DEFINE_string(logging, ".=WARNING,eden=INFO", "Logging configuration");
+DEFINE_string(logging, "", "Logging configuration");
 
 using namespace facebook::eden;
+
+namespace folly {
+const char* getBaseLoggingConfig() {
+  return "eden=INFO";
+}
+} // namespace folly
 
 /*
  * This is a samll helper program for manually testing the
