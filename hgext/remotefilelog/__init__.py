@@ -89,6 +89,7 @@ from mercurial import (
     match,
     merge,
     patch,
+    progress,
     registrar,
     repair,
     repoview,
@@ -711,64 +712,66 @@ def gcclient(ui, cachepath):
     validrepos = []
     keepkeys = set()
 
-    _analyzing = _("analyzing repositories")
-
     sharedcache = None
     filesrepacked = False
 
-    count = 0
-    for path in repos:
-        ui.progress(_analyzing, count, unit="repos", total=len(repos))
-        count += 1
-        try:
-            path = ui.expandpath(os.path.normpath(path))
-        except TypeError as e:
-            ui.warn(_("warning: malformed path: %r:%s\n") % (path, e))
-            traceback.print_exc()
-            continue
-        try:
-            peer = hg.peer(ui, {}, path)
-            repo = peer._repo
-        except error.RepoError:
-            continue
-
-        validrepos.append(path)
-
-        # Protect against any repo or config changes that have happened since
-        # this repo was added to the repos file. We'd rather this loop succeed
-        # and too much be deleted, than the loop fail and nothing gets deleted.
-        if shallowrepo.requirement not in repo.requirements:
-            continue
-
-        if not util.safehasattr(repo, 'name'):
-            ui.warn(_("repo %s is a misconfigured remotefilelog repo\n") % path)
-            continue
-
-        # If garbage collection on repack and repack on hg gc are enabled
-        # then loose files are repacked and garbage collected.
-        # Otherwise regular garbage collection is performed.
-        repackonhggc = repo.ui.configbool('remotefilelog', 'repackonhggc')
-        gcrepack = repo.ui.configbool('remotefilelog', 'gcrepack')
-        if repackonhggc and gcrepack:
+    with progress.bar(ui, _("analyzing repositories"), "repos",
+                      len(repos)) as prog:
+        count = 0
+        for path in repos:
+            prog.value = count
+            count += 1
             try:
-                repackmod.incrementalrepack(repo)
-                filesrepacked = True
+                path = ui.expandpath(os.path.normpath(path))
+            except TypeError as e:
+                ui.warn(_("warning: malformed path: %r:%s\n") % (path, e))
+                traceback.print_exc()
                 continue
-            except (IOError, repackmod.RepackAlreadyRunning):
-                # If repack cannot be performed due to not enough disk space
-                # continue doing garbage collection of loose files w/o repack
-                pass
+            try:
+                peer = hg.peer(ui, {}, path)
+                repo = peer._repo
+            except error.RepoError:
+                continue
 
-        reponame = repo.name
-        if not sharedcache:
-            sharedcache = repo.sharedstore
+            validrepos.append(path)
 
-        # Compute a keepset which is not garbage collected
-        def keyfn(fname, fnode):
-            return fileserverclient.getcachekey(reponame, fname, hex(fnode))
-        keepkeys = repackmod.keepset(repo, keyfn=keyfn, lastkeepkeys=keepkeys)
+            # Protect against any repo or config changes that have happened
+            # since this repo was added to the repos file. We'd rather this loop
+            # succeed and too much be deleted, than the loop fail and nothing
+            # gets deleted.
+            if shallowrepo.requirement not in repo.requirements:
+                continue
 
-    ui.progress(_analyzing, None)
+            if not util.safehasattr(repo, 'name'):
+                ui.warn(_("repo %s is a misconfigured remotefilelog repo\n")
+                        % path)
+                continue
+
+            # If garbage collection on repack and repack on hg gc are enabled
+            # then loose files are repacked and garbage collected.
+            # Otherwise regular garbage collection is performed.
+            repackonhggc = repo.ui.configbool('remotefilelog', 'repackonhggc')
+            gcrepack = repo.ui.configbool('remotefilelog', 'gcrepack')
+            if repackonhggc and gcrepack:
+                try:
+                    repackmod.incrementalrepack(repo)
+                    filesrepacked = True
+                    continue
+                except (IOError, repackmod.RepackAlreadyRunning):
+                    # If repack cannot be performed due to not enough disk space
+                    # continue doing garbage collection of loose files w/o
+                    # repack
+                    pass
+
+            reponame = repo.name
+            if not sharedcache:
+                sharedcache = repo.sharedstore
+
+            # Compute a keepset which is not garbage collected
+            def keyfn(fname, fnode):
+                return fileserverclient.getcachekey(reponame, fname, hex(fnode))
+            keepkeys = repackmod.keepset(repo, keyfn=keyfn,
+                                         lastkeepkeys=keepkeys)
 
     # write list of valid repos back
     oldumask = os.umask(0o002)

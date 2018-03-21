@@ -16,6 +16,7 @@ from mercurial.node import hex, bin, nullid
 from mercurial import (
     error,
     httppeer,
+    progress,
     revlog,
     sshpeer,
     util,
@@ -38,7 +39,6 @@ fetched = 0
 fetchmisses = 0
 
 _lfsmod = None
-_downloading = _('downloading')
 
 def getcachekey(reponame, file, id):
     pathhash = hashlib.sha1(file).hexdigest()
@@ -320,8 +320,8 @@ class fileserverclient(object):
             return
 
         repo = self.repo
-        count = len(fileids)
-        request = "get\n%d\n" % count
+        total = len(fileids)
+        request = "get\n%d\n" % total
         idmap = {}
         reponame = repo.name
         for file, id in fileids:
@@ -333,110 +333,107 @@ class fileserverclient(object):
 
         cache.request(request)
 
-        total = count
-        self.ui.progress(_downloading, 0, total=count)
+        with progress.bar(self.ui, _('downloading'), total=total) as prog:
+            missed = []
+            count = 0
+            while True:
+                missingid = cache.receiveline()
+                if not missingid:
+                    missedset = set(missed)
+                    for missingid in idmap.iterkeys():
+                        if not missingid in missedset:
+                            missed.append(missingid)
+                    self.ui.warn(_("warning: cache connection closed early - " +
+                        "falling back to server\n"))
+                    break
+                if missingid == "0":
+                    break
+                if missingid.startswith("_hits_"):
+                    # receive progress reports
+                    parts = missingid.split("_")
+                    count += int(parts[2])
+                    prog.value = count
+                    continue
 
-        missed = []
-        count = 0
-        while True:
-            missingid = cache.receiveline()
-            if not missingid:
-                missedset = set(missed)
-                for missingid in idmap.iterkeys():
-                    if not missingid in missedset:
-                        missed.append(missingid)
-                self.ui.warn(_("warning: cache connection closed early - " +
-                    "falling back to server\n"))
-                break
-            if missingid == "0":
-                break
-            if missingid.startswith("_hits_"):
-                # receive progress reports
-                parts = missingid.split("_")
-                count += int(parts[2])
-                self.ui.progress(_downloading, count, total=total)
-                continue
+                missed.append(missingid)
 
-            missed.append(missingid)
+            global fetchmisses
+            fetchmisses += len(missed)
 
-        global fetchmisses
-        fetchmisses += len(missed)
+            count = [total - len(missed)]
+            fromcache = count[0]
+            prog.value = count[0]
+            self.ui.log("remotefilelog", "remote cache hit rate is %r of %r\n",
+                        count[0], total, hit=count[0], total=total)
 
-        count = [total - len(missed)]
-        fromcache = count[0]
-        self.ui.progress(_downloading, count[0], total=total)
-        self.ui.log("remotefilelog", "remote cache hit rate is %r of %r\n",
-                    count[0], total, hit=count[0], total=total)
-
-        oldumask = os.umask(0o002)
-        try:
-            # receive cache misses from master
-            if missed:
-                def progresstick():
-                    count[0] += 1
-                    self.ui.progress(_downloading, count[0], total=total)
-                # When verbose is true, sshpeer prints 'running ssh...'
-                # to stdout, which can interfere with some command
-                # outputs
-                verbose = self.ui.verbose
-                self.ui.verbose = False
-                try:
-                    with self._connect() as conn:
-                        remote = conn.peer
-                        # TODO: deduplicate this with the constant in
-                        #       shallowrepo
-                        if remote.capable("remotefilelog"):
-                            if not isinstance(remote, sshpeer.sshpeer):
-                                raise error.Abort('remotefilelog requires ssh '
-                                                  'servers')
-                            step = self.ui.configint('remotefilelog',
-                                                     'getfilesstep', 10000)
-                            getfilestype = self.ui.config('remotefilelog',
-                                                          'getfilestype',
-                                                          'optimistic')
-                            if getfilestype == 'threaded':
-                                _getfiles = _getfiles_threaded
+            oldumask = os.umask(0o002)
+            try:
+                # receive cache misses from master
+                if missed:
+                    def progresstick():
+                        count[0] += 1
+                        prog.value = count[0]
+                    # When verbose is true, sshpeer prints 'running ssh...'
+                    # to stdout, which can interfere with some command
+                    # outputs
+                    verbose = self.ui.verbose
+                    self.ui.verbose = False
+                    try:
+                        with self._connect() as conn:
+                            remote = conn.peer
+                            # TODO: deduplicate this with the constant in
+                            #       shallowrepo
+                            if remote.capable("remotefilelog"):
+                                if not isinstance(remote, sshpeer.sshpeer):
+                                    msg = 'remotefilelog requires ssh servers'
+                                    raise error.Abort(msg)
+                                step = self.ui.configint('remotefilelog',
+                                                         'getfilesstep', 10000)
+                                getfilestype = self.ui.config('remotefilelog',
+                                                              'getfilestype',
+                                                              'optimistic')
+                                if getfilestype == 'threaded':
+                                    _getfiles = _getfiles_threaded
+                                else:
+                                    _getfiles = _getfiles_optimistic
+                                _getfiles(remote, self.receivemissing,
+                                          progresstick, missed, idmap, step)
+                            elif remote.capable("getfile"):
+                                if remote.capable('batch'):
+                                    batchdefault = 100
+                                else:
+                                    batchdefault = 10
+                                batchsize = self.ui.configint(
+                                    'remotefilelog', 'batchsize', batchdefault)
+                                _getfilesbatch(
+                                    remote, self.receivemissing, progresstick,
+                                    missed, idmap, batchsize)
                             else:
-                                _getfiles = _getfiles_optimistic
-                            _getfiles(remote, self.receivemissing, progresstick,
-                                      missed, idmap, step)
-                        elif remote.capable("getfile"):
-                            if remote.capable('batch'):
-                                batchdefault = 100
-                            else:
-                                batchdefault = 10
-                            batchsize = self.ui.configint(
-                                'remotefilelog', 'batchsize', batchdefault)
-                            _getfilesbatch(
-                                remote, self.receivemissing, progresstick,
-                                missed, idmap, batchsize)
-                        else:
-                            raise error.Abort("configured remotefilelog server"
-                                             " does not support remotefilelog")
+                                msg = ("configured remotefilelog server"
+                                       " does not support remotefilelog")
+                                raise error.Abort(msg)
 
-                    self.ui.log("remotefilefetchlog",
-                                "Success\n",
-                                fetched_files = count[0] - fromcache,
-                                total_to_fetch = total - fromcache)
-                except Exception:
-                    self.ui.log("remotefilefetchlog",
-                                "Fail\n",
-                                fetched_files = count[0] - fromcache,
-                                total_to_fetch = total - fromcache)
-                    raise
-                finally:
-                    self.ui.verbose = verbose
-                # send to memcache
-                count[0] = len(missed)
-                request = "set\n%d\n%s\n" % (count[0], "\n".join(missed))
-                cache.request(request)
+                        self.ui.log("remotefilefetchlog",
+                                    "Success\n",
+                                    fetched_files = count[0] - fromcache,
+                                    total_to_fetch = total - fromcache)
+                    except Exception:
+                        self.ui.log("remotefilefetchlog",
+                                    "Fail\n",
+                                    fetched_files = count[0] - fromcache,
+                                    total_to_fetch = total - fromcache)
+                        raise
+                    finally:
+                        self.ui.verbose = verbose
+                    # send to memcache
+                    count[0] = len(missed)
+                    request = "set\n%d\n%s\n" % (count[0], "\n".join(missed))
+                    cache.request(request)
 
-            self.ui.progress(_downloading, None)
-
-            # mark ourselves as a user of this cache
-            writedata.markrepo(self.repo.path)
-        finally:
-            os.umask(oldumask)
+                # mark ourselves as a user of this cache
+                writedata.markrepo(self.repo.path)
+            finally:
+                os.umask(oldumask)
 
     def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]

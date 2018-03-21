@@ -9,6 +9,7 @@ from . import (
 
 from mercurial import (
     error,
+    progress,
     pycompat,
     util,
 )
@@ -51,34 +52,26 @@ class basestore(object):
             shallowutil.mkstickygroupdir(self.ui, path)
 
     def getmissing(self, keys):
-        progress = self.repo.ui.progress
-        _discovering = _('discovering')
-        _files = _('files')
-        total = len(keys)
-        prog = 0
-
-        progress(_discovering, 0, total=total, unit=_files)
         missing = []
-        for name, node in keys:
-            prog += 1
-            progress(_discovering, prog, total=total, unit=_files)
+        with progress.bar(self.repo.ui, _('discovering'), _('files'),
+                          len(keys)) as prog:
+            for name, node in keys:
+                prog.value += 1
 
-            filepath = self._getfilepath(name, node)
-            try:
-                size = os.path.getsize(filepath)
-                # An empty file is considered corrupt and we pretend it doesn't
-                # exist.
-                exists = size > 0
-            except os.error:
-                exists = False
+                filepath = self._getfilepath(name, node)
+                try:
+                    size = os.path.getsize(filepath)
+                    # An empty file is considered corrupt and we pretend it
+                    # doesn't exist.
+                    exists = size > 0
+                except os.error:
+                    exists = False
 
-            if (exists and self._validatecache == 'strict' and
-                not self._validatekey(filepath, 'contains')):
-                exists = False
-            if not exists:
-                missing.append((name, node))
-
-        progress(_discovering, None)
+                if (exists and self._validatecache == 'strict' and
+                    not self._validatekey(filepath, 'contains')):
+                    exists = False
+                if not exists:
+                    missing.append((name, node))
 
         return missing
 
@@ -94,17 +87,14 @@ class basestore(object):
                     ledger.markhistoryentry(self, filename, node)
 
     def cleanup(self, ledger):
-        ui = self.ui
         entries = ledger.sources.get(self, [])
-        count = 0
-        for entry in entries:
-            if entry.gced or (entry.datarepacked and entry.historyrepacked):
-                ui.progress(_("cleaning up"), count, unit="files",
-                            total=len(entries))
-                path = self._getfilepath(entry.filename, entry.node)
-                util.tryunlink(path)
-            count += 1
-        ui.progress(_("cleaning up"), None)
+        with progress.bar(self.ui, _('cleaning up'), _('files'),
+                          len(entries)) as prog:
+            for entry in entries:
+                if entry.gced or (entry.datarepacked and entry.historyrepacked):
+                    path = self._getfilepath(entry.filename, entry.node)
+                    util.tryunlink(path)
+                prog.value += 1
 
         # Clean up the repo cache directory.
         self._cleanupdirectory(self._getrepocachepath())
@@ -322,8 +312,6 @@ class basestore(object):
     def gc(self, keepkeys):
         ui = self.ui
         cachepath = self._path
-        _removing = _("removing unnecessary files")
-        _truncating = _("enforcing cache limit")
 
         # prune cache
         import Queue
@@ -336,38 +324,23 @@ class basestore(object):
         # keep files newer than a day even if they aren't needed
         limit = time.time() - (60 * 60 * 24)
 
-        ui.progress(_removing, count, unit="files")
-        for root, dirs, files in os.walk(cachepath):
-            for file in files:
-                if file == 'repos':
-                    continue
+        with progress.bar(ui, _('removing unnecessary files'),
+                          _('files')) as prog:
+            for root, dirs, files in os.walk(cachepath):
+                for file in files:
+                    if file == 'repos':
+                        continue
 
-                # Don't delete pack files
-                if '/packs/' in root:
-                    continue
+                    # Don't delete pack files
+                    if '/packs/' in root:
+                        continue
 
-                ui.progress(_removing, count, unit="files")
-                path = os.path.join(root, file)
-                key = os.path.relpath(path, cachepath)
-                count += 1
-                try:
-                    pathstat = os.stat(path)
-                except OSError as e:
-                    # errno.ENOENT = no such file or directory
-                    if e.errno != errno.ENOENT:
-                        raise
-                    msg = _("warning: file %s was removed by another process\n")
-                    ui.warn(msg % path)
-                    continue
-
-                originalsize += pathstat.st_size
-
-                if key in keepkeys or pathstat.st_atime > limit:
-                    queue.put((pathstat.st_atime, path, pathstat))
-                    size += pathstat.st_size
-                else:
+                    count += 1
+                    prog.value = count
+                    path = os.path.join(root, file)
+                    key = os.path.relpath(path, cachepath)
                     try:
-                        shallowutil.unlinkfile(path)
+                        pathstat = os.stat(path)
                     except OSError as e:
                         # errno.ENOENT = no such file or directory
                         if e.errno != errno.ENOENT:
@@ -376,30 +349,45 @@ class basestore(object):
                                 "process\n")
                         ui.warn(msg % path)
                         continue
-                    removed += 1
-        ui.progress(_removing, None)
+
+                    originalsize += pathstat.st_size
+
+                    if key in keepkeys or pathstat.st_atime > limit:
+                        queue.put((pathstat.st_atime, path, pathstat))
+                        size += pathstat.st_size
+                    else:
+                        try:
+                            shallowutil.unlinkfile(path)
+                        except OSError as e:
+                            # errno.ENOENT = no such file or directory
+                            if e.errno != errno.ENOENT:
+                                raise
+                            msg = _("warning: file %s was removed by another "
+                                    "process\n")
+                            ui.warn(msg % path)
+                            continue
+                        removed += 1
 
         # remove oldest files until under limit
         limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
         if size > limit:
             excess = size - limit
-            removedexcess = 0
-            while queue and size > limit and size > 0:
-                ui.progress(_truncating, removedexcess, unit="bytes",
-                            total=excess)
-                atime, oldpath, oldpathstat = queue.get()
-                try:
-                    shallowutil.unlinkfile(oldpath)
-                except OSError as e:
-                    # errno.ENOENT = no such file or directory
-                    if e.errno != errno.ENOENT:
-                        raise
-                    msg = _("warning: file %s was removed by another process\n")
-                    ui.warn(msg % oldpath)
-                size -= oldpathstat.st_size
-                removed += 1
-                removedexcess += oldpathstat.st_size
-        ui.progress(_truncating, None)
+            with progress.bar(ui, _("enforcing cache limit"), _("bytes"),
+                              excess) as prog:
+                while queue and size > limit and size > 0:
+                    atime, oldpath, oldpathstat = queue.get()
+                    try:
+                        shallowutil.unlinkfile(oldpath)
+                    except OSError as e:
+                        # errno.ENOENT = no such file or directory
+                        if e.errno != errno.ENOENT:
+                            raise
+                        msg = _("warning: file %s was removed by another "
+                                "process\n")
+                        ui.warn(msg % oldpath)
+                    size -= oldpathstat.st_size
+                    removed += 1
+                    prog.value += oldpathstat.st_size
 
         ui.status(_("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n")
                   % (removed, count,

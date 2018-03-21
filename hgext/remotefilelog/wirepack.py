@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 from mercurial.i18n import _
 from mercurial.node import nullid
+from mercurial import progress
 from . import constants
 import struct
 from StringIO import StringIO
@@ -72,49 +73,49 @@ def receivepack(ui, fh, packpath):
     receiveddata = []
     receivedhistory = []
     mkstickygroupdir(ui, packpath)
-    totalcount = 0
-    ui.progress(_("receiving pack"), totalcount)
     with datapack.mutabledatapack(ui, packpath) as dpack:
         with historypack.mutablehistorypack(ui, packpath) as hpack:
             pendinghistory = defaultdict(dict)
-            while True:
-                filename = readpath(fh)
-                count = 0
+            with progress.bar(ui, _("receiving pack")) as prog:
+                while True:
+                    filename = readpath(fh)
+                    count = 0
 
-                # Store the history for later sorting
-                for value in readhistory(fh):
-                    node = value[0]
-                    pendinghistory[filename][node] = value
-                    receivedhistory.append((filename, node))
-                    count += 1
+                    # Store the history for later sorting
+                    for value in readhistory(fh):
+                        node = value[0]
+                        pendinghistory[filename][node] = value
+                        receivedhistory.append((filename, node))
+                        count += 1
 
-                for node, deltabase, delta in readdeltas(fh):
-                    dpack.add(filename, node, deltabase, delta)
-                    receiveddata.append((filename, node))
-                    count += 1
+                    for node, deltabase, delta in readdeltas(fh):
+                        dpack.add(filename, node, deltabase, delta)
+                        receiveddata.append((filename, node))
+                        count += 1
 
-                if count == 0 and filename == '':
-                    break
-                totalcount += 1
-                ui.progress(_("receiving pack"), totalcount)
+                    if count == 0 and filename == '':
+                        break
+                    prog.value += 1
 
             # Add history to pack in toposorted order
-            for filename, nodevalues in sorted(pendinghistory.iteritems()):
-                def _parentfunc(node):
-                    p1, p2 = nodevalues[node][1:3]
-                    parents = []
-                    if p1 != nullid:
-                        parents.append(p1)
-                    if p2 != nullid:
-                        parents.append(p2)
-                    return parents
-                sortednodes = reversed(shallowutil.sortnodes(
-                                        nodevalues.iterkeys(),
-                                        _parentfunc))
-                for node in sortednodes:
-                    node, p1, p2, linknode, copyfrom = nodevalues[node]
-                    hpack.add(filename, node, p1, p2, linknode, copyfrom)
-    ui.progress(_("receiving pack"), None)
+            with progress.bar(ui, _("storing pack"),
+                              total=len(pendinghistory)) as prog:
+                for filename, nodevalues in sorted(pendinghistory.iteritems()):
+                    def _parentfunc(node):
+                        p1, p2 = nodevalues[node][1:3]
+                        parents = []
+                        if p1 != nullid:
+                            parents.append(p1)
+                        if p2 != nullid:
+                            parents.append(p2)
+                        return parents
+                    sortednodes = reversed(shallowutil.sortnodes(
+                                            nodevalues.iterkeys(),
+                                            _parentfunc))
+                    for node in sortednodes:
+                        node, p1, p2, linknode, copyfrom = nodevalues[node]
+                        hpack.add(filename, node, p1, p2, linknode, copyfrom)
+                    prog.value += 1
 
     return receiveddata, receivedhistory
 

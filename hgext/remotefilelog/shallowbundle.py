@@ -10,7 +10,7 @@ from . import fileserverclient, remotefilelog, shallowutil
 import os
 from mercurial.node import bin, hex, nullid
 from mercurial import changegroup, mdiff, match, bundlerepo, phases
-from mercurial import util, error
+from mercurial import util, error, progress
 from mercurial.i18n import _
 
 NoFiles = NoTrees = 0
@@ -349,7 +349,6 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     if not requirement in repo.requirements:
         return orig(repo, source, revmap, trp, expectedfiles, *args)
 
-    files = 0
     newfiles = 0
     visited = set()
     revisiondatas = {}
@@ -362,39 +361,39 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     # files in topological order.
 
     # read all the file chunks but don't add them
-    while True:
-        chunkdata = source.filelogheader()
-        if not chunkdata:
-            break
-        files += 1
-        f = chunkdata["filename"]
-        repo.ui.debug("adding %s revisions\n" % f)
-        repo.ui.progress(_('files'), files, total=expectedfiles)
-
-        if not repo.shallowmatch(f):
-            fl = repo.file(f)
-            deltas = source.deltaiter()
-            fl.addgroup(deltas, revmap, trp)
-            continue
-
-        chain = None
+    with progress.bar(repo.ui, _('files'), total=expectedfiles) as prog:
         while True:
-            # returns: (node, p1, p2, cs, deltabase, delta, flags) or None
-            revisiondata = source.deltachunk(chain)
-            if not revisiondata:
+            chunkdata = source.filelogheader()
+            if not chunkdata:
                 break
+            f = chunkdata["filename"]
+            repo.ui.debug("adding %s revisions\n" % f)
+            prog.value += 1
 
-            chain = revisiondata[0]
+            if not repo.shallowmatch(f):
+                fl = repo.file(f)
+                deltas = source.deltaiter()
+                fl.addgroup(deltas, revmap, trp)
+                continue
 
-            revisiondatas[(f, chain)] = revisiondata
-            queue.append((f, chain))
+            chain = None
+            while True:
+                # returns: (node, p1, p2, cs, deltabase, delta, flags) or None
+                revisiondata = source.deltachunk(chain)
+                if not revisiondata:
+                    break
 
-            if f not in visited:
-                newfiles += 1
-                visited.add(f)
+                chain = revisiondata[0]
 
-        if chain is None:
-            raise error.Abort(_("received file revlog group is empty"))
+                revisiondatas[(f, chain)] = revisiondata
+                queue.append((f, chain))
+
+                if f not in visited:
+                    newfiles += 1
+                    visited.add(f)
+
+            if chain is None:
+                raise error.Abort(_("received file revlog group is empty"))
 
     processed = set()
     def available(f, node, depf, depnode):
@@ -482,8 +481,6 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
                           flags=flags)
         processed.add((f, node))
         skipcount = 0
-
-    repo.ui.progress(_('files'), None)
 
     return len(revisiondatas), newfiles
 

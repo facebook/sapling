@@ -8,6 +8,7 @@ from mercurial import (
     extensions,
     mdiff,
     policy,
+    progress,
     scmutil,
     util,
     vfs,
@@ -517,135 +518,138 @@ class repacker(object):
             if entry.datasource:
                 byfile.setdefault(entry.filename, {})[entry.node] = entry
 
-        count = 0
-        for filename, entries in sorted(byfile.iteritems()):
-            ui.progress(_("repacking data"), count, unit=self.unit,
-                        total=len(byfile))
+        with progress.bar(ui, _("repacking data"), self.unit,
+                          total=len(byfile)) as prog:
+            for filename, entries in sorted(byfile.iteritems()):
+                ancestors = {}
+                nodes = list(node for node in entries.iterkeys())
+                nohistory = []
+                with progress.bar(ui, _("building history"), 'nodes',
+                                  total=len(nodes)) as historyprog:
+                    for i, node in enumerate(nodes):
+                        if node in ancestors:
+                            continue
+                        historyprog.value = i
+                        try:
+                            ancestors.update(
+                                self.fullhistory.getancestors(filename, node,
+                                                              known=ancestors))
+                        except KeyError:
+                            # Since we're packing data entries, we may not have
+                            # the corresponding history entries for them. It's
+                            # not a big deal, but the entries won't be delta'd
+                            # perfectly.
+                            nohistory.append(node)
 
-            ancestors = {}
-            nodes = list(node for node in entries.iterkeys())
-            nohistory = []
-            for i, node in enumerate(nodes):
-                if node in ancestors:
-                    continue
-                ui.progress(_("building history"), i, unit='nodes',
-                            total=len(nodes))
-                try:
-                    ancestors.update(self.fullhistory.getancestors(filename,
-                        node, known=ancestors))
-                except KeyError:
-                    # Since we're packing data entries, we may not have the
-                    # corresponding history entries for them. It's not a big
-                    # deal, but the entries won't be delta'd perfectly.
-                    nohistory.append(node)
-            ui.progress(_("building history"), None)
+                # Order the nodes children first, so we can produce reverse
+                # deltas
+                orderednodes = list(reversed(self._toposort(ancestors)))
+                if len(nohistory) > 0:
+                    ui.debug('repackdata: %d nodes without history\n' %
+                             len(nohistory))
+                orderednodes.extend(sorted(nohistory))
 
-            # Order the nodes children first, so we can produce reverse deltas
-            orderednodes = list(reversed(self._toposort(ancestors)))
-            if len(nohistory) > 0:
-                ui.debug('repackdata: %d nodes without history\n' %
-                         len(nohistory))
-            orderednodes.extend(sorted(nohistory))
+                # Filter orderednodes to just the nodes we want to serialize (it
+                # currently also has the edge nodes' ancestors).
+                orderednodes = filter(lambda node: node in nodes, orderednodes)
 
-            # Filter orderednodes to just the nodes we want to serialize (it
-            # currently also has the edge nodes' ancestors).
-            orderednodes = filter(lambda node: node in nodes, orderednodes)
+                # Garbage collect old nodes:
+                if self.garbagecollect:
+                    neworderednodes = []
+                    for node in orderednodes:
+                        # If the node is old and is not in the keepset, we skip
+                        # it, and mark as garbage collected
+                        if ((filename, node) not in self.keepkeys and
+                            self.isold(self.repo, filename, node)):
+                            entries[node].gced = True
+                            continue
+                        neworderednodes.append(node)
+                    orderednodes = neworderednodes
 
-            # Garbage collect old nodes:
-            if self.garbagecollect:
-                neworderednodes = []
-                for node in orderednodes:
-                    # If the node is old and is not in the keepset, we skip it,
-                    # and mark as garbage collected
-                    if ((filename, node) not in self.keepkeys and
-                        self.isold(self.repo, filename, node)):
-                        entries[node].gced = True
-                        continue
-                    neworderednodes.append(node)
-                orderednodes = neworderednodes
+                # Compute delta bases for nodes:
+                deltabases = {}
+                nobase = set()
+                referenced = set()
+                nodes = set(nodes)
+                with progress.bar(ui, _("processing nodes"), "nodes",
+                                  len(orderednodes)) as nodeprog:
+                    for i, node in enumerate(orderednodes):
+                        nodeprog.value = i
+                        # Find delta base
+                        # TODO: allow delta'ing against most recent descendant
+                        # instead of immediate child
+                        deltatuple = deltabases.get(node, None)
+                        if deltatuple is None:
+                            deltabase, chainlen = nullid, 0
+                            deltabases[node] = (nullid, 0)
+                            nobase.add(node)
+                        else:
+                            deltabase, chainlen = deltatuple
+                            referenced.add(deltabase)
 
-            # Compute delta bases for nodes:
-            deltabases = {}
-            nobase = set()
-            referenced = set()
-            nodes = set(nodes)
-            for i, node in enumerate(orderednodes):
-                ui.progress(_("processing nodes"), i, unit='nodes',
-                            total=len(orderednodes))
-                # Find delta base
-                # TODO: allow delta'ing against most recent descendant instead
-                # of immediate child
-                deltatuple = deltabases.get(node, None)
-                if deltatuple is None:
-                    deltabase, chainlen = nullid, 0
-                    deltabases[node] = (nullid, 0)
-                    nobase.add(node)
-                else:
-                    deltabase, chainlen = deltatuple
-                    referenced.add(deltabase)
+                        # Use available ancestor information to inform our delta
+                        # choices
+                        ancestorinfo = ancestors.get(node)
+                        if ancestorinfo:
+                            p1, p2, linknode, copyfrom = ancestorinfo
 
-                # Use available ancestor information to inform our delta choices
-                ancestorinfo = ancestors.get(node)
-                if ancestorinfo:
-                    p1, p2, linknode, copyfrom = ancestorinfo
+                            # The presence of copyfrom means we're at a point
+                            # where the file was copied from elsewhere. So don't
+                            # attempt to do any deltas with the other file.
+                            if copyfrom:
+                                p1 = nullid
 
-                    # The presence of copyfrom means we're at a point where the
-                    # file was copied from elsewhere. So don't attempt to do any
-                    # deltas with the other file.
-                    if copyfrom:
-                        p1 = nullid
+                            if chainlen < maxchainlen:
+                                # Record this child as the delta base for its
+                                # parents. This may be non optimal, since the
+                                # parents may have many children, and this will
+                                # only choose the last one.
+                                # TODO: record all children and try all deltas
+                                # to find best
+                                if p1 != nullid:
+                                    deltabases[p1] = (node, chainlen + 1)
+                                if p2 != nullid:
+                                    deltabases[p2] = (node, chainlen + 1)
 
-                    if chainlen < maxchainlen:
-                        # Record this child as the delta base for its parents.
-                        # This may be non optimal, since the parents may have
-                        # many children, and this will only choose the last one.
-                        # TODO: record all children and try all deltas to find
-                        # best
-                        if p1 != nullid:
-                            deltabases[p1] = (node, chainlen + 1)
-                        if p2 != nullid:
-                            deltabases[p2] = (node, chainlen + 1)
+                # experimental config: repack.chainorphansbysize
+                if ui.configbool('repack', 'chainorphansbysize', True):
+                    orphans = nobase - referenced
+                    orderednodes = self._chainorphans(ui, filename,
+                        orderednodes, orphans, deltabases)
 
-            # experimental config: repack.chainorphansbysize
-            if ui.configbool('repack', 'chainorphansbysize', True):
-                orphans = nobase - referenced
-                orderednodes = self._chainorphans(ui, filename, orderednodes,
-                    orphans, deltabases)
+                # Compute deltas and write to the pack
+                for i, node in enumerate(orderednodes):
+                    deltabase, chainlen = deltabases[node]
+                    # Compute delta
+                    # TODO: Optimize the deltachain fetching. Since we're
+                    # iterating over the different version of the file, we may
+                    # be fetching the same deltachain over and over again.
+                    meta = None
+                    if deltabase != nullid:
+                        deltaentry = self.data.getdelta(filename, node)
+                        delta, deltabasename, origdeltabase, meta = deltaentry
+                        size = meta.get(constants.METAKEYSIZE)
+                        if (deltabasename != filename
+                                or origdeltabase != deltabase
+                                or size is None):
+                            deltabasetext = self.data.get(filename, deltabase)
+                            original = self.data.get(filename, node)
+                            size = len(original)
+                            delta = mdiff.textdiff(deltabasetext, original)
+                    else:
+                        delta = self.data.get(filename, node)
+                        size = len(delta)
+                        meta = self.data.getmeta(filename, node)
 
-            # Compute deltas and write to the pack
-            for i, node in enumerate(orderednodes):
-                deltabase, chainlen = deltabases[node]
-                # Compute delta
-                # TODO: Optimize the deltachain fetching. Since we're
-                # iterating over the different version of the file, we may
-                # be fetching the same deltachain over and over again.
-                meta = None
-                if deltabase != nullid:
-                    deltaentry = self.data.getdelta(filename, node)
-                    delta, deltabasename, origdeltabase, meta = deltaentry
-                    size = meta.get(constants.METAKEYSIZE)
-                    if (deltabasename != filename or origdeltabase != deltabase
-                        or size is None):
-                        deltabasetext = self.data.get(filename, deltabase)
-                        original = self.data.get(filename, node)
-                        size = len(original)
-                        delta = mdiff.textdiff(deltabasetext, original)
-                else:
-                    delta = self.data.get(filename, node)
-                    size = len(delta)
-                    meta = self.data.getmeta(filename, node)
+                    # TODO: don't use the delta if it's larger than the fulltext
+                    if constants.METAKEYSIZE not in meta:
+                        meta[constants.METAKEYSIZE] = size
+                    target.add(filename, node, deltabase, delta, meta)
 
-                # TODO: don't use the delta if it's larger than the fulltext
-                if constants.METAKEYSIZE not in meta:
-                    meta[constants.METAKEYSIZE] = size
-                target.add(filename, node, deltabase, delta, meta)
+                    entries[node].datarepacked = True
 
-                entries[node].datarepacked = True
+                prog.value += 1
 
-            ui.progress(_("processing nodes"), None)
-            count += 1
-
-        ui.progress(_("repacking data"), None)
         target.close(ledger=ledger)
 
     def repackhistory(self, ledger, target):
@@ -656,55 +660,54 @@ class repacker(object):
             if entry.historysource:
                 byfile.setdefault(entry.filename, {})[entry.node] = entry
 
-        count = 0
-        for filename, entries in sorted(byfile.iteritems()):
-            ancestors = {}
-            nodes = list(node for node in entries.iterkeys())
+        with progress.bar(ui, _('repacking history'), self.unit,
+                          len(byfile)) as prog:
+            for filename, entries in sorted(byfile.iteritems()):
+                ancestors = {}
+                nodes = list(node for node in entries.iterkeys())
 
-            for node in nodes:
-                if node in ancestors:
-                    continue
-                ancestors.update(self.history.getancestors(filename, node,
-                                                           known=ancestors))
+                for node in nodes:
+                    if node in ancestors:
+                        continue
+                    ancestors.update(self.history.getancestors(filename, node,
+                                                               known=ancestors))
 
-            # Order the nodes children first
-            orderednodes = reversed(self._toposort(ancestors))
+                # Order the nodes children first
+                orderednodes = reversed(self._toposort(ancestors))
 
-            # Write to the pack
-            dontprocess = set()
-            for node in orderednodes:
-                p1, p2, linknode, copyfrom = ancestors[node]
+                # Write to the pack
+                dontprocess = set()
+                for node in orderednodes:
+                    p1, p2, linknode, copyfrom = ancestors[node]
 
-                # If the node is marked dontprocess, but it's also in the
-                # explicit entries set, that means the node exists both in this
-                # file and in another file that was copied to this file.
-                # Usually this happens if the file was copied to another file,
-                # then the copy was deleted, then reintroduced without copy
-                # metadata. The original add and the new add have the same hash
-                # since the content is identical and the parents are null.
-                if node in dontprocess and node not in entries:
-                    # If copyfrom == filename, it means the copy history
-                    # went to come other file, then came back to this one, so we
-                    # should continue processing it.
-                    if p1 != nullid and copyfrom != filename:
+                    # If the node is marked dontprocess, but it's also in the
+                    # explicit entries set, that means the node exists both in
+                    # this file and in another file that was copied to this
+                    # file. Usually this happens if the file was copied to
+                    # another file, then the copy was deleted, then reintroduced
+                    # without copy metadata. The original add and the new add
+                    # have the same hash since the content is identical and the
+                    # parents are null.
+                    if node in dontprocess and node not in entries:
+                        # If copyfrom == filename, it means the copy history
+                        # went to come other file, then came back to this one,
+                        # so we should continue processing it.
+                        if p1 != nullid and copyfrom != filename:
+                            dontprocess.add(p1)
+                        if p2 != nullid:
+                            dontprocess.add(p2)
+                        continue
+
+                    if copyfrom:
                         dontprocess.add(p1)
-                    if p2 != nullid:
-                        dontprocess.add(p2)
-                    continue
 
-                if copyfrom:
-                    dontprocess.add(p1)
+                    target.add(filename, node, p1, p2, linknode, copyfrom)
 
-                target.add(filename, node, p1, p2, linknode, copyfrom)
+                    if node in entries:
+                        entries[node].historyrepacked = True
 
-                if node in entries:
-                    entries[node].historyrepacked = True
+                prog.value += 1
 
-            count += 1
-            ui.progress(_("repacking history"), count, unit=self.unit,
-                        total=len(byfile))
-
-        ui.progress(_("repacking history"), None)
         target.close(ledger=ledger)
 
     def _toposort(self, ancestors):

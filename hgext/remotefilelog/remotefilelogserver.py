@@ -7,12 +7,12 @@
 from __future__ import absolute_import
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
-from mercurial import exchange, sshserver, store, error
+from mercurial import exchange, sshserver, store, error, progress
 from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-from .  import (
+from . import (
     constants,
     lz4wrapper,
     shallowrepo,
@@ -404,22 +404,17 @@ def gcserver(ui, repo):
     days = repo.ui.configint("remotefilelog", "serverexpiration", 30)
     expiration = time.time() - (days * 24 * 60 * 60)
 
-    _removing = _("removing old server cache")
-    count = 0
-    ui.progress(_removing, count, unit="files")
-    for root, dirs, files in os.walk(cachepath):
-        for file in files:
-            filepath = os.path.join(root, file)
-            count += 1
-            ui.progress(_removing, count, unit="files")
-            if filepath in neededfiles:
-                continue
+    with progress.bar(ui, _("removing old server cache"), "files") as prog:
+        for root, dirs, files in os.walk(cachepath):
+            for file in files:
+                filepath = os.path.join(root, file)
+                prog.value += 1
+                if filepath in neededfiles:
+                    continue
 
-            stat = os.stat(filepath)
-            if stat.st_mtime < expiration:
-                os.remove(filepath)
-
-    ui.progress(_removing, None)
+                stat = os.stat(filepath)
+                if stat.st_mtime < expiration:
+                    os.remove(filepath)
 
 def getpack(repo, proto, args):
     """A server api for requesting a pack of file information.

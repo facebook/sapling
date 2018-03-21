@@ -9,7 +9,7 @@ from __future__ import absolute_import
 from ..extutil import runshellcommand
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
-from mercurial import encoding, error, localrepo, util, match, scmutil
+from mercurial import encoding, error, localrepo, util, match, scmutil, progress
 from . import (
     connectionpool,
     constants,
@@ -28,7 +28,6 @@ from .historypack import historypackstore
 import os
 
 requirement = "remotefilelog"
-_prefetching = _('prefetching')
 
 # These make*stores functions are global so that other extensions can replace
 # them.
@@ -231,43 +230,40 @@ def wraprepo(repo):
             serverfiles = skip.copy()
             visited = set()
             visited.add(nullid)
-            revnum = 0
-            revcount = len(revs)
-            self.ui.progress(_prefetching, revnum, total=revcount)
-            for rev in sorted(revs):
-                ctx = repo[rev]
-                if pats:
-                    m = scmutil.match(ctx, pats, opts)
-                sparsematch = repo.maybesparsematch(rev)
+            with progress.bar(self.ui, _('prefetching'),
+                              total=len(revs)) as prog:
+                for rev in sorted(revs):
+                    ctx = repo[rev]
+                    if pats:
+                        m = scmutil.match(ctx, pats, opts)
+                    sparsematch = repo.maybesparsematch(rev)
 
-                mfnode = ctx.manifestnode()
-                mfctx = mfl[mfnode]
+                    mfnode = ctx.manifestnode()
+                    mfctx = mfl[mfnode]
 
-                # Decompressing manifests is expensive.
-                # When possible, only read the deltas.
-                p1, p2 = mfctx.parents
-                if p1 in visited and p2 in visited:
-                    mfdict = mfl[mfnode].readfast()
-                else:
-                    mfdict = mfl[mfnode].read()
+                    # Decompressing manifests is expensive.
+                    # When possible, only read the deltas.
+                    p1, p2 = mfctx.parents
+                    if p1 in visited and p2 in visited:
+                        mfdict = mfl[mfnode].readfast()
+                    else:
+                        mfdict = mfl[mfnode].read()
 
-                diff = mfdict.iteritems()
-                if pats:
-                    diff = (pf for pf in diff if m(pf[0]))
-                if sparsematch:
-                    diff = (pf for pf in diff if sparsematch(pf[0]))
-                if rev not in localrevs:
-                    serverfiles.update(diff)
-                else:
-                    files.update(diff)
+                    diff = mfdict.iteritems()
+                    if pats:
+                        diff = (pf for pf in diff if m(pf[0]))
+                    if sparsematch:
+                        diff = (pf for pf in diff if sparsematch(pf[0]))
+                    if rev not in localrevs:
+                        serverfiles.update(diff)
+                    else:
+                        files.update(diff)
 
-                visited.add(mfctx.node())
-                revnum += 1
-                self.ui.progress(_prefetching, revnum, total=revcount)
+                    visited.add(mfctx.node())
+                    prog.value += 1
 
             files.difference_update(skip)
             serverfiles.difference_update(skip)
-            self.ui.progress(_prefetching, None)
 
             # Fetch files known to be on the server
             if serverfiles:
