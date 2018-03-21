@@ -42,6 +42,7 @@ from mercurial import (
     obsutil,
     patch,
     phases,
+    progress,
     pycompat,
     registrar,
     repair,
@@ -427,12 +428,12 @@ class rebaseruntime(object):
         cands = [k for k, v in self.state.iteritems() if v == revtodo]
         total = len(cands)
         pos = 0
-        for subset in sortsource(self.destmap):
-            pos = self._performrebasesubset(tr, subset, pos, total)
-        ui.progress(_('rebasing'), None)
+        with progress.bar(ui, _('rebasing'), _('changesets'), total) as prog:
+            for subset in sortsource(self.destmap):
+                pos = self._performrebasesubset(tr, subset, pos, prog)
         ui.note(_('rebase merging completed\n'))
 
-    def _performrebasesubset(self, tr, subset, pos, total):
+    def _performrebasesubset(self, tr, subset, pos, prog):
         repo, ui, opts = self.repo, self.ui, self.opts
         sortedrevs = repo.revs('sort(%ld, -topo)', subset)
         allowdivergence = self.ui.configbool(
@@ -475,8 +476,7 @@ class rebaseruntime(object):
             elif self.state[rev] == revtodo:
                 pos += 1
                 ui.status(_('rebasing %s\n') % desc)
-                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
-                            _('changesets'), total)
+                prog.value = (pos, "%d:%s" % (rev, ctx))
                 p1, p2, base = defineparents(repo, rev, self.destmap,
                                              self.state, self.skipped,
                                              self.obsoletenotrebased)
