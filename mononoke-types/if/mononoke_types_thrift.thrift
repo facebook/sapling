@@ -41,6 +41,37 @@ typedef Blake2 ContentId (hs.newtype)
 typedef binary MPathElement (hs.newtype)
 typedef list<MPathElement> MPath (hs.newtype)
 
+// Parent ordering
+// ---------------
+// "Ordered" parents means that behavior will change if the order of parents
+// changes.
+// Whether parents are ordered varies by source control system.
+// * In Mercurial, parents are stored ordered and the UI is order-dependent,
+//   but are hashed unordered.
+// * In Git, parents are stored and hashed ordered and the UI is also order-
+//   dependent.
+// These data structures will store parents in ordered form, as presented by
+// Mercurial. This does hypothetically mean that a single Mercurial changeset
+// can map to two Mononoke changesets -- those cases are extremely unlikely
+// in practice, and if they're deliberately constructed Mononoke will probably
+// end up rejecting whatever comes later.
+
+// Other notes:
+// * This uses sorted (B-tree) sets and maps to ensure deterministic
+//   serialization.
+// * Added and modified files are both part of file_changes.
+// * file_changes and file_deletes are at the end of the struct so that a
+//   deserializer that just wants to read metadata can stop early.
+struct TinyChangeset {
+  1: required list<ChangesetId> parents,
+  2: required string user,
+  3: required DateTime date,
+  4: required string message,
+  5: required map<string, string> extra,
+  6: required map<MPath, FileChange> file_changes,
+  7: required set<MPath> file_deletes,
+}
+
 struct DateTime {
   1: required i64 timestamp_secs,
   // Timezones can go up to UTC+13 (which would be represented as -46800), so
