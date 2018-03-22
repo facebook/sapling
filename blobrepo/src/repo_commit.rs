@@ -15,6 +15,7 @@ use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt};
 use futures_stats::{Stats, Timed};
 use slog::Logger;
+use time_ext::DurationExt;
 use uuid::Uuid;
 
 use blobstore::Blobstore;
@@ -353,10 +354,8 @@ pub fn log_cs_future_stats(logger: &Logger, phase: &str, stats: Stats, uuid: Uui
         "changeset_uuid" => uuid,
         "phase" => String::from(phase),
         "poll_count" => stats.poll_count,
-        "poll_time_us" => stats.poll_time.num_microseconds()
-                            .unwrap_or(i64::max_value()),
-        "completion_time_us" => stats.completion_time.num_microseconds()
-                                    .unwrap_or(i64::max_value())
+        "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+        "completion_time_us" => stats.completion_time.as_micros_unchecked(),
     );
 }
 

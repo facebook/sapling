@@ -40,6 +40,7 @@ extern crate serde_json;
 #[macro_use]
 extern crate slog;
 extern crate slog_glog_fmt;
+extern crate time_ext;
 extern crate tokio_core;
 extern crate tokio_proto;
 extern crate tokio_tls;
@@ -74,6 +75,7 @@ use openssl::ssl::{SSL_VERIFY_FAIL_IF_NO_PEER_CERT, SSL_VERIFY_PEER};
 use regex::{Captures, Regex};
 use scuba::{ScubaClient, ScubaSample};
 use slog::{Drain, Level, Logger};
+use time_ext::DurationExt;
 use tokio_proto::TcpServer;
 use tokio_tls::proto;
 
@@ -312,11 +314,9 @@ where
 fn add_common_stats(sample: &mut ScubaSample, stats: &Stats) {
     sample.add(
         SCUBA_COL_ELAPSED_TIME,
-        stats.completion_time.num_milliseconds(),
+        stats.completion_time.as_millis_unchecked(),
     );
-    if let Some(nanos) = stats.poll_time.num_nanoseconds() {
-        sample.add(SCUBA_COL_POLL_TIME, nanos);
-    }
+    sample.add(SCUBA_COL_POLL_TIME, stats.poll_time.as_nanos_unchecked());
     sample.add(SCUBA_COL_POLL_COUNT, stats.poll_count);
 }
 

@@ -100,8 +100,8 @@ macro_rules! recover_logged_data {
                 pub $x: String,
             )*
             pub poll_count: u64,
-            pub poll_time_us: i64,
-            pub completion_time_us: i64,
+            pub poll_time_us: u64,
+            pub completion_time_us: u64,
         }
 
         impl $name {
@@ -119,11 +119,11 @@ macro_rules! recover_logged_data {
                         .get("poll_count")
                         .expect("No poll_count supplied"),
                     poll_time_us: *source
-                        .i64_data
+                        .u64_data
                         .get("poll_time_us")
                         .expect("No poll_time_us supplied"),
                     completion_time_us: *source
-                        .i64_data
+                        .u64_data
                         .get("completion_time_us")
                         .expect("No completion_time_us supplied"),
                 }
@@ -207,8 +207,6 @@ macro_rules! check_stats {
                 .expect(&format!("No records for phase {}", phase));
             $data_checks
             assert!($data.poll_count > 0, "Not polled before completion!");
-            assert!($data.poll_time_us >= 0, "Negative time in polling");
-            assert!($data.completion_time_us >= 0, "Negative time to completion");
         }
     };
     ( $records:ident, $data:ident; $( $phase:expr ),+ ) => {

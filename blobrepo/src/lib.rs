@@ -48,6 +48,7 @@ extern crate mercurial;
 extern crate mercurial_types;
 extern crate rocksblob;
 extern crate rocksdb;
+extern crate time_ext;
 
 mod repo;
 mod changeset;

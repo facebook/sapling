@@ -20,6 +20,7 @@ use futures::sync::oneshot;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
+use time_ext::DurationExt;
 use uuid::Uuid;
 
 use blobstore::Blobstore;
@@ -352,10 +353,8 @@ impl BlobRepo {
                 "path" => path,
                 "nodeid" => nodeid,
                 "poll_count" => stats.poll_count,
-                "poll_time_us" => stats.poll_time.num_microseconds()
-                                    .unwrap_or(i64::max_value()),
-                "completion_time_us" => stats.completion_time.num_microseconds()
-                                        .unwrap_or(i64::max_value())
+                "poll_time_us" => stats.poll_time.as_micros_unchecked(),
+                "completion_time_us" => stats.completion_time.as_micros_unchecked(),
             );
         }
 

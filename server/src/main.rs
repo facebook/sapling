@@ -53,6 +53,7 @@ extern crate scuba;
 extern crate services;
 extern crate sshrelay;
 extern crate stats;
+extern crate time_ext;
 
 mod errors;
 mod repo;

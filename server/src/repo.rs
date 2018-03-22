@@ -22,6 +22,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use pylz4;
 use scuba::{ScubaClient, ScubaSample};
+use time_ext::DurationExt;
 use tokio_core::reactor::Remote;
 
 use slog::{self, Drain, Logger};
@@ -125,10 +126,11 @@ fn add_common_stats_and_send_to_scuba(
     stats: &Stats,
 ) {
     if let Some(ref scuba) = scuba {
-        sample.add("time_elapsed_ms", stats.completion_time.num_milliseconds());
-        if let Some(nanos) = stats.poll_time.num_nanoseconds() {
-            sample.add("poll_time_ns", nanos);
-        }
+        sample.add(
+            "time_elapsed_ms",
+            stats.completion_time.as_millis_unchecked(),
+        );
+        sample.add("poll_time_ns", stats.poll_time.as_nanos_unchecked());
         sample.add("poll_count", stats.poll_count);
         scuba.log(&sample);
     }
