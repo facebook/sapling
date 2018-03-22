@@ -73,6 +73,15 @@ impl RepoPath {
         }
     }
 
+    /// Get the length of this repo path in bytes. `RepoPath::Root` has length 0.
+    pub fn len(&self) -> usize {
+        match *self {
+            RepoPath::RootPath => 0,
+            RepoPath::DirectoryPath(ref path) => path.len(),
+            RepoPath::FilePath(ref path) => path.len(),
+        }
+    }
+
     pub fn mpath(&self) -> Option<&MPath> {
         match *self {
             RepoPath::RootPath => None,

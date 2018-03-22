@@ -476,7 +476,7 @@ fn walk_manifests(
     filelogs: &Filelogs,
 ) -> Result<(BlobFuture, BlobStream)> {
     fn walk_helper(
-        path_taken: &MPath,
+        path_taken: &RepoPath,
         manifest_content: &ManifestContent,
         manifests: &Manifests,
         filelogs: &Filelogs,
@@ -491,10 +491,14 @@ fn walk_manifests(
         let mut entries: Vec<BlobFuture> = Vec::new();
         for (name, details) in manifest_content.files.iter() {
             let nodehash = details.entryid().clone().into_nodehash();
-            let next_path = path_taken.join(name);
+            let next_path = MPath::join_opt(path_taken.mpath(), name);
+            let next_path = match next_path {
+                Some(path) => path,
+                None => bail_msg!("internal error: joined root path with root manifest"),
+            };
 
             if details.is_tree() {
-                let key = (nodehash, RepoPath::dir(next_path)?);
+                let key = (nodehash, RepoPath::DirectoryPath(next_path));
 
                 if let Some(&(ref manifest_content, ref blobfuture)) = manifests.get(&key) {
                     entries.push(
@@ -505,14 +509,14 @@ fn walk_manifests(
                             .boxify(),
                     );
                     entries.append(&mut walk_helper(
-                        key.1.mpath().expect("RepoPath::dir must have MPath"),
+                        &key.1,
                         manifest_content,
                         manifests,
                         filelogs,
                     )?);
                 }
             } else {
-                if let Some(blobfuture) = filelogs.get(&(nodehash, RepoPath::file(next_path)?)) {
+                if let Some(blobfuture) = filelogs.get(&(nodehash, RepoPath::FilePath(next_path))) {
                     entries.push(
                         blobfuture
                             .clone()
@@ -538,7 +542,7 @@ fn walk_manifests(
             .from_err()
             .boxify(),
         stream::futures_unordered(walk_helper(
-            &MPath::empty(),
+            &RepoPath::root(),
             &manifest_content,
             manifests,
             filelogs,
