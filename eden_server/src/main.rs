@@ -88,7 +88,7 @@ struct Route(Regex, UrlParseFunc);
 
 const SCUBA_TABLE: &'static str = "mononoke_eden_server";
 const SCUBA_COL_ELAPSED_TIME: &'static str = "time_elapsed_ms";
-const SCUBA_COL_POLL_TIME: &'static str = "poll_time_ns";
+const SCUBA_COL_POLL_TIME: &'static str = "poll_time_us";
 const SCUBA_COL_POLL_COUNT: &'static str = "poll_count";
 const SCUBA_COL_HASH: &'static str = "hash";
 const SCUBA_COL_HOSTNAME: &'static str = "hostname";
@@ -316,7 +316,7 @@ fn add_common_stats(sample: &mut ScubaSample, stats: &Stats) {
         SCUBA_COL_ELAPSED_TIME,
         stats.completion_time.as_millis_unchecked(),
     );
-    sample.add(SCUBA_COL_POLL_TIME, stats.poll_time.as_nanos_unchecked());
+    sample.add(SCUBA_COL_POLL_TIME, stats.poll_time.as_micros_unchecked());
     sample.add(SCUBA_COL_POLL_COUNT, stats.poll_count);
 }
 

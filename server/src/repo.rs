@@ -130,7 +130,7 @@ fn add_common_stats_and_send_to_scuba(
             "time_elapsed_ms",
             stats.completion_time.as_millis_unchecked(),
         );
-        sample.add("poll_time_ns", stats.poll_time.as_nanos_unchecked());
+        sample.add("poll_time_us", stats.poll_time.as_micros_unchecked());
         sample.add("poll_count", stats.poll_count);
         scuba.log(&sample);
     }
