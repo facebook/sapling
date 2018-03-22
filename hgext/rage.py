@@ -299,7 +299,8 @@ def rage(ui, repo, *pats, **opts):
                 ['arc', 'paste', '--lang', 'hgrage' , '--title', 'hgrage'],
                 stdout=subprocess.PIPE,
                 stdin=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+                stderr=subprocess.PIPE,
+                shell=pycompat.iswindows)
             out, err = p.communicate(input=msg + '\n')
             ret = p.returncode
         except (WindowsError, OSError):
