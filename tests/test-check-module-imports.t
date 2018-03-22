@@ -46,6 +46,16 @@ outputs, which should be fixed later.
   fb/packaging/nupkg_templates.py:7: direct symbol import Template from string
   hgext/age.py:21: imports not lexically sorted: re < time
   hgext/cleanobsstore.py:37: symbol import follows non-symbol import: mercurial.i18n
+  hgext/commitcloud/baseservice.py:7: relative import of stdlib module
+  hgext/commitcloud/baseservice.py:7: direct symbol import ABCMeta, abstractmethod from abc
+  hgext/commitcloud/httpsservice.py:13: relative import of stdlib module
+  hgext/commitcloud/httpsservice.py:13: direct symbol import StringIO from StringIO
+  hgext/commitcloud/httpsservice.py:20: direct symbol import BaseService, References from hgext.commitcloud.baseservice
+  hgext/commitcloud/httpsservice.py:20: symbol import follows non-symbol import: hgext.commitcloud.baseservice
+  hgext/commitcloud/httpsservice.py:25: direct symbol import httplib from mercurial.util
+  hgext/commitcloud/httpsservice.py:25: symbol import follows non-symbol import: mercurial.util
+  hgext/commitcloud/localservice.py:15: direct symbol import BaseService, References from hgext.commitcloud.baseservice
+  hgext/commitcloud/localservice.py:15: symbol import follows non-symbol import: hgext.commitcloud.baseservice
   hgext/conflictinfo.py:30: direct symbol import absentfilectx from mercurial.filemerge
   hgext/crdump.py:5: multiple imported names: json, re, shutil, tempfile
   hgext/crdump.py:6: relative import of stdlib module

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import itertools
 import re
 import socket
+import time
 
 from mercurial.i18n import _
 
@@ -29,6 +30,7 @@ command = registrar.command(cmdtable)
 def cloudsync(ui, repo, **opts):
     """Synchronize commits with the commit cloud service"""
 
+    start = time.time()
     serv = service.get(ui)
     lastsyncstate = state.SyncState(repo)
     cloudrefs = serv.getreferences(lastsyncstate.version)
@@ -42,7 +44,8 @@ def cloudsync(ui, repo, **opts):
         localbookmarks = _getbookmarks(repo)
 
         if (set(localheads) == set(lastsyncstate.heads) and
-                localbookmarks == lastsyncstate.bookmarks):
+                localbookmarks == lastsyncstate.bookmarks and
+                lastsyncstate.version != 0):
             synced = True
 
         if not synced:
@@ -60,6 +63,13 @@ def cloudsync(ui, repo, **opts):
                                      localbookmarks)
                 if obsmarkers:
                     repo.svfs.unlink('commitcloudpendingobsmarkers')
+
+    elapsed = time.time() - start
+    ui.debug(
+        "%s cloudsync is done in %0.2f sec\n" % (
+            ui.label('#commitcloud', 'commitcloud.hashtag'),
+            elapsed)
+    )
 
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions('^pull')

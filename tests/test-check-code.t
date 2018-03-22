@@ -25,6 +25,9 @@ New errors are not allowed. Warnings are strongly discouraged.
   fb/tests/test-hg-rsh.t:35:
    >   > %include /bin/../etc/mercurial/repo-specific/common.rc
    don't use explicit paths for tools
+  hgext/commitcloud/httpsservice.py:14:
+   > import urllib
+   don't use urllib, use util.urlreq/util.urlerr
   Skipping hgext/extlib/cfastmanifest.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.c it has no-che?k-code (glob)
   Skipping hgext/extlib/cfastmanifest/bsearch.h it has no-che?k-code (glob)
