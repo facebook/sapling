@@ -826,33 +826,6 @@ def _discover(ui, repo):
                 PROFILE_INACTIVE),
             repo.readsparseconfig(raw, filename=p).metadata)
 
-def _listprofiles(ui, repo, opts):
-    chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
-    labels = {
-        PROFILE_INACTIVE: 'inactive',
-        PROFILE_INCLUDED: 'included',
-        PROFILE_ACTIVE: 'active',
-    }
-    with ui.formatter('sparse', opts) as fm:
-        if fm.isplain():
-            ui.write_err(
-                _('symbols: * = active profile, ~ = transitively '
-                  'included\n'),
-                label='sparse.profile.legend')
-
-        profiles = list(_discover(ui, repo))
-        max_width = max(len(p.path) for p in profiles)
-
-        for info in profiles:
-            fm.startitem()
-            label = 'sparse.profile.' + labels[info.active]
-            fm.plain('%-1s ' % chars[info.active], label=label)
-            fm.data(active=labels[info.active], metadata=dict(info))
-            fm.write(b'path', '%-{}s'.format(max_width), info.path, label=label)
-            if 'title' in info:
-                fm.plain(' - %s' % info.get('title', b''), label=label)
-            fm.plain('\n')
-
 @command('^sparse', [
     ('I', 'include', False, _('include files in the sparse checkout')),
     ('X', 'exclude', False, _('exclude files in the sparse checkout')),
@@ -866,9 +839,8 @@ def _listprofiles(ui, repo, opts):
     ('', 'reset', False, _('makes the repo full again')),
     ('', 'cwd-list', False, _('list the full contents of the current '
                               'directory')),
-    ('l', 'list-profiles', False, _('list available profiles')),
     ] + commands.templateopts,
-    _('[--OPTION] PATTERN...'))
+    _('[--OPTION] SUBCOMMAND | PATTERN...'))
 def sparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
 
@@ -912,10 +884,6 @@ def sparse(ui, repo, *pats, **opts):
     are excluded by the current sparse checkout are annotated with a hyphen
     ('-') before the name.
 
-    --list-profiles lists all available profiles, indicating which ones are
-    currently active. Activated profiles are marked with a `*`, profiles
-    included transitively are marked with a ~.
-
     The following config option defines whether sparse treats supplied
     paths as relative to repo root or to the current working dir for
     include and exclude options:
@@ -941,6 +909,10 @@ def sparse(ui, repo, *pats, **opts):
 
     Returns 0 if editing the sparse checkout succeeds.
     """
+    if pats and pats[0] in subcmd._table:
+        # look for a possible subcommand
+        return subcmd._table[pats[0]](ui, repo, *pats[1:], **opts)
+
     include = opts.get('include')
     exclude = opts.get('exclude')
     force = opts.get('force')
@@ -952,10 +924,8 @@ def sparse(ui, repo, *pats, **opts):
     refresh = opts.get('refresh')
     reset = opts.get('reset')
     cwdlist = opts.get('cwd_list')
-    listprofiles = opts.get('list_profiles')
     count = sum([include, exclude, enableprofile, disableprofile, delete,
-                 importrules, refresh, clearrules, reset, cwdlist,
-                 listprofiles])
+                 importrules, refresh, clearrules, reset, cwdlist])
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
@@ -990,8 +960,65 @@ def sparse(ui, repo, *pats, **opts):
     if cwdlist:
         _cwdlist(repo)
 
-    if listprofiles:
-        _listprofiles(ui, repo, opts)
+# subcommands for the hg sparse command line
+class subcmdfunc(registrar._funcregistrarbase):
+    """Register a function to be invoked for an `hg sparse <thing>`."""
+
+    def __init__(self, cmd, table=None):
+        # preserve original docstring for the sparse function
+        self._cmd = cmd
+        self._base_doc = '{}\n\n\nAvailable sub-commands:\n'.format(
+            cmd[0].__doc__.rstrip())
+        if table is None:
+            # List commands in registration order
+            table = collections.OrderedDict()
+        super(subcmdfunc, self).__init__(table)
+
+    # Used by _formatdoc().
+    _docformat = '%s -- %s'
+
+    def _extrasetup(self, name, func):
+        """Execute exra setup for registered function, if needed
+        """
+        longest = max(len(n) for n in self._table)
+        entries = [
+            '    {:<{longest}}   {}'.format(
+                key, fn._origdoc, longest=longest)
+            for key, fn in sorted(self._table.items())]
+
+        self._cmd[0].__doc__ = '{}\n{}\n'.format(
+            self._base_doc, '\n\n'.join(entries))
+
+subcmd = subcmdfunc(cmdtable['^sparse'])
+
+@subcmd('list')
+def _listprofiles(ui, repo, *pats, **opts):
+    """List available sparse profiles"""
+    chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
+    labels = {
+        PROFILE_INACTIVE: 'inactive',
+        PROFILE_INCLUDED: 'included',
+        PROFILE_ACTIVE: 'active',
+    }
+    with ui.formatter('sparse', opts) as fm:
+        if fm.isplain():
+            ui.write_err(
+                _('symbols: * = active profile, ~ = transitively '
+                  'included\n'),
+                label='sparse.profile.legend')
+
+        profiles = list(_discover(ui, repo))
+        max_width = max(len(p.path) for p in profiles)
+
+        for info in profiles:
+            fm.startitem()
+            label = 'sparse.profile.' + labels[info.active]
+            fm.plain('%-1s ' % chars[info.active], label=label)
+            fm.data(active=labels[info.active], metadata=dict(info))
+            fm.write(b'path', '%-{}s'.format(max_width), info.path, label=label)
+            if 'title' in info:
+                fm.plain(' - %s' % info.get('title', b''), label=label)
+            fm.plain('\n')
 
 def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             delete=False, enableprofile=False, disableprofile=False,
