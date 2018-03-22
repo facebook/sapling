@@ -28,7 +28,6 @@ extern crate assert_matches;
 
 extern crate itertools;
 extern crate memmap;
-extern crate time;
 
 #[cfg(test)]
 #[macro_use]
