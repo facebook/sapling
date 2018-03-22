@@ -294,13 +294,17 @@ def rage(ui, repo, *pats, **opts):
         return
 
     with progress.spinner(ui, "Saving paste"):
-        p = subprocess.Popen(
-            ['arc', 'paste', '--lang', 'hgrage' , '--title', 'hgrage'],
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        out, err = p.communicate(input=msg + '\n')
-        ret = p.returncode
+        try:
+            p = subprocess.Popen(
+                ['arc', 'paste', '--lang', 'hgrage' , '--title', 'hgrage'],
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+            out, err = p.communicate(input=msg + '\n')
+            ret = p.returncode
+        except (WindowsError, OSError):
+            ui.write(_('Failed calling arc. (is it in your PATH?)\n'))
+            ret = 1
 
     if ret:
         fd, tmpname = tempfile.mkstemp(prefix='hg-rage-')
