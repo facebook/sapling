@@ -25,7 +25,7 @@ to pull these pushed commits
 
 start mononoke
 
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Push with bookmark

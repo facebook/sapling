@@ -17,10 +17,11 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use slog::Logger;
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
+use mercurial;
 use mercurial::changeset::RevlogChangeset;
-use mercurial::manifest::revlog::ManifestContent;
+use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{Changeset, HgChangesetId, HgManifestId, MPath, NodeHash, RepoPath};
+use mercurial_types::{HgChangesetId, MPath, NodeHash, RepoPath};
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
@@ -29,10 +30,11 @@ use upload_blobs::{upload_blobs, UploadBlobsType, UploadableBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
-type Changesets = Vec<(NodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<(NodeHash, RepoPath), <Filelog as UploadableBlob>::Value>;
-type Manifests = HashMap<(NodeHash, RepoPath), <TreemanifestEntry as UploadableBlob>::Value>;
-type UploadedChangesets = HashMap<NodeHash, ChangesetHandle>;
+type Changesets = Vec<(mercurial::NodeHash, RevlogChangeset)>;
+type Filelogs = HashMap<(mercurial::NodeHash, RepoPath), <Filelog as UploadableBlob>::Value>;
+type Manifests =
+    HashMap<(mercurial::NodeHash, RepoPath), <TreemanifestEntry as UploadableBlob>::Value>;
+type UploadedChangesets = HashMap<mercurial::NodeHash, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
@@ -328,7 +330,7 @@ impl Bundle2Resolver {
     ) -> BoxFuture<(), Error> {
         fn upload_changeset(
             repo: Arc<BlobRepo>,
-            node: NodeHash,
+            node: mercurial::NodeHash,
             revlog_cs: RevlogChangeset,
             mut uploaded_changesets: UploadedChangesets,
             filelogs: &Filelogs,
@@ -450,14 +452,17 @@ impl Bundle2Resolver {
 fn get_parent(
     repo: &BlobRepo,
     map: &UploadedChangesets,
-    p: Option<NodeHash>,
+    p: Option<mercurial::NodeHash>,
 ) -> BoxFuture<Option<ChangesetHandle>, Error> {
     match p {
         None => ok(None).boxify(),
         Some(p) => match map.get(&p) {
-            None => repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
-                .map(|cs| Some(cs.into()))
-                .boxify(),
+            None => {
+                let p = NodeHash::new(p.sha1().clone());
+                repo.get_changeset_by_changesetid(&HgChangesetId::new(p))
+                    .map(|cs| Some(cs.into()))
+                    .boxify()
+            }
             Some(cs) => ok(Some(cs.clone())).boxify(),
         },
     }
@@ -471,7 +476,7 @@ type BlobStream = BoxStream<(BlobEntry, RepoPath), Error>;
 /// This function starts with the Root Manifest Id and returns Future for Root Manifest and Stream
 /// of all dependent Manifests and Filelogs that were provided in this push.
 fn walk_manifests(
-    manifest_root_id: HgManifestId,
+    manifest_root_id: mercurial::HgManifestId,
     manifests: &Manifests,
     filelogs: &Filelogs,
 ) -> Result<(BlobFuture, BlobStream)> {

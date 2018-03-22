@@ -11,7 +11,8 @@ use std::fmt;
 use byteorder::{BigEndian, ByteOrder};
 use bytes::{BufMut, BytesMut};
 
-use mercurial_types::{Delta, NodeHash, RepoPath, NULL_HASH};
+use mercurial::{NodeHash, NULL_HASH};
+use mercurial_types::{Delta, RepoPath};
 
 use delta;
 use errors::*;
@@ -136,12 +137,10 @@ impl HistoryEntry {
             match kind {
                 Kind::Tree => bail_err!(ErrorKind::WirePackDecode(format!(
                     "tree entry {} is marked as copied from path {}, but they cannot be copied",
-                    node,
-                    path
+                    node, path
                 ))),
-                Kind::File => Some(RepoPath::file(path).with_context(|_| {
-                    ErrorKind::WirePackDecode("invalid copy from path".into())
-                })?),
+                Kind::File => Some(RepoPath::file(path)
+                    .with_context(|_| ErrorKind::WirePackDecode("invalid copy from path".into()))?),
             }
         } else {
             None
@@ -188,8 +187,7 @@ impl HistoryEntry {
                 RepoPath::DirectoryPath(ref path) => {
                     bail_err!(ErrorKind::InvalidWirePackEntry(format!(
                         "history entry for {} is copied from directory {}, which isn't allowed",
-                        self.node,
-                        path
+                        self.node, path
                     )))
                 }
                 RepoPath::FilePath(ref path) => {
@@ -198,9 +196,7 @@ impl HistoryEntry {
                         ErrorKind::InvalidWirePackEntry(format!(
                             "history entry for {} is copied from file {}, but the pack is of \
                              kind {}",
-                            self.node,
-                            path,
-                            kind
+                            self.node, path, kind
                         ))
                     );
                     ensure_err!(
@@ -309,8 +305,8 @@ mod test {
     use quickcheck::{Gen, StdGen};
     use rand::{self, Rng};
 
+    use mercurial::mocks::{AS_HASH, BS_HASH};
     use mercurial_types::delta::Fragment;
-    use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
 
     use super::*;
 

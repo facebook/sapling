@@ -108,7 +108,7 @@ setup repo2
 
 start mononoke
 
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
   $ hgmn debugwireargs ssh://user@dummy/repo one two --three three
   one two three None None

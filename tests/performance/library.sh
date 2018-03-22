@@ -28,7 +28,9 @@ function build_tools {
   export DUMMYSSH
   echo "Building Mononoke hgcli"
   MONONOKE_HGCLI="$(buck root)/$(buck build @mode/opt '//scm/mononoke/hgcli:hgcli' --show-output | cut -d\  -f2)"
-  export MONONOKE_HGCLI
+  echo "Building Mononoke blobimport"
+  MONONOKE_BLOBIMPORT="$(buck root)/$(buck build @mode/opt '//scm/mononoke:blobimport' --show-output | cut -d\  -f2)"
+  export MONONOKE_BLOBIMPORT
   echo "Building Mononoke server"
   MONONOKE_SERVER="$(buck root)/$(buck build @mode/opt '//scm/mononoke:mononoke' --show-output | cut -d\  -f2)"
   export MONONOKE_SERVER
@@ -88,15 +90,20 @@ repoid=0
 CONFIG
   hg add -q repos
   hg ci -ma
-  hg bookmark test-config
   hg backfilltree
+  mkdir "$config_repo-rocks"
+
+  $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes "$config_repo" "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
+  mkdir -p "$config_repo"-rocks/.hg
+  mkdir -p "$config_repo"-rocks/books
+
   mkdir -p "$repos_path/repo/.hg"
   
   echo "Scuba table is $scuba_table and repo in that table is $repos_path/repo"
 }
 
 function run_mononoke {
-  mononoke -P "$REPO_PATH/mononoke-config" -B test-config
+  mononoke
   echo "Mononoke output at $REPO_PATH/mononoke.out"
   wait_for_mononoke "$REPO_PATH/repo"
   echo

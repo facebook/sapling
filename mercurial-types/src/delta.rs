@@ -61,9 +61,7 @@ impl Delta {
                 if frag.start < prev.end {
                     let msg = format!(
                         "fragment {}: previous end {} overlaps with start {}",
-                        i,
-                        prev.end,
-                        frag.start
+                        i, prev.end, frag.start
                     );
                     bail!(ErrorKind::InvalidFragmentList(msg));
                 }
@@ -172,12 +170,10 @@ impl Arbitrary for Fragment {
                     // shrink could produce bad values
                     start <= end
                 })
-                .map(|(start, end, content)| {
-                    Fragment {
-                        start: start,
-                        end: end,
-                        content: content,
-                    }
+                .map(|(start, end, content)| Fragment {
+                    start: start,
+                    end: end,
+                    content: content,
                 }),
         )
     }
@@ -250,12 +246,10 @@ pub mod compat {
         Delta {
             frags: deltas
                 .into_iter()
-                .map(|delta| {
-                    Fragment {
-                        start: delta.start,
-                        end: delta.end,
-                        content: delta.content.clone(),
-                    }
+                .map(|delta| Fragment {
+                    start: delta.start,
+                    end: delta.end,
+                    content: delta.content.clone(),
                 })
                 .collect(),
         }

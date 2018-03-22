@@ -16,7 +16,6 @@ use failure::FutureFailureErrorExt;
 use futures::{future, Future, IntoFuture};
 
 use blobrepo::BlobRepo;
-use mercurial::RevlogRepo;
 use mercurial_types::{Changeset, MPath, MPathElement, Manifest};
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::HgChangesetId;
@@ -80,19 +79,6 @@ impl RepoConfigs {
                 })
                 .context("failed to get manifest from changeset")
                 .from_err()
-                .and_then(|manifest| Self::read_manifest(&manifest)),
-        )
-    }
-
-    /// Read the config repo and generate RepoConfigs based on it
-    pub fn read_revlog_config_repo(
-        repo: RevlogRepo,
-        changesetid: HgChangesetId,
-    ) -> Box<Future<Item = Self, Error = Error> + Send> {
-        Box::new(
-            repo.get_changeset(&changesetid)
-                .and_then(move |changeset| repo.get_root_manifest(&changeset.manifestid()))
-                .map_err(|err| err.context("failed to get manifest from changeset").into())
                 .and_then(|manifest| Self::read_manifest(&manifest)),
         )
     }

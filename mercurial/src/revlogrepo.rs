@@ -21,16 +21,15 @@ use futures::future;
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use bookmarks::Bookmarks;
-use mercurial_types::{fncache_fsencode, simple_fsencode, BlobNode, HgManifestId, MPath,
-                      MPathElement, NodeHash, RepoPath, NULL_HASH};
-use mercurial_types::nodehash::{EntryId, HgChangesetId};
+use mercurial_types::{fncache_fsencode, simple_fsencode, MPath, MPathElement, RepoPath};
 use stockbookmarks::StockBookmarks;
 use storage_types::Version;
 
+use blobnode::BlobNode;
 pub use changeset::RevlogChangeset;
 use errors::*;
 pub use manifest::RevlogManifest;
+use nodehash::{EntryId, HgChangesetId, HgManifestId, NodeHash, NULL_HASH};
 use revlog::{self, RevIdx, Revlog, RevlogIter};
 
 const DEFAULT_LOGS_CAPACITY: usize = 1000000;

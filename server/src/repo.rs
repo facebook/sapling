@@ -30,10 +30,10 @@ use slog_scuba::ScubaDrain;
 
 use blobrepo::BlobChangeset;
 use bundle2_resolver;
-use mercurial;
+use mercurial::{self, RevlogChangeset};
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
-use mercurial_types::{percent_encode, BlobNode, Changeset, Entry, HgChangesetId, HgManifestId,
-                      MPath, NodeHash, Parents, RepoPath, RepositoryId, Type, NULL_HASH};
+use mercurial_types::{percent_encode, Changeset, Entry, HgChangesetId, HgManifestId, MPath,
+                      NodeHash, Parents, RepoPath, RepositoryId, Type, NULL_HASH};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
 use metaconfig::repoconfig::RepoType;
 
@@ -292,10 +292,35 @@ impl RepoClient {
                 move |node| hgrepo.get_changeset_by_changesetid(&HgChangesetId::new(node))
             })
             .and_then(|cs| {
+                let parents = {
+                    let (p1, p2) = cs.parents().get_nodes();
+                    let p1 = p1.map(|p| mercurial::NodeHash::new(p.sha1().clone()));
+                    let p2 = p2.map(|p| mercurial::NodeHash::new(p.sha1().clone()));
+                    mercurial::Parents::new(p1.as_ref(), p2.as_ref())
+                };
+
+                let manifestid = mercurial::HgManifestId::new(mercurial::NodeHash::new(
+                    cs.manifestid().into_nodehash().sha1().clone(),
+                ));
+
+                let revlogcs = RevlogChangeset::new_from_parts(
+                    parents,
+                    manifestid,
+                    cs.user().into(),
+                    cs.time().clone(),
+                    cs.extra().clone(),
+                    cs.files().into(),
+                    cs.comments().into(),
+                );
+
                 let mut v = Vec::new();
-                mercurial::changeset::serialize_cs(&cs, &mut v)?;
-                let parents = cs.parents().get_nodes();
-                Ok(BlobNode::new(Bytes::from(v), parents.0, parents.1))
+                mercurial::changeset::serialize_cs(&revlogcs, &mut v)?;
+                let parents = revlogcs.parents().get_nodes();
+                Ok(mercurial::BlobNode::new(
+                    Bytes::from(v),
+                    parents.0,
+                    parents.1,
+                ))
             });
 
         bundle.add_part(parts::changegroup_part(changelogentries)?);
@@ -359,10 +384,14 @@ impl RepoClient {
             },
         );
 
-        let changed_entries = changed_entries.filter({
-            let mut used_hashes = HashSet::new();
-            move |entry| used_hashes.insert(*entry.0.get_hash())
-        });
+        let changed_entries = changed_entries
+            .filter({
+                let mut used_hashes = HashSet::new();
+                move |entry| used_hashes.insert(*entry.0.get_hash())
+            })
+            .map(|(entry, hash, path)| {
+                (entry, mercurial::NodeHash::new(hash.sha1().clone()), path)
+            });
 
         parts::treepack_part(changed_entries)
             .into_future()

@@ -71,16 +71,16 @@ use futures::{Future, Sink, Stream};
 use futures::sink::Wait;
 use futures::sync::mpsc;
 
-use clap::{App, ArgGroup, ArgMatches};
+use clap::{App, ArgMatches};
 
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
 use slog_kvfilter::KVFilter;
 use slog_logview::LogViewDrain;
 
+use blobrepo::BlobRepo;
 use bytes::Bytes;
 use hgproto::{sshproto, HgProtoHandler};
-use mercurial::RevlogRepo;
 use mercurial_types::RepositoryId;
 use metaconfig::RepoConfigs;
 use metaconfig::repoconfig::RepoType;
@@ -124,20 +124,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .about("serve repos")
         .args_from_usage(
             r#"
-            <crpath>      -P, --configrepo_path [PATH]           'path to the config repo'
+            <crpath>      -P, --configrepo_path [PATH]           'path to the config repo in rocksdb form'
 
-            [crbookmark]  -B, --configrepo_bookmark [BOOKMARK]   'config repo bookmark'
-            [crhash]      -C, --configrepo_hash [HASH]           'config repo commit hash'
+            <crhash>      -C, --configrepo_hash [HASH]           'config repo commit hash'
 
             -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
 
             -d, --debug                                          'print debug level output'
         "#,
-        )
-        .group(
-            ArgGroup::default()
-                .args(&["crbookmark", "crhash"])
-                .required(true),
         )
 }
 
@@ -202,26 +196,22 @@ fn start_thrift_service<'a>(
 
 fn get_config<'a>(logger: &Logger, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
     // TODO: This needs to cope with blob repos, too
-    let mut crpath = PathBuf::from(matches.value_of("crpath").unwrap());
-    crpath.push(".hg");
-    let config_repo = RevlogRepo::open(crpath)?;
+    let crpath = PathBuf::from(matches.value_of("crpath").unwrap());
+    let config_repo = BlobRepo::new_rocksdb(
+        logger.new(o!["repo" => "Config repo"]),
+        &crpath,
+        RepositoryId::new(0),
+    )?;
 
-    let changesetid = if let Some(bookmark) = matches.value_of("crbookmark") {
-        config_repo
-            .get_bookmark_value(&bookmark)
-            .wait()?
-            .ok_or_else(|| failure::err_msg("bookmark for config repo not found"))?
-            .0
-    } else {
-        mercurial_types::nodehash::HgChangesetId::from_str(matches.value_of("crhash").unwrap())?
-    };
+    let changesetid =
+        mercurial_types::nodehash::HgChangesetId::from_str(matches.value_of("crhash").unwrap())?;
 
     info!(
         logger,
         "Config repository will be read from commit: {}", changesetid
     );
 
-    RepoConfigs::read_revlog_config_repo(config_repo, changesetid)
+    RepoConfigs::read_config_repo(config_repo, changesetid)
         .from_err()
         .wait()
 }
@@ -238,6 +228,8 @@ where
     let handles: Vec<_> = repos
         .into_iter()
         .map(move |(repotype, cache_size, repoid, scuba_table)| {
+            info!(root_log, "Start listening for repo {:?}", repotype);
+
             // start a thread for each repo to own the reactor and start listening for
             // connections and detach it
             thread::Builder::new()

@@ -4,23 +4,6 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-#![deny(warnings)]
-
-extern crate ascii;
-#[macro_use]
-#[cfg(test)]
-extern crate assert_matches;
-#[macro_use]
-extern crate failure_ext as failure;
-extern crate futures;
-extern crate futures_ext;
-
-extern crate bookmarks;
-extern crate mercurial_types;
-#[cfg(test)]
-extern crate mercurial_types_mocks;
-extern crate storage_types;
-
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read};
@@ -32,9 +15,9 @@ use futures::future;
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 
-use bookmarks::Bookmarks;
-use mercurial_types::nodehash::HgChangesetId;
 use storage_types::Version;
+
+use nodehash::HgChangesetId;
 
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
@@ -106,10 +89,8 @@ impl StockBookmarks {
 
         Ok(StockBookmarks { bookmarks })
     }
-}
 
-impl Bookmarks for StockBookmarks {
-    fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
+    pub fn get(&self, name: &AsRef<[u8]>) -> BoxFuture<Option<(HgChangesetId, Version)>, Error> {
         let value = match self.bookmarks.get(name.as_ref()) {
             Some(hash) => Some((*hash, Version::from(1))),
             None => None,
@@ -117,7 +98,7 @@ impl Bookmarks for StockBookmarks {
         Box::new(future::result(Ok(value)))
     }
 
-    fn keys(&self) -> BoxStream<Vec<u8>, Error> {
+    pub fn keys(&self) -> BoxStream<Vec<u8>, Error> {
         // collect forces evaluation early, so that the stream can safely outlive self
         stream::iter_ok(
             self.bookmarks
@@ -135,7 +116,8 @@ mod tests {
 
     use failure::Context;
     use futures::Future;
-    use mercurial_types_mocks::nodehash;
+
+    use mocks::*;
 
     use super::*;
 
@@ -160,21 +142,9 @@ mod tests {
         let reader = Cursor::new(&disk_bookmarks[..]);
 
         let bookmarks = StockBookmarks::from_reader(reader).unwrap();
-        assert_bookmark_get(
-            &bookmarks,
-            &"abc",
-            Some(HgChangesetId::new(nodehash::ONES_HASH)),
-        );
-        assert_bookmark_get(
-            &bookmarks,
-            &"def",
-            Some(HgChangesetId::new(nodehash::TWOS_HASH)),
-        );
-        assert_bookmark_get(
-            &bookmarks,
-            &"test123",
-            Some(HgChangesetId::new(nodehash::ONES_HASH)),
-        );
+        assert_bookmark_get(&bookmarks, &"abc", Some(HgChangesetId::new(ONES_HASH)));
+        assert_bookmark_get(&bookmarks, &"def", Some(HgChangesetId::new(TWOS_HASH)));
+        assert_bookmark_get(&bookmarks, &"test123", Some(HgChangesetId::new(ONES_HASH)));
 
         // Bookmarks that aren't present
         assert_bookmark_get(&bookmarks, &"abcdef", None);

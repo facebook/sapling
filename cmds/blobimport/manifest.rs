@@ -15,18 +15,18 @@ use futures::{self, stream, Future, IntoFuture, Stream};
 
 use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
-use mercurial::RevlogRepo;
+use mercurial::{self, RevlogEntry, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{self, Blob, Entry, HgBlobHash, MPath, NodeHash, Parents, RepoPath, Type};
+use mercurial_types::{Blob, HgBlobHash, MPath, NodeHash, Parents, RepoPath, Type};
 
 use BlobstoreEntry;
 
 pub(crate) fn put_entry(
     sender: SyncSender<BlobstoreEntry>,
-    entry_hash: NodeHash,
+    entry_hash: mercurial::NodeHash,
     blob: Blob,
-    parents: Parents,
+    parents: mercurial::Parents,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
@@ -34,6 +34,13 @@ where
     let bytes = blob.into_inner()
         .ok_or(failure::err_msg("missing blob data"))
         .into_future();
+    let parents = {
+        let (p1, p2) = parents.get_nodes();
+        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
+        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+        Parents::new(p1.as_ref(), p2.as_ref())
+    };
+
     bytes.and_then(move |bytes| {
         let nodeblob = RawNodeBlob {
             parents: parents,
@@ -58,10 +65,10 @@ where
 // Copy a single manifest entry into the blobstore
 // TODO: #[async]
 pub(crate) fn copy_entry(
-    entry: Box<Entry>,
+    entry: RevlogEntry,
     sender: SyncSender<BlobstoreEntry>,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static {
-    let hash = (*entry).get_hash().into_nodehash();
+    let hash = entry.get_hash().into_nodehash();
 
     let blobfuture = entry.get_raw_content().map_err(Error::from);
 
@@ -71,11 +78,11 @@ pub(crate) fn copy_entry(
 }
 
 pub(crate) fn get_entry_stream(
-    entry: Box<Entry>,
+    entry: RevlogEntry,
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
     basepath: Option<&MPath>,
-) -> Box<Stream<Item = (Box<Entry>, RepoPath), Error = Error> + Send> {
+) -> Box<Stream<Item = (RevlogEntry, RepoPath), Error = Error> + Send> {
     let path = MPath::join_element_opt(basepath, entry.get_name());
     let repopath = match path.as_ref() {
         None => {
@@ -118,7 +125,7 @@ pub(crate) fn get_entry_stream(
         Type::Tree => entry
             .get_content()
             .and_then(|content| match content {
-                mercurial_types::manifest::Content::Tree(manifest) => Ok(manifest.list()),
+                mercurial::EntryContent::Tree(manifest) => Ok(manifest.list()),
                 _ => panic!("should not happened"),
             })
             .flatten_stream()

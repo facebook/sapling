@@ -12,9 +12,9 @@ use std::io::Read;
 use flate2::read::ZlibDecoder;
 use nom::{ErrorKind, IResult, Needed, be_u16, be_u32};
 
-use mercurial_types::NodeHash;
 use mercurial_types::bdiff::Delta;
 
+use nodehash::NodeHash;
 use revlog::revidx::RevIdx;
 
 use super::lz4;
@@ -266,8 +266,8 @@ fn be_u48(i: &[u8]) -> IResult<&[u8], u64> {
     if i.len() < 6 {
         IResult::Incomplete(Needed::Size(6))
     } else {
-        let res = ((i[0] as u64) << 40) + ((i[1] as u64) << 32) + ((i[2] as u64) << 24) +
-            ((i[3] as u64) << 16) + ((i[4] as u64) << 8) + ((i[5] as u64) << 0);
+        let res = ((i[0] as u64) << 40) + ((i[1] as u64) << 32) + ((i[2] as u64) << 24)
+            + ((i[3] as u64) << 16) + ((i[4] as u64) << 8) + ((i[5] as u64) << 0);
         IResult::Done(&i[6..], res)
     }
 }

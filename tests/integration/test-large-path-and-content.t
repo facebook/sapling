@@ -49,7 +49,7 @@ blobimport and start mononoke
 
   $ cd $TESTTMP
   $ blobimport repo-hg repo
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 pull on repo2

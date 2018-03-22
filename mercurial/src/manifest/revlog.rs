@@ -10,16 +10,18 @@ use std::str;
 use std::vec;
 
 use futures::{Async, Poll};
-use futures::future::{Future, IntoFuture};
-use futures::stream::Stream;
+use futures::future::{self, Future, IntoFuture};
+use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use errors::*;
 use failure;
 use file;
-use mercurial_types::{Blob, BlobNode, MPath, MPathElement, NodeHash, Parents, RepoPath};
-use mercurial_types::manifest::{Content, Entry, Manifest, Type};
-use mercurial_types::nodehash::EntryId;
+use mercurial_types::{Blob, MPath, MPathElement, RepoPath};
+use mercurial_types::manifest::Type;
+
+use blobnode::{BlobNode, Parents};
+use nodehash::{EntryId, NodeHash};
 
 use RevlogRepo;
 
@@ -32,10 +34,18 @@ pub struct Details {
 /// Revlog Manifest v1
 #[derive(Debug, PartialEq)]
 pub struct RevlogManifest {
-    // This is None for testing only -- the public API ensures `repo` always exists.
+    // This is None so that a RevlogManifest::empty() can be created for easy diffing manifests
     repo: Option<RevlogRepo>,
     parents: Parents,
     content: ManifestContent,
+}
+
+/// Concrete representation of various Entry Types.
+pub enum EntryContent {
+    File(Blob),       // TODO stream
+    Executable(Blob), // TODO stream
+    Symlink(MPath),
+    Tree(RevlogManifest),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -44,12 +54,6 @@ pub struct ManifestContent {
 }
 
 impl ManifestContent {
-    pub fn new_empty() -> Self {
-        Self {
-            files: BTreeMap::new(),
-        }
-    }
-
     // Each manifest revision contains a list of the file revisions in each changeset, in the form:
     //
     // <filename>\0<hex file revision id>[<flags>]\n
@@ -122,6 +126,16 @@ impl RevlogManifest {
             .and_then(|blob| Self::parse(Some(repo), node.parents(), blob))
     }
 
+    pub(crate) fn empty() -> Self {
+        Self {
+            repo: None,
+            parents: Parents::new(None, None),
+            content: ManifestContent {
+                files: BTreeMap::new(),
+            },
+        }
+    }
+
     fn parse(repo: Option<RevlogRepo>, parents: &Parents, data: &[u8]) -> Result<RevlogManifest> {
         // This is private because it allows one to create a RevlogManifest with repo set to None.
         ManifestContent::parse(data).map(|content| RevlogManifest {
@@ -132,14 +146,13 @@ impl RevlogManifest {
     }
 
     fn parse_with_prefix(
-        repo: Option<RevlogRepo>,
+        repo: RevlogRepo,
         parents: &Parents,
         data: &[u8],
         prefix: &MPath,
     ) -> Result<RevlogManifest> {
-        // This is private because it allows one to create a RevlogManifest with repo set to None.
         ManifestContent::parse_with_prefix(data, prefix).map(|content| RevlogManifest {
-            repo,
+            repo: Some(repo),
             parents: parents.clone(),
             content,
         })
@@ -153,12 +166,36 @@ impl RevlogManifest {
         self.content.generate(out)
     }
 
-    pub fn lookup(&self, path: &MPath) -> Option<&Details> {
-        self.content.files.get(path)
-    }
-
     pub fn manifest(&self) -> Vec<(&MPath, &Details)> {
         self.content.files.iter().collect()
+    }
+
+    pub fn lookup(&self, path: &MPath) -> BoxFuture<Option<RevlogEntry>, Error> {
+        let repo = match self.repo {
+            Some(ref repo) => repo.clone(),
+            None => return future::ok(None).boxify(),
+        };
+        let res = self.content
+            .files
+            .get(path)
+            .map(|details| RevlogEntry::new(repo, path.clone(), *details));
+
+        match res {
+            Some(v) => v.map(Some).into_future().boxify(),
+            None => Ok(None).into_future().boxify(),
+        }
+    }
+
+    pub fn list(&self) -> BoxStream<RevlogEntry, Error> {
+        let repo = match self.repo {
+            Some(ref repo) => repo.clone(),
+            None => return stream::empty().boxify(),
+        };
+        let v: Vec<_> = self.manifest()
+            .into_iter()
+            .map(|(p, d)| (p.clone(), *d))
+            .collect();
+        RevlogListStream(v.into_iter(), repo).boxify()
     }
 }
 
@@ -256,31 +293,6 @@ impl Stream for RevlogListStream {
     }
 }
 
-impl Manifest for RevlogManifest {
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        let repo = self.repo.as_ref().expect("missing repo").clone();
-        let res = RevlogManifest::lookup(self, path)
-            .map(|details| RevlogEntry::new(repo, path.clone(), *details));
-
-        match res {
-            Some(v) => v.map(|e| Some(e.boxed())).into_future().boxify(),
-            None => Ok(None).into_future().boxify(),
-        }
-    }
-
-    fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
-        let v: Vec<_> = self.manifest()
-            .into_iter()
-            .map(|(p, d)| (p.clone(), *d))
-            .collect();
-        RevlogListStream(
-            v.into_iter(),
-            self.repo.as_ref().expect("missing repo").clone(),
-        ).map(|e| e.boxed())
-            .boxify()
-    }
-}
-
 impl RevlogEntry {
     fn new(repo: RevlogRepo, path: MPath, details: Details) -> Result<Self> {
         let name = (&path).into_iter().next_back().map(|path| path.clone());
@@ -304,14 +316,12 @@ impl RevlogEntry {
     fn get_path(&self) -> &RepoPath {
         &self.path
     }
-}
 
-impl Entry for RevlogEntry {
-    fn get_type(&self) -> Type {
+    pub fn get_type(&self) -> Type {
         self.details.flag()
     }
 
-    fn get_parents(&self) -> BoxFuture<Parents, Error> {
+    pub fn get_parents(&self) -> BoxFuture<Parents, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
@@ -321,7 +331,7 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
+    pub fn get_raw_content(&self) -> BoxFuture<Blob, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
         revlog
@@ -339,7 +349,7 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_content(&self) -> BoxFuture<Content, Error> {
+    pub fn get_content(&self) -> BoxFuture<EntryContent, Error> {
         let revlog = self.repo.get_path_revlog(self.get_path());
         let nodeid = self.get_hash().into_nodehash();
 
@@ -350,26 +360,26 @@ impl Entry for RevlogEntry {
                 match self.get_type() {
                     // Mercurial file blob can have metadata, but tree manifest can't
                     // So strip metdata from everything except for Tree
-                    Type::File => Ok(Content::File(strip_file_metadata(data))),
-                    Type::Executable => Ok(Content::Executable(strip_file_metadata(data))),
+                    Type::File => Ok(EntryContent::File(strip_file_metadata(data))),
+                    Type::Executable => Ok(EntryContent::Executable(strip_file_metadata(data))),
                     Type::Symlink => {
                         let data = strip_file_metadata(data);
                         let data = data.as_slice()
                             .ok_or(failure::err_msg("missing symlink blob data"))?;
-                        Ok(Content::Symlink(MPath::new(data)?))
+                        Ok(EntryContent::Symlink(MPath::new(data)?))
                     }
                     Type::Tree => {
                         let data = data.as_slice()
                             .ok_or(failure::err_msg("missing tree blob data"))?;
                         let revlog_manifest = RevlogManifest::parse_with_prefix(
-                            Some(self.repo.clone()),
+                            self.repo.clone(),
                             node.parents(),
                             &data,
                             self.get_path()
                                 .mpath()
                                 .expect("trees should always have a path"),
                         )?;
-                        Ok(Content::Tree(Box::new(revlog_manifest)))
+                        Ok(EntryContent::Tree(revlog_manifest))
                     }
                 }
             })
@@ -385,21 +395,21 @@ impl Entry for RevlogEntry {
             .boxify()
     }
 
-    fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
+    pub fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
             .and_then(|content| match content {
-                Content::File(data) | Content::Executable(data) => Ok(data.size()),
-                Content::Symlink(path) => Ok(Some(path.to_vec().len())),
-                Content::Tree(_) => Ok(None),
+                EntryContent::File(data) | EntryContent::Executable(data) => Ok(data.size()),
+                EntryContent::Symlink(path) => Ok(Some(path.to_vec().len())),
+                EntryContent::Tree(_) => Ok(None),
             })
             .boxify()
     }
 
-    fn get_hash(&self) -> &EntryId {
+    pub fn get_hash(&self) -> &EntryId {
         &self.details.entryid
     }
 
-    fn get_name(&self) -> Option<&MPathElement> {
+    pub fn get_name(&self) -> Option<&MPathElement> {
         self.name.as_ref()
     }
 }
@@ -418,7 +428,7 @@ fn strip_file_metadata(blob: &Blob) -> Blob {
 mod test {
     use super::*;
 
-    use mercurial_types_mocks::nodehash::*;
+    use mocks::*;
 
     #[test]
     fn test_find() {

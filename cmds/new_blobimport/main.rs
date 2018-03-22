@@ -36,30 +36,34 @@ use slog::Drain;
 use slog_glog_fmt::default_drain as glog_drain;
 use tokio_core::reactor::Core;
 
-use blobrepo::{BlobChangeset, BlobEntry, BlobRepo, ChangesetHandle};
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use changesets::SqliteChangesets;
-use mercurial::RevlogRepo;
-use mercurial_types::{Blob, Changeset, Entry, HgChangesetId, MPath, NodeHash, RepoPath,
-                      RepositoryId, Type};
-use mercurial_types::manifest_utils::new_entry_intersection_stream;
+use mercurial::{RevlogChangeset, RevlogEntry, RevlogRepo};
+use mercurial_types::{Blob, MPath, NodeHash, RepoPath, RepositoryId, Type};
 
 struct ParseChangeset {
-    blobcs: BoxFuture<SharedItem<BlobChangeset>, Error>,
-    rootmf: BoxFuture<(Blob, Option<NodeHash>, Option<NodeHash>), Error>,
-    entries: BoxStream<(Option<MPath>, Box<Entry + Sync>), Error>,
+    revlogcs: BoxFuture<SharedItem<RevlogChangeset>, Error>,
+    rootmf: BoxFuture<
+        (
+            Blob,
+            Option<mercurial::NodeHash>,
+            Option<mercurial::NodeHash>,
+        ),
+        Error,
+    >,
+    entries: BoxStream<(Option<MPath>, RevlogEntry), Error>,
 }
 
 // Extracts all the data from revlog repo that commit API may need.
-fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChangeset {
-    let blobcs = revlog_repo
+fn parse_changeset(revlog_repo: RevlogRepo, csid: mercurial::HgChangesetId) -> ParseChangeset {
+    let revlogcs = revlog_repo
         .get_changeset(&csid)
-        .and_then(BlobChangeset::new)
         .map_err(move |err| err.context(format!("While reading changeset {:?}", csid)))
         .map_err(Fail::compat)
         .boxify()
         .shared();
 
-    let rootmf = blobcs
+    let rootmf = revlogcs
         .clone()
         .map_err(Error::from)
         .and_then({
@@ -71,7 +75,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
         .boxify()
         .shared();
 
-    let entries = blobcs
+    let entries = revlogcs
         .clone()
         .map_err(Error::from)
         .and_then({
@@ -79,7 +83,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             move |cs| {
                 let mut parents = cs.parents()
                     .into_iter()
-                    .map(HgChangesetId::new)
+                    .map(mercurial::HgChangesetId::new)
                     .map(|csid| {
                         let revlog_repo = revlog_repo.clone();
                         revlog_repo
@@ -99,14 +103,16 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
             }
         })
         .join(rootmf.clone().from_err())
-        .map(|((p1, p2), rootmf)| new_entry_intersection_stream(&*rootmf, p1.as_ref(), p2.as_ref()))
+        .map(|((p1, p2), rootmf)| {
+            mercurial::manifest::new_entry_intersection_stream(&*rootmf, p1.as_ref(), p2.as_ref())
+        })
         .flatten_stream()
         .map_err(move |err| {
             Error::from(err.context(format!("While reading entries for {:?}", csid)))
         })
         .boxify();
 
-    let blobcs = blobcs.map_err(Error::from).boxify();
+    let revlogcs = revlogcs.map_err(Error::from).boxify();
 
     let rootmf = rootmf
         .map_err(Error::from)
@@ -121,7 +127,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
         .boxify();
 
     ParseChangeset {
-        blobcs,
+        revlogcs,
         rootmf,
         entries,
     }
@@ -129,7 +135,7 @@ fn parse_changeset(revlog_repo: RevlogRepo, csid: HgChangesetId) -> ParseChanges
 
 fn upload_entry(
     blobrepo: &BlobRepo,
-    entry: Box<Entry>,
+    entry: RevlogEntry,
     path: Option<MPath>,
 ) -> BoxFuture<(BlobEntry, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
@@ -163,7 +169,9 @@ fn upload_entry(
 
     let parents = entry.get_parents().map(|parents| {
         let (p1, p2) = parents.get_nodes();
-        (p1.cloned(), p2.cloned())
+        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
+        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+        (p1, p2)
     });
 
     content
@@ -278,28 +286,30 @@ fn main() {
         bad => panic!("unexpected blobstore type: {}", bad),
     };
 
-    let mut parent_changeset_handles: HashMap<NodeHash, ChangesetHandle> = HashMap::new();
+    let mut parent_changeset_handles: HashMap<mercurial::NodeHash, ChangesetHandle> =
+        HashMap::new();
 
     let csstream = revlogrepo
         .changesets()
         .and_then({
             let revlogrepo = revlogrepo.clone();
-            move |node| {
+            move |csid| {
                 let ParseChangeset {
-                    blobcs,
+                    revlogcs,
                     rootmf,
                     entries,
-                } = parse_changeset(revlogrepo.clone(), HgChangesetId::new(node));
-                blobcs.map(move |cs| (cs, rootmf, entries))
+                } = parse_changeset(revlogrepo.clone(), mercurial::HgChangesetId::new(csid));
+                revlogcs.map(move |cs| (csid, cs, rootmf, entries))
             }
         })
-        .map(move |(cs, rootmf, entries)| {
-            let csid = cs.get_changeset_id();
-
+        .map(move |(csid, cs, rootmf, entries)| {
             let rootmf = rootmf
                 .and_then({
                     let blobrepo = blobrepo.clone();
                     move |(blob, p1, p2)| {
+                        let p1 = p1.map(|p| NodeHash::new(p.sha1().clone()));
+                        let p2 = p2.map(|p| NodeHash::new(p.sha1().clone()));
+
                         blobrepo.upload_entry(blob, Type::Tree, p1, p2, RepoPath::root())
                     }
                 })
@@ -336,10 +346,8 @@ fn main() {
                 String::from_utf8(Vec::from(cs.comments()))
                     .expect(&format!("non-utf8 comments for {:?}", csid)),
             );
-            parent_changeset_handles
-                .insert(cs.get_changeset_id().into_nodehash(), cshandle.clone());
+            parent_changeset_handles.insert(csid, cshandle.clone());
             cshandle.get_completed_changeset().map_err({
-                let csid = cs.get_changeset_id();
                 move |e| Error::from(e.context(format!("While uploading changeset: {:?}", csid)))
             })
         });

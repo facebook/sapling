@@ -35,7 +35,7 @@ setup repo
 
   $ cd $TESTTMP
   $ newblobimport repo-hg/.hg repo
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
   $ cd client

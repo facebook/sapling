@@ -14,10 +14,11 @@ use futures::future::Shared;
 use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::{BlobEntry, BlobRepo};
-use mercurial::manifest::revlog::ManifestContent;
+use mercurial;
+use mercurial::manifest::ManifestContent;
 use mercurial_bundles::wirepack::{DataEntry, HistoryEntry, Part};
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
-use mercurial_types::{delta, manifest, Blob, NodeHash, RepoPath, NULL_HASH};
+use mercurial_types::{delta, manifest, Blob, NodeHash, RepoPath};
 
 use errors::*;
 use upload_blobs::UploadableBlob;
@@ -57,20 +58,20 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TreemanifestEntry {
-    pub node: NodeHash,
+    pub node: mercurial::NodeHash,
     pub data: Bytes,
-    pub p1: Option<NodeHash>,
-    pub p2: Option<NodeHash>,
+    pub p1: Option<mercurial::NodeHash>,
+    pub p2: Option<mercurial::NodeHash>,
     pub path: RepoPath,
     pub manifest_content: ManifestContent,
 }
 
 impl TreemanifestEntry {
     fn new(
-        node: NodeHash,
+        node: mercurial::NodeHash,
         data: Bytes,
-        p1: NodeHash,
-        p2: NodeHash,
+        p1: mercurial::NodeHash,
+        p2: mercurial::NodeHash,
         path: RepoPath,
     ) -> Result<Self> {
         let manifest_content = ManifestContent::parse(data.as_ref())?;
@@ -92,16 +93,19 @@ impl UploadableBlob for TreemanifestEntry {
         Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
+    fn upload(self, repo: &BlobRepo) -> Result<((mercurial::NodeHash, RepoPath), Self::Value)> {
         let path = self.path;
+        let node = self.node;
         let manifest_content = self.manifest_content;
+        let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
+        let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
         repo.upload_entry(
             Blob::from(self.data),
             manifest::Type::Tree,
-            self.p1,
-            self.p2,
+            p1,
+            p2,
             path.clone(),
-        ).map(move |(node, value)| {
+        ).map(move |(_node, value)| {
             (
                 (node, path),
                 (
@@ -114,9 +118,9 @@ impl UploadableBlob for TreemanifestEntry {
 }
 
 struct TreemanifestPartProcessor {
-    node: Option<NodeHash>,
-    p1: Option<NodeHash>,
-    p2: Option<NodeHash>,
+    node: Option<mercurial::NodeHash>,
+    p1: Option<mercurial::NodeHash>,
+    p2: Option<mercurial::NodeHash>,
     path: Option<RepoPath>,
 }
 
@@ -163,7 +167,7 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
     }
 
     fn data(&mut self, data_entry: &DataEntry) -> Result<Option<Self::Data>> {
-        if data_entry.delta_base != NULL_HASH {
+        if data_entry.delta_base != mercurial::NULL_HASH {
             let msg = format!("unexpected delta base: {:?}", data_entry.delta_base);
             return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
         }
@@ -204,10 +208,10 @@ mod test {
     use super::*;
     use futures::{stream, Future};
 
-    use mercurial::manifest::revlog::Details;
-    use mercurial_types::{EntryId, MPath};
+    use mercurial::manifest::Details;
+    use mercurial::mocks as nodehash_mocks;
+    use mercurial_types::MPath;
     use mercurial_types::manifest::Type;
-    use mercurial_types_mocks::nodehash as nodehash_mocks;
 
     #[test]
     fn test_simple() {
@@ -298,12 +302,12 @@ mod test {
             files: btreemap!{
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
-                    EntryId::new(nodehash_mocks::ONES_HASH),
+                    mercurial::EntryId::new(nodehash_mocks::ONES_HASH),
                     Type::File,
                 ),
                 MPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(
-                    EntryId::new(nodehash_mocks::TWOS_HASH),
+                    mercurial::EntryId::new(nodehash_mocks::TWOS_HASH),
                     Type::Tree,
                 ),
             },
@@ -321,7 +325,7 @@ mod test {
 
         Part::Data(DataEntry {
             node,
-            delta_base: NULL_HASH,
+            delta_base: mercurial::NULL_HASH,
             delta: delta::Delta::new_fulltext(data),
         })
     }

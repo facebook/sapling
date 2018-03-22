@@ -11,9 +11,11 @@ use std::str::{self, FromStr};
 use bytes::Bytes;
 use errors::*;
 use failure;
-use mercurial_types::{BlobNode, MPath, NodeHash, Parents, NULL_HASH};
-use mercurial_types::changeset::{Changeset, Time};
-use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::MPath;
+use mercurial_types::changeset::Time;
+
+use blobnode::{BlobNode, Parents};
+use nodehash::{HgManifestId, NodeHash, NULL_HASH};
 
 #[cfg(test)]
 mod test;
@@ -24,17 +26,23 @@ mod test;
 // See https://www.mercurial-scm.org/wiki/EncodingStrategy for details.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct RevlogChangeset {
-    parents: Parents,
-    manifestid: HgManifestId,
-    user: Vec<u8>,
-    time: Time,
-    extra: Extra,
-    files: Vec<MPath>,
-    comments: Vec<u8>,
+    pub parents: Parents,
+    pub manifestid: HgManifestId,
+    pub user: Vec<u8>,
+    pub time: Time,
+    pub extra: Extra,
+    pub files: Vec<MPath>,
+    pub comments: Vec<u8>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
-struct Extra(BTreeMap<Vec<u8>, Vec<u8>>);
+pub struct Extra(BTreeMap<Vec<u8>, Vec<u8>>);
+
+impl Extra {
+    pub fn as_ref(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+        &self.0
+    }
+}
 
 fn parseline<'a, I, F, T>(lines: &mut I, parse: F) -> Result<T>
 where
@@ -101,6 +109,14 @@ fn unescape<'a, S: IntoIterator<Item = &'a u8>>(s: S) -> Vec<u8> {
 }
 
 impl Extra {
+    pub fn new(extra: BTreeMap<Vec<u8>, Vec<u8>>) -> Self {
+        Extra(extra)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     fn from_slice<S: AsRef<[u8]>>(s: Option<S>) -> Result<Extra> {
         let mut ret = BTreeMap::new();
 
@@ -279,41 +295,39 @@ impl RevlogChangeset {
         let (p1, p2) = self.parents.get_nodes();
         Ok(BlobNode::new(Bytes::from(v), p1, p2))
     }
-}
 
-impl Changeset for RevlogChangeset {
-    fn manifestid(&self) -> &HgManifestId {
+    pub fn manifestid(&self) -> &HgManifestId {
         &self.manifestid
     }
 
-    fn user(&self) -> &[u8] {
+    pub fn user(&self) -> &[u8] {
         &self.user
     }
 
-    fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
+    pub fn extra(&self) -> &BTreeMap<Vec<u8>, Vec<u8>> {
         &self.extra.0
     }
 
-    fn comments(&self) -> &[u8] {
+    pub fn comments(&self) -> &[u8] {
         self.comments.as_ref()
     }
 
-    fn files(&self) -> &[MPath] {
+    pub fn files(&self) -> &[MPath] {
         self.files.as_ref()
     }
 
-    fn time(&self) -> &Time {
+    pub fn time(&self) -> &Time {
         &self.time
     }
 
-    fn parents(&self) -> &Parents {
+    pub fn parents(&self) -> &Parents {
         &self.parents
     }
 }
 
 /// Generate a serialized changeset. This is the counterpart to parse, and generates
 /// in the same format as Mercurial. It should be bit-for-bit identical in fact.
-pub fn serialize_cs<W: Write>(cs: &Changeset, out: &mut W) -> Result<()> {
+pub fn serialize_cs<W: Write>(cs: &RevlogChangeset, out: &mut W) -> Result<()> {
     write!(out, "{}\n", cs.manifestid().into_nodehash())?;
     out.write_all(cs.user())?;
     out.write_all(b"\n")?;
@@ -321,7 +335,7 @@ pub fn serialize_cs<W: Write>(cs: &Changeset, out: &mut W) -> Result<()> {
 
     if !cs.extra().is_empty() {
         write!(out, " ")?;
-        serialize_extras(cs.extra(), out)?;
+        serialize_extras(&cs.extra, out)?;
     }
 
     write!(out, "\n")?;
@@ -334,9 +348,10 @@ pub fn serialize_cs<W: Write>(cs: &Changeset, out: &mut W) -> Result<()> {
     Ok(())
 }
 
-fn serialize_extras<W: Write>(extras: &BTreeMap<Vec<u8>, Vec<u8>>, out: &mut W) -> io::Result<()> {
+pub fn serialize_extras<W: Write>(extras: &Extra, out: &mut W) -> io::Result<()> {
     // assume BTreeMap is sorted enough
     let kv: Vec<_> = extras
+        .0
         .iter()
         .map(|(k, v)| {
             let mut vec = Vec::new();

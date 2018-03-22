@@ -20,10 +20,11 @@ use failure;
 use memmap::Mmap;
 use nom::IResult;
 
-use mercurial_types::{Blob, BlobNode, NodeHash};
+pub use mercurial_types::{delta, Blob};
 pub use mercurial_types::bdiff::{self, Delta};
-pub use mercurial_types::delta;
-use mercurial_types::nodehash::EntryId;
+
+use blobnode::BlobNode;
+use nodehash::{EntryId, NodeHash};
 
 // Submodules
 mod parser;
@@ -237,10 +238,6 @@ impl Revlog {
 
     pub fn get_rev_by_nodeid(&self, id: &NodeHash) -> Result<BlobNode> {
         self.inner.get_rev_by_nodeid(id)
-    }
-
-    pub fn get_node_by_nodeid(&self, id: &NodeHash, with_data: bool) -> Result<BlobNode> {
-        self.inner.get_node_by_nodeid(id, with_data)
     }
 
     /// Return the set of head revisions in a revlog
@@ -530,17 +527,6 @@ impl RevlogInner {
                 .with_context(|_| format!("can't get rev for id {}", id))
                 .map_err(Error::from)
         })
-    }
-
-    fn get_node_by_nodeid(&self, id: &NodeHash, with_data: bool) -> Result<BlobNode> {
-        if with_data {
-            self.get_idx_by_nodeid(id).and_then(|idx| self.get_rev(idx))
-        } else {
-            let entry = self.get_entry_by_nodeid(id)?;
-            let blob = Blob::from(entry.nodeid);
-
-            self.make_node(&entry, blob)
-        }
     }
 
     /// Return the set of head revisions in a revlog

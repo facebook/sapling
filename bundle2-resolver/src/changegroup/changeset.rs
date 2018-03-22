@@ -8,10 +8,10 @@ use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
 
 use bytes::Bytes;
+use mercurial::{BlobNode, NodeHash, NULL_HASH};
 use mercurial::changeset::RevlogChangeset;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, Blob, BlobNode, NodeHash};
-use mercurial_types::nodehash::NULL_HASH;
+use mercurial_types::{delta, Blob};
 
 use errors::*;
 

@@ -8,7 +8,7 @@ use std::fmt;
 
 use bincode;
 
-pub use failure::Error;
+pub use failure::{Error, ResultExt};
 
 use mercurial_types::{Blob, HgBlobHash, HgChangesetId, NodeHash, Parents, RepoPath, Type};
 

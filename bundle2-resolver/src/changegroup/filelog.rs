@@ -17,9 +17,9 @@ use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::{BlobEntry, BlobRepo};
+use mercurial;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{delta, manifest, Blob, Delta, MPath, NodeHash, RepoPath};
-use mercurial_types::nodehash::NULL_HASH;
 
 use errors::*;
 use stats::*;
@@ -34,25 +34,24 @@ pub struct FilelogDeltaed {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Filelog {
     pub path: RepoPath,
-    pub node: NodeHash,
-    pub p1: Option<NodeHash>,
-    pub p2: Option<NodeHash>,
-    pub linknode: NodeHash,
+    pub node: mercurial::NodeHash,
+    pub p1: Option<mercurial::NodeHash>,
+    pub p2: Option<mercurial::NodeHash>,
+    pub linknode: mercurial::NodeHash,
     pub blob: Blob,
 }
 
 impl UploadableBlob for Filelog {
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
-    fn upload(self, repo: &BlobRepo) -> Result<((NodeHash, RepoPath), Self::Value)> {
+    fn upload(self, repo: &BlobRepo) -> Result<((mercurial::NodeHash, RepoPath), Self::Value)> {
         let path = self.path;
-        repo.upload_entry(
-            self.blob,
-            manifest::Type::File,
-            self.p1,
-            self.p2,
-            path.clone(),
-        ).map(move |(node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
+        let node = self.node;
+        let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
+        let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
+
+        repo.upload_entry(self.blob, manifest::Type::File, p1, p2, path.clone())
+            .map(move |(_node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
     }
 }
 
@@ -91,7 +90,7 @@ where
 
 struct DeltaCache {
     repo: Arc<BlobRepo>,
-    bytes_cache: HashMap<NodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
+    bytes_cache: HashMap<mercurial::NodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
 }
 
 impl DeltaCache {
@@ -104,8 +103,8 @@ impl DeltaCache {
 
     fn decode(
         &mut self,
-        node: NodeHash,
-        base: Option<NodeHash>,
+        node: mercurial::NodeHash,
+        base: Option<mercurial::NodeHash>,
         delta: Delta,
     ) -> BoxFuture<Blob, Error> {
         let bytes = match self.bytes_cache.get(&node).cloned() {
@@ -125,7 +124,7 @@ impl DeltaCache {
                                 .map_err(Error::from)
                                 .boxify(),
                             None => self.repo
-                                .get_file_content(&base)
+                                .get_file_content(&NodeHash::new(base.sha1().clone()))
                                 .map(move |bytes| delta::apply(bytes.as_ref(), &delta))
                                 .boxify(),
                         };
@@ -165,10 +164,10 @@ impl Arbitrary for Filelog {
         Filelog {
             path: RepoPath::file(MPath::arbitrary(g))
                 .unwrap_or(RepoPath::file(MPath::new(b"test").unwrap()).unwrap()),
-            node: NodeHash::arbitrary(g),
-            p1: NodeHash::arbitrary(g).into_option(),
-            p2: NodeHash::arbitrary(g).into_option(),
-            linknode: NodeHash::arbitrary(g),
+            node: mercurial::NodeHash::arbitrary(g),
+            p1: mercurial::NodeHash::arbitrary(g).into_option(),
+            p2: mercurial::NodeHash::arbitrary(g).into_option(),
+            linknode: mercurial::NodeHash::arbitrary(g),
             blob: Blob::from(Bytes::from(Vec::<u8>::arbitrary(g))),
         }
     }
@@ -187,9 +186,9 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.node != NULL_HASH {
+        if self.node != mercurial::NULL_HASH {
             let mut f = self.clone();
-            f.node = NULL_HASH;
+            f.node = mercurial::NULL_HASH;
             append(&mut result, f);
         }
 
@@ -205,9 +204,9 @@ impl Arbitrary for Filelog {
             append(&mut result, f);
         }
 
-        if self.linknode != NULL_HASH {
+        if self.linknode != mercurial::NULL_HASH {
             let mut f = self.clone();
-            f.linknode = NULL_HASH;
+            f.linknode = mercurial::NULL_HASH;
             append(&mut result, f);
         }
 
@@ -231,6 +230,8 @@ mod tests {
     use futures::stream::iter_ok;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
 
+    use mercurial::NULL_HASH;
+    use mercurial::mocks::*;
     use mercurial_types::delta::Fragment;
 
     struct NodeHashGen {
@@ -244,13 +245,13 @@ mod tests {
             }
         }
 
-        fn next(&mut self) -> NodeHash {
+        fn next(&mut self) -> mercurial::NodeHash {
             for i in 0..self.bytes.len() {
                 if self.bytes[i] == 255 {
                     self.bytes[i] = 0;
                 } else {
                     self.bytes[i] = self.bytes[i] + 1;
-                    return NodeHash::from_bytes(self.bytes.as_slice()).unwrap();
+                    return mercurial::NodeHash::from_bytes(self.bytes.as_slice()).unwrap();
                 }
             }
 
@@ -336,8 +337,6 @@ mod tests {
 
     #[test]
     fn two_fulltext_files() {
-        use mercurial_types_mocks::nodehash::*;
-
         let f1 = Filelog {
             path: RepoPath::file(MPath::new(b"test").unwrap()).unwrap(),
             node: ONES_HASH,
@@ -363,8 +362,6 @@ mod tests {
     }
 
     fn files_check_order(correct_order: bool) {
-        use mercurial_types_mocks::nodehash::*;
-
         let f1 = Filelog {
             path: RepoPath::file(MPath::new(b"test").unwrap()).unwrap(),
             node: ONES_HASH,

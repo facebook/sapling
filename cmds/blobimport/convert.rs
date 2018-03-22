@@ -22,8 +22,8 @@ use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
-use mercurial_types::nodehash::{EntryId, HgChangesetId};
+use mercurial_types::{NodeHash, RepoPath};
+use mercurial_types::nodehash::HgChangesetId;
 use stats::Timeseries;
 
 use BlobstoreEntry;
@@ -54,17 +54,19 @@ where
         let skip = self.skip;
         let commits_limit = self.commits_limit;
 
-        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(skip) = skip {
+        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> = if let Some(skip) = skip
+        {
             self.repo.changesets().skip(skip).boxify()
         } else {
             self.repo.changesets().boxify()
         };
 
-        let changesets: BoxStream<NodeHash, mercurial::Error> = if let Some(limit) = commits_limit {
-            changesets.take(limit).boxify()
-        } else {
-            changesets.boxify()
-        };
+        let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> =
+            if let Some(limit) = commits_limit {
+                changesets.take(limit).boxify()
+            } else {
+                changesets.boxify()
+            };
         let linknodes_store = Arc::new(linknodes_store);
 
         // Generate stream of changesets. For each changeset, save the cs blob, and the manifest
@@ -78,7 +80,7 @@ where
                 move |(seq, csid)| {
                     debug!(logger, "{}: changeset {}", seq, csid);
                     STATS::changesets.add_value(1);
-                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), HgChangesetId::new(csid))
+                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), mercurial::HgChangesetId::new(csid))
                 }
             }) // Stream<Future<()>>
             .map(|copy| cpupool.spawn(copy))
@@ -91,6 +93,7 @@ where
             .map(|h| {
                 debug!(logger, "head {}", h);
                 STATS::heads.add_value(1);
+                let h = NodeHash::new(h.sha1().clone());
                 headstore.add(&h).map_err({
                     move |err| {
                         err.context(format_err!("Failed to create head {}", h))
@@ -121,7 +124,7 @@ fn copy_changeset<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     linknodes_store: L,
-    csid: HgChangesetId,
+    csid: mercurial::HgChangesetId,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
     Error: Send + 'static,
@@ -135,7 +138,8 @@ where
             .get_changeset(&csid)
             .from_err()
             .and_then(move |cs| {
-                let bcs = BlobChangeset::new_with_id(&csid, cs);
+                let csid = HgChangesetId::new(NodeHash::new(csid.into_nodehash().sha1().clone()));
+                let bcs = BlobChangeset::new_with_id(&csid, cs.into());
                 sender
                     .send(BlobstoreEntry::Changeset(bcs))
                     .map_err(Error::from)
@@ -143,7 +147,7 @@ where
     };
 
     let nodeid = csid.clone().into_nodehash();
-    let entryid = EntryId::new(nodeid);
+    let entryid = mercurial::EntryId::new(nodeid);
     let manifest = revlog_repo
         .get_changeset(&csid)
         .join(revlog_repo.get_changelog_entry_by_id(&entryid))
@@ -176,7 +180,7 @@ fn put_blobs<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     linknodes_store: L,
-    mfid: NodeHash,
+    mfid: mercurial::NodeHash,
     linkrev: RevIdx,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
@@ -200,7 +204,11 @@ where
             );
 
             let linknode = cs_entry.nodeid;
-            let put_root_linknode = linknodes_store.add(RepoPath::root(), &mfid, &linknode);
+            let put_root_linknode = linknodes_store.add(
+                RepoPath::root(),
+                &NodeHash::new(mfid.sha1().clone()),
+                &NodeHash::new(linknode.sha1().clone()),
+            );
 
             // Get the listing of entries and fetch each of those
             let files = RevlogManifest::new(revlog_repo.clone(), blob)
@@ -224,8 +232,8 @@ where
                             // All entries share the same linknode to the changelog.
                             let linknode_future = linknodes_store.add(
                                 repopath,
-                                &entry.get_hash().into_nodehash(),
-                                &linknode,
+                                &NodeHash::new(entry.get_hash().into_nodehash().sha1().clone()),
+                                &NodeHash::new(linknode.sha1().clone()),
                             );
                             let copy_future = manifest::copy_entry(entry, sender.clone());
                             copy_future.join(linknode_future).map(|_| ())

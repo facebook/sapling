@@ -34,7 +34,7 @@ blobimport them into Mononoke storage and start Mononoke
 
 start mononoke
 
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 Pull from Mononoke

@@ -69,7 +69,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
-use mercurial_types::{Changeset, HgChangesetId, RepositoryId};
+use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
 use rocksblob::Rocksblob;
 
 const DEFAULT_MANIFOLD_BUCKET: &str = "mononoke_prod";
@@ -216,17 +216,17 @@ where
         let mut core = Core::new()?;
         let fut = repo.changesets()
             .and_then(|node| {
-                let node = HgChangesetId::new(node);
-                repo.get_changeset(&node).map(move |cs| (cs, node))
+                repo.get_changeset(&mercurial::HgChangesetId::new(node))
+                    .map(move |cs| (cs, node))
             })
             .for_each(|(cs, node)| {
                 let parents = cs.parents()
                     .into_iter()
-                    .map(|p| HgChangesetId::new(p))
+                    .map(|p| HgChangesetId::new(NodeHash::new(p.sha1().clone())))
                     .collect();
                 let insert = ChangesetInsert {
                     repo_id: RepositoryId::new(0), // TODO(stash): real repo id
-                    cs_id: node,
+                    cs_id: HgChangesetId::new(NodeHash::new(node.sha1().clone())),
                     parents,
                 };
                 changesets.add(&insert)

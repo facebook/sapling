@@ -37,7 +37,7 @@ to pull these pushed commits
 
 start mononoke
 
-  $ mononoke -P $TESTTMP/mononoke-config -B test-config
+  $ mononoke
   $ wait_for_mononoke $TESTTMP/repo
 
 create new commits in repo2 and check that they are seen as outgoing

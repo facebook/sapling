@@ -8,10 +8,11 @@ use std::collections::BTreeMap;
 
 use quickcheck::{QuickCheck, TestResult};
 
-use mercurial_types::{Blob, BlobNode, MPath, NodeHash};
-use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::{Blob, MPath};
 
+use blobnode::BlobNode;
 use changeset::{escape, serialize_extras, unescape, Extra, RevlogChangeset, Time};
+use nodehash::{HgManifestId, NodeHash};
 
 use bytes::Bytes;
 
@@ -133,7 +134,7 @@ fn extras_roundtrip_prop(kv: BTreeMap<Vec<u8>, Vec<u8>>) -> TestResult {
 
     let extra = Extra(kv);
     let mut enc = Vec::new();
-    let () = serialize_extras(&extra.0, &mut enc).expect("enc failed");
+    let () = serialize_extras(&extra, &mut enc).expect("enc failed");
     let new = Extra::from_slice(Some(&enc)).expect("parse failed");
 
     TestResult::from_bool(new == extra)

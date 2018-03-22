@@ -5,9 +5,11 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(const_fn)]
 
 // External dependencies
 
+extern crate ascii;
 extern crate bytes;
 extern crate flate2;
 extern crate futures;
@@ -18,37 +20,57 @@ extern crate futures_ext;
 extern crate failure_ext as failure;
 
 #[macro_use]
+extern crate diesel;
+
+extern crate heapsize;
+#[macro_use]
+extern crate heapsize_derive;
+
+#[macro_use]
 extern crate nom;
 
 #[macro_use]
 extern crate bitflags;
 
 #[cfg(test)]
+#[macro_use]
 extern crate assert_matches;
 
 extern crate itertools;
 extern crate memmap;
 
+#[cfg(not(test))]
+extern crate quickcheck;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 extern crate asyncmemo;
-extern crate bookmarks;
 extern crate mercurial_types;
-#[cfg(test)]
 extern crate mercurial_types_mocks;
 extern crate pylz4;
-extern crate stockbookmarks;
 extern crate storage_types;
 
+mod blobnode;
 pub mod revlog;
 pub mod manifest;
+pub mod mocks;
+mod nodehash;
 pub mod changeset;
 pub mod revlogrepo;
 pub mod file;
+pub mod sql_types;
+pub mod stockbookmarks;
 pub mod symlink;
 mod errors;
 pub use errors::*;
 
+pub use blobnode::{BlobNode, Parents};
+pub use changeset::RevlogChangeset;
+pub use manifest::{EntryContent, RevlogEntry};
+pub use nodehash::{EntryId, HgChangesetId, HgManifestId, NodeHash, NULL_HASH};
 pub use revlogrepo::{RevlogManifest, RevlogRepo, RevlogRepoOptions};

@@ -7,7 +7,6 @@
 use ascii::{AsciiStr, AsciiString};
 use bytes::Bytes;
 
-use super::NodeHash;
 use hash::Sha1;
 
 use errors::*;
@@ -22,8 +21,6 @@ pub enum Blob {
     Clean(Bytes, HgBlobHash),
     /// External data; we only have its hash
     Extern(HgBlobHash),
-    /// External data; we only have its nodeid
-    NodeId(NodeHash),
 }
 
 /// Hash of a blob.
@@ -78,7 +75,7 @@ impl Blob {
                 let hash = HgBlobHash::from(data.as_ref());
                 Blob::Clean(data, hash)
             }
-            b @ Blob::Clean(..) | b @ Blob::Extern(..) | b @ Blob::NodeId(..) => b,
+            b @ Blob::Clean(..) | b @ Blob::Extern(..) => b,
         }
     }
 
@@ -86,7 +83,7 @@ impl Blob {
         match self {
             &Blob::Dirty(ref data) => Some(data.len()),
             &Blob::Clean(ref data, _) => Some(data.as_ref().len()),
-            &Blob::Extern(..) | &Blob::NodeId(..) => None,
+            &Blob::Extern(..) => None,
         }
     }
 
@@ -94,14 +91,14 @@ impl Blob {
         match self {
             &Blob::Dirty(ref data) => Some(data),
             &Blob::Clean(ref data, _) => Some(data),
-            &Blob::Extern(..) | &Blob::NodeId(..) => None,
+            &Blob::Extern(..) => None,
         }
     }
 
     pub fn hash(&self) -> Option<HgBlobHash> {
         match self {
             &Blob::Clean(_, hash) | &Blob::Extern(hash) => Some(hash),
-            &Blob::Dirty(..) | &Blob::NodeId(..) => None,
+            &Blob::Dirty(..) => None,
         }
     }
 
@@ -109,7 +106,7 @@ impl Blob {
         match self {
             Blob::Dirty(data) => Some(data),
             Blob::Clean(data, _) => Some(data),
-            Blob::Extern(..) | Blob::NodeId(..) => None,
+            Blob::Extern(..) => None,
         }
     }
 
@@ -117,7 +114,7 @@ impl Blob {
         match self {
             &Blob::Dirty(ref data) => Some(data.as_ref()),
             &Blob::Clean(ref data, _) => Some(data.as_ref()),
-            &Blob::Extern(..) | &Blob::NodeId(..) => None,
+            &Blob::Extern(..) => None,
         }
     }
 }
@@ -134,7 +131,7 @@ impl<'a> Into<Option<&'a [u8]>> for &'a Blob {
         match self {
             &Blob::Clean(ref data, _) => Some(data.as_ref()),
             &Blob::Dirty(ref data) => Some(data.as_ref()),
-            &Blob::Extern(..) | &Blob::NodeId(..) => None,
+            &Blob::Extern(..) => None,
         }
     }
 }
@@ -143,13 +140,6 @@ impl<'a> Into<Option<&'a [u8]>> for &'a Blob {
 impl From<HgBlobHash> for Blob {
     fn from(bh: HgBlobHash) -> Self {
         Blob::Extern(bh)
-    }
-}
-
-/// Construct a `NodeId` `Blob` from a `NodeHash`
-impl From<NodeHash> for Blob {
-    fn from(id: NodeHash) -> Self {
-        Blob::NodeId(id)
     }
 }
 

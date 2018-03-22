@@ -20,7 +20,6 @@ use uuid::Uuid;
 
 use blobstore::Blobstore;
 use linknodes::{ErrorKind as LinknodeErrorKind, Linknodes};
-use mercurial::changeset::RevlogChangeset;
 use mercurial_types::{Changeset, Entry, EntryId, MPath, Manifest, NodeHash, Parents, RepoPath,
                       Time};
 use mercurial_types::manifest::{self, Content};
@@ -29,6 +28,7 @@ use mercurial_types::nodehash::HgManifestId;
 
 use BlobChangeset;
 use BlobRepo;
+use changeset::ChangesetContent;
 use errors::*;
 use file::BlobEntry;
 use utils::get_node_key;
@@ -437,7 +437,7 @@ pub fn make_new_changeset(
     files: Vec<MPath>,
     comments: String,
 ) -> Result<BlobChangeset> {
-    let changeset = RevlogChangeset::new_from_parts(
+    let changeset = ChangesetContent::new_from_parts(
         parents,
         root_hash,
         user.into_bytes(),
