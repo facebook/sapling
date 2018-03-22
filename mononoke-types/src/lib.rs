@@ -25,14 +25,20 @@ extern crate heapsize;
 extern crate heapsize_derive;
 #[macro_use]
 extern crate lazy_static;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate rust_thrift;
+
 extern crate mononoke_types_thrift;
 
+pub mod blob;
 pub mod datetime;
 pub mod errors;
 pub mod file_change;
@@ -42,6 +48,7 @@ pub mod path;
 pub mod tiny_changeset;
 pub mod typed_hash;
 
+pub use blob::{Blob, ChangesetBlob, ContentBlob};
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;

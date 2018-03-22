@@ -6,14 +6,18 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use failure::SyncFailure;
 use quickcheck::{Arbitrary, Gen};
 
+use rust_thrift::compact_protocol;
+
+use blob::{Blob, ChangesetBlob};
 use datetime::DateTime;
 use errors::*;
 use file_change::FileChange;
 use path::MPath;
 use thrift;
-use typed_hash::ChangesetId;
+use typed_hash::{ChangesetId, ChangesetIdContext};
 
 /// A struct callers can use to build up a `TinyChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -72,6 +76,15 @@ impl TinyChangeset {
             })?
             .freeze())
     }
+
+    pub fn from_blob<T: AsRef<[u8]>>(t: T) -> Result<Self> {
+        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
+        let thrift_tc = compact_protocol::deserialize(t.as_ref())
+            .map_err(SyncFailure::new)
+            .context(ErrorKind::BlobDeserializeError("TinyChangeset".into()))?;
+        Self::from_thrift(thrift_tc)
+    }
+
     /// Get the parents for this changeset. The order of parents is significant.
     pub fn parents(&self) -> impl Iterator<Item = &ChangesetId> {
         self.inner.parents.iter()
@@ -117,6 +130,16 @@ impl TinyChangeset {
     /// Allow mutating this instance of `TinyChangeset`.
     pub fn into_mut(self) -> TinyChangesetMut {
         self.inner
+    }
+
+    /// Serialize this structure into a blob.
+    pub fn into_blob(self) -> ChangesetBlob {
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = ChangesetIdContext::new();
+        context.update(&data);
+        let id = context.finish();
+        Blob::new(id, data)
     }
 
     pub(crate) fn into_thrift(self) -> thrift::TinyChangeset {
@@ -190,6 +213,12 @@ impl Arbitrary for TinyChangeset {
 mod test {
     use super::*;
 
+    use std::str::FromStr;
+
+    use file_change::FileType;
+    use hash::Blake2;
+    use typed_hash::ContentId;
+
     quickcheck! {
         fn thrift_roundtrip(cs: TinyChangeset) -> bool {
             let thrift_cs = cs.clone().into_thrift();
@@ -197,5 +226,49 @@ mod test {
                 .expect("thrift roundtrips should always be valid");
             cs == cs2
         }
+
+        fn blob_roundtrip(cs: TinyChangeset) -> bool {
+            let blob = cs.clone().into_blob();
+            let cs2 = TinyChangeset::from_blob(blob.data().as_ref())
+                .expect("blob roundtrips should always be valid");
+            cs == cs2
+        }
+    }
+
+    #[test]
+    fn fixed_blob() {
+        let tc = TinyChangesetMut {
+            parents: vec![],
+            user: "foo".into(),
+            date: DateTime::from_timestamp(1234567890, 36800).unwrap(),
+            message: "Commit message".into(),
+            extra: BTreeMap::new(),
+            file_changes: btreemap![
+                MPath::new("a/b").unwrap() => FileChange::new(
+                    ContentId::new(Blake2::from_byte_array([1; 32])),
+                    FileType::Regular,
+                    42,
+                    None,
+                ),
+                MPath::new("c/d").unwrap() => FileChange::new(
+                    ContentId::new(Blake2::from_byte_array([2; 32])),
+                    FileType::Executable,
+                    84,
+                    Some(MPath::new("e/f").unwrap()),
+                ),
+            ],
+            file_deletes: btreeset![MPath::new("g/h").unwrap(), MPath::new("i/j").unwrap(),],
+        };
+        let tc = tc.freeze();
+        let blob = tc.into_blob();
+
+        assert_eq!(
+            blob.id(),
+            &ChangesetId::new(
+                Blake2::from_str(
+                    "c3571b7de4921fc0815756581a77ddff7b50be743480deb4f4c0c5dedb232393"
+                ).unwrap()
+            )
+        );
     }
 }
