@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use failure::Compat;
+use failure::{err_msg, Compat};
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
 use futures::stream::Stream;
 use futures::sync::oneshot;
@@ -119,15 +119,21 @@ impl UploadEntries {
                 Content::Tree(manifest) => manifest
                     .list()
                     .for_each(move |entry| {
-                        let mpath = path.mpath()
-                            .unwrap_or(&MPath::empty())
-                            .join_element(entry.get_name());
-                        let path = try_boxfuture!(match entry.get_type() {
+                        let mpath = MPath::join_element_opt(path.mpath(), entry.get_name());
+                        let mpath = match mpath {
+                            Some(mpath) => mpath,
+                            None => {
+                                return future::err(err_msg(
+                                    "internal error: unexpected empty MPath",
+                                )).boxify()
+                            }
+                        };
+                        let path = match entry.get_type() {
                             manifest::Type::File
                             | manifest::Type::Symlink
-                            | manifest::Type::Executable => RepoPath::file(mpath),
-                            manifest::Type::Tree => RepoPath::dir(mpath),
-                        });
+                            | manifest::Type::Executable => RepoPath::FilePath(mpath),
+                            manifest::Type::Tree => RepoPath::DirectoryPath(mpath),
+                        };
                         let mut inner = inner_mutex.lock().expect("Lock poisoned");
                         inner.required_entries.insert(path, *entry.get_hash());
                         future::ok(()).boxify()

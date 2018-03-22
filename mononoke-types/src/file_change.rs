@@ -170,7 +170,7 @@ mod test {
 
         fn filechange_thrift_roundtrip(fc: FileChange) -> bool {
             let thrift_fc = fc.clone().into_thrift();
-            let fc2 = FileChange::from_thrift(thrift_fc, &MPath::empty())
+            let fc2 = FileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
                 .expect("thrift roundtrip should always be valid");
             fc == fc2
         }
@@ -190,7 +190,7 @@ mod test {
             size: 0,
             copy_from: None,
         };
-        FileChange::from_thrift(thrift_fc, &MPath::empty())
+        FileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");
     }
 }

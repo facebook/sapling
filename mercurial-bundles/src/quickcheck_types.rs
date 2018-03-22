@@ -116,12 +116,7 @@ impl Arbitrary for Cg2PartSequence {
 
         for _ in 0..nfilelogs {
             // Changegroups can't support empty paths, so skip over those.
-            let path = loop {
-                let path = MPath::arbitrary(g);
-                if !path.is_empty() {
-                    break path;
-                }
-            };
+            let path = MPath::arbitrary(g);
             let section_end = Part::SectionEnd(Section::Filelog(path.clone()));
             filelogs.push((gen_parts(Section::Filelog(path), g), section_end));
         }

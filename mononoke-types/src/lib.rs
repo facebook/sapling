@@ -13,9 +13,6 @@
 #![feature(const_fn)]
 
 extern crate ascii;
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
 extern crate bincode;
 extern crate blake2;
 extern crate bytes;
@@ -29,8 +26,6 @@ extern crate heapsize_derive;
 extern crate lazy_static;
 #[cfg_attr(test, macro_use)]
 extern crate quickcheck;
-#[cfg(test)]
-extern crate rand;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;

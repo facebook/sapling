@@ -60,16 +60,10 @@ impl FileEntries {
                 if g.gen_weighted_bool(10) {
                     RepoPath::root()
                 } else {
-                    // 'false' to MPath::arbitrary_params ensures that the path is never empty, so
-                    // RepoPath::dir never fails.
-                    RepoPath::dir(MPath::arbitrary_params(g, false)).unwrap()
+                    RepoPath::DirectoryPath(MPath::arbitrary(g))
                 }
             }
-            Kind::File => {
-                // 'false' to MPath::arbitrary_params ensures that the path is never empty, so
-                // RepoPath::file never fails.
-                RepoPath::file(MPath::arbitrary_params(g, false)).unwrap()
-            }
+            Kind::File => RepoPath::FilePath(MPath::arbitrary(g)),
         };
         let history = (0..history_len)
             .map(|_| HistoryEntry::arbitrary_kind(g, kind))
@@ -93,15 +87,15 @@ impl Arbitrary for FileEntries {
         let filename = self.filename.clone();
         let self_history = self.history.clone();
         let self_data = self.data.clone();
-        Box::new((self_history, self_data).shrink().map(
-            move |(history, data)| {
-                Self {
+        Box::new(
+            (self_history, self_data)
+                .shrink()
+                .map(move |(history, data)| Self {
                     filename: filename.clone(),
                     history,
                     data,
-                }
-            },
-        ))
+                }),
+        )
     }
 }
 
@@ -111,7 +105,7 @@ impl HistoryEntry {
             Kind::File => {
                 // 20% chance of generating copy-from info
                 if g.gen_weighted_bool(5) {
-                    Some(RepoPath::file(MPath::arbitrary_params(g, false)).unwrap())
+                    Some(RepoPath::FilePath(MPath::arbitrary(g)))
                 } else {
                     None
                 }
@@ -160,12 +154,10 @@ impl Arbitrary for DataEntry {
         // The delta is the only shrinkable here.
         let node = self.node;
         let delta_base = self.delta_base;
-        Box::new(self.delta.shrink().map(move |delta| {
-            Self {
-                node: node,
-                delta_base: delta_base,
-                delta,
-            }
+        Box::new(self.delta.shrink().map(move |delta| Self {
+            node: node,
+            delta_base: delta_base,
+            delta,
         }))
     }
 }

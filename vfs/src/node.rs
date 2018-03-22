@@ -256,12 +256,12 @@ mod tests {
     where
         TFile: VfsFile,
     {
-        BoxFnOnce::from(move |result: Result<VfsNode<TDir, TFile>>| {
-            match result.unwrap() {
+        BoxFnOnce::from(
+            move |result: Result<VfsNode<TDir, TFile>>| match result.unwrap() {
                 VfsNode::File(_) => (),
                 _ => panic!("expected dir"),
-            }
-        })
+            },
+        )
     }
 
     fn check_not_exists<TDir, TFile>(expected: &'static str) -> Checker<TDir, TFile> {
@@ -305,14 +305,15 @@ mod tests {
         let node = make_node("a/b/c", None);
 
         for (path, step_limit, checker) in vec![
-            ("", 0, check_dir(vec!["a"])),
-            ("a", 1, check_dir(vec!["b"])),
-            ("a/b", 2, check_dir(vec!["c"])),
-            ("a/b/c", 3, check_not_exists("c")),
-            ("d/e", MAX_STEPS, check_not_exists("d/e")),
+            (None, 0, check_dir(vec!["a"])),
+            (Some("a"), 1, check_dir(vec!["b"])),
+            (Some("a/b"), 2, check_dir(vec!["c"])),
+            (Some("a/b/c"), 3, check_not_exists("c")),
+            (Some("d/e"), MAX_STEPS, check_not_exists("d/e")),
         ] {
+            let path = path.map(|p| MPath::new(p).unwrap());
             checker.call(
-                VfsWalker::with_max_steps(node.clone(), MPath::new(path).unwrap(), step_limit)
+                VfsWalker::with_max_steps(node.clone(), MPath::into_iter_opt(path), step_limit)
                     .walk()
                     .wait(),
             );

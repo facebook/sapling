@@ -84,8 +84,9 @@ where
     let changelogentries = changelogentries
         .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
         // One more SectionEnd entry is necessary because hg client excepts filelog section
-        // even if it's empty. Add SectionEnd part with a fake file name
-        .chain(once(Ok(Part::SectionEnd(Section::Filelog(MPath::empty())))))
+        // even if it's empty. Add a fake SectionEnd part (the choice of
+        // Manifest is just for convenience).
+        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
         .chain(once(Ok(Part::End)));
 
     let cgdata = Cg2Packer::new(changelogentries);

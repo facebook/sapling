@@ -381,37 +381,22 @@ mod test {
         check_fsencode(b"aux ", "aux~20");
     }
 
-    fn join_and_check(prefix: &str, suffix: &str, expected: &str) {
-        let prefix = MPath::new(prefix).unwrap();
+    fn join_and_check(prefix: Option<&str>, suffix: Option<&str>, expected: &str) {
+        let prefix = prefix.map(|prefix| MPath::new(prefix).unwrap());
+        let suffix = suffix.map(|suffix| MPath::new(suffix).unwrap());
         let mut elements = vec![];
-        let joined = &prefix.join(&MPath::new(suffix).unwrap());
-        elements.extend(joined.into_iter().cloned());
+        let joined = MPath::join_opt(prefix.as_ref(), MPath::iter_opt(suffix.as_ref()));
+        elements.extend(MPath::into_iter_opt(joined));
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
     #[test]
     fn join() {
-        join_and_check("prefix", "suffix", "prefix/suffix");
-        join_and_check("prefix", "", "prefix");
-        join_and_check("", "suffix", "suffix");
+        join_and_check(Some("prefix"), Some("suffix"), "prefix/suffix");
+        join_and_check(Some("prefix"), None, "prefix");
+        join_and_check(None, Some("suffix"), "suffix");
 
-        assert_eq!(
-            MPath::new(b"asdf")
-                .unwrap()
-                .join(&MPath::new(b"").unwrap())
-                .to_vec()
-                .len(),
-            4
-        );
-
-        assert_eq!(
-            MPath::new(b"")
-                .unwrap()
-                .join(&MPath::new(b"").unwrap())
-                .to_vec()
-                .len(),
-            0
-        );
+        assert_eq!(MPath::new(b"asdf").unwrap().join(None).to_vec().len(), 4);
 
         assert_eq!(
             MPath::new(b"asdf")
@@ -420,39 +405,6 @@ mod test {
                 .to_vec()
                 .len(),
             8
-        );
-    }
-
-    #[test]
-    fn empty_paths() {
-        assert_eq!(MPath::new(b"/").unwrap().to_vec().len(), 0);
-        assert_eq!(MPath::new(b"////").unwrap().to_vec().len(), 0);
-        assert_eq!(
-            MPath::new(b"////")
-                .unwrap()
-                .join(&MPath::new(b"///").unwrap())
-                .to_vec()
-                .len(),
-            0
-        );
-        let p = b"///";
-        let elements: Vec<_> = p.split(|c| *c == b'/')
-            .filter(|e| !e.is_empty())
-            .map(|e| MPathElement::new(e.into()).expect("valid MPathElement"))
-            .collect();
-        assert_eq!(
-            MPath::new(b"////")
-                .unwrap()
-                .join(elements.iter())
-                .to_vec()
-                .len(),
-            0
-        );
-        assert!(
-            MPath::new(b"////")
-                .unwrap()
-                .join(elements.iter())
-                .is_empty()
         );
     }
 

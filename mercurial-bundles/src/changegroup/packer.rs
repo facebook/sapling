@@ -95,11 +95,6 @@ impl ChunkBuilder {
         // TODO: will need to encode tree manifests here as well
         if let &Section::Filelog(ref f) = section {
             let f_vec = f.to_vec();
-            if f_vec.len() == 0 {
-                bail_err!(ErrorKind::Cg2Encode(
-                    "attempted to encode a zero-length path".into(),
-                ));
-            }
             // Note that the filename length must include the four bytes for itself.
             BigEndian::write_i32(&mut self.inner[0..], (f_vec.len() + 4) as i32);
             self.inner.put_slice(f_vec.as_slice());
@@ -127,25 +122,5 @@ impl ChunkBuilder {
         let mut inner = self.inner;
         BigEndian::write_i32(&mut inner[self.len_offset..], len as i32);
         Chunk::new(inner)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use mercurial_types::MPath;
-
-    #[test]
-    fn test_empty_filelog_path() {
-        let mut builder = ChunkBuilder::new();
-        let section = Section::Filelog(MPath::new("").unwrap());
-        assert_matches!(
-            builder
-                .encode_section(&section)
-                .unwrap_err()
-                .downcast::<ErrorKind>()
-                .unwrap(),
-            ErrorKind::Cg2Encode(_)
-        );
     }
 }

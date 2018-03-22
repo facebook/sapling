@@ -28,8 +28,8 @@ lazy_static! {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf)]
 #[derive(Serialize, Deserialize)]
 pub enum RepoPath {
-    // Do not create a RepoPath directly! Go through the constructors instead -- they verify MPath
-    // properties.
+    // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
+    // constructed.
     RootPath,
     DirectoryPath(MPath),
     FilePath(MPath),
@@ -47,14 +47,7 @@ impl RepoPath {
         Error: From<P::Error>,
     {
         let path = path.try_into()?;
-        if path.is_empty() {
-            Err(
-                ErrorKind::InvalidMPath(path, "RepoPath does not support empty MPaths".into())
-                    .into(),
-            )
-        } else {
-            Ok(RepoPath::DirectoryPath(path))
-        }
+        Ok(RepoPath::DirectoryPath(path))
     }
 
     pub fn file<P>(path: P) -> Result<Self>
@@ -63,14 +56,7 @@ impl RepoPath {
         Error: From<P::Error>,
     {
         let path = path.try_into()?;
-        if path.is_empty() {
-            Err(
-                ErrorKind::InvalidMPath(path, "RepoPath does not support empty MPaths".into())
-                    .into(),
-            )
-        } else {
-            Ok(RepoPath::FilePath(path))
-        }
+        Ok(RepoPath::FilePath(path))
     }
 
     /// Get the length of this repo path in bytes. `RepoPath::Root` has length 0.
@@ -230,12 +216,13 @@ impl MPath {
                 MPathElement(e.into())
             })
             .collect();
+        if elements.is_empty() {
+            bail_err!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                "path cannot be empty".into()
+            ));
+        }
         Ok(MPath { elements })
-    }
-
-    /// Create a new empty `MPath`.
-    pub fn empty() -> Self {
-        MPath { elements: vec![] }
     }
 
     pub(crate) fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
@@ -335,19 +322,10 @@ impl MPath {
 
     /// The length of this path, including any slashes in it.
     pub fn len(&self) -> usize {
-        if self.is_empty() {
-            0
-        } else {
-            // n elements means n-1 slashes
-            let slashes = self.elements.len() - 1;
-            let elem_len: usize = self.elements.iter().map(|elem| elem.len()).sum();
-            slashes + elem_len
-        }
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.elements.is_empty()
+        // n elements means n-1 slashes
+        let slashes = self.elements.len() - 1;
+        let elem_len: usize = self.elements.iter().map(|elem| elem.len()).sum();
+        slashes + elem_len
     }
 
     pub(crate) fn into_thrift(self) -> thrift::MPath {
@@ -428,17 +406,6 @@ impl Arbitrary for MPathElement {
 impl Arbitrary for MPath {
     #[inline]
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        // Note that this can generate zero-length paths. To only generate non-zero-length paths,
-        // use arbitrary_params.
-        Self::arbitrary_params(g, true)
-    }
-
-    // Skip over shrink for now because it's non-trivial to do.
-}
-
-impl MPath {
-    pub fn arbitrary_params<G: Gen>(g: &mut G, empty_allowed: bool) -> Self {
-        let min_components = if empty_allowed { 0 } else { 1 };
         let size = g.size();
         // Up to sqrt(size) components, each with length from 1 to 2 *
         // sqrt(size) -- don't generate zero-length components. (This isn't
@@ -456,7 +423,7 @@ impl MPath {
 
         let mut path = Vec::new();
 
-        for i in 0..g.gen_range(min_components, size_sqrt) {
+        for i in 0..g.gen_range(1, size_sqrt) {
             if i > 0 {
                 path.push(b'/');
             }
@@ -495,8 +462,7 @@ impl fmt::Debug for MPath {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::StdGen;
-    use rand;
+    use quickcheck::TestResult;
 
     use super::*;
 
@@ -515,13 +481,17 @@ mod test {
             MPathElement::verify(p.as_bytes()).is_ok()
         }
 
-        fn elements_to_path(elements: Vec<MPathElement>) -> bool {
+        fn elements_to_path(elements: Vec<MPathElement>) -> TestResult {
+            if elements.is_empty() {
+                return TestResult::discard();
+            }
+
             let joined = elements.iter().map(|elem| elem.0.clone())
                 .collect::<Vec<Vec<u8>>>()
                 .join(&b'/');
             let expected_len = joined.len();
             let path = MPath::new(joined).unwrap();
-            elements == path.elements && path.to_vec().len() == expected_len
+            TestResult::from_bool(elements == path.elements && path.to_vec().len() == expected_len)
         }
 
         fn path_len(p: MPath) -> bool {
@@ -543,20 +513,6 @@ mod test {
         }
     }
 
-    /// Verify that arbitrary instances with empty_allowed set to false are not empty.
-    #[test]
-    fn path_non_empty() {
-        let mut rng = StdGen::new(rand::thread_rng(), 100);
-        for _n in 0..100 {
-            let path = MPath::arbitrary_params(&mut rng, false);
-            MPath::verify(&path.to_vec()).expect("arbitrary MPath should be valid");
-            assert!(
-                !path.is_empty(),
-                "empty_allowed is false so empty paths should not be generated"
-            );
-        }
-    }
-
     #[test]
     fn path_make() {
         let path = MPath::new(b"1234abc");
@@ -575,23 +531,18 @@ mod test {
     }
 
     #[test]
-    fn repo_path_empty() {
-        let path = MPath::new("").unwrap();
-        match RepoPath::file(path) {
-            Ok(bad) => panic!("unexpected success {:?}", bad),
-            Err(err) => assert_matches!(
-                err.downcast::<ErrorKind>().unwrap(),
-                ErrorKind::InvalidMPath(_, _)
-            ),
-        };
-
-        match RepoPath::dir("") {
-            Ok(bad) => panic!("unexpected success {:?}", bad),
-            Err(err) => assert_matches!(
-                err.downcast::<ErrorKind>().unwrap(),
-                ErrorKind::InvalidMPath(_, _)
-            ),
-        };
+    fn empty_paths() {
+        fn assert_empty(path: &str) {
+            MPath::new(path).expect_err(&format!(
+                "unexpected OK - path '{}' is logically empty",
+                path,
+            ));
+        }
+        assert_empty("");
+        assert_empty("/");
+        assert_empty("//");
+        assert_empty("///");
+        assert_empty("////");
     }
 
     #[test]

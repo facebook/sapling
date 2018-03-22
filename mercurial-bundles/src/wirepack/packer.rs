@@ -106,23 +106,28 @@ impl ChunkBuilder {
     /// Encode a filename -- this should always happen before any history or data entries are
     /// encoded.
     fn encode_filename(&mut self, filename: &RepoPath) -> Result<&mut Self> {
-        let empty = MPath::empty();
-
         let mpath = match (self.kind, filename) {
-            (Kind::Tree, &RepoPath::RootPath) => &empty,
+            (Kind::Tree, &RepoPath::RootPath) => None,
             (Kind::File, &RepoPath::RootPath) => bail_err!(ErrorKind::WirePackEncode(
                 "attempted to encode a zero-length filename into a file wirepack".into()
             )),
-            (Kind::Tree, &RepoPath::DirectoryPath(ref dir_path)) => verify_path(dir_path)?,
-            (Kind::File, &RepoPath::FilePath(ref file_path)) => verify_path(file_path)?,
+            (Kind::Tree, &RepoPath::DirectoryPath(ref dir_path)) => Some(verify_path(dir_path)?),
+            (Kind::File, &RepoPath::FilePath(ref file_path)) => Some(verify_path(file_path)?),
             (kind, path) => bail_err!(ErrorKind::WirePackEncode(format!(
                 "attempted to encode incompatible path into wirepack (kind: {}, path: {:?})",
                 kind, path
             ))),
         };
 
-        self.inner.put_u16::<BigEndian>(mpath.len() as u16);
-        mpath.generate(&mut self.inner)?;
+        match mpath {
+            Some(mpath) => {
+                self.inner.put_u16::<BigEndian>(mpath.len() as u16);
+                mpath.generate(&mut self.inner)?;
+            }
+            None => {
+                self.inner.put_u16::<BigEndian>(0);
+            }
+        }
         Ok(self)
     }
 
@@ -158,11 +163,6 @@ impl ChunkBuilder {
 
 fn verify_path<'a>(mpath: &'a MPath) -> Result<&'a MPath> {
     let len = mpath.len();
-    if len == 0 {
-        bail_err!(ErrorKind::WirePackEncode(format!(
-            "attempted to encode a zero-length filename"
-        )));
-    }
     if len > (u16::max_value() as usize) {
         bail_err!(ErrorKind::WirePackEncode(format!(
             "attempted to encode a filename of length {} -- maximum length supported is {}",
