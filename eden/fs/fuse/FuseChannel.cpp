@@ -1007,7 +1007,7 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto read = reinterpret_cast<const fuse_read_in*>(arg);
 
@@ -1021,7 +1021,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto write = reinterpret_cast<const fuse_write_in*>(arg);
   auto bufPtr = reinterpret_cast<const char*>(write + 1);
@@ -1107,7 +1107,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
 
 folly::Future<folly::Unit> FuseChannel::fuseReadLink(
     const fuse_in_header* header,
-    const uint8_t* arg) {
+    const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK";
   return dispatcher_->readlink(InodeNumber{header->nodeid})
       .then([](std::string&& str) {
@@ -1267,7 +1267,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
 
 folly::Future<folly::Unit> FuseChannel::fuseStatFs(
     const fuse_in_header* header,
-    const uint8_t* arg) {
+    const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_STATFS";
   return dispatcher_->statfs(InodeNumber{header->nodeid})
       .then([](struct fuse_kstatfs&& info) {
@@ -1278,7 +1278,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRelease(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto release = reinterpret_cast<const fuse_release_in*>(arg);
   XLOG(DBG7) << "FUSE_RELEASE";
@@ -1289,7 +1289,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
 
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
   // There's no symbolic constant for this :-/
@@ -1385,7 +1385,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFlush(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
   XLOG(DBG7) << "FUSE_FLUSH";
@@ -1420,7 +1420,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
   XLOG(DBG7) << "FUSE_READDIR";
@@ -1433,7 +1433,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto release = reinterpret_cast<const fuse_release_in*>(arg);
   XLOG(DBG7) << "FUSE_RELEASEDIR";
@@ -1443,7 +1443,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
   // There's no symbolic constant for this :-/
@@ -1521,7 +1521,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBmap(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
-    const fuse_in_header* header,
+    const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto forgets = reinterpret_cast<const fuse_batch_forget_in*>(arg);
   auto item = reinterpret_cast<const fuse_forget_one*>(forgets + 1);
