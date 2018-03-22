@@ -97,16 +97,18 @@ impl Blake2 {
     }
 }
 
-/// Context for incrementally computing a `Sha1` hash.
+/// Context for incrementally computing a `Blake2` hash.
 #[derive(Clone)]
 pub struct Context(Blake2b);
 
 impl Context {
     /// Construct a `Context`
-    pub fn new() -> Self {
-        Context(Blake2b::new(32).expect("blake2b must support 32 byte outputs"))
+    #[inline]
+    pub fn new(key: &[u8]) -> Self {
+        Context(Blake2b::new_keyed(key, 32))
     }
 
+    #[inline]
     pub fn update<T>(&mut self, data: T)
     where
         T: AsRef<[u8]>,
@@ -114,21 +116,13 @@ impl Context {
         self.0.process(data.as_ref())
     }
 
+    #[inline]
     pub fn finish(self) -> Blake2 {
         let mut ret = [0; 32];
         self.0
             .variable_result(&mut ret)
             .expect("32-byte array must work with 32-byte blake2b");
         Blake2(ret)
-    }
-}
-
-/// Compute the `Blake2` for a slice of bytes.
-impl<'a> From<&'a [u8]> for Blake2 {
-    fn from(data: &[u8]) -> Blake2 {
-        let mut context = Context::new();
-        context.update(data);
-        context.finish()
     }
 }
 
@@ -209,7 +203,8 @@ mod test {
 
     #[test]
     fn test_nil() {
-        let nil = Blake2::from(&[][..]);
+        let context = Context::new(b"");
+        let nil = context.finish();
         assert_eq!(nil, NILHASH);
     }
 

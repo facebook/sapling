@@ -11,7 +11,7 @@ use ascii::{AsciiStr, AsciiString};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
-use hash::Blake2;
+use hash::{Blake2, Context};
 use thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
@@ -34,7 +34,11 @@ pub struct ContentId(Blake2);
 
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash {
-    ($typed: ident) => {
+    {
+        hash_type => $typed: ident,
+        context_type => $typed_context: ident,
+        context_key => $key: expr,
+    } => {
         impl $typed {
             pub const fn new(blake2: Blake2) -> Self {
                 $typed(blake2)
@@ -87,6 +91,31 @@ macro_rules! impl_typed_hash {
             }
         }
 
+        /// Context for incrementally computing a hash.
+        #[derive(Clone)]
+        pub struct $typed_context(Context);
+
+        impl $typed_context {
+            /// Construct a context.
+            #[inline]
+            pub fn new() -> Self {
+                $typed_context(Context::new($key))
+            }
+
+            #[inline]
+            pub fn update<T>(&mut self, data: T)
+            where
+                T: AsRef<[u8]>,
+            {
+                self.0.update(data)
+            }
+
+            #[inline]
+            pub fn finish(self) -> $typed {
+                $typed(self.0.finish())
+            }
+        }
+
         impl AsRef<[u8]> for $typed {
             fn as_ref(&self) -> &[u8] {
                 self.0.as_ref()
@@ -112,9 +141,23 @@ macro_rules! impl_typed_hash {
     }
 }
 
-impl_typed_hash!(ChangesetId);
-impl_typed_hash!(UnodeId);
-impl_typed_hash!(ContentId);
+impl_typed_hash! {
+    hash_type => ChangesetId,
+    context_type => ChangesetIdContext,
+    context_key => b"ChangesetId",
+}
+
+impl_typed_hash! {
+    hash_type => UnodeId,
+    context_type => UnodeIdContext,
+    context_key => b"UnodeId",
+}
+
+impl_typed_hash! {
+    hash_type => ContentId,
+    context_type => ContentIdContext,
+    context_key => b"ContentId",
+}
 
 #[cfg(test)]
 mod test {
