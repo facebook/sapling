@@ -5,8 +5,7 @@ This is my attempt to put the entire data model into one place in a semi-formali
 
 Notes:
 - I renamed `complete` to `changeset`, which seems a bit more descriptive.
-- I'm using BINARY(20) to represent hashes, but this will need to change when we switch from SHA1
-- There's a tons of BINARY(20) joins between tables - giving changesets and unodes
+- There's a tons of VARBINARY(32) joins between tables - giving changesets and unodes
   dedicated `id` fields makes references much smaller.
 - I'm assuming text-like fields such as bookmark names and paths are UTF8
 - Does SQL have a way to define type aliases? Because that would be useful here.
@@ -58,7 +57,7 @@ CREATE TABLE `repos` (
 CREATE TABLE `changeset` (
     `id` BIGINT UNSIGNED NOT NULL UNIQUE AUTO_INCREMENT,
     `repo_id` INT UNSIGNED NOT NULL,
-    `cs_id` BINARY(20) NOT NULL,
+    `cs_id` VARBINARY(32) NOT NULL,
     `gen` BIGINT UNSIGNED NOT NULL, -- index for ordering/ranges?
     PRIMARY KEY (`id`),
     UNIQUE KEY (`repo_id`, `cs_id`),
@@ -150,8 +149,8 @@ CREATE TABLE `paths` (
 CREATE TABLE `unode` (
     `id` BIGINT UNSIGNED NOT NULL UNIQUE AUTO_INCREMENT,
     `repo_id` INT UNSIGNED NOT NULL,
-    `unodehash` BINARY(20) NOT NULL, -- hash(path, contentid, salt)
-    `contentid` BINARY(20) NOT NULL,
+    `unodehash` VARBINARY(32) NOT NULL, -- hash(path, contentid, salt)
+    `contentid` VARBINARY(32) NOT NULL,
     `salt` INT UNSIGNED NOT NULL, -- larger? hash-sized if derived by hash?
     `pathid` BIGINT UNSIGNED NOT NULL, -- fastlog?
     `gen` BIGINT UNSIGNED NOT NULL, -- XXX useful? order/range index?
@@ -177,7 +176,7 @@ CREATE TABLE `unodeparents` (
 -- 1:many relationship between filenodes and unodes
 CREATE TABLE `filenode` (
   `unode` BIGINT UNSIGNED NOT NULL,
-  `filenode` BINARY(20) NOT NULL, -- hash(p1, p2, copyfrom, content)
+  `filenode` VARBINARY(32) NOT NULL, -- hash(p1, p2, copyfrom, content)
   PRIMARY KEY (`unode_id`, `filenode`),
   FOREIGN KEY (`unode_id`) REFERENCES `unode` (`id`)
 );
@@ -206,7 +205,7 @@ CREATE TABLE `copyinfo` (
     `unode_id` BIGINT UNSIGNED NOT NULL,
     `kind` VARBINARY(10) NOT NULL,
     `frompath` BIGINT UNSIGNED NOT NULL,
-    `fromunode` BINARY(20) NOT NULL,
+    `fromunode` VARBINARY(32) NOT NULL,
     UNIQUE KEY (`pathid`, `unode_id`),
     FOREIGN KEY (`pathid`) REFERENCES `path` (`id`),
     FOREIGN KEY (`unode_id`) REFERENCES `unode` (`id`)
@@ -217,7 +216,7 @@ CREATE TABLE `copyinfo` (
 -- SOT - all immutable data stored as blobs
 CREATE TABLE `content` (
     `repo_id` INT UNSIGNED NOT NULL,
-    `contentid` BINARY(20) NOT NULL,
+    `contentid` VARBINARY(32) NOT NULL,
     `blob` LONGBLOB,
     UNIQUE KEY (`repo_id`, `blobid`)
 ) ENGINE=`manifold`;
@@ -227,7 +226,7 @@ CREATE TABLE `contentalias` (
     `repo_id` INT UNSIGNED NOT NULL,
     `contentalias` VARBINARY(40) NOT NULL,
     `aliastype` VARCHAR(16) NOT NULL,
-    `contentid` BINARY(20) NOT NULL,
+    `contentid` VARBINARY(32) NOT NULL,
     UNIQUE KEY (`repo_id`, `contentalias`, `aliastype`),
     INDEX (`repo_id`, `contentid`)
 ) ENGINE='manifold';
