@@ -11,7 +11,7 @@ use ascii::{AsciiStr, AsciiString};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
-use hash::{self, Blake2};
+use hash::Blake2;
 use thrift;
 
 // There is no NULL_HASH for typed hashes. Any places that need a null hash should use an
@@ -36,20 +36,7 @@ pub struct ContentId(Blake2);
 macro_rules! impl_typed_hash {
     ($typed: ident) => {
         impl $typed {
-            pub fn new(blake2: Blake2) -> Option<Self> {
-                if blake2 == hash::NULL {
-                    None
-                } else {
-                    Some($typed(blake2))
-                }
-            }
-
-            /// This function is only meant to be used in mocks. Use `new` for most
-            /// purposes.
-            ///
-            /// This function doesn't check the hash to see that it's null. It's defined separately
-            /// because (at least as of Rust 1.24) const fns can't use `Eq`.
-            pub const fn new_mock(blake2: Blake2) -> Self {
+            pub const fn new(blake2: Blake2) -> Self {
                 $typed(blake2)
             }
 
@@ -60,17 +47,17 @@ macro_rules! impl_typed_hash {
             }
 
             #[inline]
-            pub fn from_bytes(bytes: &[u8]) -> Result<Option<Self>> {
+            pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
                 Blake2::from_bytes(bytes).map(Self::new)
             }
 
             #[inline]
-            pub fn from_str(s: &str) -> Result<Option<Self>> {
+            pub fn from_str(s: &str) -> Result<Self> {
                 Blake2::from_str(s).map(Self::new)
             }
 
             #[inline]
-            pub fn from_ascii_str(s: &AsciiStr) -> Result<Option<Self>> {
+            pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
                 Blake2::from_ascii_str(s).map(Self::new)
             }
 
@@ -88,14 +75,14 @@ macro_rules! impl_typed_hash {
             }
         }
 
-        impl From<Blake2> for Option<$typed> {
-            fn from(h: Blake2) -> Option<$typed> {
+        impl From<Blake2> for $typed {
+            fn from(h: Blake2) -> $typed {
                 $typed::new(h)
             }
         }
 
-        impl<'a> From<&'a Blake2> for Option<$typed> {
-            fn from(h: &'a Blake2) -> Option<$typed> {
+        impl<'a> From<&'a Blake2> for $typed {
+            fn from(h: &'a Blake2) -> $typed {
                 $typed::new(*h)
             }
         }
@@ -114,12 +101,7 @@ macro_rules! impl_typed_hash {
 
         impl Arbitrary for $typed {
             fn arbitrary<G: Gen>(g: &mut G) -> Self {
-                // Blake2::arbitrary will sometimes generate a null hash, so don't use that
-                // directly. (It's also theoretically possible that all the bytes are zeroes,
-                // but the chance of that happening is vanishingly small.)
-                let mut bytes = [0; 32];
-                g.fill_bytes(&mut bytes);
-                $typed(Blake2::from_byte_array(bytes))
+                $typed(Blake2::arbitrary(g))
             }
 
             fn shrink(&self) -> Box<Iterator<Item = Self>> {

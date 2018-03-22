@@ -10,12 +10,13 @@ use std::str::FromStr;
 use ascii::{AsciiStr, AsciiString};
 use blake2::Blake2b;
 use blake2::digest::{Input, VariableOutput};
-use quickcheck::{single_shrinker, Arbitrary, Gen};
+use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use errors::*;
 use thrift;
 
-pub const NULL: Blake2 = Blake2([0; 32]);
+// There is no NULL_HASH for Blake2 hashes. Any places that need a null hash should use an
+// Option type, or perhaps a list as desired.
 
 /// Raw BLAKE2b hash.
 ///
@@ -114,11 +115,11 @@ impl Context {
     }
 
     pub fn finish(self) -> Blake2 {
-        let mut ret = NULL;
+        let mut ret = [0; 32];
         self.0
-            .variable_result(&mut ret.0[..])
+            .variable_result(&mut ret)
             .expect("32-byte array must work with 32-byte blake2b");
-        ret
+        Blake2(ret)
     }
 }
 
@@ -177,15 +178,12 @@ impl Debug for Blake2 {
 impl Arbitrary for Blake2 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let mut bytes = [0; 32];
-        // The null hash is special, so give it a 5% chance of happening
-        if !g.gen_weighted_bool(20) {
-            g.fill_bytes(&mut bytes);
-        }
+        g.fill_bytes(&mut bytes);
         Blake2(bytes)
     }
 
     fn shrink(&self) -> Box<Iterator<Item = Self>> {
-        single_shrinker(NULL)
+        empty_shrinker()
     }
 }
 
@@ -194,6 +192,9 @@ mod test {
     use super::*;
 
     use quickcheck::TestResult;
+
+    // NULL is not exposed because no production code should use it.
+    const NULL: Blake2 = Blake2([0; 32]);
 
     // This hash is from https://asecuritysite.com/encryption/blake.
     #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -205,11 +206,6 @@ mod test {
                                     0x77, 0x8f, 0x77, 0x87,
                                     0xfa, 0xab, 0x45, 0xcd,
                                     0xf1, 0x2f, 0xe3, 0xa8]);
-
-    #[test]
-    fn test_null() {
-        assert_eq!(NULL, Blake2([0_u8; 32]));
-    }
 
     #[test]
     fn test_nil() {

@@ -4,9 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-// NULL is exported for convenience.
 use mononoke_types::hash::Blake2;
-pub use mononoke_types::hash::NULL;
 
 // Definitions for hashes 1111...1111 to ffff...ffff.
 
@@ -32,10 +30,6 @@ mod test {
 
     #[test]
     fn verify() {
-        assert_eq!(
-            format!("{}", NULL),
-            "0000000000000000000000000000000000000000000000000000000000000000"
-        );
         assert_eq!(
             format!("{}", ONES),
             "1111111111111111111111111111111111111111111111111111111111111111"
