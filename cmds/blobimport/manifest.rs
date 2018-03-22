@@ -11,7 +11,7 @@ use std::sync::mpsc::SyncSender;
 use bincode;
 use bytes::Bytes;
 use failure::{self, Error};
-use futures::{self, Future, IntoFuture, Stream};
+use futures::{self, stream, Future, IntoFuture, Stream};
 
 use blobrepo::RawNodeBlob;
 use futures_ext::StreamExt;
@@ -74,13 +74,21 @@ pub(crate) fn get_entry_stream(
     entry: Box<Entry>,
     revlog_repo: RevlogRepo,
     cs_rev: RevIdx,
-    basepath: MPath,
+    basepath: Option<&MPath>,
 ) -> Box<Stream<Item = (Box<Entry>, RepoPath), Error = Error> + Send> {
-    let path = basepath.join_element(entry.get_name());
-    let repopath = if entry.get_type() == Type::Tree {
-        RepoPath::DirectoryPath(path.clone())
-    } else {
-        RepoPath::FilePath(path.clone())
+    let path = MPath::join_element_opt(basepath, entry.get_name());
+    let repopath = match path.as_ref() {
+        None => {
+            // XXX clean this up so that this assertion is encoded in the type system
+            return stream::once(Err(failure::err_msg(
+                "internal error: joined root path with root manifest",
+            ))).boxify();
+        }
+        Some(path) => if entry.get_type() == Type::Tree {
+            RepoPath::DirectoryPath(path.clone())
+        } else {
+            RepoPath::FilePath(path.clone())
+        },
     };
     let revlog = revlog_repo.get_path_revlog(&repopath);
 
@@ -115,7 +123,7 @@ pub(crate) fn get_entry_stream(
             })
             .flatten_stream()
             .map(move |entry| {
-                get_entry_stream(entry, revlog_repo.clone(), cs_rev.clone(), path.clone())
+                get_entry_stream(entry, revlog_repo.clone(), cs_rev.clone(), path.as_ref())
             })
             .map_err(Error::from)
             .flatten()

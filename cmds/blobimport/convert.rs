@@ -22,7 +22,7 @@ use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{Changeset, MPath, Manifest, NodeHash, RepoPath};
+use mercurial_types::{Changeset, Manifest, NodeHash, RepoPath};
 use mercurial_types::nodehash::{EntryId, HgChangesetId};
 use stats::Timeseries;
 
@@ -215,7 +215,7 @@ where
                                     entry,
                                     revlog_repo.clone(),
                                     linkrev.clone(),
-                                    MPath::empty(),
+                                    None,
                                 )
                             }
                         })
