@@ -663,6 +663,20 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   |   y |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
+
+Test histedit with changing commits in the middle
+  $ cat >> $TESTTMP/commands <<EOF
+  > pick 2f8e443c6ba8 4
+  > x echo >> y && hg amend
+  > pick 11c4fc95a874 7
+  > EOF
+  $ hg histedit '.^' --commands $TESTTMP/commands --config extensions.histedit= --config extensions.fbhistedit=
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  warning: orphaned descendants detected, not stripping 2f8e443c6ba8
+  warning: the changeset's children were left behind
+  (this is okay since a histedit is in progress)
+  saved backup bundle to $TESTTMP/client2/.hg/strip-backup/11c4fc95a874-b05d0d47-histedit.hg
+
 Reset the server back to hybrid mode
   $ cd ../master
 - Strip the pushed commits + the recently made commit

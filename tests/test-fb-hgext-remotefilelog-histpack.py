@@ -312,6 +312,10 @@ class histpacktests(unittest.TestCase):
     def testWritingLinkRevs(self):
         """Tests that we can add linkrevs and have them written as linknodes.
         """
+        class fakerepo(object):
+            def __init__(self):
+                self.changelog = fakechangelog()
+
         class fakechangelog(object):
             def __init__(self):
                 self.commits = []
@@ -327,10 +331,9 @@ class histpacktests(unittest.TestCase):
                     raise error.LookupError(rev, 'x', 'x')
                 return self.commits[rev]
 
-        cl = fakechangelog()
+        repo = fakerepo()
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(uimod.ui(), packdir, version=1,
-                changelog=cl)
+        packer = mutablehistorypack(uimod.ui(), packdir, version=1, repo=repo)
 
         revisions = []
         commits = []
@@ -367,7 +370,7 @@ class histpacktests(unittest.TestCase):
             pass
 
         # "Commit" the commits to the changelog
-        cl.commits = commits
+        repo.changelog.commits = commits
 
         # Verify reading from the mutable store
         for filename, node, p1, p2, linknode, copyfrom in revisions:

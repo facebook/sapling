@@ -542,7 +542,7 @@ class basetreemanifestlog(object):
                 'manifests')
         self._mutabledatapack = mutabledatapack(self.ui, packpath)
         self._mutablehistorypack = mutablehistorypack(self.ui, packpath,
-                                       changelog=self._changelog)
+                                                      repo=self._repo)
 
     def _addtopack(self, ui, newtree, p1node, p2node, linknode,
                    overridenode=None, overridep1node=None, linkrev=None):
@@ -670,7 +670,7 @@ class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
             cachesize = opts.get('manifestcachesize', cachesize)
         self._treeinmem = True
 
-        self._changelog = repo.unfiltered().changelog
+        self._repo = repo.unfiltered()
 
         self._opener = opener
 
@@ -689,7 +689,7 @@ class treeonlymanifestlog(basetreemanifestlog):
         super(treeonlymanifestlog, self).__init__()
         self._opener = opener
         self.ui = repo.ui
-        self._changelog = repo.unfiltered().changelog
+        self._repo = repo.unfiltered()
 
     def clearcaches(self):
         pass
@@ -697,12 +697,12 @@ class treeonlymanifestlog(basetreemanifestlog):
     def _maplinknode(self, linknode):
         """Turns a linknode into a linkrev. Only needed for revlog backed
         manifestlogs."""
-        return self._changelog.rev(linknode)
+        return self._repo.changelog.rev(linknode)
 
     def _maplinkrev(self, linkrev):
         """Turns a linkrev into a linknode. Only needed for revlog backed
         manifestlogs."""
-        return self._changelog.node(linkrev)
+        return self._repo.changelog.node(linkrev)
 
 class hybridmanifestlog(manifest.manifestlog):
     def __init__(self, opener, repo):

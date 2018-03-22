@@ -1340,7 +1340,7 @@ class manifestlog(object):
 
         self._opener = opener
         self._revlog = repo._constructmanifest()
-        self._changelog = repo.unfiltered().changelog
+        self._repo = repo.unfiltered()
 
         # A cache of the manifestctx or treemanifestctx for each directory
         self._dirmancache = {}
@@ -1354,15 +1354,15 @@ class manifestlog(object):
     def _maplinknode(self, linknode):
         """Turns a linknode into a linkrev. Only needed for revlog backed
         manifestlogs."""
-        linkrev = self._changelog.rev(linknode)
+        linkrev = self._repo.changelog.rev(linknode)
         return linkrev
 
     def _maplinkrev(self, linkrev):
         """Turns a linkrev into a linknode. Only needed for revlog backed
         manifestlogs."""
-        if linkrev >= len(self._changelog):
+        if linkrev >= len(self._repo.changelog):
             raise LookupError(_("linkrev %s not in changelog") % linkrev)
-        return self._changelog.node(linkrev)
+        return self._repo.changelog.node(linkrev)
 
     def __getitem__(self, node):
         """Retrieves the manifest instance for the given node. Throws a

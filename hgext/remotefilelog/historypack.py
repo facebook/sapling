@@ -410,10 +410,10 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     SUPPORTED_VERSIONS = [0, 1]
 
-    def __init__(self, ui, packpath, version=0, changelog=None):
+    def __init__(self, ui, packpath, version=0, repo=None):
         """Creates a mutable history pack for writing.
 
-        If `changelog` is provided, then pack.add() can be called with
+        If `repo` is provided, then pack.add() can be called with
         linkrev=REV and the linkrev will be converted to a linknode at
         serialization time.  This allows callers to add entries without knowing
         what the linknode is just yet.
@@ -427,7 +427,7 @@ class mutablehistorypack(basepack.mutablebasepack):
         self.files = {}
         self.entrylocations = {}
         self.fileentries = {}
-        self.changelog = changelog
+        self.repo = repo
 
         if version == 0:
             self.INDEXFORMAT = INDEXFORMAT0
@@ -441,8 +441,8 @@ class mutablehistorypack(basepack.mutablebasepack):
 
     def add(self, filename, node, p1, p2, linknode, copyfrom, linkrev=None):
         if linkrev is not None:
-            if self.changelog is None:
-                msg = ("cannot specify a linkrev if changelog was not "
+            if self.repo is None:
+                msg = ("cannot specify a linkrev if repo was not "
                        "provided to the mutablehistorypack")
                 raise error.ProgrammingError(msg)
             if linknode is not None:
@@ -459,7 +459,7 @@ class mutablehistorypack(basepack.mutablebasepack):
                           linkrev)
 
     def _write(self):
-        changelog = self.changelog
+        repo = self.repo
 
         for filename in sorted(self.fileentries):
             entrymap = self.fileentries[filename]
@@ -498,8 +498,8 @@ class mutablehistorypack(basepack.mutablebasepack):
                 value = entrymap[node]
                 node, p1, p2, linknode, copyfromlen, copyfrom, linkrev = value
                 if linkrev is not None:
-                    # changelog will not be None because of the assertion in add
-                    linknode = changelog.node(linkrev)
+                    # repo will not be None because of the assertion in add
+                    linknode = repo.changelog.node(linkrev)
                     if linknode == nullid:
                         raise ValueError("attempting to add nullid linknode")
                 raw = '%s%s%s%s%s%s' % (node, p1, p2, linknode, copyfromlen,
@@ -585,8 +585,8 @@ class mutablehistorypack(basepack.mutablebasepack):
             enode, p1, p2, linknode, copyfromlen, copyfrom, linkrev = entry
             if linkrev is not None:
                 linknode = nullid
-                if linkrev < len(self.changelog):
-                    linknode = self.changelog.node(linkrev)
+                if linkrev < len(self.repo.changelog):
+                    linknode = self.repo.changelog.node(linkrev)
                 if linknode == nullid:
                     msg = ("attempting to read tree from mutablehistorypack "
                            "that can't resolve linkrev")
