@@ -356,7 +356,7 @@ class FileInode : public InodeBase {
    * Precondition: openCount > 0.  This is held because read is only called by
    * FileInode or FileHandle.
    */
-  BufVec read(size_t size, off_t off);
+  folly::Future<BufVec> read(size_t size, off_t off);
 
   folly::Future<size_t> write(BufVec&& buf, off_t off);
 

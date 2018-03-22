@@ -562,46 +562,48 @@ folly::Future<std::string> FileInode::readAll() {
   });
 }
 
-BufVec FileInode::read(size_t size, off_t off) {
-  // It's potentially possible here to optimize a fast path here only requiring
-  // a read lock.  However, since a write lock is required to update atime and
-  // cache the file handle in the case of a materialized file, do the simple
-  // thing and just acquire a write lock.
+Future<BufVec> FileInode::read(size_t size, off_t off) {
+  return ensureDataLoaded().then([size, off, self = inodePtrFromThis()] {
+    // It's potentially possible here to optimize a fast path here only
+    // requiring a read lock.  However, since a write lock is required to update
+    // atime and cache the file handle in the case of a materialized file, do
+    // the simple thing and just acquire a write lock.
 
-  auto state = state_.wlock();
-  state->checkInvariants();
-  SCOPE_SUCCESS {
-    state->timeStamps.atime = getNow();
-  };
+    auto state = self->state_.wlock();
+    state->checkInvariants();
+    SCOPE_SUCCESS {
+      state->timeStamps.atime = self->getNow();
+    };
 
-  if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-    auto file = getFile(*state);
-    auto buf = folly::IOBuf::createCombined(size);
-    auto res = ::pread(
-        file.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
+    if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
+      auto file = self->getFile(*state);
+      auto buf = folly::IOBuf::createCombined(size);
+      auto res = ::pread(
+          file.fd(), buf->writableBuffer(), size, off + Overlay::kHeaderLength);
 
-    checkUnixError(res);
-    buf->append(res);
-    return BufVec{std::move(buf)};
-  } else {
-    // read() is either called by the FileHandle or FileInode.  They must
-    // guarantee openCount > 0.
-    CHECK(state->blob);
-    auto buf = state->blob->getContents();
-    folly::io::Cursor cursor(&buf);
+      checkUnixError(res);
+      buf->append(res);
+      return BufVec{std::move(buf)};
+    } else {
+      // read() is either called by the FileHandle or FileInode.  They must
+      // guarantee openCount > 0.
+      CHECK(state->blob);
+      auto buf = state->blob->getContents();
+      folly::io::Cursor cursor(&buf);
 
-    if (!cursor.canAdvance(off)) {
-      // Seek beyond EOF.  Return an empty result.
-      return BufVec{folly::IOBuf::wrapBuffer("", 0)};
+      if (!cursor.canAdvance(off)) {
+        // Seek beyond EOF.  Return an empty result.
+        return BufVec{folly::IOBuf::wrapBuffer("", 0)};
+      }
+
+      cursor.skip(off);
+
+      std::unique_ptr<folly::IOBuf> result;
+      cursor.cloneAtMost(result, size);
+
+      return BufVec{std::move(result)};
     }
-
-    cursor.skip(off);
-
-    std::unique_ptr<folly::IOBuf> result;
-    cursor.cloneAtMost(result, size);
-
-    return BufVec{std::move(result)};
-  }
+  });
 }
 
 folly::Future<size_t> FileInode::write(BufVec&& buf, off_t off) {

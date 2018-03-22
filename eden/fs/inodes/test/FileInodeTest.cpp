@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/FileInode.h"
 
 #include <folly/Format.h>
+#include <folly/Range.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -24,6 +25,7 @@
 
 using namespace facebook::eden;
 using folly::StringPiece;
+using folly::literals::string_piece_literals::operator""_sp;
 using std::chrono::duration_cast;
 using namespace std::literals;
 
@@ -425,7 +427,7 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(true, isInodeMaterialized(parent));
 }
 
-TEST(FileInodeTest_, truncatingDuringLoad) {
+TEST(FileInode, truncatingDuringLoad) {
   FakeTreeBuilder builder;
   builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
 
@@ -455,6 +457,28 @@ TEST(FileInodeTest_, truncatingDuringLoad) {
   // Now finish the ObjectStore load request to make sure the FileInode
   // handles the state correctly.
   storedBlob->setReady();
+}
+
+TEST(FileInode, readDuringLoad) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  auto contents = "Contents not ready.\n"_sp;
+  builder.setFiles({{"notready.txt", contents}});
+  TestMount mount_;
+  mount_.initialize(builder, false);
+
+  // Load the inode and start reading the contents
+  auto inode = mount_.getFileInode("notready.txt");
+  auto dataFuture = inode->open(O_RDONLY).then(
+      [](std::shared_ptr<FileHandle> handle) { return handle->read(4096, 0); });
+  EXPECT_FALSE(dataFuture.isReady());
+
+  // Make the backing store data ready now.
+  builder.setAllReady();
+
+  // The read() operation should have completed now.
+  ASSERT_TRUE(dataFuture.isReady());
+  EXPECT_EQ(contents, dataFuture.get().copyData());
 }
 
 // TODO: test multiple flags together
