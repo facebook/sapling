@@ -125,7 +125,7 @@ class TreeInode : public InodeBase {
     }
     void setInodeNumber(InodeNumber number) {
       DCHECK(number.hasValue());
-      DCHECK(!inodeNumber_.hasValue());
+      DCHECK(!inodeNumber_.hasValue() || number == inodeNumber_);
       DCHECK(!inode_);
       inodeNumber_ = number;
     }
@@ -627,13 +627,11 @@ class TreeInode : public InodeBase {
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInodeNoThrow(
       const Entry& entry,
-      PathComponentPiece name,
-      InodeNumber number) noexcept;
+      PathComponentPiece name) noexcept;
 
   folly::Future<std::unique_ptr<InodeBase>> startLoadingInode(
       const Entry& entry,
-      PathComponentPiece name,
-      InodeNumber number);
+      PathComponentPiece name);
 
   /**
    * Materialize this directory in the overlay.

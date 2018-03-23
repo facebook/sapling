@@ -252,7 +252,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
-      auto loadFuture = startLoadingInodeNoThrow(entry, name, childNumber);
+      auto loadFuture = startLoadingInodeNoThrow(entry, name);
       if (loadFuture.isReady() && loadFuture.hasValue()) {
         // If we finished loading the inode immediately, just call
         // InodeMap::inodeLoadComplete() now, since we still have the data_
@@ -420,7 +420,7 @@ void TreeInode::loadUnlinkedChildInode(
 void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
   folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
   {
-    auto contents = contents_.rlock();
+    auto contents = contents_.wlock();
     auto iter = contents->entries.find(name);
     if (iter == contents->entries.end()) {
       auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
@@ -448,7 +448,8 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       return;
     }
 
-    future = startLoadingInodeNoThrow(entry, name, number);
+    entry.setInodeNumber(number);
+    future = startLoadingInodeNoThrow(entry, name);
   }
   registerInodeLoadComplete(future.value(), name, number);
 }
@@ -512,8 +513,7 @@ void TreeInode::inodeLoadComplete(
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
     const Entry& entry,
-    PathComponentPiece name,
-    InodeNumber number) noexcept {
+    PathComponentPiece name) noexcept {
   // The callers of startLoadingInodeNoThrow() need to make sure that they
   // always call InodeMap::inodeLoadComplete() or InodeMap::inodeLoadFailed()
   // afterwards.
@@ -522,7 +522,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   // and always return a Future object.  Therefore we simply wrap
   // startLoadingInode() and convert any thrown exceptions into Future.
   try {
-    return startLoadingInode(entry, name, number);
+    return startLoadingInode(entry, name);
   } catch (const std::exception& ex) {
     // It's possible that makeFuture() itself could throw, but this only
     // happens on out of memory, in which case the whole process is pretty much
@@ -534,11 +534,11 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
 
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const Entry& entry,
-    PathComponentPiece name,
-    InodeNumber number) {
-  XLOG(DBG5) << "starting to load inode " << number << ": " << getLogPath()
-             << " / \"" << name << "\"";
+    PathComponentPiece name) {
+  XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
+             << getLogPath() << " / \"" << name << "\"";
   DCHECK(entry.getInode() == nullptr);
+  CHECK(entry.hasInodeNumber());
   if (!entry.isDirectory()) {
     // If this is a file we can just go ahead and create it now;
     // we don't need to load anything else.
@@ -547,7 +547,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     // now, but we don't have to wait for it to be ready before marking the
     // inode loaded.
     return make_unique<FileInode>(
-        number,
+        entry.getInodeNumber(),
         inodePtrFromThis(),
         name,
         entry.getMode(),
@@ -560,7 +560,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         .then(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
-             number](
+             number = entry.getInodeNumber()](
                 std::shared_ptr<const Tree> tree) -> unique_ptr<InodeBase> {
               return make_unique<TreeInode>(
                   number, self, childName, std::move(tree));
@@ -568,15 +568,18 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   }
 
   // No corresponding TreeEntry, this exists only in the overlay.
-  CHECK_EQ(number, entry.getInodeNumber());
-  auto overlayDir = getOverlay()->loadOverlayDir(number, getInodeMap());
+  auto overlayDir =
+      getOverlay()->loadOverlayDir(entry.getInodeNumber(), getInodeMap());
   if (!overlayDir) {
     auto bug = EDEN_BUG() << "missing overlay for " << getLogPath() << " / "
                           << name;
     return folly::makeFuture<unique_ptr<InodeBase>>(bug.toException());
   }
   return make_unique<TreeInode>(
-      number, inodePtrFromThis(), name, std::move(overlayDir.value()));
+      entry.getInodeNumber(),
+      inodePtrFromThis(),
+      name,
+      std::move(overlayDir.value()));
 }
 
 std::shared_ptr<DirHandle> TreeInode::opendir() {
@@ -2812,8 +2815,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   bool startLoad = getInodeMap()->shouldLoadChild(
       this, name, childNumber, std::move(promise));
   if (startLoad) {
-    auto loadFuture =
-        startLoadingInodeNoThrow(entry, name, entry.getInodeNumber());
+    auto loadFuture = startLoadingInodeNoThrow(entry, name);
     pendingLoads->emplace_back(
         this, std::move(loadFuture), name, entry.getInodeNumber());
   }
