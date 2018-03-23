@@ -11,7 +11,10 @@
 
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/IOBuf.h>
+#include <gtest/gtest.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FileHandle.h"
@@ -179,7 +182,7 @@ void TestMount::initTestDirectory() {
 void TestMount::remount() {
   // Create a new copy of the ClientConfig
   auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
-  // Create a new ObjectStore pointing to our local store and backing storpe
+  // Create a new ObjectStore pointing to our local store and backing store
   unique_ptr<ObjectStore> objectStore =
       make_unique<ObjectStore>(localStore_, backingStore_);
 
@@ -188,12 +191,47 @@ void TestMount::remount() {
   //
   // We do this explicitly so that the old edenMount_ is destroyed before we
   // create the new one below.
+  std::weak_ptr<EdenMount> weakMount = edenMount_;
   edenMount_.reset();
+  EXPECT_EQ(0, weakMount.lock().use_count())
+      << "All references to EdenMount should be released before calling "
+         "remount()";
 
   // Create a new EdenMount object.
   edenMount_ = EdenMount::create(
       std::move(config), std::move(objectStore), &serverState_);
   edenMount_->initialize().get();
+}
+
+void TestMount::remountGracefully() {
+  // Create a new copy of the ClientConfig
+  auto config = make_unique<ClientConfig>(*edenMount_->getConfig());
+  // Create a new ObjectStore pointing to our local store and backing store
+  unique_ptr<ObjectStore> objectStore =
+      make_unique<ObjectStore>(localStore_, backingStore_);
+
+  auto takeoverData =
+      edenMount_->shutdown(/*doTakeover=*/true, /*allowFuseNotStarted=*/true)
+          .get();
+
+  // Reset the edenMount_ pointer.  This will destroy the old EdenMount
+  // assuming that no-one else still has any references to it.
+  //
+  // We do this explicitly so that the old edenMount_ is destroyed before we
+  // create the new one below.
+  std::weak_ptr<EdenMount> weakMount = edenMount_;
+  edenMount_.reset();
+  EXPECT_EQ(0, weakMount.lock().use_count())
+      << "All references to EdenMount should be released before calling "
+         "remountGracefully()";
+
+  XLOG(DBG1) << "number of unloaded inodes transferred on graceful remount: "
+             << std::get<1>(takeoverData).unloadedInodes.size();
+
+  // Create a new EdenMount object.
+  edenMount_ = EdenMount::create(
+      std::move(config), std::move(objectStore), &serverState_);
+  edenMount_->initialize(std::get<1>(takeoverData)).get();
 }
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {

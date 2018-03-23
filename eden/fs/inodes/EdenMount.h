@@ -106,7 +106,7 @@ class EdenMount {
    * If takeover data is specified, it is used to initialize the inode map.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
-      const folly::Optional<TakeoverData::MountInfo>& takeover = folly::none);
+      const folly::Optional<SerializedInodeMap>& takeover = folly::none);
 
   /**
    * Destroy the EdenMount.
@@ -141,7 +141,7 @@ class EdenMount {
    * SerializedFileHandleMap and SerializedInodeMap instances.
    */
   folly::Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-  shutdown(bool doTakeover);
+  shutdown(bool doTakeover, bool allowFuseNotStarted = false);
 
   /**
    * Get the FUSE channel for this mount point.

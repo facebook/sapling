@@ -81,11 +81,6 @@ void InodeMap::initializeFromTakeover(
   CHECK(ret.second);
   nextInodeNumber_.store(takeover.nextInodeNumber);
   for (const auto& entry : takeover.unloadedInodes) {
-    auto unloadedEntry = UnloadedInode(
-        InodeNumber::fromThrift(entry.inodeNumber),
-        InodeNumber::fromThrift(entry.parentInode),
-        PathComponentPiece{entry.name});
-    unloadedEntry.numFuseReferences = entry.numFuseReferences;
     if (entry.numFuseReferences < 0) {
       auto message = folly::to<std::string>(
           "inode number ",
@@ -94,6 +89,12 @@ void InodeMap::initializeFromTakeover(
       XLOG(ERR) << message;
       throw std::runtime_error(message);
     }
+
+    auto unloadedEntry = UnloadedInode(
+        InodeNumber::fromThrift(entry.inodeNumber),
+        InodeNumber::fromThrift(entry.parentInode),
+        PathComponentPiece{entry.name});
+    unloadedEntry.numFuseReferences = entry.numFuseReferences;
     unloadedEntry.isUnlinked = entry.isUnlinked;
     if (!entry.hash.empty()) {
       unloadedEntry.hash = hashFromThrift(entry.hash);

@@ -182,7 +182,7 @@ EdenMount::EdenMount(
       clock_(serverState_->getClock()) {}
 
 folly::Future<folly::Unit> EdenMount::initialize(
-    const folly::Optional<TakeoverData::MountInfo>& takeover) {
+    const folly::Optional<SerializedInodeMap>& takeover) {
   auto parents = std::make_shared<ParentCommits>(config_->getParentCommits());
   parentInfo_.wlock()->parents.setParents(*parents);
 
@@ -198,12 +198,9 @@ folly::Future<folly::Unit> EdenMount::initialize(
   }
 
   return createRootInode(*parents).then(
-      [this,
-       parents,
-       inodeMap = takeover ? folly::make_optional(takeover->inodeMap)
-                           : folly::none](TreeInodePtr initTreeNode) {
-        if (inodeMap) {
-          inodeMap_->initializeFromTakeover(std::move(initTreeNode), *inodeMap);
+      [this, parents, takeover](TreeInodePtr initTreeNode) {
+        if (takeover) {
+          inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
         } else {
           inodeMap_->initialize(std::move(initTreeNode));
         }
@@ -323,11 +320,13 @@ void EdenMount::destroy() {
 }
 
 Future<std::tuple<SerializedFileHandleMap, SerializedInodeMap>>
-EdenMount::shutdown(bool doTakeover) {
+EdenMount::shutdown(bool doTakeover, bool allowFuseNotStarted) {
   // shutdown() should only be called on mounts that have not yet reached
   // SHUTTING_DOWN or later states.  Confirm this is the case, and move to
   // SHUTTING_DOWN.
-  if (!doStateTransition(State::RUNNING, State::SHUTTING_DOWN) &&
+  if (!(allowFuseNotStarted &&
+        doStateTransition(State::UNINITIALIZED, State::SHUTTING_DOWN)) &&
+      !doStateTransition(State::RUNNING, State::SHUTTING_DOWN) &&
       !doStateTransition(State::STARTING, State::SHUTTING_DOWN) &&
       !doStateTransition(State::FUSE_ERROR, State::SHUTTING_DOWN)) {
     EDEN_BUG() << "attempted to call shutdown() on a non-running EdenMount: "

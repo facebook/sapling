@@ -602,7 +602,9 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto edenMount = EdenMount::create(
       std::move(initialConfig), std::move(objectStore), &serverState_);
 
-  auto initFuture = edenMount->initialize(optionalTakeover);
+  auto initFuture = edenMount->initialize(
+      optionalTakeover ? folly::make_optional(optionalTakeover->inodeMap)
+                       : folly::none);
   return initFuture.then(
       [this,
        doTakeover,

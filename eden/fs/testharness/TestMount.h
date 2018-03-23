@@ -180,6 +180,11 @@ class TestMount {
   void remount();
 
   /**
+   * Simulate an edenfs daemon takeover for this mount.
+   */
+  void remountGracefully();
+
+  /**
    * Add file to the mount; it will be available in the overlay.
    */
   void addFile(folly::StringPiece path, folly::StringPiece contents);
