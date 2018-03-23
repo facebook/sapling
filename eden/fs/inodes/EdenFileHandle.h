@@ -35,7 +35,14 @@ class EdenFileHandle : public FileHandle {
     func();
   }
 
-  // Calls fileHandleDidClose on the associated inode.
+  /**
+   * EdenFileHandle destructor.
+   *
+   * This calls fileHandleDidClose on the associated inode to decrement its
+   * open count.  Beware that fileHandleDidClose() acquires the FileInode lock,
+   * so callers must ensure that EdenFileHandle objects can never be destroyed
+   * while they are already holding an inode lock.
+   */
   ~EdenFileHandle() override;
 
   InodeNumber getInodeNumber() override;

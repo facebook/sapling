@@ -21,7 +21,6 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestChecks.h"
 #include "eden/fs/testharness/TestMount.h"
-#include "eden/fs/testharness/TestUtil.h"
 
 using namespace facebook::eden;
 using folly::StringPiece;
@@ -213,8 +212,8 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   EXPECT_EQ(folly::to<FakeClock::time_point>(attr.st.st_ctim), start);
 }
 
-TEST_F(FileInodeTest, setattrTruncateAll) {
-  auto inode = mount_.getFileInode("dir/a.txt");
+void testSetattrTruncateAll(TestMount& mount) {
+  auto inode = mount.getFileInode("dir/a.txt");
   fuse_setattr_in desired = {};
   desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
@@ -225,6 +224,20 @@ TEST_F(FileInodeTest, setattrTruncateAll) {
   EXPECT_EQ(0, attr.st.st_blocks);
 
   EXPECT_FILE_INODE(inode, "", 0644);
+}
+
+TEST_F(FileInodeTest, setattrTruncateAll) {
+  testSetattrTruncateAll(mount_);
+}
+
+TEST_F(FileInodeTest, setattrTruncateAllMaterialized) {
+  // Modify the inode before running the test, so that
+  // it will be materialized in the overlay.
+  auto inode = mount_.getFileInode("dir/a.txt");
+  inode->write("THIS IS A.TXT.\n", 0);
+  inode.reset();
+
+  testSetattrTruncateAll(mount_);
 }
 
 TEST_F(FileInodeTest, setattrTruncatePartial) {
@@ -364,8 +377,8 @@ TEST_F(FileInodeTest, setattrAtime) {
       folly::to<FakeClock::time_point>(attr.st.st_atim));
 }
 
-TEST_F(FileInodeTest, setattrMtime) {
-  auto inode = mount_.getFileInode("dir/a.txt");
+void testSetattrMtime(TestMount& mount) {
+  auto inode = mount.getFileInode("dir/a.txt");
   fuse_setattr_in desired = {};
 
   // Set the mtime to a specific value
@@ -380,8 +393,8 @@ TEST_F(FileInodeTest, setattrMtime) {
   EXPECT_EQ(5678, attr.st.st_mtim.tv_nsec);
 
   // Ask to set the mtime to the current time
-  mount_.getClock().advance(1234min);
-  auto start = mount_.getClock().getTimePoint();
+  mount.getClock().advance(1234min);
+  auto start = mount.getClock().getTimePoint();
   desired.mtime = 8765;
   desired.mtimensec = 4321;
   desired.valid = FATTR_MTIME_NOW;
@@ -389,6 +402,20 @@ TEST_F(FileInodeTest, setattrMtime) {
 
   BASIC_ATTR_CHECKS(inode, attr);
   EXPECT_EQ(start, folly::to<FakeClock::time_point>(attr.st.st_mtim));
+}
+
+TEST_F(FileInodeTest, setattrMtime) {
+  testSetattrMtime(mount_);
+}
+
+TEST_F(FileInodeTest, setattrMtimeMaterialized) {
+  // Modify the inode before running the test, so that
+  // it will be materialized in the overlay.
+  auto inode = mount_.getFileInode("dir/a.txt");
+  inode->write("THIS IS A.TXT.\n", 0);
+  inode.reset();
+
+  testSetattrMtime(mount_);
 }
 
 namespace {
@@ -479,6 +506,71 @@ TEST(FileInode, readDuringLoad) {
   // The read() operation should have completed now.
   ASSERT_TRUE(dataFuture.isReady());
   EXPECT_EQ(contents, dataFuture.get().copyData());
+}
+
+TEST(FileInode, writeDuringLoad) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
+  TestMount mount_;
+  mount_.initialize(builder, false);
+
+  // Load the inode and start reading the contents
+  auto inode = mount_.getFileInode("notready.txt");
+  auto handleFuture = inode->open(O_WRONLY);
+  ASSERT_TRUE(handleFuture.isReady());
+  auto handle = handleFuture.get();
+
+  auto newContents = "TENTS"_sp;
+  auto writeFuture = handle->write(newContents, 3);
+  EXPECT_FALSE(writeFuture.isReady());
+
+  // Make the backing store data ready now.
+  builder.setAllReady();
+
+  // The write() operation should have completed now.
+  ASSERT_TRUE(writeFuture.isReady());
+  EXPECT_EQ(newContents.size(), writeFuture.get());
+
+  // We should be able to read back our modified data now.
+  EXPECT_FILE_INODE(inode, "ConTENTS not ready.\n", 0644);
+}
+
+TEST(FileInode, truncateDuringLoad) {
+  // Build a tree to test against, but do not mark the state ready yet
+  FakeTreeBuilder builder;
+  builder.setFiles({{"notready.txt", "Contents not ready.\n"}});
+  TestMount mount_;
+  mount_.initialize(builder, false);
+
+  auto inode = mount_.getFileInode("notready.txt");
+
+  // Open the file and start reading the contents
+  auto handleFuture = inode->open(O_RDWR);
+  ASSERT_TRUE(handleFuture.isReady());
+  auto handle = handleFuture.get();
+  auto dataFuture = handle->read(4096, 0);
+  EXPECT_FALSE(dataFuture.isReady());
+
+  // Open the file again with O_TRUNC while the initial read is in progress.
+  // This should immediately truncate the file even without needing to wait for
+  // the data from the object store.
+  auto truncHandleFuture = inode->open(O_WRONLY | O_TRUNC);
+  ASSERT_TRUE(truncHandleFuture.isReady());
+  auto truncHandle = truncHandleFuture.get();
+
+  // The read should complete now too.
+  ASSERT_TRUE(dataFuture.isReady());
+  EXPECT_EQ("", dataFuture.get().copyData());
+
+  // For good measure, test reading and writing some more.
+  truncHandle->write("foobar\n"_sp, 5);
+
+  dataFuture = handle->read(4096, 0);
+  ASSERT_TRUE(dataFuture.isReady());
+  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, dataFuture.get().copyData());
+
+  EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }
 
 // TODO: test multiple flags together

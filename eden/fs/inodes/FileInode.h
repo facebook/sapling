@@ -11,6 +11,7 @@
 #include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Synchronized.h>
+#include <folly/futures/Future.h>
 #include <folly/futures/SharedPromise.h>
 #include <chrono>
 #include "eden/fs/inodes/InodeBase.h"
@@ -152,31 +153,6 @@ class FileInode : public InodeBase {
 
  private:
   /**
-   * Load the file data so it can be used for reading.
-   *
-   * If this file is materialized, this opens its file in the overlay.
-   * If the file is not materialized, this loads the Blob data from the
-   * ObjectStore.
-   *
-   * Returns a FileHandle that, while it's alive, either State::blob is non-null
-   * or getFile() will return a File handle.
-   */
-  FOLLY_NODISCARD folly::Future<FileHandlePtr> ensureDataLoaded();
-
-  /**
-   * Materialize the file data.  If already materialized, the future is
-   * immediately fulfilled.  Otherwise, the backing blob is loaded and copied
-   * into the overlay.
-   */
-  FOLLY_NODISCARD folly::Future<folly::Unit> materializeForWrite();
-
-  /**
-   * Ensures the inode transitions to or stays in the 'materialized' state,
-   * and truncates the file to zero bytes.
-   */
-  void materializeAndTruncate();
-
-  /**
    * The contents of a FileInode.
    *
    * This structure exists to allow the entire contents to be protected inside
@@ -278,6 +254,94 @@ class FileInode : public InodeBase {
      */
     InodeTimestamps timeStamps;
   };
+  using LockedState = folly::Synchronized<State>::LockedPtr;
+
+  /**
+   * Run a function with the FileInode data loaded.
+   *
+   * fn(state) will be invoked when state->tag is either BLOB_LOADED or
+   * MATERIALIZED_IN_OVERLAY.
+   *
+   * Returns a Future with the result of fn(state_.wlock())
+   */
+  template <typename Fn>
+  typename folly::futures::detail::callableResult<LockedState, Fn>::Return
+  runWhileDataLoaded(LockedState state, Fn&& fn);
+
+  /**
+   * Run a function with the FileInode materialized.
+   *
+   * fn(state) will be invoked when state->tag is MATERIALIZED_IN_OVERLAY.
+   *
+   * Returns a Future with the result of fn(state_.wlock())
+   */
+  template <typename Fn>
+  typename folly::futures::detail::callableResult<LockedState, Fn>::Return
+  runWhileMaterialized(LockedState state, Fn&& fn);
+
+  /**
+   * Truncate the file and then call a function.
+   *
+   * This immediately truncates the file, and never has to wait for data to
+   * load from the ObjectStore.
+   *
+   * fn(state) will be invoked with state->tag set to MATERIALIZED_IN_OVERLAY.
+   *
+   * Returns the result of fn(state_.wlock())
+   */
+  template <typename Fn>
+  typename std::result_of<Fn(LockedState&&)>::type truncateAndRun(
+      LockedState state,
+      Fn&& fn);
+
+  /**
+   * Start loading the file data.
+   *
+   * state->tag must be NOT_LOADED when this is called.
+   *
+   * This should normally only be invoked by runWhileDataLoaded() or
+   * runWhileMaterialized().  Most other callers should use
+   * runWhileDataLoaded() or runWhileMaterialized() instead.
+   */
+  FOLLY_NODISCARD folly::Future<FileHandlePtr> startLoadingData(
+      LockedState state);
+
+  /**
+   * Materialize the file as an empty file in the overlay.
+   *
+   * state->tag must not already be MATERIALIZED_IN_OVERLAY when this is called.
+   *
+   * After this function returns the caller must call materializeInParent()
+   * after releasing the state lock.  If the state was previously BLOB_LOADING
+   * the caller must also fulfill the blobLoadingPromise.
+   *
+   * This should normally only be invoked by truncateAndRun().  Most callers
+   * should use truncateAndRun() instead of calling this function directly.
+   *
+   * Returns a FileHandlePtr.  state->file is guaranteed to remain open only
+   * as long as this file handle object exists.
+   */
+  FOLLY_NODISCARD FileHandlePtr
+  materializeAndTruncate(const LockedState& state);
+
+  /**
+   * Replace this file's contents in the overlay with an empty file.
+   *
+   * state->tag must be MATERIALIZED_IN_OVERLAY when this is called.
+   *
+   * This should normally only be invoked by truncateAndRun().  Most callers
+   * should use truncateAndRun() instead of calling this function directly.
+   *
+   * Returns a FileHandlePtr.  state->file is guaranteed to remain open only
+   * as long as this file handle object exists.
+   */
+  FOLLY_NODISCARD FileHandlePtr truncateInOverlay(const LockedState& state);
+
+  /**
+   * Transition from BLOB_LOADED to MATERIALIZED_IN_OVERLAY by copying the
+   * blob into the overlay.
+   */
+  void materializeNow(const LockedState& state);
 
   /**
    * Get a FileInodePtr to ourself.
@@ -294,6 +358,8 @@ class FileInode : public InodeBase {
 
   /**
    * Mark this FileInode materialized in its parent directory.
+   *
+   * The state_ lock must not be held when calling this method.
    */
   void materializeInParent();
 
@@ -359,6 +425,11 @@ class FileInode : public InodeBase {
   folly::Future<BufVec> read(size_t size, off_t off);
 
   folly::Future<size_t> write(BufVec&& buf, off_t off);
+  size_t writeImpl(
+      const LockedState& state,
+      const struct iovec* iov,
+      size_t numIovecs,
+      off_t off);
 
   folly::Future<struct stat> stat();
   void flush(uint64_t lock_owner);
