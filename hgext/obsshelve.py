@@ -70,10 +70,6 @@ shelvefileextensions = ['hg', 'patch', 'oshelve']
 # universal extension is present in all types of shelves
 patchextension = 'patch'
 
-# we never need the user, so we use a
-# generic user for all shelve operations
-shelveuser = 'shelve@localhost'
-
 try:
     xrange
 except NameError:
@@ -391,7 +387,7 @@ def getcommitfunc(extra, interactive, editor=False):
             if editor:
                 editor_ = cmdutil.getcommiteditor(editform='shelve.shelve',
                                                   **opts)
-            return repo.commit(message, shelveuser, opts.get('date'),
+            return repo.commit(message, ui.username(), opts.get('date'),
                                match, editor=editor_, extra=extra)
         finally:
             if hasmq:
@@ -443,7 +439,7 @@ def _docreatecmd(ui, repo, pats, opts):
     origbranch = wctx.branch()
 
     if parent.node() != nodemod.nullid:
-        desc = "changes to: %s" % parent.description().split('\n', 1)[0]
+        desc = "shelve changes to: %s" % parent.description().split('\n', 1)[0]
     else:
         desc = '(changes in empty repository)'
 
