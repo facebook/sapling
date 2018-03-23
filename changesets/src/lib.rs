@@ -5,7 +5,7 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from)]
+#![feature(try_from, never_type)]
 
 #[macro_use]
 extern crate diesel;
@@ -20,12 +20,13 @@ extern crate mercurial_types;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::result;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
 use diesel::connection::SimpleConnection;
 use diesel::prelude::*;
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
@@ -121,19 +122,25 @@ impl SqliteChangesets {
     pub fn in_memory() -> Result<Self> {
         Self::create(":memory:")
     }
+
+    pub fn get_conn(&self) -> result::Result<MutexGuard<SqliteConnection>, !> {
+        Ok(self.connection.lock().expect("lock poisoned"))
+    }
 }
 
 pub struct MysqlChangesets {
-    connection: Mutex<MysqlConnection>,
+    pool: Pool<ConnectionManager<MysqlConnection>>,
 }
 
 impl MysqlChangesets {
     pub fn open(params: ConnectionParams) -> Result<Self> {
         let url = params.to_diesel_url()?;
-        let conn = MysqlConnection::establish(&url)?;
-        Ok(Self {
-            connection: Mutex::new(conn),
-        })
+        let manager = ConnectionManager::new(url);
+        let pool = Pool::builder()
+            .max_size(10)
+            .min_idle(Some(1))
+            .build(manager)?;
+        Ok(Self { pool })
     }
 
     pub fn create_test_db<P: AsRef<str>>(prefix: P) -> Result<Self> {
@@ -145,13 +152,13 @@ impl MysqlChangesets {
         let changesets = Self::open(params)?;
 
         let up_query = include_str!("../schemas/mysql-changesets.sql");
-        changesets
-            .connection
-            .lock()
-            .expect("lock poisoned")
-            .batch_execute(&up_query)?;
+        changesets.pool.get()?.batch_execute(&up_query)?;
 
         Ok(changesets)
+    }
+
+    fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<MysqlConnection>>> {
+        self.pool.get().map_err(Error::from)
     }
 }
 
@@ -169,7 +176,11 @@ macro_rules! impl_changesets {
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
                 // TODO: don't block -- send this to another thread
                 let query = changeset_query(repo_id, cs_id);
-                let connection = self.connection.lock().expect("lock poisoned");
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = match self.get_conn() {
+                    Ok(conn) => conn,
+                    Err(err) => return future::err(err).boxify(),
+                };
                 // TODO: (sid0) T26215418 run the changeset and parent queries in parallel, once
                 // async framework is available
                 let changeset_row = query.first::<ChangesetRow>(&*connection).optional();
@@ -211,7 +222,11 @@ macro_rules! impl_changesets {
                 let parent_query = changesets::table
                     .filter(changesets::repo_id.eq(cs.repo_id))
                     .filter(changesets::cs_id.eq_any(&cs.parents));
-                let connection = self.connection.lock().expect("lock poisoned");
+                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                let connection = match self.get_conn() {
+                    Ok(conn) => conn,
+                    Err(err) => return future::err(err).boxify(),
+                };
 
                 // TODO: always hit master for this query?
                 let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
