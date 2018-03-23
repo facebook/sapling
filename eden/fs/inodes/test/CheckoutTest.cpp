@@ -17,6 +17,7 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
@@ -767,6 +768,52 @@ TEST(Checkout, removeSubdirectorySimple) {
     SCOPED_TRACE(folly::to<string>(" load type ", loadType));
     testRemoveSubdirectory(loadType);
   }
+}
+
+TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
+  // This test is designed to stress the logic in
+  // TreeInode::processCheckoutEntry that decides whether it's necessary to load
+  // a TreeInode in order to continue.  It tests that unlinked status is
+  // properly updated for tree inodes that have are referenced after a takeover.
+
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/sub/file.txt", "contents");
+  TestMount testMount{builder1};
+
+  // Prepare a second commit, removing dir/sub.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("dir/tree/differentfile.txt", "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Load "dir/sub" on behalf of a FUSE connection.
+  auto subTree = testMount.getEdenMount()
+                     ->getInode(RelativePathPiece{"dir/sub"})
+                     .get(1ms)
+                     .asTreePtr();
+  auto subInodeNumber = subTree->getNodeId();
+  subTree->incFuseRefcount();
+  auto treeHash = subTree->getContents().rlock()->treeHash;
+  subTree.reset();
+
+  testMount.remountGracefully();
+
+  // Checkout to a revision without "dir/sub" even though it's still referenced
+  // by FUSE.
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(makeTestHash("2")).get(1ms);
+  EXPECT_EQ(0, checkoutResult.size());
+
+  // Try to load the same tree by its inode number. This will fail if the
+  // unlinked bit wasn't set correctly.
+  subTree = testMount.getEdenMount()
+                ->getInodeMap()
+                ->lookupInode(subInodeNumber)
+                .get(1ms)
+                .asTreePtr();
+  ASSERT_FALSE(subTree->getContents().rlock()->isMaterialized());
+  EXPECT_EQ(treeHash, subTree->getContents().rlock()->treeHash);
 }
 
 // TODO:

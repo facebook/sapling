@@ -840,5 +840,14 @@ class TreeInode : public InodeBase {
 
   folly::Synchronized<Dir> contents_;
 };
+
+/**
+ * An internal function which computes the difference between a Dir and a tree
+ * as a set of strings starting with + and - followed by the entry name.
+ */
+folly::Optional<std::vector<std::string>> findEntryDifferences(
+    const TreeInode::Dir& dir,
+    const Tree& tree);
+
 } // namespace eden
 } // namespace facebook

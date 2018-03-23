@@ -263,6 +263,12 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>, Allocator> {
     return 1;
   }
 
+  /** Returns 1 if there is an entry with the given key and 0 otherwise. */
+  size_type count(Piece key) const {
+    auto iter = find(key);
+    return iter != end();
+  }
+
   /// Equality operator.
   template <typename V, typename K, typename A>
   friend bool operator==(

@@ -532,6 +532,49 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInodeNoThrow(
   }
 }
 
+template <typename T>
+inline std::ostream& operator<<(
+    std::ostream& os,
+    const folly::Optional<T>& value) {
+  if (value) {
+    return os << "some(" << *value << ")";
+  } else {
+    return os << "none";
+  }
+}
+
+static std::vector<std::string> computeEntryDifferences(
+    const TreeInode::Dir& dir,
+    const Tree& tree) {
+  std::set<std::string> differences;
+  for (const auto& entry : dir.entries) {
+    if (!tree.getEntryPtr(entry.first)) {
+      differences.insert("- " + entry.first.stringPiece().str());
+    }
+  }
+  for (const auto& entry : tree.getTreeEntries()) {
+    if (!dir.entries.count(entry.getName())) {
+      differences.insert("+ " + entry.getName().stringPiece().str());
+    }
+  }
+  return std::vector<std::string>{differences.begin(), differences.end()};
+}
+
+folly::Optional<std::vector<std::string>> findEntryDifferences(
+    const TreeInode::Dir& dir,
+    const Tree& tree) {
+  // Avoid allocations in the case where the tree and dir agree.
+  if (dir.entries.size() != tree.getTreeEntries().size()) {
+    return computeEntryDifferences(dir, tree);
+  }
+  for (const auto& entry : dir.entries) {
+    if (!tree.getEntryPtr(entry.first)) {
+      return computeEntryDifferences(dir, tree);
+    }
+  }
+  return folly::none;
+}
+
 Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     const Entry& entry,
     PathComponentPiece name) {
@@ -560,14 +603,48 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
         .then(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},
+             treeHash = entry.getHash(),
              number = entry.getInodeNumber()](
-                std::shared_ptr<const Tree> tree) -> unique_ptr<InodeBase> {
+                std::shared_ptr<const Tree> tree) mutable
+            -> unique_ptr<InodeBase> {
+              // Even if the inode is not materialized, it may have inode
+              // numbers stored in the overlay.
+              auto overlayDir = self->getOverlay()->loadOverlayDir(
+                  number, self->getInodeMap());
+              if (overlayDir) {
+                overlayDir->treeHash = treeHash;
+                // Compare the Tree and the Dir from the overlay.  If they
+                // differ, something is wrong, so log the difference.
+                if (auto differences =
+                        findEntryDifferences(*overlayDir, *tree)) {
+                  std::string diffString;
+                  for (const auto& diff : *differences) {
+                    diffString += diff;
+                    diffString += '\n';
+                  }
+                  XLOG(ERR)
+                      << "loaded entry " << self->getLogPath() << " / "
+                      << childName << " (inode number " << number
+                      << ") from overlay but the entries don't correspond with "
+                         "the tree.  Something is wrong!\n"
+                      << diffString;
+                }
+
+                XLOG(DBG6) << "found entry " << childName
+                           << " with inode number " << number << " in overlay";
+                return make_unique<TreeInode>(
+                    number,
+                    std::move(self),
+                    childName,
+                    std::move(overlayDir.value()));
+              }
+
               return make_unique<TreeInode>(
                   number, self, childName, std::move(tree));
             });
   }
 
-  // No corresponding TreeEntry, this exists only in the overlay.
+  // The entry is materialized, so data must exist in the overlay.
   auto overlayDir =
       getOverlay()->loadOverlayDir(entry.getInodeNumber(), getInodeMap());
   if (!overlayDir) {
@@ -2424,12 +2501,16 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // This also handles materialized inodes--an inode cannot be materialized if
   // it does not have an inode number assigned to it.
   if (entry.hasInodeNumber()) {
+    XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified, but is not currently loaded.
     // Start loading it and create a CheckoutAction to process it once it
     // is loaded.
     auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
+  } else {
+    XLOG(DBG6) << "not loading child: inode=" << getNodeId()
+               << " child=" << name;
   }
 
   // Check for conflicts

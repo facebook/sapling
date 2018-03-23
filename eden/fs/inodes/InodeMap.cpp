@@ -26,6 +26,7 @@ using folly::Promise;
 using folly::throwSystemErrorExplicit;
 using folly::Unit;
 using std::string;
+using namespace std::literals::chrono_literals;
 
 namespace facebook {
 namespace eden {
@@ -675,11 +676,51 @@ void InodeMap::unloadInode(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
+  // If any of this inode's childrens are in unloadedInodes_, then this
+  // inode, as its parent, must not be forgotten.
+  auto hasRememberedChildren = [](const TreeInode* asTree,
+                                  const Members& data) {
+    if (!asTree) {
+      return false;
+    }
+
+    // Normally, acquiring the tree's contents lock while the InodeMap members
+    // lock is held violates our lock hierarchy.  However, since this TreeInode
+    // is being unloaded, nobody else can reference it right now, so the lock is
+    // guaranteed not held.  Another option is to acquire the TreeInode's lock
+    // prior to calling unloadInode and pass an optional TreeInode::Dir into
+    // this function.  We could even add an unsafe "I'm in the ctor or dtor so
+    // there cannot be any contention" accessor to folly::Synchronized to avoid
+    // needing to acquire the lock.
+    auto contents = asTree->getContents().wlock(0s);
+    CHECK(contents)
+        << "TreeInode::getContents lock was held prior to unloadInode!";
+    for (const auto& pair : contents->entries) {
+      const auto& name = pair.first;
+      const auto& entry = pair.second;
+      if (entry.hasInodeNumber() &&
+          data.unloadedInodes_.count(entry.getInodeNumber())) {
+        XLOG(DBG6) << "remembering inode " << asTree->getNodeId()
+                   << " because its child " << name << " was remembered";
+        return true;
+      }
+    }
+    return false;
+  };
+
   // Update timestamps to overlay header on unloadInode
   inode->updateOverlayHeader();
 
   auto fuseCount = inode->getFuseRefcount();
-  if (fuseCount > 0) {
+  auto* asTree = dynamic_cast<const TreeInode*>(inode);
+  if (fuseCount > 0 || hasRememberedChildren(asTree, *data)) {
+    if (asTree) {
+      // Remember the child's inode numbers so they can be reloaded after
+      // shutdown or takeover.
+      asTree->getOverlay()->saveOverlayDir(
+          inode->getNodeId(), *asTree->getContents().rlock());
+    }
+
     // Insert an unloaded entry
     XLOG(DBG5) << "unloading inode " << inode->getNodeId()
                << " with FUSE refcount=" << fuseCount << ": "
@@ -689,8 +730,6 @@ void InodeMap::unloadInode(
     unloadedEntry.numFuseReferences = fuseCount;
     unloadedEntry.isUnlinked = isUnlinked;
 
-    auto* asTree = dynamic_cast<const TreeInode*>(inode);
-    auto* asFile = dynamic_cast<const FileInode*>(inode);
     if (asTree) {
       unloadedEntry.hash = asTree->getContents()->treeHash;
       // There is no asTree->getMode() we can call,
@@ -699,6 +738,7 @@ void InodeMap::unloadInode(
       // force the value down here.
       unloadedEntry.mode = S_IFDIR | 0755;
     } else {
+      auto* asFile = dynamic_cast<const FileInode*>(inode);
       unloadedEntry.hash = asFile->getBlobHash();
       unloadedEntry.mode = asFile->getMode();
     }

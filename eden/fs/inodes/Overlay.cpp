@@ -239,7 +239,6 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir)
   // Translate the data to the thrift equivalents
   overlay::OverlayDir odir;
 
-  DCHECK(dir.isMaterialized());
   for (auto& entIter : dir.entries) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
