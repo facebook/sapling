@@ -101,14 +101,23 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     raise Exception("Incorrect commit graph topology")
 
                 commit_hash = split[0]
-                writeline('let cs_id = HgChangesetId::new(NodeHash::from_str("{}").unwrap());'.format(commit_hash))
+                writeline(
+                    'let cs_id = HgChangesetId::new(NodeHash::from_str("{}").unwrap());'.
+                    format(commit_hash)
+                )
                 writeline('let parents = vec![')
                 if len(split) > 1:
                     indent += 1
                     for p in split[1:-1]:
-                        writeline('HgChangesetId::new(NodeHash::from_str("{}").unwrap()), '.format(p))
+                        writeline(
+                            'HgChangesetId::new(NodeHash::from_str("{}").unwrap()), '.
+                            format(p)
+                        )
 
-                    writeline('HgChangesetId::new(NodeHash::from_str("{}").unwrap())'.format(split[-1]))
+                    writeline(
+                        'HgChangesetId::new(NodeHash::from_str("{}").unwrap())'.
+                        format(split[-1])
+                    )
                     indent -= 1
                 writeline('];')
                 writeline('let cs_insert = ChangesetInsert {')
@@ -118,7 +127,7 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 writeline('parents,')
                 indent -= 1
                 writeline('};')
-                writeline("changesets.add(&cs_insert).wait().unwrap();")
+                writeline("changesets.add(cs_insert).wait().unwrap();")
                 writeline("")
             writeline("")
 

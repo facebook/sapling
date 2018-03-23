@@ -64,7 +64,7 @@ pub struct ChangesetInsert {
 /// Interface to storage of changesets that have been completely stored in Mononoke.
 pub trait Changesets: Send + Sync {
     /// Add a new entry to the changesets table.
-    fn add(&self, cs: &ChangesetInsert) -> BoxFuture<(), Error>;
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error>;
 
     /// Retrieve the row specified by this commit, if available.
     fn get(
@@ -218,7 +218,7 @@ macro_rules! impl_changesets {
 
             /// Insert a new changeset into this table. Checks that all parents are already in
             /// storage.
-            fn add(&self, cs: &ChangesetInsert) -> BoxFuture<(), Error> {
+            fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
                 let parent_query = changesets::table
                     .filter(changesets::repo_id.eq(cs.repo_id))
                     .filter(changesets::cs_id.eq_any(&cs.parents));

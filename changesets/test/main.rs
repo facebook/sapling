@@ -32,10 +32,7 @@ fn add_and_get<C: Changesets>(changesets: C) {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets
-        .add(&row)
-        .wait()
-        .expect("Adding new entry failed");
+    changesets.add(row).wait().expect("Adding new entry failed");
 
     let result = changesets
         .get(REPO_ZERO, ONES_CSID)
@@ -59,7 +56,7 @@ fn add_missing_parents<C: Changesets>(changesets: C) {
         parents: vec![TWOS_CSID],
     };
     let result = changesets
-        .add(&row)
+        .add(row)
         .wait()
         .expect_err("Adding entry with missing parents failed (should have succeeded)");
     assert_matches!(
@@ -83,12 +80,12 @@ fn duplicate<C: Changesets>(changesets: C) {
         parents: vec![],
     };
     changesets
-        .add(&row)
+        .add(row.clone())
         .wait()
         .expect("Adding new entry failed");
 
     let result = changesets
-        .add(&row)
+        .add(row)
         .wait()
         .expect_err("Adding duplicate entry succeeded (should fail)");
     match result.downcast::<ErrorKind>() {
@@ -103,35 +100,35 @@ fn complex<C: Changesets>(changesets: C) {
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(&row1).wait().expect("Adding row 1 failed");
+    changesets.add(row1).wait().expect("Adding row 1 failed");
 
     let row2 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(&row2).wait().expect("Adding row 2 failed");
+    changesets.add(row2).wait().expect("Adding row 2 failed");
 
     let row3 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: THREES_CSID,
         parents: vec![TWOS_CSID],
     };
-    changesets.add(&row3).wait().expect("Adding row 3 failed");
+    changesets.add(row3).wait().expect("Adding row 3 failed");
 
     let row4 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FOURS_CSID,
         parents: vec![ONES_CSID, THREES_CSID],
     };
-    changesets.add(&row4).wait().expect("Adding row 4 failed");
+    changesets.add(row4).wait().expect("Adding row 4 failed");
 
     let row5 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FIVES_CSID,
         parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
     };
-    changesets.add(&row5).wait().expect("Adding row 5 failed");
+    changesets.add(row5).wait().expect("Adding row 5 failed");
 
     assert_eq!(
         changesets

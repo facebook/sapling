@@ -15,7 +15,7 @@ use {ChangesetEntry, ChangesetInsert, Changesets};
 use errors::*;
 
 impl Changesets for Arc<Changesets> {
-    fn add(&self, cs: &ChangesetInsert) -> BoxFuture<(), Error> {
+    fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
         (**self).add(cs)
     }
 

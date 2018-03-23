@@ -521,7 +521,7 @@ impl BlobRepo {
                             .map(|n| HgChangesetId::new(n))
                             .collect(),
                     };
-                    complete_changesets.add(&completion_record).map(|_| cs)
+                    complete_changesets.add(completion_record).map(|_| cs)
                 })
                 .map_err(Error::compat)
                 .timed({

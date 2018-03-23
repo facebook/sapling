@@ -229,7 +229,7 @@ where
                     cs_id: HgChangesetId::new(NodeHash::new(node.sha1().clone())),
                     parents,
                 };
-                changesets.add(&insert)
+                changesets.add(insert)
             });
         core.run(fut)?;
     }
