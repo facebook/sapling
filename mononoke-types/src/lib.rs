@@ -39,21 +39,21 @@ extern crate rust_thrift;
 extern crate mononoke_types_thrift;
 
 pub mod blob;
+pub mod bonsai_changeset;
 pub mod datetime;
 pub mod errors;
 pub mod file_change;
 pub mod file_contents;
 pub mod hash;
 pub mod path;
-pub mod tiny_changeset;
 pub mod typed_hash;
 
 pub use blob::{Blob, ChangesetBlob, ContentBlob};
+pub use bonsai_changeset::BonsaiChangeset;
 pub use datetime::DateTime;
 pub use file_change::{FileChange, FileType};
 pub use file_contents::FileContents;
 pub use path::{MPath, MPathElement, RepoPath};
-pub use tiny_changeset::TinyChangeset;
 pub use typed_hash::{ChangesetId, ContentId, UnodeId};
 
 mod thrift {

@@ -19,9 +19,9 @@ use path::MPath;
 use thrift;
 use typed_hash::{ChangesetId, ChangesetIdContext};
 
-/// A struct callers can use to build up a `TinyChangeset`.
+/// A struct callers can use to build up a `BonsaiChangeset`.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct TinyChangesetMut {
+pub struct BonsaiChangesetMut {
     pub parents: Vec<ChangesetId>,
     pub user: String,
     pub date: DateTime,
@@ -31,22 +31,22 @@ pub struct TinyChangesetMut {
     pub file_deletes: BTreeSet<MPath>,
 }
 
-impl TinyChangesetMut {
-    /// Freeze this instance and turn it into a `TinyChangeset`.
-    pub fn freeze(self) -> TinyChangeset {
-        TinyChangeset { inner: self }
+impl BonsaiChangesetMut {
+    /// Freeze this instance and turn it into a `BonsaiChangeset`.
+    pub fn freeze(self) -> BonsaiChangeset {
+        BonsaiChangeset { inner: self }
     }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct TinyChangeset {
-    inner: TinyChangesetMut,
+pub struct BonsaiChangeset {
+    inner: BonsaiChangesetMut,
 }
 
-impl TinyChangeset {
-    pub(crate) fn from_thrift(tc: thrift::TinyChangeset) -> Result<Self> {
+impl BonsaiChangeset {
+    pub(crate) fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
         let catch_block = || {
-            Ok(TinyChangesetMut {
+            Ok(BonsaiChangesetMut {
                 parents: tc.parents
                     .into_iter()
                     .map(|parent| ChangesetId::from_thrift(parent))
@@ -72,7 +72,7 @@ impl TinyChangeset {
 
         Ok(catch_block()
             .with_context(|_: &Error| {
-                ErrorKind::InvalidThrift("TinyChangeset".into(), "Invalid changeset".into())
+                ErrorKind::InvalidThrift("BonsaiChangeset".into(), "Invalid changeset".into())
             })?
             .freeze())
     }
@@ -81,7 +81,7 @@ impl TinyChangeset {
         // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
         let thrift_tc = compact_protocol::deserialize(t.as_ref())
             .map_err(SyncFailure::new)
-            .context(ErrorKind::BlobDeserializeError("TinyChangeset".into()))?;
+            .context(ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -127,8 +127,8 @@ impl TinyChangeset {
             .map(|(k, v)| (k.as_str(), v.as_str()))
     }
 
-    /// Allow mutating this instance of `TinyChangeset`.
-    pub fn into_mut(self) -> TinyChangesetMut {
+    /// Allow mutating this instance of `BonsaiChangeset`.
+    pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner
     }
 
@@ -142,8 +142,8 @@ impl TinyChangeset {
         Blob::new(id, data)
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::TinyChangeset {
-        thrift::TinyChangeset {
+    pub(crate) fn into_thrift(self) -> thrift::BonsaiChangeset {
+        thrift::BonsaiChangeset {
             parents: self.inner
                 .parents
                 .into_iter()
@@ -167,7 +167,7 @@ impl TinyChangeset {
     }
 }
 
-impl Arbitrary for TinyChangeset {
+impl Arbitrary for BonsaiChangeset {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         // In the future Mononoke would like to support changesets with more parents than 2.
         // Start testing that now.
@@ -175,7 +175,7 @@ impl Arbitrary for TinyChangeset {
         let parents = (0..num_parents)
             .map(|_| ChangesetId::arbitrary(g))
             .collect();
-        TinyChangesetMut {
+        BonsaiChangesetMut {
             parents,
             file_changes: BTreeMap::arbitrary(g),
             file_deletes: BTreeSet::arbitrary(g),
@@ -195,7 +195,7 @@ impl Arbitrary for TinyChangeset {
             cs.extra.clone(),
         ).shrink()
             .map(move |(parents, file_changes, file_deletes, extra)| {
-                TinyChangesetMut {
+                BonsaiChangesetMut {
                     parents,
                     file_changes,
                     file_deletes,
@@ -220,16 +220,16 @@ mod test {
     use typed_hash::ContentId;
 
     quickcheck! {
-        fn thrift_roundtrip(cs: TinyChangeset) -> bool {
+        fn thrift_roundtrip(cs: BonsaiChangeset) -> bool {
             let thrift_cs = cs.clone().into_thrift();
-            let cs2 = TinyChangeset::from_thrift(thrift_cs)
+            let cs2 = BonsaiChangeset::from_thrift(thrift_cs)
                 .expect("thrift roundtrips should always be valid");
             cs == cs2
         }
 
-        fn blob_roundtrip(cs: TinyChangeset) -> bool {
+        fn blob_roundtrip(cs: BonsaiChangeset) -> bool {
             let blob = cs.clone().into_blob();
-            let cs2 = TinyChangeset::from_blob(blob.data().as_ref())
+            let cs2 = BonsaiChangeset::from_blob(blob.data().as_ref())
                 .expect("blob roundtrips should always be valid");
             cs == cs2
         }
@@ -237,7 +237,7 @@ mod test {
 
     #[test]
     fn fixed_blob() {
-        let tc = TinyChangesetMut {
+        let tc = BonsaiChangesetMut {
             parents: vec![],
             user: "foo".into(),
             date: DateTime::from_timestamp(1234567890, 36800).unwrap(),

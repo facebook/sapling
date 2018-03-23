@@ -62,7 +62,7 @@ typedef list<MPathElement> MPath (hs.newtype)
 // * Added and modified files are both part of file_changes.
 // * file_changes and file_deletes are at the end of the struct so that a
 //   deserializer that just wants to read metadata can stop early.
-struct TinyChangeset {
+struct BonsaiChangeset {
   1: required list<ChangesetId> parents,
   2: required string user,
   3: required DateTime date,
