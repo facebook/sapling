@@ -7,10 +7,15 @@
 use std::fmt::{self, Debug};
 
 use bytes::Bytes;
+use failure::SyncFailure;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
+use rust_thrift::compact_protocol;
+
+use blob::{Blob, ContentBlob};
 use errors::*;
 use thrift;
+use typed_hash::ContentIdContext;
 
 /// An enum representing contents for a file. In the future this may have
 /// special support for very large files.
@@ -22,6 +27,14 @@ pub enum FileContents {
 impl FileContents {
     pub fn new_bytes<B: Into<Bytes>>(b: B) -> Self {
         FileContents::Bytes(b.into())
+    }
+
+    pub fn from_blob<T: AsRef<[u8]>>(t: T) -> Result<Self> {
+        // TODO (T27336549) stop using SyncFailure once thrift is converted to failure
+        let thrift_tc = compact_protocol::deserialize(t.as_ref())
+            .map_err(SyncFailure::new)
+            .context(ErrorKind::BlobDeserializeError("FileContents".into()))?;
+        Self::from_thrift(thrift_tc)
     }
 
     pub(crate) fn from_thrift(fc: thrift::FileContents) -> Result<Self> {
@@ -38,6 +51,16 @@ impl FileContents {
         match self {
             FileContents::Bytes(bytes) => bytes,
         }
+    }
+
+    /// Serialize this structure into a blob.
+    pub fn into_blob(self) -> ContentBlob {
+        let thrift = self.into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = ContentIdContext::new();
+        context.update(&data);
+        let id = context.finish();
+        Blob::new(id, data)
     }
 
     pub(crate) fn into_thrift(self) -> thrift::FileContents {
@@ -78,6 +101,13 @@ mod test {
             let fc2 = FileContents::from_thrift(thrift_fc)
                 .expect("thrift roundtrips should always be valid");
             fc == fc2
+        }
+
+        fn blob_roundtrip(cs: FileContents) -> bool {
+            let blob = cs.clone().into_blob();
+            let cs2 = FileContents::from_blob(blob.data().as_ref())
+                .expect("blob roundtrips should always be valid");
+            cs == cs2
         }
     }
 
