@@ -1459,7 +1459,7 @@ class ui(object):
         return t
 
     def system(self, cmd, environ=None, cwd=None, onerr=None, errprefix=None,
-               blockedtag=None):
+               blockedtag=None, suspendprogress=True):
         '''execute shell command with appropriate output stream. command
         output will be redirected if fout is not stdout.
 
@@ -1474,7 +1474,11 @@ class ui(object):
         out = self.fout
         if any(s[1] for s in self._bufferstates):
             out = self
-        with self.timeblockedsection(blockedtag):
+        if suspendprogress:
+            suspend = progress.suspend
+        else:
+            suspend = util.nullcontextmanager
+        with self.timeblockedsection(blockedtag), suspend():
             rc = self._runsystem(cmd, environ=environ, cwd=cwd, out=out)
         if rc and onerr:
             errmsg = '%s %s' % (os.path.basename(cmd.split(None, 1)[0]),
