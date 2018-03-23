@@ -40,13 +40,20 @@
 //!   (16-bit) bitmask but that hurts lookup performance.
 
 use std::collections::HashMap;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::io::ErrorKind::InvalidData;
+use std::path::Path;
+
+use lock::ScopedFileLock;
+use utils::mmap_readonly;
+
+use memmap::Mmap;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 //// Structures related to file format
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Default, Debug)]
 struct Radix {
     pub offsets: [u64; 16],
     pub link_offset: u64,
@@ -252,6 +259,88 @@ impl Root {
         let len = buf.len() + 1;
         buf.write_vlq(len)?;
         writer.write_all(&buf)
+    }
+}
+
+//// Main Index
+
+pub struct Index {
+    // For locking and low-level access.
+    file: File,
+
+    // For efficient and shared random reading.
+    buf: Mmap,
+
+    // Whether "file" was opened as read-only.
+    // Only affects "flush". Do not affect in-memory writes.
+    read_only: bool,
+
+    // In-memory entries. The root entry is always in-memory.
+    root: Root,
+    dirty_radixes: Vec<Radix>,
+    dirty_leafs: Vec<Leaf>,
+    dirty_links: Vec<Link>,
+    dirty_keys: Vec<Key>,
+}
+
+impl Index {
+    /// Open the index file as read-write. Fallback to read-only.
+    ///
+    /// The index is always writable because it buffers all writes in-memory.
+    /// read-only will only cause "flush" to fail.
+    ///
+    /// If `root_offset` is not 0, read the root entry from the given offset.
+    /// Otherwise, read the root entry from the end of the file.
+    pub fn open<P: AsRef<Path>>(path: P, root_offset: u64) -> io::Result<Self> {
+        let open_result = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .append(true)
+            .open(path.as_ref());
+
+        // Fallback to open the file as read-only.
+        let (read_only, mut file) = if open_result.is_err() {
+            (true, OpenOptions::new().read(true).open(path)?)
+        } else {
+            (false, open_result.unwrap())
+        };
+
+        let (mmap, len) = {
+            if root_offset == 0 {
+                // Take the lock to read file length, since that decides root entry location.
+                let mut lock = ScopedFileLock::new(&mut file, false)?;
+                mmap_readonly(lock.as_ref())?
+            } else {
+                // It's okay to mmap a larger buffer, without locking.
+                mmap_readonly(&file)?
+            }
+        };
+
+        let (dirty_radixes, root) = if root_offset == 0 {
+            // Automatically locate the root entry
+            if len == 0 {
+                // Empty file. Create root radix entry as an dirty entry
+                (vec![Radix::default()], Root { radix_offset: 1 })
+            } else {
+                // Load root entry from the end of file.
+                (vec![], Root::read_from_end(&mmap, len)?)
+            }
+        } else {
+            // Load root entry from given offset.
+            (vec![], Root::read_from(&mmap, root_offset)?)
+        };
+
+        Ok(Index {
+            file,
+            buf: mmap,
+            read_only,
+            root,
+            dirty_radixes,
+            dirty_links: vec![],
+            dirty_leafs: vec![],
+            dirty_keys: vec![],
+        })
     }
 }
 
