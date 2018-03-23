@@ -231,6 +231,7 @@ impl Stream for RangeNodeStream {
 #[cfg(test)]
 mod test {
     use super::*;
+    use async_unit;
     use linear;
     use merge_uneven;
     use tests::assert_node_sequence;
@@ -238,146 +239,158 @@ mod test {
 
     #[test]
     fn linear_range() {
-        let repo = Arc::new(linear::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-            string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-        ).boxed();
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-                string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
-                string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-            ],
-            nodestream,
-        )
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            ).boxed();
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    string_to_nodehash("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b"),
+                    string_to_nodehash("cb15ca4a43a59acff5388cea9648c162afde8372"),
+                    string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                ],
+                nodestream,
+            );
+        })
     }
 
     #[test]
     fn linear_direct_parent_range() {
-        let repo = Arc::new(linear::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-            string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-        ).boxed();
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
-                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
                 string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
-            ],
-            nodestream,
-        )
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+            ).boxed();
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                    string_to_nodehash("0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                ],
+                nodestream,
+            );
+        })
     }
 
     #[test]
     fn linear_single_node_range() {
-        let repo = Arc::new(linear::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-            string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-        ).boxed();
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
                 string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-            ],
-            nodestream,
-        )
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            ).boxed();
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                ],
+                nodestream,
+            );
+        })
     }
 
     #[test]
     fn linear_empty_range() {
-        let repo = Arc::new(linear::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        // These are swapped, so won't find anything
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-            string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
-        ).boxed();
+            // These are swapped, so won't find anything
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
+                string_to_nodehash("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
+                string_to_nodehash("d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+            ).boxed();
 
-        assert_node_sequence(repo_generation, &repo, vec![], nodestream)
+            assert_node_sequence(repo_generation, &repo, vec![], nodestream);
+        })
     }
 
     #[test]
     fn merge_range_from_merge() {
-        let repo = Arc::new(merge_uneven::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-            string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-        ).boxed();
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
-                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
                 string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-            ],
-            nodestream,
-        )
+                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+            ).boxed();
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                ],
+                nodestream,
+            );
+        })
     }
 
     #[test]
     fn merge_range_everything() {
-        let repo = Arc::new(merge_uneven::getrepo(None));
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(merge_uneven::getrepo(None));
+            let repo_generation = RepoGenCache::new(10);
 
-        let nodestream = RangeNodeStream::new(
-            &repo,
-            repo_generation.clone(),
-            string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-            string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-        ).boxed();
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
-                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
-                string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
-                string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
-                string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
-                string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
-                string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
-                string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
-                string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
-                string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
-                string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
-                string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
-                string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+            let nodestream = RangeNodeStream::new(
+                &repo,
+                repo_generation.clone(),
                 string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
-            ],
-            nodestream,
-        )
+                string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+            ).boxed();
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("75742e6fc286a359b39a89fdfa437cc7e2a0e1ce"),
+                    string_to_nodehash("264f01429683b3dd8042cb3979e8bf37007118bc"),
+                    string_to_nodehash("5d43888a3c972fe68c224f93d41b30e9f888df7c"),
+                    string_to_nodehash("fc2cef43395ff3a7b28159007f63d6529d2f41ca"),
+                    string_to_nodehash("bc7b4d0f858c19e2474b03e442b8495fd7aeef33"),
+                    string_to_nodehash("795b8133cf375f6d68d27c6c23db24cd5d0cd00f"),
+                    string_to_nodehash("4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_nodehash("16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_nodehash("1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                    string_to_nodehash("b65231269f651cfe784fd1d97ef02a049a37b8a0"),
+                    string_to_nodehash("d7542c9db7f4c77dab4b315edd328edf1514952f"),
+                    string_to_nodehash("3cda5c78aa35f0f5b09780d971197b51cad4613a"),
+                    string_to_nodehash("15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                ],
+                nodestream,
+            );
+        })
     }
 }

@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Arguments};
 use std::sync::{Arc, Mutex};
 
+use async_unit;
 use failure::Error;
 use slog::{self, Drain, Logger, OwnedKVList, Record, Serializer, KV};
 
@@ -238,30 +239,32 @@ recover_logged_data!(ChangesetsData, ChangesetsTestDrain;
 
 #[test]
 fn test_create_changeset_stats() {
-    let drain = ChangesetsTestDrain::new();
-    let records = drain.records.clone();
-    let logger = Logger::root(drain.fuse(), o!("drain" => "test"));
-    let repo = get_logging_blob_repo(logger);
+    async_unit::tokio_unit_test(|| {
+        let drain = ChangesetsTestDrain::new();
+        let records = drain.records.clone();
+        let logger = Logger::root(drain.fuse(), o!("drain" => "test"));
+        let repo = get_logging_blob_repo(logger);
 
-    let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
+        let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
 
-    let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
-    let (_, root_manifest_future) =
-        upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &RepoPath::root());
+        let (filehash, file_future) = upload_file_no_parents(&repo, "blob", &fake_file_path);
+        let (_, root_manifest_future) =
+            upload_manifest_no_parents(&repo, format!("file\0{}\n", filehash), &RepoPath::root());
 
-    let commit = create_changeset_no_parents(&repo, root_manifest_future, vec![file_future]);
-    let _ = run_future(commit.get_completed_changeset()).unwrap();
+        let commit = create_changeset_no_parents(&repo, root_manifest_future, vec![file_future]);
+        let _ = run_future(commit.get_completed_changeset()).unwrap();
 
-    let mut uuid = None;
-    check_stats!(records, data;
-        "upload_entries", "wait_for_parents_ready", "changeset_created", "parents_complete", "finished";
-        {
-            let changeset_uuid = Some(data.changeset_uuid.clone());
-            if uuid.is_none() {
-                uuid = changeset_uuid;
-            } else {
-                assert_eq!(uuid, changeset_uuid, "Changeset logging UUID not constant");
+        let mut uuid = None;
+        check_stats!(records, data;
+            "upload_entries", "wait_for_parents_ready", "changeset_created", "parents_complete", "finished";
+            {
+                let changeset_uuid = Some(data.changeset_uuid.clone());
+                if uuid.is_none() {
+                    uuid = changeset_uuid;
+                } else {
+                    assert_eq!(uuid, changeset_uuid, "Changeset logging UUID not constant");
+                }
             }
-        }
-    );
+        );
+    });
 }

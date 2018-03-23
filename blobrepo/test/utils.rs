@@ -51,25 +51,33 @@ macro_rules! test_both_repotypes {
     ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
         #[test]
         fn $lazy_test() {
-            $impl_name(get_empty_lazy_repo())
+            async_unit::tokio_unit_test(|| {
+                $impl_name(get_empty_lazy_repo());
+            })
         }
 
         #[test]
         fn $eager_test() {
-            $impl_name(get_empty_eager_repo())
+            async_unit::tokio_unit_test(|| {
+                $impl_name(get_empty_eager_repo());
+            })
         }
     };
     (should_panic, $impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
         #[test]
         #[should_panic]
         fn $lazy_test() {
-            $impl_name(get_empty_lazy_repo())
+            async_unit::tokio_unit_test(|| {
+                $impl_name(get_empty_lazy_repo());
+            })
         }
 
         #[test]
         #[should_panic]
         fn $eager_test() {
-            $impl_name(get_empty_eager_repo())
+            async_unit::tokio_unit_test(|| {
+                $impl_name(get_empty_eager_repo());
+            })
         }
     }
 }

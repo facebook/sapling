@@ -127,7 +127,9 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 writeline('parents,')
                 indent -= 1
                 writeline('};')
-                writeline("changesets.add(cs_insert).wait().unwrap();")
+                writeline(
+                    "changesets.add(cs_insert.clone()).map_err(move |err| panic!(\"changsets {:?} failed {:?}\", cs_insert, err)).wait().expect(\"changesets.add failed\");"
+                )
                 writeline("")
             writeline("")
 

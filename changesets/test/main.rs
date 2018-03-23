@@ -13,12 +13,14 @@ extern crate assert_matches;
 extern crate diesel;
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate tokio;
 
 extern crate changesets;
 extern crate mercurial_types_mocks;
 
 use std::sync::Arc;
 
+use failure::Error;
 use futures::Future;
 
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, MysqlChangesets,
@@ -26,27 +28,29 @@ use changesets::{ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, MysqlCh
 use mercurial_types_mocks::nodehash::*;
 use mercurial_types_mocks::repo::*;
 
-fn add_and_get<C: Changesets>(changesets: C) {
+fn add_and_get<C: Changesets + 'static>(changesets: C) {
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(row).wait().expect("Adding new entry failed");
-
-    let result = changesets
-        .get(REPO_ZERO, ONES_CSID)
-        .wait()
-        .expect("Get failed");
-    assert_eq!(
-        result,
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: ONES_CSID,
-            parents: vec![],
-            gen: 1,
-        }),
-    );
+    let test = changesets
+        .add(row)
+        .map_err(|err| panic!("Adding new entry failed: {:?}", err))
+        .and_then(move |_| changesets.get(REPO_ZERO, ONES_CSID))
+        .map_err(|err| panic!("Get failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: ONES_CSID,
+                    parents: vec![],
+                    gen: 1,
+                })
+            )
+        });
+    tokio::run(test);
 }
 
 fn add_missing_parents<C: Changesets>(changesets: C) {
@@ -55,145 +59,200 @@ fn add_missing_parents<C: Changesets>(changesets: C) {
         cs_id: ONES_CSID,
         parents: vec![TWOS_CSID],
     };
-    let result = changesets
+    let test = changesets
         .add(row)
-        .wait()
-        .expect_err("Adding entry with missing parents failed (should have succeeded)");
-    assert_matches!(
-        result.downcast::<ErrorKind>(),
-        Ok(ErrorKind::MissingParents(ref x)) if x == &vec![TWOS_CSID]
-    );
+        .map(|err| {
+            panic!(
+                "Adding entry with missing parents succeeded (should have failed): {:?}",
+                err
+            )
+        })
+        .map_err(|result| {
+            assert_matches!(
+                result.downcast::<ErrorKind>(),
+                Ok(ErrorKind::MissingParents(ref x)) if x == &vec![TWOS_CSID])
+        });
+    tokio::run(test);
 }
 
-fn missing<C: Changesets>(changesets: C) {
-    let result = changesets
+fn missing<C: Changesets + 'static>(changesets: C) {
+    let test = changesets
         .get(REPO_ZERO, ONES_CSID)
-        .wait()
-        .expect("Failed to fetch missing changeset (should succeed with None instead)");
-    assert_eq!(result, None);
+        .map_err(|err| {
+            panic!(
+                "Failed to fetch missing changeset (should succeed with None instead): {:?}",
+                err
+            )
+        })
+        .map(|result| assert_eq!(result, None));
+    tokio::run(test);
 }
 
-fn duplicate<C: Changesets>(changesets: C) {
+fn duplicate<C: Changesets + 'static>(changesets: C) {
     let row = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets
+    let test = changesets
         .add(row.clone())
-        .wait()
-        .expect("Adding new entry failed");
-
-    let result = changesets
-        .add(row)
-        .wait()
-        .expect_err("Adding duplicate entry succeeded (should fail)");
-    match result.downcast::<ErrorKind>() {
-        Ok(ErrorKind::DuplicateChangeset) => {}
-        err => panic!("unexpected error: {:?}", err),
-    };
+        .map_err(|err| panic!("Adding new entry failed: {:?}", err))
+        .and_then({ move |_| changesets.add(row) })
+        .map(|_| panic!("Adding duplicate entry succeeded (should fail)"))
+        .map_err(|result: Error| match result.downcast::<ErrorKind>() {
+            Ok(ErrorKind::DuplicateChangeset) => {}
+            err => panic!("unexpected error: {:?}", err),
+        });
+    tokio::run(test);
 }
 
-fn complex<C: Changesets>(changesets: C) {
+fn complex<C: Changesets + Clone + 'static>(changesets: C) {
     let row1 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: ONES_CSID,
         parents: vec![],
     };
-    changesets.add(row1).wait().expect("Adding row 1 failed");
+    let test = changesets
+        .add(row1)
+        .map_err(|err| panic!("Adding row 1 failed: {:?}", err));
 
     let row2 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: TWOS_CSID,
         parents: vec![],
     };
-    changesets.add(row2).wait().expect("Adding row 2 failed");
+    let test = test.and_then({
+        let changesets = changesets.clone();
+        move |_| {
+            changesets
+                .add(row2)
+                .map_err(|err| panic!("Adding row 2 failed: {:?}", err))
+        }
+    });
 
     let row3 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: THREES_CSID,
         parents: vec![TWOS_CSID],
     };
-    changesets.add(row3).wait().expect("Adding row 3 failed");
+    let test = test.and_then({
+        let changesets = changesets.clone();
+        move |_| {
+            changesets
+                .add(row3)
+                .map_err(|err| panic!("Adding row 3 failed: {:?}", err))
+        }
+    });
 
     let row4 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FOURS_CSID,
         parents: vec![ONES_CSID, THREES_CSID],
     };
-    changesets.add(row4).wait().expect("Adding row 4 failed");
+    let test = test.and_then({
+        let changesets = changesets.clone();
+        move |_| {
+            changesets
+                .add(row4)
+                .map_err(|err| panic!("Adding row 4 failed: {:?}", err))
+        }
+    });
 
     let row5 = ChangesetInsert {
         repo_id: REPO_ZERO,
         cs_id: FIVES_CSID,
         parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
     };
-    changesets.add(row5).wait().expect("Adding row 5 failed");
+    let test = test.and_then({
+        let changesets = changesets.clone();
+        move |_| {
+            changesets
+                .add(row5)
+                .map_err(|err| panic!("Adding row 5 failed: {:?}", err))
+        }
+    });
 
-    assert_eq!(
-        changesets
-            .get(REPO_ZERO, ONES_CSID)
-            .wait()
-            .expect("Get row 1 failed"),
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: ONES_CSID,
-            parents: vec![],
-            gen: 1,
-        }),
-    );
+    tokio::run(test);
 
-    assert_eq!(
-        changesets
-            .get(REPO_ZERO, TWOS_CSID)
-            .wait()
-            .expect("Get row 2 failed"),
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: TWOS_CSID,
-            parents: vec![],
-            gen: 1,
-        }),
-    );
+    let test = changesets
+        .get(REPO_ZERO, ONES_CSID)
+        .map_err(|err| panic!("Get row 1 failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: ONES_CSID,
+                    parents: vec![],
+                    gen: 1,
+                })
+            )
+        });
+    tokio::run(test);
 
-    assert_eq!(
-        changesets
-            .get(REPO_ZERO, THREES_CSID)
-            .wait()
-            .expect("Get row 3 failed"),
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: THREES_CSID,
-            parents: vec![TWOS_CSID],
-            gen: 2,
-        }),
-    );
+    let test = changesets
+        .get(REPO_ZERO, TWOS_CSID)
+        .map_err(|err| panic!("Get row 2 failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: TWOS_CSID,
+                    parents: vec![],
+                    gen: 1,
+                })
+            )
+        });
+    tokio::run(test);
 
-    assert_eq!(
-        changesets
-            .get(REPO_ZERO, FOURS_CSID)
-            .wait()
-            .expect("Get row 4 failed"),
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: FOURS_CSID,
-            parents: vec![ONES_CSID, THREES_CSID],
-            gen: 3,
-        }),
-    );
+    let test = changesets
+        .get(REPO_ZERO, THREES_CSID)
+        .map_err(|err| panic!("Get row 3 failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: THREES_CSID,
+                    parents: vec![TWOS_CSID],
+                    gen: 2,
+                })
+            )
+        });
+    tokio::run(test);
 
-    assert_eq!(
-        changesets
-            .get(REPO_ZERO, FIVES_CSID)
-            .wait()
-            .expect("Get row 5 failed"),
-        Some(ChangesetEntry {
-            repo_id: REPO_ZERO,
-            cs_id: FIVES_CSID,
-            parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
-            gen: 4,
-        }),
-    );
+    let test = changesets
+        .get(REPO_ZERO, FOURS_CSID)
+        .map_err(|err| panic!("Get row 4 failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: FOURS_CSID,
+                    parents: vec![ONES_CSID, THREES_CSID],
+                    gen: 3,
+                })
+            )
+        });
+    tokio::run(test);
+
+    let test = changesets
+        .get(REPO_ZERO, FIVES_CSID)
+        .map_err(|err| panic!("Get row 5 failed: {:?}", err))
+        .map(|result| {
+            assert_eq!(
+                result,
+                Some(ChangesetEntry {
+                    repo_id: REPO_ZERO,
+                    cs_id: FIVES_CSID,
+                    parents: vec![ONES_CSID, TWOS_CSID, FOURS_CSID],
+                    gen: 4,
+                })
+            )
+        });
+    tokio::run(test);
 }
 
 macro_rules! changesets_test_impl {

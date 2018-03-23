@@ -4,6 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
+use async_unit;
 use futures::executor::spawn;
 use quickcheck::{quickcheck, Arbitrary, Gen};
 use rand::Rng;
@@ -235,9 +236,12 @@ macro_rules! quickcheck_setops {
         #[test]
         fn $test_name() {
             fn prop(set: RevsetSpec) -> bool {
-                let repo = Arc::new($repo::getrepo(None));
-                match_hashset_to_revset(repo, set)
+                async_unit::tokio_unit_test(|| {
+                    let repo = Arc::new($repo::getrepo(None));
+                    match_hashset_to_revset(repo, set)
+                })
             }
+
             quickcheck(prop as fn(RevsetSpec) -> bool)
         }
     };

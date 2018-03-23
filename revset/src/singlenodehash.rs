@@ -57,6 +57,7 @@ impl Stream for SingleNodeHash {
 #[cfg(test)]
 mod test {
     use super::*;
+    use async_unit;
     use linear;
     use repoinfo::RepoGenCache;
     use std::sync::Arc;
@@ -65,31 +66,35 @@ mod test {
 
     #[test]
     fn valid_node() {
-        let repo = Arc::new(linear::getrepo(None));
-        let nodestream = SingleNodeHash::new(
-            string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
-            &repo,
-        );
-
-        let repo_generation = RepoGenCache::new(10);
-
-        assert_node_sequence(
-            repo_generation,
-            &repo,
-            vec![
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let nodestream = SingleNodeHash::new(
                 string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
-            ].into_iter(),
-            nodestream.boxed(),
-        );
+                &repo,
+            );
+
+            let repo_generation = RepoGenCache::new(10);
+
+            assert_node_sequence(
+                repo_generation,
+                &repo,
+                vec![
+                    string_to_nodehash("a5ffa77602a066db7d5cfb9fb5823a0895717c5a"),
+                ].into_iter(),
+                nodestream.boxed(),
+            );
+        });
     }
 
     #[test]
     fn invalid_node() {
-        let repo = Arc::new(linear::getrepo(None));
-        let nodehash = string_to_nodehash("1000000000000000000000000000000000000000");
-        let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
-        let repo_generation = RepoGenCache::new(10);
+        async_unit::tokio_unit_test(|| {
+            let repo = Arc::new(linear::getrepo(None));
+            let nodehash = string_to_nodehash("1000000000000000000000000000000000000000");
+            let nodestream = SingleNodeHash::new(nodehash, &repo).boxed();
+            let repo_generation = RepoGenCache::new(10);
 
-        assert_node_sequence(repo_generation, &repo, vec![].into_iter(), nodestream);
+            assert_node_sequence(repo_generation, &repo, vec![].into_iter(), nodestream);
+        });
     }
 }

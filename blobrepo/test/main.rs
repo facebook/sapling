@@ -7,6 +7,7 @@
 #![deny(warnings)]
 
 extern crate ascii;
+extern crate async_unit;
 extern crate bytes;
 extern crate failure_ext as failure;
 extern crate futures;
@@ -362,58 +363,65 @@ test_both_repotypes!(
 
 #[test]
 fn test_compute_changed_files_no_parents() {
-    let repo = many_files_dirs::getrepo(None);
-    let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
-    let expected = vec![
-        MPath::new(b"1").unwrap(),
-        MPath::new(b"2").unwrap(),
-        MPath::new(b"dir1").unwrap(),
-        MPath::new(b"dir2/file_1_in_dir2").unwrap(),
-    ];
+    async_unit::tokio_unit_test(|| {
+        let repo = many_files_dirs::getrepo(None);
+        let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
+        let expected = vec![
+            MPath::new(b"1").unwrap(),
+            MPath::new(b"2").unwrap(),
+            MPath::new(b"dir1").unwrap(),
+            MPath::new(b"dir2/file_1_in_dir2").unwrap(),
+        ];
 
-    let cs = run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-    let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
+        let cs =
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
-    let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
-    assert!(
-        diff == expected,
-        "Got {:?}, expected {:?}\n",
-        diff,
-        expected,
-    );
+        let diff = run_future(compute_changed_files(&mf, None, None)).unwrap();
+        assert!(
+            diff == expected,
+            "Got {:?}, expected {:?}\n",
+            diff,
+            expected,
+        );
+    });
 }
 
 #[test]
 fn test_compute_changed_files_one_parent() {
-    // Note that this is a commit and its parent commit, so you can use:
-    // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
-    // to see how Mercurial would compute the files list and confirm that it's the same
-    let repo = many_files_dirs::getrepo(None);
-    let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
-    let parenthash = string_to_nodehash("473b2e715e0df6b2316010908879a3c78e275dd9");
-    let expected = vec![
-        MPath::new(b"dir1").unwrap(),
-        MPath::new(b"dir1/file_1_in_dir1").unwrap(),
-        MPath::new(b"dir1/file_2_in_dir1").unwrap(),
-        MPath::new(b"dir1/subdir1/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir1/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir2/file_1").unwrap(),
-        MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
-    ];
+    async_unit::tokio_unit_test(|| {
+        // Note that this is a commit and its parent commit, so you can use:
+        // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
+        // to see how Mercurial would compute the files list and confirm that it's the same
+        let repo = many_files_dirs::getrepo(None);
+        let nodehash = string_to_nodehash("a6cb7dddec32acaf9a28db46cdb3061682155531");
+        let parenthash = string_to_nodehash("473b2e715e0df6b2316010908879a3c78e275dd9");
+        let expected = vec![
+            MPath::new(b"dir1").unwrap(),
+            MPath::new(b"dir1/file_1_in_dir1").unwrap(),
+            MPath::new(b"dir1/file_2_in_dir1").unwrap(),
+            MPath::new(b"dir1/subdir1/file_1").unwrap(),
+            MPath::new(b"dir1/subdir1/subsubdir1/file_1").unwrap(),
+            MPath::new(b"dir1/subdir1/subsubdir2/file_1").unwrap(),
+            MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
+        ];
 
-    let cs = run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
-    let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
+        let cs =
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(nodehash))).unwrap();
+        let mf = run_future(repo.get_manifest_by_nodeid(&cs.manifestid().into_nodehash())).unwrap();
 
-    let parent_cs =
-        run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
-    let parent_mf =
-        run_future(repo.get_manifest_by_nodeid(&parent_cs.manifestid().into_nodehash())).unwrap();
+        let parent_cs =
+            run_future(repo.get_changeset_by_changesetid(&HgChangesetId::new(parenthash))).unwrap();
+        let parent_mf = run_future(repo.get_manifest_by_nodeid(
+            &parent_cs.manifestid().into_nodehash(),
+        )).unwrap();
 
-    let diff = run_future(compute_changed_files(&mf, Some(&parent_mf), None)).unwrap();
-    assert!(
-        diff == expected,
-        "Got {:?}, expected {:?}\n",
-        diff,
-        expected,
-    );
+        let diff = run_future(compute_changed_files(&mf, Some(&parent_mf), None)).unwrap();
+        assert!(
+            diff == expected,
+            "Got {:?}, expected {:?}\n",
+            diff,
+            expected,
+        );
+    });
 }

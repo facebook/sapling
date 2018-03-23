@@ -5,13 +5,14 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from, never_type)]
+#![feature(try_from, never_type, use_nested_groups)]
 
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+extern crate tokio;
 
 extern crate db;
 extern crate futures_ext;
@@ -20,7 +21,7 @@ extern crate mercurial_types;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::result;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use diesel::{insert_into, Connection, MysqlConnection, SqliteConnection};
 use diesel::backend::Backend;
@@ -30,7 +31,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 use diesel::sql_types::HasSqlType;
 use failure::ResultExt;
-use futures::future;
+use futures::{future, Future, sync::oneshot};
 
 use db::ConnectionParams;
 use futures_ext::{BoxFuture, FutureExt};
@@ -74,8 +75,9 @@ pub trait Changesets: Send + Sync {
     ) -> BoxFuture<Option<ChangesetEntry>, Error>;
 }
 
+#[derive(Clone)]
 pub struct SqliteChangesets {
-    connection: Mutex<SqliteConnection>,
+    connection: Arc<Mutex<SqliteConnection>>,
 }
 
 impl SqliteChangesets {
@@ -85,7 +87,7 @@ impl SqliteChangesets {
         let path = path.as_ref();
         let conn = SqliteConnection::establish(path)?;
         Ok(Self {
-            connection: Mutex::new(conn),
+            connection: Arc::new(Mutex::new(conn)),
         })
     }
 
@@ -128,6 +130,7 @@ impl SqliteChangesets {
     }
 }
 
+#[derive(Clone)]
 pub struct MysqlChangesets {
     pool: Pool<ConnectionManager<MysqlConnection>>,
 }
@@ -174,122 +177,148 @@ macro_rules! impl_changesets {
                 repo_id: RepositoryId,
                 cs_id: HgChangesetId,
             ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-                // TODO: don't block -- send this to another thread
-                let query = changeset_query(repo_id, cs_id);
-                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                let connection = match self.get_conn() {
-                    Ok(conn) => conn,
-                    Err(err) => return future::err(err).boxify(),
-                };
-                // TODO: (sid0) T26215418 run the changeset and parent queries in parallel, once
-                // async framework is available
-                let changeset_row = query.first::<ChangesetRow>(&*connection).optional();
-                // This code is written in this style to allow easy porting to futures.
-                let entry = changeset_row.map_err(failure::Error::from).and_then(|row| {
-                    match row {
-                        None => Ok(None),
-                        Some(row) => {
-                            // Diesel can't express unsigned ints, so convert manually.
-                            // TODO: (sid0) T26215455 hide i64/u64 Diesel conversions behind an
-                            // interface
-                            let gen = u64::try_from(row.gen)
-                                .context(ErrorKind::InvalidStoredData)?;
+                let db = self.clone();
+                let (tx, rx) = oneshot::channel();
 
-                            let parent_query = csparents::table
-                                .filter(csparents::cs_id.eq(row.id))
-                                .order(csparents::seq.asc())
-                                .inner_join(changesets::table);
-                            let parent_rows = parent_query
-                                .load::<(ChangesetParentRow, ChangesetRow)>(&*connection);
+                let fut = future::lazy(move || {
+                    let query = changeset_query(repo_id, cs_id);
 
-                            parent_rows.map(|parents| {
-                                Some(ChangesetEntry {
-                                    repo_id: row.repo_id,
-                                    cs_id: row.cs_id,
-                                    parents: parents.into_iter().map(|p| p.1.cs_id).collect(),
-                                    gen,
-                                })
-                            }).map_err(failure::Error::from)
+                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                    let connection = match db.get_conn() {
+                        Ok(conn) => conn,
+                        Err(err) => {
+                            let _ = tx.send(Err(err));
+                            return Ok(());
                         }
-                    }
+                    };
+
+                    let changeset_row = query.first::<ChangesetRow>(&*connection).optional();
+                    // This code is written in this style to allow easy porting to futures.
+                    let entry = changeset_row.map_err(failure::Error::from).and_then(|row| {
+                        match row {
+                            None => Ok(None),
+                            Some(row) => {
+                                // Diesel can't express unsigned ints, so convert manually.
+                                // TODO: (sid0) T26215455 hide i64/u64 Diesel conversions behind an
+                                // interface
+                                let gen = u64::try_from(row.gen)
+                                    .context(ErrorKind::InvalidStoredData)?;
+
+                                let parent_query = csparents::table
+                                    .filter(csparents::cs_id.eq(row.id))
+                                    .order(csparents::seq.asc())
+                                    .inner_join(changesets::table);
+                                let parent_rows = parent_query
+                                    .load::<(ChangesetParentRow, ChangesetRow)>(&*connection);
+
+                                parent_rows.map(|parents| {
+                                    Some(ChangesetEntry {
+                                        repo_id: row.repo_id,
+                                        cs_id: row.cs_id,
+                                        parents: parents.into_iter().map(|p| p.1.cs_id).collect(),
+                                        gen,
+                                    })
+                                }).map_err(failure::Error::from)
+                            }
+                        }
+                    });
+                    let _ = tx.send(entry);
+                    Ok(())
                 });
-                future::result(entry).boxify()
+                future::lazy(|| {
+                    let _ = tokio::spawn(fut);
+                    rx.from_err().and_then(|v| v)
+                }).boxify()
             }
 
             /// Insert a new changeset into this table. Checks that all parents are already in
             /// storage.
             fn add(&self, cs: ChangesetInsert) -> BoxFuture<(), Error> {
-                let parent_query = changesets::table
-                    .filter(changesets::repo_id.eq(cs.repo_id))
-                    .filter(changesets::cs_id.eq_any(&cs.parents));
-                #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
-                let connection = match self.get_conn() {
-                    Ok(conn) => conn,
-                    Err(err) => return future::err(err).boxify(),
-                };
+                let db = self.clone();
+                let (tx, rx) = oneshot::channel();
 
-                // TODO: always hit master for this query?
-                let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
-                // This code is written in this style to allow easy porting to futures.
-                let txn_result = parent_rows.map_err(failure::Error::from).and_then(|parent_rows| {
-                    check_missing_rows(&cs.parents, &parent_rows)?;
+                let fut = future::lazy(move || {
+                    let parent_query = changesets::table
+                        .filter(changesets::repo_id.eq(cs.repo_id))
+                        .filter(changesets::cs_id.eq_any(&cs.parents));
 
-                    // A changeset with no parents has generation number 1.
-                    // (The null commit has generation number 0.)
-                    let gen = parent_rows.iter().map(|row| row.gen).max().unwrap_or(0) + 1;
-                    let cs_insert = ChangesetInsertRow {
-                        repo_id: cs.repo_id,
-                        cs_id: cs.cs_id,
-                        gen,
+                    #[allow(unreachable_code, unreachable_patterns)] // sqlite can't fail
+                    let connection = match db.get_conn() {
+                        Ok(conn) => conn,
+                        Err(err) => {
+                            let _ = tx.send(Err(err));
+                            return Ok(());
+                        }
                     };
 
-                    connection.transaction::<_, Error, _>(|| {
-                        // TODO figure out how to make transactions async. Assuming for now that
-                        // the inside of a transaction can be synchronous.
-                        let result = insert_into(changesets::table)
-                            .values(&cs_insert)
-                            .execute(&*connection);
-                        map_add_result(result)?;
+                    // TODO: always hit master for this query?
+                    let parent_rows = parent_query.load::<ChangesetRow>(&*connection);
 
-                        let cs_query = changeset_query(cs.repo_id, cs.cs_id);
-                        // MySQL and SQLite both have functions to expose "last insert ID", but
-                        // Diesel doesn't expose them. Using it isn't strictly necessary, because
-                        // inserts can be later queried from selects within the same transaction.
-                        // But doing so would probably save a roundtrip.
-                        // TODO: (sid0) T26215642 expose last_insert_id in Diesel and use it.
-                        let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;
+                    let txn_result = parent_rows.map_err(failure::Error::from).and_then(|parent_rows| {
+                        check_missing_rows(&cs.parents, &parent_rows)?;
 
-                        // parent_rows might not be in the same order as cs.parents.
-                        let parent_map: HashMap<_, _> = parent_rows
-                            .into_iter()
-                            .map(|row| (row.cs_id, row.id))
-                            .collect();
+                        // A changeset with no parents has generation number 1.
+                        // (The null commit has generation number 0.)
+                        let gen = parent_rows.iter().map(|row| row.gen).max().unwrap_or(0) + 1;
+                        let cs_insert = ChangesetInsertRow {
+                            repo_id: cs.repo_id,
+                            cs_id: cs.cs_id,
+                            gen,
+                        };
 
-                        // enumerate() would be OK here too, but involve conversions from usize
-                        // to i32 within the map function.
-                        let parent_inserts: Vec<_> = (0..(cs.parents.len() as i32))
-                            .zip(cs.parents.iter())
-                            .map(|(seq, parent)| {
-                                // check_missing_rows should have ensured that all the IDs are
-                                // present.
-                                let parent_id = parent_map.get(&parent)
-                                    .expect("check_missing_rows check failed");
+                        connection.transaction::<_, Error, _>(|| {
+                            // TODO figure out how to make transactions async. Assuming for now that
+                            // the inside of a transaction can be synchronous.
+                            let result = insert_into(changesets::table)
+                                .values(&cs_insert)
+                                .execute(&*connection);
+                            map_add_result(result)?;
 
-                                ChangesetParentRow {
-                                    cs_id: new_cs_row.id,
-                                    parent_id: *parent_id,
-                                    seq,
-                                }
-                            })
-                            .collect();
-                        insert_into(csparents::table)
-                            .values(&parent_inserts)
-                            .execute(&*connection)?;
-                        Ok(())
-                    })
+                            let cs_query = changeset_query(cs.repo_id, cs.cs_id);
+                            // MySQL and SQLite both have functions to expose "last insert ID", but
+                            // Diesel doesn't expose them. Using it isn't strictly necessary, because
+                            // inserts can be later queried from selects within the same transaction.
+                            // But doing so would probably save a roundtrip.
+                            // TODO: (sid0) T26215642 expose last_insert_id in Diesel and use it.
+                            let new_cs_row = cs_query.first::<ChangesetRow>(&*connection)?;
+
+                            // parent_rows might not be in the same order as cs.parents.
+                            let parent_map: HashMap<_, _> = parent_rows
+                                .into_iter()
+                                .map(|row| (row.cs_id, row.id))
+                                .collect();
+
+                            // enumerate() would be OK here too, but involve conversions from usize
+                            // to i32 within the map function.
+                            let parent_inserts: Vec<_> = (0..(cs.parents.len() as i32))
+                                .zip(cs.parents.iter())
+                                .map(|(seq, parent)| {
+                                    // check_missing_rows should have ensured that all the IDs are
+                                    // present.
+                                    let parent_id = parent_map.get(&parent)
+                                        .expect("check_missing_rows check failed");
+
+                                    ChangesetParentRow {
+                                        cs_id: new_cs_row.id,
+                                        parent_id: *parent_id,
+                                        seq,
+                                    }
+                                })
+                                .collect();
+                            insert_into(csparents::table)
+                                .values(&parent_inserts)
+                                .execute(&*connection)?;
+                            Ok(())
+                        })
+                    });
+
+                    let _ = tx.send(txn_result);
+                    Ok(())
                 });
-
-                future::result(txn_result).boxify()
+                future::lazy(move || {
+                    let _ = tokio::spawn(fut);
+                    rx.from_err().and_then(|v| v)
+                }).boxify()
             }
         }
     }

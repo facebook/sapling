@@ -8,6 +8,8 @@
 #![deny(warnings)]
 
 extern crate ascii;
+#[cfg(test)]
+extern crate async_unit;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
@@ -125,19 +127,20 @@ mod test {
 
     #[test]
     fn test_hook() {
-        let hook_info = hashmap! {
-            "repo" => "fbsource".into(),
-            "bookmark" => "master".into(),
-            "old_hash" => "0000000000000000000000000000000000000000".into(),
-            "new_hash" => "a5ffa77602a066db7d5cfb9fb5823a0895717c5a".into(),
-        };
-        let mut hook_manager = HookManager::new();
-        let repo = linear::getrepo(None);
-        let hook = HookContext {
-            name: "test",
-            repo: Arc::new(repo),
-            info: hook_info,
-            code: "
+        async_unit::tokio_unit_test(|| {
+            let hook_info = hashmap! {
+                "repo" => "fbsource".into(),
+                "bookmark" => "master".into(),
+                "old_hash" => "0000000000000000000000000000000000000000".into(),
+                "new_hash" => "a5ffa77602a066db7d5cfb9fb5823a0895717c5a".into(),
+            };
+            let mut hook_manager = HookManager::new();
+            let repo = linear::getrepo(None);
+            let hook = HookContext {
+                name: "test",
+                repo: Arc::new(repo),
+                info: hook_info,
+                code: "
                     function hook(info)
                         if info.repo ~= \"fbsource\" then
                             return false
@@ -146,10 +149,11 @@ mod test {
                             return author == \"Jeremy Fitzhardinge <jsgf@fb.com>\"
                         end
                     end",
-        };
+            };
 
-        let coroutine_fut = hook_manager.run_hook(hook).unwrap();
-        let result = coroutine_fut.wait();
-        assert!(result.unwrap());
+            let coroutine_fut = hook_manager.run_hook(hook).unwrap();
+            let result = coroutine_fut.wait();
+            assert!(result.unwrap());
+        })
     }
 }

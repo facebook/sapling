@@ -45,30 +45,26 @@ pub use ancestors::{common_ancestors, greatest_common_ancestor, AncestorsNodeStr
 mod range;
 pub use range::RangeNodeStream;
 
+pub use test::*;
 #[cfg(test)]
-extern crate ascii;
-#[cfg(test)]
-extern crate branch_even;
-#[cfg(test)]
-extern crate branch_uneven;
-#[cfg(test)]
-extern crate branch_wide;
-#[cfg(test)]
-extern crate linear;
-#[cfg(test)]
-extern crate merge_even;
-#[cfg(test)]
-extern crate merge_uneven;
-#[cfg(test)]
-extern crate quickcheck;
-#[cfg(test)]
-extern crate rand;
-#[cfg(test)]
-extern crate unshared_merge_even;
-#[cfg(test)]
-extern crate unshared_merge_uneven;
+mod test {
+    pub extern crate ascii;
+    pub extern crate async_unit;
+    pub extern crate quickcheck;
+    pub extern crate rand;
+
+    pub extern crate branch_even;
+    pub extern crate branch_uneven;
+    pub extern crate branch_wide;
+    pub extern crate linear;
+    pub extern crate merge_even;
+    pub extern crate merge_uneven;
+    pub extern crate unshared_merge_even;
+    pub extern crate unshared_merge_uneven;
+}
+#[cfg(not(test))]
+mod test {}
 #[cfg(test)]
 mod tests;
-
 #[cfg(test)]
 mod quickchecks;

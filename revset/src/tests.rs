@@ -15,8 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub fn string_to_nodehash(hash: &'static str) -> NodeHash {
-    NodeHash::from_ascii_str(&AsciiString::from_ascii(hash)
-        .expect("Can't turn string to AsciiString"))
+    NodeHash::from_ascii_str(&AsciiString::from_ascii(hash).expect("Can't turn string to AsciiString"))
         .expect("Can't turn AsciiString to NodeHash")
 }
 

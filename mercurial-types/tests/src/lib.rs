@@ -12,12 +12,17 @@ extern crate futures;
 extern crate many_files_dirs;
 extern crate mercurial_types;
 extern crate mercurial_types_mocks;
+extern crate tokio;
 
 use std::collections::HashSet;
+use std::iter::repeat;
+use std::str::FromStr;
+use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
+use futures::future;
 use mercurial_types::{Changeset, Entry, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
@@ -25,9 +30,6 @@ use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, Ch
 use mercurial_types::nodehash::{EntryId, HgChangesetId, NodeHash};
 use mercurial_types_mocks::manifest::{ContentFactory, MockEntry};
 use mercurial_types_mocks::nodehash;
-use std::iter::repeat;
-use std::str::FromStr;
-use std::sync::Arc;
 
 fn get_root_manifest(repo: Arc<BlobRepo>, changesetid: &HgChangesetId) -> Box<Manifest> {
     let cs = repo.get_changeset_by_changesetid(changesetid)
@@ -288,98 +290,107 @@ fn do_check(
 
 #[test]
 fn test_recursive_changed_entry_stream_simple() {
-    let repo = Arc::new(many_files_dirs::getrepo(None));
-    let main_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-    let base_hash = NodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
-    // main_hash is a child of base_hash
-    // hg st --change .
-    // A 2
-    // A dir1/file_1_in_dir1
-    // A dir1/file_2_in_dir1
-    // A dir1/subdir1/file_1
-    // A dir2/file_1_in_dir2
+    tokio::run(future::lazy(|| {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        let base_hash = NodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
+        // main_hash is a child of base_hash
+        // hg st --change .
+        // A 2
+        // A dir1/file_1_in_dir1
+        // A dir1/file_2_in_dir1
+        // A dir1/subdir1/file_1
+        // A dir2/file_1_in_dir2
 
-    // 8 entries were added: top-level dirs 'dir1' and 'dir2' and file 'A',
-    // two files 'file_1_in_dir1' and 'file_2_in_dir1' and dir 'subdir1' inside 'dir1'
-    // 'file_1_in_dir2' inside dir2 and 'file_1' inside 'dir1/subdir1/file_1'
+        // 8 entries were added: top-level dirs 'dir1' and 'dir2' and file 'A',
+        // two files 'file_1_in_dir1' and 'file_2_in_dir1' and dir 'subdir1' inside 'dir1'
+        // 'file_1_in_dir2' inside dir2 and 'file_1' inside 'dir1/subdir1/file_1'
 
-    let expected_added = vec![
-        "2",
-        "dir1",
-        "dir1/file_1_in_dir1",
-        "dir1/file_2_in_dir1",
-        "dir1/subdir1",
-        "dir1/subdir1/file_1",
-        "dir2",
-        "dir2/file_1_in_dir2",
-    ];
-    do_check(repo, main_hash, base_hash, expected_added, vec![], vec![]);
+        let expected_added = vec![
+            "2",
+            "dir1",
+            "dir1/file_1_in_dir1",
+            "dir1/file_2_in_dir1",
+            "dir1/subdir1",
+            "dir1/subdir1/file_1",
+            "dir2",
+            "dir2/file_1_in_dir2",
+        ];
+        do_check(repo, main_hash, base_hash, expected_added, vec![], vec![]);
+        Ok(())
+    }))
 }
 
 #[test]
 fn test_recursive_changed_entry_stream_changed_dirs() {
-    let repo = Arc::new(many_files_dirs::getrepo(None));
-    let main_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-    let base_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
-    // main_hash is a child of base_hash
-    // hg st --change .
-    // A dir1/subdir1/subsubdir1/file_1
-    // A dir1/subdir1/subsubdir2/file_1
-    // A dir1/subdir1/subsubdir2/file_2
-    let expected_added = vec![
-        "dir1/subdir1/subsubdir1",
-        "dir1/subdir1/subsubdir1/file_1",
-        "dir1/subdir1/subsubdir2",
-        "dir1/subdir1/subsubdir2/file_1",
-        "dir1/subdir1/subsubdir2/file_2",
-    ];
-    let expected_modified = vec!["dir1", "dir1/subdir1"];
-    do_check(
-        repo,
-        main_hash,
-        base_hash,
-        expected_added,
-        vec![],
-        expected_modified,
-    );
+    tokio::run(future::lazy(|| {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        let base_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
+        // main_hash is a child of base_hash
+        // hg st --change .
+        // A dir1/subdir1/subsubdir1/file_1
+        // A dir1/subdir1/subsubdir2/file_1
+        // A dir1/subdir1/subsubdir2/file_2
+        let expected_added = vec![
+            "dir1/subdir1/subsubdir1",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2",
+            "dir1/subdir1/subsubdir2/file_1",
+            "dir1/subdir1/subsubdir2/file_2",
+        ];
+        let expected_modified = vec!["dir1", "dir1/subdir1"];
+        do_check(
+            repo,
+            main_hash,
+            base_hash,
+            expected_added,
+            vec![],
+            expected_modified,
+        );
+        Ok(())
+    }))
 }
 
 #[test]
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
-    let repo = Arc::new(many_files_dirs::getrepo(None));
-    let main_hash = NodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
-    let base_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
-    // main_hash is a child of base_hash
-    // hg st --change .
-    // A dir1
-    // R dir1/file_1_in_dir1
-    // R dir1/file_2_in_dir1
-    // R dir1/subdir1/file_1
-    // R dir1/subdir1/subsubdir1/file_1
-    // R dir1/subdir1/subsubdir2/file_1
-    // R dir1/subdir1/subsubdir2/file_2
+    tokio::run(future::lazy(|| {
+        let repo = Arc::new(many_files_dirs::getrepo(None));
+        let main_hash = NodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
+        let base_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
+        // main_hash is a child of base_hash
+        // hg st --change .
+        // A dir1
+        // R dir1/file_1_in_dir1
+        // R dir1/file_2_in_dir1
+        // R dir1/subdir1/file_1
+        // R dir1/subdir1/subsubdir1/file_1
+        // R dir1/subdir1/subsubdir2/file_1
+        // R dir1/subdir1/subsubdir2/file_2
 
-    let expected_added = vec!["dir1"];
-    let expected_deleted = vec![
-        "dir1",
-        "dir1/file_1_in_dir1",
-        "dir1/file_2_in_dir1",
-        "dir1/subdir1",
-        "dir1/subdir1/file_1",
-        "dir1/subdir1/subsubdir1",
-        "dir1/subdir1/subsubdir1/file_1",
-        "dir1/subdir1/subsubdir2",
-        "dir1/subdir1/subsubdir2/file_1",
-        "dir1/subdir1/subsubdir2/file_2",
-    ];
-    do_check(
-        repo,
-        main_hash,
-        base_hash,
-        expected_added,
-        expected_deleted,
-        vec![],
-    );
+        let expected_added = vec!["dir1"];
+        let expected_deleted = vec![
+            "dir1",
+            "dir1/file_1_in_dir1",
+            "dir1/file_2_in_dir1",
+            "dir1/subdir1",
+            "dir1/subdir1/file_1",
+            "dir1/subdir1/subsubdir1",
+            "dir1/subdir1/subsubdir1/file_1",
+            "dir1/subdir1/subsubdir2",
+            "dir1/subdir1/subsubdir2/file_1",
+            "dir1/subdir1/subsubdir2/file_2",
+        ];
+        do_check(
+            repo,
+            main_hash,
+            base_hash,
+            expected_added,
+            expected_deleted,
+            vec![],
+        );
+        Ok(())
+    }))
 }
 
 #[test]
