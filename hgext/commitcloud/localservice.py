@@ -12,12 +12,9 @@ from mercurial import (
     error,
 )
 
-from .baseservice import (
-    BaseService,
-    References,
-)
+from . import baseservice
 
-class LocalService(BaseService):
+class LocalService(baseservice.BaseService):
     """Local commit-cloud service implemented using files on disk.
 
     There is no locking, so this is suitable only for use in unit tests.
@@ -60,7 +57,7 @@ class LocalService(BaseService):
             self._ui.debug(
                 'commitcloud local service: '
                 'get_references for current version %s\n' % version)
-            return References(version, None, None, None)
+            return baseservice.References(version, None, None, None)
         else:
             self._ui.debug(
                 'commitcloud local service: '
@@ -88,4 +85,4 @@ class LocalService(BaseService):
             'update_references to %s (%s heads, %s bookmarks)\n'
             % (newversion, len(data['heads']), len(data['bookmarks'])))
         self._save(data)
-        return True, References(newversion, None, None, None)
+        return True, baseservice.References(newversion, None, None, None)

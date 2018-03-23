@@ -15,14 +15,12 @@ import urllib
 
 from mercurial import (
     error,
+    util,
 )
 
-from .baseservice import (
-    BaseService,
-    References,
-)
+from . import baseservice
 
-from mercurial.util import httplib
+httplib = util.httplib
 
 try:
     xrange
@@ -32,7 +30,7 @@ except NameError:
 DEFAULT_TIMEOUT = 60
 MAX_CONNECT_RETRIES = 2
 
-class HttpsCommitCloudService(BaseService):
+class HttpsCommitCloudService(baseservice.BaseService):
     """Commit Cloud Client uses interngraph proxy to communicate with
        Commit Cloud Service
     """
@@ -165,8 +163,12 @@ class HttpsCommitCloudService(BaseService):
             'repo_name': self.repo_name,
             'workspace': self.workspace,
         }
+        start = time.time()
         response = self._send(path, data)
-        self.ui.debug("%s responce received\n" % self.ccht)
+        elapsed = time.time() - start
+        self.ui.debug("%s responce received in %0.2f sec\n" % (
+            self.ccht, elapsed)
+        )
 
         if 'error' in response:
             raise error.Abort(self.ccht + ' ' + response['error'])
@@ -178,14 +180,14 @@ class HttpsCommitCloudService(BaseService):
                 '%s \'get_references\' '
                 'informs the workspace \'%s\' is not known by server\n'
                 % (self.ccht, self.workspace)))
-            return References(version, None, None, None)
+            return baseservice.References(version, None, None, None)
 
         if version == baseversion:
             self.ui.debug(
                 '%s \'get_references\' '
                 'confirms the current version %s is the latest\n'
                 % (self.ccht, version))
-            return References(version, None, None, None)
+            return baseservice.References(version, None, None, None)
 
         self.ui.debug(
             '%s \'get_references\' '
@@ -211,8 +213,12 @@ class HttpsCommitCloudService(BaseService):
             'new_obsmarkers': self._encodedmarkers(newobsmarkers),
         }
 
+        start = time.time()
         response = self._send(path, data)
-        self.ui.debug("%s responce received\n" % self.ccht)
+        elapsed = time.time() - start
+        self.ui.debug("%s responce received in %0.2f sec\n" % (
+            self.ccht, elapsed)
+        )
 
         if 'error' in response:
             raise error.Abort(self.ccht + ' ' + response['error'])
@@ -234,4 +240,4 @@ class HttpsCommitCloudService(BaseService):
             'accepted update, old version is %d, new version is %d\n'
             % (self.ccht, version, newversion))
 
-        return True, References(newversion, None, None, None)
+        return True, baseservice.References(newversion, None, None, None)
