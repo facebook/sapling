@@ -88,16 +88,31 @@ impl SqliteChangesets {
         })
     }
 
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let changesets = Self::open(path)?;
-
+    fn create_tables(&mut self) -> Result<()> {
         let up_query = include_str!("../schemas/sqlite-changesets.sql");
-        changesets
-            .connection
+
+        self.connection
             .lock()
             .expect("lock poisoned")
             .batch_execute(&up_query)?;
+
+        Ok(())
+    }
+
+    /// Create a new SQLite database.
+    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
+        let mut changesets = Self::open(path)?;
+
+        changesets.create_tables()?;
+
+        Ok(changesets)
+    }
+
+    /// Open a SQLite database, and create the tables if they are missing
+    pub fn open_or_create<P: AsRef<str>>(path: P) -> Result<Self> {
+        let mut changesets = Self::open(path)?;
+
+        let _ = changesets.create_tables();
 
         Ok(changesets)
     }
