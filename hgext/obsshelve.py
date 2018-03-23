@@ -45,7 +45,6 @@ from mercurial import (
     node as nodemod,
     obsolete,
     patch,
-    phases,
     registrar,
     repair,
     scmutil,
@@ -76,7 +75,7 @@ patchextension = 'patch'
 shelveuser = 'shelve@localhost'
 
 try:
-    xrange(0)
+    xrange
 except NameError:
     xrange = range
 
@@ -136,8 +135,7 @@ class shelvedfile(object):
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
             bundle2.applybundle(self.repo, gen, self.repo.currenttransaction(),
                                 source='unshelve',
-                                url='bundle:' + self.vfs.join(self.fname),
-                                targetphase=phases.secret)
+                                url='bundle:' + self.vfs.join(self.fname))
         finally:
             fp.close()
 
@@ -388,15 +386,13 @@ def getcommitfunc(extra, interactive, editor=False):
         hasmq = util.safehasattr(repo, 'mq')
         if hasmq:
             saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-        overrides = {('phases', 'new-commit'): phases.secret}
         try:
             editor_ = False
             if editor:
                 editor_ = cmdutil.getcommiteditor(editform='shelve.shelve',
                                                   **opts)
-            with repo.ui.configoverride(overrides):
-                return repo.commit(message, shelveuser, opts.get('date'),
-                                   match, editor=editor_, extra=extra)
+            return repo.commit(message, shelveuser, opts.get('date'),
+                               match, editor=editor_, extra=extra)
         finally:
             if hasmq:
                 repo.mq.checkapplied = saved
@@ -496,7 +492,7 @@ def _docreatecmd(ui, repo, pats, opts):
         if ui.formatted():
             desc = util.ellipsis(desc, ui.termwidth())
         ui.status(_('shelved as %s\n') % name)
-        # current wc parent may be already obsolete becuase
+        # current wc parent may be already obsolete because
         # it might have been created previously and shelve just
         # reuses it
         hg.update(repo.unfiltered(), parent.node())
@@ -1145,4 +1141,3 @@ def reposetup(ui, repo):
     order = extensions._order
     if 'shelve' in order:
         raise error.Abort("shelve must be disabled when obsshelve is enabled")
-
