@@ -928,7 +928,7 @@ log -p -l2 --color=always
   \x1b[0;32;1m+++ b/b1	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
   \x1b[0;35m@@ -1,1 +1,2 @@\x1b[0m (esc)
    b1
-  \x1b[0;32m+postm\x1b[0m (esc)
+  \x1b[0;92m+postm\x1b[0m (esc)
   
   \x1b[0;33mchangeset:   5:302e9dd6890d\x1b[0m (esc)
   parent:      3:e62f78d544b4
@@ -941,7 +941,7 @@ log -p -l2 --color=always
   \x1b[0;31;1m--- /dev/null	Thu Jan 01 00:00:00 1970 +0000\x1b[0m (esc)
   \x1b[0;32;1m+++ b/b2	Thu Jan 01 00:00:01 1970 +0000\x1b[0m (esc)
   \x1b[0;35m@@ -0,0 +1,1 @@\x1b[0m (esc)
-  \x1b[0;32m+b2\x1b[0m (esc)
+  \x1b[0;92m+b2\x1b[0m (esc)
   
 
 

@@ -45,8 +45,8 @@ default context
    c
    a
    a
-  \x1b[0;31m-b\x1b[0m (esc)
-  \x1b[0;32m+dd\x1b[0m (esc)
+  \x1b[0;91m-b\x1b[0m (esc)
+  \x1b[0;92m+dd\x1b[0m (esc)
    a
    a
    c
@@ -93,8 +93,8 @@ default context
    c
    a
    a
-  \x1b[0;31m-b\x1b[0m (esc)
-  \x1b[0;32m+dd\x1b[0m (esc)
+  \x1b[0;91m-b\x1b[0m (esc)
+  \x1b[0;92m+dd\x1b[0m (esc)
    a
    a
    c
@@ -108,8 +108,8 @@ default context
   \x1b[0;35m@@ -3,5 +3,5 @@\x1b[0m (esc)
    a
    a
-  \x1b[0;31m-b\x1b[0m (esc)
-  \x1b[0;32m+dd\x1b[0m (esc)
+  \x1b[0;91m-b\x1b[0m (esc)
+  \x1b[0;92m+dd\x1b[0m (esc)
    a
    a
 
@@ -146,8 +146,8 @@ record
    c
    a
    a
-  \x1b[0;31m-b\x1b[0m (esc)
-  \x1b[0;32m+dd\x1b[0m (esc)
+  \x1b[0;91m-b\x1b[0m (esc)
+  \x1b[0;92m+dd\x1b[0m (esc)
    a
    a
    c
@@ -176,8 +176,8 @@ qrecord
    c
    a
    a
-  \x1b[0;31m-b\x1b[0m (esc)
-  \x1b[0;32m+dd\x1b[0m (esc)
+  \x1b[0;91m-b\x1b[0m (esc)
+  \x1b[0;92m+dd\x1b[0m (esc)
    a
    a
    c
@@ -210,13 +210,13 @@ issue3712: test colorization of subrepo diff
    a
    c
    c
-  \x1b[0;32m+aa\x1b[0m (esc)
+  \x1b[0;92m+aa\x1b[0m (esc)
   \x1b[0;1mdiff --git a/sub/b b/sub/b\x1b[0m (esc)
   \x1b[0;31;1m--- a/sub/b\x1b[0m (esc)
   \x1b[0;32;1m+++ b/sub/b\x1b[0m (esc)
   \x1b[0;35m@@ -1,1 +1,2 @@\x1b[0m (esc)
    b
-  \x1b[0;32m+bb\x1b[0m (esc)
+  \x1b[0;92m+bb\x1b[0m (esc)
 
 test tabs
 
@@ -235,12 +235,12 @@ test tabs
    a
    c
    c
-  \x1b[0;32m+aa\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m	\x1b[0;32mone tab\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m		\x1b[0;32mtwo tabs\x1b[0m (esc)
-  \x1b[0;32m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
-  \x1b[0;32m+mid\x1b[0m	\x1b[0;32mtab\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m	\x1b[0;32mall\x1b[0m		\x1b[0;32mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;92m+aa\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m	\x1b[0;92mone tab\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m		\x1b[0;92mtwo tabs\x1b[0m (esc)
+  \x1b[0;92m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;92m+mid\x1b[0m	\x1b[0;92mtab\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m	\x1b[0;92mall\x1b[0m		\x1b[0;92mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
   $ echo "[color]" >> $HGRCPATH
   $ echo "diff.tab = bold magenta" >> $HGRCPATH
   $ hg diff --nodates
@@ -251,12 +251,12 @@ test tabs
    a
    c
    c
-  \x1b[0;32m+aa\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mone tab\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;32mtwo tabs\x1b[0m (esc)
-  \x1b[0;32m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
-  \x1b[0;32m+mid\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mtab\x1b[0m (esc)
-  \x1b[0;32m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;32mall\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;32mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;92m+aa\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;92mone tab\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;92mtwo tabs\x1b[0m (esc)
+  \x1b[0;92m+end tab\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
+  \x1b[0;92m+mid\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;92mtab\x1b[0m (esc)
+  \x1b[0;92m+\x1b[0m\x1b[0;1;35m	\x1b[0m\x1b[0;92mall\x1b[0m\x1b[0;1;35m		\x1b[0m\x1b[0;92mtabs\x1b[0m\x1b[0;1;41m	\x1b[0m (esc)
 
   $ cd ..
 

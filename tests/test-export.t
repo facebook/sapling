@@ -240,7 +240,7 @@ Check for color output
    foo-9
    foo-10
    foo-11
-  \x1b[0;32m+line\x1b[0m (esc)
+  \x1b[0;92m+line\x1b[0m (esc)
 
 
   $ cd ..
