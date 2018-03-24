@@ -1084,7 +1084,11 @@ class Test(unittest.TestCase):
         env['TZ'] = 'GMT'
         env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
         env['COLUMNS'] = '80'
-        env['TERM'] = 'xterm'
+
+        # Claim that 256 colors is not supported.
+        env['TERM'] = 'screen'
+        if 'TMUX' in env:
+            del env['TMUX']
 
         for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
                   'HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER ' +

@@ -293,6 +293,15 @@ def _modesetup(ui):
         return realmode
     return None
 
+def normalizestyle(ui, style):
+    """choose a fallback from a list of labels"""
+    # colorname1:colorname2:colorname3 means:
+    # use colorname1 if supported, fallback to colorname2, then
+    # fallback to colorname3.
+    for e in style.split(':'):
+        if valideffect(ui, e):
+            return e
+
 def configstyles(ui):
     ui._styles.update(_defaultstyles)
     for status, cfgeffects in ui.configitems('color'):
@@ -302,8 +311,9 @@ def configstyles(ui):
         if cfgeffects:
             good = []
             for e in cfgeffects:
-                if valideffect(ui, e):
-                    good.append(e)
+                n = normalizestyle(ui, e)
+                if n:
+                    good.append(n)
                 else:
                     ui.warn(_("ignoring unknown color/effect %r "
                               "(configured in color.%s)\n")
@@ -396,6 +406,8 @@ def colorlabel(ui, msg, label):
         effects = []
         for l in label.split():
             s = ui._styles.get(l, '')
+            if ':' in s:
+                s = normalizestyle(ui, s)
             if s:
                 effects.append(s)
             elif valideffect(ui, l):
