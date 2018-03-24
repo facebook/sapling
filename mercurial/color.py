@@ -579,3 +579,9 @@ def support256colors():
         return False
 
     return True
+
+# see https://en.wikipedia.org/wiki/ANSI_escape_code
+if support256colors():
+    for i in range(256):
+        _effects['color%s' % i] = '38;5;%s' % i
+        _effects['color%s_background' % i] = '48;5;%s' % i
