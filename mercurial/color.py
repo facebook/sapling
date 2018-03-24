@@ -556,3 +556,26 @@ if pycompat.iswindows:
             # Explicitly reset original attributes
             ui.flush()
             _kernel32.SetConsoleTextAttribute(stdout, origattr)
+
+def support256colors():
+    """Returns True if the terminal is likely to support 256 colors"""
+    # Pretend Windows does not support 256 colors for now.
+    if pycompat.iswindows:
+        return False
+
+    # Detecting Terminal features is hard. "infocmp" seems to be a "standard"
+    # way to do it. But it can often miss real terminal capabilities.
+    #
+    # Tested on real tmux (2.2), mosh (1.3.0), screen (4.04) from Linux (xfce)
+    # and OS X Terminal.app and iTerm 2. Every terminal support 256 colors
+    # excpet for "screen". "screen" also uses underline for "dim".
+    #
+    # screen can actually support 256 colors if it's started with TERM set to
+    # "xterm-256color". In that case, screen will set TERM to
+    # "screen.xterm-256color". Tmux sets TERM to "screen" by default. But it
+    # also sets TMUX.
+    env = encoding.environ
+    if env.get('TERM') == 'screen' and 'TMUX' not in env:
+        return False
+
+    return True
