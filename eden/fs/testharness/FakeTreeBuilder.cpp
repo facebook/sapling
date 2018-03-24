@@ -110,7 +110,7 @@ void FakeTreeBuilder::removeFile(
 }
 
 void FakeTreeBuilder::setReady(RelativePathPiece path) {
-  CHECK(finalizedRoot_);
+  CHECK(finalizedRoot_) << "call finalize before setReady";
 
   if (path.empty()) {
     finalizedRoot_->setReady();

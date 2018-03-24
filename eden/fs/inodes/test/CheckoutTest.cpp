@@ -770,6 +770,50 @@ TEST(Checkout, removeSubdirectorySimple) {
   }
 }
 
+TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/sub/file.txt", "contents");
+  TestMount testMount{builder1, false};
+  builder1.setReady("");
+  builder1.setReady("dir");
+
+  // Prepare a second commit, pointing dir/sub to a different tree.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("dir/sub/differentfile.txt", "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Begin loading "dir/sub".
+  auto inodeFuture =
+      testMount.getEdenMount()->getInode(RelativePathPiece{"dir/sub"});
+  EXPECT_FALSE(inodeFuture.isReady());
+
+  // Checkout to a revision where the contents of "dir/sub" have changed.
+  auto checkoutResult = testMount.getEdenMount()->checkout(makeTestHash("2"));
+
+  // The checkout ought to wait until the load completes.
+  EXPECT_FALSE(checkoutResult.isReady());
+
+  // Finish loading.
+  builder1.setReady("dir/sub");
+  EXPECT_TRUE(inodeFuture.isReady());
+
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto results = checkoutResult.get();
+  EXPECT_EQ(0, results.size());
+
+  auto inode = inodeFuture.get().asTreePtr();
+  EXPECT_EQ(
+      0,
+      inode->getContents().rlock()->entries.count(
+          PathComponentPiece{"file.txt"}));
+  EXPECT_EQ(
+      1,
+      inode->getContents().rlock()->entries.count(
+          PathComponentPiece{"differentfile.txt"}));
+}
+
 TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // This test is designed to stress the logic in
   // TreeInode::processCheckoutEntry that decides whether it's necessary to load
@@ -812,8 +856,17 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
                 ->lookupInode(subInodeNumber)
                 .get(1ms)
                 .asTreePtr();
-  ASSERT_FALSE(subTree->getContents().rlock()->isMaterialized());
-  EXPECT_EQ(treeHash, subTree->getContents().rlock()->treeHash);
+  auto subTreeContents = subTree->getContents().rlock();
+  EXPECT_TRUE(subTree->isUnlinked());
+  // Unlinked inodes are considered materialized?
+  EXPECT_TRUE(subTreeContents->isMaterialized());
+
+  auto dirTree = testMount.getEdenMount()
+                     ->getInode(RelativePathPiece{"dir"})
+                     .get(1ms)
+                     .asTreePtr();
+  auto dirContents = dirTree->getContents().rlock();
+  EXPECT_FALSE(dirContents->isMaterialized());
 }
 
 // TODO:

@@ -123,3 +123,27 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
     expectTimeStampsEqual(beforeRemountDir, afterRemount);
   }
 }
+
+TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
+  auto hash = Hash{"0123456789012345678901234567890123456789"};
+
+  auto overlay = mount_.getEdenMount()->getOverlay();
+
+  TreeInode::Dir dir;
+  dir.entries.emplace(PathComponentPiece{"one"}, S_IFREG | 0644, 11_ino, hash);
+  dir.entries.emplace(PathComponentPiece{"two"}, S_IFDIR | 0755, 12_ino);
+
+  overlay->saveOverlayDir(10_ino, dir);
+
+  auto newDir =
+      overlay->loadOverlayDir(10_ino, mount_.getEdenMount()->getInodeMap());
+  EXPECT_TRUE(newDir);
+
+  EXPECT_EQ(2, newDir->entries.size());
+  const auto& one = newDir->entries.find(PathComponentPiece{"one"})->second;
+  const auto& two = newDir->entries.find(PathComponentPiece{"two"})->second;
+  EXPECT_EQ(11_ino, one.getInodeNumber());
+  EXPECT_FALSE(one.isMaterialized());
+  EXPECT_EQ(12_ino, two.getInodeNumber());
+  EXPECT_TRUE(two.isMaterialized());
+}

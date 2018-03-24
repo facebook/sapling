@@ -122,12 +122,15 @@ struct HgProxyHash {
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.
    */
-  HgProxyHash(LocalStore* store, Hash edenBlobHash) {
+  HgProxyHash(
+      LocalStore* store,
+      Hash edenBlobHash,
+      folly::StringPiece context) {
     // Read the path name and file rev hash
     auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenBlobHash);
     if (!infoResult.isValid()) {
       XLOG(ERR) << "received unknown mercurial proxy hash "
-                << edenBlobHash.toString();
+                << edenBlobHash.toString() << " in " << context;
       // Fall through and let infoResult.extractValue() throw
     }
 
@@ -497,7 +500,7 @@ std::unique_ptr<Tree> HgImporter::importTree(const Hash& id) {
         "with treemanifest"));
   }
 
-  HgProxyHash pathInfo(store_, id);
+  HgProxyHash pathInfo(store_, id, "importTree");
   auto writeBatch = store_->beginWrite();
   auto tree = importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
@@ -768,7 +771,7 @@ Hash HgImporter::importFlatManifest(int fd, LocalStore* store) {
 IOBuf HgImporter::importFileContents(Hash blobHash) {
   // Look up the mercurial path and file revision hash,
   // which we need to import the data from mercurial
-  HgProxyHash hgInfo(store_, blobHash);
+  HgProxyHash hgInfo(store_, blobHash, "importFileContents");
   XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
              << hgInfo.revHash().toString();
 

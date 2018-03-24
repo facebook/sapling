@@ -5,16 +5,28 @@ typedef binary Hash
 typedef string PathComponent
 typedef string RelativePath
 
+// An entry can be in one of three states:
+//
+// 1. Non-materialized, unknown inode number
+// 2. Non-materialized, known inode number
+// 3. Materialized (inode number must be known)
+//
+// Eventually, once legacy data has been migrated, only states #2 and #3 will
+// occur. All tree entries will be given an inode number upon allocation,
+// regardless of whether the entry exists in the overlay.
+
 struct OverlayEntry {
   // Holds the mode_t data, which encodes the file type and permissions
+  // Note: eventually this data will be obsoleted by the InodeMetadata table.
   1: i32 mode
-  // The inodeNumber of the child, if it is materialized.
-  // If the child is not materialized this will be 0, and the hash will
-  // contain the hash of a source control Tree or Blob.
+  // The child's inode number.  Until legacy data is migrated, this may be zero
+  // or unset.  It should never be the case that hash is unset (indicating
+  // materialized) and inodeNumber is zero or unset.
   2: i64 inodeNumber
-  // If inodeNumber is 0, then this child is identical to an existing
+  // If not materialized, then this child is identical to an existing
   // source control Tree or Blob.  This contains the hash of that Tree or Blob.
-  3: Hash hash
+  // If materialized, the hash is either unset or has zero length.
+  3: optional Hash hash
 }
 
 struct OverlayDir {

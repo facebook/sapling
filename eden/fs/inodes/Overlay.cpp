@@ -12,6 +12,7 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/experimental/logging/xlog.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
@@ -206,7 +207,7 @@ void Overlay::initNewOverlay() {
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(
     InodeNumber inodeNumber,
-    InodeMap* /*inodeMap*/) const {
+    InodeMap* inodeMap) const {
   TreeInode::Dir result;
   auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
   if (!dirData.hasValue()) {
@@ -214,19 +215,31 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
   }
   const auto& dir = dirData.value();
 
+  bool shouldMigrateToNewFormat = false;
+
   for (auto& iter : dir.entries) {
     const auto& name = iter.first;
     const auto& value = iter.second;
 
-    if (value.inodeNumber == 0) {
-      auto hash = Hash(folly::ByteRange(folly::StringPiece(value.hash)));
-      result.entries.emplace(PathComponentPiece{name}, value.mode, hash);
+    bool isMaterialized = !value.__isset.hash || value.hash.empty();
+    InodeNumber ino;
+    if (value.inodeNumber) {
+      ino = InodeNumber::fromThrift(value.inodeNumber);
     } else {
-      result.entries.emplace(
-          PathComponentPiece{name},
-          value.mode,
-          InodeNumber::fromThrift(value.inodeNumber));
+      ino = inodeMap->allocateInodeNumber();
+      shouldMigrateToNewFormat = true;
     }
+
+    if (isMaterialized) {
+      result.entries.emplace(PathComponentPiece{name}, value.mode, ino);
+    } else {
+      auto hash = Hash{folly::ByteRange{folly::StringPiece{value.hash}}};
+      result.entries.emplace(PathComponentPiece{name}, value.mode, ino, hash);
+    }
+  }
+
+  if (shouldMigrateToNewFormat) {
+    saveOverlayDir(inodeNumber, result);
   }
 
   return folly::Optional<TreeInode::Dir>(std::move(result));
@@ -245,15 +258,13 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir)
 
     overlay::OverlayEntry oent;
     oent.mode = ent.getModeUnsafe();
-    if (ent.isMaterialized()) {
-      oent.inodeNumber = ent.getInodeNumber().get();
-      DCHECK_NE(oent.inodeNumber, 0);
-    } else {
-      oent.inodeNumber = 0;
+    oent.inodeNumber = ent.getInodeNumber().get();
+    bool isMaterialized = ent.isMaterialized();
+    if (!isMaterialized) {
       auto entHash = ent.getHash();
       auto bytes = entHash.getBytes();
-      oent.hash = std::string(
-          reinterpret_cast<const char*>(bytes.data()), bytes.size());
+      oent.set_hash(std::string{reinterpret_cast<const char*>(bytes.data()),
+                                bytes.size()});
     }
 
     odir.entries.emplace(

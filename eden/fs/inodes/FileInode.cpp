@@ -560,7 +560,7 @@ void FileInode::materializeInParent() {
   auto renameLock = getMount()->acquireRenameLock();
   auto loc = getLocationInfo(renameLock);
   if (loc.parent && !loc.unlinked) {
-    loc.parent->childMaterialized(renameLock, loc.name, getNodeId());
+    loc.parent->childMaterialized(renameLock, loc.name);
   }
 }
 

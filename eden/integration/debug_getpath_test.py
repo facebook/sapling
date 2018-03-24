@@ -10,8 +10,8 @@
 from .lib import testcase, edenclient
 from facebook.eden.ttypes import TimeSpec
 import os
+import stat
 import time
-
 
 @testcase.eden_repo_test
 class DebugGetPathTest:
@@ -34,13 +34,17 @@ class DebugGetPathTest:
 
     def test_getpath_dot_eden_inode(self):
         '''
-        Test that calling `eden debug getpath 2` returns the path to the .eden
+        Test that calling `eden debug getpath ${ino}` returns the path to the .eden
         directory, and indicates that the inode is loaded.
         '''
+        st = os.lstat(os.path.join(self.mount, '.eden'))
+        self.assertTrue(stat.S_ISDIR(st.st_mode))
+        ino = st.st_ino
+
         output = self.eden.run_cmd(
             'debug',
             'getpath',
-            '2',
+            str(ino),
             cwd=self.mount)
 
         self.assertEqual(

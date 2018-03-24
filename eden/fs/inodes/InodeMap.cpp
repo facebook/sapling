@@ -588,6 +588,10 @@ void InodeMap::shutdownComplete(
   shutdownPromise->setValue();
 }
 
+bool InodeMap::isInodeRemembered(InodeNumber ino) const {
+  return data_.rlock()->unloadedInodes_.count(ino) > 0;
+}
+
 void InodeMap::onInodeUnreferenced(
     const InodeBase* inode,
     ParentInodeInfo&& parentInfo) {
@@ -698,8 +702,7 @@ void InodeMap::unloadInode(
     for (const auto& pair : contents->entries) {
       const auto& name = pair.first;
       const auto& entry = pair.second;
-      if (entry.hasInodeNumber() &&
-          data.unloadedInodes_.count(entry.getInodeNumber())) {
+      if (data.unloadedInodes_.count(entry.getInodeNumber())) {
         XLOG(DBG6) << "remembering inode " << asTree->getNodeId()
                    << " because its child " << name << " was remembered";
         return true;

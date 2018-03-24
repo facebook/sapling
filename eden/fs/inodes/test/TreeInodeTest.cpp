@@ -16,7 +16,7 @@
 using namespace facebook::eden;
 
 static TreeInode::Entry makeDirEntry() {
-  return TreeInode::Entry{S_IFREG | 0644, Hash{}};
+  return TreeInode::Entry{S_IFREG | 0644, 1_ino, Hash{}};
 }
 
 static TreeEntry makeTreeEntry(folly::StringPiece name) {

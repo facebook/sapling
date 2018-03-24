@@ -51,6 +51,7 @@ class Overlay {
   const AbsolutePath& getLocalDir() const;
 
   void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir) const;
+
   folly::Optional<TreeInode::Dir> loadOverlayDir(
       InodeNumber inodeNumber,
       InodeMap* inodeMap) const;

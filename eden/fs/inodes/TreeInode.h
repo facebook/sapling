@@ -76,19 +76,16 @@ class TreeInode : public InodeBase {
     /**
      * Create a hash for a non-materialized entry.
      */
-    Entry(mode_t m, Hash hash) : Entry(m, InodeNumber{}, hash) {}
-
-    /**
-     * Create a hash for a non-materialized entry.
-     */
     Entry(mode_t m, InodeNumber number, Hash hash)
-        : mode_(m), hash_{hash}, isLoading_(false), inodeNumber_(number) {}
+        : mode_{m}, hash_{hash}, isLoading_{false}, inodeNumber_{number} {
+      DCHECK(number.hasValue());
+    }
 
     /**
      * Create a hash for a materialized entry.
      */
     Entry(mode_t m, InodeNumber number)
-        : mode_(m), isLoading_(false), inodeNumber_{number} {
+        : mode_{m}, isLoading_{false}, inodeNumber_{number} {
       DCHECK(number.hasValue());
     }
 
@@ -116,23 +113,11 @@ class TreeInode : public InodeBase {
       return hash_;
     }
 
-    bool hasInodeNumber() const {
-      return inodeNumber_.hasValue();
-    }
     InodeNumber getInodeNumber() const {
-      DCHECK(inodeNumber_.hasValue());
       return inodeNumber_;
     }
-    void setInodeNumber(InodeNumber number) {
-      DCHECK(number.hasValue());
-      DCHECK(!inodeNumber_.hasValue() || number == inodeNumber_);
-      DCHECK(!inode_);
-      inodeNumber_ = number;
-    }
 
-    void setMaterialized(InodeNumber inode) {
-      DCHECK(inodeNumber_.empty() || inode == inodeNumber_);
-      inodeNumber_ = inode;
+    void setMaterialized() {
       hash_.clear();
     }
 
@@ -145,6 +130,7 @@ class TreeInode : public InodeBase {
     }
 
     void setDematerialized(Hash hash) {
+      DCHECK(inode_);
       hash_ = hash;
     }
 
@@ -209,6 +195,7 @@ class TreeInode : public InodeBase {
     void setInode(InodeBase* inode) {
       DCHECK(!inode_);
       DCHECK(inode);
+      DCHECK_EQ(inodeNumber_, inode->getNodeId());
       isLoading_ = false;
       inode_ = inode;
     }
@@ -244,12 +231,7 @@ class TreeInode : public InodeBase {
     bool isLoading_{false};
 
     /**
-     * The inode number, if one is allocated for this entry, or 0 if one is not
-     * allocated.
-     *
-     * An inode number is required for materialized entries, so this is always
-     * non-zero if hash_ is not set.  (It may also be non-zero even when hash_
-     * is set.)
+     * The inode number assigned to this entry.  Is never zero.
      */
     InodeNumber inodeNumber_{};
 
@@ -270,7 +252,13 @@ class TreeInode : public InodeBase {
     InodeBase* inode_{nullptr};
   };
 
-  // TODO: We can do better than this.
+  // TODO: We can do better than this. When mode_t is stored in the InodeTable,
+  // an entry can be in one of two states:
+  // 1. Non-materialized, where we only need to store
+  //    (TreeEntryType, Hash, InodeNumber)
+  // 2. Materialized, where hash is unset and inode_ is non-null.
+  // I think that could fit in 32 bytes, which would be a material savings
+  // given how many trees Eden tends to keep loaded.
   static_assert(sizeof(Entry) == 48, "Entry is six words");
 
   /** Represents a directory in the overlay */
@@ -482,8 +470,7 @@ class TreeInode : public InodeBase {
    */
   void childMaterialized(
       const RenameLock& renameLock,
-      PathComponentPiece childName,
-      InodeNumber childNodeId);
+      PathComponentPiece childName);
 
   /**
    * Update this directory when a child entry is dematerialized.

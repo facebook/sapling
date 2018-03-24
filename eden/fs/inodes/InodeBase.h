@@ -129,6 +129,7 @@ class InodeBase {
    * materialized file during unmount.
    */
   virtual void updateOverlayHeader() const = 0;
+
   /**
    * Check if this Inode has been unlinked from its parent TreeInode.
    *

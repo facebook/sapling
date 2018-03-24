@@ -234,21 +234,11 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     // being loaded, or if we need to start loading it now.
     folly::Promise<InodePtr> promise;
     returnFuture = promise.getFuture();
-    bool allocatedInodeNumber;
-    if (entry.hasInodeNumber()) {
-      childNumber = entry.getInodeNumber();
-      allocatedInodeNumber = false;
-    } else {
-      childNumber = getInodeMap()->allocateInodeNumber();
-      entry.setInodeNumber(childNumber);
-      allocatedInodeNumber = true;
-    }
-    entry.setLoading();
+    childNumber = entry.getInodeNumber();
     bool startLoad = getInodeMap()->shouldLoadChild(
         this, name, childNumber, std::move(promise));
-    if (allocatedInodeNumber) {
-      DCHECK(startLoad);
-    }
+    DCHECK_EQ(startLoad, !entry.isLoading());
+    entry.setLoading();
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
@@ -345,17 +335,10 @@ InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   }
 
   auto& ent = iter->second;
-  if (ent.getInode()) {
-    return ent.getInode()->getNodeId();
-  }
-
-  if (ent.hasInodeNumber()) {
-    return ent.getInodeNumber();
-  }
-
-  auto inodeNumber = getInodeMap()->allocateInodeNumber();
-  ent.setInodeNumber(inodeNumber);
-  return inodeNumber;
+  DCHECK(!ent.getInode() || ent.getInode()->getNodeId() == ent.getInodeNumber())
+      << "inode number mismatch: " << ent.getInode()->getNodeId()
+      << " != " << ent.getInodeNumber();
+  return ent.getInodeNumber();
 }
 
 void TreeInode::loadUnlinkedChildInode(
@@ -420,7 +403,7 @@ void TreeInode::loadUnlinkedChildInode(
 void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
   folly::Optional<folly::Future<unique_ptr<InodeBase>>> future;
   {
-    auto contents = contents_.wlock();
+    auto contents = contents_.rlock();
     auto iter = contents->entries.find(name);
     if (iter == contents->entries.end()) {
       auto bug = EDEN_BUG() << "InodeMap requested to load inode " << number
@@ -448,7 +431,6 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
       return;
     }
 
-    entry.setInodeNumber(number);
     future = startLoadingInodeNoThrow(entry, name);
   }
   registerInodeLoadComplete(future.value(), name, number);
@@ -581,7 +563,6 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
              << getLogPath() << " / \"" << name << "\"";
   DCHECK(entry.getInode() == nullptr);
-  CHECK(entry.hasInodeNumber());
   if (!entry.isDirectory()) {
     // If this is a file we can just go ahead and create it now;
     // we don't need to load anything else.
@@ -715,7 +696,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
     // Mark ourself materialized in our parent directory (if we have one)
     auto loc = getLocationInfo(*renameLock);
     if (loc.parent && !loc.unlinked) {
-      loc.parent->childMaterialized(*renameLock, loc.name, getNodeId());
+      loc.parent->childMaterialized(*renameLock, loc.name);
     }
   }
 }
@@ -725,8 +706,7 @@ void TreeInode::materialize(const RenameLock* renameLock) {
  * to also materialize its parents. */
 void TreeInode::childMaterialized(
     const RenameLock& renameLock,
-    PathComponentPiece childName,
-    InodeNumber childNodeId) {
+    PathComponentPiece childName) {
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -743,7 +723,7 @@ void TreeInode::childMaterialized(
       return;
     }
 
-    childEntry.setMaterialized(childNodeId);
+    childEntry.setMaterialized();
     contents->setMaterialized();
     getOverlay()->saveOverlayDir(this->getNodeId(), *contents);
   }
@@ -752,7 +732,7 @@ void TreeInode::childMaterialized(
   // and mark us materialized when it does so.
   auto location = getLocationInfo(renameLock);
   if (location.parent && !location.unlinked) {
-    location.parent->childMaterialized(renameLock, location.name, getNodeId());
+    location.parent->childMaterialized(renameLock, location.name);
   }
 }
 
@@ -796,14 +776,14 @@ void TreeInode::childDematerialized(
   // and mark us materialized when it does so.
   auto location = getLocationInfo(renameLock);
   if (location.parent && !location.unlinked) {
-    location.parent->childMaterialized(renameLock, location.name, getNodeId());
+    location.parent->childMaterialized(renameLock, location.name);
   }
 }
 
 TreeInode::Dir TreeInode::buildDirFromTree(
     const Tree* tree,
     const struct timespec& lastCheckoutTime,
-    InodeMap* /*inodeMap*/) {
+    InodeMap* inodeMap) {
   // Now build out the Dir based on what we know.
   Dir dir;
   if (!tree) {
@@ -815,6 +795,7 @@ TreeInode::Dir TreeInode::buildDirFromTree(
     dir.entries.emplace(
         treeEntry.getName(),
         modeFromTreeEntryType(treeEntry.getType()),
+        inodeMap->allocateInodeNumber(),
         treeEntry.getHash());
   }
   dir.timeStamps.setAll(lastCheckoutTime);
@@ -2444,6 +2425,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   }
 
   // Look to see if we have a child entry with this name.
+  bool contentsUpdated = false;
   const auto& name =
       oldScmEntry ? oldScmEntry->getName() : newScmEntry->getName();
   auto it = contents.entries.find(name);
@@ -2456,8 +2438,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         contents.entries.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
+            getInodeMap()->allocateInodeNumber(),
             newScmEntry->getHash());
         invalidateFuseCache(newScmEntry->getName());
+        contentsUpdated = true;
       }
     } else if (!newScmEntry) {
       // This file exists in the old tree, but is being removed in the new
@@ -2476,9 +2460,21 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         contents.entries.emplace(
             newScmEntry->getName(),
             modeFromTreeEntryType(newScmEntry->getType()),
+            getInodeMap()->allocateInodeNumber(),
             newScmEntry->getHash());
         invalidateFuseCache(newScmEntry->getName());
+        contentsUpdated = true;
       }
+    }
+
+    if (contentsUpdated) {
+      // Contents have changed and they need to be written out to the overlay.
+      // We should not do that here since this code runs per entry.  Today this
+      // ought to be reconciled in saveOverlayPostCheckout() after this inode
+      // processes all of its checkout actions.
+      // TODO: it is probably worth poking at this code to see if we can find
+      // cases where it does the wrong thing or fails to persist state after
+      // a checkout.
     }
 
     // Nothing else to do when there is no local inode.
@@ -2492,15 +2488,13 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
 
-  // If this entry has an inode number assigned to it then load the InodeBase
-  // object to process it.
-  //
-  // We have to load the InodeBase object because another thread may already be
-  // trying to load it.
-  //
-  // This also handles materialized inodes--an inode cannot be materialized if
-  // it does not have an inode number assigned to it.
-  if (entry.hasInodeNumber()) {
+  // If a load for this entry is in progress, then we have to wait for the
+  // load to finish.  Loading the inode ourself will wait for the existing
+  // attempt to finish.
+  // We also have to load the inode if it is materialized so we can
+  // check its contents to see if there are conflicts or not.
+  if (getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
+      entry.isMaterialized()) {
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified, but is not currently loaded.
     // Start loading it and create a CheckoutAction to process it once it
@@ -2544,18 +2538,27 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   // Update the entry
   if (!newScmEntry) {
+    // TODO: remove entry.getInodeNumber() from both the overlay and the
+    // InodeTable.  Or at least verify that it's already done in a test.
+    //
+    // This logic could potentially be unified with TreeInode::tryRemoveChild
+    // and TreeInode::checkoutUpdateEntry.
     contents.entries.erase(it);
   } else {
     entry = Entry{modeFromTreeEntryType(newScmEntry->getType()),
+                  getInodeMap()->allocateInodeNumber(),
                   newScmEntry->getHash()};
   }
 
-  // Note that we intentionally don't bother calling
-  // fuseChannel->invalidateEntry() here.
-  //
-  // We always assign an inode number to entries when telling FUSE about
-  // directory entries.  Given that this entry does not have an inode number we
-  // must not have ever told FUSE about it.
+  // TODO: contents have changed: we probably should propagate
+  // this information up to our caller so it can mark us
+  // materialized correctly.
+
+  // We removed or replaced an entry - invalidate it.
+  auto* fuseChannel = getMount()->getFuseChannel();
+  if (fuseChannel) {
+    fuseChannel->invalidateEntry(getNodeId(), name);
+  }
 
   return nullptr;
 }
@@ -2602,6 +2605,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
         DCHECK_EQ(newScmEntry->getName(), name);
         it->second = Entry(
             modeFromTreeEntryType(newScmEntry->getType()),
+            getInodeMap()->allocateInodeNumber(),
             newScmEntry->getHash());
       } else {
         contents->entries.erase(it);
@@ -2668,6 +2672,7 @@ Future<Unit> TreeInode::checkoutUpdateEntry(
           auto ret = contents->entries.emplace(
               name,
               modeFromTreeEntryType(newScmEntry->getType()),
+              parentInode->getInodeMap()->allocateInodeNumber(),
               newScmEntry->getHash());
           inserted = ret.second;
         }
@@ -2834,7 +2839,7 @@ void TreeInode::saveOverlayPostCheckout(
     auto loc = getLocationInfo(ctx->renameLock());
     if (loc.parent && !loc.unlinked) {
       if (isMaterialized) {
-        loc.parent->childMaterialized(ctx->renameLock(), loc.name, getNodeId());
+        loc.parent->childMaterialized(ctx->renameLock(), loc.name);
       } else {
         loc.parent->childDematerialized(
             ctx->renameLock(), loc.name, tree->getHash());
@@ -2883,18 +2888,13 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     std::vector<IncompleteInodeLoad>* pendingLoads) {
   DCHECK(!entry.getInode());
 
-  InodeNumber childNumber;
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();
-  if (entry.hasInodeNumber()) {
-    childNumber = entry.getInodeNumber();
-  } else {
-    childNumber = getInodeMap()->allocateInodeNumber();
-    entry.setInodeNumber(childNumber);
-  }
-  entry.setLoading();
+  auto childNumber = entry.getInodeNumber();
   bool startLoad = getInodeMap()->shouldLoadChild(
       this, name, childNumber, std::move(promise));
+  DCHECK_EQ(startLoad, !entry.isLoading());
+  entry.setLoading();
   if (startLoad) {
     auto loadFuture = startLoadingInodeNoThrow(entry, name);
     pendingLoads->emplace_back(
@@ -3131,11 +3131,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
         auto& infoEntry = info.entries.back();
         auto& inodeEntry = entry.second;
         infoEntry.name = entry.first.stringPiece().str();
-        if (inodeEntry.hasInodeNumber()) {
-          infoEntry.inodeNumber = inodeEntry.getInodeNumber().get();
-        } else {
-          infoEntry.inodeNumber = 0;
-        }
+        infoEntry.inodeNumber = inodeEntry.getInodeNumber().get();
         infoEntry.mode = inodeEntry.getMode();
         infoEntry.loaded = false;
         infoEntry.materialized = inodeEntry.isMaterialized();

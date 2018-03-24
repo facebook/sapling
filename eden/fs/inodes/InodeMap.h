@@ -266,6 +266,17 @@ class InodeMap {
   FOLLY_NODISCARD folly::Future<SerializedInodeMap> shutdown(bool doTakeover);
 
   /**
+   * Returns true if we have stored information about this inode that may
+   * need to be updated if the inode's state changes.
+   *
+   * This returns true if we are currently in the process of loading this
+   * inode, or if we previously had this inode loaded and are remembering
+   * it because the kernel still remembers its inode number or some of its
+   * children's inode numbers.
+   */
+  bool isInodeRemembered(InodeNumber ino) const;
+
+  /**
    * onInodeUnreferenced() will be called when an Inode's InodePtr reference
    * count drops to zero.
    *
