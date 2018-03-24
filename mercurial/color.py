@@ -56,6 +56,14 @@ _effects = {
     'magenta': 35,
     'cyan': 36,
     'white': 37,
+    'brightblack': 90,
+    'brightred': 91,
+    'brightgreen': 92,
+    'brightyellow': 93,
+    'brightblue': 94,
+    'brightmagenta': 95,
+    'brightcyan': 96,
+    'brightwhite': 97,
     'bold': 1,
     'italic': 3,
     'underline': 4,
@@ -453,6 +461,18 @@ if pycompat.iswindows:
         'cyan': _FOREGROUND_BLUE | _FOREGROUND_GREEN,
         'white': _FOREGROUND_RED | _FOREGROUND_GREEN | _FOREGROUND_BLUE,
         'bold': _FOREGROUND_INTENSITY,
+        'brightblack': 0,
+        'brightred': _FOREGROUND_RED | _FOREGROUND_INTENSITY,
+        'brightgreen': _FOREGROUND_GREEN | _FOREGROUND_INTENSITY,
+        'brightyellow': (_FOREGROUND_RED | _FOREGROUND_GREEN |
+                         _FOREGROUND_INTENSITY),
+        'brightblue': _FOREGROUND_BLUE | _FOREGROUND_INTENSITY,
+        'brightmagenta': (_FOREGROUND_BLUE | _FOREGROUND_RED |
+                          _FOREGROUND_INTENSITY),
+        'brightcyan': (_FOREGROUND_BLUE | _FOREGROUND_GREEN |
+                       _FOREGROUND_INTENSITY),
+        'brightwhite': (_FOREGROUND_RED | _FOREGROUND_GREEN | _FOREGROUND_BLUE
+                        | _FOREGROUND_INTENSITY),
         'black_background': 0x100,                  # unused value > 0x0f
         'red_background': _BACKGROUND_RED,
         'green_background': _BACKGROUND_GREEN,
