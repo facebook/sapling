@@ -9,19 +9,19 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use ascii::AsciiString;
+use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use bytes::Bytes;
+use failure::{FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{Future, IntoFuture, Stream};
 use futures::future::{err, ok};
 use futures::stream;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use slog::Logger;
-
-use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
 use mercurial;
 use mercurial::changeset::RevlogChangeset;
 use mercurial::manifest::ManifestContent;
 use mercurial_bundles::{parts, Bundle2EncodeBuilder, Bundle2Item};
 use mercurial_types::{HgChangesetId, MPath, NodeHash, RepoPath};
+use slog::Logger;
 
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
@@ -103,7 +103,8 @@ pub fn resolve(
                 })
                 .and_then(move |bookmark_id| resolver.prepare_response(changegroup_id, bookmark_id))
         })
-        .map_err(|err| err.context("bundle2-resolver error").into())
+        .context("bundle2-resolver error")
+        .from_err()
         .boxify()
 }
 
@@ -180,7 +181,8 @@ impl Bundle2Resolver {
                                 repo.clone(),
                                 convert_to_revlog_filelog(repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
-                            ).map_err(|err| err.context("While uploading File Blobs").into()),
+                            ).context("While uploading File Blobs")
+                                .from_err(),
                         )
                         .map(move |(changesets, filelogs)| {
                             let cg_push = ChangegroupPush {
@@ -195,7 +197,8 @@ impl Bundle2Resolver {
                 Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
                 _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
             })
-            .map_err(|err| err.context("While resolving Changegroup").into())
+            .context("While resolving Changegroup")
+            .from_err()
             .boxify()
     }
 
@@ -241,7 +244,8 @@ impl Bundle2Resolver {
                 Some(part) => ok((None, stream::once(Ok(part)).chain(bundle2).boxify())).boxify(),
                 None => ok((None, bundle2.boxify())).boxify(),
             })
-            .map_err(|err| err.context("While resolving Pushkey").into())
+            .context("While resolving Pushkey")
+            .from_err()
             .boxify()
     }
 
@@ -288,7 +292,8 @@ impl Bundle2Resolver {
                 }
                 _ => err(format_err!("Expected Bundle2 B2xTreegroup2")).boxify(),
             })
-            .map_err(|err| err.context("While resolving B2xTreegroup2").into())
+            .context("While resolving B2xTreegroup2")
+            .from_err()
             .boxify()
     }
 
@@ -310,10 +315,8 @@ impl Bundle2Resolver {
                     )).boxify(),
                 },
             )
-            .map_err(|err| {
-                err.context("While resolving B2xInfinitepushBookmarks")
-                    .into()
-            })
+            .context("While resolving B2xInfinitepushBookmarks")
+            .from_err()
             .boxify()
     }
 
@@ -385,12 +388,10 @@ impl Bundle2Resolver {
                         uploaded_changesets,
                         &filelogs,
                         &manifests,
-                    ).map_err(move |err| {
-                        err.context(format!(
-                            "While trying to upload Changeset with id {:?}",
-                            node
-                        ))
-                    })
+                    ).context(format!(
+                        "While trying to upload Changeset with id {:?}",
+                        node
+                    ))
                 },
             )
             .and_then(|uploaded_changesets| {
@@ -401,7 +402,8 @@ impl Bundle2Resolver {
                 ).map_err(Error::from)
                     .for_each(|_| Ok(()))
             })
-            .map_err(|err| err.context("While uploading Changesets to BlobRepo").into())
+            .context("While uploading Changesets to BlobRepo")
+            .from_err()
             .boxify()
     }
 
@@ -443,7 +445,8 @@ impl Bundle2Resolver {
         bundle
             .build()
             .map(|cursor| Bytes::from(cursor.into_inner()))
-            .map_err(|err| err.context("While preparing response").into())
+            .context("While preparing response")
+            .from_err()
             .boxify()
     }
 }
@@ -551,12 +554,11 @@ fn walk_manifests(
             &manifest_content,
             manifests,
             filelogs,
-        )?).map_err(move |err| {
-            err.context(format!(
-                "While walking dependencies of Root Manifest with id {:?}",
-                manifest_root_id
-            )).into()
-        })
+        )?).context(format!(
+            "While walking dependencies of Root Manifest with id {:?}",
+            manifest_root_id
+        ))
+            .from_err()
             .boxify(),
     ))
 }
