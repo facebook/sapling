@@ -15,7 +15,7 @@ use slog::Logger;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobChangeset;
-use failure::{Error, Result};
+use failure::{Error, Result, StreamFailureErrorExt};
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
 use linknodes::Linknodes;
@@ -88,8 +88,8 @@ where
 
         let heads = self.repo
             .get_heads()
-            .map_err(Error::from)
-            .map_err(|err| err.context("Failed get heads").into())
+            .context("Failed get heads")
+            .from_err()
             .map(|h| {
                 debug!(logger, "head {}", h);
                 STATS::heads.add_value(1);
