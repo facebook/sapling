@@ -35,7 +35,7 @@ TODO: make fully isolated integration test a'la https://github.com/facebook/watc
   $ echo "ignoredir2/" >> .hgignore
   $ hg commit -m ignoredir2
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ hg sparse -I ignoredir1 -I ignoredir2 -I dir1
 
   $ mkdir ignoredir1 ignoredir2 dir1

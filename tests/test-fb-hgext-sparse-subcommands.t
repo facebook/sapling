@@ -24,21 +24,59 @@ test sparse subcommands (help, verbose)
   $ hg help sparse | subcmds
   subcommands:
   
-   list List available sparse profiles
+   list           List available sparse profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
   
   (some details hidden, use --verbose to show complete help)
 
   $ hg help sparse --verbose | subcmds
   subcommands:
   
-   list List available sparse profiles - Show all available sparse profiles,
-        with the active profiles marked.
+   list           List available sparse profiles - Show all available sparse
+                  profiles, with the active profiles marked.
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules - Accepts a path to a
+                  file containing rules in the .hgsparse format.  This allows
+                  you to add *include*, *exclude* and *enable* rules in bulk.
+                  Like the include, exclude and enable subcommands, the changes
+                  are applied immediately.
+   clear          Clear local sparse rules - Removes all local include and
+                  exclude rules, while leaving any enabled profiles in place.
+   refresh        Refreshes the files on disk based on the sparse rules - This
+                  is only necessary if .hg/sparse was changed by hand.
+   cwd            List all names in this directory - The list includes any names
+                  that are excluded by the current sparse checkout; these are
+                  annotated with a hyphen ('-') before the name.
 
   $ hg sparse --error-nonesuch | subcmds
   hg sparse: option --error-nonesuch not recognized
   subcommands:
   
-   list List available sparse profiles
+   list           List available sparse profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
   
   (use 'hg sparse -h' to show more help)
 
@@ -46,6 +84,16 @@ test sparse subcommands (help, verbose)
   hg sparse: option --error-nonesuch not recognized
   subcommands:
   
-   list List available sparse profiles
+   list           List available sparse profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
   
   (use 'hg sparse -h' to show more help)

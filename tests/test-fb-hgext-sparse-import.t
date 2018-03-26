@@ -35,7 +35,7 @@ Import a rules file against a 'blank' sparse profile
   $ ls
   data.py
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ rm .hg/sparse
 
   $ cat > $TESTTMP/rules_to_import <<EOF
@@ -49,7 +49,7 @@ Import a rules file against a 'blank' sparse profile
   data.py
   webpage.sparse
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ rm .hg/sparse
 
 Start against an existing profile; rules *already active* should be ignored
@@ -78,7 +78,7 @@ Start against an existing profile; rules *already active* should be ignored
   [exclude]
   *.py
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ rm .hg/sparse
 
 Same tests, with -Tjson enabled to output summaries
@@ -99,7 +99,7 @@ Same tests, with -Tjson enabled to output summaries
    }
   ]
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ rm .hg/sparse
 
   $ cat > $TESTTMP/rules_to_import <<EOF
@@ -119,7 +119,7 @@ Same tests, with -Tjson enabled to output summaries
    }
   ]
 
-  $ hg sparse --reset
+  $ hg sparse reset
   $ rm .hg/sparse
 
   $ hg sparse --enable-profile webpage.sparse

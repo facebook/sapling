@@ -18,7 +18,7 @@ test sparse with --verbose and -T json
   $ echo xx > hide2
   $ hg ci -Aqm 'two'
 
-Verify basic --include and --reset
+Verify basic --include and reset
 
   $ hg up -q 0
   $ hg sparse --include 'hide' -Tjson
@@ -42,7 +42,7 @@ Verify basic --include and --reset
   Include rule # change: 1
   Exclude rule # change: 0
 
-  $ hg sparse --reset -Tjson
+  $ hg sparse reset -Tjson
   [
    {
     "exclude_rules_added": 0,
@@ -54,7 +54,7 @@ Verify basic --include and --reset
    }
   ]
   $ hg sparse --include 'hide'
-  $ hg sparse --reset --verbose
+  $ hg sparse reset --verbose
   calculating actions for refresh
   applying changes to disk (1 actions)
   getting show

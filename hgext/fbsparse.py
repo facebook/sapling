@@ -1072,6 +1072,61 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                 fm.plain(' - %s' % info.get('title', b''), label=label)
             fm.plain('\n')
 
+@subcmd('reset', help=_('makes the repo full again'))
+@subcmd('disableprofile', help=_('disables the specified profile'))
+@subcmd('enableprofile', help=_('enables the specified profile'))
+@subcmd('delete', help=_('delete an include/exclude rule'))
+@subcmd('exclude', help=_('exclude files in the sparse checkout'))
+@subcmd('include', help=_('include files in the sparse checkout'))
+def _configsubcmd(cmd, ui, repo, *pats, **opts):
+    _config(ui, repo, pats, opts, force=opts.get('force'), **{cmd: True})
+
+@subcmd('importrules')
+def _importsubcmd(cmd, ui, repo, *pats, **opts):
+    """Directly import sparse profile rules
+
+    Accepts a path to a file containing rules in the .hgsparse format.
+
+    This allows you to add *include*, *exclude* and *enable* rules
+    in bulk. Like the include, exclude and enable subcommands, the
+    changes are applied immediately.
+
+    """
+    _import(ui, repo, pats, opts, force=opts.get('force'))
+
+@subcmd('clear')
+def _clearsubcmd(cmd, ui, repo, *pats, **opts):
+    """Clear local sparse rules
+
+    Removes all local include and exclude rules, while leaving
+    any enabled profiles in place.
+
+    """
+    _clear(ui, repo, pats, force=opts.get('force'))
+
+@subcmd('refresh')
+def _refreshsubcmd(cmd, ui, repo, *pats, **opts):
+    """Refreshes the files on disk based on the sparse rules
+
+    This is only necessary if .hg/sparse was changed by hand.
+
+    """
+    force = opts.get('force')
+    with repo.wlock():
+        c = _refresh(ui, repo, repo.status(), repo.sparsematch(), force)
+        fcounts = map(len, c)
+        _verbose_output(ui, opts, 0, 0, 0, *fcounts)
+
+@subcmd('cwd')
+def _cwdsubcmd(cmd, ui, repo, *pats, **opts):
+    """List all names in this directory
+
+    The list includes any names that are excluded by the current sparse
+    checkout; these are annotated with a hyphen ('-') before the name.
+
+    """
+    _cwdlist(repo)
+
 def _config(ui, repo, pats, opts, include=False, exclude=False, reset=False,
             delete=False, enableprofile=False, disableprofile=False,
             force=False):
