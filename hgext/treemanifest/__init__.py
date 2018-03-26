@@ -268,12 +268,12 @@ def getrepocaps(orig, repo, *args, **kwargs):
     return caps
 
 def _collectmanifest(orig, repo, striprev):
-    if repo.ui.configbool("treemanifest", "treeonly"):
+    if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
         return []
     return orig(repo, striprev)
 
 def stripmanifest(orig, repo, striprev, tr, files):
-    if repo.ui.configbool("treemanifest", "treeonly"):
+    if treeenabled(repo.ui) and repo.ui.configbool("treemanifest", "treeonly"):
         return
     orig(repo, striprev, tr, files)
 
@@ -1654,7 +1654,7 @@ def getfallbackpath(repo):
 def pull(orig, ui, repo, *pats, **opts):
     # If we're not in treeonly mode, and we're missing public commits from the
     # revlog, backfill them.
-    if not ui.configbool('treemanifest', 'treeonly'):
+    if treeenabled(ui) and not ui.configbool('treemanifest', 'treeonly'):
         tippublicrevs = repo.revs('last(public())')
         if tippublicrevs:
             ctx = repo[tippublicrevs.first()]
@@ -2115,13 +2115,14 @@ def striptrees(orig, repo, tr, striprev, files):
 def _addpartsfromopts(orig, ui, repo, bundler, source, outgoing, opts):
     orig(ui, repo, bundler, source, outgoing, opts)
 
-    # Only add trees if we have them
-    sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing,
-                                           b2caps=bundler.capabilities)
-    if sendtrees != shallowbundle.NoTrees:
-        part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
-                                  sendtrees=sendtrees)
-        bundler.addpart(part)
+    if treeenabled(repo.ui):
+        # Only add trees if we have them
+        sendtrees = shallowbundle.cansendtrees(repo, outgoing.missing,
+                                               b2caps=bundler.capabilities)
+        if sendtrees != shallowbundle.NoTrees:
+            part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
+                                      sendtrees=sendtrees)
+            bundler.addpart(part)
 
 def _handlebundle2part(orig, self, bundle, part):
     if part.type == TREEGROUP_PARTTYPE2:
