@@ -1600,7 +1600,9 @@ Obsshelve knows how to unshelve traditional shelves
 Test revsetpredicate 'shelved'
 For this test enabled obsshelve extension is enough, and it is enabled at the top of the file
   $ hg init test-log-shelved && cd test-log-shelved
-  $ alias shelvelog='hg log --hidden -r "shelved()" --template "{node}\n" | wc -l'
+  $ testshelvedcount() {
+  >   hg log --hidden -r "shelved()" --template "{node}\n" | wc -l | grep -v $1 | cat
+  > }
   $ touch file1 && touch file2 && touch file3 && hg addremove && hg commit -m "Add test files"
   adding file1
   adding file2
@@ -1608,27 +1610,18 @@ For this test enabled obsshelve extension is enough, and it is enabled at the to
   $ echo 1 >> file1 && hg shelve
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ shelvelog
-  1
+  $ testshelvedcount 1
   $ echo 2 >> file2 && hg shelve
   shelved as default-01
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ shelvelog
-  2
+  $ testshelvedcount 2
   $ echo 3 >> file3 && hg shelve
   shelved as default-02
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ shelvelog
-  3
+  $ testshelvedcount 3
   $ hg unshelve > /dev/null
-  $ shelvelog
-  2
+  $ testshelvedcount 2
   $ hg unshelve > /dev/null
-  $ shelvelog
-  1
+  $ testshelvedcount 1
   $ hg unshelve > /dev/null
-  $ shelvelog
-  0
-
-
-
+  $ testshelvedcount 0
