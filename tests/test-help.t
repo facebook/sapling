@@ -371,6 +371,7 @@ Test extension help:
        ownercheck    prevent operations on repos not owned by the current user
        p4fastimport  p4fastimport - A fast importer from Perforce to Mercurial
        patchbomb     command to send changesets as (a series of) patch emails
+       perfsuite     (no help text available)
        perftweaks    extension for tweaking Mercurial features to improve
                      performance.
        phabdiff      (no help text available)
