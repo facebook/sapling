@@ -77,12 +77,12 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
     // Simply call runWhileDataLoaded() again when we we finish loading the blob
     // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
     // time around.
-    auto state = self->state_.wlock();
+    auto stateLock = self->state_.wlock();
     DCHECK(
-        state->tag == State::BLOB_LOADED ||
-        state->tag == State::MATERIALIZED_IN_OVERLAY)
-        << "unexpected FileInode state after loading: " << state->tag;
-    return self->runWhileDataLoaded(std::move(state), std::forward<Fn>(fn));
+        stateLock->tag == State::BLOB_LOADED ||
+        stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
+        << "unexpected FileInode state after loading: " << stateLock->tag;
+    return self->runWhileDataLoaded(std::move(stateLock), std::forward<Fn>(fn));
   });
 }
 
@@ -136,12 +136,13 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
     // Simply call runWhileDataLoaded() again when we we finish loading the blob
     // data.  The state should be BLOB_LOADED or MATERIALIZED_IN_OVERLAY this
     // time around.
-    auto state = self->state_.wlock();
+    auto stateLock = self->state_.wlock();
     DCHECK(
-        state->tag == State::BLOB_LOADED ||
-        state->tag == State::MATERIALIZED_IN_OVERLAY)
-        << "unexpected FileInode state after loading: " << state->tag;
-    return self->runWhileMaterialized(std::move(state), std::forward<Fn>(fn));
+        stateLock->tag == State::BLOB_LOADED ||
+        stateLock->tag == State::MATERIALIZED_IN_OVERLAY)
+        << "unexpected FileInode state after loading: " << stateLock->tag;
+    return self->runWhileMaterialized(
+        std::move(stateLock), std::forward<Fn>(fn));
   });
 }
 
@@ -824,11 +825,12 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
 
   return runWhileMaterialized(
       std::move(state),
-      [data = data.str(), off, self = inodePtrFromThis()](LockedState&& state) {
+      [data = data.str(), off, self = inodePtrFromThis()](
+          LockedState&& stateLock) {
         struct iovec iov;
         iov.iov_base = const_cast<char*>(data.data());
         iov.iov_len = data.size();
-        return self->writeImpl(state, &iov, 1, off);
+        return self->writeImpl(stateLock, &iov, 1, off);
       });
 }
 
