@@ -1147,7 +1147,7 @@ class localrepository(object):
 
         # abort here if the journal already exists
         if self.svfs.exists("journal"):
-            raise error.RepoError(
+            raise error.AbandonedTransactionFoundError(
                 _("abandoned transaction found"),
                 hint=_("run 'hg recover' to clean up transaction"))
 

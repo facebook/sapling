@@ -130,6 +130,9 @@ class UnknownIdentifier(ParseError):
 class RepoError(Hint, Exception):
     __bytes__ = _tobytes
 
+class AbandonedTransactionFoundError(RepoError):
+    """Exception raised when an unfinished transaction has been found"""
+
 class RepoLookupError(RepoError):
     pass
 
