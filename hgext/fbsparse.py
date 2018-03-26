@@ -909,9 +909,9 @@ def sparse(ui, repo, *pats, **opts):
 
     Returns 0 if editing the sparse checkout succeeds.
     """
-    if pats and pats[0] in subcmd._table:
-        # look for a possible subcommand
-        return subcmd._table[pats[0]](ui, repo, *pats[1:], **opts)
+    cmd = subcmd.parse(pats, opts)
+    if cmd is not None:
+        return cmd(ui, repo)
 
     include = opts.get('include')
     exclude = opts.get('exclude')
@@ -962,37 +962,55 @@ def sparse(ui, repo, *pats, **opts):
 
 # subcommands for the hg sparse command line
 class subcmdfunc(registrar._funcregistrarbase):
-    """Register a function to be invoked for an `hg sparse <thing>`."""
+    """Register a function to be invoked for "hg sparse <thing>" subcommands
+
+    Help info is taken from the function docstring, or can be set explicitly
+    with the help='...' keyword argument.
+    """
 
     def __init__(self, cmd, table=None):
         # preserve original docstring for the sparse function
         self._cmd = cmd
         self._base_doc = '{}\n\n\nAvailable sub-commands:\n'.format(
             cmd[0].__doc__.rstrip())
+        self._help = {}
         if table is None:
             # List commands in registration order
             table = collections.OrderedDict()
         super(subcmdfunc, self).__init__(table)
 
-    # Used by _formatdoc().
-    _docformat = '%s -- %s'
+    def _doregister(self, func, name, help=None):
+        if name in self._table:
+            msg = 'duplicate registration for name: "%s"' % name
+            raise error.ProgrammingError(msg)
 
-    def _extrasetup(self, name, func):
-        """Execute exra setup for registered function, if needed
-        """
+        self._table[name] = func
+        self._help[name] = (help or func.__doc__ or '').strip()
         longest = max(len(n) for n in self._table)
         entries = [
             '    {:<{longest}}   {}'.format(
-                key, fn._origdoc, longest=longest)
-            for key, fn in sorted(self._table.items())]
+                key, self._help[key].split('\n', 1)[0].strip(), longest=longest)
+            for key in self._table]
 
         self._cmd[0].__doc__ = '{}\n{}\n'.format(
             self._base_doc, '\n\n'.join(entries))
 
+        return func
+
+    def parse(self, pats, opts):
+        if not pats or pats[0] not in self._table:
+            return
+
+        name, pats = pats[0], pats[1:]
+        def callsubcmd(ui, repo, *args, **kw):
+            opts.update(kw)
+            return self._table[name](name, ui, repo, *(args + pats), **opts)
+        return callsubcmd
+
 subcmd = subcmdfunc(cmdtable['^sparse'])
 
 @subcmd('list')
-def _listprofiles(ui, repo, *pats, **opts):
+def _listprofiles(cmd, ui, repo, *pats, **opts):
     """List available sparse profiles"""
     chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
     labels = {
