@@ -176,14 +176,15 @@ impl Bundle2Resolver {
                     let (c, f) = split_changegroup(parts);
                     convert_to_revlog_changesets(c)
                         .collect()
-                        .join(
+                        .and_then(|changesets| {
                             upload_blobs(
                                 repo.clone(),
                                 convert_to_revlog_filelog(repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
-                            ).context("While uploading File Blobs")
-                                .from_err(),
-                        )
+                            ).map(move |filelogs| (changesets, filelogs))
+                                .context("While uploading File Blobs")
+                                .from_err()
+                        })
                         .map(move |(changesets, filelogs)| {
                             let cg_push = ChangegroupPush {
                                 part_id,
