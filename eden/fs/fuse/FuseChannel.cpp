@@ -479,6 +479,7 @@ std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
       // outstandingCalls collection
       auto rdata = boost::polymorphic_downcast<RequestData*>(
           ctx->getContextData(RequestData::kKey));
+      // rdata should never be null here and if it - it's most likely a bug
       const fuse_in_header& fuseHeader = rdata->examineReq();
       if (fuseHeader.opcode != 0) {
         outstandingCalls.push_back(fuseHeader);
@@ -929,16 +930,23 @@ void FuseChannel::processSession() {
           // request.
           RequestContextScopeGuard requestContextGuard;
 
-          // Save a weak reference to this new request context.
-          // We'll need this to process FUSE_INTERRUPT requests.
-          state_.wlock()->requests.emplace(
-              header->unique,
-              std::weak_ptr<folly::RequestContext>(
-                  RequestContext::saveContext()));
-
           auto& request = RequestData::create(this, *header, dispatcher_);
+          {
+            // Save a weak reference to this new request context.
+            // We'll need this to process FUSE_INTERRUPT requests.
+            auto state = state_.wlock();
+            state->requests.emplace(
+                header->unique,
+                std::weak_ptr<folly::RequestContext>(
+                    RequestContext::saveContext()));
+          }
           const auto& entry = handlerIter->second;
-
+          // TODO: it seems problematic that this code calls
+          // setRequstFuture() without holding any lock.  This races with
+          // other threads processing FUSE_REQUEST.  We should probably fix
+          // this up in a subsequent diff.  We cannot hold the state_ lock
+          // while invoking entry.handler, though, so we perhaps should
+          // re-acquire the state_ lock after calling the handler.
           request.setRequestFuture(
               request.startRequest(dispatcher_->getStats(), entry.histogram)
                   .then([=, &request] {
