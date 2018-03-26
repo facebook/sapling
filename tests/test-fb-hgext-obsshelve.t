@@ -1597,3 +1597,41 @@ Obsshelve knows how to unshelve traditional shelves
   +something
   $ cd ..
 
+Test revsetpredicate 'shelved'
+  $ hg init test-log-shelved && cd test-log-shelved
+  $ cat <<EOF >> .hg/hgrc
+  > [experimental]
+  > obsshelve=True
+  > EOF
+  $ alias shelvelog='hg log --hidden -r "shelved()" --template "{node}\n" | wc -l'
+  $ touch file1 && touch file2 && touch file3 && hg addremove && hg commit -m "Add test files"
+  adding file1
+  adding file2
+  adding file3
+  $ echo 1 >> file1 && hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ shelvelog
+  1
+  $ echo 2 >> file2 && hg shelve
+  shelved as default-01
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ shelvelog
+  2
+  $ echo 3 >> file3 && hg shelve
+  shelved as default-02
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ shelvelog
+  3
+  $ hg unshelve > /dev/null
+  $ shelvelog
+  2
+  $ hg unshelve > /dev/null
+  $ shelvelog
+  1
+  $ hg unshelve > /dev/null
+  $ shelvelog
+  0
+
+
+
