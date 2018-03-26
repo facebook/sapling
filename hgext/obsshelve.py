@@ -603,6 +603,10 @@ def listcmd(ui, repo, pats, opts):
                 for chunk, label in patch.diffstatui(difflines, width=width):
                     ui.write(chunk, label=label)
 
+def listshelvesfiles(repo):
+    """return all shelves in the repo as list of filenames from the repo root"""
+    return [util.split(filetuple[1])[1] for filetuple in listshelves(repo)]
+
 def patchcmds(ui, repo, pats, opts, subcommand):
     """subcommand that displays shelves"""
     if len(pats) == 0:
@@ -1137,3 +1141,25 @@ def reposetup(ui, repo):
     order = extensions._order
     if 'shelve' in order:
         raise error.Abort("shelve must be disabled when obsshelve is enabled")
+
+revsetpredicate = registrar.revsetpredicate()
+@revsetpredicate('shelved')
+def shelved(repo, subset, x):
+    """Shelved changes"""
+    # list files with shelves
+    shelved = listshelvesfiles(repo)
+    # read node from each file
+    nodes = map(lambda filename:
+        nodemod.bin(shelvedfile(
+            repo,
+            filename,
+            'oshelve'
+        ).readobsshelveinfo()['node']),
+        shelved
+    )
+    # filter if some of the revisions are not in repo
+    nodes = filter(lambda x: x in repo, nodes)
+    # convert to full hash
+    nodes = map(lambda x: nodemod.hex(repo[x].node()), nodes)
+    # returns intersection with shelved commits (including hidden)
+    return subset & repo.revs('%ls', nodes)
