@@ -1072,6 +1072,73 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                 fm.plain(' - %s' % info.get('title', b''), label=label)
             fm.plain('\n')
 
+@subcmd('explain')
+def _explainprofile(cmd, ui, repo, *profiles, **opts):
+    """Show information on individual profiles"""
+    if ui.plain() and not opts.get('template'):
+        hint = _('invoke with -T/--template to control output format')
+        raise error.Abort(_('must specify a template in plain mode'), hint=hint)
+
+    exitcode = 0
+    with ui.formatter('sparse', opts) as fm:
+        for i, p in enumerate(profiles):
+            try:
+                raw = repo.getrawprofile(p, '.')
+            except KeyError:
+                ui.warn(_('The profile %s was not found\n') % p)
+                exitcode = 255
+                continue
+            if i:
+                fm.plain('\n')
+            fm.startitem()
+
+            fm.write('path', '%s\n\n', p)
+
+            profile = repo.readsparseconfig(raw, p)
+            fm.data(**attr.asdict(profile))
+
+            if fm.isplain():
+                md = profile.metadata
+                title = md.get('title', _('(untitled)'))
+                lines = [
+                    minirst.section(title)
+                ]
+                description = md.get('description')
+                if description:
+                    lines.append('%s\n\n' % description)
+
+                other = md.viewkeys() - {'title', 'description'}
+                if other:
+                    lines += (
+                        minirst.subsection(_('Additional metadata')),
+                        ''.join(
+                            [':%s: %s\n' % (
+                                key, '\n  '.join(md[key].splitlines()))
+                            for key in sorted(other)]),
+                        '\n')
+
+                sections = (
+                    ('profiles', _('Profiles included')),
+                    ('includes', _('Inclusion rules')),
+                    ('excludes', _('Exclusion rules')),
+                )
+
+                for attrib, label in sections:
+                    section = getattr(profile, attrib)
+                    if not section:
+                        continue
+                    lines += (minirst.subsection(label), '::\n\n')
+                    lines += ('  %s\n' % entry for entry in sorted(section))
+                    lines += ('\n',)
+
+                textwidth = ui.configint('ui', 'textwidth')
+                termwidth = ui.termwidth() - 2
+                if not (0 < textwidth <= termwidth):
+                    textwidth = termwidth
+                fm.plain(minirst.format(''.join(lines), textwidth))
+
+    return exitcode
+
 @subcmd('reset', help=_('makes the repo full again'))
 @subcmd('disableprofile', help=_('disables the specified profile'))
 @subcmd('enableprofile', help=_('enables the specified profile'))

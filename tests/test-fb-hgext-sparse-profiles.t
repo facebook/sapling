@@ -316,11 +316,21 @@ Test profile discovery
   > [metadata]
   > title: Base profile including the profiles directory
   > description: This is a base profile, you really want to include this one
-  >  if you want to be able to edit profiles.
+  >  if you want to be able to edit profiles. In addition, this profiles has
+  >  some metadata.
+  > foo = bar baz and a whole
+  >   lot more.
+  > team: me, myself and I
   > [include]
   > profiles
   > EOF
-  $ touch profiles/foo/monty
+  $ cat > profiles/foo/monty <<EOF
+  > [include]
+  > eric_idle
+  > john_cleese
+  > [exclude]
+  > guido_van_rossum
+  > EOF
   $ touch profiles/bar/python
   $ hg add -q profiles
   $ hg commit -qm 'created profiles'
@@ -333,7 +343,7 @@ Test profile discovery
   [
    {
     "active": "included",
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles.", "title": "Base profile including the profiles directory"},
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
@@ -356,7 +366,7 @@ Test profile discovery
   [
    {
     "active": "included",
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles.", "title": "Base profile including the profiles directory"},
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs"
    },
    {
@@ -419,3 +429,96 @@ warnings:
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
 
+We can look at invididual profiles:
+
+  $ hg sparse explain profiles/bar/eggs
+  profiles/bar/eggs
+  
+  Base profile including the profiles directory
+  """""""""""""""""""""""""""""""""""""""""""""
+  
+  This is a base profile, you really want to include this one if you want to be
+  able to edit profiles. In addition, this profiles has some metadata.
+  
+  Additional metadata
+  ===================
+  
+  foo           bar baz and a whole lot more.
+  team          me, myself and I
+  
+  Inclusion rules
+  ===============
+  
+    profiles
+
+  $ hg sparse explain profiles/bar/eggs -T json
+  [
+   {
+    "excludes": [],
+    "includes": ["profiles"],
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
+    "path": "profiles/bar/eggs",
+    "profiles": []
+   }
+  ]
+  $ hg sparse explain profiles/bar/eggs
+  profiles/bar/eggs
+  
+  Base profile including the profiles directory
+  """""""""""""""""""""""""""""""""""""""""""""
+  
+  This is a base profile, you really want to include this one if you want to be
+  able to edit profiles. In addition, this profiles has some metadata.
+  
+  Additional metadata
+  ===================
+  
+  foo           bar baz and a whole lot more.
+  team          me, myself and I
+  
+  Inclusion rules
+  ===============
+  
+    profiles
+
+  $ hg sparse explain profiles/bar/eggs profiles/foo/monty profiles/nonsuch
+  profiles/bar/eggs
+  
+  Base profile including the profiles directory
+  """""""""""""""""""""""""""""""""""""""""""""
+  
+  This is a base profile, you really want to include this one if you want to be
+  able to edit profiles. In addition, this profiles has some metadata.
+  
+  Additional metadata
+  ===================
+  
+  foo           bar baz and a whole lot more.
+  team          me, myself and I
+  
+  Inclusion rules
+  ===============
+  
+    profiles
+  
+  profiles/foo/monty
+  
+  (untitled)
+  """"""""""
+  
+  Inclusion rules
+  ===============
+  
+    eric_idle
+    john_cleese
+  
+  Exclusion rules
+  ===============
+  
+    guido_van_rossum
+  The profile profiles/nonsuch was not found
+  [255]
+
+  $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n"
+  profiles/bar/eggs
+  Base profile including the profiles directory

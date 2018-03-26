@@ -25,6 +25,7 @@ test sparse subcommands (help, verbose)
   subcommands:
   
    list           List available sparse profiles
+   explain        Show information on individual profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -43,6 +44,7 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles - Show all available sparse
                   profiles, with the active profiles marked.
+   explain        Show information on individual profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -67,6 +69,7 @@ test sparse subcommands (help, verbose)
   subcommands:
   
    list           List available sparse profiles
+   explain        Show information on individual profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -85,6 +88,7 @@ test sparse subcommands (help, verbose)
   subcommands:
   
    list           List available sparse profiles
+   explain        Show information on individual profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
