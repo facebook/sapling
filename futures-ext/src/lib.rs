@@ -257,6 +257,38 @@ impl<In: Stream> Stream for Enumerate<In> {
 /// receiver is polled before the sender has send the result
 pub struct ConservativeReceiver<T>(oneshot::Receiver<T>);
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ConservativeReceiverError {
+    Canceled,
+    ReceiveBeforeSend,
+}
+
+impl ::std::error::Error for ConservativeReceiverError {
+    fn description(&self) -> &str {
+        match self {
+            &ConservativeReceiverError::Canceled => "oneshot canceled",
+            &ConservativeReceiverError::ReceiveBeforeSend => "recv called on channel before send",
+        }
+    }
+}
+
+impl ::std::fmt::Display for ConservativeReceiverError {
+    fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        match self {
+            &ConservativeReceiverError::Canceled => write!(fmt, "oneshot canceled"),
+            &ConservativeReceiverError::ReceiveBeforeSend => {
+                write!(fmt, "recv called on channel before send")
+            }
+        }
+    }
+}
+
+impl ::std::convert::From<oneshot::Canceled> for ConservativeReceiverError {
+    fn from(_: oneshot::Canceled) -> ConservativeReceiverError {
+        ConservativeReceiverError::Canceled
+    }
+}
+
 impl<T> ConservativeReceiver<T> {
     pub fn new(recv: oneshot::Receiver<T>) -> Self {
         ConservativeReceiver(recv)
@@ -265,12 +297,12 @@ impl<T> ConservativeReceiver<T> {
 
 impl<T> Future for ConservativeReceiver<T> {
     type Item = T;
-    type Error = oneshot::Canceled;
+    type Error = ConservativeReceiverError;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         match self.0.poll()? {
             Async::Ready(item) => Ok(Async::Ready(item)),
-            Async::NotReady => Err(oneshot::Canceled),
+            Async::NotReady => Err(ConservativeReceiverError::ReceiveBeforeSend),
         }
     }
 }
@@ -399,16 +431,28 @@ mod test {
 
         let mut core = Core::new().unwrap();
         let res: Result<(), ()> = core.run(poll_fn(move || {
-            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+            assert_matches!(
+                remainder.poll(),
+                Err(ConservativeReceiverError::ReceiveBeforeSend)
+            );
 
             assert_eq!(s.poll(), Ok(Async::Ready(Some("hello"))));
-            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+            assert_matches!(
+                remainder.poll(),
+                Err(ConservativeReceiverError::ReceiveBeforeSend)
+            );
 
             assert_eq!(s.poll(), Ok(Async::Ready(Some("there"))));
-            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+            assert_matches!(
+                remainder.poll(),
+                Err(ConservativeReceiverError::ReceiveBeforeSend)
+            );
 
             assert_eq!(s.poll(), Ok(Async::Ready(Some("world"))));
-            assert_matches!(remainder.poll(), Err(oneshot::Canceled));
+            assert_matches!(
+                remainder.poll(),
+                Err(ConservativeReceiverError::ReceiveBeforeSend)
+            );
 
             assert_eq!(s.poll(), Ok(Async::Ready(None)));
             match remainder.poll() {
