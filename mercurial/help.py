@@ -310,25 +310,51 @@ addtopicsymbols('templates', '.. functionsmarker', templater.funcs)
 addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands,
                 dedent=True)
 
-def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
-          **opts):
-    '''
-    Generate the help for 'name' as unformatted restructured text. If
-    'name' is None, describe the commands available.
-    '''
+class _helpdispatch(object):
+    def __init__(
+            self, ui, commands, unknowncmd=False, full=False, subtopic=None,
+            **opts):
+        self.ui = ui
+        self.commands = commands
+        self.subtopic = subtopic
+        self.unknowncmd = unknowncmd
+        self.full = full
+        self.opts = opts
 
-    opts = pycompat.byteskwargs(opts)
+    def dispatch(self, name):
+        queries = []
+        if self.unknowncmd:
+            queries += [self.helpextcmd]
+        if self.opts.get('extension'):
+            queries += [self.helpext]
+        if self.opts.get('command'):
+            queries += [self.helpcmd]
+        if not queries:
+            queries = (self.helptopic, self.helpcmd, self.helpext,
+                       self.helpextcmd)
+        for f in queries:
+            try:
+                return f(name, self.subtopic)
+            except error.UnknownCommand:
+                pass
+        else:
+            if self.unknowncmd:
+                raise error.UnknownCommand(name)
+            else:
+                msg = _('no such help topic: %s') % name
+                hint = _("try 'hg help --keyword %s'") % name
+                raise error.Abort(msg, hint=hint)
 
-    def helpcmd(name, subtopic=None):
+    def helpcmd(self, name, subtopic=None):
         try:
-            aliases, entry = cmdutil.findcmd(name, commands.table,
-                                             strict=unknowncmd)
+            aliases, entry = cmdutil.findcmd(name, self.commands.table,
+                                             strict=self.unknowncmd)
         except error.AmbiguousCommand as inst:
             # py3k fix: except vars can't be used outside the scope of the
             # except block, nor can be used inside a lambda. python issue4617
             prefix = inst.args[0]
             select = lambda c: c.lstrip('^').startswith(prefix)
-            rst = helplist(select)
+            rst = self.helplist(name, select)
             return rst
 
         rst = []
@@ -338,7 +364,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             rst.append(entry[0].badalias + '\n')
             if entry[0].unknowncmd:
                 try:
-                    rst.extend(helpextcmd(entry[0].cmdname))
+                    rst.extend(self.helpextcmd(entry[0].cmdname))
                 except error.UnknownCommand:
                     pass
             return rst
@@ -352,7 +378,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
         else:
             rst.append('hg %s\n' % aliases[0])
         # aliases
-        if full and not ui.quiet and len(aliases) > 1:
+        if self.full and not self.ui.quiet and len(aliases) > 1:
             rst.append(_("\naliases: %s\n") % ', '.join(aliases[1:]))
         rst.append('\n')
 
@@ -369,7 +395,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
                 doc = (_('alias for: hg %s\n\n%s\n\ndefined by: %s\n') %
                        (entry[0].definition, doc, source))
         doc = doc.splitlines(True)
-        if ui.quiet or not full:
+        if self.ui.quiet or not self.full:
             rst.append(doc[0])
         else:
             rst.extend(doc)
@@ -388,24 +414,24 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             pass
 
         # options
-        if not ui.quiet and entry[1]:
-            rst.append(optrst(_("options"), entry[1], ui.verbose))
+        if not self.ui.quiet and entry[1]:
+            rst.append(optrst(_("options"), entry[1], self.ui.verbose))
 
-        if ui.verbose:
+        if self.ui.verbose:
             rst.append(optrst(_("global options"),
-                              commands.globalopts, ui.verbose))
+                              self.commands.globalopts, self.ui.verbose))
 
-        if not ui.verbose:
-            if not full:
+        if not self.ui.verbose:
+            if not self.full:
                 rst.append(_("\n(use 'hg %s -h' to show more help)\n")
                            % name)
-            elif not ui.quiet:
+            elif not self.ui.quiet:
                 rst.append(_('\n(some details hidden, use --verbose '
                                'to show complete help)'))
 
         return rst
 
-    def helplist(select=None, **opts):
+    def helplist(self, name, select=None, **opts):
         # list of commands
         if name == "shortlist":
             header = _('basic commands:\n\n')
@@ -416,18 +442,18 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
 
         h = {}
         cmds = {}
-        for c, e in commands.table.iteritems():
+        for c, e in self.commands.table.iteritems():
             f = c.partition("|")[0]
             if select and not select(f):
                 continue
             if (not select and name != 'shortlist' and
-                e[0].__module__ != commands.__name__):
+                e[0].__module__ != self.commands.__name__):
                 continue
             if name == "shortlist" and not f.startswith("^"):
                 continue
             f = f.lstrip("^")
             doc = pycompat.getdoc(e[0])
-            if filtercmd(ui, f, name, doc):
+            if filtercmd(self.ui, f, name, doc):
                 continue
             doc = gettext(doc)
             if not doc:
@@ -437,21 +463,21 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
 
         rst = []
         if not h:
-            if not ui.quiet:
+            if not self.ui.quiet:
                 rst.append(_('no commands defined\n'))
             return rst
 
-        if not ui.quiet:
+        if not self.ui.quiet:
             rst.append(header)
         fns = sorted(h)
         for f in fns:
-            if ui.verbose:
+            if self.ui.verbose:
                 commacmds = cmds[f].replace("|",", ")
                 rst.append(" :%s: %s\n" % (commacmds, h[f]))
             else:
                 rst.append(' :%s: %s\n' % (f, h[f]))
 
-        ex = opts.get
+        ex = self.opts.get
         anyopts = (ex(r'keyword') or not (ex(r'command') or ex(r'extension')))
         if not name and anyopts:
             exts = listexts(_('enabled extensions:'), extensions.enabled())
@@ -466,11 +492,11 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             for t, desc in topics:
                 rst.append(" :%s: %s\n" % (t, desc))
 
-        if ui.quiet:
+        if self.ui.quiet:
             pass
-        elif ui.verbose:
-            rst.append('\n%s\n' % optrst(_("global options"),
-                                         commands.globalopts, ui.verbose))
+        elif self.ui.verbose:
+            rst.append('\n%s\n' % optrst(
+                _("global options"), self.commands.globalopts, self.ui.verbose))
             if name == 'shortlist':
                 rst.append(_("\n(use 'hg help' for the full list "
                              "of commands)\n"))
@@ -478,7 +504,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             if name == 'shortlist':
                 rst.append(_("\n(use 'hg help' for the full list of commands "
                              "or 'hg -v' for details)\n"))
-            elif name and not full:
+            elif name and not self.full:
                 rst.append(_("\n(use 'hg help %s' to show the full help "
                              "text)\n") % name)
             elif name and cmds and name in cmds.keys():
@@ -490,7 +516,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
                            % (name and " " + name or ""))
         return rst
 
-    def helptopic(name, subtopic=None):
+    def helptopic(self, name, subtopic=None):
         # Look for sub-topic entry first.
         header, doc = None, None
         if subtopic and name in subtopics:
@@ -511,22 +537,22 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
         if not doc:
             rst.append("    %s\n" % _("(no help text available)"))
         if callable(doc):
-            rst += ["    %s\n" % l for l in doc(ui).splitlines()]
+            rst += ["    %s\n" % l for l in doc(self.ui).splitlines()]
 
-        if not ui.verbose:
+        if not self.ui.verbose:
             omitted = _('(some details hidden, use --verbose'
                          ' to show complete help)')
             indicateomitted(rst, omitted)
 
         try:
-            cmdutil.findcmd(name, commands.table)
+            cmdutil.findcmd(name, self.commands.table)
             rst.append(_("\nuse 'hg help -c %s' to see help for "
                        "the %s command\n") % (name, name))
         except error.UnknownCommand:
             pass
         return rst
 
-    def helpext(name, subtopic=None):
+    def helpext(self, name, subtopic=None):
         try:
             mod = extensions.find(name)
             doc = gettext(pycompat.getdoc(mod)) or _('no help text available')
@@ -545,7 +571,7 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             rst.extend(tail.splitlines(True))
             rst.append('\n')
 
-        if not ui.verbose:
+        if not self.ui.verbose:
             omitted = _('(some details hidden, use --verbose'
                          ' to show complete help)')
             indicateomitted(rst, omitted)
@@ -556,15 +582,15 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             except AttributeError:
                 ct = {}
             modcmds = set([c.partition('|')[0] for c in ct])
-            rst.extend(helplist(modcmds.__contains__))
+            rst.extend(self.helplist(name, modcmds.__contains__))
         else:
             rst.append(_("(use 'hg help extensions' for information on enabling"
                        " extensions)\n"))
         return rst
 
-    def helpextcmd(name, subtopic=None):
-        cmd, ext, mod = extensions.disabledcmd(ui, name,
-                                               ui.configbool('ui', 'strict'))
+    def helpextcmd(self, name, subtopic=None):
+        cmd, ext, mod = extensions.disabledcmd(
+            self.ui, name, self.ui.configbool('ui', 'strict'))
         doc = gettext(pycompat.getdoc(mod))
         if doc is None:
             doc = _('(no help text available)')
@@ -578,6 +604,16 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
         rst.append(_("(use 'hg help extensions' for information on enabling "
                    "extensions)\n"))
         return rst
+
+def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
+          **opts):
+    '''
+    Generate the help for 'name' as unformatted restructured text. If
+    'name' is None, describe the commands available.
+    '''
+
+    opts = pycompat.byteskwargs(opts)
+    dispatch = _helpdispatch(ui, commands, unknowncmd, full, subtopic, **opts)
 
     rst = []
     kw = opts.get('keyword')
@@ -603,33 +639,12 @@ def help_(ui, commands, name, unknowncmd=False, full=True, subtopic=None,
             hint = _("try 'hg help' for a list of topics")
             raise error.Abort(msg, hint=hint)
     elif name and name != 'shortlist':
-        queries = []
-        if unknowncmd:
-            queries += [helpextcmd]
-        if opts.get('extension'):
-            queries += [helpext]
-        if opts.get('command'):
-            queries += [helpcmd]
-        if not queries:
-            queries = (helptopic, helpcmd, helpext, helpextcmd)
-        for f in queries:
-            try:
-                rst = f(name, subtopic)
-                break
-            except error.UnknownCommand:
-                pass
-        else:
-            if unknowncmd:
-                raise error.UnknownCommand(name)
-            else:
-                msg = _('no such help topic: %s') % name
-                hint = _("try 'hg help --keyword %s'") % name
-                raise error.Abort(msg, hint=hint)
+        rst = dispatch.dispatch(name)
     else:
         # program name
         if not ui.quiet:
             rst = [_("Mercurial Distributed SCM\n"), '\n']
-        rst.extend(helplist(None, **pycompat.strkwargs(opts)))
+        rst.extend(dispatch.helplist(name, None, **pycompat.strkwargs(opts)))
 
     return ''.join(rst)
 
