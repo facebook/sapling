@@ -18,7 +18,9 @@ from mercurial import (
     progress,
     localrepo,
     error,
+    help,
     hg,
+    minirst,
     pathutil,
     registrar,
     patch,
@@ -48,6 +50,7 @@ def extsetup(ui):
     _setupadd(ui)
     _setupdirstate(ui)
     _setupdiff(ui)
+    _setupsubcommands(ui)
     # if fsmonitor is enabled, tell it to use our hash function
     try:
         fsmonitor = extensions.find('fsmonitor')
@@ -403,6 +406,20 @@ def _setupdiff(ui):
             if issparse:
                 extensions.unwrapfunction(patch, 'trydiff', trydiff)
     extensions.wrapcommand(commands.table, 'diff', diff)
+
+def _setupsubcommands(ui):
+    def helpsubcommands(orig, self, name, subtopic=None):
+        rst = orig(self, name, subtopic)
+        if name == 'sparse':
+            if not self.ui.quiet:
+                subcmdsrst = subcmd.subcmdsrst(self.ui.verbose)
+                # in verbose mode there is an extra line we want to keep at the
+                # end.
+                pos = len(rst) if self.ui.verbose else -1
+                rst[pos:pos] = [subcmdsrst]
+        return rst
+
+    extensions.wrapfunction(help._helpdispatch, 'helpcmd', helpsubcommands)
 
 @attr.s(frozen=True, slots=True)
 class SparseConfig(object):
@@ -997,6 +1014,19 @@ class subcmdfunc(registrar._funcregistrarbase):
 
         return func
 
+    def subcmdsrst(self, verbose=False):
+        """Produce a table of subcommands"""
+        def cmdhelp():
+            for key in self._table:
+                doc = self._help[key]
+                doc, __, rest = doc.strip().partition('\n')
+                if verbose and rest.strip():
+                    doc = '{} - {}'.format(doc, rest.strip())
+                yield (key, doc)
+        rst = ['\n%s:\n\n' % _('subcommands')]
+        rst += minirst.maketable(list(cmdhelp()), 1)
+        return ''.join(rst)
+
     def parse(self, pats, opts):
         if not pats or pats[0] not in self._table:
             return
@@ -1011,7 +1041,11 @@ subcmd = subcmdfunc(cmdtable['^sparse'])
 
 @subcmd('list')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
-    """List available sparse profiles"""
+    """List available sparse profiles
+
+    Show all available sparse profiles, with the active profiles marked.
+
+    """
     chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
     labels = {
         PROFILE_INACTIVE: 'inactive',
