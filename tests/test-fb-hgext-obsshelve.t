@@ -1598,11 +1598,8 @@ Obsshelve knows how to unshelve traditional shelves
   $ cd ..
 
 Test revsetpredicate 'shelved'
+For this test enabled obsshelve extension is enough, and it is enabled at the top of the file
   $ hg init test-log-shelved && cd test-log-shelved
-  $ cat <<EOF >> .hg/hgrc
-  > [experimental]
-  > obsshelve=True
-  > EOF
   $ alias shelvelog='hg log --hidden -r "shelved()" --template "{node}\n" | wc -l'
   $ touch file1 && touch file2 && touch file3 && hg addremove && hg commit -m "Add test files"
   adding file1
