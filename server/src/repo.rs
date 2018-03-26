@@ -14,6 +14,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use failure::err_msg;
@@ -21,9 +22,12 @@ use futures::{future, stream, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use pylz4;
+use rand::Isaac64Rng;
+use rand::distributions::{LogNormal, Sample};
 use scuba::{ScubaClient, ScubaSample};
 use time_ext::DurationExt;
 use tokio_core::reactor::Remote;
+use tokio_timer;
 
 use slog::{self, Drain, Logger};
 use slog_scuba::ScubaDrain;
@@ -88,6 +92,11 @@ pub fn init_repo(
     Ok((sock, repo))
 }
 
+struct LogNormalGenerator {
+    rng: Isaac64Rng,
+    distribution: LogNormal,
+}
+
 pub trait OpenableRepoType {
     fn open(&self, logger: Logger, remote: &Remote, repoid: RepositoryId) -> Result<BlobRepo>;
     fn path(&self) -> &Path;
@@ -105,6 +114,55 @@ impl OpenableRepoType for RepoType {
             TestBlobManifold(ref bucket, ref prefix, _) => {
                 BlobRepo::new_test_manifold(logger, bucket, &prefix, remote, repoid)?
             }
+            TestBlobDelayRocks(ref path, mean, stddev) => {
+                // We take in an arithmetic mean and stddev, and deduce a log normal
+                let mean = mean as f64 / 1_000_000.0;
+                let stddev = stddev as f64 / 1_000_000.0;
+                let variance = stddev * stddev;
+                let mean_squared = mean * mean;
+
+                let mu = (mean_squared / (variance + mean_squared).sqrt()).ln();
+                let sigma = (1.0 + variance / mean_squared).ln();
+
+                let max_delay = 16.0;
+
+                let mut delay_gen = LogNormalGenerator {
+                    // This is a deterministic RNG if not seeded
+                    rng: Isaac64Rng::new_unseeded(),
+                    distribution: LogNormal::new(mu, sigma),
+                };
+                let delay_gen = move |()| {
+                    let delay = delay_gen.distribution.sample(&mut delay_gen.rng);
+                    let delay = if delay < 0.0 || delay > max_delay {
+                        max_delay
+                    } else {
+                        delay
+                    };
+                    let seconds = delay as u64;
+                    let nanos = ((delay - seconds as f64) * 1_000_000_000.0) as u32;
+                    Duration::new(seconds, nanos)
+                };
+                let timer = {
+                    tokio_timer::wheel()
+                        .tick_duration(Duration::from_millis(1))
+                        // Timeouts above num_slots * tick_duration cause a panic
+                        .num_slots(16384)
+                        .thread_name("Blobstore Delay Timer")
+                        .build()
+                };
+                BlobRepo::new_rocksdb_delayed(
+                    logger,
+                    &path,
+                    repoid,
+                    delay_gen,
+                    timer,
+                    // Roundtrips to the server - i.e. how many delays to apply
+                    2, // get
+                    3, // put
+                    2, // is_present
+                    2, // assert_present
+                )?
+            }
         };
 
         Ok(ret)
@@ -116,6 +174,7 @@ impl OpenableRepoType for RepoType {
         match *self {
             Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
             TestBlobManifold(_, _, ref path) => path.as_ref(),
+            TestBlobDelayRocks(ref path, ..) => path.as_ref(),
         }
     }
 }

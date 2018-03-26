@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::mem;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use ascii::AsciiString;
 use bincode;
@@ -21,12 +22,14 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::{Discard, Drain, Logger};
 use time_ext::DurationExt;
+use tokio_timer::Timer;
 use uuid::Uuid;
 
 use blobstore::Blobstore;
 use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
+use delayblob::DelayBlob;
 use fileblob::Fileblob;
 use fileheads::FileHeads;
 use filelinknodes::FileLinknodes;
@@ -120,6 +123,56 @@ impl BlobRepo {
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
         let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
             .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+
+        Ok(Self::new(
+            logger,
+            Arc::new(heads),
+            Arc::new(bookmarks),
+            Arc::new(blobstore),
+            Arc::new(linknodes),
+            Arc::new(changesets),
+            repoid,
+        ))
+    }
+
+    pub fn new_rocksdb_delayed<F>(
+        logger: Logger,
+        path: &Path,
+        repoid: RepositoryId,
+        delay_gen: F,
+        timer: Timer,
+        get_roundtrips: usize,
+        put_roundtrips: usize,
+        is_present_roundtrips: usize,
+        assert_present_roundtrips: usize,
+    ) -> Result<Self>
+    where
+        F: FnMut(()) -> Duration + 'static + Send + Sync,
+    {
+        let heads = FileHeads::open(path.join("heads"))
+            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
+        // TODO(stash): read bookmarks from file when blobimport supports it
+        let bookmarks = SqliteDbBookmarks::in_memory()
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
+
+        let options = rocksdb::Options::new().create_if_missing(true);
+        let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
+            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
+        let linknodes = FileLinknodes::open(path.join("linknodes"))
+            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        let changesets = SqliteChangesets::open_or_create(
+            path.join("changesets").to_string_lossy(),
+        ).context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+
+        let blobstore = DelayBlob::new(
+            Box::new(blobstore),
+            delay_gen,
+            timer,
+            get_roundtrips,
+            put_roundtrips,
+            is_present_roundtrips,
+            assert_present_roundtrips,
+        );
 
         Ok(Self::new(
             logger,

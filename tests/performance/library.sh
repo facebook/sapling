@@ -102,6 +102,48 @@ CONFIG
   echo "Scuba table is $scuba_table and repo in that table is $repos_path/repo"
 }
 
+function setup_testdelay_config_repo {
+  local repos_path=$1
+  local config_repo="$repos_path/mononoke-config"
+  local prefix=$2
+  local scuba_table="mononoke_test_perf"
+  
+  cd "$repos_path" || exit
+  hg init "$config_repo"
+  cd "$config_repo" || exit
+  cat >> .hg/hgrc <<EOF
+[extensions]
+treemanifest=
+remotefilelog=
+[treemanifest]
+server=True
+[remotefilelog]
+server=True
+shallowtrees=True
+EOF
+
+# https://fburl.com/ods/icc3brsq gives raw Manifold latency for this purpose
+  mkdir repos
+  cat > repos/repo <<CONFIG
+path="$repos_path/repo"
+repotype="blob:testdelay"
+scuba_table="$scuba_table"
+delay_mean=150000
+delay_stddev=1200
+repoid=0
+CONFIG
+  hg add -q repos
+  hg ci -ma
+  hg bookmark test-config
+  hg backfilltree
+  mkdir -p "$repos_path/repo/.hg" \
+           "$repos_path/repo/heads" \
+           "$repos_path/repo/books" \
+           "$repos_path/repo/linknodes" \
+  
+  echo "Scuba table is $scuba_table and repo in that table is $repos_path/repo"
+}
+
 function run_mononoke {
   mononoke
   echo "Mononoke output at $REPO_PATH/mononoke.out"

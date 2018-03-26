@@ -51,6 +51,10 @@ pub enum RepoType {
     /// Blobs are stored in Manifold, first parameter is Manifold bucket, second is prefix.
     /// Bookmarks and heads are stored in memory
     TestBlobManifold(String, String, PathBuf),
+    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
+    /// RocksDb database, and a log-normal delay is applied to access to simulate a remote store
+    /// like Manifold. Params are path, mean microseconds, stddev microseconds.
+    TestBlobDelayRocks(PathBuf, u64, u64),
 }
 
 /// Configuration of a metaconfig repository
@@ -173,6 +177,8 @@ struct RawRepoConfig {
     manifold_prefix: Option<String>,
     repoid: i32,
     scuba_table: Option<String>,
+    delay_mean: Option<u64>,
+    delay_stddev: Option<u64>,
 }
 
 /// Types of repositories supported
@@ -182,6 +188,7 @@ enum RawRepoType {
     #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:testmanifold")] TestBlobManifold,
+    #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
 }
 
 impl TryFrom<RawRepoConfig> for RepoConfig {
@@ -204,6 +211,11 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
                     this.path,
                 )
             }
+            TestBlobDelayRocks => RepoType::TestBlobDelayRocks(
+                this.path,
+                this.delay_mean.expect("mean delay must be specified"),
+                this.delay_stddev.expect("stddev delay must be specified"),
+            ),
         };
 
         let generation_cache_size = this.generation_cache_size.unwrap_or(10 * 1024 * 1024);

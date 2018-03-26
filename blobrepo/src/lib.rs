@@ -20,6 +20,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate slog;
 extern crate tokio_core;
+extern crate tokio_timer;
 extern crate uuid;
 
 extern crate heapsize;
@@ -33,6 +34,7 @@ extern crate blobstore;
 extern crate bookmarks;
 extern crate changesets;
 extern crate dbbookmarks;
+extern crate delayblob;
 extern crate fileblob;
 extern crate fileheads;
 extern crate filelinknodes;
