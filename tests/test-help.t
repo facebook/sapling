@@ -389,6 +389,8 @@ Test extension help:
                      minimize and speed up large repositories
        remoteid      (no help text available)
        remotenames   mercurial extension for improving client/server workflows
+       repogenerator
+                     (no help text available)
        reset         reset the active bookmark and working copy to a desired
                      revision
        sampling      (no help text available)
