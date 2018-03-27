@@ -1292,12 +1292,13 @@ class ui(object):
             self.write(msg, ' ', default or '', "\n")
             return default
         try:
-            r = self._readline(self.label(msg, 'ui.prompt'))
-            if not r:
-                r = default
-            if self.configbool('ui', 'promptecho'):
-                self.write(r, "\n")
-            return r
+            with progress.suspend():
+                r = self._readline(self.label(msg, 'ui.prompt'))
+                if not r:
+                    r = default
+                if self.configbool('ui', 'promptecho'):
+                    self.write(r, "\n")
+                return r
         except EOFError:
             raise error.ResponseExpected()
 
@@ -1342,11 +1343,12 @@ class ui(object):
 
         msg, choices = self.extractchoices(prompt)
         resps = [r for r, t in choices]
-        while True:
-            r = self.prompt(msg, resps[default])
-            if r.lower() in resps:
-                return resps.index(r.lower())
-            self.write(_("unrecognized response\n"))
+        with progress.suspend():
+            while True:
+                r = self.prompt(msg, resps[default])
+                if r.lower() in resps:
+                    return resps.index(r.lower())
+                self.write(_("unrecognized response\n"))
 
     def getpass(self, prompt=None, default=None):
         if not self.interactive():
