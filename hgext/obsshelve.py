@@ -1147,16 +1147,16 @@ revsetpredicate = registrar.revsetpredicate()
 def shelved(repo, subset, x):
     """Shelved changes"""
     # list files with shelves
-    shelved = listshelvesfiles(repo)
+    shelves = [shelvedfile(
+        repo,
+        filename,
+        'oshelve'
+    ) for filename in listshelvesfiles(repo)]
+    # filter valid files
+    shelves = filter(lambda f: f.exists(), shelves)
     # read node from each file
-    nodes = map(lambda filename:
-        nodemod.bin(shelvedfile(
-            repo,
-            filename,
-            'oshelve'
-        ).readobsshelveinfo()['node']),
-        shelved
-    )
+    nodes = [nodemod.bin(shelve.readobsshelveinfo()['node'])
+        for shelve in shelves]
     # filter if some of the revisions are not in repo
     nodes = filter(lambda x: x in repo, nodes)
     # convert to full hash
