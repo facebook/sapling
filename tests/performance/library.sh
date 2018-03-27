@@ -96,6 +96,7 @@ CONFIG
   $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes "$config_repo" "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
   mkdir -p "$config_repo"-rocks/.hg
   mkdir -p "$config_repo"-rocks/books
+  mkdir -p "$config_repo"-rocks/heads
 
   mkdir -p "$repos_path/repo/.hg"
   
@@ -136,6 +137,14 @@ CONFIG
   hg ci -ma
   hg bookmark test-config
   hg backfilltree
+  hg backfilltree
+  mkdir "$config_repo-rocks"
+
+  $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes "$config_repo" "$config_repo"-rocks >> "$REPO_PATH/blobimport.out" 2>&1
+  mkdir -p "$config_repo"-rocks/.hg
+  mkdir -p "$config_repo"-rocks/books
+  mkdir -p "$config_repo"-rocks/heads
+
   mkdir -p "$repos_path/repo/.hg" \
            "$repos_path/repo/heads" \
            "$repos_path/repo/books" \
