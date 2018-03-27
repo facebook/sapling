@@ -71,7 +71,6 @@ class FileInode : public InodeBase {
       TreeInodePtr parentInode,
       PathComponentPiece name,
       mode_t mode,
-      folly::File&& file,
       timespec ctime);
 
   folly::Future<Dispatcher::Attr> getattr() override;
@@ -190,7 +189,7 @@ class FileInode : public InodeBase {
 
     /**
      * In lieu of std::variant, enforce the state machine invariants.
-     * Call after construction and on every modification.
+     * Called after construction and each time we unlock the state.
      */
     void checkInvariants();
 
@@ -209,9 +208,15 @@ class FileInode : public InodeBase {
     }
 
     /**
-     * Close out the internal file descriptor.
+     * Decrement the openCount, releasing the blob or file if the open count is
+     * now zero.
      */
-    void closeFile();
+    void decOpenCount();
+
+    /**
+     * Increment the open count.
+     */
+    void incOpenCount();
 
     Tag tag;
 
@@ -254,13 +259,14 @@ class FileInode : public InodeBase {
      */
     InodeTimestamps timeStamps;
   };
-  using LockedState = folly::Synchronized<State>::LockedPtr;
+  class LockedState;
 
   /**
    * Run a function with the FileInode data loaded.
    *
    * fn(state) will be invoked when state->tag is either BLOB_LOADED or
-   * MATERIALIZED_IN_OVERLAY.
+   * MATERIALIZED_IN_OVERLAY.  If state->tag is MATERIALIZED_IN_OVERLAY,
+   * state->file will be available.
    *
    * Returns a Future with the result of fn(state_.wlock())
    */
@@ -272,6 +278,7 @@ class FileInode : public InodeBase {
    * Run a function with the FileInode materialized.
    *
    * fn(state) will be invoked when state->tag is MATERIALIZED_IN_OVERLAY.
+   * state->file will also be open.
    *
    * Returns a Future with the result of fn(state_.wlock())
    */
@@ -318,11 +325,10 @@ class FileInode : public InodeBase {
    * This should normally only be invoked by truncateAndRun().  Most callers
    * should use truncateAndRun() instead of calling this function directly.
    *
-   * Returns a FileHandlePtr.  state->file is guaranteed to remain open only
-   * as long as this file handle object exists.
+   * The input LockedState object will be updated to hold an open refcount,
+   * and state->file will be valid when this function returns.
    */
-  FOLLY_NODISCARD FileHandlePtr
-  materializeAndTruncate(const LockedState& state);
+  void materializeAndTruncate(LockedState& state);
 
   /**
    * Replace this file's contents in the overlay with an empty file.
@@ -332,16 +338,19 @@ class FileInode : public InodeBase {
    * This should normally only be invoked by truncateAndRun().  Most callers
    * should use truncateAndRun() instead of calling this function directly.
    *
-   * Returns a FileHandlePtr.  state->file is guaranteed to remain open only
-   * as long as this file handle object exists.
+   * The input LockedState object will be updated to hold an open refcount,
+   * and state->file will be valid when this function returns.
    */
-  FOLLY_NODISCARD FileHandlePtr truncateInOverlay(const LockedState& state);
+  void truncateInOverlay(LockedState& state);
 
   /**
    * Transition from BLOB_LOADED to MATERIALIZED_IN_OVERLAY by copying the
    * blob into the overlay.
+   *
+   * The input LockedState object will be updated to hold an open refcount,
+   * and state->file will be valid when this function returns.
    */
-  void materializeNow(const LockedState& state);
+  void materializeNow(LockedState& state);
 
   /**
    * Get a FileInodePtr to ourself.
@@ -364,24 +373,9 @@ class FileInode : public InodeBase {
   void materializeInParent();
 
   /**
-   * Called as part of setting up an open file handle.
-   */
-  static void fileHandleDidOpen(State& state);
-
-  /**
    * Called as part of shutting down an open handle.
    */
   void fileHandleDidClose();
-
-  /**
-   * Returns a file handle on the materialized file.
-   * The file handle may be a transient handle or may be our own
-   * local file instance, depending on whether we consider the
-   * file to be open or not.  Since the caller can not easily
-   * tell which is the case, the file should only be accessed
-   * while the caller holds the lock on the state.
-   */
-  folly::File getFile(FileInode::State& state) const;
 
   /**
    * Helper function for isSameAs().
@@ -397,16 +391,24 @@ class FileInode : public InodeBase {
 
   /**
    * Recompute the SHA1 content hash of the open file.
+   *
+   * state->tag must be MATERIALIZED_IN_OVERLAY, and state.ensureFileOpen()
+   * must have already been called.
    */
-  Hash recomputeAndStoreSha1(
-      const folly::Synchronized<FileInode::State>::LockedPtr& state,
-      const folly::File& file);
+  Hash recomputeAndStoreSha1(const LockedState& state);
 
+  /**
+   * Store the SHA1 content hash on an overlay file.
+   *
+   * state->tag must be MATERIALIZED_IN_OVERLAY, and state.ensureFileOpen()
+   * must have already been called.
+   */
+  static void storeSha1(const LockedState& state, Hash sha1);
+
+  /**
+   * Get the ObjectStore used by this FileInode to load non-materialized data.
+   */
   ObjectStore* getObjectStore() const;
-  static void storeSha1(
-      const folly::Synchronized<FileInode::State>::LockedPtr& state,
-      const folly::File& file,
-      Hash sha1);
 
   /**
    * Read up to size bytes from the file at the specified offset.
@@ -426,7 +428,7 @@ class FileInode : public InodeBase {
 
   folly::Future<size_t> write(BufVec&& buf, off_t off);
   size_t writeImpl(
-      const LockedState& state,
+      LockedState& state,
       const struct iovec* iov,
       size_t numIovecs,
       off_t off);

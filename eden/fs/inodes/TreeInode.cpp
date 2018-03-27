@@ -968,7 +968,6 @@ FileInodePtr TreeInode::symlink(
         this->inodePtrFromThis(),
         name,
         entry.getMode(),
-        std::move(file),
         currentTime);
     entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);
@@ -1047,7 +1046,6 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
         this->inodePtrFromThis(),
         name,
         entry.getMode(),
-        std::move(file),
         currentTime);
     entry.setInode(inode.get());
     inodeMap->inodeCreated(inode);

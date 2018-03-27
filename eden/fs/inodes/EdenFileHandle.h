@@ -21,18 +21,21 @@ class LocalStore;
 class EdenFileHandle : public FileHandle {
  public:
   /**
-   * The caller is responsible for incrementing any reference counts in the
-   * given function.  This constructor does nothing but retain the specified
-   * inode.
+   * Construct an EdenFileHandle object.
    *
-   * Note that, for exception safety, the given function has to run during
-   * EdenFileHandle construction - if it throws, we don't want ~EdenFileHandle
-   * to call fileHandleDidClose.
+   * This should only be called by FileInode.  The caller is responsible for
+   * acquiring an open refcount on the FileInode before constructing an
+   * EdenFileHandle object.  The EdenFileHandle destructor will decrement the
+   * FileInode's open refcount.
+   *
+   * *callerHasRefcount will be set to false by this constructor.  This makes
+   * it easier for the caller to correctly decide if they still own the
+   * refcount or not in case allocating the EdenFileHandle object throws an
+   * exception.
    */
-  template <typename Func>
-  explicit EdenFileHandle(FileInodePtr inode, Func&& func)
+  explicit EdenFileHandle(FileInodePtr inode, bool* callerHasRefcount)
       : inode_(std::move(inode)) {
-    func();
+    *callerHasRefcount = false;
   }
 
   /**
