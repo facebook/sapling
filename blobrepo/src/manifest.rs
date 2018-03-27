@@ -14,7 +14,7 @@ use futures::future::{Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Entry, MPath, Manifest, Type};
+use mercurial_types::{Entry, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{EntryId, HgManifestId, NodeHash, NULL_HASH};
 
 use blobstore::Blobstore;
@@ -31,7 +31,7 @@ pub struct Details {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
-    pub files: BTreeMap<MPath, Details>,
+    pub files: BTreeMap<MPathElement, Details>,
 }
 
 impl ManifestContent {
@@ -48,7 +48,7 @@ impl ManifestContent {
     // Source: mercurial/parsers.c:parse_manifest()
     //
     // NB: filenames are sequences of non-zero bytes, not strings
-    fn parse_impl(data: &[u8], prefix: Option<&MPath>) -> Result<BTreeMap<MPath, Details>> {
+    fn parse_impl(data: &[u8]) -> Result<BTreeMap<MPathElement, Details>> {
         let mut files = BTreeMap::new();
 
         for line in data.split(|b| *b == b'\n') {
@@ -68,14 +68,9 @@ impl ManifestContent {
                 }
             };
 
-            let path = if let Some(prefix) = prefix {
-                prefix.join(&MPath::new(name).context("invalid path in manifest")?)
-            } else {
-                MPath::new(name).context("invalid path in manifest")?
-            };
+            let path = MPathElement::new(name.to_vec()).context("invalid path in manifest")?;
             let details = Details::parse(rest)?;
 
-            // XXX check path > last entry in files
             files.insert(path, details);
         }
 
@@ -84,7 +79,7 @@ impl ManifestContent {
 
     pub fn parse(data: &[u8]) -> Result<Self> {
         Ok(Self {
-            files: Self::parse_impl(data, None)?,
+            files: Self::parse_impl(data)?,
         })
     }
 }
@@ -127,23 +122,24 @@ impl BlobManifest {
     }
 
     pub fn parse<D: AsRef<[u8]>>(blobstore: Arc<Blobstore>, data: D) -> Result<Self> {
+        Self::create(blobstore, ManifestContent::parse(data.as_ref())?)
+    }
+
+    pub fn create(blobstore: Arc<Blobstore>, content: ManifestContent) -> Result<Self> {
         Ok(BlobManifest {
             blobstore: blobstore,
-            content: ManifestContent::parse(data.as_ref())?,
+            content: content,
         })
     }
 }
 
 impl Manifest for BlobManifest {
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        // Path is a single MPathElement. In t25575327 we'll change the type.
-        let name = path.clone().into_iter().next_back();
-
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         let res = self.content.files.get(path).map({
             move |d| {
                 BlobEntry::new(
                     self.blobstore.clone(),
-                    name,
+                    Some(path.clone()),
                     d.entryid().into_nodehash(),
                     d.flag(),
                 )
@@ -164,10 +160,9 @@ impl Manifest for BlobManifest {
             .map({
                 let blobstore = self.blobstore.clone();
                 move |(path, d)| {
-                    let name = path.clone().into_iter().next_back();
                     BlobEntry::new(
                         blobstore.clone(),
-                        name,
+                        Some(path),
                         d.entryid().into_nodehash(),
                         d.flag(),
                     )

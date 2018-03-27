@@ -27,14 +27,13 @@ use nodehash::EntryId;
 /// each directory ("tree manifest"). As a result, operations on a manifest are path element at
 /// a time.
 ///
-/// TODO: (jsgf) T25575327 lookup should just take a single element
 pub trait Manifest: Send + 'static {
     /// Look up a specific entry in the Manifest by name
     ///
     /// If the name exists, return it as Some(entry). If it doesn't exist, return None.
     /// If it returns an error, it indicates something went wrong with the underlying
     /// infrastructure.
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error>;
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error>;
 
     /// List all the entries in the Manifest.
     ///
@@ -53,7 +52,7 @@ pub trait Manifest: Send + 'static {
 pub struct EmptyManifest;
 
 impl Manifest for EmptyManifest {
-    fn lookup(&self, _path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, _path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         future::ok(None).boxify()
     }
 
@@ -84,7 +83,7 @@ impl<M> Manifest for BoxManifest<M>
 where
     M: Manifest + Sync + Send + 'static,
 {
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         self.manifest
             .lookup(path)
             .map(move |oe| oe.map(|e| BoxEntry::new(e)))
@@ -97,7 +96,7 @@ where
 }
 
 impl Manifest for Box<Manifest + Sync> {
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         (**self).lookup(path)
     }
 
@@ -107,7 +106,7 @@ impl Manifest for Box<Manifest + Sync> {
 }
 
 impl Manifest for Box<Manifest> {
-    fn lookup(&self, path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         (**self).lookup(path)
     }
 

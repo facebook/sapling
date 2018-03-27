@@ -11,7 +11,7 @@ use failure::Error;
 use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Blob, Entry, MPath, MPathElement, Manifest, RepoPath, Type};
+use mercurial_types::{Blob, Entry, MPathElement, Manifest, RepoPath, Type};
 use mercurial_types::blobnode::Parents;
 use mercurial_types::manifest::Content;
 use mercurial_types::nodehash::EntryId;
@@ -63,7 +63,7 @@ impl MockManifest {
 }
 
 impl Manifest for MockManifest {
-    fn lookup(&self, _path: &MPath) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+    fn lookup(&self, _path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
         unimplemented!();
     }
     fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
