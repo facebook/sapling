@@ -9,9 +9,10 @@
 
 import logging
 import os
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List
 
 from eden.integration.lib.hgrepo import HgRepository
+from eden.integration.lib.util import gen_tree
 from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
@@ -56,7 +57,7 @@ class StatusDeadlockTest(EdenHgTestCase):
             repo.write_file(gitignore_path, gitignore_contents, add=False)
             new_files.append(gitignore_path)
 
-        self._fanout('src', self.fanouts, populate_dir, populate_dir)
+        gen_tree('src', self.fanouts, populate_dir, populate_dir)
 
         self._hg_add_many(repo, new_files)
 
@@ -73,7 +74,7 @@ class StatusDeadlockTest(EdenHgTestCase):
             new_files.append(new_path)
             self.expected_status[new_path] = '?'
 
-        self._fanout('src', self.fanouts, create_new_file)
+        gen_tree('src', self.fanouts, create_new_file)
         self._hg_add_many(repo, new_files)
 
         self.commit2 = repo.commit('Initial commit.')
@@ -85,37 +86,6 @@ class StatusDeadlockTest(EdenHgTestCase):
         for n in range(0, len(paths), chunk_size):
             logging.debug('= add %d/%d', n, len(paths))
             repo.add_files(paths[n:n + chunk_size])
-
-    def _fanout(self,
-                path: str,
-                fanouts: List[int],
-                leaf_function: Callable[[str], None],
-                internal_function: Optional[Callable[[str], None]]=None) -> None:
-        '''
-        Helper function for recursively building a large branching directory
-        tree.
-
-        path is the leading path prefix to put before all directory names.
-
-        fanouts is an array of integers specifying the directory fan-out
-        dimensions.  One layer of directories will be created for each element
-        in this array.  e.g., [3, 4] would create 3 subdirectories inside the
-        top-level directory, and 4 subdirectories in each of those 3
-        directories.
-
-        Calls leaf_function on all leaf directories.
-        Calls internal_function on all internal (non-leaf) directories.
-        '''
-        for n in range(fanouts[0]):
-            subdir = os.path.join(path, 'dir{:02}'.format(n + 1))
-            sub_fanouts = fanouts[1:]
-            if sub_fanouts:
-                if internal_function is not None:
-                    internal_function(subdir)
-                self._fanout(subdir, fanouts[1:],
-                             leaf_function, internal_function)
-            else:
-                leaf_function(subdir)
 
     def test(self) -> None:
         # Reset our working directory parent from commit2 to commit1.
