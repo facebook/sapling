@@ -237,8 +237,6 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     childNumber = entry.getInodeNumber();
     bool startLoad = getInodeMap()->shouldLoadChild(
         this, name, childNumber, std::move(promise));
-    DCHECK_EQ(startLoad, !entry.isLoading());
-    entry.setLoading();
     if (startLoad) {
       // The inode is not already being loaded.  We have to start loading it
       // now.
@@ -2891,8 +2889,6 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
   auto childNumber = entry.getInodeNumber();
   bool startLoad = getInodeMap()->shouldLoadChild(
       this, name, childNumber, std::move(promise));
-  DCHECK_EQ(startLoad, !entry.isLoading());
-  entry.setLoading();
   if (startLoad) {
     auto loadFuture = startLoadingInodeNoThrow(entry, name);
     pendingLoads->emplace_back(
