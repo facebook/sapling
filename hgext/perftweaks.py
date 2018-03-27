@@ -35,7 +35,6 @@ testedwith = 'ships-with-fb-hgext'
 
 def extsetup(ui):
     wrapfunction(tags, '_readtagcache', _readtagcache)
-    wrapfunction(merge, '_checkcollision', _checkcollision)
     wrapfunction(branchmap.branchcache, 'update', _branchmapupdate)
     wrapfunction(branchmap, 'read', _branchmapread)
     wrapfunction(branchmap, 'replacecache', _branchmapreplacecache)
@@ -67,6 +66,15 @@ def extsetup(ui):
         pass
 
     wrapfunction(namespaces.namespaces, 'singlenode', _singlenode)
+
+    def wrapcheckcollisionafterfbsparse(loaded=False):
+        # wrap merge._checkcollision after fbsparse has had a chance to wrapped
+        # it, to ensure we don't do the extra work in fbsparse's version when
+        # this extension disabled the collision check.
+        # Note: this wrapping takes place even when fbsparse is not loaded at
+        # all, which is intentional.
+        wrapfunction(merge, '_checkcollision', _checkcollision)
+    extensions.afterloaded('fbsparse', wrapcheckcollisionafterfbsparse)
 
 def reposetup(ui, repo):
     if repo.local() is not None:

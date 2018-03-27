@@ -190,6 +190,15 @@ def _setupupdates(ui):
 
     extensions.wrapfunction(mergemod, 'update', _update)
 
+    def _checkcollision(orig, repo, wmf, actions):
+        if util.safehasattr(repo, 'sparsematch'):
+            # Only check for collisions on files and directories in the
+            # sparse profile
+            wmf = wmf.matches(repo.sparsematch())
+        return orig(repo, wmf, actions)
+
+    extensions.wrapfunction(mergemod, '_checkcollision', _checkcollision)
+
 def _setupcommit(ui):
     def _refreshoncommit(orig, self, node):
         """Refresh the checkout when commits touch .hgsparse
