@@ -286,7 +286,7 @@ def p4fastimport(ui, repo, client, **opts):
         largefiles = []
         ftr = repo.transaction('importer')
         try:
-            with progress.bar(_('importing filelogs'), 'file',
+            with progress.bar(ui, _('importing filelogs'), 'file',
                               len(p4filelogs)) as prog:
                 for filelogs in map(sorted, runlist.values()):
                     wargs = (ftr, ui, repo, importset, p1ctx)
