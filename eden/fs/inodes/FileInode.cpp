@@ -1090,7 +1090,7 @@ folly::Future<folly::Unit> FileInode::prefetch() {
   });
 }
 
-void FileInode::updateOverlayHeader() const {
+void FileInode::updateOverlayHeader() {
   auto state = state_.wlock();
   if (state->isMaterialized()) {
     int fd;

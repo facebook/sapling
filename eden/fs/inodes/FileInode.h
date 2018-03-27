@@ -90,7 +90,7 @@ class FileInode : public InodeBase {
    * Updates in-memory timestamps in FileInode and TreeInode to the overlay
    * file.
    */
-  void updateOverlayHeader() const override;
+  void updateOverlayHeader() override;
   folly::Future<Hash> getSha1();
 
   /**

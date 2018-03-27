@@ -318,7 +318,7 @@ class TreeInode : public InodeBase {
 
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<folly::Unit> prefetch() override;
-  void updateOverlayHeader() const override;
+  void updateOverlayHeader() override;
   Dispatcher::Attr getAttrLocked(const Dir* contents);
 
   /** Implements the InodeBase method used by the Dispatcher

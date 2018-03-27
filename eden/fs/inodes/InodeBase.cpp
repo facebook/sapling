@@ -246,7 +246,20 @@ void InodeBase::updateLocation(
 }
 
 void InodeBase::onPtrRefZero() const {
-  getMount()->getInodeMap()->onInodeUnreferenced(this, getParentInfo());
+  // onPtrRefZero() is const since we treat incrementing and decrementing the
+  // pointer refcount as a non-modifying operation.  (The refcount is updated
+  // atomically so the operation is thread-safe.)
+  //
+  // However when the last reference goes to zero we destroy the inode object,
+  // which is a modifying operation.  Cast ourself back to non-const in this
+  // case.  We are guaranteed that no-one else has a reference to us anymore so
+  // this is safe.
+  //
+  // We could perhaps just make incrementPtrRef() and decrementPtrRef()
+  // non-const instead.  InodePtr objects always point to non-const InodeBase
+  // objects; we do not currently ever use pointer-to-const InodePtrs.
+  getMount()->getInodeMap()->onInodeUnreferenced(
+      const_cast<InodeBase*>(this), getParentInfo());
 }
 
 ParentInodeInfo InodeBase::getParentInfo() const {

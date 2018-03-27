@@ -593,7 +593,7 @@ bool InodeMap::isInodeRemembered(InodeNumber ino) const {
 }
 
 void InodeMap::onInodeUnreferenced(
-    const InodeBase* inode,
+    InodeBase* inode,
     ParentInodeInfo&& parentInfo) {
   XLOG(DBG5) << "inode " << inode->getNodeId()
              << " unreferenced: " << inode->getLogPath();
@@ -666,7 +666,7 @@ InodeMapLock InodeMap::lockForUnload() {
 }
 
 void InodeMap::unloadInode(
-    const InodeBase* inode,
+    InodeBase* inode,
     TreeInode* parent,
     PathComponentPiece name,
     bool isUnlinked,
@@ -675,7 +675,7 @@ void InodeMap::unloadInode(
 }
 
 void InodeMap::unloadInode(
-    const InodeBase* inode,
+    InodeBase* inode,
     TreeInode* parent,
     PathComponentPiece name,
     bool isUnlinked,

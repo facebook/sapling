@@ -282,9 +282,7 @@ class InodeMap {
    *
    * This is an internal API that should not be called by most users.
    */
-  void onInodeUnreferenced(
-      const InodeBase* inode,
-      ParentInodeInfo&& parentInfo);
+  void onInodeUnreferenced(InodeBase* inode, ParentInodeInfo&& parentInfo);
 
   /**
    * Acquire the InodeMap lock while performing Inode unloading.
@@ -315,7 +313,7 @@ class InodeMap {
    * which will acquire these locks).
    */
   void unloadInode(
-      const InodeBase* inode,
+      InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,
       bool isUnlinked,
@@ -585,7 +583,7 @@ class InodeMap {
    * releasing the InodeMap lock.
    */
   void unloadInode(
-      const InodeBase* inode,
+      InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,
       bool isUnlinked,
