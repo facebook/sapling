@@ -471,8 +471,8 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
   // This prevents multiple checkout operations from running in parallel.
   auto parentsLock = parentInfo_.wlock();
   auto oldParents = parentsLock->parents;
-  auto ctx =
-      std::make_shared<CheckoutContext>(std::move(parentsLock), checkoutMode);
+  auto ctx = std::make_shared<CheckoutContext>(
+      this, std::move(parentsLock), checkoutMode);
   XLOG(DBG1) << "starting checkout for " << this->getPath() << ": "
              << oldParents << " to " << snapshotHash;
 
@@ -512,15 +512,15 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
         // completes.
         return journalDiffFuture.then([this, ctx, fromTree, toTree]() {
           ctx->start(this->acquireRenameLock());
-          return this->getRootInode()
-              ->checkout(ctx.get(), fromTree, toTree)
-              .then([toTree]() mutable { return toTree; });
+          return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
         });
       })
+      .then([ctx, snapshotHash] {
+        // Complete the checkout and save the new snapshot hash
+        return ctx->finish(snapshotHash);
+      })
       .then([this, ctx, oldParents, snapshotHash, journalDiffCallback](
-                std::shared_ptr<const Tree> toTree) {
-        // Save the new snapshot hash
-        auto conflicts = ctx->finish(snapshotHash);
+                std::vector<CheckoutConflict>&& conflicts) {
         if (ctx->isDryRun()) {
           // This is a dry run, so all we need to do is tell the caller about
           // the conflicts: we should not modify any files or add any entries to
@@ -528,6 +528,9 @@ folly::Future<std::vector<CheckoutConflict>> EdenMount::checkout(
           return conflicts;
         }
 
+        // Save the new snapshot hash to the config
+        // TODO: This should probably be done by CheckoutConflict::finish()
+        // while still holding the parents lock.
         this->config_->setParentCommits(snapshotHash);
         XLOG(DBG1) << "updated snapshot for " << this->getPath() << " from "
                    << oldParents << " to " << snapshotHash;

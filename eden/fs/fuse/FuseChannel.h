@@ -14,6 +14,8 @@
 #include <folly/futures/Promise.h>
 #include <stdlib.h>
 #include <sys/uio.h>
+#include <condition_variable>
+#include <iosfwd>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -25,6 +27,7 @@
 
 namespace folly {
 class RequestContext;
+struct Unit;
 } // namespace folly
 
 namespace facebook {
@@ -165,23 +168,41 @@ class FuseChannel {
   }
 
   /**
-   * Notify to invalidate cache for an inode
+   * Request that the kernel invalidate its cached data for the specified
+   * inode.
+   *
+   * This operation is performed asynchronously.  flushInvalidations() can be
+   * called if you need to determine when this operation has completed.
    *
    * @param ino the inode number
    * @param off the offset in the inode where to start invalidating
    *            or negative to invalidate attributes only
    * @param len the amount of cache to invalidate or 0 for all
    */
-  void invalidateInode(InodeNumber ino, off_t off, off_t len);
+  void invalidateInode(InodeNumber ino, int64_t off, int64_t len);
 
   /**
-   * Notify to invalidate parent attributes and the dentry matching
-   * parent/name
+   * Request that the kernel invalidate its cached data for the specified
+   * directory entry.
+   *
+   * This operation is performed asynchronously.  flushInvalidations() can be
+   * called if you need to determine when this operation has completed.
    *
    * @param parent inode number
    * @param name file name
    */
   void invalidateEntry(InodeNumber parent, PathComponentPiece name);
+
+  /**
+   * Wait for all currently scheduled invalidateInode() and invalidateEntry()
+   * operations to complete.
+   *
+   * The returned Future will complete once all invalidation operations
+   * scheduled before this flushInvalidations() call have finished.  This
+   * future will normally be completed in the FuseChannel's invalidation
+   * thread.
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> flushInvalidations();
 
   /**
    * Sends a reply to a kernel request that consists only of the error
@@ -297,6 +318,40 @@ class FuseChannel {
     StopReason stopReason{StopReason::RUNNING};
   };
 
+  struct DataRange {
+    DataRange(int64_t offset, int64_t length);
+
+    int64_t offset;
+    int64_t length;
+  };
+  enum class InvalidationType : uint32_t {
+    INODE,
+    DIR_ENTRY,
+    FLUSH,
+  };
+  struct InvalidationEntry {
+    InvalidationEntry(InodeNumber inode, int64_t offset, int64_t length);
+    InvalidationEntry(InodeNumber inode, PathComponentPiece name);
+    explicit InvalidationEntry(folly::Promise<folly::Unit> promise);
+    InvalidationEntry(InvalidationEntry&& other);
+    ~InvalidationEntry();
+
+    InvalidationType type;
+    InodeNumber inode;
+    union {
+      PathComponent name;
+      DataRange range;
+      folly::Promise<folly::Unit> promise;
+    };
+  };
+  struct InvalidationQueue {
+    std::vector<InvalidationEntry> queue;
+    bool stop{false};
+  };
+  friend std::ostream& operator<<(
+      std::ostream& os,
+      const InvalidationEntry& entry);
+
   /**
    * Private destructor.
    *
@@ -406,6 +461,11 @@ class FuseChannel {
   void setThreadSigmask();
   void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
+  void invalidationThread() noexcept;
+  void stopInvalidationThread();
+  void sendInvalidation(InvalidationEntry& entry);
+  void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
+  void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
   void readInitPacket();
   void startWorkerThreads();
 
@@ -489,6 +549,12 @@ class FuseChannel {
 
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
+
+  // State for sending inode invalidation requests to the kernel
+  // These are processed in their own dedicated thread.
+  folly::Synchronized<InvalidationQueue, std::mutex> invalidationQueue_;
+  std::condition_variable invalidationCV_;
+  std::thread invalidationThread_;
 
   static const HandlerMap handlerMap_;
 };

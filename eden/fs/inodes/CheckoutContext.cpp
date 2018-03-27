@@ -9,6 +9,8 @@
  */
 #include "eden/fs/inodes/CheckoutContext.h"
 
+#include <folly/experimental/logging/xlog.h>
+
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -21,9 +23,12 @@ namespace facebook {
 namespace eden {
 
 CheckoutContext::CheckoutContext(
+    EdenMount* mount,
     folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
     CheckoutMode checkoutMode)
-    : checkoutMode_{checkoutMode}, parentsLock_(std::move(parentsLock)) {}
+    : checkoutMode_{checkoutMode},
+      mount_{mount},
+      parentsLock_(std::move(parentsLock)) {}
 
 CheckoutContext::~CheckoutContext() {}
 
@@ -31,18 +36,36 @@ void CheckoutContext::start(RenameLock&& renameLock) {
   renameLock_ = std::move(renameLock);
 }
 
-vector<CheckoutConflict> CheckoutContext::finish(Hash newSnapshot) {
+Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
   // Only update the parents if it is not a dry run.
   if (!isDryRun()) {
     // Update the in-memory snapshot ID
     parentsLock_->parents.setParents(newSnapshot);
   }
 
-  // Release our locks.
-  // This would release automatically when the CheckoutContext is destroyed,
-  // but go ahead and explicitly unlock them just to make sure that we are
-  // really completely finished when we fulfill the checkout futures.
+  // Release the rename lock.
+  // This allows any filesystem unlink() or rename() operations to proceed.
   renameLock_.unlock();
+
+  // If we have a FUSE channel, flush all invalidations we sent to the kernel
+  // as part of the checkout operation.  This will ensure that other processes
+  // will see up-to-date data once we return.
+  //
+  // We do this after releasing the rename lock since some of the invalidation
+  // operations may be blocked waiting on FUSE unlink() and rename() operations
+  // complete.
+  auto* fuseChannel = mount_->getFuseChannel();
+  if (!isDryRun() && fuseChannel) {
+    XLOG(DBG4) << "waiting for inode invalidations to complete";
+    return fuseChannel->flushInvalidations().then([this] {
+      XLOG(DBG4) << "finished processing inode invalidations";
+      parentsLock_.unlock();
+      return std::move(*conflicts_.wlock());
+    });
+  }
+
+  // Release the parentsLock_.
+  // Once this is released other checkout operations may proceed.
   parentsLock_.unlock();
 
   // Return conflicts_ via a move operation.  We don't need them any more, and

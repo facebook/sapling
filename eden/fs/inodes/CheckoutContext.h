@@ -36,6 +36,7 @@ class Tree;
 class CheckoutContext {
  public:
   CheckoutContext(
+      EdenMount* mount,
       folly::Synchronized<EdenMount::ParentInfo>::LockedPtr&& parentsLock,
       CheckoutMode checkoutMode);
   ~CheckoutContext();
@@ -76,7 +77,7 @@ class CheckoutContext {
    * Returns the list of conflicts and errors that were encountered during the
    * operation.
    */
-  std::vector<CheckoutConflict> finish(Hash newSnapshot);
+  folly::Future<std::vector<CheckoutConflict>> finish(Hash newSnapshot);
 
   void addConflict(ConflictType type, RelativePathPiece path);
   void
@@ -100,6 +101,7 @@ class CheckoutContext {
 
  private:
   CheckoutMode checkoutMode_;
+  EdenMount* const mount_;
   folly::Synchronized<EdenMount::ParentInfo>::LockedPtr parentsLock_;
   RenameLock renameLock_;
 

@@ -7,13 +7,16 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import logging
 import os
+import threading
+from textwrap import dedent
+from typing import Dict
+
 from eden.integration.hg.lib.hg_extension_test_base import (
     EdenHgTestCase, hg_test
 )
 from eden.integration.lib import hgrepo
-from textwrap import dedent
-from typing import Dict
 
 
 @hg_test
@@ -22,6 +25,7 @@ class UpdateTest(EdenHgTestCase):
         return {
             'eden.fs.inodes.TreeInode': 'DBG5',
             'eden.fs.inodes.CheckoutAction': 'DBG5',
+            'eden.fs.inodes.CheckoutContext': 'DBG5',
         }
 
     def populate_backing_repo(self, repo: hgrepo.HgRepository) -> None:
@@ -381,3 +385,85 @@ class UpdateTest(EdenHgTestCase):
         })
         self.assertFalse(os.path.exists(self.get_path('foo/bar/a.txt')))
         self.assertTrue(os.path.exists(self.get_path('foo/bar/b.txt')))
+
+    def test_dir_locking(self) -> None:
+        '''
+        Test performing checkouts that modify the directory foo/ while other
+        clients are simultaneously renaming untracked files under foo/
+
+        This exercises the interaction of the kernel's inode locks and Eden's
+        own user-space locking.  We previously had some situations where
+        deadlock could occur because FUSE requests holding kernel inode lock
+        were blocked on userspace locks that were held by other threads blocked
+        on the kernel inode lock.
+        '''
+        num_checkout_changed_files = 500
+        num_rename_threads = 4
+        num_checkouts = 4
+
+        # Create a new commit in the backing repository with many new files in
+        # the foo/ directory
+        for n in range(num_checkout_changed_files):
+            path = os.path.join(self.backing_repo.path, 'foo', 'tracked.%d' % n)
+            with open(path, 'w') as f:
+                f.write('file %d\n' % n)
+        self.backing_repo.add_files(['foo'])
+        new_commit = self.backing_repo.commit('Add many files under foo/')
+
+        # Spawn several threads that repeatedly rename ignored files under foo/
+        stop = threading.Event()
+
+        def rename_worker(thread_id):
+            logging.info('rename thread %d starting', thread_id)
+            path1 = os.path.join(self.repo.path, 'foo', '_%d.log' % thread_id)
+            path2 = os.path.join(self.repo.path, 'foo', '_%d.log2' % thread_id)
+
+            with open(path1, 'w') as f:
+                f.write('ignored %d\n' % thread_id)
+
+            count = 0
+            while not stop.is_set():
+                os.rename(path1, path2)
+                os.rename(path2, path1)
+                count += 1
+
+            logging.info('rename thread %d performed %d renames',
+                         thread_id, count)
+
+        threads = []
+        for n in range(num_rename_threads):
+            thread = threading.Thread(target=rename_worker, args=(n,))
+            threads.append(thread)
+            thread.start()
+
+        logging.info('===== starting checkouts')
+
+        commits = [new_commit, self.commit3]
+        for n in range(num_checkouts):
+            self.repo.update(commits[n % len(commits)])
+
+        logging.info('===== checkouts complete')
+
+        stop.set()
+        for thread in threads:
+            thread.join()
+
+        logging.info('===== threads stopped')
+
+        # For the most part this test is mainly checking to ensure that
+        # we reach this point without causing a deadlock.
+        # However go ahead and check that the repository is left in an expected
+        # state too.
+        if num_checkouts % 2 == 0:
+            self.assertEqual(self.commit3, self.repo.get_head_hash())
+        else:
+            self.assertEqual(new_commit, self.repo.get_head_hash())
+
+        # Assert that the status is empty other than the ignored files
+        # created by the rename threads
+        self.assert_status(
+            {
+                os.path.join('foo', '_%d.log' % thread_id): 'I'
+                for thread_id in range(num_rename_threads)
+            }
+        )

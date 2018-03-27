@@ -46,6 +46,7 @@ using folly::Future;
 using folly::makeFuture;
 using folly::Optional;
 using folly::StringPiece;
+using folly::Unit;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -752,7 +753,7 @@ void EdenServiceHandler::flushStatsNow() {
   server_->flushStatsNow();
 }
 
-void EdenServiceHandler::invalidateKernelInodeCache(
+Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> path) {
   auto edenMount = server_->getMount(*mountPoint);
@@ -769,13 +770,16 @@ void EdenServiceHandler::invalidateKernelInodeCache(
 
   const auto treePtr = inode.asTreePtrOrNull();
 
-  // invalidate all parent/child relationships potentially cached.
+  // Invalidate all parent/child relationships potentially cached.
   if (treePtr != nullptr) {
     const auto& dir = treePtr->getContents().rlock();
     for (const auto& entry : dir->entries) {
       fuseChannel->invalidateEntry(inode->getNodeId(), entry.first);
     }
   }
+
+  // Wait for all of the invalidations to complete
+  return fuseChannel->flushInvalidations();
 }
 
 void EdenServiceHandler::shutdown() {

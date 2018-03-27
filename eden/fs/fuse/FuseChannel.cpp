@@ -20,6 +20,7 @@
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FileHandle.h"
 #include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
@@ -265,6 +266,74 @@ static const std::unordered_map<int32_t, const char*> capsLabels = {
 #endif
 };
 
+FuseChannel::DataRange::DataRange(int64_t off, int64_t len)
+    : offset(off), length(len) {}
+
+FuseChannel::InvalidationEntry::InvalidationEntry(
+    InodeNumber num,
+    PathComponentPiece n)
+    : type(InvalidationType::DIR_ENTRY), inode(num), name(n) {}
+
+FuseChannel::InvalidationEntry::InvalidationEntry(
+    InodeNumber num,
+    int64_t offset,
+    int64_t length)
+    : type(InvalidationType::INODE), inode(num), range(offset, length) {}
+
+FuseChannel::InvalidationEntry::InvalidationEntry(Promise<Unit> p)
+    : type(InvalidationType::FLUSH),
+      inode(kRootNodeId),
+      promise(std::move(p)) {}
+
+FuseChannel::InvalidationEntry::~InvalidationEntry() {
+  switch (type) {
+    case InvalidationType::INODE:
+      range.~DataRange();
+      return;
+    case InvalidationType::DIR_ENTRY:
+      name.~PathComponent();
+      return;
+    case InvalidationType::FLUSH:
+      promise.~Promise();
+      return;
+  }
+  XLOG(FATAL) << "unknown InvalidationEntry type: "
+              << static_cast<uint64_t>(type);
+}
+
+FuseChannel::InvalidationEntry::InvalidationEntry(InvalidationEntry&& other)
+    : type(other.type), inode(other.inode) {
+  switch (type) {
+    case InvalidationType::INODE:
+      new (&range) DataRange(std::move(other.range));
+      return;
+    case InvalidationType::DIR_ENTRY:
+      new (&name) PathComponent(std::move(other.name));
+      return;
+    case InvalidationType::FLUSH:
+      new (&promise) Promise<Unit>(std::move(other.promise));
+      return;
+  }
+}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const FuseChannel::InvalidationEntry& entry) {
+  switch (entry.type) {
+    case FuseChannel::InvalidationType::INODE:
+      return os << "(inode " << entry.inode << ", offset " << entry.range.offset
+                << ", length " << entry.range.length << ")";
+    case FuseChannel::InvalidationType::DIR_ENTRY:
+      return os << "(inode " << entry.inode << ", child \"" << entry.name
+                << "\")";
+    case FuseChannel::InvalidationType::FLUSH:
+      return os << "(invalidation flush)";
+  }
+  return os << "(unknown invalidation type "
+            << static_cast<uint64_t>(entry.type) << " inode " << entry.inode
+            << ")";
+}
+
 void FuseChannel::replyError(const fuse_in_header& request, int errorCode) {
   fuse_out_header err;
   err.len = sizeof(err);
@@ -392,10 +461,13 @@ void FuseChannel::startWorkerThreads() {
     while (state->workerThreads.size() < numThreads_) {
       state->workerThreads.emplace_back([this] { fuseWorkerThread(); });
     }
+
+    invalidationThread_ = std::thread([this] { invalidationThread(); });
   } catch (const std::exception& ex) {
     XLOG(ERR) << "Error starting FUSE worker threads: " << exceptionStr(ex);
     // Request any threads we did start to stop now.
     requestSessionExit(state, StopReason::INIT_FAILED);
+    stopInvalidationThread();
     throw;
   }
 }
@@ -434,6 +506,81 @@ void FuseChannel::destroy() {
 }
 
 void FuseChannel::invalidateInode(InodeNumber ino, off_t off, off_t len) {
+  // Add the entry to invalidationQueue_ and wake up the invalidation thread to
+  // send it.
+  invalidationQueue_.lock()->queue.emplace_back(ino, off, len);
+  invalidationCV_.notify_one();
+}
+
+void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
+  // Add the entry to invalidationQueue_ and wake up the invalidation thread to
+  // send it.
+  invalidationQueue_.lock()->queue.emplace_back(parent, name);
+  invalidationCV_.notify_one();
+}
+
+folly::Future<folly::Unit> FuseChannel::flushInvalidations() {
+  // Add a promise to the invalidation queue, which the invalidation thread
+  // will fulfill once it reaches that element in the queue.
+  Promise<Unit> promise;
+  auto result = promise.getFuture();
+  invalidationQueue_.lock()->queue.emplace_back(std::move(promise));
+  invalidationCV_.notify_one();
+  return result;
+}
+
+/**
+ * Send an element from the invalidation queue.
+ *
+ * This method always runs in the invalidation thread.
+ */
+void FuseChannel::sendInvalidation(InvalidationEntry& entry) {
+  // We catch any exceptions that occur and simply log an error message.
+  // There is not much else we can do in this situation.
+  XLOG(DBG6) << "sending invalidation request: " << entry;
+  try {
+    switch (entry.type) {
+      case InvalidationType::INODE:
+        sendInvalidateInode(
+            entry.inode, entry.range.offset, entry.range.length);
+        return;
+      case InvalidationType::DIR_ENTRY:
+        sendInvalidateEntry(entry.inode, entry.name);
+        return;
+      case InvalidationType::FLUSH:
+        // Fulfill the promise to indicate that all previous entries in the
+        // invalidation queue have been completed.
+        entry.promise.setValue();
+        return;
+    }
+    EDEN_BUG() << "unknown invalidation entry type "
+               << static_cast<uint64_t>(entry.type);
+  } catch (const std::system_error& ex) {
+    // Log ENOENT errors as a debug message.  This can happen for inode numbers
+    // that we allocated on our own and haven't actually told the kernel about
+    // yet.
+    if (isEnoent(ex)) {
+      XLOG(DBG3) << "received ENOENT when sending invalidation request: "
+                 << entry;
+    } else {
+      XLOG(ERR) << "error sending invalidation request: " << entry << ": "
+                << folly::exceptionStr(ex);
+    }
+  } catch (const std::exception& ex) {
+    XLOG(ERR) << "error sending invalidation request: " << entry << ": "
+              << folly::exceptionStr(ex);
+  }
+}
+
+/**
+ * Send a FUSE_NOTIFY_INVAL_INODE message to the kernel.
+ *
+ * This method always runs in the invalidation thread.
+ */
+void FuseChannel::sendInvalidateInode(
+    InodeNumber ino,
+    int64_t off,
+    int64_t len) {
   fuse_notify_inval_inode_out notify;
   notify.ino = ino.get();
   notify.off = off;
@@ -467,29 +614,14 @@ void FuseChannel::invalidateInode(InodeNumber ino, off_t off, off_t len) {
   }
 }
 
-std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
-  auto state = state_.wlock();
-  const auto& requests = state->requests;
-  std::vector<fuse_in_header> outstandingCalls;
-
-  for (const auto& entry : requests) {
-    auto ctx = entry.second.lock();
-    if (ctx) {
-      // Get the fuse_in_header from the ctx and push a copy of it on the
-      // outstandingCalls collection
-      auto rdata = boost::polymorphic_downcast<RequestData*>(
-          ctx->getContextData(RequestData::kKey));
-      // rdata should never be null here and if it - it's most likely a bug
-      const fuse_in_header& fuseHeader = rdata->examineReq();
-      if (fuseHeader.opcode != 0) {
-        outstandingCalls.push_back(fuseHeader);
-      }
-    }
-  }
-  return outstandingCalls;
-}
-
-void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
+/**
+ * Send a FUSE_NOTIFY_INVAL_ENTRY message to the kernel.
+ *
+ * This method always runs in the invalidation thread.
+ */
+void FuseChannel::sendInvalidateEntry(
+    InodeNumber parent,
+    PathComponentPiece name) {
   auto namePiece = name.stringPiece();
 
   fuse_notify_inval_entry_out notify = {};
@@ -533,6 +665,28 @@ void FuseChannel::invalidateEntry(InodeNumber parent, PathComponentPiece name) {
           parent);
     }
   }
+}
+
+std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
+  auto state = state_.wlock();
+  const auto& requests = state->requests;
+  std::vector<fuse_in_header> outstandingCalls;
+
+  for (const auto& entry : requests) {
+    auto ctx = entry.second.lock();
+    if (ctx) {
+      // Get the fuse_in_header from the ctx and push a copy of it on the
+      // outstandingCalls collection
+      auto rdata = boost::polymorphic_downcast<RequestData*>(
+          ctx->getContextData(RequestData::kKey));
+      // rdata should never be null here and if it - it's most likely a bug
+      const fuse_in_header& fuseHeader = rdata->examineReq();
+      if (fuseHeader.opcode != 0) {
+        outstandingCalls.push_back(fuseHeader);
+      }
+    }
+  }
+  return outstandingCalls;
 }
 
 void FuseChannel::requestSessionExit(StopReason reason) {
@@ -641,6 +795,57 @@ void FuseChannel::fuseWorkerThread() noexcept {
       sessionComplete(std::move(state));
     }
   }
+}
+
+void FuseChannel::invalidationThread() noexcept {
+  // We send all FUSE_NOTIFY_INVAL_ENTRY and FUSE_NOTIFY_INVAL_INODE requests
+  // in a dedicated thread.  These requests will block in the kernel until it
+  // can obtain the inode lock on the inode in question.
+  //
+  // It is possible that the kernel-level inode lock is already held by another
+  // thread that is waiting on one of our own user-space locks.  To avoid
+  // deadlock, we therefore need to make sure that we are never holding any
+  // Eden locks when sending these invalidation requests.
+  //
+  // For example, a process calling unlink(parent_dir, "foo") will acquire the
+  // inode lock for parent_dir in the kernel, and the kernel will then send an
+  // unlink request to Eden.  This unlink request will require the mount
+  // point's rename lock to proceed.  If a checkout is currently in progress it
+  // currently owns the rename lock, and will generate invalidation requests.
+  // We need to make sure the checkout operation does not block waiting on the
+  // invalidation requests to complete, since otherwise this would deadlock.
+  while (true) {
+    // Wait for entries to process
+    std::vector<InvalidationEntry> entries;
+    {
+      auto lockedQueue = invalidationQueue_.lock();
+      while (lockedQueue->queue.empty()) {
+        if (lockedQueue->stop) {
+          return;
+        }
+        invalidationCV_.wait(lockedQueue.getUniqueLock());
+      }
+      lockedQueue->queue.swap(entries);
+    }
+
+    // Process all of the entries we found
+    for (auto& entry : entries) {
+      sendInvalidation(entry);
+    }
+    entries.clear();
+  }
+}
+
+void FuseChannel::stopInvalidationThread() {
+  // Check that the thread is joinable just in case we were destroyed
+  // before the invalidation thread was started.
+  if (!invalidationThread_.joinable()) {
+    return;
+  }
+
+  invalidationQueue_.lock()->stop = true;
+  invalidationCV_.notify_one();
+  invalidationThread_.join();
 }
 
 void FuseChannel::readInitPacket() {
@@ -1004,8 +1209,15 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
     data.fuseSettings = connInfo_.value();
   }
 
-  // Unlock the state before fulfilling sessionCompletePromise_
+  // Unlock the state before the remaining steps
   state.unlock();
+
+  // Stop the invalidation thread.  We do not do this when requestSessionExit()
+  // is called since we want to continue to allow invalidation requests to be
+  // processed until all outstanding requests complete.
+  stopInvalidationThread();
+
+  // Fulfill sessionCompletePromise
   sessionCompletePromise_.setValue(std::move(data));
 
   // Destroy ourself if desired
