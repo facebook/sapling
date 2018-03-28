@@ -8,6 +8,7 @@ from os import path
 from mercurial import (
     error,
     extensions,
+    obsutil,
     phases,
     registrar,
     scmutil,
@@ -30,6 +31,8 @@ command = registrar.command(cmdtable)
          ('U', 'unified',
           1 << 15, _('number of lines of context to show'), _('NUM')),
          ('l', 'lfs', False, 'Provide sha256 for lfs files instead of dumping'),
+         ('', 'obsolete', False,
+          'add obsolete markers related to the given revisions'),
          ],
          _('hg debugcrdump [OPTION]... [-r] [REV]'))
 def crdump(ui, repo, *revs, **opts):
@@ -67,6 +70,21 @@ def crdump(ui, repo, *revs, **opts):
             "public_base": {
               "node": public base commit hash,
               "svnrev": svn revision of public base (if hgsvn repo),
+            },
+            "obsolete": {
+                "date": [
+                    time,
+                    timezone
+                ],
+                "flag": marker's flags,
+                "metadata": {
+                    "operation": changes made,
+                    "user": user name
+                },
+                "prednode": predecessor commit in hash,
+                "succnodes": [
+                    successors in hash
+                ]
             }
           },
           ...
@@ -110,6 +128,12 @@ def crdump(ui, repo, *revs, **opts):
                 # we need this only if parent is in the same draft stack
                 rdata['p1']['differential_revision'] = \
                     phabricatorrevision(ctx.parents()[0])
+
+            if opts['obsolete']:
+                markers = obsutil.getmarkers(repo, [ctx.node()])
+                obsolete = dumpmarkers(markers)
+                if obsolete:
+                    rdata['obsolete'] = obsolete
 
             pbctx = publicbase(repo, ctx)
             if pbctx:
@@ -229,3 +253,21 @@ def publicbase(repo, ctx):
     if len(base):
         return repo[base.first()]
     return None
+
+def dumpmarkers(rawmarkers):
+    markers = []
+    for rm in rawmarkers:
+        marker = {
+            'date': rm.date(),
+            'flag': rm.flags(),
+            'metadata': rm.metadata(),
+            'prednode': hex(rm.prednode())
+        }
+        if rm.succnodes():
+            marker['succnodes'] = map(hex, rm.succnodes())
+        if rm.parentnodes():
+            marker['parents'] = map(hex, rm.parentnodes())
+
+        markers.append(marker)
+
+    return markers

@@ -54,8 +54,8 @@ outputs, which should be fixed later.
   hgext/crdump.py:5: multiple imported names: json, re, shutil, tempfile
   hgext/crdump.py:6: relative import of stdlib module
   hgext/crdump.py:6: direct symbol import path from os
-  hgext/crdump.py:16: symbol import follows non-symbol import: mercurial.i18n
-  hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.node
+  hgext/crdump.py:17: symbol import follows non-symbol import: mercurial.i18n
+  hgext/crdump.py:18: symbol import follows non-symbol import: mercurial.node
   hgext/dirsync.py:46: symbol import follows non-symbol import: mercurial.i18n
   hgext/fastannotate/revmap.py:16: symbol import follows non-symbol import: mercurial.node
   hgext/fastmanifest/cachemanager.py:10: imports not lexically sorted: errno < os

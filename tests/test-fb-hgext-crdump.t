@@ -1,7 +1,13 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
+  > fbamend=
   > crdump=
+  > [experimental]
+  > evolution.createmarkers=True
   > EOF
+  $ showgraph() {
+  >   hg log --graph --hidden -T "{rev} {desc|firstline}" | sed \$d
+  > }
 
 Create repo
   $ mkdir repo
@@ -20,8 +26,84 @@ Create repo
   $ printf "b\0\n" > bin2
   $ hg addremove
   adding bin2
+  $ revision="Differential Revision: https://phabricator.facebook.com/D123"
   $ hg commit -m "b
-  > Differential Revision: https://phabricator.facebook.com/D123"
+  > $revision"
+
+  $ showgraph
+  @  1 b
+  |
+  o  0 a
+
+Test obsolete markers
+
+  $ printf "a\0b\0c\n" > bin1
+  $ hg amend -m "b'
+  > $revision"
+  $ showgraph
+  @  2 b'
+  |
+  | x  1 b
+  |/
+  o  0 a
+  $ hg debugcrdump -U 1 -r . --obsolete --traceback
+  {
+      "commits": [
+          {
+              "binary_files": [
+                  {
+                      "file_name": "bin1",
+                      "new_file": "69403266b0b9ca9c9403df5097a07d01b74f3e23",
+                      "old_file": "23c26c825bddcb198e701c6f7043a4e35dcb8b97"
+                  },
+                  {
+                      "file_name": "bin2",
+                      "new_file": "31f7b4d23cf93fd41972d0a879086e900cbf06c9",
+                      "old_file": null
+                  }
+              ],
+              "bookmarks": [],
+              "date": [
+                  0,
+                  0
+              ],
+              "desc": "b'\nDifferential Revision: https://phabricator.facebook.com/D123",
+              "files": [
+                  "a",
+                  "bin1",
+                  "bin2"
+              ],
+              "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8",
+              "obsolete": [
+                  {
+                      "date": [
+                          0.0,
+                          0
+                      ],
+                      "flag": 0,
+                      "metadata": {
+                          "operation": "amend",
+                          "user": "test"
+                      },
+                      "prednode": "6370cd64643d547e11c6bc91920bca7b44ea21b5",
+                      "succnodes": [
+                          "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8"
+                      ]
+                  }
+              ],
+              "p1": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "patch_file": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8.patch",
+              "public_base": {
+                  "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
+              },
+              "user": "test"
+          }
+      ],
+      "output_directory": "*" (glob)
+  }
+
 
   $ echo G >> a
   $ echo C > c
@@ -70,7 +152,7 @@ Test basic dump of two commits
               "binary_files": [
                   {
                       "file_name": "bin1",
-                      "new_file": "5f54dc7f5b744f0bf88fcfe31eaba3cabc7a5f0c",
+                      "new_file": "69403266b0b9ca9c9403df5097a07d01b74f3e23",
                       "old_file": "23c26c825bddcb198e701c6f7043a4e35dcb8b97"
                   },
                   {
@@ -84,17 +166,17 @@ Test basic dump of two commits
                   0,
                   0
               ],
-              "desc": "b\nDifferential Revision: https://phabricator.facebook.com/D123",
+              "desc": "b'\nDifferential Revision: https://phabricator.facebook.com/D123",
               "files": [
                   "a",
                   "bin1",
                   "bin2"
               ],
-              "node": "6370cd64643d547e11c6bc91920bca7b44ea21b5",
+              "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8",
               "p1": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
               },
-              "patch_file": "6370cd64643d547e11c6bc91920bca7b44ea21b5.patch",
+              "patch_file": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8.patch",
               "public_base": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
               },
@@ -104,8 +186,8 @@ Test basic dump of two commits
               "binary_files": [
                   {
                       "file_name": "bin1",
-                      "new_file": "4281f31b8cfa1376dc036a729c4118cd192db663",
-                      "old_file": "5f54dc7f5b744f0bf88fcfe31eaba3cabc7a5f0c"
+                      "new_file": "08f31c375398e39fe9c485a2a06a79dfc296580e",
+                      "old_file": "69403266b0b9ca9c9403df5097a07d01b74f3e23"
                   },
                   {
                       "file_name": "bin2",
@@ -127,12 +209,12 @@ Test basic dump of two commits
                   "bin2",
                   "c"
               ],
-              "node": "c2c1919228a86d876dbb46befd0e0433c62a9f5f",
+              "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7",
               "p1": {
                   "differential_revision": "123",
-                  "node": "6370cd64643d547e11c6bc91920bca7b44ea21b5"
+                  "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8"
               },
-              "patch_file": "c2c1919228a86d876dbb46befd0e0433c62a9f5f.patch",
+              "patch_file": "e3a67aeeade9ad9e292f1762f8f075a8322042b7.patch",
               "public_base": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
               },
@@ -174,7 +256,7 @@ Test basic dump of two commits
   ######## file bin1
   ######## new
   41000a
-  #### commit 6370cd64643d547e11c6bc91920bca7b44ea21b5
+  #### commit 9e6c8a14e241d3140575d17288d4a91bd8c9a3c8
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -195,11 +277,11 @@ Test basic dump of two commits
   ######## old
   41000a
   ######## new
-  6100620a
+  61006200630a
   ######## file bin2
   ######## new
   62000a
-  #### commit c2c1919228a86d876dbb46befd0e0433c62a9f5f
+  #### commit e3a67aeeade9ad9e292f1762f8f075a8322042b7
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -220,12 +302,10 @@ Test basic dump of two commits
   
   ######## file bin1
   ######## old
-  6100620a
+  61006200630a
   ######## new
   780a
   ######## file bin2
   ######## old
   62000a
-
-
 
