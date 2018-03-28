@@ -27,6 +27,7 @@ using apache::thrift::CompactSerializer;
 using folly::ByteRange;
 using folly::fbvector;
 using folly::File;
+using folly::IOBuf;
 using folly::MutableStringPiece;
 using folly::Optional;
 using folly::StringPiece;
@@ -412,11 +413,11 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
 
 // Overlay version number is currently 32 bit,
 // so making version uint32_t instead of uint16_t
-folly::IOBuf Overlay::createHeader(
+IOBuf Overlay::createHeader(
     StringPiece identifier,
     uint32_t version,
     const InodeTimestamps& timestamps) {
-  folly::IOBuf header(folly::IOBuf::CREATE, kHeaderLength);
+  IOBuf header(IOBuf::CREATE, kHeaderLength);
   folly::io::Appender appender(&header, 0);
   appender.push(identifier);
   appender.writeBE(version);
@@ -440,11 +441,12 @@ folly::IOBuf Overlay::createHeader(
 // Helper function to open,validate,
 // get file pointer of an overlay file
 folly::File Overlay::openFile(
-    folly::StringPiece filePath,
+    InodeNumber inodeNumber,
     folly::StringPiece headerId,
     InodeTimestamps& timeStamps) {
   // Open the overlay file
-  folly::File file(filePath, O_RDWR);
+  auto filePath = getFilePath(inodeNumber);
+  folly::File file(filePath.c_str(), O_RDWR);
 
   // Read the contents
   std::string contents;
@@ -455,10 +457,16 @@ folly::File Overlay::openFile(
   return file;
 }
 
+folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
+  auto filePath = getFilePath(inodeNumber);
+  return folly::File{filePath.c_str(), O_RDWR};
+}
+
 // Helper function to  add header to the materialized file
-void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
-  InodeTimestamps ts{ctime};
-  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, ts);
+void Overlay::addHeaderToOverlayFile(
+    int fd,
+    const InodeTimestamps& timestamps) {
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
 
   auto data = header.coalesce();
   auto wrote = folly::writeFull(fd, data.data(), data.size());
@@ -474,24 +482,47 @@ void Overlay::addHeaderToOverlayFile(int fd, timespec ctime) {
 
 // Helper function to create an overlay file
 folly::File Overlay::createOverlayFile(
-    InodeNumber childNumber,
-    timespec ctime) {
-  auto filePath = getFilePath(childNumber);
+    InodeNumber inodeNumber,
+    const InodeTimestamps& timestamps) {
+  auto filePath = getFilePath(inodeNumber);
   folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
 
   SCOPE_FAIL {
     ::unlink(filePath.c_str());
   };
 
-  addHeaderToOverlayFile(file.fd(), ctime);
+  addHeaderToOverlayFile(file.fd(), timestamps);
   return file;
+}
+
+folly::File Overlay::createOverlayFile(
+    InodeNumber inodeNumber,
+    const InodeTimestamps& timestamps,
+    const IOBuf& contents) {
+  // Add header to the overlay File.
+  auto header = Overlay::createHeader(
+      Overlay::kHeaderIdentifierFile, Overlay::kHeaderVersion, timestamps);
+  auto iov = header.getIov();
+
+  auto filePath = getFilePath(inodeNumber);
+
+  // Write the blob contents out to the overlay
+  auto contentsIov = contents.getIov();
+  iov.insert(iov.end(), contentsIov.begin(), contentsIov.end());
+
+  folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size(), 0600);
+
+  // TODO: Clean this code up so that we don't have to open the file twice.
+  // We probably should just create the temporary file ourselves rather than
+  // using folly::writeFileAtomic().
+  return folly::File(filePath.c_str(), O_RDWR);
 }
 
 void Overlay::parseHeader(
     folly::StringPiece header,
     folly::StringPiece headerId,
     InodeTimestamps& timestamps) {
-  folly::IOBuf buf(folly::IOBuf::WRAP_BUFFER, ByteRange{header});
+  IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{header});
   folly::io::Cursor cursor(&buf);
 
   // Validate header identifier
@@ -526,7 +557,7 @@ void Overlay::updateTimestampToHeader(
     const InodeTimestamps& timestamps) {
   // Create a string piece with timestamps
   std::array<uint64_t, 6> buf;
-  folly::IOBuf iobuf(folly::IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
+  IOBuf iobuf(IOBuf::WRAP_BUFFER, buf.data(), sizeof(buf));
   iobuf.clear();
 
   folly::io::Appender appender(&iobuf, 0);

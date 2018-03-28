@@ -210,7 +210,8 @@ void FileInode::LockedState::ensureFileOpen(const FileInode* inode) {
     // When opening a file handle to the file, the openCount is incremented but
     // the overlay file is not actually opened.  Instead, it's opened lazily
     // here.
-    ptr_->file = folly::File(inode->getLocalPath().c_str(), O_RDWR);
+    ptr_->file =
+        inode->getMount()->getOverlay()->openFileNoVerify(inode->getNodeId());
   }
 }
 
@@ -417,9 +418,11 @@ FileInode::State::State(
     : mode(m), hash(h) {
   if (!hash.hasValue()) {
     // File is materialized; read out the timestamps but don't keep it open.
-    auto filePath = inode->getLocalPath();
-    (void)Overlay::openFile(
-        filePath.c_str(), Overlay::kHeaderIdentifierFile, timeStamps);
+    //
+    // TODO: This is inefficient for constructors that just created the inode
+    // and already have timestamp info.
+    (void)inode->getMount()->getOverlay()->openFile(
+        inode->getNodeId(), Overlay::kHeaderIdentifierFile, timeStamps);
     tag = MATERIALIZED_IN_OVERLAY;
   } else {
     timeStamps.setAll(lastCheckoutTime);
@@ -644,10 +647,6 @@ void FileInode::fileHandleDidClose() {
   state->decOpenCount();
 }
 
-AbsolutePath FileInode::getLocalPath() const {
-  return getMount()->getOverlay()->getFilePath(getNodeId());
-}
-
 folly::Optional<bool> FileInode::isSameAsFast(
     const Hash& blobID,
     TreeEntryType entryType) {
@@ -809,8 +808,7 @@ folly::Future<struct stat> FileInode::stat() {
           checkUnixError(fstat(state->file.fd(), &overlayStat));
 
           if (overlayStat.st_size < Overlay::kHeaderLength) {
-            auto filePath = self->getLocalPath();
-            EDEN_BUG() << "Overlay file " << filePath
+            EDEN_BUG() << "Overlay file for " << self->getNodeId()
                        << " is too short for header: size="
                        << overlayStat.st_size;
           }
@@ -1086,14 +1084,6 @@ Future<FileInode::FileHandlePtr> FileInode::startLoadingData(
   return resultFuture;
 }
 
-namespace {
-folly::IOBuf createOverlayHeaderFromTimestamps(
-    const InodeTimestamps& timestamps) {
-  return Overlay::createHeader(
-      Overlay::kHeaderIdentifierFile, Overlay::kHeaderVersion, timestamps);
-}
-} // namespace
-
 void FileInode::materializeNow(LockedState& state) {
   // This function should only be called from the BLOB_LOADED state
   DCHECK_EQ(state->tag, State::BLOB_LOADED);
@@ -1104,21 +1094,8 @@ void FileInode::materializeNow(LockedState& state) {
   // state.setMaterialized()
   auto metadata = getObjectStore()->getBlobMetadata(state->hash.value());
 
-  // Add header to the overlay File.
-  auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
-  auto iov = header.getIov();
-
-  auto filePath = getLocalPath();
-
-  // Write the blob contents out to the overlay
-  auto contents = state->blob->getContents().getIov();
-  iov.insert(iov.end(), contents.begin(), contents.end());
-
-  folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size(), 0600);
-  InodeTimestamps timeStamps;
-
-  auto file = Overlay::openFile(
-      filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
+  auto file = getMount()->getOverlay()->createOverlayFile(
+      getNodeId(), state->timeStamps, state->blob->getContents());
   state.setMaterialized(std::move(file));
 
   // If we have a SHA-1 from the metadata, apply it to the new file.  This
@@ -1138,21 +1115,8 @@ void FileInode::materializeNow(LockedState& state) {
 
 void FileInode::materializeAndTruncate(LockedState& state) {
   CHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
-
-  // Add header to the overlay File.
-  auto header = createOverlayHeaderFromTimestamps(state->timeStamps);
-  auto iov = header.getIov();
-
-  auto filePath = getLocalPath();
-
-  folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size());
-  // We don't want to set the in-memory timestamps to the timestamps
-  // returned by the below openFile function as we just wrote these
-  // timestamps in to overlay using writeFileAtomic.
-  InodeTimestamps timeStamps;
-  auto file = Overlay::openFile(
-      filePath.stringPiece(), Overlay::kHeaderIdentifierFile, timeStamps);
-
+  auto file = getMount()->getOverlay()->createOverlayFile(
+      getNodeId(), state->timeStamps);
   state.setMaterialized(std::move(file));
   storeSha1(state, Hash::sha1(ByteRange{}));
 }

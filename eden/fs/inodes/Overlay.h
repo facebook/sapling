@@ -75,15 +75,31 @@ class Overlay {
    * checks if the file has valid header
    * populates st_atim, st_mtim, st_ctim and returns the file.
    */
-  static folly::File openFile(
-      folly::StringPiece filePath,
+  folly::File openFile(
+      InodeNumber inodeNumber,
       folly::StringPiece headerId,
       InodeTimestamps& timestamps);
 
   /**
-   * Helper function that creates a new overlay file and adds header to it
+   * Open an existing overlay file without verifying the header.
    */
-  folly::File createOverlayFile(InodeNumber childNumber, timespec ctime);
+  folly::File openFileNoVerify(InodeNumber inodeNumber);
+
+  /**
+   * Helper function that creates an overlay file for a new FileInode.
+   */
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      const InodeTimestamps& timestamps);
+
+  /**
+   * Helper function to write an overlay file for a FileInode with existing
+   * contents.
+   */
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      const InodeTimestamps& timestamps,
+      const folly::IOBuf& contents);
 
   /**
    * Updates the timestamps of an overlay file appropriately
@@ -118,10 +134,11 @@ class Overlay {
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber,
       InodeTimestamps& timeStamps) const;
+
   /**
    * Helper function to add header to the overlay file
    */
-  static void addHeaderToOverlayFile(int fd, timespec ctime);
+  static void addHeaderToOverlayFile(int fd, const InodeTimestamps& timestamps);
 
   /**
    * Parses, validates and reads Timestamps from the header.

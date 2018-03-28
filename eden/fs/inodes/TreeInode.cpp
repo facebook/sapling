@@ -829,12 +829,10 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     auto* inodeMap = this->getInodeMap();
     auto childNumber = inodeMap->allocateInodeNumber();
 
-    // Since we will move this file into the underlying file data, we
-    // take special care to ensure that it is opened read-write
-
+    // Create the overlay file before we insert the file into our entries map.
     auto currentTime = getNow();
-    folly::File file =
-        getOverlay()->createOverlayFile(childNumber, currentTime);
+    folly::File file = getOverlay()->createOverlayFile(
+        childNumber, InodeTimestamps{currentTime});
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a regular file.
     mode = S_IFREG | (07777 & mode);
@@ -929,8 +927,8 @@ FileInodePtr TreeInode::symlink(
     auto childNumber = inodeMap->allocateInodeNumber();
 
     auto currentTime = getNow();
-    folly::File file =
-        getOverlay()->createOverlayFile(childNumber, currentTime);
+    folly::File file = getOverlay()->createOverlayFile(
+        childNumber, InodeTimestamps{currentTime});
 
     SCOPE_FAIL {
       // If an exception is thrown, remove the in-progress file from the
@@ -1034,8 +1032,8 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
     auto childNumber = inodeMap->allocateInodeNumber();
 
     auto currentTime = getNow();
-    folly::File file =
-        getOverlay()->createOverlayFile(childNumber, currentTime);
+    folly::File file = getOverlay()->createOverlayFile(
+        childNumber, InodeTimestamps{currentTime});
     auto entry = Entry(mode, childNumber);
 
     // build a corresponding FileInode
@@ -3192,9 +3190,8 @@ void TreeInode::updateOverlayHeader() {
   auto contents = contents_.wlock();
   if (contents->isMaterialized()) {
     InodeTimestamps timeStamps;
-    auto filePath = getOverlay()->getFilePath(getNodeId());
-    auto file = Overlay::openFile(
-        filePath.stringPiece(), Overlay::kHeaderIdentifierDir, timeStamps);
+    auto file = getOverlay()->openFile(
+        getNodeId(), Overlay::kHeaderIdentifierDir, timeStamps);
     Overlay::updateTimestampToHeader(file.fd(), contents->timeStamps);
   }
 }

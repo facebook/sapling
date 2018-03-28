@@ -93,11 +93,6 @@ class FileInode : public InodeBase {
   folly::Future<Hash> getSha1();
 
   /**
-   * Compute the path to the overlay file for this item.
-   */
-  AbsolutePath getLocalPath() const;
-
-  /**
    * Check to see if the file has the same contents as the specified blob
    * and the same tree entry type.
    *
