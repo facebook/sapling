@@ -529,9 +529,21 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
     except KeyError:
         pass
     else:
+        # This parsing should be refactored to be shared with
+        # exchange.getbundlechunks. But I'll do that in a separate diff.
+        if bundlecaps is None:
+            bundlecaps = set()
+        b2caps = {}
+        for bcaps in bundlecaps:
+            if bcaps.startswith('bundle2='):
+                blob = util.urlreq.unquote(bcaps[len('bundle2='):])
+                b2caps.update(bundle2.decodecaps(blob))
+
         missing = outgoing.missing
         if remotefilelog.shallowbundle.cansendtrees(bundlerepo, missing,
-                                                    source='infinitepushpull'):
+                                                    source='infinitepushpull',
+                                                    bundlecaps=bundlecaps,
+                                                    b2caps=b2caps):
             treepart = treemod.createtreepackpart(bundlerepo, outgoing,
                             treemod.TREEGROUP_PARTTYPE2)
             parts.append(treepart)

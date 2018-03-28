@@ -509,7 +509,8 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
     prefetch = AllTrees
 
     if repo.svfs.treemanifestserver:
-        if source == 'infinitepushpull':
+        if (source == 'infinitepushpull' and
+            'True' in b2caps.get('treemanifest', [])):
             result = AllTrees
         else:
             result = NoTrees

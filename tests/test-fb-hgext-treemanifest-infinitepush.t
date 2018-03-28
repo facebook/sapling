@@ -272,6 +272,18 @@ Pull a normal scratch branch into a treeonly client
   
   $ cd ..
 
+Pull a normal scratch branch into a normal client with rebundling where the
+server has treemanifest enabled.
+  $ cd normal-client
+  $ hg pull -r 42ec76eb772a --config extensions.treemanifest=! --config fastmanifest.usetree=False
+  pulling from ssh://user@dummy/master
+  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 1 changes to 1 files
+  $ cd ..
+
 Verify its not on the server
   $ cd master
   $ hg log -G
