@@ -4,7 +4,7 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use mercurial_types::{HgChangesetId, HgManifestId, NodeHash};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, NodeHash};
 // NULL_HASH is exported for convenience.
 pub use mercurial_types::NULL_HASH;
 
@@ -60,3 +60,20 @@ pub const CS_MID: HgManifestId = HgManifestId::new(CS_HASH);
 pub const DS_MID: HgManifestId = HgManifestId::new(DS_HASH);
 pub const ES_MID: HgManifestId = HgManifestId::new(ES_HASH);
 pub const FS_MID: HgManifestId = HgManifestId::new(FS_HASH);
+
+// Definitions for filenode IDs 1111...ffff
+pub const ONES_FNID: HgFileNodeId = HgFileNodeId::new(ONES_HASH);
+pub const TWOS_FNID: HgFileNodeId = HgFileNodeId::new(TWOS_HASH);
+pub const THREES_FNID: HgFileNodeId = HgFileNodeId::new(THREES_HASH);
+pub const FOURS_FNID: HgFileNodeId = HgFileNodeId::new(FOURS_HASH);
+pub const FIVES_FNID: HgFileNodeId = HgFileNodeId::new(FIVES_HASH);
+pub const SIXES_FNID: HgFileNodeId = HgFileNodeId::new(SIXES_HASH);
+pub const SEVENS_FNID: HgFileNodeId = HgFileNodeId::new(SEVENS_HASH);
+pub const EIGHTS_FNID: HgFileNodeId = HgFileNodeId::new(EIGHTS_HASH);
+pub const NINES_FNID: HgFileNodeId = HgFileNodeId::new(NINES_HASH);
+pub const AS_FNID: HgFileNodeId = HgFileNodeId::new(AS_HASH);
+pub const BS_FNID: HgFileNodeId = HgFileNodeId::new(BS_HASH);
+pub const CS_FNID: HgFileNodeId = HgFileNodeId::new(CS_HASH);
+pub const DS_FNID: HgFileNodeId = HgFileNodeId::new(DS_HASH);
+pub const ES_FNID: HgFileNodeId = HgFileNodeId::new(ES_HASH);
+pub const FS_FNID: HgFileNodeId = HgFileNodeId::new(FS_HASH);
