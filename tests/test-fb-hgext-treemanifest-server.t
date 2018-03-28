@@ -230,6 +230,37 @@ Test stripping trees
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
 
+Test stripping merge commits where filelogs arent affected
+  $ rsync -a .hg/ $TESTTMP/backup.hg/
+  $ echo a >> subdir/a
+  $ hg commit -Aqm one
+  $ hg up -q '.^'
+  $ echo b >> subdir/b
+  $ hg commit -Aqm two
+  $ hg merge -q 'first(children(.^))'
+  $ hg commit -m 'merge'
+  $ hg log -r . -T '{rev}\n'
+  4
+  $ hg debugindex .hg/store/meta/subdir/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
+       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
+       2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
+       3       152      54      2       4 55daa4591d61 abeda9251d1d 000000000000
+- Verify rev 3 (from the merge commit) is gone after the strip
+  $ hg strip -r tip
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/a03b8b42d703-fdc98185-backup.hg
+  $ hg debugindex .hg/store/meta/subdir/00manifest.i
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000
+       1        44      54      0       2 126c4ddee02e bc0c2c938b92 000000000000
+       2        98      54      0       3 abeda9251d1d bc0c2c938b92 000000000000
+  $ hg strip -qr 'children(.^)'
+  $ rm -rf .hg
+  $ cp -R $TESTTMP/backup.hg .hg
+  $ rm -rf $TESTTMP/backup.hg
+
 Test pushing only trees without pushrebase to a hybrid server
   $ cd ../client
   $ hg push -f -r . --config extensions.pushrebase=!

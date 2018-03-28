@@ -213,6 +213,7 @@ def uisetup(ui):
     wireproto.wirepeer.gettreepack = clientgettreepack
     localrepo.localpeer.gettreepack = localgettreepack
 
+    extensions.wrapfunction(repair, '_collectfiles', collectfiles)
     extensions.wrapfunction(repair, 'striptrees', striptrees)
     extensions.wrapfunction(repair, '_collectmanifest', _collectmanifest)
     extensions.wrapfunction(repair, 'stripmanifest', stripmanifest)
@@ -2097,6 +2098,32 @@ def serverrepack(repo, incremental=False, options=None):
     revlogstore.setrepacklinkrevrange(startrev, endrev)
     _runrepack(repo, datastore, histstore, packpath, PACK_CATEGORY,
         options=options)
+
+def collectfiles(orig, repo, striprev):
+    """find out the filelogs affected by the strip"""
+    if not treeenabled(repo.ui):
+        return orig(repo, striprev)
+
+    files = set()
+
+    for x in xrange(striprev, len(repo)):
+        ctx = repo[x]
+        parents = ctx.parents()
+        if len(parents) > 1:
+            # Merge commits may not list all the files that are different
+            # between the two sides. This is fine for stripping filelogs (since
+            # any filelog that was changed will be listed), but is not fine for
+            # directories, which may have changes despite filelogs not changing
+            # (imagine a directory where two different files were added on
+            # different sides of the merge. No filelogs change in the merge, but
+            # the directory does).
+            for parent in parents:
+                diff = ctx.manifest().diff(parent.manifest())
+                files.update(diff)
+        else:
+            files.update(repo[x].files())
+
+    return sorted(files)
 
 def striptrees(orig, repo, tr, striprev, files):
     if not treeenabled(repo.ui):
