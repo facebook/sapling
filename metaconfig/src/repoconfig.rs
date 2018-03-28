@@ -42,8 +42,6 @@ pub struct RepoConfig {
 pub enum RepoType {
     /// Revlog repository with path pointing to on-disk checkout of repository
     Revlog(PathBuf),
-    /// Blob repository with path pointing to on-disk files with data
-    BlobFiles(PathBuf),
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// RocksDb database
     BlobRocks(PathBuf),
@@ -185,7 +183,6 @@ struct RawRepoConfig {
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
     #[serde(rename = "revlog")] Revlog,
-    #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:testmanifold")] TestBlobManifold,
     #[serde(rename = "blob:testdelay")] TestBlobDelayRocks,
@@ -199,7 +196,6 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
 
         let repotype = match this.repotype {
             Revlog => RepoType::Revlog(this.path),
-            BlobFiles => RepoType::BlobFiles(this.path),
             BlobRocks => RepoType::BlobRocks(this.path),
             TestBlobManifold => {
                 let manifold_bucket = this.manifold_bucket.ok_or(ErrorKind::InvalidConfig(
@@ -244,7 +240,7 @@ mod test {
     fn test_read_manifest() {
         let fbsource_content = r#"
             path="/tmp/fbsource"
-            repotype="blob:files"
+            repotype="blob:rocks"
             generation_cache_size=1048576
             repoid=0
             scuba_table="scuba_table"
@@ -283,7 +279,7 @@ mod test {
         repos.insert(
             "fbsource".to_string(),
             RepoConfig {
-                repotype: RepoType::BlobFiles("/tmp/fbsource".into()),
+                repotype: RepoType::BlobRocks("/tmp/fbsource".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: 0,
                 scuba_table: Some("scuba_table".to_string()),

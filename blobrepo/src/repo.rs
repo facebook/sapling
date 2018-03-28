@@ -30,7 +30,6 @@ use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use delayblob::DelayBlob;
-use fileblob::Fileblob;
 use fileheads::FileHeads;
 use filelinknodes::FileLinknodes;
 use heads::Heads;
@@ -83,30 +82,6 @@ impl BlobRepo {
             changesets,
             repoid,
         }
-    }
-
-    pub fn new_files(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {
-        let heads = FileHeads::open(path.join("heads"))
-            .context(ErrorKind::StateOpen(StateOpenError::Heads))?;
-        // TODO(stash): read bookmarks from file when blobimport supports it
-        let bookmarks = SqliteDbBookmarks::in_memory()
-            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
-        let blobstore = Fileblob::open(path.join("blobs"))
-            .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let linknodes = FileLinknodes::open(path.join("linknodes"))
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
-        let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
-
-        Ok(Self::new(
-            logger,
-            Arc::new(heads),
-            Arc::new(bookmarks),
-            Arc::new(blobstore),
-            Arc::new(linknodes),
-            Arc::new(changesets),
-            repoid,
-        ))
     }
 
     pub fn new_rocksdb(logger: Logger, path: &Path, repoid: RepositoryId) -> Result<Self> {

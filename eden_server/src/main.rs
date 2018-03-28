@@ -452,7 +452,6 @@ fn start_server(addr: &str, reponame: String, repo: BlobRepo, logger: Logger, ss
 /// Types of repositories supported
 #[derive(Clone, Debug, Deserialize)]
 enum RawRepoType {
-    #[serde(rename = "blob:files")] BlobFiles,
     #[serde(rename = "blob:rocks")] BlobRocks,
     #[serde(rename = "blob:manifold")] BlobManifold,
 }
@@ -509,18 +508,6 @@ fn main() {
     };
 
     match config.repotype {
-        RawRepoType::BlobFiles => {
-            let path = config.path.expect("Please specify a path to the blobrepo");
-            let repo_logger = root_logger.new(o!("repo" => format!("{}", path.display())));
-            start_server(
-                &config.addr,
-                config.reponame,
-                BlobRepo::new_files(repo_logger, &path, RepositoryId::new(config.repoid))
-                    .expect("couldn't open blob state"),
-                root_logger.clone(),
-                config.ssl,
-            )
-        }
         RawRepoType::BlobRocks => {
             let path = config.path.expect("Please specify a path to the blobrepo");
             let repo_logger = root_logger.new(o!("repo" => format!("{}", path.display())));

@@ -109,7 +109,6 @@ impl OpenableRepoType for RepoType {
 
         let ret = match *self {
             Revlog(_) => Err(ErrorKind::CantServeRevlogRepo)?,
-            BlobFiles(ref path) => BlobRepo::new_files(logger, &path, repoid)?,
             BlobRocks(ref path) => BlobRepo::new_rocksdb(logger, &path, repoid)?,
             TestBlobManifold(ref bucket, ref prefix, _) => {
                 BlobRepo::new_test_manifold(logger, bucket, &prefix, remote, repoid)?
@@ -172,7 +171,7 @@ impl OpenableRepoType for RepoType {
         use metaconfig::repoconfig::RepoType::*;
 
         match *self {
-            Revlog(ref path) | BlobFiles(ref path) | BlobRocks(ref path) => path.as_ref(),
+            Revlog(ref path) | BlobRocks(ref path) => path.as_ref(),
             TestBlobManifold(_, _, ref path) => path.as_ref(),
             TestBlobDelayRocks(ref path, ..) => path.as_ref(),
         }
