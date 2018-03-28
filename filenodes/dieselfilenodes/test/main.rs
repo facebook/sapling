@@ -83,6 +83,28 @@ fn file_b_first_filenode() -> FilenodeInfo {
     }
 }
 
+fn copied_from_filenode() -> FilenodeInfo {
+    FilenodeInfo {
+        path: RepoPath::file("copiedfrom").unwrap(),
+        filenode: ONES_FNID,
+        p1: None,
+        p2: None,
+        copyfrom: None,
+        linknode: TWOS_CSID,
+    }
+}
+
+fn copied_filenode() -> FilenodeInfo {
+    FilenodeInfo {
+        path: RepoPath::file("copiedto").unwrap(),
+        filenode: TWOS_FNID,
+        p1: None,
+        p2: None,
+        copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+        linknode: TWOS_CSID,
+    }
+}
+
 fn do_add_filenodes(filenodes: &Filenodes, to_insert: Vec<FilenodeInfo>, repo_id: &RepositoryId) {
     let stream = futures::stream::iter_ok(to_insert.into_iter()).boxify();
     filenodes.add_filenodes(stream, repo_id).wait().unwrap();
@@ -279,6 +301,81 @@ macro_rules! filenodes_test_impl {
                     &TWOS_FNID,
                     &REPO_ZERO,
                     root_second_filenode(),
+                );
+            }
+
+            #[test]
+            fn insert_copied_file() {
+                let filenodes = &$new_cb();
+
+                do_add_filenodes(
+                    filenodes,
+                    vec![copied_from_filenode(), copied_filenode()],
+                    &REPO_ZERO
+                );
+                assert_filenode(
+                    filenodes,
+                    &RepoPath::file("copiedto").unwrap(),
+                    &TWOS_FNID,
+                    &REPO_ZERO,
+                    copied_filenode(),
+                );
+            }
+
+            #[test]
+            fn insert_same_copied_file() {
+                let filenodes = &$new_cb();
+
+                do_add_filenodes(filenodes, vec![copied_from_filenode()], &REPO_ZERO);
+                do_add_filenodes(
+                    filenodes,
+                    vec![copied_filenode(), copied_filenode()],
+                    &REPO_ZERO
+                );
+            }
+
+            #[test]
+            fn insert_copied_file_to_different_repo() {
+                let filenodes = &$new_cb();
+
+                let copied = FilenodeInfo {
+                    path: RepoPath::file("copiedto").unwrap(),
+                    filenode: TWOS_FNID,
+                    p1: None,
+                    p2: None,
+                    copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+                    linknode: TWOS_CSID,
+                };
+
+                let notcopied = FilenodeInfo {
+                    path: RepoPath::file("copiedto").unwrap(),
+                    filenode: TWOS_FNID,
+                    p1: None,
+                    p2: None,
+                    copyfrom: None,
+                    linknode: TWOS_CSID,
+                };
+
+                do_add_filenodes(
+                    filenodes,
+                    vec![copied_from_filenode(), copied.clone()],
+                    &REPO_ZERO
+                );
+                do_add_filenodes(filenodes, vec![notcopied.clone()], &REPO_ONE);
+                assert_filenode(
+                    filenodes,
+                    &RepoPath::file("copiedto").unwrap(),
+                    &TWOS_FNID,
+                    &REPO_ZERO,
+                    copied,
+                );
+
+                assert_filenode(
+                    filenodes,
+                    &RepoPath::file("copiedto").unwrap(),
+                    &TWOS_FNID,
+                    &REPO_ONE,
+                    notcopied,
                 );
             }
         }

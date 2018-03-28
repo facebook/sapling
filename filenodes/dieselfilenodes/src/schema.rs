@@ -33,3 +33,18 @@ table! {
         path -> Binary,
     }
 }
+
+table! {
+    use diesel::sql_types::{Binary, Integer};
+
+    use mercurial_types::sql_types::HgFileNodeIdSql;
+
+    fixedcopyinfo (repo_id, frompath_hash, fromnode, is_tree) {
+        repo_id -> Integer,
+        frompath_hash -> Binary,
+        fromnode -> HgFileNodeIdSql,
+        is_tree -> Integer,
+        topath_hash -> Binary,
+        tonode -> HgFileNodeIdSql,
+    }
+}

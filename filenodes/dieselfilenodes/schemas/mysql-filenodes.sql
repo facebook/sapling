@@ -11,6 +11,16 @@ CREATE TABLE filenodes (
   PRIMARY KEY (repo_id, path_hash, is_tree, filenode)
 );
 
+CREATE TABLE fixedcopyinfo (
+  repo_id INT UNSIGNED NOT NULL,
+  topath_hash VARBINARY(32) NOT NULL,
+  tonode BINARY(20) NOT NULL,
+  is_tree TINYINT NOT NULL,
+  frompath_hash VARBINARY(32) NOT NULL,
+  fromnode BINARY(20) NOT NULL,
+  PRIMARY KEY (repo_id, topath_hash, tonode, is_tree)
+);
+
 CREATE TABLE paths (
   repo_id INT UNSIGNED NOT NULL,
   path_hash VARBINARY(32) NOT NULL,

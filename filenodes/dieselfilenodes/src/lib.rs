@@ -5,10 +5,12 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
+#![feature(try_from)]
 
 extern crate db;
 #[macro_use]
 extern crate diesel;
+#[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
 
@@ -34,8 +36,11 @@ use mercurial_types::sql_types::HgFileNodeIdSql;
 use std::sync::{Arc, Mutex};
 
 mod common;
+mod errors;
 mod models;
 mod schema;
+
+use errors::ErrorKind;
 
 pub const DEFAULT_INSERT_CHUNK_SIZE: usize = 100;
 
@@ -141,26 +146,29 @@ macro_rules! impl_filenodes {
                     query.first::<models::FilenodeRow>(&*connection).optional());
                 match filenode_row {
                     Some(filenode_row) => {
+                        let copyfrom = try_boxfuture!(Self::fetch_copydata(
+                            &*connection,
+                            filenode,
+                            path,
+                            repo_id,
+                        ));
+
                         let filenodeinfo = FilenodeInfo {
                             path: path.clone(),
                             filenode: filenode.clone(),
                             p1: filenode_row.p1,
                             p2: filenode_row.p2,
-                            copyfrom: None,
+                            copyfrom,
                             linknode: filenode_row.linknode,
                         };
-
-                        future::ok::<_, Error>(Some(filenodeinfo)).from_err().boxify()
+                        future::ok::<_, Error>(Some(filenodeinfo)).boxify()
                     }
-                    None => {
-                        future::ok::<_, Error>(None).from_err().boxify()
-                    }
+                    None => future::ok::<_, Error>(None).boxify(),
                 }
             }
         }
 
         impl $struct {
-            // TODO(stash): add copyfrom support
             fn do_insert(
                 connection: &$connection,
                 filenodes: &Vec<FilenodeInfo>,
@@ -186,8 +194,8 @@ macro_rules! impl_filenodes {
             ) -> Result<()> {
                 let mut path_rows = vec![];
                 for filenode in filenodes {
-                    let (path_bytes, _) = convert_repo_path(&filenode.path);
-                    let path_row = models::PathInsertRow::new(repo_id, path_bytes);
+                    let (path_bytes, _) = convert_from_repo_path(&filenode.path);
+                    let path_row = models::PathRow::new(repo_id, path_bytes);
                     path_rows.push(path_row);
                 }
 
@@ -203,8 +211,9 @@ macro_rules! impl_filenodes {
                 repo_id: &RepositoryId,
             ) -> Result<()> {
                 let mut filenode_rows = vec![];
+                let mut copydata_rows = vec![];
                 for filenode in filenodes.clone() {
-                    let (path_bytes, is_tree) = convert_repo_path(&filenode.path);
+                    let (path_bytes, is_tree) = convert_from_repo_path(&filenode.path);
                     let filenode_row = models::FilenodeRow::new(
                         repo_id,
                         &path_bytes,
@@ -215,6 +224,22 @@ macro_rules! impl_filenodes {
                         filenode.p2,
                     );
                     filenode_rows.push(filenode_row);
+                    if let Some(copyinfo) = filenode.copyfrom {
+                        let (frompath, fromnode) = copyinfo;
+                        let (frompath_bytes, from_is_tree) = convert_from_repo_path(&frompath);
+                        if from_is_tree != is_tree {
+                            return Err(ErrorKind::InvalidCopy(filenode.path, frompath).into());
+                        }
+                        let copyinfo_row = models::FixedCopyInfoRow::new(
+                            repo_id,
+                            &frompath_bytes,
+                            &fromnode,
+                            is_tree,
+                            &path_bytes,
+                            &filenode.filenode,
+                        );
+                        copydata_rows.push(copyinfo_row);
+                    }
                 }
 
                 // Do not try to insert filenode again - even if linknode is different!
@@ -222,7 +247,46 @@ macro_rules! impl_filenodes {
                 insert_or_ignore_into(schema::filenodes::table)
                     .values(&filenode_rows)
                     .execute(&*connection)?;
+
+                insert_or_ignore_into(schema::fixedcopyinfo::table)
+                    .values(&copydata_rows)
+                    .execute(&*connection)?;
                 Ok(())
+            }
+
+            fn fetch_copydata(
+                connection: &$connection,
+                filenode: &HgFileNodeId,
+                path: &RepoPath,
+                repo_id: &RepositoryId,
+            ) -> Result<Option<(RepoPath, HgFileNodeId)>> {
+                let is_tree = match path {
+                    &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => true,
+                    &RepoPath::FilePath(_) => false,
+                };
+
+                let copyinfoquery = copyinfo_query(repo_id, filenode, path);
+
+                let copydata_row =
+                    copyinfoquery.first::<models::FixedCopyInfoRow>(&*connection)
+                    .optional()?;
+                if let Some(copydata) = copydata_row {
+                    let path_row = path_query(repo_id, &copydata.frompath_hash)
+                        .first::<models::PathRow>(&*connection)
+                        .optional()?;
+                    match path_row {
+                        Some(path_row) => {
+                            let frompath = convert_to_repo_path(&path_row.path, is_tree)?;
+                            Ok(Some((frompath, copydata.fromnode)))
+                        }
+                        None => {
+                            let err: Error = ErrorKind::PathNotFound(copydata.frompath_hash).into();
+                            Err(err)
+                        }
+                    }
+                } else {
+                    Ok(None)
+                }
             }
         }
     }
@@ -240,7 +304,7 @@ where
     DB: Backend,
     DB: HasSqlType<HgFileNodeIdSql>,
 {
-    let (path_bytes, is_tree) = convert_repo_path(path);
+    let (path_bytes, is_tree) = convert_from_repo_path(path);
 
     let path_hash = common::blake2_path_hash(&path_bytes);
 
@@ -253,10 +317,55 @@ where
         .into_boxed()
 }
 
-fn convert_repo_path(path: &RepoPath) -> (Vec<u8>, i32) {
+fn copyinfo_query<DB>(
+    repo_id: &RepositoryId,
+    tonode: &HgFileNodeId,
+    topath: &RepoPath,
+) -> schema::fixedcopyinfo::BoxedQuery<'static, DB>
+where
+    DB: Backend,
+    DB: HasSqlType<HgFileNodeIdSql>,
+{
+    let (topath_bytes, is_tree) = convert_from_repo_path(topath);
+
+    let topath_hash = common::blake2_path_hash(&topath_bytes);
+
+    schema::fixedcopyinfo::table
+        .filter(schema::fixedcopyinfo::repo_id.eq(*repo_id))
+        .filter(schema::fixedcopyinfo::topath_hash.eq(topath_hash))
+        .filter(schema::fixedcopyinfo::tonode.eq(*tonode))
+        .filter(schema::fixedcopyinfo::is_tree.eq(is_tree))
+        .limit(1)
+        .into_boxed()
+}
+
+fn path_query<DB>(
+    repo_id: &RepositoryId,
+    path_hash: &Vec<u8>,
+) -> schema::paths::BoxedQuery<'static, DB>
+where
+    DB: Backend,
+    DB: HasSqlType<HgFileNodeIdSql>,
+{
+    schema::paths::table
+        .filter(schema::paths::repo_id.eq(*repo_id))
+        .filter(schema::paths::path_hash.eq(path_hash.clone()))
+        .limit(1)
+        .into_boxed()
+}
+
+fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, i32) {
     match path {
         &RepoPath::RootPath => (vec![], 1),
         &RepoPath::DirectoryPath(ref dir) => (dir.to_vec(), 1),
         &RepoPath::FilePath(ref file) => (file.to_vec(), 0),
+    }
+}
+
+fn convert_to_repo_path<B: AsRef<[u8]>>(path_bytes: B, is_tree: bool) -> Result<RepoPath> {
+    if is_tree {
+        RepoPath::dir(path_bytes.as_ref())
+    } else {
+        RepoPath::file(path_bytes.as_ref())
     }
 }
