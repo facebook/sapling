@@ -62,6 +62,7 @@ class Overlay {
    * Get the path to the overlay file for the given inode
    */
   AbsolutePath getFilePath(InodeNumber inodeNumber) const;
+
   /**
    * Creates header for the files stored in Overlay
    */
@@ -90,7 +91,8 @@ class Overlay {
    */
   folly::File createOverlayFile(
       InodeNumber inodeNumber,
-      const InodeTimestamps& timestamps);
+      const InodeTimestamps& timestamps,
+      folly::ByteRange contents);
 
   /**
    * Helper function to write an overlay file for a FileInode with existing

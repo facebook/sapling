@@ -45,6 +45,7 @@
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueThreadPool.h"
 
+using folly::ByteRange;
 using folly::Future;
 using folly::makeFuture;
 using folly::Optional;
@@ -800,10 +801,96 @@ TreeInode::Dir TreeInode::buildDirFromTree(
   return dir;
 }
 
+FileInodePtr TreeInode::createImpl(
+    folly::Synchronized<Dir>::LockedPtr contents,
+    PathComponentPiece name,
+    mode_t mode,
+    ByteRange fileContents,
+    std::shared_ptr<EdenFileHandle>* outHandle) {
+  FileInodePtr inode;
+  RelativePath targetName;
+
+  // new scope just to help distinguish work done with the contents lock
+  // held vs without it.
+  {
+    // Make sure that an entry with this name does not already exist.
+    //
+    // In general FUSE should avoid calling create(), symlink(), or mknod() on
+    // entries that already exist.  It performs its own check in the kernel
+    // first to see if this entry exists.  However, this may race with a
+    // checkout operation, so it is still possible that it calls us with an
+    // entry that was in fact just created by a checkout operation.
+    auto entIter = contents->entries.find(name);
+    if (entIter != contents->entries.end()) {
+      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
+    }
+
+    auto myPath = getPath();
+    // Make sure this directory has not been unlinked.
+    // We have to check this after acquiring the contents_ lock; otherwise
+    // we could race with rmdir() or rename() calls affecting us.
+    if (!myPath.hasValue()) {
+      throw InodeError(ENOENT, inodePtrFromThis());
+    }
+
+    // Compute the target path, so we can record it in the journal below
+    // after releasing the contents lock.
+    targetName = myPath.value() + name;
+
+    // Generate an inode number for this new entry.
+    auto* inodeMap = this->getInodeMap();
+    auto childNumber = inodeMap->allocateInodeNumber();
+
+    // Create the overlay file before we insert the file into our entries map.
+    auto currentTime = getNow();
+    folly::File file = getOverlay()->createOverlayFile(
+        childNumber, InodeTimestamps{currentTime}, fileContents);
+
+    // Record the new entry
+    auto insertion = contents->entries.emplace(name, mode, childNumber);
+    CHECK(insertion.second)
+        << "we already confirmed that this entry did not exist above";
+    auto& entry = insertion.first->second;
+
+    if (outHandle) {
+      std::tie(inode, *outHandle) = FileInode::create(
+          childNumber,
+          this->inodePtrFromThis(),
+          name,
+          mode,
+          std::move(file),
+          currentTime);
+    } else {
+      inode = FileInodePtr::makeNew(
+          childNumber,
+          this->inodePtrFromThis(),
+          name,
+          entry.getMode(),
+          currentTime);
+    }
+
+    entry.setInode(inode.get());
+    inodeMap->inodeCreated(inode);
+
+    // Update the directory timestamps, and save it to the overlay
+    contents->timeStamps.ctime = currentTime;
+    contents->timeStamps.mtime = currentTime;
+    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
+
+    // Release the contents lock
+    contents.unlock();
+  }
+
+  invalidateFuseCacheIfRequired(name);
+
+  getMount()->getJournal().addDelta(
+      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
+
+  return inode;
+}
+
 folly::Future<TreeInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
-  // Compute the effective name of the node they want to create.
-  RelativePath targetName;
   std::shared_ptr<EdenFileHandle> handle;
   FileInodePtr inode;
 
@@ -815,70 +902,19 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
     // Acquire our contents lock
     auto contents = contents_.wlock();
 
-    auto myPath = getPath();
-    // Make sure this directory has not been unlinked.
-    // We have to check this after acquiring the contents_ lock; otherwise
-    // we could race with rmdir() or rename() calls affecting us.
-    if (!myPath.hasValue()) {
-      return makeFuture<CreateResult>(InodeError(ENOENT, inodePtrFromThis()));
-    }
-    // Compute the target path, so we can record it in the journal below.
-    targetName = myPath.value() + name;
-
-    // Generate an inode number for this new entry.
-    auto* inodeMap = this->getInodeMap();
-    auto childNumber = inodeMap->allocateInodeNumber();
-
-    // Create the overlay file before we insert the file into our entries map.
-    auto currentTime = getNow();
-    folly::File file = getOverlay()->createOverlayFile(
-        childNumber, InodeTimestamps{currentTime});
     // The mode passed in by the caller may not have the file type bits set.
     // Ensure that we mark this as a regular file.
     mode = S_IFREG | (07777 & mode);
-
-    // Record the new entry
-    auto insertion = contents->entries.emplace(name, mode, childNumber);
-    auto& entry = insertion.first->second;
-    if (!insertion.second) {
-      // FUSE will never call into this code path if a file is being replaced.
-      auto bug = EDEN_BUG()
-          << "create() on path component that already exists" << name;
-      return makeFuture<TreeInode::CreateResult>(bug.toException());
-    }
-
-    // Build a corresponding FileInode.  This code does not have to do anything
-    // special to handle O_EXCL, because the kernel and FUSE take care of making
-    // sure there is only one winner.  See the discussion in T23630298 and test
-    // program at P58653093.
-    //
-    // However, if we support creating files via Thrift in the future we will
-    // have to verify we do the right thing if O_EXCL.
-    std::tie(inode, handle) = FileInode::create(
-        childNumber,
-        this->inodePtrFromThis(),
-        name,
-        mode,
-        std::move(file),
-        currentTime);
-
-    entry.setInode(inode.get());
-    inodeMap->inodeCreated(inode);
-
-    auto now = getNow();
-    contents->timeStamps.ctime = now;
-    contents->timeStamps.mtime = now;
-    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
+    inode = createImpl(std::move(contents), name, mode, ByteRange{}, &handle);
   }
 
-  invalidateFuseCacheIfRequired(name);
-
-  getMount()->getJournal().addDelta(
-      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
-
   // Now that we have the file handle, let's look up the attributes.
-  auto getattrResult = handle->getattr();
-  return getattrResult.then(
+  //
+  // TODO: We probably could compute this more efficiently without using an
+  // extra Future::then() call.  getattr() should always complete immediately
+  // in this case.  We should be able to avoid calling stat() on the underlying
+  // overlay file since we just created it and know it is an empty file.
+  return inode->getattr().then(
       [=, handle = std::move(handle)](Dispatcher::Attr attr) mutable {
         CreateResult result(getMount());
 
@@ -894,94 +930,15 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int /*flags*/) {
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
     folly::StringPiece symlinkTarget) {
-  // Compute the effective name of the node they want to create.
-  RelativePath targetName;
-  std::shared_ptr<EdenFileHandle> handle;
-  FileInodePtr inode;
-
   materialize();
 
-  // We need to scope the write lock as the getattr call below implicitly
-  // wants to acquire a read lock.
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
-
-    auto myPath = getPath();
-    // Make sure this directory has not been unlinked.
-    // We have to check this after acquiring the contents_ lock; otherwise
-    // we could race with rmdir() or rename() calls affecting us.
-    if (!myPath.hasValue()) {
-      throw InodeError(ENOENT, inodePtrFromThis());
-    }
-    // Compute the target path, so we can record it in the journal below.
-    targetName = myPath.value() + name;
-
-    auto entIter = contents->entries.find(name);
-    if (entIter != contents->entries.end()) {
-      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
-    }
-
-    // Generate an inode number for this new entry.
-    auto* inodeMap = this->getInodeMap();
-    auto childNumber = inodeMap->allocateInodeNumber();
-
-    auto currentTime = getNow();
-    folly::File file = getOverlay()->createOverlayFile(
-        childNumber, InodeTimestamps{currentTime});
-
-    SCOPE_FAIL {
-      // If an exception is thrown, remove the in-progress file from the
-      // overlay.
-      auto filePath = getOverlay()->getFilePath(childNumber);
-      ::unlink(filePath.c_str());
-    };
-
-    auto wrote = folly::writeNoInt(
-        file.fd(), symlinkTarget.data(), symlinkTarget.size());
-
-    if (wrote == -1) {
-      auto filePath = getOverlay()->getFilePath(childNumber);
-      folly::throwSystemError("writeNoInt(", filePath, ") failed");
-    }
-    if (wrote != symlinkTarget.size()) {
-      auto filePath = getOverlay()->getFilePath(childNumber);
-      folly::throwSystemError(
-          "writeNoInt(",
-          filePath,
-          ") wrote only ",
-          wrote,
-          " of ",
-          symlinkTarget.size(),
-          " bytes");
-    }
-
-    auto entry = Entry(S_IFLNK | 0770, childNumber);
-
-    // build a corresponding FileInode
-    inode = FileInodePtr::makeNew(
-        childNumber,
-        this->inodePtrFromThis(),
-        name,
-        entry.getMode(),
-        currentTime);
-    entry.setInode(inode.get());
-    inodeMap->inodeCreated(inode);
-    contents->entries.emplace(name, std::move(entry));
-
-    // Update mtime and ctime of the file
-    const auto now = getNow();
-    contents->timeStamps.mtime = now;
-    contents->timeStamps.ctime = now;
-
-    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
+    const mode_t mode = S_IFLNK | 0770;
+    return createImpl(
+        std::move(contents), name, mode, ByteRange{symlinkTarget}, nullptr);
   }
-
-  invalidateFuseCacheIfRequired(name);
-  getMount()->getJournal().addDelta(
-      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
-
-  return inode;
 }
 
 FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
@@ -1006,59 +963,11 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
 
   materialize();
 
-  // We need to scope the write lock as the getattr call below implicitly
-  // wants to acquire a read lock.
   {
     // Acquire our contents lock
     auto contents = contents_.wlock();
-
-    auto myPath = getPath();
-    // Make sure this directory has not been unlinked.
-    // We have to check this after acquiring the contents_ lock; otherwise
-    // we could race with rmdir() or rename() calls affecting us.
-    if (!myPath.hasValue()) {
-      throw InodeError(ENOENT, inodePtrFromThis());
-    }
-    // Compute the target path, so we can record it in the journal below.
-    targetName = myPath.value() + name;
-
-    auto entIter = contents->entries.find(name);
-    if (entIter != contents->entries.end()) {
-      throw InodeError(EEXIST, this->inodePtrFromThis(), name);
-    }
-
-    // Generate an inode number for this new entry.
-    auto* inodeMap = this->getInodeMap();
-    auto childNumber = inodeMap->allocateInodeNumber();
-
-    auto currentTime = getNow();
-    folly::File file = getOverlay()->createOverlayFile(
-        childNumber, InodeTimestamps{currentTime});
-    auto entry = Entry(mode, childNumber);
-
-    // build a corresponding FileInode
-    inode = FileInodePtr::makeNew(
-        childNumber,
-        this->inodePtrFromThis(),
-        name,
-        entry.getMode(),
-        currentTime);
-    entry.setInode(inode.get());
-    inodeMap->inodeCreated(inode);
-    contents->entries.emplace(name, std::move(entry));
-
-    // Update mtime and ctime of the file
-    contents->timeStamps.mtime = currentTime;
-    contents->timeStamps.ctime = currentTime;
-
-    this->getOverlay()->saveOverlayDir(getNodeId(), *contents);
+    return createImpl(std::move(contents), name, mode, ByteRange{}, nullptr);
   }
-
-  invalidateFuseCacheIfRequired(name);
-  getMount()->getJournal().addDelta(
-      std::make_unique<JournalDelta>(targetName, JournalDelta::CREATED));
-
-  return inode;
 }
 
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {

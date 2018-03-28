@@ -639,6 +639,21 @@ class TreeInode : public InodeBase {
   }
 
   /**
+   * createImpl() is a helper function for creating new children inodes.
+   *
+   * This is used by create(), symlink(), and mknod().
+   *
+   * If outHandle is non-null a FileHandle will also be created and will be
+   * returned via this parameter.
+   */
+  FileInodePtr createImpl(
+      folly::Synchronized<Dir>::LockedPtr contentsLock,
+      PathComponentPiece name,
+      mode_t mode,
+      folly::ByteRange fileContents,
+      std::shared_ptr<EdenFileHandle>* outHandle);
+
+  /**
    * removeImpl() is the actual implementation used for unlink() and rmdir().
    *
    * The child inode in question must already be loaded.  removeImpl() will

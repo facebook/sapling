@@ -470,20 +470,16 @@ void Overlay::addHeaderToOverlayFile(
 
   auto data = header.coalesce();
   auto wrote = folly::writeFull(fd, data.data(), data.size());
-
   if (wrote == -1) {
-    folly::throwSystemError("writeNoInt failed");
-  }
-  if (wrote != data.size()) {
-    folly::throwSystemError(
-        "writeNoInt wrote only ", wrote, " of ", data.size(), " bytes");
+    folly::throwSystemError("failed to write overlay header");
   }
 }
 
 // Helper function to create an overlay file
 folly::File Overlay::createOverlayFile(
     InodeNumber inodeNumber,
-    const InodeTimestamps& timestamps) {
+    const InodeTimestamps& timestamps,
+    ByteRange contents) {
   auto filePath = getFilePath(inodeNumber);
   folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
 
@@ -491,7 +487,15 @@ folly::File Overlay::createOverlayFile(
     ::unlink(filePath.c_str());
   };
 
+  // TODO: This version of createOverlayFile() and the other one below should
+  // eventually use the same logic to write the files out.
   addHeaderToOverlayFile(file.fd(), timestamps);
+  if (!contents.empty()) {
+    auto wrote = folly::writeFull(file.fd(), contents.data(), contents.size());
+    if (wrote == -1) {
+      folly::throwSystemError("failed to write overlay file contents");
+    }
+  }
   return file;
 }
 

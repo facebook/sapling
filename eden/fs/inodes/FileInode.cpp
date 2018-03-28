@@ -1116,7 +1116,7 @@ void FileInode::materializeNow(LockedState& state) {
 void FileInode::materializeAndTruncate(LockedState& state) {
   CHECK_NE(state->tag, State::MATERIALIZED_IN_OVERLAY);
   auto file = getMount()->getOverlay()->createOverlayFile(
-      getNodeId(), state->timeStamps);
+      getNodeId(), state->timeStamps, ByteRange{});
   state.setMaterialized(std::move(file));
   storeSha1(state, Hash::sha1(ByteRange{}));
 }
