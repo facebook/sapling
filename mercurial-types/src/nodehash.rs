@@ -16,7 +16,7 @@ use quickcheck::{single_shrinker, Arbitrary, Gen};
 use errors::*;
 use hash::{self, Sha1};
 use serde;
-use sql_types::{HgChangesetIdSql, HgManifestIdSql};
+use sql_types::{HgChangesetIdSql, HgFileNodeIdSql, HgManifestIdSql};
 
 pub const NULL_HASH: NodeHash = NodeHash(hash::NULL);
 pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
@@ -242,6 +242,32 @@ impl HgManifestId {
 }
 
 impl Display for HgManifestId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(fmt)
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+#[derive(HeapSizeOf, FromSqlRow, AsExpression)]
+#[sql_type = "HgFileNodeIdSql"]
+pub struct HgFileNodeId(NodeHash);
+
+impl HgFileNodeId {
+    #[inline]
+    pub(crate) fn as_nodehash(&self) -> &NodeHash {
+        &self.0
+    }
+
+    pub fn into_nodehash(self) -> NodeHash {
+        self.0
+    }
+
+    pub const fn new(hash: NodeHash) -> Self {
+        HgFileNodeId(hash)
+    }
+}
+
+impl Display for HgFileNodeId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
