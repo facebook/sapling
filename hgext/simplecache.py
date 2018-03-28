@@ -114,20 +114,34 @@ def mcset(key, value, ui):
     s.close()
     return ''.join(data) == 'STORED'
 
-class pathcopiesserializer(object):
+class jsonserializer(object):
+    """
+    Serialize and deserialize simple Python datastructures.
+
+    Any Python object that can be JSON-serialized is fair game.
+    """
+    @classmethod
+    def serialize(cls, input):
+        return json.dumps(input)
+
+    @classmethod
+    def deserialize(cls, string):
+        return json.loads(string)
+
+class pathcopiesserializer(jsonserializer):
     """
     Serialize and deserialize the results of calls to copies.pathcopies.
     Results are just dictionaries, so this just uses json.
     """
-    @staticmethod
-    def serialize(copydict):
+    @classmethod
+    def serialize(cls, copydict):
         encoded = dict((k.encode('base64'), v.encode('base64'))
                 for (k, v) in copydict.iteritems())
-        return json.dumps(encoded)
+        return super(pathcopiesserializer, cls).serialize(encoded)
 
-    @staticmethod
-    def deserialize(string):
-        encoded = json.loads(string)
+    @classmethod
+    def deserialize(cls, string):
+        encoded = super(pathcopiesserializer, cls).deserialize(string)
         return dict((k.decode('base64'), v.decode('base64'))
                 for k, v in encoded.iteritems())
 
@@ -142,24 +156,24 @@ def pathcopiesui(ui):
         return func()
     return pathcopies
 
-class buildstatusserializer(object):
+class buildstatusserializer(jsonserializer):
     """
     Serialize and deserialize the results of calls to buildstatus.
     Results are status objects, which extend tuple. Each status object
     has seven lists within it, each containing strings of filenames in
     each type of status.
     """
-    @staticmethod
-    def serialize(status):
+    @classmethod
+    def serialize(cls, status):
         ls = [list(status[i]) for i in range(7)]
         ll = []
         for s in ls:
             ll.append([f.encode('base64') for f in s])
-        return json.dumps(ll)
+        return super(buildstatusserializer, cls).serialize(ll)
 
-    @staticmethod
-    def deserialize(string):
-        ll = json.loads(string)
+    @classmethod
+    def deserialize(cls, string):
+        ll = super(buildstatusserializer, cls).deserialize(string)
         ls = []
         for l in ll:
             ls.append([f.decode('base64') for f in l])
@@ -238,12 +252,29 @@ cachefuncs = {
     'memcache' : (mcget, mcset),
 }
 
-def memoize(func, key, serializer, ui):
+def _adjust_key(key, ui):
     version = ui.config('simplecache', 'version', default='1')
     key = "%s:v%s" % (key, version)
     if pycompat.iswindows:
         # : is prohibited in Windows filenames, while ! is allowed
         key = key.replace(':', '!')
+    return key
+
+def memoize(func, key, serializer, ui):
+    key = _adjust_key(key, ui)
+    sentinel = object()
+    result = cacheget(key, serializer, ui, sentinel, _adjusted=True)
+    if result is not sentinel:
+        return result
+
+    _debug(ui, 'falling back for value %s\n' % (key))
+    value = func()
+    cacheset(key, value, serializer, ui, _adjusted=True)
+    return value
+
+def cacheget(key, serializer, ui, default=None, _adjusted=False):
+    if not _adjusted:
+        key = _adjust_key(key, ui)
     cachelist = ui.configlist('simplecache', 'caches', ['local'])
     for name in cachelist:
         get, set = cachefuncs[name]
@@ -257,9 +288,13 @@ def memoize(func, key, serializer, ui):
             _debug(ui, 'error getting or deserializing key %s: %s\n'
                      % (key, inst))
 
-    _debug(ui, 'falling back for value %s\n' % (key))
-    value = func()
+    _debug(ui, 'no value found for key %s from %s\n' % (key, name))
+    return default
 
+def cacheset(key, value, serializer, ui, _adjusted=False):
+    if not _adjusted:
+        key = _adjust_key(key, ui)
+    cachelist = ui.configlist('simplecache', 'caches', ['local'])
     for name in cachelist:
         get, set = cachefuncs[name]
         try:
@@ -267,8 +302,6 @@ def memoize(func, key, serializer, ui):
             _debug(ui, 'set value for key %s to %s\n' % (key, name))
         except Exception as inst:
             _debug(ui, 'error setting key %s: %s\n' % (key, inst))
-
-    return value
 
 def _runningintests():
     return 'TESTTMP' in encoding.environ

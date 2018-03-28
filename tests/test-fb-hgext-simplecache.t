@@ -42,6 +42,7 @@ Test that output remains the same with multiple invocations.
   # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   xx
   
+  no value found for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from local
   falling back for value buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1
   set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to memcache
   set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to local
@@ -210,6 +211,7 @@ Test strange (unicode) filenames
   # Parent  a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   unicode test
   
+  no value found for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from local
   falling back for value buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1
   set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to memcache
   set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to local
