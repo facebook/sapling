@@ -101,3 +101,27 @@ test sparse subcommands (help, verbose)
    cwd            List all names in this directory
   
   (use 'hg sparse -h' to show more help)
+
+  $ hg help sparse list
+  hg sparse list
+  
+  List available sparse profiles
+  
+      Show all available sparse profiles, with the active profiles marked.
+  
+  subcommands:
+  
+   list           List available sparse profiles
+   explain        Show information on individual profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
+  
+  (some details hidden, use --verbose to show complete help)

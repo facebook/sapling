@@ -31,7 +31,7 @@ from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
 from mercurial.thirdparty import attr
-import os, collections, hashlib
+import os, collections, functools, hashlib
 import re
 
 cmdtable = {}
@@ -417,18 +417,40 @@ def _setupdiff(ui):
     extensions.wrapcommand(commands.table, 'diff', diff)
 
 def _setupsubcommands(ui):
+    # hg help sparse <subcommand> needs to be acceptable
+    def helpacceptmultiplenames(orig, ui, *names, **opts):
+        name = ' '.join(names) if names else None
+        return orig(ui, name, **opts)
+
+    # hg help should include subcommands
     def helpsubcommands(orig, self, name, subtopic=None):
         rst = orig(self, name, subtopic)
-        if name == 'sparse':
+
+        cmd, hassub, sub = name.partition(' ')
+        if cmd == 'sparse':
+            if hassub and rst[0] == 'hg %s\n' % sub:
+                    # subcommand help, patch first line
+                    rst[0] = 'hg %s\n' % name
+
             if not self.ui.quiet:
                 subcmdsrst = subcmd.subcmdsrst(self.ui.verbose)
                 # in verbose mode there is an extra line we want to keep at the
                 # end.
                 pos = len(rst) if self.ui.verbose else -1
                 rst[pos:pos] = [subcmdsrst]
+
         return rst
 
+    # when looking for subcommands, have cmdutil.findpossible find them
+    def findpossible(orig, cmd, table, strict=False):
+        cmd, hassub, subcmd = cmd.partition(' ')
+        if hassub and cmd == 'sparse':
+            return orig(subcmd, subcmdtable, strict)
+        return orig(cmd, table, strict)
+
+    extensions.wrapcommand(commands.table, 'help', helpacceptmultiplenames)
     extensions.wrapfunction(help._helpdispatch, 'helpcmd', helpsubcommands)
+    extensions.wrapfunction(cmdutil, 'findpossible', findpossible)
 
 @attr.s(frozen=True, slots=True)
 class SparseConfig(object):
@@ -992,14 +1014,10 @@ class subcmdfunc(registrar._funcregistrarbase):
 
     Help info is taken from the function docstring, or can be set explicitly
     with the help='...' keyword argument.
+
     """
 
     def __init__(self, cmd, table=None):
-        # preserve original docstring for the sparse function
-        self._cmd = cmd
-        self._base_doc = '{}\n\n\nAvailable sub-commands:\n'.format(
-            cmd[0].__doc__.rstrip())
-        self._help = {}
         if table is None:
             # List commands in registration order
             table = collections.OrderedDict()
@@ -1010,43 +1028,45 @@ class subcmdfunc(registrar._funcregistrarbase):
             msg = 'duplicate registration for name: "%s"' % name
             raise error.ProgrammingError(msg)
 
-        self._table[name] = func
-        self._help[name] = (help or func.__doc__ or '').strip()
-        longest = max(len(n) for n in self._table)
-        entries = [
-            '    {:<{longest}}   {}'.format(
-                key, self._help[key].split('\n', 1)[0].strip(), longest=longest)
-            for key in self._table]
+        @functools.wraps(func)
+        def dispatch(*args, **kwargs):
+            return func(name, *args, **kwargs)
 
-        self._cmd[0].__doc__ = '{}\n{}\n'.format(
-            self._base_doc, '\n\n'.join(entries))
+        if help is not None:
+            dispatch.__doc__ = help
+
+        # TODO: add options and synopsis support, with delegated parsing
+        registration = dispatch, ()
+
+        self._table[name] = registration
 
         return func
 
     def subcmdsrst(self, verbose=False):
         """Produce a table of subcommands"""
         def cmdhelp():
-            for key in self._table:
-                doc = self._help[key]
+            for name, entry in self._table.items():
+                doc = pycompat.getdoc(entry[0])
                 doc, __, rest = doc.strip().partition('\n')
                 if verbose and rest.strip():
                     doc = '{} - {}'.format(doc, rest.strip())
-                yield (key, doc)
+                yield (name, doc)
         rst = ['\n%s:\n\n' % _('subcommands')]
         rst += minirst.maketable(list(cmdhelp()), 1)
         return ''.join(rst)
 
-    def parse(self, pats, opts):
-        if not pats or pats[0] not in self._table:
+    def parse(self, args, opts):
+        if not args or args[0] not in self._table:
             return
 
-        name, pats = pats[0], pats[1:]
-        def callsubcmd(ui, repo, *args, **kw):
+        name, args = args[0], args[1:]
+        def callsubcmd(ui, repo, *moreargs, **kw):
             opts.update(kw)
-            return self._table[name](name, ui, repo, *(args + pats), **opts)
+            return self._table[name][0](ui, repo, *(moreargs + args), **opts)
         return callsubcmd
 
-subcmd = subcmdfunc(cmdtable['^sparse'])
+subcmdtable = collections.OrderedDict()
+subcmd = subcmdfunc(cmdtable['^sparse'], subcmdtable)
 
 @subcmd('list')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
