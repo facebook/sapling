@@ -5,6 +5,7 @@ import time
 from mercurial import (
     progress,
     registrar,
+    util,
 )
 
 cmdtable = {}
@@ -62,6 +63,15 @@ def progresstest(ui, loops, total, **opts):
                         nestedprog.value = (j, 'nest %s' % j)
                         progress._engine.pump(_faketime.increment())
 
+@command('bytesprogresstest', norepo=True)
+def bytesprogresstest(ui):
+    values = [0, 10, 250, 999, 1000, 1024, 22000, 1048576,
+              1474560, 123456789, 555555555, 1000000000, 1111111111]
+    with progress.bar(ui, 'bytes progress test', 'bytes', max(values),
+                      formatfunc=util.bytecount) as prog:
+        for value in values:
+            prog.value = (value, '%s bytes' % value)
+            progress._engine.pump(_faketime.increment())
 
 def uisetup(ui):
     class syncengine(progress._engine.__class__):

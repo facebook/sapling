@@ -73,7 +73,7 @@ def writeprogress(self, progressfile, filemode, bars):
             remaining = progress.estimateremaining(bar) if total else None
             info['units_per_sec'] = cullempty(speed)
             info['estimate_sec'] = cullempty(remaining)
-            info['speed_str'] = cullempty(progress.fmtspeed(speed, unit))
+            info['speed_str'] = cullempty(progress.fmtspeed(speed, bar))
             info['estimate_str'] = cullempty(progress.fmtremaining(remaining))
         topics[topic] = info
 

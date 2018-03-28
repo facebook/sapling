@@ -185,6 +185,22 @@ test count over total
   [progress.fancy.bar.normal progress.fancy.topic| progress test: ][progress.fancy.bar.normal progress.fancy.item|loop 6                               ][progress.fancy.bar.normal progress.fancy.count|  6/4  ]\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
+test rendering with bytes
+  $ hg bytesprogresstest
+  \r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|10 bytes     ][progress.fancy.bar.background progress.fancy.count|  10 bytes/1.03 GB 3y28w ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|250 bytes  ][progress.fancy.bar.background progress.fancy.count|  250 bytes/1.03 GB 14w05d ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|999 bytes   ][progress.fancy.bar.background progress.fancy.count|  999 bytes/1.03 GB 5w04d ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|1000 bytes ][progress.fancy.bar.background progress.fancy.count|  1000 bytes/1.03 GB 7w03d ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|1024 bytes    ][progress.fancy.bar.background progress.fancy.count|  1.00 KB/1.03 GB 9w00d ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|22000 bytes   ][progress.fancy.bar.background progress.fancy.count|  21.5 KB/1.03 GB 3d13h ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|1048576 bytes ][progress.fancy.bar.background progress.fancy.count|  1.00 MB/1.03 GB 2h04m ]\r (no-eol) (esc)
+  [progress.fancy.bar.background progress.fancy.topic| bytes progress test: ][progress.fancy.bar.background progress.fancy.item|1474560 bytes ][progress.fancy.bar.background progress.fancy.count|  1.41 MB/1.03 GB 1h41m ]\r (no-eol) (esc)
+  [progress.fancy.bar.normal progress.fancy.topic| bytes][progress.fancy.bar.background progress.fancy.topic| progress test: ][progress.fancy.bar.background progress.fancy.item|123456789 byte][progress.fancy.bar.background progress.fancy.count|   118 MB/1.03 GB 1m13s ]\r (no-eol) (esc)
+  [progress.fancy.bar.normal progress.fancy.topic| bytes progress test: ][progress.fancy.bar.normal progress.fancy.item|5555555][progress.fancy.bar.background progress.fancy.item|55 bytes ][progress.fancy.bar.background progress.fancy.count|   530 MB/1.03 GB 11s ]\r (no-eol) (esc)
+  [progress.fancy.bar.normal progress.fancy.topic| bytes progress test: ][progress.fancy.bar.normal progress.fancy.item|1000000000 bytes][progress.fancy.bar.normal progress.fancy.count|   954 MB/1.03 G][progress.fancy.bar.background progress.fancy.count|B 02s ]\r (no-eol) (esc)
+  [progress.fancy.bar.normal progress.fancy.topic| bytes progress test: ][progress.fancy.bar.normal progress.fancy.item|1111111111 bytes][progress.fancy.bar.normal progress.fancy.count|  1.03 GB/1.03 GB 01s ]\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 test immediate completion
   $ hg progresstest 0 0
 

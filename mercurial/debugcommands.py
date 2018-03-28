@@ -2551,9 +2551,10 @@ def debugdrawdag(ui, repo, **opts):
 
 @command(b'debugprogress',
     [('s', 'spinner', False, _('use a progress spinner')),
-     ('n', 'nototal', False, _('don\'t include the total'))],
+     ('n', 'nototal', False, _('don\'t include the total')),
+     ('b', 'bytes', False, _('use a bytes format function'))],
     _('NUMBER'), norepo=True)
-def debugprogress(ui, number, spinner=False, nototal=False):
+def debugprogress(ui, number, spinner=False, nototal=False, bytes=False):
     """
     Initiate a progress bar and increment the progress NUMBER times.
 
@@ -2563,15 +2564,17 @@ def debugprogress(ui, number, spinner=False, nototal=False):
     num = int(number)
     _spinning = _('spinning')
 
+    formatfunc = util.bytecount if bytes else None
+
     if spinner:
         with progress.spinner(ui, _spinning):
             for i in xrange(num):
                 pass
     elif nototal:
-        with progress.bar(ui, _spinning) as p:
+        with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
             for i in xrange(num):
                 p.value = (i, 'item %s' % i)
     else:
-        with progress.bar(ui, _spinning, total=num) as p:
+        with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in xrange(num):
                 p.value = (i, 'item %s' % i)

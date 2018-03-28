@@ -87,11 +87,13 @@ def estimateremaining(bar):
         return seconds
     return None
 
-def fmtspeed(speed, unit):
+def fmtspeed(speed, bar):
     if speed is None:
         return ''
-    if unit:
-        return _('%d %s/sec') % (speed, unit)
+    elif bar._formatfunc:
+        return _('%s/sec') % bar._formatfunc(speed)
+    elif bar._unit:
+        return _('%d %s/sec') % (speed, bar._unit)
     else:
         return _('%d per sec') % speed
 
@@ -171,6 +173,9 @@ class classicrenderer(baserenderer):
         pos, item = _progvalue(self._bar.value)
         if pos is None:
             pos = round(now - self._bar._enginestarttime, 1)
+        formatfunc = self._bar._formatfunc
+        if formatfunc is None:
+            formatfunc = str
         topic = self._bar._topic
         unit = self._bar._unit
         total = self._bar._total
@@ -184,11 +189,13 @@ class classicrenderer(baserenderer):
             if indicator == 'topic':
                 add = topic
             elif indicator == 'number':
+                fpos = formatfunc(pos)
                 if total:
-                    add = ('% ' + str(len(str(total))) +
-                           's/%s') % (pos, total)
+                    ftotal = formatfunc(total)
+                    maxlen = max(len(fpos), len(ftotal))
+                    add = ('% ' + str(maxlen) + 's/%s') % (fpos, ftotal)
                 else:
-                    add = str(pos)
+                    add = fpos
             elif indicator.startswith('item') and item:
                 slice = 'end'
                 if '-' in indicator:
@@ -211,7 +218,7 @@ class classicrenderer(baserenderer):
             elif indicator == 'estimate':
                 add = fmtremaining(estimateremaining(self._bar))
             elif indicator == 'speed':
-                add = fmtspeed(estimatespeed(self._bar), self._bar._unit)
+                add = fmtspeed(estimatespeed(self._bar), self._bar)
             if not needprogress:
                 head = spacejoin(head, add)
             else:
@@ -303,11 +310,14 @@ class fancyrenderer(baserenderer):
             spinpos = int((now - self._bar._enginestarttime) * 20)
         termwidth = self.width()
         self.printed = True
+        formatfunc = self._bar._formatfunc or str
+        fpos = formatfunc(pos)
         if total:
-            number = ('% ' + str(len(str(total))) + 's/%s') % (pos, total)
+            ftotal = formatfunc(total)
+            number = ('% ' + str(len(ftotal)) + 's/%s') % (fpos, ftotal)
             remaining = ' ' + fmtremaining(estimateremaining(self._bar))
         else:
-            number = str(pos)
+            number = fpos
             remaining = ''
 
         start = " %s" % topic
@@ -541,12 +551,14 @@ class normalbar(object):
         prog.value = pos
         # alternatively: prog.value = (pos, item)
     """
-    def __init__(self, ui, topic, unit="", total=None, start=0):
+    def __init__(self, ui, topic, unit="", total=None, start=0,
+                 formatfunc=None):
         self._ui = ui
         self._topic = topic
         self._unit = unit
         self._total = total
         self._start = start
+        self._formatfunc = formatfunc
         self._delay = ui.configwith(float, 'progress', 'delay')
         self._refresh = ui.configwith(float, 'progress', 'refresh')
         self._changedelay = ui.configwith(float, 'progress', 'changedelay')
@@ -585,12 +597,14 @@ class normalbar(object):
         _engine.unregister(self)
 
 class debugbar(object):
-    def __init__(self, ui, topic, unit="", total=None, start=0):
+    def __init__(self, ui, topic, unit="", total=None, start=0,
+                 formatfunc=None):
         self._ui = ui
         self._topic = topic
         self._unit = unit
         self._total = total
         self._start = start
+        self._formatfunc = formatfunc
         self._started = False
 
     def reset(self, topic, unit="", total=None):
@@ -628,11 +642,13 @@ class debugbar(object):
 
 class nullbar(object):
     """A progress bar context manager that just keeps track of state."""
-    def __init__(self, ui, topic, unit="", total=None, start=0):
+    def __init__(self, ui, topic, unit="", total=None, start=0,
+                 formatfunc=None):
         self._topic = topic
         self._unit = unit
         self._total = total
         self._start = start
+        self._formatfunc = formatfunc
 
     def reset(self, topic, unit="", total=None):
         self._topic = topic
@@ -647,15 +663,15 @@ class nullbar(object):
     def __exit__(self, type, value, traceback):
         pass
 
-def bar(ui, topic, unit="", total=None, start=0):
+def bar(ui, topic, unit="", total=None, start=0, formatfunc=None):
     if ui.configbool('progress', 'debug'):
-        return debugbar(ui, topic, unit, total, start)
+        return debugbar(ui, topic, unit, total, start, formatfunc)
     elif (ui.quiet or ui.debugflag
             or ui.configbool('progress', 'disable')
             or not shouldprint(ui)):
-        return nullbar(ui, topic, unit, total, start)
+        return nullbar(ui, topic, unit, total, start, formatfunc)
     else:
-        return normalbar(ui, topic, unit, total, start)
+        return normalbar(ui, topic, unit, total, start, formatfunc)
 
 def spinner(ui, topic):
     return bar(ui, topic, start=None)

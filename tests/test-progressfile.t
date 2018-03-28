@@ -321,6 +321,36 @@ test count over total
   {"state": {"progress test": {"active": true, "estimate_sec": null, "estimate_str": null, "item": "loop 6", "pos": 6, "speed_str": "1 cycles/sec", "topic": "progress test", "total": 4, "unit": "cycles", "units_per_sec": 1}}, "topics": ["progress test"]}
   {"state": {}, "topics": []}
 
+test rendering with bytes
+  $ withprogress hg bytesprogresstest
+  \r (no-eol) (esc)
+  bytes progress test [                                  ] 10 bytes/1.03 GB 3y28w\r (no-eol) (esc)
+  bytes progress test [                                ] 250 bytes/1.03 GB 14w05d\r (no-eol) (esc)
+  bytes progress test [                                 ] 999 bytes/1.03 GB 5w04d\r (no-eol) (esc)
+  bytes progress test [                                ] 1000 bytes/1.03 GB 7w03d\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.00 KB/1.03 GB 9w00d\r (no-eol) (esc)
+  bytes progress test [                                   ] 21.5 KB/1.03 GB 3d13h\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.00 MB/1.03 GB 2h04m\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.41 MB/1.03 GB 1h41m\r (no-eol) (esc)
+  bytes progress test [==>                                ]  118 MB/1.03 GB 1m13s\r (no-eol) (esc)
+  bytes progress test [=================>                   ]  530 MB/1.03 GB 11s\r (no-eol) (esc)
+  bytes progress test [================================>    ]  954 MB/1.03 GB 02s\r (no-eol) (esc)
+  bytes progress test [====================================>] 1.03 GB/1.03 GB 01s\r (no-eol) (esc)
+                                                                                  \r (no-eol) (esc)
+  {"state": {"bytes progress test": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "0 bytes", "pos": 0, "speed_str": null, "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": null}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 111111111, "estimate_str": "3y28w", "item": "10 bytes", "pos": 10, "speed_str": "10 bytes/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 10}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 8888887, "estimate_str": "14w05d", "item": "250 bytes", "pos": 250, "speed_str": "125 bytes/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 125}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 3336668, "estimate_str": "5w04d", "item": "999 bytes", "pos": 999, "speed_str": "333 bytes/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 333}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 4444441, "estimate_str": "7w03d", "item": "1000 bytes", "pos": 1000, "speed_str": "250 bytes/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 250}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 5425343, "estimate_str": "9w00d", "item": "1024 bytes", "pos": 1024, "speed_str": "204 bytes/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 204}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 303025, "estimate_str": "3d13h", "item": "22000 bytes", "pos": 22000, "speed_str": "3.58 KB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 3666}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 7411, "estimate_str": "2h04m", "item": "1048576 bytes", "pos": 1048576, "speed_str": "146 KB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 149796}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 6021, "estimate_str": "1h41m", "item": "1474560 bytes", "pos": 1474560, "speed_str": "180 KB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 184320}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 73, "estimate_str": "1m13s", "item": "123456789 bytes", "pos": 123456789, "speed_str": "13.1 MB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 13717421}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 11, "estimate_str": "11s", "item": "555555555 bytes", "pos": 555555555, "speed_str": "53.0 MB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 55555555}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 2, "estimate_str": "02s", "item": "1000000000 bytes", "pos": 1000000000, "speed_str": "86.7 MB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 90909090}}, "topics": ["bytes progress test"]}
+  {"state": {"bytes progress test": {"active": true, "estimate_sec": 1, "estimate_str": "01s", "item": "1111111111 bytes", "pos": 1111111111, "speed_str": "88.3 MB/sec", "topic": "bytes progress test", "total": 1111111111, "unit": "bytes", "units_per_sec": 92592592}}, "topics": ["bytes progress test"]}
+  {"state": {}, "topics": []}
 test immediate completion
   $ withprogress hg progresstest 0 0
   {"state": {"progress test": {"active": false, "estimate_sec": null, "estimate_str": null, "item": "loop 0", "pos": 0, "speed_str": null, "topic": "progress test", "total": 0, "unit": "cycles", "units_per_sec": null}}, "topics": ["progress test"]}

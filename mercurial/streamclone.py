@@ -292,7 +292,8 @@ def generatebundlev1(repo, compression='UN'):
         # This is where we'll add compression in the future.
         assert compression == 'UN'
 
-        with progress.bar(repo.ui, _('bundle'), _('bytes'), bytecount) as prog:
+        with progress.bar(repo.ui, _('bundle'), _('bytes'), bytecount,
+                          formatfunc=util.bytecount) as prog:
             for chunk in it:
                 prog.value += len(chunk)
                 yield chunk
@@ -327,7 +328,8 @@ def consumev1(repo, fp, filecount, bytecount):
         # nesting occurs also in ordinary case (e.g. enabling
         # clonebundles).
 
-        with progress.bar(repo.ui, _('clone'), _('bytes'), bytecount) as prog:
+        with progress.bar(repo.ui, _('clone'), _('bytes'), bytecount,
+                          formatfunc=util.bytecount) as prog:
             with repo.transaction('clone'):
                 with repo.svfs.backgroundclosing(repo.ui,
                                                  expectedcount=filecount):

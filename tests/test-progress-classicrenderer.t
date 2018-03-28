@@ -180,6 +180,22 @@ test count over total
   progress test [      <=>                                                  ] 6/4\r (no-eol) (esc)
                                                                                   \r (no-eol) (esc)
 
+test rendering with bytes
+  $ hg bytesprogresstest
+  \r (no-eol) (esc)
+  bytes progress test [                                  ] 10 bytes/1.03 GB 3y28w\r (no-eol) (esc)
+  bytes progress test [                                ] 250 bytes/1.03 GB 14w05d\r (no-eol) (esc)
+  bytes progress test [                                 ] 999 bytes/1.03 GB 5w04d\r (no-eol) (esc)
+  bytes progress test [                                ] 1000 bytes/1.03 GB 7w03d\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.00 KB/1.03 GB 9w00d\r (no-eol) (esc)
+  bytes progress test [                                   ] 21.5 KB/1.03 GB 3d13h\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.00 MB/1.03 GB 2h04m\r (no-eol) (esc)
+  bytes progress test [                                   ] 1.41 MB/1.03 GB 1h41m\r (no-eol) (esc)
+  bytes progress test [==>                                ]  118 MB/1.03 GB 1m13s\r (no-eol) (esc)
+  bytes progress test [=================>                   ]  530 MB/1.03 GB 11s\r (no-eol) (esc)
+  bytes progress test [================================>    ]  954 MB/1.03 GB 02s\r (no-eol) (esc)
+  bytes progress test [====================================>] 1.03 GB/1.03 GB 01s\r (no-eol) (esc)
+                                                                                  \r (no-eol) (esc)
 test immediate completion
   $ hg progresstest 0 0
 
