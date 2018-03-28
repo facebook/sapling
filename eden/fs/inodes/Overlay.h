@@ -11,6 +11,7 @@
 #include <folly/File.h>
 #include <folly/Optional.h>
 #include <folly/Range.h>
+#include <gtest/gtest_prod.h>
 #include "TreeInode.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -57,11 +58,6 @@ class Overlay {
       InodeMap* inodeMap) const;
 
   void removeOverlayData(InodeNumber inodeNumber) const;
-
-  /**
-   * Get the path to the overlay file for the given inode
-   */
-  AbsolutePath getFilePath(InodeNumber inodeNumber) const;
 
   /**
    * Creates header for the files stored in Overlay
@@ -129,6 +125,8 @@ class Overlay {
   static constexpr size_t kHeaderLength = 64;
 
  private:
+  FRIEND_TEST(OverlayTest, getFilePath);
+
   void initOverlay();
   bool isOldFormatOverlay() const;
   void readExistingOverlay(int infoFD);
@@ -136,6 +134,11 @@ class Overlay {
   folly::Optional<overlay::OverlayDir> deserializeOverlayDir(
       InodeNumber inodeNumber,
       InodeTimestamps& timeStamps) const;
+
+  /**
+   * Get the path to the overlay file for the given inode
+   */
+  AbsolutePath getFilePath(InodeNumber inodeNumber) const;
 
   /**
    * Helper function to add header to the overlay file

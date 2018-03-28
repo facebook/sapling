@@ -22,11 +22,13 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 
-using namespace facebook::eden;
 using folly::Future;
 using folly::makeFuture;
 using folly::StringPiece;
 using std::string;
+
+namespace facebook {
+namespace eden {
 
 class OverlayTest : public ::testing::Test {
  protected:
@@ -147,3 +149,23 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   EXPECT_EQ(12_ino, two.getInodeNumber());
   EXPECT_TRUE(two.isMaterialized());
 }
+
+TEST_F(OverlayTest, getFilePath) {
+  auto overlay = mount_.getEdenMount()->getOverlay();
+  EXPECT_EQ(
+      overlay->localDir_ + RelativePath{"01/1"}, overlay->getFilePath(1_ino));
+  EXPECT_EQ(
+      overlay->localDir_ + RelativePath{"d2/1234"},
+      overlay->getFilePath(1234_ino));
+
+  // It's slightly unfortunate that we use hexadecimal for the subdirectory
+  // name and decimal for the final inode path.  That doesn't seem worth fixing
+  // for now.
+  EXPECT_EQ(
+      overlay->localDir_ + RelativePath{"0f/15"}, overlay->getFilePath(15_ino));
+  EXPECT_EQ(
+      overlay->localDir_ + RelativePath{"10/16"}, overlay->getFilePath(16_ino));
+}
+
+} // namespace eden
+} // namespace facebook
