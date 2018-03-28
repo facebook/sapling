@@ -44,7 +44,7 @@ The case collision is ignored when the sparse profile is enabled:
   > force_case_insensitivity=../force_case_insensitivity.py
   > EOF
   $ hg up -r 1
-  abort: case-folding collision between colliding_dir/A and colliding_dir/a
+  abort: case-folding collision between colliding_dir/[Aa] and colliding_dir/[aA] (re)
   [255]
   $ hg sparse --enable-profile profiles/sparse_profile
   $ hg up -r 1
