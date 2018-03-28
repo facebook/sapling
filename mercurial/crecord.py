@@ -20,6 +20,7 @@ from . import (
     encoding,
     error,
     patch as patchmod,
+    progress,
     scmutil,
     util,
 )
@@ -525,10 +526,11 @@ def chunkselector(ui, headerlist, operation=None):
     if util.safehasattr(signal, 'SIGTSTP'):
         origsigtstp = signal.getsignal(signal.SIGTSTP)
     try:
-        curses.wrapper(chunkselector.main)
-        if chunkselector.initerr is not None:
-            raise error.Abort(chunkselector.initerr)
-        # ncurses does not restore signal handler for SIGTSTP
+        with progress.suspend():
+            curses.wrapper(chunkselector.main)
+            if chunkselector.initerr is not None:
+                raise error.Abort(chunkselector.initerr)
+            # ncurses does not restore signal handler for SIGTSTP
     finally:
         if origsigtstp is not sentinel:
             signal.signal(signal.SIGTSTP, origsigtstp)
