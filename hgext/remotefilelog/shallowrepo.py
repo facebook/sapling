@@ -208,7 +208,8 @@ def wraprepo(repo):
                 # If we know a rev is on the server, we should fetch the server
                 # version of those files, since our local file versions might
                 # become obsolete if the local commits are stripped.
-                localrevs = repo.revs('outgoing(%s)', fallbackpath)
+                with progress.spinner(self.ui, _('finding outgoing revisions')):
+                    localrevs = repo.revs('outgoing(%s)', fallbackpath)
                 if base is not None and base != nullrev:
                     serverbase = list(repo.revs('first(reverse(::%s) - %ld)',
                                                 base, localrevs))
