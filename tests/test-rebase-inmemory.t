@@ -138,9 +138,38 @@ Ensure symlink and executable files were rebased properly:
   e -> somefile
   $ ls -l f | cut -c -10
   -rwxr-xr-x
+  $ cd ..
+
+Make a change that only changes the flags of a file and ensure it rebases
+cleanly.
+  $ hg clone repo2 repo3
+  updating to branch default
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd repo3
+  $ hg tglog
+  @  3: 753feb6fd12a 'c'
+  |
+  o  2: 09c044d2cb43 'd'
+  |
+  o  1: fc055c3b4d33 'b'
+  |
+  o  0: b173517d0057 'a'
+  
+  $ chmod +x a
+  $ hg commit -m "change a's flags"
+  $ hg up 0
+  1 files updated, 0 files merged, 5 files removed, 0 files unresolved
+  $ hg rebase -r 4 -d .
+  rebasing 4:0666f6a71f74 "change a's flags" (tip)
+  saved backup bundle to $TESTTMP/repo1/repo3/.hg/strip-backup/0666f6a71f74-a2618702-rebase.hg
+  $ hg up -q tip
+  $ ls -l a | cut -c -10
+  -rwxr-xr-x
+  $ cd ..
 
 Rebase the working copy parent, which should default to an on-disk merge even if
 we requested in-memory.
+  $ cd repo2
   $ hg up -C 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg rebase -r 3 -d 0 --debug | egrep 'rebasing|disabling'
