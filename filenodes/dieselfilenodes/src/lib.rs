@@ -61,23 +61,38 @@ impl SqliteFilenodes {
         })
     }
 
-    /// Create a new SQLite database.
-    pub fn create<P: AsRef<str>>(path: P) -> Result<Self> {
-        let filenodes = Self::open(path, DEFAULT_INSERT_CHUNK_SIZE)?;
-
+    fn create_tables(&mut self) -> Result<()> {
         let up_query = include_str!("../schemas/sqlite-filenodes.sql");
-        filenodes
-            .connection
+
+        self.connection
             .lock()
             .expect("lock poisoned")
             .batch_execute(&up_query)?;
+
+        Ok(())
+    }
+
+    /// Create a new SQLite database.
+    pub fn create<P: AsRef<str>>(path: P, insert_chunk_size: usize) -> Result<Self> {
+        let mut changesets = Self::open(path, insert_chunk_size)?;
+
+        changesets.create_tables()?;
+
+        Ok(changesets)
+    }
+
+    /// Open a SQLite database, and create the tables if they are missing
+    pub fn open_or_create<P: AsRef<str>>(path: P, insert_chunk_size: usize) -> Result<Self> {
+        let mut filenodes = Self::open(path, insert_chunk_size)?;
+
+        let _ = filenodes.create_tables();
 
         Ok(filenodes)
     }
 
     /// Create a new in-memory empty database. Great for tests.
     pub fn in_memory() -> Result<Self> {
-        Self::create(":memory:")
+        Self::create(":memory:", DEFAULT_INSERT_CHUNK_SIZE)
     }
 }
 
