@@ -15,36 +15,18 @@ use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 
 use blobrepo::{BlobEntry, BlobRepo, ChangesetHandle};
-use changesets::SqliteChangesets;
-use dbbookmarks::SqliteDbBookmarks;
 use memblob::{EagerMemblob, LazyMemblob};
-use memheads::MemHeads;
-use memlinknodes::MemLinknodes;
-use mercurial_types::{manifest, Blob, NodeHash, RepoPath, RepositoryId, Time};
+use mercurial_types::{manifest, Blob, NodeHash, RepoPath, Time};
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
-    let bookmarks =
-        Arc::new(SqliteDbBookmarks::in_memory().expect("cannot create in-memory bookmarks table"));
-    let heads: MemHeads = MemHeads::new();
-    let blobs = EagerMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_memblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
+    BlobRepo::new_memblob_empty(None, Some(Arc::new(EagerMemblob::new())))
+        .expect("cannot create empty repo")
 }
 
 pub fn get_empty_lazy_repo() -> BlobRepo {
-    let bookmarks =
-        Arc::new(SqliteDbBookmarks::in_memory().expect("cannot create in-memory bookmarks table"));
-    let heads: MemHeads = MemHeads::new();
-    let blobs = LazyMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_lazymemblob(None, heads, bookmarks, blobs, linknodes, changesets, repoid)
+    BlobRepo::new_memblob_empty(None, Some(Arc::new(LazyMemblob::new())))
+        .expect("cannot create empty repo")
 }
 
 macro_rules! test_both_repotypes {

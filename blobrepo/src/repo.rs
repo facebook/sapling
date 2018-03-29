@@ -35,7 +35,7 @@ use filelinknodes::FileLinknodes;
 use heads::Heads;
 use linknodes::Linknodes;
 use manifoldblob::ManifoldBlob;
-use memblob::{EagerMemblob, LazyMemblob};
+use memblob::EagerMemblob;
 use memheads::MemHeads;
 use memlinknodes::MemLinknodes;
 use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, MPath, Manifest, NodeHash,
@@ -162,52 +162,15 @@ impl BlobRepo {
 
     // Memblob repos are test repos, and do not have to have a logger. If we're given None,
     // we won't log.
-    pub fn new_memblob(
+    pub fn new_memblob_empty(
         logger: Option<Logger>,
-        heads: MemHeads,
-        bookmarks: Arc<Bookmarks>,
-        blobstore: EagerMemblob,
-        linknodes: MemLinknodes,
-        changesets: SqliteChangesets,
-        repoid: RepositoryId,
-    ) -> Self {
-        Self::new(
-            logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
-            Arc::new(heads),
-            bookmarks,
-            Arc::new(blobstore),
-            Arc::new(linknodes),
-            Arc::new(changesets),
-            repoid,
-        )
-    }
-
-    pub fn new_lazymemblob(
-        logger: Option<Logger>,
-        heads: MemHeads,
-        bookmarks: Arc<Bookmarks>,
-        blobstore: LazyMemblob,
-        linknodes: MemLinknodes,
-        changesets: SqliteChangesets,
-        repoid: RepositoryId,
-    ) -> Self {
-        Self::new(
-            logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
-            Arc::new(heads),
-            bookmarks,
-            Arc::new(blobstore),
-            Arc::new(linknodes),
-            Arc::new(changesets),
-            repoid,
-        )
-    }
-
-    pub fn new_memblob_empty(logger: Option<Logger>) -> Result<Self> {
+        blobstore: Option<Arc<Blobstore>>,
+    ) -> Result<Self> {
         Ok(Self::new(
             logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!())),
             Arc::new(MemHeads::new()),
             Arc::new(SqliteDbBookmarks::in_memory()?),
-            Arc::new(EagerMemblob::new()),
+            blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
             Arc::new(MemLinknodes::new()),
             Arc::new(SqliteChangesets::in_memory()
                 .context(ErrorKind::StateOpen(StateOpenError::Changesets))?),

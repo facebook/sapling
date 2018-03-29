@@ -13,34 +13,15 @@ use failure::Error;
 use slog::{self, Drain, Logger, OwnedKVList, Record, Serializer, KV};
 
 use blobrepo::BlobRepo;
-use changesets::SqliteChangesets;
-use dbbookmarks::SqliteDbBookmarks;
 use memblob::LazyMemblob;
-use memheads::MemHeads;
-use memlinknodes::MemLinknodes;
-use mercurial_types::{RepoPath, RepositoryId};
+use mercurial_types::RepoPath;
 
 use utils::{create_changeset_no_parents, run_future, upload_file_no_parents,
             upload_manifest_no_parents};
 
 fn get_logging_blob_repo(logger: Logger) -> BlobRepo {
-    let bookmarks =
-        Arc::new(SqliteDbBookmarks::in_memory().expect("cannot create in memory bookmarks"));
-    let heads: MemHeads = MemHeads::new();
-    let blobs = LazyMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory().expect("cannot create in memory changesets");
-    let repoid = RepositoryId::new(0);
-
-    BlobRepo::new_lazymemblob(
-        Some(logger),
-        heads,
-        bookmarks,
-        blobs,
-        linknodes,
-        changesets,
-        repoid,
-    )
+    BlobRepo::new_memblob_empty(Some(logger), Some(Arc::new(LazyMemblob::new())))
+        .expect("cannot create BlobRepo")
 }
 
 // These are minimal tests, just confirming that the right sort of data comes out of our futures

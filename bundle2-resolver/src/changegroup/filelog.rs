@@ -265,7 +265,7 @@ mod tests {
         J: IntoIterator<Item = Filelog>,
     {
         let result = convert_to_revlog_filelog(
-            Arc::new(BlobRepo::new_memblob_empty(None).unwrap()),
+            Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
             iter_ok(inp.into_iter().collect::<Vec<_>>()),
         ).collect()
             .wait()
@@ -394,7 +394,7 @@ mod tests {
         };
 
         let result = convert_to_revlog_filelog(
-            Arc::new(BlobRepo::new_memblob_empty(None).unwrap()),
+            Arc::new(BlobRepo::new_memblob_empty(None, None).unwrap()),
             iter_ok(inp),
         ).collect()
             .wait();

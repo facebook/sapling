@@ -51,6 +51,7 @@ extern crate ascii;
 extern crate heads;
 extern crate futures;
 extern crate bytes;
+#[macro_use]
 extern crate slog;
 
 use std::str::FromStr;
@@ -67,17 +68,17 @@ use ascii::AsciiString;
 use blobstore::Blobstore;
 use heads::Heads;
 use futures::future::Future;
-use slog::Logger;
+use slog::{Discard, Drain, Logger};
 use std::sync::Arc;
 
 pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
     let bookmarks = Arc::new(SqliteDbBookmarks::in_memory()
         .expect("cannot create in-memory bookmarks table"));
-    let heads: MemHeads = MemHeads::new();
-    let blobs = EagerMemblob::new();
-    let linknodes = MemLinknodes::new();
-    let changesets = SqliteChangesets::in_memory()
-        .expect("cannot create in-memory changeset table");
+    let heads = Arc::new(MemHeads::new());
+    let blobs = Arc::new(EagerMemblob::new());
+    let linknodes = Arc::new(MemLinknodes::new());
+    let changesets = Arc::new(SqliteChangesets::in_memory()
+        .expect("cannot create in-memory changeset table"));
     let repo_id = RepositoryId::new(0);
 
 """
@@ -160,7 +161,8 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                 )
         rs.writelines(
             """
-    BlobRepo::new_memblob(logger, heads, bookmarks, blobs, linknodes, changesets, repo_id)
+    let logger = logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!()));
+    BlobRepo::new(logger, heads, bookmarks, blobs, linknodes, changesets, repo_id)
 }
 """
         )
