@@ -7,7 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
-#include "Overlay.h"
+#include "eden/fs/inodes/Overlay.h"
+
 #include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
@@ -31,9 +32,8 @@ using folly::IOBuf;
 using folly::MutableStringPiece;
 using folly::Optional;
 using folly::StringPiece;
-using std::make_unique;
+using folly::literals::string_piece_literals::operator""_sp;
 using std::string;
-using std::unique_ptr;
 
 /* Relative to the localDir, the metaFile holds the serialized rendition
  * of the overlay_ data.  We use thrift CompactSerialization for this.
@@ -106,11 +106,11 @@ void Overlay::initOverlay() {
 
   // Read the info file.
   auto infoPath = localDir_ + PathComponentPiece{kInfoFile};
-  int fd = folly::openNoInt(infoPath.value().c_str(), O_RDONLY);
+  int fd = folly::openNoInt(infoPath.value().c_str(), O_RDONLY | O_CLOEXEC);
   if (fd >= 0) {
     // This is an existing overlay directory.
     // Read the info file and make sure we are compatible with its version.
-    infoFile_ = File{fd, true};
+    infoFile_ = File{fd, /* ownsFd */ true};
     readExistingOverlay(infoFile_.fd());
   } else if (errno != ENOENT) {
     folly::throwSystemError(
@@ -118,12 +118,19 @@ void Overlay::initOverlay() {
   } else {
     // This is a brand new overlay directory.
     initNewOverlay();
-    infoFile_ = File{infoPath.value().c_str(), O_RDONLY};
+    infoFile_ = File{infoPath.value().c_str(), O_RDONLY | O_CLOEXEC};
   }
 
   if (!infoFile_.try_lock()) {
     folly::throwSystemError("failed to acquire overlay lock on ", infoPath);
   }
+
+  // Open a handle on the overlay directory itself
+  int dirFd =
+      open(localDir_.c_str(), O_RDONLY | O_PATH | O_DIRECTORY | O_CLOEXEC);
+  folly::checkUnixError(
+      dirFd, "error opening overlay directory handle for ", localDir_.value());
+  dirFile_ = File{dirFd, /* ownsFd */ true};
 }
 
 bool Overlay::isOldFormatOverlay() const {
@@ -208,7 +215,7 @@ void Overlay::initNewOverlay() {
 
 Optional<TreeInode::Dir> Overlay::loadOverlayDir(
     InodeNumber inodeNumber,
-    InodeMap* inodeMap) const {
+    InodeMap* inodeMap) {
   TreeInode::Dir result;
   auto dirData = deserializeOverlayDir(inodeNumber, result.timeStamps);
   if (!dirData.hasValue()) {
@@ -246,8 +253,9 @@ Optional<TreeInode::Dir> Overlay::loadOverlayDir(
   return folly::Optional<TreeInode::Dir>(std::move(result));
 }
 
-void Overlay::saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir)
-    const {
+void Overlay::saveOverlayDir(
+    InodeNumber inodeNumber,
+    const TreeInode::Dir& dir) {
   // TODO: T20282158 clean up access of child inode information.
   //
   // Translate the data to the thrift equivalents
@@ -275,22 +283,22 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir)
   // Ask thrift to serialize it.
   auto serializedData = CompactSerializer::serialize<std::string>(odir);
 
-  // Add header to the overlay directory.
+  // Create the header
   auto header =
       createHeader(kHeaderIdentifierDir, kHeaderVersion, dir.timeStamps);
 
-  auto iov = header.getIov();
-  iov.push_back(
-      {const_cast<char*>(serializedData.data()), serializedData.size()});
-
-  // And update the file on disk
-  folly::writeFileAtomic(
-      getFilePath(inodeNumber).stringPiece(), iov.data(), iov.size());
+  std::array<struct iovec, 2> iov;
+  iov[0].iov_base = header.data();
+  iov[0].iov_len = header.size();
+  iov[1].iov_base = const_cast<char*>(serializedData.data());
+  iov[1].iov_len = serializedData.size();
+  (void)createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
-void Overlay::removeOverlayData(InodeNumber inodeNumber) const {
-  auto path = getFilePath(inodeNumber);
-  if (::unlink(path.value().c_str()) != 0 && errno != ENOENT) {
+void Overlay::removeOverlayData(InodeNumber inodeNumber) {
+  InodePath path;
+  getFilePath(inodeNumber, path);
+  if (::unlinkat(dirFile_.fd(), path.data(), 0) != 0 && errno != ENOENT) {
     folly::throwSystemError("error unlinking overlay file: ", path);
   }
 }
@@ -364,30 +372,47 @@ const AbsolutePath& Overlay::getLocalDir() const {
   return localDir_;
 }
 
-AbsolutePath Overlay::getFilePath(InodeNumber inodeNumber) const {
-  std::array<char, 2> subdir;
-  formatSubdirPath(
-      MutableStringPiece{subdir.data(), subdir.size()}, inodeNumber.get());
-  auto numberStr = folly::to<string>(inodeNumber);
-  return localDir_ +
-      PathComponentPiece{StringPiece{subdir.data(), subdir.size()}} +
-      PathComponentPiece{numberStr};
+size_t Overlay::getFilePath(InodeNumber inodeNumber, InodePath& outPath) {
+  formatSubdirPath(MutableStringPiece{outPath.data(), 2}, inodeNumber.get());
+  outPath[2] = '/';
+  auto index =
+      folly::uint64ToBufferUnsafe(inodeNumber.get(), outPath.data() + 3);
+  DCHECK_LT(index + 3, outPath.size());
+  outPath[index + 3] = '\0';
+  return index + 3;
 }
 
 Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
     InodeNumber inodeNumber,
     InodeTimestamps& timeStamps) const {
-  auto path = getFilePath(inodeNumber);
-
-  // Read the file and de-serialize it into data
-  std::string serializedData;
-  if (!folly::readFile(path.value().c_str(), serializedData)) {
+  // Open the file.  Return folly::none if the file does not exist.
+  InodePath path;
+  getFilePath(inodeNumber, path);
+  int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+  if (fd == -1) {
     int err = errno;
     if (err == ENOENT) {
       // There is no overlay here
       return folly::none;
     }
-    folly::throwSystemErrorExplicit(err, "failed to read ", path);
+    folly::throwSystemErrorExplicit(
+        err,
+        "error opening overlay file for inode ",
+        inodeNumber,
+        " in ",
+        localDir_);
+  }
+  folly::File file{fd, /* ownsFd */ true};
+
+  // Read the file data
+  std::string serializedData;
+  if (!folly::readFile(file.fd(), serializedData)) {
+    int err = errno;
+    if (err == ENOENT) {
+      // There is no overlay here
+      return folly::none;
+    }
+    folly::throwSystemErrorExplicit(errno, "failed to read ", path);
   }
 
   // Removing header and deserializing the contents
@@ -411,14 +436,15 @@ Optional<overlay::OverlayDir> Overlay::deserializeOverlayDir(
   return CompactSerializer::deserialize<overlay::OverlayDir>(contents);
 }
 
-// Overlay version number is currently 32 bit,
-// so making version uint32_t instead of uint16_t
-IOBuf Overlay::createHeader(
-    StringPiece identifier,
+std::array<uint8_t, Overlay::kHeaderLength> Overlay::createHeader(
+    folly::StringPiece identifier,
     uint32_t version,
     const InodeTimestamps& timestamps) {
-  IOBuf header(IOBuf::CREATE, kHeaderLength);
+  std::array<uint8_t, kHeaderLength> headerStorage;
+  IOBuf header{IOBuf::WRAP_BUFFER, folly::MutableByteRange{headerStorage}};
+  header.clear();
   folly::io::Appender appender(&header, 0);
+
   appender.push(identifier);
   appender.writeBE(version);
   auto atime = timestamps.atime.toTimespec();
@@ -435,7 +461,7 @@ IOBuf Overlay::createHeader(
   memset(appender.writableData(), 0, paddingSize);
   appender.append(paddingSize);
 
-  return header;
+  return headerStorage;
 }
 
 // Helper function to open,validate,
@@ -445,12 +471,18 @@ folly::File Overlay::openFile(
     folly::StringPiece headerId,
     InodeTimestamps& timeStamps) {
   // Open the overlay file
-  auto filePath = getFilePath(inodeNumber);
-  folly::File file(filePath.c_str(), O_RDWR);
+  auto file = openFileNoVerify(inodeNumber);
 
   // Read the contents
   std::string contents;
-  folly::readFile(file.fd(), contents, kHeaderLength);
+  if (!folly::readFile(file.fd(), contents, kHeaderLength)) {
+    folly::throwSystemErrorExplicit(
+        errno,
+        "failed to read overlay file for inode ",
+        inodeNumber,
+        " in ",
+        localDir_);
+  }
 
   StringPiece header{contents};
   parseHeader(header, headerId, timeStamps);
@@ -458,68 +490,126 @@ folly::File Overlay::openFile(
 }
 
 folly::File Overlay::openFileNoVerify(InodeNumber inodeNumber) {
-  auto filePath = getFilePath(inodeNumber);
-  return folly::File{filePath.c_str(), O_RDWR};
+  InodePath path;
+  getFilePath(inodeNumber, path);
+
+  int fd = openat(dirFile_.fd(), path.data(), O_RDWR | O_CLOEXEC | O_NOFOLLOW);
+  folly::checkUnixError(
+      fd,
+      "error opening overlay file for inode ",
+      inodeNumber,
+      " in ",
+      localDir_);
+  return folly::File{fd, /* ownsFd */ true};
 }
 
-// Helper function to  add header to the materialized file
-void Overlay::addHeaderToOverlayFile(
-    int fd,
-    const InodeTimestamps& timestamps) {
-  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
-
-  auto data = header.coalesce();
-  auto wrote = folly::writeFull(fd, data.data(), data.size());
-  if (wrote == -1) {
-    folly::throwSystemError("failed to write overlay header");
-  }
-}
-
-// Helper function to create an overlay file
-folly::File Overlay::createOverlayFile(
+folly::File Overlay::createOverlayFileImpl(
     InodeNumber inodeNumber,
-    const InodeTimestamps& timestamps,
-    ByteRange contents) {
-  auto filePath = getFilePath(inodeNumber);
-  folly::File file(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+    iovec* iov,
+    size_t iovCount) {
+  // We do not use mkstemp() to create the temporary file, since there is no
+  // mkstempat() equivalent that can create files relative to dirFile_.  We
+  // simply create the file with a fixed suffix, and do not use O_EXCL.  This
+  // is not a security risk since only the current user should have permission
+  // to create files inside the overlay directory, so no one else can create
+  // symlinks inside the overlay directory.  We also open the temporary file
+  // using O_NOFOLLOW.
+  //
+  // We could potentially use O_TMPFILE followed by linkat() to commit the
+  // file.  However this may not be supported by all filesystems, and seems to
+  // provide minimal benefits for our use case.
+  constexpr auto tmpSuffix = ".tmp\0"_sp;
+  InodePath path;
+  std::array<char, kMaxPathLength + tmpSuffix.size()> tmpPath;
+  auto pathLength = getFilePath(inodeNumber, path);
+  memcpy(tmpPath.data(), path.data(), pathLength);
+  memcpy(tmpPath.data() + pathLength, tmpSuffix.data(), tmpSuffix.size());
 
-  SCOPE_FAIL {
-    ::unlink(filePath.c_str());
+  auto tmpFD = openat(
+      dirFile_.fd(),
+      tmpPath.data(),
+      O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW,
+      0600);
+  folly::checkUnixError(
+      tmpFD,
+      "failed to create temporary overlay file for inode ",
+      inodeNumber,
+      " in ",
+      localDir_);
+  folly::File file{tmpFD, /* ownsFd */ true};
+  bool success = false;
+  SCOPE_EXIT {
+    if (!success) {
+      unlinkat(dirFile_.fd(), tmpPath.data(), 0);
+    }
   };
 
-  // TODO: This version of createOverlayFile() and the other one below should
-  // eventually use the same logic to write the files out.
-  addHeaderToOverlayFile(file.fd(), timestamps);
-  if (!contents.empty()) {
-    auto wrote = folly::writeFull(file.fd(), contents.data(), contents.size());
-    if (wrote == -1) {
-      folly::throwSystemError("failed to write overlay file contents");
-    }
-  }
+  auto sizeWritten = folly::writevFull(tmpFD, iov, iovCount);
+  folly::checkUnixError(
+      sizeWritten,
+      "error writing to overlay file for inode ",
+      inodeNumber,
+      " in ",
+      localDir_);
+
+  auto returnCode = folly::fdatasyncNoInt(tmpFD);
+  folly::checkUnixError(
+      returnCode,
+      "error flushing data to overlay file for inode ",
+      inodeNumber,
+      " in ",
+      localDir_);
+
+  returnCode =
+      renameat(dirFile_.fd(), tmpPath.data(), dirFile_.fd(), path.data());
+  folly::checkUnixError(
+      returnCode,
+      "error committing overlay file for inode ",
+      inodeNumber,
+      " in ",
+      localDir_);
+  // We do not want to unlink the temporary file on exit now that we have
+  // successfully renamed it.
+  success = true;
+
   return file;
 }
 
 folly::File Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     const InodeTimestamps& timestamps,
+    ByteRange contents) {
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
+
+  std::array<struct iovec, 2> iov;
+  iov[0].iov_base = header.data();
+  iov[0].iov_len = header.size();
+  iov[1].iov_base = const_cast<uint8_t*>(contents.data());
+  iov[1].iov_len = contents.size();
+  return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
+}
+
+folly::File Overlay::createOverlayFile(
+    InodeNumber inodeNumber,
+    const InodeTimestamps& timestamps,
     const IOBuf& contents) {
-  // Add header to the overlay File.
-  auto header = Overlay::createHeader(
-      Overlay::kHeaderIdentifierFile, Overlay::kHeaderVersion, timestamps);
-  auto iov = header.getIov();
+  // In the common case where there is just one element in the chain, use the
+  // ByteRange version of createOverlayFile() to avoid having to allocate the
+  // iovec array on the heap.
+  if (contents.next() == &contents) {
+    return createOverlayFile(
+        inodeNumber, timestamps, ByteRange{contents.data(), contents.length()});
+  }
 
-  auto filePath = getFilePath(inodeNumber);
+  auto header = createHeader(kHeaderIdentifierFile, kHeaderVersion, timestamps);
 
-  // Write the blob contents out to the overlay
-  auto contentsIov = contents.getIov();
-  iov.insert(iov.end(), contentsIov.begin(), contentsIov.end());
+  fbvector<struct iovec> iov;
+  iov.resize(1);
+  iov[0].iov_base = header.data();
+  iov[0].iov_len = header.size();
+  contents.appendToIov(&iov);
 
-  folly::writeFileAtomic(filePath.stringPiece(), iov.data(), iov.size(), 0600);
-
-  // TODO: Clean this code up so that we don't have to open the file twice.
-  // We probably should just create the temporary file ourselves rather than
-  // using folly::writeFileAtomic().
-  return folly::File(filePath.c_str(), O_RDWR);
+  return createOverlayFileImpl(inodeNumber, iov.data(), iov.size());
 }
 
 void Overlay::parseHeader(

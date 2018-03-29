@@ -152,19 +152,20 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
 
 TEST_F(OverlayTest, getFilePath) {
   auto overlay = mount_.getEdenMount()->getOverlay();
-  EXPECT_EQ(
-      overlay->localDir_ + RelativePath{"01/1"}, overlay->getFilePath(1_ino));
-  EXPECT_EQ(
-      overlay->localDir_ + RelativePath{"d2/1234"},
-      overlay->getFilePath(1234_ino));
+  std::array<char, Overlay::kMaxPathLength> path;
+
+  Overlay::getFilePath(1_ino, path);
+  EXPECT_STREQ("01/1", path.data());
+  Overlay::getFilePath(1234_ino, path);
+  EXPECT_STREQ("d2/1234", path.data());
 
   // It's slightly unfortunate that we use hexadecimal for the subdirectory
   // name and decimal for the final inode path.  That doesn't seem worth fixing
   // for now.
-  EXPECT_EQ(
-      overlay->localDir_ + RelativePath{"0f/15"}, overlay->getFilePath(15_ino));
-  EXPECT_EQ(
-      overlay->localDir_ + RelativePath{"10/16"}, overlay->getFilePath(16_ino));
+  Overlay::getFilePath(15_ino, path);
+  EXPECT_STREQ("0f/15", path.data());
+  Overlay::getFilePath(16_ino, path);
+  EXPECT_STREQ("10/16", path.data());
 }
 
 } // namespace eden

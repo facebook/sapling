@@ -51,21 +51,13 @@ class Overlay {
   /** Returns the path to the root of the Overlay storage area */
   const AbsolutePath& getLocalDir() const;
 
-  void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir) const;
+  void saveOverlayDir(InodeNumber inodeNumber, const TreeInode::Dir& dir);
 
   folly::Optional<TreeInode::Dir> loadOverlayDir(
       InodeNumber inodeNumber,
-      InodeMap* inodeMap) const;
+      InodeMap* inodeMap);
 
-  void removeOverlayData(InodeNumber inodeNumber) const;
-
-  /**
-   * Creates header for the files stored in Overlay
-   */
-  static folly::IOBuf createHeader(
-      folly::StringPiece identifier,
-      uint32_t version,
-      const InodeTimestamps& timestamps);
+  void removeOverlayData(InodeNumber inodeNumber);
 
   /**
    * Helper function that opens an existing overlay file,
@@ -125,7 +117,17 @@ class Overlay {
   static constexpr size_t kHeaderLength = 64;
 
  private:
+  /**
+   * The maximum path length for the path to a file inside the overlay
+   * directory.
+   *
+   * This is 2 bytes for the initial subdirectory name, 1 byte for the '/',
+   * 20 bytes for the inode number, and 1 byte for a null terminator.
+   */
+  static constexpr size_t kMaxPathLength = 24;
+
   FRIEND_TEST(OverlayTest, getFilePath);
+  using InodePath = std::array<char, kMaxPathLength>;
 
   void initOverlay();
   bool isOldFormatOverlay() const;
@@ -136,14 +138,26 @@ class Overlay {
       InodeTimestamps& timeStamps) const;
 
   /**
-   * Get the path to the overlay file for the given inode
+   * Creates header for the files stored in Overlay
    */
-  AbsolutePath getFilePath(InodeNumber inodeNumber) const;
+  static std::array<uint8_t, kHeaderLength> createHeader(
+      folly::StringPiece identifier,
+      uint32_t version,
+      const InodeTimestamps& timestamps);
+
+  folly::File
+  createOverlayFileImpl(InodeNumber inodeNumber, iovec* iov, size_t iovCount);
 
   /**
-   * Helper function to add header to the overlay file
+   * Get the path to the file for the given inode, relative to localDir_.
+   *
+   * This puts the path name data into the user-supplied InodePath object.  A
+   * null terminator will be added to the path.
+   *
+   * Returns the length of the path name, not including the terminating null
+   * byte.
    */
-  static void addHeaderToOverlayFile(int fd, const InodeTimestamps& timestamps);
+  static size_t getFilePath(InodeNumber inodeNumber, InodePath& outPath);
 
   /**
    * Parses, validates and reads Timestamps from the header.
@@ -163,6 +177,13 @@ class Overlay {
    * using it.  We want to ensure that only one eden process
    */
   folly::File infoFile_;
+
+  /**
+   * An open file to the overlay directory.
+   *
+   * We maintain this so we can use openat(), unlinkat(), etc.
+   */
+  folly::File dirFile_;
 };
 } // namespace eden
 } // namespace facebook
