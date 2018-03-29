@@ -215,7 +215,7 @@ def do_clone(args: argparse.Namespace) -> int:
     if not health_info.is_healthy():
         # Sometimes this returns a non-zero exit code if it does not finish
         # startup within the default timeout.
-        exit_code = start_daemon(config)
+        exit_code = start_daemon(config, args.daemon_binary, args.edenfs_args)
         if exit_code != 0:
             return exit_code
 
@@ -325,16 +325,9 @@ def do_checkout(args: argparse.Namespace) -> int:
 
 def do_daemon(args: argparse.Namespace) -> int:
     config = create_config(args)
-
-    # If the user put an "--" argument before the edenfs args, argparse passes
-    # that through to us.  Strip it out.
-    edenfs_args = args.edenfs_args
-    if edenfs_args and edenfs_args[0] == '--':
-        edenfs_args = edenfs_args[1:]
-
     return start_daemon(config,
                         args.daemon_binary,
-                        edenfs_args,
+                        args.edenfs_args,
                         takeover=args.takeover,
                         gdb=args.gdb,
                         gdb_args=args.gdb_arg,
@@ -366,6 +359,12 @@ def start_daemon(
             return 1
     else:
         valid_daemon_binary = daemon_binary
+
+    # If the user put an "--" argument before the edenfs args, argparse passes
+    # that through to us.  Strip it out.
+    if edenfs_args and edenfs_args[0] == '--':
+        edenfs_args = edenfs_args[1:]
+
     try:
         health_info = config.spawn(valid_daemon_binary, edenfs_args,
                                    takeover=takeover, gdb=gdb,
@@ -557,6 +556,17 @@ def create_parser(
     clone_parser.add_argument(
         '--allow-empty-repo', '-e', action='store_true',
         help='Allow repo with null revision (no revisions)')
+    # Optional arguments to control how to start the daemon if clone needs
+    # to start edenfs.  We do not show these in --help by default
+    # These behave identically to the daemon arguments with the same name.
+    clone_parser.add_argument(
+        '--daemon-binary',
+        help=argparse.SUPPRESS)
+    clone_parser.add_argument(
+        '--daemon-args',
+        dest='edenfs_args',
+        nargs=argparse.REMAINDER,
+        help=argparse.SUPPRESS)
     clone_parser.set_defaults(func=do_clone)
 
     config_parser = subparsers.add_parser(

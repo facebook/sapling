@@ -177,18 +177,8 @@ class EdenFS(object):
             timeout=timeout,
             exclude_pid=takeover_from)
 
-    def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
-        if self._process is not None:
-            raise Exception('cannot start an already-running eden client')
-
-        args = self._get_eden_args(
-            'daemon',
-            '--daemon-binary', EDEN_DAEMON,
-            '--foreground',
-        )
-
+    def get_extra_daemon_args(self) -> List[str]:
         extra_daemon_args = [
-            '--',
             # Defaulting to 8 import processes is excessive when the test
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
@@ -203,8 +193,33 @@ class EdenFS(object):
             # edenfs_extra_args() method.
             '--allow_flatmanifest_fallback=no',
         ]
+
         if 'SANDCASTLE' in os.environ:
             extra_daemon_args.append('--allowRoot')
+
+        # Turn up the VLOG level for the fuse server so that errors are logged
+        # with an explanation when they bubble up to RequestData::catchErrors
+        if self._logging_settings:
+            logging_arg = ','.join('%s=%s' % (module, level)
+                                   for module, level in sorted(
+                                       self._logging_settings.items()))
+            extra_daemon_args.extend(['--logging=' + logging_arg])
+        if self._extra_args:
+            extra_daemon_args.extend(self._extra_args)
+
+        return extra_daemon_args
+
+    def _spawn(self, gdb: bool = False, takeover: bool = False) -> None:
+        if self._process is not None:
+            raise Exception('cannot start an already-running eden client')
+
+        args = self._get_eden_args(
+            'daemon',
+            '--daemon-binary', EDEN_DAEMON,
+            '--foreground',
+        )
+
+        extra_daemon_args = self.get_extra_daemon_args()
 
         if takeover:
             args.append('--takeover')
@@ -231,19 +246,10 @@ class EdenFS(object):
             for arg in gdb_args:
                 args.append('--gdb-arg=' + arg)
 
-        # Turn up the VLOG level for the fuse server so that errors are logged
-        # with an explanation when they bubble up to RequestData::catchErrors
-        if self._logging_settings:
-            logging_arg = ','.join('%s=%s' % (module, level)
-                                   for module, level in sorted(
-                                       self._logging_settings.items()))
-            extra_daemon_args.extend(['--logging=' + logging_arg])
-        if self._extra_args:
-            extra_daemon_args.extend(self._extra_args)
         if 'EDEN_DAEMON_ARGS' in os.environ:
             args.extend(shlex.split(os.environ['EDEN_DAEMON_ARGS']))
 
-        full_args = args + extra_daemon_args
+        full_args = args + ['--'] + extra_daemon_args
         logging.info('Invoking eden daemon: %s',
                      ' '.join(shlex.quote(arg) for arg in full_args))
         self._process = subprocess.Popen(full_args)
@@ -365,7 +371,7 @@ class EdenFS(object):
         return_code = self.run_unchecked('health')
         return return_code == 0
 
-    def set_log_level(self, category, level):
+    def set_log_level(self, category: str, level: str) -> None:
         with self.get_thrift_client() as client:
             client.debugSetLogLevel(category, level)
 
@@ -376,8 +382,11 @@ class EdenCommandError(subprocess.CalledProcessError):
                          stderr=ex.stderr)
 
     def __str__(self) -> str:
-        return ("eden command '%s' returned non-zero exit status %d\n"
-                "stderr=%s" % (self.cmd, self.returncode, self.stderr))
+        cmd_str = ' '.join(shlex.quote(arg) for arg in self.cmd)
+        return (
+            "eden command [%s] returned non-zero exit status %d\n"
+            "stderr=%s" % (cmd_str, self.returncode, self.stderr)
+        )
 
 
 _can_run_eden: Optional[bool] = None

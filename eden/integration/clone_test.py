@@ -7,8 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from eden.cli import util
-from .lib import edenclient, testcase
 from textwrap import dedent
 import errno
 import os
@@ -16,6 +14,10 @@ import subprocess
 import stat
 import tempfile
 import unittest
+
+from eden.cli import util
+from .lib import edenclient, testcase
+from .lib.find_executables import EDEN_DAEMON
 
 
 # This is the name of the default repository created by EdenRepoTestBase.
@@ -204,8 +206,7 @@ echo -n "$1" >> "{scratch_file}"
             f'No repository configured named "{repo_name}". '
             'Try one of: "main".', context.exception.stderr.decode())
 
-    @unittest.skipIf(os.geteuid() == 0, "no way to pass --allowRoot through clone")
-    def test_clone_should_start_daemon(self):
+    def test_clone_should_start_daemon(self) -> None:
         # Shut down Eden.
         self.assertTrue(self.eden.is_healthy())
         self.eden.shutdown()
@@ -215,6 +216,8 @@ echo -n "$1" >> "{scratch_file}"
         list_output = self.eden.list_cmd()
         self.assertEqual({self.mount: self.eden.CLIENT_INACTIVE}, list_output,
                          msg='Eden should have one mount.')
+
+        extra_daemon_args = self.eden.get_extra_daemon_args()
 
         # Verify that clone starts the daemon.
         tmp = self._new_tmp_dir()
@@ -229,7 +232,16 @@ echo -n "$1" >> "{scratch_file}"
         # itself.  That way it can handle only redirecting its stdout and stderr
         # after startup, when it daemonizes, and to sudo the edenfs process
         # will exit, releasing the pipe file handle.
-        self.eden.run_cmd('clone', self.repo.path, tmp, capture_output=False)
+        self.eden.run_cmd(
+            'clone',
+            '--daemon-binary',
+            EDEN_DAEMON,
+            self.repo.path,
+            tmp,
+            '--daemon-args',
+            *extra_daemon_args,
+            capture_output=False
+        )
         self.assertTrue(self.eden.is_healthy(), msg='clone should start Eden.')
         mount_points = {
             self.mount: self.eden.CLIENT_ACTIVE,
