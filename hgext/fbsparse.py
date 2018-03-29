@@ -861,7 +861,7 @@ class ProfileInfo(collections.Mapping):
     def __len__(self):
         return len(self._metadata)
 
-def _discover(ui, repo):
+def _discover(ui, repo, include_hidden=False):
     """Generate a list of available profiles with metadata
 
     Returns a generator yielding ProfileInfo objects, paths are relative to the
@@ -871,6 +871,9 @@ def _discover(ui, repo):
     yield active and included profiles.
 
     README(.*) files are filtered out.
+
+    If `include_hidden` is False, we filter out any profile with a 'hidden'
+    entry in the profile metadata (unless it is currently active).
 
     """
     included = repo.getactiveprofiles()
@@ -901,11 +904,13 @@ def _discover(ui, repo):
     # sort profiles and read profile metadata as we iterate
     for p in sorted(available | included):
         raw = repo.getrawprofile(p, '.')
-        yield ProfileInfo(
-            p, (PROFILE_ACTIVE if p in active else
-                PROFILE_INCLUDED if p in included else
-                PROFILE_INACTIVE),
-            repo.readsparseconfig(raw, filename=p).metadata)
+        md = repo.readsparseconfig(raw, filename=p).metadata
+        if 'hidden' not in md or include_hidden or p in active or p in included:
+            yield ProfileInfo(
+                p, (PROFILE_ACTIVE if p in active else
+                    PROFILE_INCLUDED if p in included else
+                    PROFILE_INACTIVE),
+                md)
 
 def _profilesizeinfo(ui, repo, *config, **kwargs):
     """Get size stats for a given set of profiles
@@ -1083,8 +1088,11 @@ def sparse(ui, repo, *pats, **opts):
       value. Values can be extended over multiple lines by indenting additional
       lines.
 
-      Currently, only the `title` and `description` keys carry meaning, these
-      are used in the `hg sparse list` and `hg sparse explain` commands.
+      Only the `title`, `description` and `hidden` keys carry meaning to for
+      `hg sparse`, these are used in the `hg sparse list` and
+      `hg sparse explain` commands. Profiles with the `hidden` key (regardless
+      of its value) are excluded from the `hg sparse list` listing unless
+      the `-v` / `--verbose` switch is given.
 
       Include and exclude rules
       .........................
@@ -1106,6 +1114,9 @@ def sparse(ui, repo, *pats, **opts):
         description: You can include as much metadata as makes sense for your
           setup, and values can extend over multiple lines.
         lorem ipsum = Keys and values are separated by a : or =
+        ; hidden: the hidden key lets you mark profiles that should not
+        ;  generally be discorable. The value doesn't matter, use it to motivate
+        ;  why it is hidden.
 
         [include]
         foo/bar/baz
@@ -1259,6 +1270,9 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
     """List available sparse profiles
 
     Show all available sparse profiles, with the active profiles marked.
+    However, if a profile has a key named `hidden` in it's metadata, the profile
+    is excluded from this list unless explicitly active or included in an active
+    profile, or when the `--verbose` switch is used.
 
     """
     chars = {PROFILE_INACTIVE: '', PROFILE_INCLUDED: '~', PROFILE_ACTIVE: '*'}
@@ -1275,7 +1289,7 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                   'included\n'),
                 label='sparse.profile.legend')
 
-        profiles = list(_discover(ui, repo))
+        profiles = list(_discover(ui, repo, include_hidden=ui.verbose))
         max_width = max(len(p.path) for p in profiles)
 
         for info in profiles:

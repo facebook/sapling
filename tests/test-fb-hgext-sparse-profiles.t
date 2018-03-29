@@ -325,6 +325,8 @@ Test profile discovery
   > profiles
   > EOF
   $ cat > profiles/foo/monty <<EOF
+  > [metadata]
+  > hidden: this profile is deliberatly hidden from listings
   > [include]
   > eric_idle
   > john_cleese
@@ -365,7 +367,6 @@ Test profile discovery
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
-    profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
   $ hg sparse list -T json
   [
@@ -378,11 +379,6 @@ Test profile discovery
     "active": "inactive",
     "metadata": {},
     "path": "profiles/bar/python"
-   },
-   {
-    "active": "inactive",
-    "metadata": {},
-    "path": "profiles/foo/monty"
    },
    {
     "active": "active",
@@ -399,7 +395,6 @@ The current working directory plays no role in listing profiles:
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
-    profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
   $ cd ..
 
@@ -408,6 +403,14 @@ not hamper listing.
 
   $ hg sparse --exclude profiles/bar
   $ hg sparse list
+  symbols: * = active profile, ~ = transitively included
+  ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/python
+  * profiles/foo/spam   - Profile that only includes another
+
+Hidden profiles only show up when we use the --verbose switch:
+
+  $ hg sparse list --verbose
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
@@ -431,7 +434,6 @@ warnings:
   ~ profiles/bar/eggs   - Base profile including the profiles directory
     profiles/bar/python
     profiles/foo/errors
-    profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
 
 We can look at invididual profiles:
@@ -481,7 +483,7 @@ We can look at invididual profiles:
     "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs",
     "profiles": [],
-    "stats": {"filecount": 7, "filecountpercentage": 87.5, "totalsize": 540}
+    "stats": {"filecount": 7, "filecountpercentage": 87.5, "totalsize": 608}
    }
   ]
   $ hg sparse explain profiles/bar/eggs
@@ -523,7 +525,7 @@ We can look at invididual profiles:
   =======================================
   
   file count    7 (87.50%)
-  total size    540 bytes
+  total size    608 bytes
   
   Additional metadata
   ===================
@@ -573,6 +575,11 @@ We can look at invididual profiles:
   =======================================
   
   file count    7 (87.50%)
+  
+  Additional metadata
+  ===================
+  
+  hidden        this profile is deliberatly hidden from listings
   
   Inclusion rules
   ===============

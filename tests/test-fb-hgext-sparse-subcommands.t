@@ -44,7 +44,11 @@ test sparse subcommands (help, verbose)
   subcommands:
   
    list           List available sparse profiles - Show all available sparse
-                  profiles, with the active profiles marked.
+                  profiles, with the active profiles marked. However, if a
+                  profile has a key named `hidden` in it's metadata, the profile
+                  is excluded from this list unless explicitly active or
+                  included in an active profile, or when the `--verbose` switch
+                  is used.
    explain        Show information on individual profiles - If --verbose is
                   given, calculates the file size impact of a profile (slow).
    files          List all files included in a profiles - If files are given to
@@ -130,6 +134,9 @@ test sparse subcommands (help, verbose)
   List available sparse profiles
   
       Show all available sparse profiles, with the active profiles marked.
+      However, if a profile has a key named 'hidden' in it's metadata, the
+      profile is excluded from this list unless explicitly active or included in
+      an active profile, or when the '--verbose' switch is used.
   
   subcommands:
   
