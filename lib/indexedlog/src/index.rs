@@ -271,6 +271,24 @@ enum DirtyOffset {
     Key(usize),
 }
 
+impl DirtyOffset {
+    /// Get type_int for a given dirty_offset.
+    #[inline]
+    fn peek_type(dirty_offset: u64) -> u8 {
+        debug_assert!(dirty_offset >= DIRTY_OFFSET);
+        let x = dirty_offset - DIRTY_OFFSET;
+        (x & 7) as u8
+    }
+
+    /// Get the vec index for a given dirty_offset.
+    #[inline]
+    fn peek_index(dirty_offset: u64) -> usize {
+        debug_assert!(dirty_offset >= DIRTY_OFFSET);
+        let x = dirty_offset - DIRTY_OFFSET;
+        (x >> 3) as usize
+    }
+}
+
 impl From<u64> for DirtyOffset {
     fn from(x: u64) -> DirtyOffset {
         debug_assert!(x >= DIRTY_OFFSET);
