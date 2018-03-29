@@ -58,30 +58,30 @@ use vlqencoding::{VLQDecodeAt, VLQEncode};
 //// Structures related to file format
 
 #[derive(Clone, PartialEq, Default)]
-struct Radix {
+struct MemRadix {
     pub offsets: [u64; 16],
     pub link_offset: u64,
 }
 
 #[derive(Clone, PartialEq)]
-struct Leaf {
+struct MemLeaf {
     pub key_offset: u64,
     pub link_offset: u64,
 }
 
 #[derive(Clone, PartialEq)]
-struct Key {
+struct MemKey {
     pub key: Vec<u8>, // base256
 }
 
 #[derive(Clone, PartialEq)]
-struct Link {
+struct MemLink {
     pub value: u64,
     pub next_link_offset: u64,
 }
 
 #[derive(Clone, PartialEq)]
-struct Root {
+struct MemRoot {
     pub radix_offset: u64,
 }
 
@@ -118,7 +118,7 @@ fn check_type(buf: &[u8], offset: usize, expected: u8) -> io::Result<()> {
     }
 }
 
-impl Radix {
+impl MemRadix {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
@@ -145,7 +145,7 @@ impl Radix {
             }
         }
 
-        Ok(Radix {
+        Ok(MemRadix {
             offsets,
             link_offset,
         })
@@ -172,14 +172,14 @@ impl Radix {
     }
 }
 
-impl Leaf {
+impl MemLeaf {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LEAF)?;
         let (key_offset, len) = buf.read_vlq_at(offset + 1)?;
         let (link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
-        Ok(Leaf {
+        Ok(MemLeaf {
             key_offset,
             link_offset,
         })
@@ -193,14 +193,14 @@ impl Leaf {
     }
 }
 
-impl Link {
+impl MemLink {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LINK)?;
         let (value, len) = buf.read_vlq_at(offset + 1)?;
         let (next_link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
-        Ok(Link {
+        Ok(MemLink {
             value,
             next_link_offset,
         })
@@ -214,7 +214,7 @@ impl Link {
     }
 }
 
-impl Key {
+impl MemKey {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
@@ -222,7 +222,7 @@ impl Key {
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
         let key = Vec::from(buf.get(offset + 1 + len..offset + 1 + len + key_len)
             .ok_or(InvalidData)?);
-        Ok(Key { key })
+        Ok(MemKey { key })
     }
 
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
@@ -233,7 +233,7 @@ impl Key {
     }
 }
 
-impl Root {
+impl MemRoot {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
@@ -241,7 +241,7 @@ impl Root {
         let (radix_offset, len1) = buf.read_vlq_at(offset + 1)?;
         let (len, _): (usize, _) = buf.read_vlq_at(offset + 1 + len1)?;
         if len == 1 + len1 + 1 {
-            Ok(Root { radix_offset })
+            Ok(MemRoot { radix_offset })
         } else {
             Err(InvalidData.into())
         }
@@ -358,11 +358,11 @@ pub struct Index {
     read_only: bool,
 
     // In-memory entries. The root entry is always in-memory.
-    root: Root,
-    dirty_radixes: Vec<Radix>,
-    dirty_leafs: Vec<Leaf>,
-    dirty_links: Vec<Link>,
-    dirty_keys: Vec<Key>,
+    root: MemRoot,
+    dirty_radixes: Vec<MemRadix>,
+    dirty_leafs: Vec<MemLeaf>,
+    dirty_links: Vec<MemLink>,
+    dirty_keys: Vec<MemKey>,
 }
 
 impl Index {
@@ -404,14 +404,14 @@ impl Index {
             if len == 0 {
                 // Empty file. Create root radix entry as an dirty entry
                 let radix_offset = DirtyOffset::Radix(0).into();
-                (vec![Radix::default()], Root { radix_offset })
+                (vec![MemRadix::default()], MemRoot { radix_offset })
             } else {
                 // Load root entry from the end of file.
-                (vec![], Root::read_from_end(&mmap, len)?)
+                (vec![], MemRoot::read_from_end(&mmap, len)?)
             }
         } else {
             // Load root entry from given offset.
-            (vec![], Root::read_from(&mmap, root_offset)?)
+            (vec![], MemRoot::read_from(&mmap, root_offset)?)
         };
 
         Ok(Index {
@@ -522,7 +522,7 @@ impl Index {
                 return Err(io::ErrorKind::UnexpectedEof.into());
             }
 
-            self.root = Root::read_from_end(&self.buf, new_len)?;
+            self.root = MemRoot::read_from_end(&self.buf, new_len)?;
         }
 
         // Outside critical section
@@ -745,7 +745,7 @@ impl Index {
             let b1 = old_iter.next();
             let b2 = new_iter.next();
 
-            let mut radix = Radix::default();
+            let mut radix = MemRadix::default();
 
             if let Some(b1) = b1 {
                 // Initial value for the b1-th child. Could be rewritten by
@@ -942,7 +942,7 @@ impl Index {
     #[inline]
     fn copy_radix_entry(&mut self, offset: u64) -> io::Result<u64> {
         if offset < DIRTY_OFFSET {
-            let entry = Radix::read_from(&self.buf, offset)?;
+            let entry = MemRadix::read_from(&self.buf, offset)?;
             Ok(self.create_radix_entry(entry))
         } else {
             Ok(offset)
@@ -951,7 +951,7 @@ impl Index {
 
     /// Append a Radix entry to dirty_radixes. Return its offset.
     #[inline]
-    fn create_radix_entry(&mut self, entry: Radix) -> u64 {
+    fn create_radix_entry(&mut self, entry: MemRadix) -> u64 {
         let index = self.dirty_radixes.len();
         self.dirty_radixes.push(entry);
         DirtyOffset::Radix(index).into()
@@ -983,7 +983,7 @@ impl Index {
         let next_link_offset = link.map_or(link_offset, |v| v.0);
         if let Some(value) = value {
             // Create a new Link entry
-            let new_link = Link {
+            let new_link = MemLink {
                 value,
                 next_link_offset,
             };
@@ -1004,7 +1004,7 @@ impl Index {
     fn set_leaf_link(&mut self, offset: u64, link_offset: u64) -> io::Result<u64> {
         debug_assert_eq!(DirtyOffset::peek_type(offset), TYPE_LEAF);
         if offset < DIRTY_OFFSET {
-            let entry = Leaf::read_from(&self.buf, offset)?;
+            let entry = MemLeaf::read_from(&self.buf, offset)?;
             Ok(self.create_leaf_entry(link_offset, entry.key_offset))
         } else {
             let index = DirtyOffset::peek_index(offset);
@@ -1017,7 +1017,7 @@ impl Index {
     #[inline]
     fn create_leaf_entry(&mut self, link_offset: u64, key_offset: u64) -> u64 {
         let index = self.dirty_leafs.len();
-        self.dirty_leafs.push(Leaf {
+        self.dirty_leafs.push(MemLeaf {
             link_offset,
             key_offset,
         });
@@ -1028,7 +1028,7 @@ impl Index {
     #[inline]
     fn create_key_entry(&mut self, key: &[u8]) -> u64 {
         let index = self.dirty_keys.len();
-        self.dirty_keys.push(Key {
+        self.dirty_keys.push(MemKey {
             key: Vec::from(key),
         });
         DirtyOffset::Key(index).into()
@@ -1058,7 +1058,7 @@ impl Debug for DirtyOffset {
     }
 }
 
-impl Debug for Radix {
+impl Debug for MemRadix {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Radix {{ link: ")?;
         fmt_offset(self.link_offset, f)?;
@@ -1072,7 +1072,7 @@ impl Debug for Radix {
     }
 }
 
-impl Debug for Leaf {
+impl Debug for MemLeaf {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Leaf {{ key: ")?;
         fmt_offset(self.key_offset, f)?;
@@ -1082,7 +1082,7 @@ impl Debug for Leaf {
     }
 }
 
-impl Debug for Link {
+impl Debug for MemLink {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Link {{ value: {}, next: ", self.value)?;
         fmt_offset(self.next_link_offset, f)?;
@@ -1090,7 +1090,7 @@ impl Debug for Link {
     }
 }
 
-impl Debug for Key {
+impl Debug for MemKey {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Key {{ key:")?;
         for byte in self.key.iter() {
@@ -1100,7 +1100,7 @@ impl Debug for Key {
     }
 }
 
-impl Debug for Root {
+impl Debug for MemRoot {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Root {{ radix: ")?;
         fmt_offset(self.radix_offset, f)?;
@@ -1128,27 +1128,27 @@ impl Debug for Index {
             let i = i as u64;
             match type_int {
                 TYPE_RADIX => {
-                    let e = Radix::read_from(&self.buf, i).expect("read");
+                    let e = MemRadix::read_from(&self.buf, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_LEAF => {
-                    let e = Leaf::read_from(&self.buf, i).expect("read");
+                    let e = MemLeaf::read_from(&self.buf, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_LINK => {
-                    let e = Link::read_from(&self.buf, i).expect("read");
+                    let e = MemLink::read_from(&self.buf, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_KEY => {
-                    let e = Key::read_from(&self.buf, i).expect("read");
+                    let e = MemKey::read_from(&self.buf, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_ROOT => {
-                    let e = Root::read_from(&self.buf, i).expect("read");
+                    let e = MemRoot::read_from(&self.buf, i).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
@@ -1201,47 +1201,47 @@ mod tests {
             offsets[(v.1 + v.3) as usize % 16] = v.2 % DIRTY_OFFSET;
             offsets[(v.0 + v.2) as usize % 16] = v.3 % DIRTY_OFFSET;
 
-            let radix = Radix { offsets, link_offset };
+            let radix = MemRadix { offsets, link_offset };
             let mut buf = vec![1];
             radix.write_to(&mut buf, &HashMap::new()).expect("write");
-            let radix1 = Radix::read_from(buf, 1).unwrap();
+            let radix1 = MemRadix::read_from(buf, 1).unwrap();
             radix1 == radix
         }
 
         fn test_leaf_format_roundtrip(key_offset: u64, link_offset: u64) -> bool {
             let key_offset = key_offset % DIRTY_OFFSET;
             let link_offset = link_offset % DIRTY_OFFSET;
-            let leaf = Leaf { key_offset, link_offset };
+            let leaf = MemLeaf { key_offset, link_offset };
             let mut buf = vec![1];
             leaf.write_to(&mut buf, &HashMap::new()).expect("write");
-            let leaf1 = Leaf::read_from(buf, 1).unwrap();
+            let leaf1 = MemLeaf::read_from(buf, 1).unwrap();
             leaf1 == leaf
         }
 
         fn test_link_format_roundtrip(value: u64, next_link_offset: u64) -> bool {
             let next_link_offset = next_link_offset % DIRTY_OFFSET;
-            let link = Link { value, next_link_offset };
+            let link = MemLink { value, next_link_offset };
             let mut buf = vec![1];
             link.write_to(&mut buf, &HashMap::new()).expect("write");
-            let link1 = Link::read_from(buf, 1).unwrap();
+            let link1 = MemLink::read_from(buf, 1).unwrap();
             link1 == link
         }
 
         fn test_key_format_roundtrip(key: Vec<u8>) -> bool {
-            let entry = Key { key };
+            let entry = MemKey { key };
             let mut buf = vec![1];
             entry.write_to(&mut buf, &HashMap::new()).expect("write");
-            let entry1 = Key::read_from(buf, 1).unwrap();
+            let entry1 = MemKey::read_from(buf, 1).unwrap();
             entry1 == entry
         }
 
         fn test_root_format_roundtrip(radix_offset: u64) -> bool {
-            let root = Root { radix_offset };
+            let root = MemRoot { radix_offset };
             let mut buf = vec![1];
             root.write_to(&mut buf, &HashMap::new()).expect("write");
-            let root1 = Root::read_from(&buf, 1).unwrap();
+            let root1 = MemRoot::read_from(&buf, 1).unwrap();
             let end = buf.len() as u64;
-            let root2 = Root::read_from_end(buf, end).unwrap();
+            let root2 = MemRoot::read_from_end(buf, end).unwrap();
             root1 == root && root2 == root
         }
     }
