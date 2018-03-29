@@ -317,6 +317,24 @@ impl Into<u64> for DirtyOffset {
     }
 }
 
+/// Convert a dirty offset to an error. This should be applied to all
+/// offsets read from disk - there should never be references to in-memory
+/// data.
+///
+/// With the non_dirty check applied to everywhere, it's safe to assume
+/// an offset that is >= DIRTY_OFFSET has a valid content (i.e. it contains
+/// a valid vec index).
+#[inline]
+fn non_dirty(v: io::Result<u64>) -> io::Result<u64> {
+    v.and_then(|x| {
+        if x >= DIRTY_OFFSET {
+            Err(InvalidData.into())
+        } else {
+            Ok(x)
+        }
+    })
+}
+
 //// Main Index
 
 pub struct Index {
