@@ -26,8 +26,10 @@ to the user.
 from __future__ import absolute_import
 
 import contextlib
+import datetime
 import itertools
 import re
+import time
 
 from mercurial.i18n import _
 from mercurial import (
@@ -48,6 +50,7 @@ from mercurial import (
     scmutil,
     smartset,
     templatekw,
+    templater,
     util,
 )
 
@@ -171,6 +174,7 @@ def uisetup(ui):
     revset.safesymbols.add('smartlog')
 
 templatekeyword = registrar.templatekeyword()
+templatefunc = registrar.templatefunc()
 
 @templatekeyword('singlepublicsuccessor')
 def singlepublicsuccessor(repo, ctx, templ, **args):
@@ -549,6 +553,62 @@ def smartlogrevset(repo, subset, x):
     revs.add(masterrev)
 
     return subset & revs
+
+@templatefunc('simpledate(date[, tz])')
+def simpledate(context, mapping, args):
+    """Date.  Returns a human-readable date/time that is simplified for
+    dates and times in the recent past.
+    """
+    ctx = mapping['ctx']
+    repo = ctx.repo()
+    date = templater.evalfuncarg(context, mapping, args[0])
+    tz = None
+    if len(args) == 2:
+        tzname = templater.evalstring(context, mapping, args[1])
+        if tzname:
+            try:
+                import pytz
+                tz = pytz.timezone(tzname)
+            except ImportError:
+                msg = "Couldn't import pytz, using default time zone\n"
+                repo.ui.warn(msg)
+            except pytz.UnknownTimeZoneError:
+                msg = "Unknown time zone: %s\n" % tzname
+                repo.ui.warn(msg)
+    then = datetime.datetime.fromtimestamp(date[0], tz)
+    now = datetime.datetime.now(tz)
+    td = now - then
+    if then > now:
+        # Time is in the future, render it in full
+        return then.strftime("%Y-%m-%d %H:%M")
+    elif then.date() == now.date():
+        # Today ("Today at HH:MM")
+        return then.strftime("Today at %H:%M")
+    elif then.date() == now.date() - datetime.timedelta(days=1):
+        # Yesterday ("Yesterday at HH:MM")
+        return then.strftime("Yesterday at %H:%M")
+    elif td.days <= 6:
+        # In the last week (e.g. "Monday at HH:MM")
+        return then.strftime("%A at %H:%M")
+    elif now.year == then.year or td.days <= 90:
+        # This year or in the last 3 months (e.g. "Jan 05 at HH:MM")
+        return then.strftime("%b %d at %H:%M")
+    else:
+        # Before, render it in full
+        return then.strftime("%Y-%m-%d %H:%M")
+
+@templatefunc('smartdate(date, threshold, recent, other)')
+def smartdate(context, mapping, args):
+    """Date.  Returns one of two values depending on whether the date provided
+    is in the past and recent or not."""
+    date = templater.evalfuncarg(context, mapping, args[0])
+    threshold = templater.evalinteger(context, mapping, args[1])
+    now = time.time()
+    then = date[0]
+    if now - threshold <= then <= now:
+        return templater.evalstring(context, mapping, args[2])
+    else:
+        return templater.evalstring(context, mapping, args[3])
 
 @command('^smartlog|slog', [
     ('', 'master', '', _('master bookmark'), _('BOOKMARK')),
