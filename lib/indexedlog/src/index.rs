@@ -721,13 +721,14 @@ impl Index {
         }
     }
 
-    /// Return true if the given key matched the key entry.
+    /// Return a reference to the content of a key entry.
     #[inline]
-    fn check_key_entry_matched(&self, offset: u64, key: &[u8]) -> io::Result<bool> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_KEY);
-        if offset >= DIRTY_OFFSET {
+    fn peek_key_entry_content(&self, offset: u64) -> io::Result<&[u8]> {
+        if self.peek_type(offset)? != TYPE_KEY {
+            Err(InvalidData.into())
+        } else if offset >= DIRTY_OFFSET {
             let index = DirtyOffset::peek_index(offset);
-            Ok(key == &self.dirty_keys[index].key[..])
+            Ok(&self.dirty_keys[index].key[..])
         } else {
             let (key_len, vlq_len): (usize, _) = self.buf.read_vlq_at(offset as usize + 1)?;
             let start = offset as usize + 1 + vlq_len;
@@ -735,9 +736,15 @@ impl Index {
             if end > self.buf.len() {
                 Err(InvalidData.into())
             } else {
-                Ok(key == &self.buf[start..end])
+                Ok(&self.buf[start..end])
             }
         }
+    }
+
+    /// Return true if the given key matched the key entry.
+    #[inline]
+    fn check_key_entry_matched(&self, offset: u64, key: &[u8]) -> io::Result<bool> {
+        Ok(self.peek_key_entry_content(offset)? == key)
     }
 
     /// Copy a Radix entry to dirty_radixes. Return its offset.
