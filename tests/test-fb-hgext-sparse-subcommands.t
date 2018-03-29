@@ -26,6 +26,7 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles
    explain        Show information on individual profiles
+   files          List all files included in a profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -46,6 +47,9 @@ test sparse subcommands (help, verbose)
                   profiles, with the active profiles marked.
    explain        Show information on individual profiles - If --verbose is
                   given, calculates the file size impact of a profile (slow).
+   files          List all files included in a profiles - If files are given to
+                  match, this command only prints the names of the files in a
+                  profile that match those patterns.
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -71,6 +75,7 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles
    explain        Show information on individual profiles
+   files          List all files included in a profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -90,6 +95,7 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles
    explain        Show information on individual profiles
+   files          List all files included in a profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
@@ -114,6 +120,7 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles
    explain        Show information on individual profiles
+   files          List all files included in a profiles
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule

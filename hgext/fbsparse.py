@@ -1345,6 +1345,39 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
 
     return exitcode
 
+@subcmd('files')
+def _listfilessubcmd(cmd, ui, repo, *profiles, **opts):
+    """List all files included in a profiles
+
+    If files are given to match, this command only prints the names of the
+    files in a profile that match those patterns.
+
+    """
+    if not profiles:
+        raise error.Abort(_('no profiles specified'))
+
+    profile, files = profiles[0], profiles[1:]
+    try:
+        raw = repo.getrawprofile(profile, '.')
+    except KeyError:
+        raise error.Abort(_('The profile %s was not found\n') % profile)
+
+    config = repo.readsparseconfig(raw, profile)
+    ctx = repo['.']
+    matcher = matchmod.intersectmatchers(
+        matchmod.match(repo.root, repo.getcwd(), files),
+        repo.sparsematch(ctx.hex(), includetemp=False, config=config))
+
+    exitcode = 1
+    ui.pager('sparse listfiles')
+    with ui.formatter('files', opts) as fm:
+        for f in ctx.matches(matcher):
+            fm.startitem()
+            fm.data(abspath=f)
+            fm.write('path', '%s\n', matcher.rel(f))
+            exitcode = 0
+    return exitcode
+
 @subcmd('reset', help=_('makes the repo full again'))
 @subcmd('disableprofile', help=_('disables the specified profile'))
 @subcmd('enableprofile', help=_('enables the specified profile'))

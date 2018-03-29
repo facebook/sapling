@@ -589,3 +589,17 @@ We can look at invididual profiles:
   profiles/bar/eggs
   Base profile including the profiles directory
   7
+
+We can list the files in a profile with the hg sparse files command:
+
+  $ hg sparse files profiles/bar/eggs
+  profiles/README.txt
+  profiles/bar/eggs
+  profiles/bar/python
+  profiles/foo/README
+  profiles/foo/errors
+  profiles/foo/monty
+  profiles/foo/spam
+  $ hg sparse files profiles/bar/eggs **/README **/README.*
+  profiles/README.txt
+  profiles/foo/README
