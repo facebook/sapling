@@ -479,7 +479,8 @@ impl Index {
                 offset_map.insert(DirtyOffset::Leaf(i).into(), offset);
             }
 
-            for (i, entry) in self.dirty_radixes.iter().enumerate() {
+            // Write Radix entries in reversed order since former ones might refer to latter ones.
+            for (i, entry) in self.dirty_radixes.iter().enumerate().rev() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
                 offset_map.insert(DirtyOffset::Radix(i).into(), offset);
