@@ -546,6 +546,102 @@ impl Index {
         Ok(LinkOffset(0))
     }
 
+    /// Insert a new value as a head of the linked list associated with `key`.
+    pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> io::Result<()> {
+        self.insert_advanced(key, value.into(), None)
+    }
+
+    /// Update the linked list for a given key.
+    ///
+    /// - If `value` is not None, `link` is None, a new link entry with
+    ///   `value` will be created, and connect to the existing linked
+    ///   list pointed by `key`. `key` will point to the new link entry.
+    /// - If `value` is None, `link` is not None, `key` will point
+    ///   to `link` directly.  This can be used to make multiple
+    ///   keys share (part of) a linked list.
+    /// - If `value` is not None, and `link` is not None, a new link entry
+    ///   with `value` will be created, and connect to `link`. `key` will
+    ///   point to the new link entry.
+    /// - If `value` and `link` are None. Everything related to `key` is
+    ///   marked "dirty" without changing their actual logic value.
+    ///
+    /// This is a low-level API.
+    pub fn insert_advanced<K: AsRef<[u8]>>(
+        &mut self,
+        key: &K,
+        value: Option<u64>,
+        link: Option<LinkOffset>,
+    ) -> io::Result<()> {
+        let mut offset = self.root.radix_offset;
+        let mut iter = Base16Iter::from_base256(key);
+        let mut step = 0;
+        let key = key.as_ref();
+
+        let mut last_radix_offset = 0u64;
+        let mut last_child = 0u8;
+
+        loop {
+            match self.peek_type(offset)? {
+                TYPE_RADIX => {
+                    // Copy RadixEntry since we must modify it.
+                    offset = self.copy_radix_entry(offset)?;
+                    debug_assert!(offset > 0 && self.peek_type(offset)? == TYPE_RADIX);
+
+                    // Change the Root entry, or the previous Radix entry so it
+                    // points to the new offset.
+                    if step == 0 {
+                        self.root.radix_offset = offset;
+                    } else {
+                        self.set_radix_entry_child(last_radix_offset, last_child, offset);
+                    }
+
+                    last_radix_offset = offset;
+
+                    let e = &self.dirty_radixes[DirtyOffset::peek_index(offset)].clone();
+                    match iter.next() {
+                        None => {
+                            let link_offset =
+                                self.maybe_create_link_entry(e.link_offset, value, link);
+                            self.set_radix_entry_link(offset, link_offset);
+                            return Ok(());
+                        }
+                        Some(x) => {
+                            let next_offset = e.offsets[x as usize];
+                            if next_offset == 0 {
+                                // "key" is longer than existing ones. Create key and leaf entries.
+                                let link_offset = self.maybe_create_link_entry(0, value, link);
+                                let key_offset = self.create_key_entry(key);
+                                let leaf_offset = self.create_leaf_entry(link_offset, key_offset);
+                                self.set_radix_entry_child(offset, x, leaf_offset);
+                                return Ok(());
+                            } else {
+                                offset = next_offset;
+                                last_child = x;
+                            }
+                        }
+                    }
+                }
+                TYPE_LEAF => {
+                    // TODO: Not implemented yet.
+                    let link_offset =
+                        self.peek_leaf_entry_link_offset_if_matched(offset, key.as_ref())?;
+
+                    if link_offset > 0 {
+                        // Key matched. Need to copy LeafEntry.
+                        unimplemented!()
+                    } else {
+                        // Key mismatch. Do a leaf split.
+                        unimplemented!()
+                    }
+                    return Ok(());
+                }
+                _ => return Err(InvalidData.into()),
+            }
+
+            step += 1;
+        }
+    }
+
     /// Return the type_int (TYPE_RADIX, TYPE_LEAF, ...) for a given offset.
     #[inline]
     fn peek_type(&self, offset: u64) -> io::Result<u8> {
@@ -880,6 +976,7 @@ impl Debug for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempdir::TempDir;
 
     quickcheck! {
         fn test_radix_format_roundtrip(v: (u64, u64, u64, u64), link_offset: u64) -> bool {
@@ -932,5 +1029,104 @@ mod tests {
             let root2 = Root::read_from_end(buf, end).unwrap();
             root1 == root && root2 == root
         }
+    }
+
+    #[test]
+    fn test_distinct_one_byte_keys() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None }\n"
+        );
+
+        index.insert(&[], 55).expect("update");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: Link[0] }\n\
+             Link[0]: Link { value: 55, next: None }\n"
+        );
+
+        index.insert(&[0x12], 77).expect("update");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
+             Link[0]: Link { value: 55, next: None }\n\
+             Link[1]: Link { value: 77, next: None }\n\
+             Key[0]: Key { key: 12 }\n"
+        );
+
+        let link = index.get(&[0x12]).expect("get");
+        index
+            .insert_advanced(&[0x34], 99.into(), link.into())
+            .expect("update");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: Link[0], 1: Leaf[0], 3: Leaf[1] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
+             Leaf[1]: Leaf { key: Key[1], link: Link[2] }\n\
+             Link[0]: Link { value: 55, next: None }\n\
+             Link[1]: Link { value: 77, next: None }\n\
+             Link[2]: Link { value: 99, next: Link[1] }\n\
+             Key[0]: Key { key: 12 }\n\
+             Key[1]: Key { key: 34 }\n"
+        );
+    }
+
+    #[test]
+    fn test_distinct_one_byte_keys_flush() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+
+        // 1st flush.
+        assert_eq!(index.flush().expect("flush"), 19);
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 22, root: Disk[1] }\n\
+             Disk[1]: Radix { link: None }\n\
+             Disk[19]: Root { radix: Disk[1] }\n"
+        );
+
+        // Mixed on-disk and in-memory state.
+        index.insert(&[], 55).expect("update");
+        index.insert(&[0x12], 77).expect("update");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 22, root: Radix[0] }\n\
+             Disk[1]: Radix { link: None }\n\
+             Disk[19]: Root { radix: Disk[1] }\n\
+             Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
+             Link[0]: Link { value: 55, next: None }\n\
+             Link[1]: Link { value: 77, next: None }\n\
+             Key[0]: Key { key: 12 }\n"
+        );
+
+        // After 2nd flush. There are 2 roots.
+        let link = index.get(&[0x12]).expect("get");
+        index
+            .insert_advanced(&[0x34], 99.into(), link.into())
+            .expect("update");
+        index.flush().expect("flush");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 66, root: Disk[43] }\n\
+             Disk[1]: Radix { link: None }\n\
+             Disk[19]: Root { radix: Disk[1] }\n\
+             Disk[22]: Key { key: 12 }\n\
+             Disk[25]: Key { key: 34 }\n\
+             Disk[28]: Link { value: 55, next: None }\n\
+             Disk[31]: Link { value: 77, next: None }\n\
+             Disk[34]: Link { value: 99, next: Disk[31] }\n\
+             Disk[37]: Leaf { key: Disk[22], link: Disk[31] }\n\
+             Disk[40]: Leaf { key: Disk[25], link: Disk[34] }\n\
+             Disk[43]: Radix { link: Disk[28], 1: Disk[37], 3: Disk[40] }\n\
+             Disk[63]: Root { radix: Disk[43] }\n"
+        );
     }
 }
