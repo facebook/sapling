@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import argparse
 import os
 
 from . import config as config_mod
@@ -20,7 +21,7 @@ DEFAULT_CONFIG_DIR = 'local/.eden'
 CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
 
 
-def find_default_config_dir(home_dir):
+def find_default_config_dir(home_dir: str) -> str:
     '''Returns the path to default Eden config directory.
 
     If the environment variable $EDEN_CONFIG_DIR is set, it takes precedence
@@ -35,7 +36,7 @@ def find_default_config_dir(home_dir):
     return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
 
 
-def create_config(args) -> config_mod.Config:
+def create_config(args: argparse.Namespace) -> config_mod.Config:
     home_dir = args.home_dir or util.get_home_dir()
     config = args.config_dir or find_default_config_dir(home_dir)
     return config_mod.Config(config, args.etc_eden_dir, home_dir)

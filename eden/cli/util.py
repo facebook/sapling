@@ -39,7 +39,7 @@ class HealthStatus(object):
         self.pid = pid  # The process ID, or None if not running
         self.detail = detail  # a human-readable message
 
-    def is_healthy(self):
+    def is_healthy(self) -> bool:
         return self.status == fb_status.ALIVE
 
 
@@ -297,12 +297,12 @@ def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:
     print(message, file=sys.stderr)
 
 
-def stack_trace():
+def stack_trace() -> str:
     import traceback
     return ''.join(traceback.format_stack())
 
 
-def is_valid_sha1(sha1: str):
+def is_valid_sha1(sha1: str) -> bool:
     '''True iff sha1 is a valid 40-character SHA1 hex string.'''
     if sha1 is None or len(sha1) != 40:
         return False
@@ -310,7 +310,7 @@ def is_valid_sha1(sha1: str):
     return set(sha1).issubset(string.hexdigits)
 
 
-def read_all(path):
+def read_all(path: str) -> str:
     '''One-liner to read the contents of a file and properly close the fd.'''
     with open(path, 'r') as f:
         return f.read()

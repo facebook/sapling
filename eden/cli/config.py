@@ -22,12 +22,14 @@ import subprocess
 import tempfile
 import time
 import toml
+import types
+import typing
+from typing import Any, Dict, Iterable, List, Optional, Union, Type
 
 from . import configinterpolator, util
 from .util import print_stderr, HealthStatus, EdenStartError
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
-from typing import Dict, List, Optional
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -83,7 +85,10 @@ class ClientConfig:
     __slots__ = ('path', 'scm_type', 'hooks_path', 'bind_mounts',
                  'default_revision')
 
-    def __init__(self, path, scm_type, hooks_path, bind_mounts, default_revision):
+    def __init__(
+        self, path: str, scm_type: str, hooks_path: str,
+        bind_mounts: Dict[str, str], default_revision: str
+    ) -> None:
         self.path = path
         self.scm_type = scm_type
         self.hooks_path = hooks_path
@@ -92,7 +97,9 @@ class ClientConfig:
 
 
 class Config:
-    def __init__(self, config_dir, etc_eden_dir, home_dir):
+    def __init__(
+        self, config_dir: str, etc_eden_dir: str, home_dir: str
+    ) -> None:
         self._config_dir = config_dir
         self._etc_eden_dir = etc_eden_dir
         if not self._etc_eden_dir:
@@ -116,8 +123,8 @@ class Config:
         parser.read(self.get_rc_files())
         return parser
 
-    def get_rc_files(self):
-        result = []
+    def get_rc_files(self) -> List[str]:
+        result: List[str] = []
         config_d = os.path.join(self._etc_eden_dir, CONFIG_DOT_D)
         if os.path.isdir(config_d):
             result = os.listdir(config_d)
@@ -126,7 +133,10 @@ class Config:
         result.append(self._user_config_path)
         return result
 
-    def get_repository_list(self, parser=None):
+    def get_repository_list(
+        self,
+        parser: Union[configparser.ConfigParser, 'ConfigUpdater', None] = None
+    ) -> List[str]:
         result = []
         if not parser:
             parser = self._loadConfig()
@@ -136,7 +146,7 @@ class Config:
                 result.append(header[1])
         return sorted(result)
 
-    def get_config_value(self, key):
+    def get_config_value(self, key: str) -> str:
         parser = self._loadConfig()
         section, option = key.split('.', 1)
         try:
@@ -144,14 +154,14 @@ class Config:
         except (configparser.NoOptionError, configparser.NoSectionError) as exc:
             raise KeyError(str(exc))
 
-    def print_full_config(self):
+    def print_full_config(self) -> None:
         parser = self._loadConfig()
         for section in parser.sections():
             print('[%s]' % section)
             for k, v in parser.items(section):
                 print('%s=%s' % (k, v))
 
-    def find_config_for_alias(self, alias) -> Optional[ClientConfig]:
+    def find_config_for_alias(self, alias: str) -> Optional[ClientConfig]:
         '''Looks through the existing config files and searches for a
         [repository <alias>] section that defines a config:
         - If no such section is found, returns None.
@@ -216,32 +226,32 @@ class Config:
             msg += f' Try one of: {all_repos}.'
         return Exception(msg)
 
-    def get_mount_paths(self):
+    def get_mount_paths(self) -> Iterable[str]:
         '''Return the paths of the set mount points stored in config.json'''
         return self._get_directory_map().keys()
 
-    def get_all_client_config_info(self):
+    def get_all_client_config_info(self) -> Dict[str, collections.OrderedDict]:
         info = {}
         for path in self.get_mount_paths():
             info[path] = self.get_client_info(path)
 
         return info
 
-    def get_thrift_client(self):
+    def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(self._config_dir)
 
-    def get_client_info(self, path):
+    def get_client_info(self, path: str) -> collections.OrderedDict:
         path = os.path.realpath(path)
         client_dir = self._get_client_dir_for_mount_point(path)
         client_config = self._get_client_config(client_dir)
         snapshot = self._get_snapshot(client_dir)
 
         return collections.OrderedDict([
-            ['bind-mounts', client_config.bind_mounts],
-            ['mount', path],
-            ['scm_type', client_config.scm_type],
-            ['snapshot', snapshot],
-            ['client-dir', client_dir],
+            ('bind-mounts', client_config.bind_mounts),
+            ('mount', path),
+            ('scm_type', client_config.scm_type),
+            ('snapshot', snapshot),
+            ('client-dir', client_dir),
         ])
 
     @staticmethod
@@ -252,13 +262,15 @@ class Config:
             assert f.read(8) == SNAPSHOT_MAGIC
             return binascii.hexlify(f.read(20)).decode('utf-8')
 
-    def checkout(self, path, snapshot_id):
+    def checkout(self, path: str, snapshot_id: bytes) -> None:
         '''Switch the active snapshot id for a given client'''
         with self.get_thrift_client() as client:
             client.checkOutRevision(path, snapshot_id,
                                     eden_ttypes.CheckoutMode.NORMAL)
 
-    def add_repository(self, name, repo_type, source, with_buck=False):
+    def add_repository(
+        self, name: str, repo_type: str, source: str, with_buck: bool = False
+    ) -> None:
         # Check if repository already exists
         with ConfigUpdater(self._user_config_path) as config:
             if name in self.get_repository_list(config):
@@ -278,7 +290,9 @@ by hand to make changes to the repository or remove it.''' % name)
                 config['bindmounts ' + name] = bind_mounts
             config.save()
 
-    def clone(self, client_config: ClientConfig, path: str, snapshot_id: str):
+    def clone(
+        self, client_config: ClientConfig, path: str, snapshot_id: str
+    ) -> None:
         if path in self._get_directory_map():
             raise Exception('''\
 mount path %s is already configured (see `eden list`). \
@@ -342,7 +356,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         # Add mapping of mount path to client directory in config.json
         self._add_path_to_directory_map(path, os.path.basename(client_dir))
 
-    def _create_client_dir_for_path(self, clients_dir, path) -> str:
+    def _create_client_dir_for_path(self, clients_dir: str, path: str) -> str:
         '''Tries to create a new subdirectory of clients_dir based on the
         basename of the specified path. Tries appending an increasing sequence
         of integers to the basename if there is a collision until it finds an
@@ -372,7 +386,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
                 raise
 
     def _run_post_clone_hooks(self, eden_mount_path: str, client_dir: str,
-                              client_config: ClientConfig):
+                              client_config: ClientConfig) -> None:
         # First, check to see if the post-clone hook has been run successfully
         # before.
         clone_success_path = os.path.join(client_dir, CLONE_SUCCEEDED)
@@ -400,7 +414,9 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with open(clone_success_path, 'a'):
             os.utime(clone_success_path, None)
 
-    def _save_client_config(self, client_config: ClientConfig, config_path: str):
+    def _save_client_config(
+        self, client_config: ClientConfig, config_path: str
+    ) -> None:
         # Store information about the mount in the config.toml file.
         config_data = {
             'repository': {
@@ -413,7 +429,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         with open(config_path, 'w') as f:
             toml.dump(config_data, f)
 
-    def mount(self, path) -> int:
+    def mount(self, path: str) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
         path = os.path.realpath(path)
@@ -458,7 +474,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
         return 0
 
-    def unmount(self, path, delete_config) -> None:
+    def unmount(self, path: str, delete_config: bool) -> None:
         path = os.path.realpath(path)
         with self.get_thrift_client() as client:
             client.unmount(path)
@@ -483,7 +499,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
     def spawn(
         self,
         daemon_binary: str,
-        extra_args: List[str] = None,
+        extra_args: Optional[List[str]] = None,
         takeover: bool = False,
         gdb: bool = False,
         gdb_args: Optional[List[str]] = None,
@@ -581,7 +597,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         # > ResourceWarning: subprocess <pid> is still running
         # (Of course it's still running - our goal was to start a process.)
         class NoDestructorWarningHack(subprocess.Popen):
-            def __del__(self):
+            def __del__(self) -> None:
                 pass
         proc.__class__ = NoDestructorWarningHack
 
@@ -604,7 +620,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
     def get_log_path(self) -> str:
         return os.path.join(self._config_dir, 'logs', 'edenfs.log')
 
-    def _build_eden_environment(self):
+    def _build_eden_environment(self) -> Dict[str, str]:
         # Reset $PATH to the following contents, so that everyone has the
         # same consistent settings.
         path_dirs = [
@@ -652,11 +668,11 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
 
         return eden_env
 
-    def get_or_create_path_to_rocks_db(self):
+    def get_or_create_path_to_rocks_db(self) -> str:
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
         return util.mkdir_p(rocks_db_dir)
 
-    def _get_client_config(self, client_dir) -> ClientConfig:
+    def _get_client_config(self, client_dir: str) -> ClientConfig:
         '''Returns ClientConfig or raises an Exception if the config.toml
         under the client_dir is not properly formatted or does not exist.
         '''
@@ -667,7 +683,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         if not isinstance(repository, dict):
             raise Exception(f'{config_toml} is missing [repository]')
 
-        def get_field(key: str):
+        def get_field(key: str) -> str:
             value = repository.get(key)
             if not isinstance(value, str):
                 raise Exception(f'{config_toml} is missing {key} in '
@@ -709,7 +725,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         client_dir = os.path.join(self._get_clients_dir(), client_dir_component)
         return self._get_client_config(client_dir)
 
-    def _get_directory_map(self):
+    def _get_directory_map(self) -> Dict[str, str]:
         '''
         Parse config.json which holds a mapping of mount paths to their
         respective client directory and return contents in a dictionary.
@@ -717,29 +733,32 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
         directory_map = os.path.join(self._config_dir, CONFIG_JSON)
         if os.path.isfile(directory_map):
             with open(directory_map) as f:
-                return json.load(f)
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise Exception('invalid data found in %s' % directory_map)
+            return typing.cast(Dict[str, str], data)
         return {}
 
-    def _add_path_to_directory_map(self, path, dir_name):
+    def _add_path_to_directory_map(self, path: str, dir_name: str) -> None:
         config_data = self._get_directory_map()
         if path in config_data:
             raise Exception('mount path %s already exists.' % path)
         config_data[path] = dir_name
         self._write_directory_map(config_data)
 
-    def _remove_path_from_directory_map(self, path):
+    def _remove_path_from_directory_map(self, path: str) -> None:
         config_data = self._get_directory_map()
         if path in config_data:
             del config_data[path]
             self._write_directory_map(config_data)
 
-    def _write_directory_map(self, config_data):
+    def _write_directory_map(self, config_data: Dict[str, Any]) -> None:
         directory_map = os.path.join(self._config_dir, CONFIG_JSON)
         with open(directory_map, 'w') as f:
             json.dump(config_data, f, indent=2, sort_keys=True)
             f.write('\n')
 
-    def _get_client_dir_for_mount_point(self, path):
+    def _get_client_dir_for_mount_point(self, path: str) -> str:
         # The caller is responsible for making sure the path is already
         # a normalized, absolute path.
         assert os.path.isabs(path)
@@ -749,7 +768,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             raise Exception('could not find mount path %s' % path)
         return os.path.join(self._get_clients_dir(), config_data[path])
 
-    def _get_clients_dir(self):
+    def _get_clients_dir(self) -> str:
         return os.path.join(self._config_dir, CLIENTS_DIR)
 
     def get_server_build_info(self) -> Dict[str, str]:
@@ -776,10 +795,10 @@ class ConfigUpdater(object):
     place, so that the main config file is always in a good state, and never
     has partially written contents.
     '''
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
         self._lock_path = self.path + '.lock'
-        self._lock_file = None
+        self._lock_file: Optional[typing.TextIO] = None
         self.config = configparser.ConfigParser()
 
         # Acquire a lock.
@@ -790,25 +809,30 @@ class ConfigUpdater(object):
         self._acquire_lock()
         self.config.read(self.path)
 
-    def __enter__(self):
+    def __enter__(self) -> 'ConfigUpdater':
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        exc_traceback: Optional[types.TracebackType]
+    ) -> bool:
+        self.close()
+        return False
+
+    def __del__(self) -> None:
         self.close()
 
-    def __del__(self):
-        self.close()
-
-    def sections(self):
+    def sections(self) -> List[str]:
         return self.config.sections()
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> typing.Mapping[str, Any]:
         return self.config[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
         self.config[key] = value
 
-    def _acquire_lock(self):
+    def _acquire_lock(self) -> None:
         while True:
             self._lock_file = open(self._lock_path, 'w+')
             fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
@@ -827,7 +851,8 @@ class ConfigUpdater(object):
             self._lock_file = None
             continue
 
-    def _unlock(self):
+    def _unlock(self) -> None:
+        assert self._lock_file is not None
         # Remove the file on disk before we unlock it.
         # This way processes currently waiting in _acquire_lock() that already
         # opened our lock file will see that it isn't the current file on disk
@@ -836,11 +861,11 @@ class ConfigUpdater(object):
         self._lock_file.close()
         self._lock_file = None
 
-    def close(self):
+    def close(self) -> None:
         if self._lock_file is not None:
             self._unlock()
 
-    def save(self):
+    def save(self) -> None:
         if self._lock_file is None:
             raise Exception('Cannot save the config without holding the lock')
 
@@ -873,7 +898,7 @@ class ConfigUpdater(object):
             raise
 
 
-def _verify_mount_point(mount_point):
+def _verify_mount_point(mount_point: str) -> None:
     if os.path.isdir(mount_point):
         return
     parent_dir = os.path.dirname(mount_point)

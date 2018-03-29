@@ -52,9 +52,15 @@ class EdenClient(EdenService.Client):
     def __init__(self, eden_dir=None, mounted_path=None):
         self._eden_dir = eden_dir
         if mounted_path:
-            sock_path = os.readlink(os.path.join(mounted_path, '.eden', 'socket'))
-        else:
+            sock_path = os.readlink(
+                os.path.join(mounted_path, '.eden', 'socket')
+            )
+            self._eden_dir = os.path.dirname(sock_path)
+        elif eden_dir is not None:
+            self._eden_dir = eden_dir
             sock_path = os.path.join(self._eden_dir, SOCKET_PATH)
+        else:
+            raise TypeError('one of mounted_path or eden_dir is required')
         self._socket = TSocket(unix_socket=sock_path)
         # We used to set a timeout here, but picking the right duration is hard,
         # and safely retrying an arbitrary thrift call may not be safe.  So we

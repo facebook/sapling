@@ -15,6 +15,8 @@ import os
 import signal
 import subprocess
 import sys
+import typing
+from typing import List, Optional, Set, Tuple
 
 from . import config as config_mod
 from . import debug as debug_mod
@@ -27,10 +29,9 @@ from . import util
 from .cmd_util import create_config
 from .util import print_stderr
 from facebook.eden import EdenService
-from typing import List, Optional
 
 
-def infer_client_from_cwd(config, clientname):
+def infer_client_from_cwd(config: config_mod.Config, clientname: str) -> str:
     if clientname:
         return clientname
 
@@ -42,7 +43,7 @@ def infer_client_from_cwd(config, clientname):
     while len(path) > 1:
         for _, info in all_clients.items():
             if info['mount'] == path:
-                return info['mount']
+                return typing.cast(str, info['mount'])
         path = os.path.dirname(path)
 
     print_stderr(
@@ -50,7 +51,7 @@ def infer_client_from_cwd(config, clientname):
     sys.exit(2)
 
 
-def do_version(args):
+def do_version(args: argparse.Namespace) -> int:
     config = create_config(args)
     print('Installed: %s' %
             version_mod.get_installed_eden_rpm_version())
@@ -65,32 +66,42 @@ def do_version(args):
     return 0
 
 
-def do_help(args, parser, subparsers):
+def do_help(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+    # subparsers is really an argparse._SubParsersAction, but the python
+    # typing stubs for the argparse module do not represent this type fully.
+    subparsers: typing.Any,  # argparse._SubParsersAction,
+) -> int:
     help_args = getattr(args, 'args', [])
     num_help_args = len(help_args)
     if num_help_args == 1:
         name = args.args[0]
         subparser = subparsers.choices.get(name, None)
         if subparser:
-            subparser.parse_args(['--help'])
+            subparser.print_help()
+            return 0
         else:
             print_stderr('No manual entry for %s' % name)
-            sys.exit(2)
+            return 2
     elif num_help_args == 0:
-        parser.parse_args(['--help'])
+        parser.print_help()
+        return 0
     else:
         print_stderr('Too many args passed to help: %s' % help_args)
-        sys.exit(2)
+        return 2
+    return 0
 
 
-def do_info(args):
+def do_info(args: argparse.Namespace) -> int:
     config = create_config(args)
     info = config.get_client_info(infer_client_from_cwd(config, args.client))
     json.dump(info, sys.stdout, indent=2)
     sys.stdout.write('\n')
+    return 0
 
 
-def do_health(args):
+def do_health(args: argparse.Namespace) -> int:
     config = create_config(args)
     health_info = config.check_health()
     if health_info.is_healthy():
@@ -101,7 +112,7 @@ def do_health(args):
     return 1
 
 
-def do_repository(args):
+def do_repository(args: argparse.Namespace) -> int:
     config = create_config(args)
     if (args.name and args.path):
         repo_source, repo_type = util.get_repo_source_and_type(args.path)
@@ -124,31 +135,35 @@ def do_repository(args):
         repo_list = config.get_repository_list()
         for repo in sorted(repo_list):
             print(repo)
+    return 0
 
 
-def do_list(args):
+def do_list(args: argparse.Namespace) -> int:
     config = create_config(args)
 
     try:
         with config.get_thrift_client() as client:
-            active_mount_points = set(
+            active_mount_points: Set[Optional[str]] = {
                 mount.mountPoint
-                for mount in client.listMounts())
+                for mount in client.listMounts()
+            }
     except EdenNotRunningError:
         active_mount_points = set()
 
     config_mount_points = set(config.get_mount_paths())
 
     for path in sorted(active_mount_points | config_mount_points):
+        assert path is not None
         if path not in config_mount_points:
             print(path + ' (unconfigured)')
         elif path in active_mount_points:
             print(path + ' (active)')
         else:
             print(path)
+    return 0
 
 
-def do_clone(args) -> int:
+def do_clone(args: argparse.Namespace) -> int:
     NULL_REVISION = '0' * 40
     config = create_config(args)
     try:
@@ -175,16 +190,23 @@ def do_clone(args) -> int:
                 repo=client_config.path, bookmark=bm)
         else:
             print_stderr(
-                '%s does not look like a git or hg repository' % client_config.path)
+                '%s does not look like a git or hg repository' %
+                client_config.path
+            )
             return 1
     except Exception as e:
         print_stderr('error: {}', e)
-        snapshot_id = NULL_REVISION  # this is just to trigger error clause below
+        # set snapshot_id just to trigger error clause below
+        snapshot_id = NULL_REVISION
     if ((not util.is_valid_sha1(snapshot_id)) or
             (snapshot_id == NULL_REVISION and not args.allow_empty_repo)):
         print_stderr('Obtained commit for repo is invalid: %s' % snapshot_id)
-        print_stderr(' %s repository may still be cloning.' % client_config.path)
-        print_stderr('Please make sure cloning completes before running `eden clone`.')
+        print_stderr(
+            ' %s repository may still be cloning.' % client_config.path
+        )
+        print_stderr(
+            'Please make sure cloning completes before running `eden clone`.'
+        )
         print_stderr('If null revision is valid, add --allow-empty-repo .')
         return 1
 
@@ -198,7 +220,8 @@ def do_clone(args) -> int:
             return exit_code
 
     try:
-        return config.clone(client_config, args.path, snapshot_id)
+        config.clone(client_config, args.path, snapshot_id)
+        return 0
     except Exception as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -241,7 +264,7 @@ def try_create_config_from_repo(
         default_revision=config_mod.DEFAULT_REVISION[_scm_type])
 
 
-def do_config(args):
+def do_config(args: argparse.Namespace) -> int:
     config = create_config(args)
 
     if args.get:
@@ -255,13 +278,13 @@ def do_config(args):
     return 0
 
 
-def do_doctor(args) -> int:
+def do_doctor(args: argparse.Namespace) -> int:
     config = create_config(args)
     return doctor_mod.cure_what_ails_you(config, args.dry_run, out=sys.stdout,
                                          mount_table=mtab.LinuxMountTable())
 
 
-def do_mount(args) -> int:
+def do_mount(args: argparse.Namespace) -> int:
     config = create_config(args)
     for path in args.paths:
         try:
@@ -274,7 +297,7 @@ def do_mount(args) -> int:
     return 0
 
 
-def do_unmount(args) -> int:
+def do_unmount(args: argparse.Namespace) -> int:
     config = create_config(args)
     for path in args.paths:
         path = normalize_path_arg(path)
@@ -285,7 +308,8 @@ def do_unmount(args) -> int:
             return 1
     return 0
 
-def do_checkout(args):
+
+def do_checkout(args: argparse.Namespace) -> int:
     config = create_config(args)
     try:
         config.checkout(infer_client_from_cwd(config, args.client),
@@ -295,10 +319,11 @@ def do_checkout(args):
                      args.snapshot,
                      args.client,
                      str(ex)))
-        sys.exit(1)
+        return 1
+    return 0
 
 
-def do_daemon(args) -> int:
+def do_daemon(args: argparse.Namespace) -> int:
     config = create_config(args)
 
     # If the user put an "--" argument before the edenfs args, argparse passes
@@ -336,6 +361,9 @@ def start_daemon(
 
     if daemon_binary is None:
         valid_daemon_binary = _find_default_daemon_binary()
+        if valid_daemon_binary is None:
+            print_stderr('error: unable to find edenfs executable')
+            return 1
     else:
         valid_daemon_binary = daemon_binary
     try:
@@ -352,7 +380,7 @@ def start_daemon(
     return 0
 
 
-def do_rage(args):
+def do_rage(args: argparse.Namespace) -> int:
     rage_processor = None
     config = create_config(args)
     try:
@@ -360,8 +388,11 @@ def do_rage(args):
     except KeyError:
         pass
 
+    proc: Optional[subprocess.Popen] = None
     if rage_processor and not args.stdout:
-        proc = subprocess.Popen(['sh', '-c', rage_processor], stdin=subprocess.PIPE)
+        proc = subprocess.Popen(
+            ['sh', '-c', rage_processor], stdin=subprocess.PIPE
+        )
         sink = proc.stdin
     else:
         proc = None
@@ -374,12 +405,12 @@ def do_rage(args):
     return 0
 
 
-def do_stats(args):
+def do_stats(args: argparse.Namespace) -> int:
     stats_mod.do_stats_general(args)
     return 0
 
 
-def _find_default_daemon_binary():
+def _find_default_daemon_binary() -> Optional[str]:
     # By default, we look for the daemon executable alongside this file.
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     candidate = os.path.join(script_dir, 'edenfs')
@@ -389,14 +420,16 @@ def _find_default_daemon_binary():
 
     # This is where the binary will be found relative to this file when it is
     # run out of buck-out in debug mode.
-    candidate = os.path.normpath(os.path.join(script_dir, '../fs/service/edenfs'))
+    candidate = os.path.normpath(
+        os.path.join(script_dir, '../fs/service/edenfs')
+    )
     if os.access(candidate, permissions):
         return candidate
     else:
         return None
 
 
-def _ensure_dot_eden_folder_exists(config) -> None:
+def _ensure_dot_eden_folder_exists(config: config_mod.Config) -> None:
     '''Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
     If the ~/.eden folder already exists, it will be left alone.
     '''
@@ -411,7 +444,7 @@ SHUTDOWN_EXIT_CODE_EPERM_ERROR_SENDING_SIGKILL = 4
 SHUTDOWN_EXIT_CODE_SIGKILL_FAILED_TO_KILL_EDENFS = 5
 
 
-def do_shutdown(args):
+def do_shutdown(args: argparse.Namespace) -> int:
     config = create_config(args)
     try:
         with config.get_thrift_client() as client:
@@ -427,7 +460,7 @@ def do_shutdown(args):
         return SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
 
     # Wait until the process exits on its own.
-    def eden_exited():
+    def eden_exited() -> Optional[bool]:
         try:
             os.kill(pid, 0)
         except OSError as ex:
@@ -481,7 +514,8 @@ def do_shutdown(args):
         return SHUTDOWN_EXIT_CODE_SIGKILL_FAILED_TO_KILL_EDENFS
 
 
-def create_parser():
+def create_parser(
+) -> Tuple[argparse.ArgumentParser, argparse._SubParsersAction]:
     '''Returns a parser and its immediate subparsers.'''
     parser = argparse.ArgumentParser(description='Manage Eden clients.')
     parser.add_argument(
@@ -571,7 +605,6 @@ def create_parser():
 
     help_parser = subparsers.add_parser(
         'help', help='Display help information about Eden.')
-    help_parser.set_defaults(func=do_help)
     help_parser.add_argument('args', nargs='*')
 
     info_parser = subparsers.add_parser(
@@ -653,17 +686,20 @@ def create_parser():
     return parser, subparsers
 
 
-def main():
+def main() -> int:
     parser, subparsers = create_parser()
     args = parser.parse_args()
     if args.version:
         return do_version(args)
     if args.subparser_name == 'help' or getattr(args, 'func', None) is None:
         return do_help(args, parser, subparsers)
-    return args.func(args)
+    return_code: int = args.func(args)
+    return return_code
 
 
-def normalize_path_arg(path_arg, may_need_tilde_expansion=False):
+def normalize_path_arg(
+    path_arg: str, may_need_tilde_expansion: bool = False
+) -> str:
     '''Normalizes a path by using os.path.realpath().
 
     Note that this function is expected to be used with command-line arguments.
