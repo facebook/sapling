@@ -503,6 +503,104 @@ impl Index {
 
         Ok(root_offset)
     }
+
+    /// Return the type_int (TYPE_RADIX, TYPE_LEAF, ...) for a given offset.
+    #[inline]
+    fn peek_type(&self, offset: u64) -> io::Result<u8> {
+        if offset >= DIRTY_OFFSET {
+            Ok(DirtyOffset::peek_type(offset))
+        } else {
+            self.buf
+                .get(offset as usize)
+                .map(|v| *v)
+                .ok_or(InvalidData.into())
+        }
+    }
+
+    /// Read the link offset from a Radix entry.
+    #[inline]
+    fn peek_radix_entry_link_offset(&self, offset: u64) -> io::Result<u64> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_RADIX);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            Ok(self.dirty_radixes[index].link_offset)
+        } else {
+            non_dirty(
+                self.buf
+                    .read_vlq_at(offset as usize + 1 + 16)
+                    .map(|(v, _)| v),
+            )
+        }
+    }
+
+    /// Lookup the `i`-th child inside a Radix entry.
+    /// Return stored offset, or 0 if that child does not exist.
+    #[inline]
+    fn peek_radix_entry_child(&self, offset: u64, i: u8) -> io::Result<u64> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_RADIX);
+        debug_assert!(i < 16);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            let e = &self.dirty_radixes[index];
+            Ok(e.offsets[i as usize])
+        } else {
+            // Read from jump table
+            match self.buf.get(offset as usize + 1 + i as usize) {
+                None => Err(InvalidData.into()),
+                Some(&jump) => non_dirty(
+                    self.buf
+                        .read_vlq_at(offset as usize + jump as usize)
+                        .map(|(v, _)| v),
+                ),
+            }
+        }
+    }
+
+    /// Return the link offset stored in a leaf entry if the key matches.
+    /// Otherwise return 0.
+    fn peek_leaf_entry_link_offset_if_matched(&self, offset: u64, key: &[u8]) -> io::Result<u64> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            let leaf = &self.dirty_leafs[index];
+            if self.check_key_entry_matched(leaf.key_offset, key)? {
+                Ok(leaf.link_offset)
+            } else {
+                Ok(0)
+            }
+        } else {
+            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
+            non_dirty(Ok(key_offset))?;
+            if self.check_key_entry_matched(key_offset, key)? {
+                non_dirty(
+                    self.buf
+                        .read_vlq_at(offset as usize + 1 + vlq_len)
+                        .map(|(v, _)| v),
+                )
+            } else {
+                Ok(0)
+            }
+        }
+    }
+
+    /// Return true if the given key matched the key entry.
+    #[inline]
+    fn check_key_entry_matched(&self, offset: u64, key: &[u8]) -> io::Result<bool> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_KEY);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            Ok(key == &self.dirty_keys[index].key[..])
+        } else {
+            let (key_len, vlq_len): (usize, _) = self.buf.read_vlq_at(offset as usize + 1)?;
+            let start = offset as usize + 1 + vlq_len;
+            let end = start + key_len;
+            if end > self.buf.len() {
+                Err(InvalidData.into())
+            } else {
+                Ok(key == &self.buf[start..end])
+            }
+        }
+    }
 }
 
 #[cfg(test)]
