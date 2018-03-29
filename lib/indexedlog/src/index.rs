@@ -622,16 +622,26 @@ impl Index {
                     }
                 }
                 TYPE_LEAF => {
-                    // TODO: Not implemented yet.
                     let link_offset =
                         self.peek_leaf_entry_link_offset_if_matched(offset, key.as_ref())?;
 
                     if link_offset > 0 {
-                        // Key matched. Need to copy LeafEntry.
-                        unimplemented!()
+                        // Key matched. Need to copy leaf entry.
+                        let new_link_offset =
+                            self.maybe_create_link_entry(link_offset, value, link);
+                        let new_leaf_offset = self.set_leaf_link(offset, new_link_offset)?;
+                        self.set_radix_entry_child(last_radix_offset, last_child, new_leaf_offset);
                     } else {
                         // Key mismatch. Do a leaf split.
-                        unimplemented!()
+                        let new_link_offset = self.maybe_create_link_entry(0, value, link);
+                        self.split_leaf(
+                            offset,
+                            key.as_ref(),
+                            step,
+                            last_radix_offset,
+                            last_child,
+                            new_link_offset,
+                        )?;
                     }
                     return Ok(());
                 }
@@ -640,6 +650,117 @@ impl Index {
 
             step += 1;
         }
+    }
+
+    /// Split a leaf entry. Separated from `insert_advanced` to make `insert_advanced`
+    /// shorter.  The parameters are internal states inside `insert_advanced`. Calling this
+    /// from other functions makes less sense.
+    #[inline]
+    fn split_leaf(
+        &mut self,
+        leaf_offset: u64,
+        key: &[u8],
+        step: usize,
+        radix_offset: u64,
+        child: u8,
+        new_link_offset: u64,
+    ) -> io::Result<()> {
+        // This is probably the most complex part. Here are some explanation about input parameters
+        // and what this function is supposed to do for some cases:
+        //
+        // Input parameters are marked using `*`:
+        //
+        //      Offset            | Content
+        //      root_radix        | Radix(child1: radix1, ...)         \
+        //      radix1            | Radix(child2: radix2, ...)         |> steps
+        //      ...               | ...                                | (for skipping check
+        //      *radix_offset*    | Radix(*child*: *leaf_offset*, ...) /  of prefix in keys)
+        //      *leaf_offset*     | Leaf(...)
+        //      *new_link_offset* | Link(...)
+        //
+        //      *leaf_offset* is redundant, but lookup_and_update_link has it. Avoids a read.
+        //
+        // Here are 3 kinds of examples (Keys are embed in Leaf for simplicity):
+        //
+        // Example 1. old_key = "1234"; new_key = "1278".
+        //
+        //      Offset | Before                | After
+        //           A | Radix(1: B)           | Radix(1: C)
+        //           B | Leaf("1234", Link: X) | Leaf("1234", Link: X)
+        //           C |                       | Radix(2: E)
+        //           D |                       | Leaf("1278")
+        //           E |                       | Radix(3: B, 7: D)
+        //
+        // Example 2. old_key = "1234", new_key = "12". No need for a new leaf entry:
+        //
+        //      Offset | Before                | After
+        //           A | Radix(1: B)           | Radix(1: C)
+        //           B | Leaf("1234", Link: X) | Leaf("1234", Link: X)
+        //           C |                       | Radix(2: B, Link: Y)
+        //
+        // Example 3. old_key = "12", new_key = "1234". Need new leaf. Old leaf is not needed.
+        //
+        //      Offset | Before              | After
+        //           A | Radix(1: B)         | Radix(1: C)
+        //           B | Leaf("12", Link: X) | Leaf("12", Link: X) # not used
+        //           C |                     | Radix(2: E, Link: X)
+        //           D |                     | Leaf("1234", Link: Y)
+        //           E |                     | Radix(3: D)
+
+        let old_key = Vec::from(self.peek_leaf_entry_key(leaf_offset)?);
+        let new_key = key;
+        let mut old_iter = Base16Iter::from_base256(&old_key).skip(step);
+        let mut new_iter = Base16Iter::from_base256(&new_key).skip(step);
+        let old_leaf_offset = leaf_offset;
+
+        let mut last_radix_offset = radix_offset;
+        let mut last_radix_child = child;
+
+        let mut completed = false;
+
+        loop {
+            let b1 = old_iter.next();
+            let b2 = new_iter.next();
+
+            let mut radix = Radix::default();
+
+            if let Some(b1) = b1 {
+                // Initial value for the b1-th child. Could be rewritten by
+                // "set_radix_entry_child" in the next loop iteration.
+                radix.offsets[b1 as usize] = old_leaf_offset;
+            } else {
+                // Example 3. old_key is a prefix of new_key. A leaf is still needed.
+                // The new leaf will be created by the next "if" block.
+                let old_link_offset = self.peek_leaf_entry_link_offset(old_leaf_offset)?;
+                radix.link_offset = old_link_offset;
+            }
+
+            if b2.is_none() {
+                // Example 2. new_key is a prefix of old_key. A new leaf is not needed.
+                radix.link_offset = new_link_offset;
+                completed = true;
+            } else if b1 != b2 {
+                // Example 1 and Example 3. A new leaf is needed.
+                let new_key_offset = self.create_key_entry(new_key);
+                let new_leaf_offset = self.create_leaf_entry(new_link_offset, new_key_offset);
+                radix.offsets[b2.unwrap() as usize] = new_leaf_offset;
+                completed = true;
+            }
+
+            // Create the Radix entry, and connect it to the parent entry.
+            let offset = self.create_radix_entry(radix);
+            self.set_radix_entry_child(last_radix_offset, last_radix_child, offset);
+
+            if completed {
+                break;
+            }
+
+            debug_assert!(b1 == b2);
+            last_radix_offset = offset;
+            last_radix_child = b2.unwrap();
+        }
+
+        Ok(())
     }
 
     /// Return the type_int (TYPE_RADIX, TYPE_LEAF, ...) for a given offset.
@@ -1187,4 +1308,84 @@ mod tests {
              Disk[63]: Root { radix: Disk[43] }\n"
         );
     }
+
+    #[test]
+    fn test_leaf_split() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+
+        // Example 1: two keys are not prefixes of each other
+        index.insert(&[0x12, 0x34], 5).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Link[0]: Link { value: 5, next: None }\n\
+             Key[0]: Key { key: 12 34 }\n"
+        );
+        index.insert(&[0x12, 0x78], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: None, 3: Leaf[0], 7: Leaf[1] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Leaf[1]: Leaf { key: Key[1], link: Link[1] }\n\
+             Link[0]: Link { value: 5, next: None }\n\
+             Link[1]: Link { value: 7, next: None }\n\
+             Key[0]: Key { key: 12 34 }\n\
+             Key[1]: Key { key: 12 78 }\n"
+        );
+
+        // Example 2: new key is a prefix of the old key
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        index.insert(&[0x12, 0x34], 5).expect("insert");
+        index.insert(&[0x12], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: Link[1], 3: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Link[0]: Link { value: 5, next: None }\n\
+             Link[1]: Link { value: 7, next: None }\n\
+             Key[0]: Key { key: 12 34 }\n"
+        );
+
+        // Example 3: old key is a prefix of the new key
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        index.insert(&[0x12], 5).expect("insert");
+        index.insert(&[0x12, 0x78], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: Link[0], 7: Leaf[1] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Leaf[1]: Leaf { key: Key[1], link: Link[1] }\n\
+             Link[0]: Link { value: 5, next: None }\n\
+             Link[1]: Link { value: 7, next: None }\n\
+             Key[0]: Key { key: 12 }\n\
+             Key[1]: Key { key: 12 78 }\n"
+        );
+
+        // Same key. Multiple values.
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        index.insert(&[0x12], 5).expect("insert");
+        index.insert(&[0x12], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 1, root: Radix[0] }\n\
+             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
+             Link[0]: Link { value: 5, next: None }\n\
+             Link[1]: Link { value: 7, next: Link[0] }\n\
+             Key[0]: Key { key: 12 }\n"
+        );
+    }
+
 }
