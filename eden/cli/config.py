@@ -640,6 +640,7 @@ Do you want to run `eden mount %s` instead?''' % (path, path))
             'HOME',
             'EMAIL',
             'NAME',
+            'ASAN_OPTIONS',
             # When we import data from mercurial, the remotefilelog extension
             # may need to SSH to a remote mercurial server to get the file
             # contents.  Preserve SSH environment variables needed to do this.
