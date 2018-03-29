@@ -38,15 +38,24 @@ class BasicTest:
 
     def test_version(self):
         output = self.eden.run_cmd('version', cwd=self.mount)
-        first_line = output.split('\n')[0]
-        self.assertTrue(first_line.startswith('Installed: '))
-        if 'Not Installed' in first_line:
-            self.skipTest("eden is not installed")
-        parts = first_line[11:].split('-')
-        self.assertEqual(len(parts[0]), 8)
-        self.assertEqual(len(parts[1]), 6)
-        self.assertTrue(parts[0].isdigit())
-        self.assertTrue(parts[1].isdigit())
+        lines = output.splitlines()
+
+        # The first line reports info about the installed RPM version
+        rpm_info = lines[0]
+        self.assertTrue(rpm_info.startswith('Installed: '))
+        if 'Not Installed' in rpm_info:
+            # This system does not have Eden installed as an RPM.
+            pass
+        else:
+            parts = rpm_info[11:].split('-')
+            self.assertEqual(len(parts[0]), 8)
+            self.assertEqual(len(parts[1]), 6)
+            self.assertTrue(parts[0].isdigit())
+            self.assertTrue(parts[1].isdigit())
+
+        # The second line reports info about the current running edenfs process
+        running_info = lines[1]
+        self.assertTrue(running_info.startswith('Running: '))
 
     def test_fileList(self):
         entries = set(os.listdir(self.mount))
