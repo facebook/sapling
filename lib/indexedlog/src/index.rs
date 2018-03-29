@@ -40,6 +40,7 @@
 //!   (16-bit) bitmask but that hurts lookup performance.
 
 use std::collections::HashMap;
+use std::fmt::{self, Debug, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::io::ErrorKind::InvalidData;
@@ -54,30 +55,30 @@ use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 //// Structures related to file format
 
-#[derive(Clone, PartialEq, Default, Debug)]
+#[derive(Clone, PartialEq, Default)]
 struct Radix {
     pub offsets: [u64; 16],
     pub link_offset: u64,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 struct Leaf {
     pub key_offset: u64,
     pub link_offset: u64,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 struct Key {
     pub key: Vec<u8>, // base256
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 struct Link {
     pub value: u64,
     pub next_link_offset: u64,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq)]
 struct Root {
     pub radix_offset: u64,
 }
@@ -641,6 +642,159 @@ impl Index {
                 Ok(key == &self.buf[start..end])
             }
         }
+    }
+}
+
+//// Debug Formatter
+
+fn fmt_offset(offset: u64, f: &mut Formatter) -> Result<(), fmt::Error> {
+    if offset >= DIRTY_OFFSET {
+        write!(f, "{:?}", DirtyOffset::from(offset))
+    } else if offset == 0 {
+        write!(f, "None")
+    } else {
+        write!(f, "Disk[{}]", offset)
+    }
+}
+
+impl Debug for DirtyOffset {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            DirtyOffset::Radix(x) => write!(f, "Radix[{}]", x),
+            DirtyOffset::Leaf(x) => write!(f, "Leaf[{}]", x),
+            DirtyOffset::Link(x) => write!(f, "Link[{}]", x),
+            DirtyOffset::Key(x) => write!(f, "Key[{}]", x),
+        }
+    }
+}
+
+impl Debug for Radix {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Radix {{ link: ")?;
+        fmt_offset(self.link_offset, f)?;
+        for (i, v) in self.offsets.iter().cloned().enumerate() {
+            if v > 0 {
+                write!(f, ", {}: ", i)?;
+                fmt_offset(v, f)?;
+            }
+        }
+        write!(f, " }}")
+    }
+}
+
+impl Debug for Leaf {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Leaf {{ key: ")?;
+        fmt_offset(self.key_offset, f)?;
+        write!(f, ", link: ")?;
+        fmt_offset(self.link_offset, f)?;
+        write!(f, " }}")
+    }
+}
+
+impl Debug for Link {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Link {{ value: {}, next: ", self.value)?;
+        fmt_offset(self.next_link_offset, f)?;
+        write!(f, " }}")
+    }
+}
+
+impl Debug for Key {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Key {{ key:")?;
+        for byte in self.key.iter() {
+            write!(f, " {:X}", byte)?;
+        }
+        write!(f, " }}")
+    }
+}
+
+impl Debug for Root {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Root {{ radix: ")?;
+        fmt_offset(self.radix_offset, f)?;
+        write!(f, " }}")
+    }
+}
+
+impl Debug for Index {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "Index {{ len: {}, root: ", self.buf.len())?;
+        fmt_offset(self.root.radix_offset, f)?;
+        write!(f, " }}\n")?;
+
+        // On-disk entries
+        let offset_map = HashMap::new();
+        let mut buf = Vec::with_capacity(self.buf.len());
+        buf.push(TYPE_HEAD);
+        loop {
+            let i = buf.len();
+            if i >= self.buf.len() {
+                break;
+            }
+            write!(f, "Disk[{}]: ", i)?;
+            let type_int = self.buf[i];
+            let i = i as u64;
+            match type_int {
+                TYPE_RADIX => {
+                    let e = Radix::read_from(&self.buf, i).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                TYPE_LEAF => {
+                    let e = Leaf::read_from(&self.buf, i).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                TYPE_LINK => {
+                    let e = Link::read_from(&self.buf, i).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                TYPE_KEY => {
+                    let e = Key::read_from(&self.buf, i).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                TYPE_ROOT => {
+                    let e = Root::read_from(&self.buf, i).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                _ => {
+                    write!(f, "Broken Data!\n")?;
+                    break;
+                }
+            }
+        }
+
+        if buf.len() > 1 && self.buf[..] != buf[..] {
+            return write!(f, "Inconsistent Data!\n");
+        }
+
+        // In-memory entries
+        for (i, e) in self.dirty_radixes.iter().enumerate() {
+            write!(f, "Radix[{}]: ", i)?;
+            write!(f, "{:?}\n", e)?;
+        }
+
+        for (i, e) in self.dirty_leafs.iter().enumerate() {
+            write!(f, "Leaf[{}]: ", i)?;
+            write!(f, "{:?}\n", e)?;
+        }
+
+        for (i, e) in self.dirty_links.iter().enumerate() {
+            write!(f, "Link[{}]: ", i)?;
+            write!(f, "{:?}\n", e)?;
+        }
+
+        for (i, e) in self.dirty_keys.iter().enumerate() {
+            write!(f, "Key[{}]: ", i)?;
+            write!(f, "{:?}\n", e)?;
+        }
+
+        Ok(())
     }
 }
 
