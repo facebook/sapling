@@ -18,3 +18,5 @@ mod checksum_table;
 mod index;
 mod lock;
 mod utils;
+
+pub use index::Index;
