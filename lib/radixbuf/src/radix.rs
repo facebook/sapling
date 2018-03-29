@@ -380,15 +380,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use key::{FixedKey, VariantKey};
     use std::collections::HashSet;
     use std::mem::transmute;
-    use key::{VariantKey, FixedKey};
-
-    #[cfg(not(feature="nobench"))]
-    use rand::{ChaChaRng, Rng};
-
-    #[cfg(not(feature="nobench"))]
-    use test::Bencher;
 
     #[test]
     fn test_errors() {
@@ -547,57 +541,5 @@ mod tests {
             let r = radix_lookup(&radix_buf, 0, key, VariantKey::read, &key_buf);
             r.unwrap().is_some()
         })
-    }
-
-    #[cfg(not(feature="nobench"))]
-    const COUNT: usize = 51200;
-
-    #[cfg(not(feature="nobench"))]
-    #[bench]
-    fn bench_insert(b: &mut Bencher) {
-        let key_buf = randomized_key_buf(COUNT);
-        b.iter(|| { batch_insert_radix_buf(&key_buf, COUNT); })
-    }
-
-    #[cfg(not(feature="nobench"))]
-    #[bench]
-    fn bench_unchecked_lookups(b: &mut Bencher) {
-        let key_buf = randomized_key_buf(COUNT);
-        let radix_buf = batch_insert_radix_buf(&key_buf, COUNT);
-        b.iter(|| for i in 0..COUNT {
-            let key_id = (i as u32 * 20).into();
-            let key = FixedKey::read(&key_buf, key_id).unwrap();
-            radix_lookup_unchecked(&radix_buf, 0, &key).expect("lookup");
-        })
-    }
-
-    #[cfg(not(feature="nobench"))]
-    #[bench]
-    fn bench_lookups(b: &mut Bencher) {
-        let key_buf = randomized_key_buf(COUNT);
-        let radix_buf = batch_insert_radix_buf(&key_buf, COUNT);
-        b.iter(|| for i in 0..COUNT {
-            let key_id = (i as u32 * 20).into();
-            let key = FixedKey::read(&key_buf, key_id).unwrap();
-            radix_lookup(&radix_buf, 0, &key, FixedKey::read, &key_buf).expect("lookup");
-        })
-    }
-
-    #[cfg(not(feature="nobench"))]
-    fn randomized_key_buf(count: usize) -> Vec<u8> {
-        let mut key_buf = vec![0u8; count * 20];
-        // Using an unseeded rng so benchmarks are more stable across multiple runs
-        ChaChaRng::new_unseeded().fill_bytes(key_buf.as_mut());
-        key_buf
-    }
-
-    #[cfg(not(feature="nobench"))]
-    fn batch_insert_radix_buf(key_buf: &Vec<u8>, count: usize) -> Vec<u32> {
-        let mut radix_buf = vec![0u32; 16];
-        for i in 0..count {
-            let key_id: KeyId = ((i * 20) as u32).into();
-            radix_insert(&mut radix_buf, 0, key_id, FixedKey::read, key_buf).expect("insert");
-        }
-        radix_buf
     }
 }

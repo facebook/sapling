@@ -83,9 +83,6 @@ impl<'a, T: AsRef<[u8]>> Base16Iter<'a, T> {
 mod tests {
     use super::*;
 
-    #[cfg(not(feature="nobench"))]
-    use test::Bencher;
-
     quickcheck! {
         fn check_skip_rev(src: Vec<u8>) -> bool {
             let iter = Base16Iter::from_bin(&src);
@@ -125,13 +122,4 @@ mod tests {
         assert_eq!(v, vec![6, 5, 4]);
     }
 
-    #[cfg(not(feature="nobench"))]
-    #[bench]
-    fn bench_key_base64(b: &mut Bencher) {
-        let x = [4u8; 20];
-        b.iter(|| {
-            let y: u8 = Base16Iter::from_bin(&x).sum();
-            assert_eq!(y, 4 * 20 as u8);
-        })
-    }
 }
