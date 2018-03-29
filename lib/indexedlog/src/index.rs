@@ -45,6 +45,7 @@ use std::io::{self, Seek, SeekFrom, Write};
 use std::io::ErrorKind::InvalidData;
 use std::path::Path;
 
+use base16::Base16Iter;
 use lock::ScopedFileLock;
 use utils::mmap_readonly;
 
@@ -317,6 +318,11 @@ impl Into<u64> for DirtyOffset {
     }
 }
 
+/// An Offset to an link entry. This is a standalone type so it cannot be
+/// constructed arbitarily.
+#[derive(Debug, PartialOrd, PartialEq, Copy, Clone)]
+pub struct LinkOffset(u64);
+
 /// Convert a dirty offset to an error. This should be applied to all
 /// offsets read from disk - there should never be references to in-memory
 /// data.
@@ -502,6 +508,41 @@ impl Index {
         self.dirty_keys.clear();
 
         Ok(root_offset)
+    }
+
+    /// Lookup by key. Return the link offset (the head of the linked list), or 0
+    /// if the key does not exist. This is a low-level API.
+    pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> io::Result<LinkOffset> {
+        let mut offset = self.root.radix_offset;
+        let mut iter = Base16Iter::from_base256(key);
+
+        while offset != 0 {
+            // Read the entry at "offset"
+            match self.peek_type(offset)? {
+                TYPE_RADIX => {
+                    match iter.next() {
+                        None => {
+                            // The key ends at this Radix entry.
+                            return self.peek_radix_entry_link_offset(offset)
+                                .map(|v| LinkOffset(v));
+                        }
+                        Some(x) => {
+                            // Should follow the `x`-th child in the Radix entry.
+                            offset = self.peek_radix_entry_child(offset, x)?;
+                        }
+                    }
+                }
+                TYPE_LEAF => {
+                    // Meet a leaf. If key matches, return the LinkOffset.
+                    return self.peek_leaf_entry_link_offset_if_matched(offset, key.as_ref())
+                        .map(|v| LinkOffset(v));
+                }
+                _ => return Err(InvalidData.into()),
+            }
+        }
+
+        // Not found
+        Ok(LinkOffset(0))
     }
 
     /// Return the type_int (TYPE_RADIX, TYPE_LEAF, ...) for a given offset.
