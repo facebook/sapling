@@ -332,8 +332,13 @@ Test profile discovery
   > guido_van_rossum
   > EOF
   $ touch profiles/bar/python
-  $ hg add -q profiles
-  $ hg commit -qm 'created profiles'
+  $ mkdir hidden
+  $ cat > hidden/outsidesparseprofile <<EOF
+  > A non-empty file to show that a sparse profile has an impact in terms of
+  > file count and bytesize.
+  > EOF
+  $ hg add -q profiles hidden
+  $ hg commit -qm 'created profiles and some hidden data'
   $ hg sparse --enable-profile profiles/foo/spam
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
@@ -440,6 +445,11 @@ We can look at invididual profiles:
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
   
+  Size impact compared to a full checkout
+  =======================================
+  
+  file count    7 (87.50%)
+  
   Additional metadata
   ===================
   
@@ -449,16 +459,29 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
+    .hg*
     profiles
 
   $ hg sparse explain profiles/bar/eggs -T json
   [
    {
     "excludes": [],
-    "includes": ["profiles"],
+    "includes": [".hg*", "profiles"],
     "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs",
-    "profiles": []
+    "profiles": [],
+    "stats": {"filecount": 7, "filecountpercentage": 87.5}
+   }
+  ]
+  $ hg sparse explain profiles/bar/eggs -T json --verbose
+  [
+   {
+    "excludes": [],
+    "includes": [".hg*", "profiles"],
+    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
+    "path": "profiles/bar/eggs",
+    "profiles": [],
+    "stats": {"filecount": 7, "filecountpercentage": 87.5, "totalsize": 540}
    }
   ]
   $ hg sparse explain profiles/bar/eggs
@@ -470,6 +493,11 @@ We can look at invididual profiles:
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
   
+  Size impact compared to a full checkout
+  =======================================
+  
+  file count    7 (87.50%)
+  
   Additional metadata
   ===================
   
@@ -479,9 +507,10 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
+    .hg*
     profiles
 
-  $ hg sparse explain profiles/bar/eggs profiles/foo/monty profiles/nonsuch
+  $ hg sparse explain profiles/bar/eggs --verbose
   profiles/bar/eggs
   
   Base profile including the profiles directory
@@ -490,6 +519,12 @@ We can look at invididual profiles:
   This is a base profile, you really want to include this one if you want to be
   able to edit profiles. In addition, this profiles has some metadata.
   
+  Size impact compared to a full checkout
+  =======================================
+  
+  file count    7 (87.50%)
+  total size    540 bytes
+  
   Additional metadata
   ===================
   
@@ -499,12 +534,45 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
+    .hg*
+    profiles
+
+  $ hg sparse explain profiles/bar/eggs profiles/foo/monty profiles/nonsuch
+  The profile profiles/nonsuch was not found
+  profiles/bar/eggs
+  
+  Base profile including the profiles directory
+  """""""""""""""""""""""""""""""""""""""""""""
+  
+  This is a base profile, you really want to include this one if you want to be
+  able to edit profiles. In addition, this profiles has some metadata.
+  
+  Size impact compared to a full checkout
+  =======================================
+  
+  file count    7 (87.50%)
+  
+  Additional metadata
+  ===================
+  
+  foo           bar baz and a whole lot more.
+  team          me, myself and I
+  
+  Inclusion rules
+  ===============
+  
+    .hg*
     profiles
   
   profiles/foo/monty
   
   (untitled)
   """"""""""
+  
+  Size impact compared to a full checkout
+  =======================================
+  
+  file count    7 (87.50%)
   
   Inclusion rules
   ===============
@@ -516,9 +584,8 @@ We can look at invididual profiles:
   ===============
   
     guido_van_rossum
-  The profile profiles/nonsuch was not found
-  [255]
 
-  $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n"
+  $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n{stats.filecount}\n"
   profiles/bar/eggs
   Base profile including the profiles directory
+  7

@@ -8,6 +8,8 @@
 """allow sparse checkouts of the working directory
 """
 
+from __future__ import division
+
 from mercurial import (
     util,
     cmdutil,
@@ -452,8 +454,9 @@ def _setupsubcommands(ui):
     extensions.wrapfunction(help._helpdispatch, 'helpcmd', helpsubcommands)
     extensions.wrapfunction(cmdutil, 'findpossible', findpossible)
 
-@attr.s(frozen=True, slots=True)
+@attr.s(frozen=True, slots=True, cmp=False)
 class SparseConfig(object):
+    path = attr.ib()
     includes = attr.ib()
     excludes = attr.ib()
     profiles = attr.ib()
@@ -554,24 +557,32 @@ def _wraprepo(ui, repo):
 
             metadata = {key: '\n'.join(value).strip()
                         for key, value in metadata.items()}
-            return SparseConfig(includes, excludes, profiles, metadata)
+            return SparseConfig(
+                filename, includes, excludes, profiles, metadata)
 
-        def getsparsepatterns(self, rev):
+        def getsparsepatterns(self, rev, config=None):
             """Produce the full sparse config for a revision as a SparseConfig
 
             This includes all patterns from included profiles, transitively.
 
+            if config is None, use the active profile, in .hg/sparse
+
             """
             # Use unfiltered to avoid computing hidden commits
-            repo = self.unfiltered()
-            if not self.vfs.exists('sparse'):
-                return SparseConfig(set(), set(), [])
             if rev is None:
-                raise error.Abort(_("cannot parse sparse patterns from " +
-                    "working copy"))
+                raise error.Abort(
+                    _("cannot parse sparse patterns from working copy"))
 
-            raw = self.vfs.read('sparse')
-            includes, excludes, profiles = self.readsparseconfig(raw)
+            repo = self.unfiltered()
+            if config is None:
+                if not self.vfs.exists('sparse'):
+                    return SparseConfig(None, set(), set(), [])
+
+                raw = self.vfs.read('sparse')
+                config = self.readsparseconfig(
+                    raw, filename=self.vfs.join('sparse'))
+
+            includes, excludes, profiles = config
 
             ctx = repo[rev]
             if profiles:
@@ -604,7 +615,9 @@ def _wraprepo(ui, repo):
 
             if includes:
                 includes.add('.hg*')
-            return SparseConfig(includes, excludes, profiles)
+            return SparseConfig(
+                '<aggregated from %s>'.format(config.path),
+                includes, excludes, profiles)
 
         def getrawprofile(self, profile, changeid):
             repo = self.unfiltered()
@@ -622,10 +635,10 @@ def _wraprepo(ui, repo):
                 return repo.filectx(profile, changeid=changeid).data()
 
         def sparsechecksum(self, filepath):
-            fh = open(filepath)
-            return hashlib.sha1(fh.read()).hexdigest()
+            with open(filepath) as fh:
+                return hashlib.sha1(fh.read()).hexdigest()
 
-        def _sparsesignature(self, includetemp=True):
+        def _sparsesignature(self, includetemp=True, config=None):
             """Returns the signature string representing the contents of the
             current project sparse configuration. This can be used to cache the
             sparse matcher for a given set of revs."""
@@ -638,6 +651,10 @@ def _wraprepo(ui, repo):
 
             if signature is None or (includetemp and tempsignature is None):
                 signature = 0
+                if config is None:
+                    sparsepath = self.vfs.join('sparse')
+                else:
+                    sparsepath = config.path
                 try:
                     sparsepath = self.vfs.join('sparse')
                     signature = self.sparsechecksum(sparsepath)
@@ -653,7 +670,7 @@ def _wraprepo(ui, repo):
                     except (OSError, IOError):
                         pass
                     signaturecache['tempsignature'] = tempsignature
-            return '%s %s' % (str(signature), str(tempsignature))
+            return '%s:%s' % (signature, tempsignature)
 
         def invalidatecaches(self):
             self.invalidatesignaturecache()
@@ -663,31 +680,47 @@ def _wraprepo(ui, repo):
             self.signaturecache.clear()
 
         def sparsematch(self, *revs, **kwargs):
-            """Returns the sparse match function for the given revs.
+            """Returns the sparse match function for the given revs
 
             If multiple revs are specified, the match function is the union
             of all the revs.
 
             `includetemp` is used to indicate if the temporarily included file
             should be part of the matcher.
+
+            `config` can be used to specify a different sparse profile
+            from the default .hg/sparse active profile
+
+            """
+            return self._sparsematch_and_key(*revs, **kwargs)[0]
+
+        def _sparsematch_and_key(self, *revs, **kwargs):
+            """Implementation of sparsematch() with the cache key included.
+
+            This lets us reuse the key elsewhere without having to hit each
+            profile file twice.
+
             """
             if not revs or revs == (None,):
                 revs = [self.changelog.rev(node) for node in
                     self.dirstate.parents() if node != nullid]
 
             includetemp = kwargs.get('includetemp', True)
-            signature = self._sparsesignature(includetemp=includetemp)
+            config = kwargs.get('config')
+            signature = self._sparsesignature(
+                includetemp=includetemp, config=config)
 
-            key = '%s %s' % (str(signature), ' '.join([str(r) for r in revs]))
+            key = '%s:%s' % (signature, ':'.join([str(r) for r in revs]))
 
             result = self.sparsecache.get(key, None)
             if result:
-                return result
+                return result, key
 
             matchers = []
             for rev in revs:
                 try:
-                    includes, excludes, profiles = self.getsparsepatterns(rev)
+                    includes, excludes, profiles = self.getsparsepatterns(
+                        rev, config)
 
                     if includes or excludes:
                         # Explicitly include subdirectories of includes so
@@ -724,7 +757,7 @@ def _wraprepo(ui, repo):
 
             self.sparsecache[key] = result
 
-            return result
+            return result, key
 
         def getactiveprofiles(self):
             # Use unfiltered to avoid computing hidden commits
@@ -873,6 +906,107 @@ def _discover(ui, repo):
                 PROFILE_INCLUDED if p in included else
                 PROFILE_INACTIVE),
             repo.readsparseconfig(raw, filename=p).metadata)
+
+def _profilesizeinfo(ui, repo, *config, **kwargs):
+    """Get size stats for a given set of profiles
+
+    Returns a dictionary of config -> (count, bytes) tuples. The
+    special key `None` represents the total manifest count and
+    bytecount. bytes is the total size of the files.
+
+    Note: for performance reasons we don't calculate the total repository size
+    and the value for the `None` key is always set to (count, None) to reflect
+    this.
+
+    """
+    try:
+        cache = extensions.find('simplecache')
+        cacheget = functools.partial(
+            cache.cacheget, serializer=cache.jsonserializer, ui=ui)
+        cacheset = functools.partial(
+            cache.cacheset, serializer=cache.jsonserializer, ui=ui)
+    except KeyError:
+        cacheget = cacheset = lambda *args: None
+
+    collectsize = kwargs.get('collectsize', False)
+
+    results = {}
+    matchers = {}
+    to_store = {}
+
+    ctx = repo['.']
+
+    templ = 'sparseprofilestats:%s:{}' % util.split(repo.root)[-1]
+    def _genkey(path, *parts):
+        # paths need to be ascii-safe with
+        path = path.replace('/', '__')
+        return templ.format(':'.join((path,) + parts))
+
+    key = _genkey('unfiltered', ctx.hex())
+    cached = cacheget(key)
+    results[None] = cached if cached else [0, None]
+    if cached is None:
+        # gather complete working copy data
+        matchers[None] = matchmod.always(repo.root, repo.root)
+        to_store[None] = key
+
+    for c in config:
+        matcher, key = repo._sparsematch_and_key(
+            ctx.hex(), includetemp=False, config=c)
+        key = _genkey(c.path, key, str(collectsize))
+        cached = cacheget(key)
+        if not cached and not collectsize:
+            # if not collecting the full size, but we have a cached copy
+            # for a full run, use the file count from that
+            cached = cacheget(_genkey(c.path, key, 'True'))
+            cached = cached and [cached[0], 0]
+        results[c] = cached or [0, 0]
+        if cached is None:
+            matchers[c] = matcher
+            to_store[c] = key
+
+    if matchers:
+        mf = ctx.manifest()
+        if results[None][0]:
+            # use cached working copy size
+            totalfiles = results[None][0]
+        else:
+            with progress.spinner(ui, 'calculating total manifest size'):
+                try:
+                    totalfiles = len(mf)
+                except AttributeError:
+                    # treemanifest does not implement __len__ :-(
+                    totalfiles = sum(1 for __ in mf)
+
+        if collectsize and len(matchers) - (None in matchers):
+            # we may need to prefetch file data, to calculate the size of each
+            # profile
+            try:
+                remotefilelog = extensions.find('remotefilelog')
+            except KeyError:
+                pass
+            else:
+                if remotefilelog.shallowrepo.requirement in repo.requirements:
+                    profilematchers = unionmatcher(
+                        [matchers[k] for k in matchers if k])
+                    repo.prefetch(repo.revs('.'), matcher=profilematchers)
+
+        with progress.bar(ui, _('calculating'), total=totalfiles) as prog:
+            # only matchers for which there was no cache are processed
+            for file in ctx.walk(unionmatcher(matchers.values())):
+                prog.value += 1
+                for c, matcher in matchers.items():
+                    if matcher(file):
+                        results[c][0] += 1
+                        if collectsize and c is not None:
+                            results[c][1] += repo.filectx(
+                                file, changeid='.').size()
+
+    results = {k: tuple(v) for k, v in results.items()}
+    for c, key in to_store.items():
+        cacheset(key, results[c])
+
+    return results
 
 @command('^sparse', [
     ('I', 'include', False, _('include files in the sparse checkout')),
@@ -1081,6 +1215,7 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
         PROFILE_INCLUDED: 'included',
         PROFILE_ACTIVE: 'active',
     }
+    ui.pager('sparse list')
     with ui.formatter('sparse', opts) as fm:
         if fm.isplain():
             ui.write_err(
@@ -1103,28 +1238,58 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
 
 @subcmd('explain')
 def _explainprofile(cmd, ui, repo, *profiles, **opts):
-    """Show information on individual profiles"""
+    """Show information on individual profiles
+
+    If --verbose is given, calculates the file size impact of a profile (slow).
+    """
     if ui.plain() and not opts.get('template'):
         hint = _('invoke with -T/--template to control output format')
         raise error.Abort(_('must specify a template in plain mode'), hint=hint)
 
+    if not profiles:
+        raise error.Abort(_('no profiles specified'))
+
+    configs = []
+    for i, p in enumerate(profiles):
+        try:
+            raw = repo.getrawprofile(p, '.')
+        except KeyError:
+            ui.warn(_('The profile %s was not found\n') % p)
+            exitcode = 255
+            continue
+        profile = repo.readsparseconfig(raw, p)
+        configs.append(profile)
+
+    stats = _profilesizeinfo(ui, repo, *configs, collectsize=ui.verbose)
+    filecount, totalsize = stats[None]
+
     exitcode = 0
+
+    def sortedsets(d):
+        return {k: sorted(v) if isinstance(v, set) else v for k, v in d.items()}
+
+    ui.pager('sparse explain')
     with ui.formatter('sparse', opts) as fm:
-        for i, p in enumerate(profiles):
-            try:
-                raw = repo.getrawprofile(p, '.')
-            except KeyError:
-                ui.warn(_('The profile %s was not found\n') % p)
-                exitcode = 255
-                continue
+        for i, profile in enumerate(configs):
             if i:
                 fm.plain('\n')
             fm.startitem()
 
-            fm.write('path', '%s\n\n', p)
+            fm.write('path', '%s\n\n', profile.path)
 
-            profile = repo.readsparseconfig(raw, p)
-            fm.data(**attr.asdict(profile))
+            pfilecount, ptotalsize = stats.get(profile, (-1, -1))
+            pfileperc = 0.0
+            if pfilecount > -1 and filecount > 0:
+                pfileperc = (pfilecount / filecount) * 100
+            profilestats = {
+                'filecount': pfilecount, 'filecountpercentage': pfileperc
+            }
+            if ptotalsize:
+                profilestats['totalsize'] = ptotalsize
+            fm.data(
+                stats=profilestats,
+                **sortedsets(attr.asdict(profile, retain_collection_types=True))
+            )
 
             if fm.isplain():
                 md = profile.metadata
@@ -1135,6 +1300,18 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
                 description = md.get('description')
                 if description:
                     lines.append('%s\n\n' % description)
+
+                if pfileperc or ptotalsize:
+                    lines.append(minirst.subsection(
+                        _('Size impact compared to a full checkout')))
+
+                    if pfileperc:
+                        lines.append(':file count: {:d} ({:.2f}%)\n'.format(
+                            pfilecount, pfileperc))
+                    if ptotalsize:
+                        lines.append(':total size: {:s}\n'.format(
+                            util.bytecount(ptotalsize)))
+                    lines.append('\n')
 
                 other = md.viewkeys() - {'title', 'description'}
                 if other:
@@ -1560,30 +1737,16 @@ def _cwdlist(repo):
         marker = ' ' if entry in checkedoutentries else '-'
         ui.status("%s %s\n" % (marker, entry))
 
-class forceincludematcher(object):
+class forceincludematcher(matchmod.basematcher):
     """A matcher that returns true for any of the forced includes before testing
     against the actual matcher."""
     def __init__(self, matcher, includes):
+        super(forceincludematcher, self).__init__(matcher._root, matcher._cwd)
         self._matcher = matcher
         self._includes = includes
 
     def __call__(self, value):
         return value in self._includes or self._matcher(value)
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
 
     def visitdir(self, dir):
         if any(True for path in self._includes if path.startswith(dir)):
@@ -1597,65 +1760,20 @@ class forceincludematcher(object):
             sha1.update(include + '\0')
         return sha1.hexdigest()
 
-class unionmatcher(object):
-    """A matcher that is the union of several matchers."""
-    def __init__(self, matchers):
-        self._matchers = matchers
-
-    def __call__(self, value):
-        for match in self._matchers:
-            if match(value):
-                return True
-        return False
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
-
-    def visitdir(self, dir):
-        for match in self._matchers:
-            if match.visitdir(dir):
-                return True
-        return False
-
+class unionmatcher(matchmod.unionmatcher):
     def hash(self):
         sha1 = hashlib.sha1()
         for m in self._matchers:
             sha1.update(_hashmatcher(m))
         return sha1.hexdigest()
 
-class negatematcher(object):
+class negatematcher(matchmod.basematcher):
     def __init__(self, matcher):
+        super(negatematcher, self).__init__(matcher._root, matcher._cwd)
         self._matcher = matcher
 
     def __call__(self, value):
         return not self._matcher(value)
-
-    def always(self):
-        return False
-
-    def files(self):
-        return []
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def visitdir(self, dir):
-        return True
 
     def hash(self):
         sha1 = hashlib.sha1()

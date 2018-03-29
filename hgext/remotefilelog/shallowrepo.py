@@ -194,15 +194,16 @@ def wraprepo(repo):
 
             runshellcommand(cmd, encoding.environ)
 
-        def prefetch(self, revs, base=None, pats=None, opts=None):
+        def prefetch(self, revs, base=None, pats=None, opts=None, matcher=None):
             """Prefetches all the necessary file revisions for the given revs
             Optionally runs repack in background
             """
             with repo._lock(repo.svfs, 'prefetchlock', True, None, None,
                             _('prefetching in %s') % repo.origroot):
-                self._prefetch(revs, base, pats, opts)
+                self._prefetch(revs, base, pats, opts, matcher)
 
-        def _prefetch(self, revs, base=None, pats=None, opts=None):
+        def _prefetch(
+                self, revs, base=None, pats=None, opts=None, matcher=None):
             fallbackpath = self.fallbackpath
             if fallbackpath:
                 # If we know a rev is on the server, we should fetch the server
@@ -237,7 +238,8 @@ def wraprepo(repo):
                     ctx = repo[rev]
                     if pats:
                         m = scmutil.match(ctx, pats, opts)
-                    sparsematch = repo.maybesparsematch(rev)
+                    if matcher is None:
+                        matcher = repo.maybesparsematch(rev)
 
                     mfnode = ctx.manifestnode()
                     mfctx = mfl[mfnode]
@@ -253,8 +255,8 @@ def wraprepo(repo):
                     diff = mfdict.iteritems()
                     if pats:
                         diff = (pf for pf in diff if m(pf[0]))
-                    if sparsematch:
-                        diff = (pf for pf in diff if sparsematch(pf[0]))
+                    if matcher:
+                        diff = (pf for pf in diff if matcher(pf[0]))
                     if rev not in localrevs:
                         serverfiles.update(diff)
                     else:

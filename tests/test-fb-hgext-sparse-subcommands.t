@@ -44,7 +44,8 @@ test sparse subcommands (help, verbose)
   
    list           List available sparse profiles - Show all available sparse
                   profiles, with the active profiles marked.
-   explain        Show information on individual profiles
+   explain        Show information on individual profiles - If --verbose is
+                  given, calculates the file size impact of a profile (slow).
    include        include files in the sparse checkout
    exclude        exclude files in the sparse checkout
    delete         delete an include/exclude rule
