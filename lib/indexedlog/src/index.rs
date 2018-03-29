@@ -694,6 +694,39 @@ impl Index {
         }
     }
 
+    /// Return a reference to a Key pointed by a Leaf entry.
+    #[inline]
+    fn peek_leaf_entry_key(&self, offset: u64) -> io::Result<&[u8]> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            let leaf = &self.dirty_leafs[index];
+            self.peek_key_entry_content(leaf.key_offset)
+        } else {
+            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
+            non_dirty(Ok(key_offset))?;
+            self.peek_key_entry_content(key_offset)
+        }
+    }
+
+    /// Return the link offset stored in a leaf entry.
+    fn peek_leaf_entry_link_offset(&self, offset: u64) -> io::Result<u64> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            let leaf = &self.dirty_leafs[index];
+            Ok(leaf.link_offset)
+        } else {
+            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
+            non_dirty(Ok(key_offset))?;
+            non_dirty(
+                self.buf
+                    .read_vlq_at(offset as usize + 1 + vlq_len)
+                    .map(|(v, _)| v),
+            )
+        }
+    }
+
     /// Return the link offset stored in a leaf entry if the key matches.
     /// Otherwise return 0.
     fn peek_leaf_entry_link_offset_if_matched(&self, offset: u64, key: &[u8]) -> io::Result<u64> {
@@ -802,6 +835,24 @@ impl Index {
             DirtyOffset::Link(index).into()
         } else {
             next_link_offset
+        }
+    }
+
+    /// Update link_offset of a leaf entry in-place. Copy on write. Return the new leaf_offset
+    /// if it's copied from disk.
+    ///
+    /// Note: the old leaf is expected to be no longer needed. If that's not true, don't call
+    /// this function.
+    #[inline]
+    fn set_leaf_link(&mut self, offset: u64, link_offset: u64) -> io::Result<u64> {
+        debug_assert_eq!(DirtyOffset::peek_type(offset), TYPE_LEAF);
+        if offset < DIRTY_OFFSET {
+            let entry = Leaf::read_from(&self.buf, offset)?;
+            Ok(self.create_leaf_entry(link_offset, entry.key_offset))
+        } else {
+            let index = DirtyOffset::peek_index(offset);
+            self.dirty_leafs[index].link_offset = link_offset;
+            Ok(offset)
         }
     }
 
