@@ -42,9 +42,9 @@ if __name__ == '__main__':
 extern crate changesets;
 extern crate memblob;
 extern crate dbbookmarks;
+extern crate dieselfilenodes;
 extern crate mercurial_types;
 extern crate memheads;
-extern crate memlinknodes;
 extern crate blobrepo;
 extern crate blobstore;
 extern crate ascii;
@@ -60,9 +60,9 @@ use bytes::Bytes;
 use changesets::{Changesets, ChangesetInsert, SqliteChangesets};
 use memblob::EagerMemblob;
 use dbbookmarks::SqliteDbBookmarks;
+use dieselfilenodes::SqliteFilenodes;
 use mercurial_types::{HgChangesetId, NodeHash, RepositoryId};
 use memheads::MemHeads;
-use memlinknodes::MemLinknodes;
 use blobrepo::BlobRepo;
 use ascii::AsciiString;
 use blobstore::Blobstore;
@@ -76,7 +76,8 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
         .expect("cannot create in-memory bookmarks table"));
     let heads = Arc::new(MemHeads::new());
     let blobs = Arc::new(EagerMemblob::new());
-    let linknodes = Arc::new(MemLinknodes::new());
+    let filenodes = Arc::new(SqliteFilenodes::in_memory()
+        .expect("cannot create in-memory filenodes"));
     let changesets = Arc::new(SqliteChangesets::in_memory()
         .expect("cannot create in-memory changeset table"));
     let repo_id = RepositoryId::new(0);
@@ -150,19 +151,10 @@ pub fn getrepo(logger: Option<Logger>) -> BlobRepo {
                     'blobs.put(String::from("{}"), Bytes::from_static(b"\\x{}")).wait().expect("Blob put failed");'.
                     format(key, blobdata)
                 )
-        for linknode in glob.glob(
-            os.path.join(args.source, "linknodes", "linknode-*")
-        ):
-            with open(linknode, "rb") as data:
-                linknode_data = "\\x".join(chunk_string(data.read().hex()))
-                writeline(
-                    'linknodes.add_data_encoded(&b"\\x{}"[..]).expect("Linknode add failed");'.
-                    format(linknode_data)
-                )
         rs.writelines(
             """
     let logger = logger.unwrap_or(Logger::root(Discard {}.ignore_res(), o!()));
-    BlobRepo::new(logger, heads, bookmarks, blobs, linknodes, changesets, repo_id)
+    BlobRepo::new(logger, heads, bookmarks, blobs, filenodes, changesets, repo_id)
 }
 """
         )

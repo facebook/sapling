@@ -35,9 +35,10 @@ extern crate bookmarks;
 extern crate changesets;
 extern crate dbbookmarks;
 extern crate delayblob;
+extern crate dieselfilenodes;
 extern crate fileblob;
 extern crate fileheads;
-extern crate filelinknodes;
+extern crate filenodes;
 #[macro_use]
 extern crate futures_ext;
 extern crate heads;

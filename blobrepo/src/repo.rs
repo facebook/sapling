@@ -30,16 +30,15 @@ use bookmarks::{self, Bookmarks};
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use dbbookmarks::SqliteDbBookmarks;
 use delayblob::DelayBlob;
+use dieselfilenodes::{SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use fileheads::FileHeads;
-use filelinknodes::FileLinknodes;
+use filenodes::Filenodes;
 use heads::Heads;
-use linknodes::Linknodes;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use memlinknodes::MemLinknodes;
-use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, MPath, Manifest, NodeHash,
-                      Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, HgFileNodeId, MPath,
+                      Manifest, NodeHash, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
@@ -58,7 +57,7 @@ pub struct BlobRepo {
     blobstore: Arc<Blobstore>,
     bookmarks: Arc<Bookmarks>,
     heads: Arc<Heads>,
-    linknodes: Arc<Linknodes>,
+    filenodes: Arc<Filenodes>,
     changesets: Arc<Changesets>,
     repoid: RepositoryId,
 }
@@ -69,7 +68,7 @@ impl BlobRepo {
         heads: Arc<Heads>,
         bookmarks: Arc<Bookmarks>,
         blobstore: Arc<Blobstore>,
-        linknodes: Arc<Linknodes>,
+        filenodes: Arc<Filenodes>,
         changesets: Arc<Changesets>,
         repoid: RepositoryId,
     ) -> Self {
@@ -78,7 +77,7 @@ impl BlobRepo {
             heads,
             bookmarks,
             blobstore,
-            linknodes,
+            filenodes,
             changesets,
             repoid,
         }
@@ -94,17 +93,19 @@ impl BlobRepo {
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let linknodes = FileLinknodes::open(path.join("linknodes"))
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        let filenodes = SqliteFilenodes::open_or_create(
+            path.join("filenodes").to_string_lossy(),
+            DEFAULT_INSERT_CHUNK_SIZE,
+        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::open(path.join("changesets").to_string_lossy())
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+            .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         Ok(Self::new(
             logger,
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
-            Arc::new(linknodes),
+            Arc::new(filenodes),
             Arc::new(changesets),
             repoid,
         ))
@@ -133,11 +134,13 @@ impl BlobRepo {
         let options = rocksdb::Options::new().create_if_missing(true);
         let blobstore = Rocksblob::open_with_options(path.join("blobs"), options)
             .context(ErrorKind::StateOpen(StateOpenError::Blobstore))?;
-        let linknodes = FileLinknodes::open(path.join("linknodes"))
-            .context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        let filenodes = SqliteFilenodes::open_or_create(
+            path.join("filenodes").to_string_lossy(),
+            DEFAULT_INSERT_CHUNK_SIZE,
+        ).context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::open_or_create(
             path.join("changesets").to_string_lossy(),
-        ).context(ErrorKind::StateOpen(StateOpenError::Linknodes))?;
+        ).context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
         let blobstore = DelayBlob::new(
             Box::new(blobstore),
@@ -154,7 +157,7 @@ impl BlobRepo {
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
-            Arc::new(linknodes),
+            Arc::new(filenodes),
             Arc::new(changesets),
             repoid,
         ))
@@ -171,7 +174,8 @@ impl BlobRepo {
             Arc::new(MemHeads::new()),
             Arc::new(SqliteDbBookmarks::in_memory()?),
             blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
-            Arc::new(MemLinknodes::new()),
+            Arc::new(SqliteFilenodes::in_memory()
+                .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?),
             Arc::new(SqliteChangesets::in_memory()
                 .context(ErrorKind::StateOpen(StateOpenError::Changesets))?),
             RepositoryId::new(0),
@@ -189,7 +193,8 @@ impl BlobRepo {
         // TODO(stash): use real bookmarks
         let bookmarks = SqliteDbBookmarks::in_memory()?;
         let blobstore = ManifoldBlob::new_with_prefix(bucket.to_string(), prefix, remote);
-        let linknodes = MemLinknodes::new();
+        let filenodes =
+            SqliteFilenodes::in_memory().context(ErrorKind::StateOpen(StateOpenError::Filenodes))?;
         let changesets = SqliteChangesets::in_memory()
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))?;
 
@@ -198,7 +203,7 @@ impl BlobRepo {
             Arc::new(heads),
             Arc::new(bookmarks),
             Arc::new(blobstore),
-            Arc::new(linknodes),
+            Arc::new(filenodes),
             Arc::new(changesets),
             repoid,
         ))
@@ -278,7 +283,17 @@ impl BlobRepo {
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
-        self.linknodes.get(path, node)
+        self.filenodes
+            .get_filenode(&path, &HgFileNodeId::new(*node), &self.repoid)
+            .and_then({
+                let node = *node;
+                move |filenode| {
+                    filenode
+                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
+                        .map(|filenode| filenode.linknode.into_nodehash())
+                }
+            })
+            .boxify()
     }
 
     pub fn get_generation_number(&self, cs: &HgChangesetId) -> BoxFuture<Option<u64>, Error> {
@@ -412,7 +427,7 @@ impl BlobRepo {
         extra: BTreeMap<Vec<u8>, Vec<u8>>,
         comments: String,
     ) -> ChangesetHandle {
-        let entry_processor = UploadEntries::new(self.blobstore.clone());
+        let entry_processor = UploadEntries::new(self.blobstore.clone(), self.repoid.clone());
         let (signal_parent_ready, can_be_parent) = oneshot::channel();
         // This is used for logging, so that we can tie up all our pieces without knowing about
         // the final commit hash
@@ -434,7 +449,7 @@ impl BlobRepo {
             upload_entries
                 .join(parents_data)
                 .and_then({
-                    let linknodes = self.linknodes.clone();
+                    let filenodes = self.filenodes.clone();
                     let blobstore = self.blobstore.clone();
                     let heads = self.heads.clone();
                     let logger = self.logger.clone();
@@ -466,7 +481,7 @@ impl BlobRepo {
                                 blobcs
                                     .save(blobstore)
                                     .join(heads.add(&cs_id))
-                                    .join(entry_processor.finalize(linknodes, cs_id))
+                                    .join(entry_processor.finalize(filenodes, cs_id))
                                     .map(move |_| {
                                         // We deliberately eat this error - this is only so that
                                         // another changeset can start uploading to the blob store
@@ -536,7 +551,7 @@ impl Clone for BlobRepo {
             heads: self.heads.clone(),
             bookmarks: self.bookmarks.clone(),
             blobstore: self.blobstore.clone(),
-            linknodes: self.linknodes.clone(),
+            filenodes: self.filenodes.clone(),
             changesets: self.changesets.clone(),
             repoid: self.repoid.clone(),
         }

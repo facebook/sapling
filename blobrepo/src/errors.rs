@@ -18,7 +18,7 @@ pub enum StateOpenError {
     Bookmarks,
     Blobstore,
     Changesets,
-    Linknodes,
+    Filenodes,
 }
 
 impl fmt::Display for StateOpenError {
@@ -30,7 +30,7 @@ impl fmt::Display for StateOpenError {
             Bookmarks => write!(f, "bookmarks"),
             Blobstore => write!(f, "blob store"),
             Changesets => write!(f, "changesets"),
-            Linknodes => write!(f, "linknodes"),
+            Filenodes => write!(f, "filenodes"),
         }
     }
 }
@@ -56,6 +56,7 @@ pub enum ErrorKind {
     #[fail(display = "Path {} appears multiple times in manifests", _0)] DuplicateEntry(RepoPath),
     #[fail(display = "Duplicate manifest hash {}", _0)] DuplicateManifest(NodeHash),
     #[fail(display = "Missing entries in new changeset {}", _0)] MissingEntries(NodeHash),
+    #[fail(display = "Filenode is missing: {} {}", _0, _1)] MissingFilenode(RepoPath, NodeHash),
     #[fail(display = "Some manifests do not exist")] MissingManifests,
     #[fail(display = "Parents failed to complete")] ParentsFailed,
     #[fail(display = "Expected {} to be a manifest, found a {} instead", _0, _1)]

@@ -9,22 +9,24 @@ use std::mem;
 use std::sync::{Arc, Mutex};
 
 use failure::{err_msg, Compat};
+use futures::IntoFuture;
 use futures::future::{self, Future, Shared, SharedError, SharedItem};
-use futures::stream::Stream;
+use futures::stream::{self, Stream};
 use futures::sync::oneshot;
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_stats::{Stats, Timed};
 use slog::Logger;
 use time_ext::DurationExt;
 use uuid::Uuid;
 
 use blobstore::Blobstore;
-use linknodes::{ErrorKind as LinknodeErrorKind, Linknodes};
-use mercurial_types::{Changeset, Entry, EntryId, MPath, Manifest, NodeHash, Parents, RepoPath,
-                      Time};
+use filenodes::{FilenodeInfo, Filenodes};
+use mercurial::file;
+use mercurial_types::{BlobNode, Changeset, Entry, EntryId, HgChangesetId, MPath, Manifest,
+                      NodeHash, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest::{self, Content};
 use mercurial_types::manifest_utils::{changed_entry_stream, EntryStatus};
-use mercurial_types::nodehash::HgManifestId;
+use mercurial_types::nodehash::{HgFileNodeId, HgManifestId};
 
 use BlobChangeset;
 use BlobRepo;
@@ -81,12 +83,13 @@ struct UploadEntriesState {
     /// uploaded child manifests
     required_entries: HashMap<RepoPath, EntryId>,
     /// All the blobs that have been uploaded in this changeset
-    uploaded_entries: HashMap<RepoPath, EntryId>,
+    uploaded_entries: HashMap<RepoPath, BlobEntry>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
     parents: HashSet<NodeHash>,
     blobstore: Arc<Blobstore>,
+    repoid: RepositoryId,
 }
 
 #[derive(Clone)]
@@ -95,13 +98,14 @@ pub struct UploadEntries {
 }
 
 impl UploadEntries {
-    pub fn new(blobstore: Arc<Blobstore>) -> Self {
+    pub fn new(blobstore: Arc<Blobstore>, repoid: RepositoryId) -> Self {
         Self {
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 required_entries: HashMap::new(),
                 uploaded_entries: HashMap::new(),
                 parents: HashSet::new(),
                 blobstore,
+                repoid,
             })),
         }
     }
@@ -187,9 +191,7 @@ impl UploadEntries {
     pub fn process_one_entry(&self, entry: &BlobEntry, path: RepoPath) -> BoxFuture<(), Error> {
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
-            inner
-                .uploaded_entries
-                .insert(path.clone(), *entry.get_hash());
+            inner.uploaded_entries.insert(path.clone(), entry.clone());
         }
         if entry.get_type() == manifest::Type::Tree {
             self.process_manifest(entry, path)
@@ -198,7 +200,7 @@ impl UploadEntries {
         }
     }
 
-    pub fn finalize(self, linknodes: Arc<Linknodes>, cs_id: NodeHash) -> BoxFuture<(), Error> {
+    pub fn finalize(self, filenodes: Arc<Filenodes>, cs_id: NodeHash) -> BoxFuture<(), Error> {
         let required_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
             let checks: Vec<_> = inner
@@ -236,21 +238,66 @@ impl UploadEntries {
         let linknodes = {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
-            let futures = uploaded_entries.into_iter().map(move |(path, entryid)| {
-                linknodes
-                    .add(path, &entryid.into_nodehash(), &cs_id)
-                    .or_else(|err| match err.downcast_ref::<LinknodeErrorKind>() {
-                        Some(&LinknodeErrorKind::AlreadyExists { .. }) => future::ok(()),
-                        _ => future::err(err),
-                    })
-            });
-            future::join_all(futures).boxify()
+            let filenodeinfos = stream::iter_ok(uploaded_entries.into_iter())
+                .and_then(|(path, blobentry): (_, BlobEntry)| {
+                    blobentry
+                        .get_parents()
+                        .map(move |parents| (path, blobentry, parents))
+                })
+                .and_then(|(path, blobentry, parents)| {
+                    let copyfrom = compute_copy_from_info(&path, &blobentry, &parents);
+                    copyfrom.and_then(move |copyfrom| Ok((path, blobentry, parents, copyfrom)))
+                })
+                .map(move |(path, blobentry, parents, copyfrom)| {
+                    let (p1, p2) = parents.get_nodes();
+                    FilenodeInfo {
+                        path,
+                        filenode: HgFileNodeId::new(blobentry.get_hash().into_nodehash()),
+                        p1: p1.cloned().map(HgFileNodeId::new),
+                        p2: p2.cloned().map(HgFileNodeId::new),
+                        copyfrom,
+                        linknode: HgChangesetId::new(cs_id),
+                    }
+                })
+                .boxify();
+
+            filenodes.add_filenodes(filenodeinfos, &inner.repoid)
         };
 
         parent_checks
             .join3(required_checks, linknodes)
             .map(|_| ())
             .boxify()
+    }
+}
+
+fn compute_copy_from_info(
+    path: &RepoPath,
+    blobentry: &BlobEntry,
+    parents: &Parents,
+) -> BoxFuture<Option<(RepoPath, HgFileNodeId)>, Error> {
+    let parents = parents.clone();
+    match path {
+        &RepoPath::FilePath(_) => blobentry
+            .get_raw_content()
+            .and_then({
+                let parents = parents.clone();
+                move |blob| {
+                    let (p1, p2) = parents.get_nodes();
+                    file::File::new(BlobNode::new(blob, p1, p2))
+                        .copied_from()
+                        .map(|copiedfrom| {
+                            copiedfrom.map(|(path, node)| {
+                                (RepoPath::FilePath(path), HgFileNodeId::new(node))
+                            })
+                        })
+                }
+            })
+            .boxify(),
+        &RepoPath::RootPath | &RepoPath::DirectoryPath(_) => {
+            // No copy information for directories/repo roots
+            Ok(None).into_future().boxify()
+        }
     }
 }
 
