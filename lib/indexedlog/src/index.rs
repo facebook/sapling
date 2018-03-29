@@ -849,6 +849,19 @@ impl Index {
         }
     }
 
+    /// Return the value of a link entry.
+    fn peek_link_entry_value(&self, offset: u64) -> io::Result<u64> {
+        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LINK);
+        if offset >= DIRTY_OFFSET {
+            let index = DirtyOffset::peek_index(offset);
+            let link = &self.dirty_links[index];
+            Ok(link.value)
+        } else {
+            let (value, _) = self.buf.read_vlq_at(offset as usize + 1)?;
+            non_dirty(Ok(value))
+        }
+    }
+
     /// Return the link offset stored in a leaf entry if the key matches.
     /// Otherwise return 0.
     fn peek_leaf_entry_link_offset_if_matched(&self, offset: u64, key: &[u8]) -> io::Result<u64> {
@@ -1389,4 +1402,25 @@ mod tests {
         );
     }
 
+    quickcheck! {
+        fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
+            let dir = TempDir::new("index").expect("tempdir");
+            let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+
+            for (key, value) in &map {
+                index.insert(key, *value).expect("insert");
+            }
+
+            if flush {
+                let root_offset = index.flush().expect("flush");
+                index = Index::open(dir.path().join("a"), root_offset).expect("open");
+            }
+
+            map.iter().all(|(key, value)| {
+                let link_offset = index.get(key).expect("lookup").0;
+                assert!(link_offset > 0);
+                index.peek_link_entry_value(link_offset).expect("peek") == *value
+            })
+        }
+    }
 }
