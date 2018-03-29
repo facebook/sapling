@@ -26,7 +26,7 @@ pub struct FilenodeInfo {
     pub linknode: HgChangesetId,
 }
 
-pub trait Filenodes {
+pub trait Filenodes: Send + Sync {
     fn add_filenodes(
         &self,
         info: BoxStream<FilenodeInfo, Error>,
