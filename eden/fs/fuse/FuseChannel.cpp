@@ -992,33 +992,29 @@ void FuseChannel::processSession() {
     // We can look at turning this on once the main plumbing is complete.
     auto res = read(fuseDevice_.fd(), buf.data(), buf.size());
     if (res < 0) {
-      res = -errno;
-    }
+      int error = errno;
+      if (stop_.load(std::memory_order_relaxed)) {
+        break;
+      }
 
-    if (stop_.load(std::memory_order_relaxed)) {
-      break;
-    }
-
-    if (res == -EINTR || res == -EAGAIN) {
-      // If we got interrupted by a signal while reading the next
-      // fuse command, we will simply retry and read the next thing.
-      continue;
-    }
-    if (res == -ENOENT) {
-      // According to comments in the libfuse code:
-      // ENOENT means the operation was interrupted; it's safe to restart
-      continue;
-    }
-    if (res == -ENODEV) {
-      // ENODEV means the filesystem was unmounted
-      requestSessionExit(StopReason::UNMOUNTED);
-      break;
-    }
-    if (res < 0) {
-      XLOG(WARNING) << "error reading from fuse channel: "
-                    << folly::errnoStr(-res);
-      requestSessionExit(StopReason::FUSE_READ_ERROR);
-      break;
+      if (error == EINTR || error == EAGAIN) {
+        // If we got interrupted by a signal while reading the next
+        // fuse command, we will simply retry and read the next thing.
+        continue;
+      } else if (error == ENOENT) {
+        // According to comments in the libfuse code:
+        // ENOENT means the operation was interrupted; it's safe to restart
+        continue;
+      } else if (res == -ENODEV) {
+        // ENODEV means the filesystem was unmounted
+        requestSessionExit(StopReason::UNMOUNTED);
+        break;
+      } else {
+        XLOG(WARNING) << "error reading from fuse channel: "
+                      << folly::errnoStr(-res);
+        requestSessionExit(StopReason::FUSE_READ_ERROR);
+        break;
+      }
     }
 
     const auto arg_size = static_cast<size_t>(res);

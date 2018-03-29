@@ -10,6 +10,7 @@
 import os
 import resource
 import sys
+import threading
 
 from .lib import testcase
 
@@ -35,6 +36,10 @@ class TakeoverTest:
         return 'sqlite'
 
     def edenfs_logging_settings(self):
+        if self._testMethodName == 'test_takeover_with_io':
+            # test_takeover_with_io causes lots of I/O, so do not enable
+            # verbose logging of I/O operations in this test.
+            return {}
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
     def do_takeover_test(self):
@@ -135,6 +140,77 @@ class TakeoverTest:
             )
 
         return self.do_takeover_test()
+
+    def test_takeover_with_io(self):
+        num_threads = 4
+        write_chunk_size = 1024 * 1024
+        max_file_length = write_chunk_size * 100
+
+        # TODO: Setting this higher than 1 currently makes it likely that
+        # edenfs will crash during restart.
+        # There are still some other bugs we need to track down in the restart
+        # ordering.
+        num_restarts = 1
+
+        stop = threading.Event()
+        bufs = [b'x' * write_chunk_size, b'y' * write_chunk_size]
+
+        def do_io(thread_id, running_event):
+            path = os.path.join(
+                self.mount, 'src', 'test', 'data%d.log' % thread_id
+            )
+            with open(path, 'wb') as f:
+                # Use raw file descriptors to avoid going through python's I/O
+                # buffering code.
+                fd = f.fileno()
+
+                buf_idx = 0
+                buf = bufs[buf_idx]
+                offset = 0
+
+                # Repeatedly write and rewrite the same file,
+                #jalternating between two different data buffers.
+                running_event.set()
+                while True:
+                    os.pwrite(fd, buf, offset)
+                    if stop.is_set():
+                        return
+                    offset += len(buf)
+                    if offset >= max_file_length:
+                        buf_idx += 1
+                        buf = bufs[buf_idx % len(bufs)]
+                        offset = 0
+
+        # Log the mount points device ID at the start of the test
+        # (Just in case anything hangs and we need to abort the mount
+        # using /sys/fs/fuse/connections/<dev>/)
+        st = os.lstat(self.mount)
+        print('=== eden mount device=%d ===' % st.st_dev, file=sys.stderr)
+
+        # Start several threads doing I/O while we we perform a takeover
+        threads = []
+        try:
+            running_events = []
+            for n in range(num_threads):
+                running = threading.Event()
+                thread = threading.Thread(target=do_io, args=(n, running))
+                thread.start()
+                threads.append(thread)
+                running_events.append(running)
+
+            # Wait until all threads have started and are doing I/O
+            for event in running_events:
+                event.wait()
+
+            # Restart edenfs
+            for n in range(num_restarts):
+                print('=== beginning restart %d ===' % n, file=sys.stderr)
+                self.eden.graceful_restart()
+                print('=== restart %d complete ===' % n, file=sys.stderr)
+        finally:
+            stop.set()
+            for thread in threads:
+                thread.join()
 
     def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
         self
