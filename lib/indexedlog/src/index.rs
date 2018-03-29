@@ -43,8 +43,9 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
-use std::io::ErrorKind::InvalidData;
 use std::path::Path;
+
+use std::io::ErrorKind::InvalidData;
 
 use base16::Base16Iter;
 use lock::ScopedFileLock;
