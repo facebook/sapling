@@ -164,11 +164,13 @@ class dirstate(object):
     @rootcache('.hgignore')
     def _ignore(self):
         files = self._ignorefiles()
+        gitignore = matchmod.gitignorematcher(self._root, '')
         if not files:
-            return matchmod.never(self._root, '')
+            return gitignore
 
         pats = ['include:%s' % f for f in files]
-        return matchmod.match(self._root, '', [], pats, warn=self._ui.warn)
+        hgignore = matchmod.match(self._root, '', [], pats, warn=self._ui.warn)
+        return matchmod.unionmatcher([gitignore, hgignore])
 
     @propertycache
     def _slash(self):

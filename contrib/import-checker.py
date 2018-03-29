@@ -202,6 +202,7 @@ def populateextmods(localmods):
         'hgext.patchrmdir',
         'hgext.traceprof',
         'mercurial.cext.xdiff',
+        'mercurial.rust.matcher',
     ])
     return newlocalmods
 

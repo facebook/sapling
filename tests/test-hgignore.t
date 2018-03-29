@@ -1,9 +1,10 @@
   $ hg init ignorerepo
   $ cd ignorerepo
 
-debugignore with no hgignore should be deterministic:
+gitignore is used when there is no hgignore:
+
   $ hg debugignore
-  <nevermatcher>
+  <gitignorematcher>
 
 Issue562: .hgignore requires newline at end:
 
@@ -197,7 +198,7 @@ Test relative ignore path (issue4473):
   A b.o
 
   $ hg debugignore
-  <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
+  <unionmatcher matchers=[<gitignorematcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
 
   $ hg debugignore b.o
   b.o is ignored

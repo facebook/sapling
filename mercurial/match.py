@@ -12,6 +12,7 @@ import os
 import re
 
 from .i18n import _
+from .rust import matcher as rustmatcher
 from . import (
     error,
     pathutil,
@@ -369,6 +370,24 @@ class nevermatcher(basematcher):
 
     def __repr__(self):
         return '<nevermatcher>'
+
+class gitignorematcher(basematcher):
+    '''Match files specified by ".gitignore"s'''
+
+    def __init__(self, root, cwd, badfn=None):
+        super(gitignorematcher, self).__init__(root, cwd, badfn)
+        self._matcher = rustmatcher.gitignorematcher(root)
+
+    def matchfn(self, f):
+        # XXX: is_dir is set to True here for performance.
+        # It should be set to whether "f" is actually a directory or not.
+        return self._matcher.match_relative(f, True)
+
+    def visitdir(self, dir):
+        return not self._matcher.match_relative(dir, True)
+
+    def __repr__(self):
+        return '<gitignorematcher>'
 
 class patternmatcher(basematcher):
 
