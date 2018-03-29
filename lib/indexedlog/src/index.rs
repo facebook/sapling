@@ -643,6 +643,85 @@ impl Index {
             }
         }
     }
+
+    /// Copy a Radix entry to dirty_radixes. Return its offset.
+    /// If the Radix entry is already dirty. Return its offset unchanged.
+    #[inline]
+    fn copy_radix_entry(&mut self, offset: u64) -> io::Result<u64> {
+        if offset < DIRTY_OFFSET {
+            let entry = Radix::read_from(&self.buf, offset)?;
+            Ok(self.create_radix_entry(entry))
+        } else {
+            Ok(offset)
+        }
+    }
+
+    /// Append a Radix entry to dirty_radixes. Return its offset.
+    #[inline]
+    fn create_radix_entry(&mut self, entry: Radix) -> u64 {
+        let index = self.dirty_radixes.len();
+        self.dirty_radixes.push(entry);
+        DirtyOffset::Radix(index).into()
+    }
+
+    /// Set value of a child of a Radix entry.
+    #[inline]
+    fn set_radix_entry_child(&mut self, radix_offset: u64, i: u8, value: u64) {
+        debug_assert!(radix_offset >= DIRTY_OFFSET);
+        debug_assert_eq!(DirtyOffset::peek_type(radix_offset), TYPE_RADIX);
+        self.dirty_radixes[DirtyOffset::peek_index(radix_offset)].offsets[i as usize] = value;
+    }
+
+    /// Set value of the link offset of a Radix entry.
+    #[inline]
+    fn set_radix_entry_link(&mut self, radix_offset: u64, link_offset: u64) {
+        debug_assert!(radix_offset >= DIRTY_OFFSET);
+        debug_assert_eq!(DirtyOffset::peek_type(radix_offset), TYPE_RADIX);
+        self.dirty_radixes[DirtyOffset::peek_index(radix_offset)].link_offset = link_offset;
+    }
+
+    /// See `insert_advanced`. Create a new link entry if necessary and return its offset.
+    fn maybe_create_link_entry(
+        &mut self,
+        link_offset: u64,
+        value: Option<u64>,
+        link: Option<LinkOffset>,
+    ) -> u64 {
+        let next_link_offset = link.map_or(link_offset, |v| v.0);
+        if let Some(value) = value {
+            // Create a new Link entry
+            let new_link = Link {
+                value,
+                next_link_offset,
+            };
+            let index = self.dirty_links.len();
+            self.dirty_links.push(new_link);
+            DirtyOffset::Link(index).into()
+        } else {
+            next_link_offset
+        }
+    }
+
+    /// Append a Leaf entry to dirty_leafs. Return its offset.
+    #[inline]
+    fn create_leaf_entry(&mut self, link_offset: u64, key_offset: u64) -> u64 {
+        let index = self.dirty_leafs.len();
+        self.dirty_leafs.push(Leaf {
+            link_offset,
+            key_offset,
+        });
+        DirtyOffset::Leaf(index).into()
+    }
+
+    /// Append a Key entry to dirty_keys. Return its offset.
+    #[inline]
+    fn create_key_entry(&mut self, key: &[u8]) -> u64 {
+        let index = self.dirty_keys.len();
+        self.dirty_keys.push(Key {
+            key: Vec::from(key),
+        });
+        DirtyOffset::Key(index).into()
+    }
 }
 
 //// Debug Formatter
