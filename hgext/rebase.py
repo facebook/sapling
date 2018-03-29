@@ -322,7 +322,8 @@ class rebaseruntime(object):
     def _prepareabortorcontinue(self, isabort):
         try:
             self.restorestatus()
-            self.collapsemsg = restorecollapsemsg(self.repo, isabort)
+            if self.collapsef:
+                self.collapsemsg = restorecollapsemsg(self.repo, isabort)
         except error.RepoLookupError:
             if isabort:
                 clearstatus(self.repo)
@@ -860,11 +861,12 @@ def rebase(ui, repo, **opts):
                          '(%s)\n' % e))
                 ui.log("rebase", "", rebase_imm_restart=True,
                     rebase_imm_exception=str(e))
-                rbsrt.inmemory = False
+                inmemory = False
                 try:
                     _origrebase(ui, repo, rbsrt, **{'abort': True})
                 except Exception as e:
                     ui.warn(_("(couldn't abort rebase: %s)\n") % e.message)
+                rbsrt = rebaseruntime(repo, ui, inmemory, opts)
                 return _origrebase(ui, repo, rbsrt, **opts)
             else:
                 raise
