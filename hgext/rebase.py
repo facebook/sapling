@@ -861,7 +861,10 @@ def rebase(ui, repo, **opts):
                 ui.log("rebase", "", rebase_imm_restart=True,
                     rebase_imm_exception=str(e))
                 rbsrt.inmemory = False
-                _origrebase(ui, repo, rbsrt, **{'abort': True})
+                try:
+                    _origrebase(ui, repo, rbsrt, **{'abort': True})
+                except Exception as e:
+                    ui.warn(_("(couldn't abort rebase: %s)\n") % e.message)
                 return _origrebase(ui, repo, rbsrt, **opts)
             else:
                 raise
