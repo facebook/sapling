@@ -256,7 +256,7 @@ impl Root {
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
-        buf.write_vlq(self.radix_offset)?;
+        buf.write_vlq(translate_offset(self.radix_offset, offset_map))?;
         let len = buf.len() + 1;
         buf.write_vlq(len)?;
         writer.write_all(&buf)
