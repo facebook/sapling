@@ -1009,20 +1009,27 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
     return results
 
 @command('^sparse', [
-    ('I', 'include', False, _('include files in the sparse checkout')),
-    ('X', 'exclude', False, _('exclude files in the sparse checkout')),
-    ('d', 'delete', False, _('delete an include/exclude rule')),
     ('f', 'force', False, _('allow changing rules even with pending changes')),
-    ('', 'enable-profile', False, _('enables the specified profile')),
-    ('', 'disable-profile', False, _('disables the specified profile')),
-    ('', 'import-rules', False, _('imports rules from a file')),
-    ('', 'clear-rules', False, _('clears local include/exclude rules')),
-    ('', 'refresh', False, _('updates the working after sparseness changes')),
-    ('', 'reset', False, _('makes the repo full again')),
+    ('I', 'include', False, _('include files in the sparse checkout '
+                              '(DEPRECATED)')),
+    ('X', 'exclude', False, _('exclude files in the sparse checkout '
+                              '(DEPRECATED)')),
+    ('d', 'delete', False, _('delete an include/exclude rule '
+                             '(DEPRECATED)')),
+    ('', 'enable-profile', False, _('enables the specified profile '
+                                    '(DEPRECATED)')),
+    ('', 'disable-profile', False, _('disables the specified profile '
+                                     '(DEPRECATED)')),
+    ('', 'import-rules', False, _('imports rules from a file (DEPRECATED)')),
+    ('', 'clear-rules', False, _('clears local include/exclude rules '
+                                 '(DEPRECATED)')),
+    ('', 'refresh', False, _('updates the working after sparseness changes '
+                             '(DEPRECATED)')),
+    ('', 'reset', False, _('makes the repo full again (DEPRECATED)')),
     ('', 'cwd-list', False, _('list the full contents of the current '
-                              'directory')),
+                              'directory (DEPRECATED)')),
     ] + commands.templateopts,
-    _('[--OPTION] SUBCOMMAND | PATTERN...'))
+    _('[--OPTION] SUBCOMMAND ...'))
 def sparse(ui, repo, *pats, **opts):
     """make the current checkout sparse, or edit the existing checkout
 
@@ -1031,65 +1038,110 @@ def sparse(ui, repo, *pats, **opts):
     written to disk, or show up in any working copy operations. It does
     not affect files in history in any way.
 
-    Passing no arguments prints the currently applied sparse rules.
+    All the work is done in subcommands such as `hg sparse enableprofile`;
+    passing no subcommand prints the currently applied sparse rules.
 
-    --include and --exclude are used to add and remove files from the sparse
-    checkout. The effects of adding an include or exclude rule are applied
-    immediately. If applying the new rule would cause a file with pending
-    changes to be added or removed, the command will fail. Pass --force to
-    force a rule change even with pending changes (the changes on disk will
-    be preserved).
+    The `include` and `exclude` subcommands are used to add and remove files
+    from the sparse checkout, while delete removes an existing include/exclude
+    rule.
 
-    --delete removes an existing include/exclude rule. The effects are
-    immediate.
+    Sparse profiles can also be shared with other users of te repository by
+    committing a file with include and exclude rules in a separate file. Use the
+    `enableprofile` and `disableprofile` subcommands to enable or disable
+    such profiles. Changes to shared profiles are not applied until they have
+    been committed.
 
-    --refresh refreshes the files on disk based on the sparse rules. This is
-    only necessary if .hg/sparse was changed by hand.
+    See :hg:`help sparse <subcommand>` to get additional information.
 
-    --enable-profile and --disable-profile accept a path to a .hgsparse file.
-    This allows defining sparse checkouts and tracking them inside the
-    repository. This is useful for defining commonly used sparse checkouts for
-    many people to use. As the profile definition changes over time, the sparse
-    checkout will automatically be updated appropriately, depending on which
-    changeset is checked out. Changes to .hgsparse are not applied until they
-    have been committed.
+    .. container:: verbose
 
-    --import-rules accepts a path to a file containing rules in the .hgsparse
-    format, allowing you to add --include, --exclude and --enable-profile rules
-    in bulk. Like the --include, --exclude and --enable-profile switches, the
-    changes are applied immediately.
+      Sparse file format
+      ------------------
 
-    --clear-rules removes all local include and exclude rules, while leaving
-    any enabled profiles in place.
+      Structure
+      .........
 
-    --cwd-list list all the contents of the current directory. The files that
-    are excluded by the current sparse checkout are annotated with a hyphen
-    ('-') before the name.
+      Shared sparse profile files comprise of 4 sections: `%include` directives
+      that pull in another sparse profile, and `[metadata]`, `[include]` and
+      `[exclude]` sections.
 
-    The following config option defines whether sparse treats supplied
-    paths as relative to repo root or to the current working dir for
-    include and exclude options:
+      Any line starting with a `;` or `#` character is a comment and is ignored.
 
-        [sparse]
-        includereporootpaths = off
+      Extending existing profiles
+      ...........................
 
-    The following config option defines whether sparse treats supplied
-    paths as relative to repo root or to the current working dir for
-    enableprofile and disableprofile options:
+      `%include <absolute path>` directives (one per line) let you extend as
+      an existing profile file, adding more include and exclude rules. Although
+      this directive can appear anywere in the file, it is recommended you
+      keep these at the top of the file.
 
-        [sparse]
-        enablereporootpaths = on
+      Metadata
+      ........
 
-    You can configure a path to find sparse profiles in; this path is
-    used to discover available sparse profiles. Nested directories are
-    reflected in the UI.
+      The `[metadata]` section lets you specify key-value pairs for the profile.
+      Anything before the first `:` or `=` is the key, everything after is the
+      value. Values can be extended over multiple lines by indenting additional
+      lines.
 
-        [sparse]
-        profile_directory = tools/scm/sparse
+      Currently, only the `title` and `description` keys carry meaning, these
+      are used in the `hg sparse list` and `hg sparse explain` commands.
 
-    It is not set by default.
+      Include and exclude rules
+      .........................
 
-    Returns 0 if editing the sparse checkout succeeds.
+      Each line in the `[include]` and `[exclude]` sections is treated as a
+      standard pattern, see :hg:`help patterns`. Exclude rules override include
+      rules.
+
+      Example
+      .......
+
+      ::
+
+        # this profile extends another profile, incorporating all its rules
+        %include some/base/profile
+
+        [metadata]
+        title: This is an example sparse profile
+        description: You can include as much metadata as makes sense for your
+          setup, and values can extend over multiple lines.
+        lorem ipsum = Keys and values are separated by a : or =
+
+        [include]
+        foo/bar/baz
+        bar/python_project/**/*.py
+
+        [exclude]
+        ; exclude rules override include rules, so all files with the extension
+        ; .ignore are excluded from this sparse profile.
+        foo/bar/baz/*.ignore
+
+      Configuration options
+      ---------------------
+
+      The following config option defines whether sparse treats supplied
+      paths as relative to repo root or to the current working dir for
+      include and exclude options:
+
+          [sparse]
+          includereporootpaths = off
+
+      The following config option defines whether sparse treats supplied
+      paths as relative to repo root or to the current working dir for
+      enableprofile and disableprofile options:
+
+          [sparse]
+          enablereporootpaths = on
+
+      You can configure a path to find sparse profiles in; this path is
+      used to discover available sparse profiles. Nested directories are
+      reflected in the UI.
+
+          [sparse]
+          profile_directory = tools/scm/sparse
+
+      It is not set by default.
+
     """
     cmd = subcmd.parse(pats, opts)
     if cmd is not None:
@@ -1378,12 +1430,20 @@ def _listfilessubcmd(cmd, ui, repo, *profiles, **opts):
             exitcode = 0
     return exitcode
 
+_details = '''\n
+The effects of adding or deleting an include or exclude rule are applied
+immediately. If applying the new rule would cause a file with pending
+changes to be added or removed, the command will fail. Pass --force to
+force a rule change even with pending changes (the changes on disk will
+be preserved).
+'''
+
 @subcmd('reset', help=_('makes the repo full again'))
 @subcmd('disableprofile', help=_('disables the specified profile'))
 @subcmd('enableprofile', help=_('enables the specified profile'))
-@subcmd('delete', help=_('delete an include/exclude rule'))
-@subcmd('exclude', help=_('exclude files in the sparse checkout'))
-@subcmd('include', help=_('include files in the sparse checkout'))
+@subcmd('delete', help=_('delete an include/exclude rule' + _details))
+@subcmd('exclude', help=_('exclude files in the sparse checkout' + _details))
+@subcmd('include', help=_('include files in the sparse checkout' + _details))
 def _configsubcmd(cmd, ui, repo, *pats, **opts):
     _config(ui, repo, pats, opts, force=opts.get('force'), **{cmd: True})
 

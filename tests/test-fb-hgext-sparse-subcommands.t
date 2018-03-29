@@ -50,9 +50,24 @@ test sparse subcommands (help, verbose)
    files          List all files included in a profiles - If files are given to
                   match, this command only prints the names of the files in a
                   profile that match those patterns.
-   include        include files in the sparse checkout
-   exclude        exclude files in the sparse checkout
-   delete         delete an include/exclude rule
+   include        include files in the sparse checkout - The effects of adding
+                  or deleting an include or exclude rule are applied
+                  immediately. If applying the new rule would cause a file with
+                  pending changes to be added or removed, the command will fail.
+                  Pass --force to force a rule change even with pending changes
+                  (the changes on disk will be preserved).
+   exclude        exclude files in the sparse checkout - The effects of adding
+                  or deleting an include or exclude rule are applied
+                  immediately. If applying the new rule would cause a file with
+                  pending changes to be added or removed, the command will fail.
+                  Pass --force to force a rule change even with pending changes
+                  (the changes on disk will be preserved).
+   delete         delete an include/exclude rule - The effects of adding or
+                  deleting an include or exclude rule are applied immediately.
+                  If applying the new rule would cause a file with pending
+                  changes to be added or removed, the command will fail. Pass
+                  --force to force a rule change even with pending changes (the
+                  changes on disk will be preserved).
    enableprofile  enables the specified profile
    disableprofile disables the specified profile
    reset          makes the repo full again
