@@ -37,10 +37,7 @@ class MaterializedQueryTest:
         super().setUp()
         self.client = self.get_thrift_client()
         self.client.open()
-
-    def tearDown(self):
-        self.client.close()
-        super().tearDown()
+        self.addCleanup(self.client.close)
 
     def test_noEntries(self):
         pos = self.client.getCurrentJournalPosition(self.mount)

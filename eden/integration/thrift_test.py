@@ -36,10 +36,7 @@ class ThriftTest:
         super().setUp()
         self.client = self.get_thrift_client()
         self.client.open()
-
-    def tearDown(self):
-        self.client.close()
-        super().tearDown()
+        self.addCleanup(self.client.close)
 
     def get_loaded_inodes_count(self, path):
         result = self.client.debugInodeStatus(self.mount, path)
