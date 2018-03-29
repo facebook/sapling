@@ -1086,9 +1086,7 @@ class Test(unittest.TestCase):
         env['COLUMNS'] = '80'
 
         # Claim that 256 colors is not supported.
-        env['TERM'] = 'screen'
-        if 'TMUX' in env:
-            del env['TMUX']
+        env['HGCOLORS'] = '16'
 
         for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
                   'HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER ' +

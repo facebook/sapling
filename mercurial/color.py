@@ -56,14 +56,6 @@ _effects = {
     'magenta': 35,
     'cyan': 36,
     'white': 37,
-    'brightblack': 90,
-    'brightred': 91,
-    'brightgreen': 92,
-    'brightyellow': 93,
-    'brightblue': 94,
-    'brightmagenta': 95,
-    'brightcyan': 96,
-    'brightwhite': 97,
     'bold': 1,
     'italic': 3,
     'underline': 4,
@@ -94,16 +86,16 @@ _defaultstyles = {
     'branches.current': 'green',
     'branches.inactive': 'none',
     'diff.changed': 'white',
-    'diff.deleted': 'color160:brightred',
-    'diff.deleted.changed': 'color196:brightred',
+    'diff.deleted': 'color160:brightred:red',
+    'diff.deleted.changed': 'color196:brightred:red',
     'diff.deleted.unchanged': 'color124:red',
     'diff.diffline': 'bold',
     'diff.extended': 'cyan bold',
     'diff.file_a': 'red bold',
     'diff.file_b': 'green bold',
     'diff.hunk': 'magenta',
-    'diff.inserted': 'color40:brightgreen',
-    'diff.inserted.changed': 'color40:brightgreen',
+    'diff.inserted': 'color40:brightgreen:green',
+    'diff.inserted.changed': 'color40:brightgreen:green',
     'diff.inserted.unchanged': 'color28:green',
     'diff.tab': '',
     'diff.trailingwhitespace': 'bold red_background',
@@ -302,7 +294,27 @@ def normalizestyle(ui, style):
         if valideffect(ui, e):
             return e
 
+def _extendcolors(colors):
+    # see https://en.wikipedia.org/wiki/ANSI_escape_code
+    if colors >= 16:
+        _effects.update({
+            'brightblack': 90,
+            'brightred': 91,
+            'brightgreen': 92,
+            'brightyellow': 93,
+            'brightblue': 94,
+            'brightmagenta': 95,
+            'brightcyan': 96,
+            'brightwhite': 97,
+        })
+    if colors >= 256:
+        for i in range(256):
+            _effects['color%s' % i] = '38;5;%s' % i
+            _effects['color%s_background' % i] = '48;5;%s' % i
+
 def configstyles(ui):
+    if ui._colormode in ('ansi', 'terminfo'):
+        _extendcolors(supportedcolors())
     ui._styles.update(_defaultstyles)
     for status, cfgeffects in ui.configitems('color'):
         if '.' not in status or status.startswith(('color.', 'terminfo.')):
@@ -569,31 +581,53 @@ if pycompat.iswindows:
             ui.flush()
             _kernel32.SetConsoleTextAttribute(stdout, origattr)
 
-def support256colors():
-    """Returns True if the terminal is likely to support 256 colors"""
-    # Pretend Windows does not support 256 colors for now.
-    if pycompat.iswindows:
-        return False
+def supportedcolors():
+    """Return the number of colors likely supported by the terminal
 
+    Usually it's one of 8, 16, 256.
+    """
+    # HGCOLORS can override the decision
+    env = encoding.environ
+    if 'HGCOLORS' in env:
+        colors = 8
+        try:
+            colors = int(env['HGCOLORS'])
+        except Exception:
+            pass
+        return colors
+
+    # Colors reported by terminfo. Might be smaller than the real value.
+    ticolors = 8
+    if curses:
+        try:
+            curses.setupterm()
+            ticolors = curses.tigetnum('colors')
+        except Exception:
+            pass
+
+    # Guess the real number of colors supported.
+    # Windows supports 16 colors.
+    if pycompat.iswindows:
+        realcolors = 16
+    # Emacs has issues with 16 or 256 colors.
+    elif env.get('INSIDE_EMACS'):
+        realcolors = 8
     # Detecting Terminal features is hard. "infocmp" seems to be a "standard"
     # way to do it. But it can often miss real terminal capabilities.
     #
     # Tested on real tmux (2.2), mosh (1.3.0), screen (4.04) from Linux (xfce)
     # and OS X Terminal.app and iTerm 2. Every terminal support 256 colors
-    # excpet for "screen". "screen" also uses underline for "dim".
+    # except for "screen". "screen" also uses underline for "dim".
     #
     # screen can actually support 256 colors if it's started with TERM set to
     # "xterm-256color". In that case, screen will set TERM to
     # "screen.xterm-256color". Tmux sets TERM to "screen" by default. But it
     # also sets TMUX.
-    env = encoding.environ
-    if env.get('TERM') == 'screen' and 'TMUX' not in env:
-        return False
+    elif env.get('TERM') == 'screen' and 'TMUX' not in env:
+        realcolors = 16
+    # Otherwise, pretend to support 256 colors.
+    else:
+        realcolors = 256
 
-    return True
-
-# see https://en.wikipedia.org/wiki/ANSI_escape_code
-if support256colors():
-    for i in range(256):
-        _effects['color%s' % i] = '38;5;%s' % i
-        _effects['color%s_background' % i] = '48;5;%s' % i
+    # terminfo can override "realcolors" upwards.
+    return max([realcolors, ticolors])
