@@ -51,6 +51,7 @@ use base16::Base16Iter;
 use lock::ScopedFileLock;
 use utils::mmap_readonly;
 
+use fs2::FileExt;
 use memmap::Mmap;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
@@ -422,6 +423,26 @@ impl Index {
             dirty_links: vec![],
             dirty_leafs: vec![],
             dirty_keys: vec![],
+        })
+    }
+
+    /// Clone the index.
+    pub fn clone(&self) -> io::Result<Index> {
+        let file = self.file.duplicate()?;
+        let mmap = mmap_readonly(&file)?.0;
+        if mmap.len() < self.buf.len() {
+            // Break the append-only property
+            return Err(InvalidData.into());
+        }
+        Ok(Index {
+            file,
+            buf: mmap,
+            read_only: self.read_only,
+            root: self.root.clone(),
+            dirty_keys: self.dirty_keys.clone(),
+            dirty_leafs: self.dirty_leafs.clone(),
+            dirty_links: self.dirty_links.clone(),
+            dirty_radixes: self.dirty_radixes.clone(),
         })
     }
 
@@ -1401,6 +1422,20 @@ mod tests {
              Link[1]: Link { value: 7, next: Link[0] }\n\
              Key[0]: Key { key: 12 }\n"
         );
+    }
+
+    #[test]
+    fn test_clone() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+
+        index.insert(&[], 55).expect("insert");
+        index.insert(&[0x12], 77).expect("insert");
+        index.flush().expect("flush");
+        index.insert(&[0x15], 99).expect("insert");
+
+        let index2 = index.clone().expect("clone");
+        assert_eq!(format!("{:?}", index), format!("{:?}", index2));
     }
 
     quickcheck! {
