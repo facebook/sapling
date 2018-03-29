@@ -80,6 +80,23 @@ def convert(tar: str, blobimport: str):
     # TODO: support unzipped repos as well?
     with tempfile.TemporaryDirectory(prefix='mononoke-regenerate') as tmpdir:
         revlog_repo = py_tar_utils.extractall_safe(tar, tmpdir)
+        # Add mercurial config file to enable treemanifest. This is necessary
+        # to back fill treemanifest.
+        with open(os.path.join(revlog_repo, '.hg', 'hgrc'), 'w') as hgrc:
+            hgrc.write(
+                """
+[extensions]
+treemanifest=
+fastmanifest=!
+
+[treemanifest]
+treeonly=False
+server=True"""
+            )
+
+        # Backfill tree manifests
+        subprocess.check_call(['hg', '-R', revlog_repo, 'backfilltree'])
+
         with tempfile.TemporaryDirectory(
             dir=output_dir, prefix=output_name + '.'
         ) as tmpdest:
@@ -99,9 +116,10 @@ def convert(tar: str, blobimport: str):
                 hgrepo = repo.Repository(revlog_repo, prefer='hg')
                 commits = hgrepo.get_commits([':'])
                 for commit in commits:
-                    parents = ' '.join((commit.hash for commit in commit.parents()))
+                    parents = ' '.join(
+                        (commit.hash for commit in commit.parents())
+                    )
                     topology_file.write('%s %s\n' % (commit.hash, parents))
-
 
 
 def safe_overwrite_dir(src: str, abs_dest: str):
