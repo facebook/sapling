@@ -25,10 +25,13 @@ extern crate tokio_core;
 extern crate blobrepo;
 extern crate blobstore;
 extern crate changesets;
+extern crate db;
+extern crate dieselfilenodes;
 extern crate fileblob;
 extern crate fileheads;
 extern crate filekv;
 extern crate filelinknodes;
+extern crate filenodes;
 extern crate futures_ext;
 extern crate heads;
 extern crate linknodes;
@@ -53,8 +56,11 @@ use std::thread;
 use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
+use dieselfilenodes::{SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use failure::{Error, Result, ResultExt, SlogKVError};
+use filenodes::{FilenodeInfo, Filenodes};
 use futures::{stream, Future, IntoFuture, Stream};
+use futures::sync::mpsc::unbounded;
 use futures_cpupool::CpuPool;
 use slog::{Drain, Level, Logger};
 use slog_glog_fmt::default_drain as glog_drain;
@@ -65,7 +71,7 @@ use blobrepo::BlobChangeset;
 use blobstore::Blobstore;
 use fileblob::Fileblob;
 use filelinknodes::FileLinknodes;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use linknodes::NoopLinknodes;
 use manifoldblob::ManifoldBlob;
 use mercurial::{RevlogRepo, RevlogRepoOptions};
@@ -122,7 +128,8 @@ where
     let input = input.into();
     let core = Core::new()?;
     let cpupool = Arc::new(CpuPool::new_num_cpus());
-
+    // TODO(stash): real repo id
+    let repo_id = RepositoryId::new(0);
     info!(logger, "Opening headstore: {:?}", output);
     let headstore = open_headstore(output.clone(), &cpupool)?;
 
@@ -180,6 +187,29 @@ where
         })
         .expect("cannot start iothread");
 
+    let (filenodes_sender, filenodes_receiver) = unbounded::<FilenodeInfo>();
+    let filenodesthread = thread::Builder::new()
+        .name("filenodeinserts".to_owned())
+        .spawn({
+            let output = output.clone();
+            move || {
+                let mut core = Core::new().expect("cannot create core in iothread");
+                let filenodes = SqliteFilenodes::create(
+                    output.into().join("filenodes").to_string_lossy(),
+                    DEFAULT_INSERT_CHUNK_SIZE,
+                ).expect("cannot connect to mysql filenodes");
+                let insert_filenodes = filenodes.add_filenodes(
+                    filenodes_receiver
+                        .map_err(|()| failure::err_msg("failed to receive filenodes"))
+                        .boxify(),
+                    &repo_id,
+                );
+                core.run(insert_filenodes)
+                    .expect("failed to insert filenodes");
+            }
+        })
+        .expect("cannot start filenodeinserts thread");
+
     let repo = open_repo(&input, inmemory_logs_capacity)?;
 
     info!(logger, "Converting: {}", input.display());
@@ -192,6 +222,7 @@ where
         logger: logger.clone(),
         skip: skip,
         commits_limit: commits_limit,
+        filenodes_sender: filenodes_sender,
     };
     let res = if write_linknodes {
         info!(logger, "Opening linknodes store: {:?}", output);
@@ -203,9 +234,12 @@ where
         convert_context.convert(NoopLinknodes::new())
     };
     iothread.join().expect("failed to join io thread")?;
+    filenodesthread
+        .join()
+        .expect("failed to join filenodesthread");
     res?;
 
-    if !skip.is_none() && !commits_limit.is_none() {
+    if !skip.is_none() || !commits_limit.is_none() {
         warn!(
             logger,
             "skipping filling up changesets store because --skip or --commits-limit is set"
@@ -216,6 +250,7 @@ where
         let mut core = Core::new()?;
         let fut = repo.changesets()
             .and_then(|node| {
+                let node = mercurial::NodeHash::new(node.sha1().clone());
                 repo.get_changeset(&mercurial::HgChangesetId::new(node))
                     .map(move |cs| (cs, node))
             })
@@ -224,9 +259,10 @@ where
                     .into_iter()
                     .map(|p| HgChangesetId::new(NodeHash::new(p.sha1().clone())))
                     .collect();
+                let node = NodeHash::new(node.sha1().clone());
                 let insert = ChangesetInsert {
-                    repo_id: RepositoryId::new(0), // TODO(stash): real repo id
-                    cs_id: HgChangesetId::new(NodeHash::new(node.sha1().clone())),
+                    repo_id,
+                    cs_id: HgChangesetId::new(node),
                     parents,
                 };
                 changesets.add(insert)

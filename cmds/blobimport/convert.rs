@@ -9,20 +9,23 @@
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 
+use failure::StreamFailureErrorExt;
 use futures::{Future, IntoFuture, Stream};
 use futures_cpupool::CpuPool;
 use slog::Logger;
 use tokio_core::reactor::Core;
 
 use blobrepo::BlobChangeset;
-use failure::{Error, Result, StreamFailureErrorExt};
+use failure::{Error, Result};
+use filenodes::FilenodeInfo;
+use futures::sync::mpsc::UnboundedSender;
 use futures_ext::{BoxStream, FutureExt, StreamExt};
 use heads::Heads;
 use linknodes::Linknodes;
 use mercurial::{self, RevlogManifest, RevlogRepo};
 use mercurial::revlog::RevIdx;
 use mercurial::revlogrepo::RevlogRepoBlobimportExt;
-use mercurial_types::{NodeHash, RepoPath};
+use mercurial_types::{Blob, BlobNode, HgFileNodeId, NodeHash, RepoPath};
 use mercurial_types::nodehash::HgChangesetId;
 use stats::Timeseries;
 
@@ -39,6 +42,7 @@ pub(crate) struct ConvertContext<H> {
     pub logger: Logger,
     pub skip: Option<u64>,
     pub commits_limit: Option<u64>,
+    pub filenodes_sender: UnboundedSender<FilenodeInfo>,
 }
 
 impl<H> ConvertContext<H>
@@ -53,6 +57,7 @@ where
         let headstore = self.headstore;
         let skip = self.skip;
         let commits_limit = self.commits_limit;
+        let filenodes_sender = self.filenodes_sender;
 
         let changesets: BoxStream<mercurial::NodeHash, mercurial::Error> = if let Some(skip) = skip
         {
@@ -80,7 +85,13 @@ where
                 move |(seq, csid)| {
                     debug!(logger, "{}: changeset {}", seq, csid);
                     STATS::changesets.add_value(1);
-                    copy_changeset(repo.clone(), sender.clone(), linknodes_store.clone(), mercurial::HgChangesetId::new(csid))
+                    copy_changeset(
+                        repo.clone(),
+                        sender.clone(),
+                        linknodes_store.clone(),
+                        filenodes_sender.clone(),
+                        mercurial::HgChangesetId::new(csid)
+                    )
                 }
             }) // Stream<Future<()>>
             .map(|copy| cpupool.spawn(copy))
@@ -124,6 +135,7 @@ fn copy_changeset<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     linknodes_store: L,
+    filenodes: UnboundedSender<FilenodeInfo>,
     csid: mercurial::HgChangesetId,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
 where
@@ -159,6 +171,7 @@ where
                 revlog_repo,
                 sender,
                 linknodes_store,
+                filenodes,
                 mfid.clone().into_nodehash(),
                 linkrev,
             )
@@ -180,6 +193,7 @@ fn put_blobs<L>(
     revlog_repo: RevlogRepo,
     sender: SyncSender<BlobstoreEntry>,
     linknodes_store: L,
+    filenodes: UnboundedSender<FilenodeInfo>,
     mfid: mercurial::NodeHash,
     linkrev: RevIdx,
 ) -> impl Future<Item = (), Error = Error> + Send + 'static
@@ -195,12 +209,12 @@ where
         .into_future()
         .join(cs_entry_fut)
         .from_err()
-        .and_then(move |(blob, cs_entry)| {
+        .and_then(move |(rootmfblob, cs_entry)| {
             let putmf = manifest::put_entry(
                 sender.clone(),
                 mfid,
-                blob.as_blob().clone(),
-                blob.parents().clone(),
+                rootmfblob.as_blob().clone(),
+                rootmfblob.parents().clone(),
             );
 
             let linknode = cs_entry.nodeid;
@@ -210,8 +224,19 @@ where
                 &NodeHash::new(linknode.sha1().clone()),
             );
 
+            let filenode = create_filenode(
+                rootmfblob.as_blob().clone(),
+                mfid,
+                *rootmfblob.parents(),
+                RepoPath::RootPath,
+                linknode,
+            );
+
+            filenodes
+                .unbounded_send(filenode)
+                .expect("failed to send root filenodeinfo");
             // Get the listing of entries and fetch each of those
-            let files = RevlogManifest::new(revlog_repo.clone(), blob)
+            let files = RevlogManifest::new(revlog_repo.clone(), rootmfblob)
                 .map_err(|err| Error::from(err.context("Parsing manifest to get list")))
                 .map(|mf| mf.list().map_err(Error::from))
                 .map(|entry_stream| {
@@ -228,13 +253,30 @@ where
                             }
                         })
                         .flatten()
-                        .for_each(move |(entry, repopath)| {
+                        .and_then(|(entry, repopath)| {
+                            entry
+                                .get_parents()
+                                .join(entry.get_raw_content())
+                                .map(move |(parents, blob)| (entry, blob, repopath, parents))
+                        })
+                        .for_each(move |(entry, blob, repopath, parents)| {
                             // All entries share the same linknode to the changelog.
                             let linknode_future = linknodes_store.add(
-                                repopath,
-                                &NodeHash::new(entry.get_hash().into_nodehash().sha1().clone()),
-                                &NodeHash::new(linknode.sha1().clone()),
+                                repopath.clone(),
+                                &convert_node_hash(&entry.get_hash().into_nodehash()),
+                                &convert_node_hash(&linknode),
                             );
+                            let filenode_hash = entry.get_hash().clone();
+                            let filenode = create_filenode(
+                                blob,
+                                filenode_hash.into_nodehash(),
+                                parents,
+                                repopath,
+                                linknode,
+                            );
+                            filenodes
+                                .unbounded_send(filenode)
+                                .expect("failed to send filenodeinfo");
                             let copy_future = manifest::copy_entry(entry, sender.clone());
                             copy_future.join(linknode_future).map(|_| ())
                         })
@@ -248,6 +290,38 @@ where
 
             putmf.join3(put_root_linknode, files).map(|_| ())
         })
+}
+
+fn create_filenode(
+    blob: Blob,
+    filenode_hash: mercurial::NodeHash,
+    parents: mercurial::Parents,
+    repopath: RepoPath,
+    linknode: mercurial::NodeHash,
+) -> FilenodeInfo {
+    let (p1, p2) = parents.get_nodes();
+    let p1 = p1.map(convert_node_hash);
+    let p2 = p2.map(convert_node_hash);
+
+    let copyfrom = mercurial::file::File::new(BlobNode::new(blob, p1.as_ref(), p2.as_ref()))
+        .copied_from()
+        .map(|copiedfrom| {
+            copiedfrom.map(|(path, node)| (RepoPath::FilePath(path), HgFileNodeId::new(node)))
+        })
+        .expect("cannot create filenode");
+
+    FilenodeInfo {
+        path: repopath.clone(),
+        filenode: HgFileNodeId::new(convert_node_hash(&filenode_hash)),
+        p1: p1.map(HgFileNodeId::new),
+        p2: p2.map(HgFileNodeId::new),
+        copyfrom,
+        linknode: HgChangesetId::new(convert_node_hash(&linknode)),
+    }
+}
+
+fn convert_node_hash(hash: &mercurial::NodeHash) -> NodeHash {
+    NodeHash::new(hash.sha1().clone())
 }
 
 fn _assert_sized<T: Sized>(_: &T) {}
