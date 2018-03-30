@@ -875,12 +875,7 @@ def getbundle(repo, proto, others):
             raise # cannot do better for bundle1 + ssh
         # bundle2 request expect a bundle2 reply
         bundler = bundle2.bundle20(repo.ui)
-        manargs = [('message', str(exc))]
-        advargs = []
-        if exc.hint is not None:
-            advargs.append(('hint', exc.hint))
-        bundler.addpart(bundle2.bundlepart('error:abort',
-                                           manargs, advargs))
+        bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         return streamres(gen=bundler.getchunks(), v1compressible=True)
     return streamres(gen=chunks, v1compressible=True)
 
@@ -1064,12 +1059,7 @@ def unbundle(repo, proto, heads):
             if exc.params:
                 errpart.addparam('params', '\0'.join(exc.params))
         except error.Abort as exc:
-            manargs = [('message', str(exc))]
-            advargs = []
-            if exc.hint is not None:
-                advargs.append(('hint', exc.hint))
-            bundler.addpart(bundle2.bundlepart('error:abort',
-                                               manargs, advargs))
+            bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         except error.PushRaced as exc:
             bundler.newpart('error:pushraced', [('message', str(exc))])
         return streamres(gen=bundler.getchunks())

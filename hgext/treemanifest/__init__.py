@@ -1807,12 +1807,7 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories):
     except error.Abort as exc:
         # cleanly forward Abort error to the client
         bundler = bundle2.bundle20(repo.ui)
-        manargs = [('message', str(exc))]
-        advargs = []
-        if exc.hint is not None:
-            advargs.append(('hint', exc.hint))
-        bundler.addpart(bundle2.bundlepart('error:abort',
-                                           manargs, advargs))
+        bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
 
     return bundler
 

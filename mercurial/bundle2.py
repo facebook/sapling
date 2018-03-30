@@ -1085,8 +1085,7 @@ class bundlepart(object):
                      % bexc)
             tb = sys.exc_info()[2]
             msg = 'unexpected error: %s' % bexc
-            interpart = bundlepart('error:abort', [('message', msg)],
-                                   mandatory=False)
+            interpart = createerrorpart(msg, mandatory=False)
             interpart.id = 0
             yield _pack(_fpayloadsize, -1)
             for chunk in interpart.getchunks(ui=ui):
@@ -1899,6 +1898,24 @@ def handlereplycaps(op, inpart):
 
 class AbortFromPart(error.Abort):
     """Sub-class of Abort that denotes an error from a bundle2 part."""
+
+def createerrorpart(msg, hint=None, mandatory=True):
+    """Creates an error abort bundle part. In particular, it enforces the
+    message length maximum."""
+    maxarglen = 255
+    manargs = []
+    advargs = []
+
+    if len(msg) > maxarglen:
+        msg = msg[:maxarglen - 3] + '...'
+    manargs.append(('message', msg))
+
+    if hint is not None:
+        if len(hint) > maxarglen:
+            hint = hint[:maxarglen - 3] + '...'
+        advargs.append(('hint', hint))
+
+    return bundlepart('error:abort', manargs, advargs, mandatory=mandatory)
 
 @parthandler('error:abort', ('message', 'hint'))
 def handleerrorabort(op, inpart):
