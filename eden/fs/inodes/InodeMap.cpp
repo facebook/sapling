@@ -113,6 +113,10 @@ void InodeMap::initializeFromTakeover(
       throw std::runtime_error(message);
     }
   }
+
+  XLOG(DBG2) << "InodeMap initialized mount " << mount_->getPath()
+             << " from takeover: nextInodeNumber=" << nextInodeNumber_.load()
+             << ", " << data->unloadedInodes_.size() << " inodes registered";
 }
 
 Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
@@ -482,6 +486,10 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
         << mount_->getPath();
     data->shutdownPromise.assign(Promise<Unit>{});
     future = data->shutdownPromise->getFuture();
+
+    XLOG(DBG3) << "starting InodeMap::shutdown: loadedCount="
+               << data->loadedInodes_.size()
+               << " unloadedCount=" << data->unloadedInodes_.size();
   }
 
   // Walk from the root of the tree down, finding all unreferenced inodes,
@@ -540,6 +548,11 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
       return SerializedInodeMap{};
     }
     auto data = data_.wlock();
+    XLOG(DBG3)
+        << "InodeMap::shutdown after releasing inodesToClear: loadedCount="
+        << data->loadedInodes_.size()
+        << " unloadedCount=" << data->unloadedInodes_.size();
+
     if (data->loadedInodes_.size() != 1) {
       EDEN_BUG() << "After InodeMap::shutdown() finished, "
                  << data->loadedInodes_.size()
@@ -551,10 +564,14 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
     // Therefore, at this point, nobody is calling allocateInodeNumber(), so
     // it's safe to read nextInodeNumber_.
     result.nextInodeNumber = nextInodeNumber_.load();
+    XLOG(DBG5) << "InodeMap::save nextInodeNumber: " << result.nextInodeNumber;
     result.unloadedInodes.reserve(data->unloadedInodes_.size());
     for (const auto& it : data->unloadedInodes_) {
       const auto& entry = it.second;
       SerializedInodeMapEntry serializedEntry;
+
+      XLOG(DBG5) << "  serializing unloaded inode " << entry.number.get()
+                 << " parent=" << entry.parent.get() << " name=" << entry.name;
 
       serializedEntry.inodeNumber = entry.number.get();
       serializedEntry.parentInode = entry.parent.get();

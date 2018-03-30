@@ -279,3 +279,105 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   EXPECT_EQ(
       RelativePathPiece{"a/b/x/d/file.txt"}, fileInode->getPath().value());
 }
+
+struct InodePersistenceTreeTest : ::testing::Test {
+  InodePersistenceTreeTest() {
+    builder.setFile("dir/file1.txt", "contents1");
+    builder.setFile("dir/file2.txt", "contents2");
+  }
+
+  FakeTreeBuilder builder;
+};
+
+struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
+  InodePersistenceTakeoverTest()
+      : testMount{builder}, edenMount{testMount.getEdenMount()} {}
+
+  void SetUp() override {
+    InodePersistenceTreeTest::SetUp();
+
+    auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
+    auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+    auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+
+    // Pretend FUSE is keeping references to these.
+    tree->incFuseRefcount();
+    file1->incFuseRefcount();
+    file2->incFuseRefcount();
+
+    oldTreeId = tree->getNodeId();
+    oldFile1Id = file1->getNodeId();
+    oldFile2Id = file2->getNodeId();
+
+    edenMount.reset();
+    tree.reset();
+    file1.reset();
+    file2.reset();
+    testMount.remountGracefully();
+
+    edenMount = testMount.getEdenMount();
+  }
+
+  TestMount testMount;
+  std::shared_ptr<EdenMount> edenMount;
+
+  InodeNumber oldTreeId;
+  InodeNumber oldFile1Id;
+  InodeNumber oldFile2Id;
+};
+
+TEST_F(
+    InodePersistenceTakeoverTest,
+    preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByName) {
+  // Look up in a different order to avoid allocating the same numbers.
+  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
+  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+
+  EXPECT_EQ(1, tree->getRefcount());
+  EXPECT_EQ(1, file1->getRefcount());
+  EXPECT_EQ(1, file2->getRefcount());
+
+  EXPECT_EQ(oldTreeId, tree->getNodeId());
+  EXPECT_EQ(oldFile1Id, file1->getNodeId());
+  EXPECT_EQ(oldFile2Id, file2->getNodeId());
+
+  // Now try looking up by inode number.
+  EXPECT_EQ(
+      "dir",
+      edenMount->getInodeMap()->lookupInode(oldTreeId).get()->getLogPath());
+  EXPECT_EQ(
+      "dir/file1.txt",
+      edenMount->getInodeMap()->lookupInode(oldFile1Id).get()->getLogPath());
+  EXPECT_EQ(
+      "dir/file2.txt",
+      edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
+}
+
+TEST_F(
+    InodePersistenceTakeoverTest,
+    preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByNumber) {
+  // Look up by number first.
+  EXPECT_EQ(
+      "dir",
+      edenMount->getInodeMap()->lookupInode(oldTreeId).get()->getLogPath());
+  EXPECT_EQ(
+      "dir/file1.txt",
+      edenMount->getInodeMap()->lookupInode(oldFile1Id).get()->getLogPath());
+  EXPECT_EQ(
+      "dir/file2.txt",
+      edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
+
+  // Verify the same inodes can be looked up by name too.
+  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
+  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+
+  EXPECT_EQ(1, tree->getRefcount());
+  EXPECT_EQ(1, file1->getRefcount());
+  EXPECT_EQ(1, file2->getRefcount());
+
+  EXPECT_EQ(oldTreeId, tree->getNodeId());
+  EXPECT_EQ(oldFile1Id, file1->getNodeId());
+  EXPECT_EQ(oldFile2Id, file2->getNodeId());
+}
