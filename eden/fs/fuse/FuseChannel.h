@@ -333,7 +333,7 @@ class FuseChannel {
     InvalidationEntry(InodeNumber inode, int64_t offset, int64_t length);
     InvalidationEntry(InodeNumber inode, PathComponentPiece name);
     explicit InvalidationEntry(folly::Promise<folly::Unit> promise);
-    InvalidationEntry(InvalidationEntry&& other);
+    InvalidationEntry(InvalidationEntry&& other) noexcept;
     ~InvalidationEntry();
 
     InvalidationType type;

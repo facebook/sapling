@@ -15,6 +15,7 @@
 #include <folly/io/async/Request.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
+#include <type_traits>
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/Dispatcher.h"
@@ -301,8 +302,22 @@ FuseChannel::InvalidationEntry::~InvalidationEntry() {
               << static_cast<uint64_t>(type);
 }
 
-FuseChannel::InvalidationEntry::InvalidationEntry(InvalidationEntry&& other)
+FuseChannel::InvalidationEntry::InvalidationEntry(
+    InvalidationEntry&& other) noexcept
     : type(other.type), inode(other.inode) {
+  // For simplicity we just declare the InvalidationEntry move constructor as
+  // unconditionally noexcept in FuseChannel.h
+  // Assert that this is actually true.
+  static_assert(
+      std::is_nothrow_move_constructible<PathComponent>::value,
+      "All members should be nothrow move constructible");
+  static_assert(
+      std::is_nothrow_move_constructible<Promise<Unit>>::value,
+      "All members should be nothrow move constructible");
+  static_assert(
+      std::is_nothrow_move_constructible<DataRange>::value,
+      "All members should be nothrow move constructible");
+
   switch (type) {
     case InvalidationType::INODE:
       new (&range) DataRange(std::move(other.range));
