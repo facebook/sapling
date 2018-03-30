@@ -127,6 +127,7 @@ from mercurial import (
     localrepo,
     merge,
     pathutil,
+    progress,
     pycompat,
     registrar,
     scmutil,
@@ -647,7 +648,8 @@ def makedirstate(repo, dirstate):
             orig = super(fsmonitordirstate, self).walk
             if self._fsmonitordisable:
                 return orig(*args, **kwargs)
-            return overridewalk(orig, self, *args, **kwargs)
+            with progress.spinner(self._ui, 'scanning working copy'):
+                return overridewalk(orig, self, *args, **kwargs)
 
         def rebuild(self, *args, **kwargs):
             self._fsmonitorstate.invalidate()
