@@ -11,6 +11,7 @@ import argparse
 import binascii
 import collections
 import os
+import shlex
 import stat
 import sys
 from typing import List, IO, Tuple
@@ -492,6 +493,26 @@ def do_flush_cache(args: argparse.Namespace):
         client.invalidateKernelInodeCache(mount, rel_path)
 
 
+def do_log(args: argparse.Namespace):
+    # Display eden's log with the system pager if possible.  We could
+    # add a --tail option.
+    config = cmd_util.create_config(args)
+
+    eden_log_path = config.get_log_path()
+    if not os.path.exists(eden_log_path):
+        print('No log file found at ' + eden_log_path, file=sys.stderr)
+        return 1
+
+    pager_env = os.getenv('PAGER')
+    if pager_env:
+        pager_cmd = shlex.split(pager_env)
+    else:
+        pager_cmd = ['less']
+    pager_cmd.append(eden_log_path)
+
+    os.execvp(pager_cmd[0], pager_cmd)
+
+
 def do_set_log_level(args: argparse.Namespace):
     config = cmd_util.create_config(args)
 
@@ -651,6 +672,10 @@ def setup_argparse(parser: argparse.ArgumentParser):
         'path',
         help='Path to a directory/file inside an eden mount.')
     parser.set_defaults(func=do_flush_cache)
+
+    parser = subparsers.add_parser(
+        'log', help='Display the eden log file')
+    parser.set_defaults(func=do_log)
 
     parser = subparsers.add_parser(
         'set_log_level',
