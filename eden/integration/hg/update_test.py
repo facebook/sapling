@@ -10,6 +10,7 @@
 import logging
 import os
 import threading
+import unittest
 from textwrap import dedent
 from typing import Dict
 
@@ -386,6 +387,9 @@ class UpdateTest(EdenHgTestCase):
         self.assertFalse(os.path.exists(self.get_path('foo/bar/a.txt')))
         self.assertTrue(os.path.exists(self.get_path('foo/bar/b.txt')))
 
+    @unittest.skipIf('SANDCASTLE' in os.environ,
+                     'This test seems to leave behind unkillable processes '
+                     'on sandcastle.  Disable it for now.')
     def test_dir_locking(self) -> None:
         '''
         Test performing checkouts that modify the directory foo/ while other
