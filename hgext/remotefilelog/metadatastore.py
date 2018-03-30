@@ -78,7 +78,7 @@ class unionmetadatastore(object):
             except KeyError:
                 pass
 
-        raise KeyError((name, hex(node)))
+        raise shallowutil.MissingNodesError([(name, node)])
 
     def getnodeinfo(self, name, node):
         for store in self.stores:
@@ -87,7 +87,7 @@ class unionmetadatastore(object):
             except KeyError:
                 pass
 
-        raise KeyError((name, hex(node)))
+        raise shallowutil.MissingNodesError([(name, node)])
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
