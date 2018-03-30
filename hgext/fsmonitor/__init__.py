@@ -749,8 +749,13 @@ class state_update(object):
                 if self.newnode is None:
                     self.newnode = self.repo['.'].node()
                 if self.distance is None:
-                    self.distance = calcdistance(
-                        self.repo, self.oldnode, self.newnode)
+                    try:
+                        self.distance = calcdistance(
+                            self.repo, self.oldnode, self.newnode)
+                    except Exception:
+                        # this happens in complex cases where oldnode
+                        # or newnode might become unavailable.
+                        pass
                 self._state(
                     'state-leave',
                     hex(self.newnode),
