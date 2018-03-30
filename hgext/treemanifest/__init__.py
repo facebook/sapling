@@ -1461,7 +1461,6 @@ def _prefetchonlytrees(repo, opts):
 def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
     if 'gettreepack' not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
-    remote.ui.pushbuffer()
     bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories)
 
     try:
@@ -1488,17 +1487,10 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start):
         # Give stderr some time to reach the client, so we can read it into the
         # currently pushed ui buffer, instead of it randomly showing up in a
         # future ui read.
-        time.sleep(0.1)
         raise shallowutil.MissingNodesError((('', n) for n in mfnodes),
                                             hint=exc.hint)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
-    finally:
-        if util.safehasattr(remote, '_readerr'):
-            remote._readerr()
-        output = remote.ui.popbuffer()
-        if output:
-            repo.ui.debug(output)
 
 def _registerbundle2parts():
     @bundle2.parthandler(TREEGROUP_PARTTYPE2, ('version', 'cache', 'category'))
@@ -1606,9 +1598,12 @@ def _registerbundle2parts():
                                                bundlecaps=bundlecaps,
                                                b2caps=b2caps)
         if sendtrees != shallowbundle.NoTrees:
-            part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
-                                      sendtrees=sendtrees)
-            bundler.addpart(part)
+            try:
+                part = createtreepackpart(repo, outgoing, TREEGROUP_PARTTYPE2,
+                                          sendtrees=sendtrees)
+                bundler.addpart(part)
+            except BaseException as ex:
+                bundler.addpart(bundle2.createerrorpart(str(ex)))
 
 def createtreepackpart(repo, outgoing, partname,
                        sendtrees=shallowbundle.AllTrees):
@@ -1808,6 +1803,9 @@ def _gettreepack(repo, rootdir, mfnodes, basemfnodes, directories):
         # cleanly forward Abort error to the client
         bundler = bundle2.bundle20(repo.ui)
         bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
+    except BaseException as exc:
+        bundler = bundle2.bundle20(repo.ui)
+        bundler.addpart(bundle2.createerrorpart(str(exc)))
 
     return bundler
 
@@ -1839,6 +1837,30 @@ def generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
         raise RuntimeError("directories arg is not supported yet ('%s')" %
                             ', '.join(directories))
 
+    datastore = repo.manifestlog.datastore
+
+    # Throw an exception early if the requested nodes aren't present. It's
+    # important that we throw it now and not later during the pack stream
+    # generation because at that point we've already added the part to the
+    # stream and it's difficult to switch to an error then.
+    missing = []
+    for n in mfnodes:
+        try:
+            datastore.get(rootdir, n)
+        except shallowutil.MissingNodesError:
+            missing.append((rootdir, n))
+    if missing:
+        raise shallowutil.MissingNodesError(missing,
+                                            'tree nodes missing on server')
+
+    return _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories)
+
+def _generatepackstream(repo, rootdir, mfnodes, basemfnodes, directories):
+    """A simple helper function for generatepackstream. This helper is a
+    generator, while the main function is not, so we can execute the
+    validation logic in the main function immediately without waiting for the
+    first iteration.
+    """
     historystore = repo.manifestlog.historystore
     datastore = repo.manifestlog.datastore
 

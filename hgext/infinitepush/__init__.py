@@ -544,9 +544,12 @@ def _rebundle(bundlerepo, bundleroots, unknownhead, cgversion, bundlecaps):
                                                     source='infinitepushpull',
                                                     bundlecaps=bundlecaps,
                                                     b2caps=b2caps):
-            treepart = treemod.createtreepackpart(bundlerepo, outgoing,
-                            treemod.TREEGROUP_PARTTYPE2)
-            parts.append(treepart)
+            try:
+                treepart = treemod.createtreepackpart(bundlerepo, outgoing,
+                                treemod.TREEGROUP_PARTTYPE2)
+                parts.append(treepart)
+            except BaseException as ex:
+                parts.append(bundle2.createerrorpart(str(ex)))
 
     return parts
 
