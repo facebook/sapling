@@ -43,6 +43,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
+use std::ops::Deref;
 use std::path::Path;
 
 use std::io::ErrorKind::InvalidData;
@@ -59,14 +60,14 @@ use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 #[derive(Clone, PartialEq, Default)]
 struct MemRadix {
-    pub offsets: [u64; 16],
-    pub link_offset: u64,
+    pub offsets: [Offset; 16],
+    pub link_offset: LinkOffset,
 }
 
 #[derive(Clone, PartialEq)]
 struct MemLeaf {
-    pub key_offset: u64,
-    pub link_offset: u64,
+    pub key_offset: KeyOffset,
+    pub link_offset: LinkOffset,
 }
 
 #[derive(Clone, PartialEq)]
@@ -77,12 +78,12 @@ struct MemKey {
 #[derive(Clone, PartialEq)]
 struct MemLink {
     pub value: u64,
-    pub next_link_offset: u64,
+    pub next_link_offset: LinkOffset,
 }
 
 #[derive(Clone, PartialEq)]
 struct MemRoot {
-    pub radix_offset: u64,
+    pub radix_offset: RadixOffset,
 }
 
 //// Serialization
@@ -98,13 +99,389 @@ const TYPE_LEAF: u8 = 3;
 const TYPE_LINK: u8 = 4;
 const TYPE_KEY: u8 = 5;
 
-/// Convert a possibly "dirty" offset to a non-dirty offset.
-fn translate_offset(v: u64, offset_map: &HashMap<u64, u64>) -> u64 {
-    if v >= DIRTY_OFFSET {
-        // Should always find a value. Otherwise it's a programming error about write order.
-        *offset_map.get(&v).unwrap()
-    } else {
-        v
+// Bits needed to represent the above type integers.
+const TYPE_BITS: usize = 3;
+
+// Size constants. Do not change.
+const TYPE_BYTES: usize = 1;
+const JUMPTABLE_BYTES: usize = 16;
+
+// Raw offset that has an unknown type.
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+pub struct Offset(u64);
+
+// Typed offsets. Constructed after verifying types.
+// `LinkOffset` is public since it's exposed by some APIs.
+
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+struct RadixOffset(Offset);
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+struct LeafOffset(Offset);
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+pub struct LinkOffset(Offset);
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+struct KeyOffset(Offset);
+
+#[derive(Copy, Clone)]
+enum TypedOffset {
+    Radix(RadixOffset),
+    Leaf(LeafOffset),
+    Link(LinkOffset),
+    Key(KeyOffset),
+}
+
+impl Offset {
+    /// Convert `io::Result<u64>` read from disk to a non-dirty `Offset`.
+    /// Return `InvalidData` error if the offset is dirty.
+    #[inline]
+    fn from_disk(value: u64) -> io::Result<Self> {
+        if value >= DIRTY_OFFSET {
+            Err(InvalidData.into())
+        } else {
+            Ok(Offset(value))
+        }
+    }
+
+    /// Convert a possibly "dirty" offset to a non-dirty offset.
+    /// Useful when writing offsets to disk.
+    #[inline]
+    fn to_disk(self, offset_map: &HashMap<u64, u64>) -> u64 {
+        if self.is_dirty() {
+            // Should always find a value. Otherwise it's a programming error about write order.
+            *offset_map.get(&self.0).unwrap()
+        } else {
+            self.0
+        }
+    }
+
+    /// Convert to `TypedOffset`.
+    #[inline]
+    fn to_typed(self, buf: &[u8]) -> io::Result<TypedOffset> {
+        let type_int = self.type_int(buf)?;
+        match type_int {
+            TYPE_RADIX => Ok(TypedOffset::Radix(RadixOffset(self))),
+            TYPE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
+            TYPE_LINK => Ok(TypedOffset::Link(LinkOffset(self))),
+            TYPE_KEY => Ok(TypedOffset::Key(KeyOffset(self))),
+            _ => Err(InvalidData.into()),
+        }
+    }
+
+    /// Read the `type_int` value.
+    #[inline]
+    fn type_int(self, buf: &[u8]) -> io::Result<u8> {
+        if self.is_null() {
+            Err(InvalidData.into())
+        } else if self.is_dirty() {
+            Ok(((self.0 - DIRTY_OFFSET) & ((1 << TYPE_BITS) - 1)) as u8)
+        } else {
+            match buf.get(self.0 as usize) {
+                Some(x) => Ok(*x as u8),
+                _ => return Err(InvalidData.into()),
+            }
+        }
+    }
+
+    /// Test whether the offset is null (0).
+    #[inline]
+    fn is_null(self) -> bool {
+        self.0 == 0
+    }
+
+    /// Test whether the offset points to an in-memory entry.
+    #[inline]
+    fn is_dirty(self) -> bool {
+        self.0 >= DIRTY_OFFSET
+    }
+}
+
+// Common methods shared by typed offset structs.
+trait TypedOffsetMethods: Sized {
+    #[inline]
+    fn dirty_index(self) -> usize {
+        debug_assert!(self.to_offset().is_dirty());
+        ((self.to_offset().0 - DIRTY_OFFSET) >> TYPE_BITS) as usize
+    }
+
+    #[inline]
+    fn from_offset(offset: Offset, buf: &[u8]) -> io::Result<Self> {
+        if offset.is_null() {
+            Ok(Self::from_offset_unchecked(offset))
+        } else {
+            let type_int = offset.type_int(buf)?;
+            if type_int == Self::type_int() {
+                Ok(Self::from_offset_unchecked(offset))
+            } else {
+                Err(InvalidData.into())
+            }
+        }
+    }
+
+    #[inline]
+    fn from_dirty_index(index: usize) -> Self {
+        Self::from_offset_unchecked(Offset(
+            (((index as u64) << TYPE_BITS) | Self::type_int() as u64) + DIRTY_OFFSET,
+        ))
+    }
+
+    #[inline]
+    fn type_int() -> u8;
+
+    #[inline]
+    fn from_offset_unchecked(offset: Offset) -> Self;
+
+    #[inline]
+    fn to_offset(&self) -> Offset;
+}
+
+// Implement traits for typed offset structs.
+macro_rules! impl_offset {
+    ($type: ident, $type_int: expr, $name: expr) => {
+        impl TypedOffsetMethods for $type {
+            #[inline]
+            fn type_int() -> u8 {
+                $type_int
+            }
+
+            #[inline]
+            fn from_offset_unchecked(offset: Offset) -> Self {
+                $type(offset)
+            }
+
+            #[inline]
+            fn to_offset(&self) -> Offset {
+                self.0
+            }
+        }
+
+        impl Deref for $type {
+            type Target = Offset;
+
+            #[inline]
+            fn deref(&self) -> &Offset {
+                &self.0
+            }
+        }
+
+        impl Debug for $type {
+            fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+                if self.is_null() {
+                    write!(f, "None")
+                } else {
+                    if self.is_dirty() {
+                        write!(f, "{}[{}]", $name, self.dirty_index())
+                    } else {
+                        // `Offset` will print "Disk[{}]".
+                        self.0.fmt(f)
+                    }
+                }
+            }
+        }
+
+        impl From<$type> for Offset {
+            #[inline]
+            fn from(x: $type) -> Offset {
+                x.0
+            }
+        }
+
+        impl From<$type> for u64 {
+            #[inline]
+            fn from(x: $type) -> u64 {
+                (x.0).0
+            }
+        }
+
+        impl From<$type> for usize {
+            #[inline]
+            fn from(x: $type) -> usize {
+                (x.0).0 as usize
+            }
+        }
+    };
+}
+
+impl_offset!(RadixOffset, TYPE_RADIX, "Radix");
+impl_offset!(LeafOffset, TYPE_LEAF, "Leaf");
+impl_offset!(LinkOffset, TYPE_LINK, "Link");
+impl_offset!(KeyOffset, TYPE_KEY, "Key");
+
+impl RadixOffset {
+    /// Link offset of a radix entry.
+    #[inline]
+    fn link_offset(self, index: &Index) -> io::Result<LinkOffset> {
+        if self.is_dirty() {
+            Ok(index.dirty_radixes[self.dirty_index()].link_offset)
+        } else {
+            let (v, _) = index
+                .buf
+                .read_vlq_at(TYPE_BYTES + JUMPTABLE_BYTES + usize::from(self))?;
+            LinkOffset::from_offset(Offset::from_disk(v)?, &index.buf)
+        }
+    }
+
+    /// Lookup the `i`-th child inside a radix entry.
+    /// Return stored offset, or `Offset(0)` if that child does not exist.
+    #[inline]
+    fn child(self, index: &Index, i: u8) -> io::Result<Offset> {
+        debug_assert!(i < 16);
+        if self.is_dirty() {
+            Ok(index.dirty_radixes[self.dirty_index()].offsets[i as usize])
+        } else {
+            // Read from jump table
+            match index.buf.get(usize::from(self) + TYPE_BYTES + i as usize) {
+                None => Err(InvalidData.into()),
+                Some(&jump) => {
+                    let (v, _) = index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
+                    Offset::from_disk(v)
+                }
+            }
+        }
+    }
+
+    /// Copy an on-disk entry to memory so it can be modified. Return new offset.
+    /// If the offset is already in-memory, return it as-is.
+    #[inline]
+    fn copy(self, index: &mut Index) -> io::Result<RadixOffset> {
+        if self.is_dirty() {
+            Ok(self)
+        } else {
+            let entry = MemRadix::read_from(&index.buf, u64::from(self))?;
+            let len = index.dirty_radixes.len();
+            index.dirty_radixes.push(entry);
+            Ok(RadixOffset::from_dirty_index(len))
+        }
+    }
+
+    /// Change a child of `MemRadix`. Panic if the offset points to an on-disk entry.
+    #[inline]
+    fn set_child(self, index: &mut Index, i: u8, value: Offset) {
+        assert!(i < 16);
+        if self.is_dirty() {
+            index.dirty_radixes[self.dirty_index()].offsets[i as usize] = value;
+        } else {
+            panic!("bug: set_child called on immutable radix entry");
+        }
+    }
+
+    /// Change link offset of `MemRadix`. Panic if the offset points to an on-disk entry.
+    #[inline]
+    fn set_link(self, index: &mut Index, value: LinkOffset) {
+        if self.is_dirty() {
+            index.dirty_radixes[self.dirty_index()].link_offset = value.into();
+        } else {
+            panic!("bug: set_link called on immutable radix entry");
+        }
+    }
+
+    /// Create a new in-memory radix entry.
+    #[inline]
+    fn create(index: &mut Index, radix: MemRadix) -> RadixOffset {
+        let len = index.dirty_radixes.len();
+        index.dirty_radixes.push(radix);
+        RadixOffset::from_dirty_index(len)
+    }
+}
+
+impl LeafOffset {
+    /// Key and link offsets of a leaf entry.
+    #[inline]
+    fn key_and_link_offset(self, index: &Index) -> io::Result<(KeyOffset, LinkOffset)> {
+        if self.is_dirty() {
+            let e = &index.dirty_leafs[self.dirty_index()];
+            Ok((e.key_offset, e.link_offset))
+        } else {
+            let (key_offset, vlq_len): (u64, _) =
+                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, &index.buf)?;
+            let (link_offset, _) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+            let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, &index.buf)?;
+            Ok((key_offset, link_offset))
+        }
+    }
+
+    /// Create a new in-memory leaf entry.
+    #[inline]
+    fn create(index: &mut Index, link_offset: LinkOffset, key_offset: KeyOffset) -> LeafOffset {
+        let len = index.dirty_leafs.len();
+        index.dirty_leafs.push(MemLeaf {
+            link_offset,
+            key_offset,
+        });
+        LeafOffset::from_dirty_index(len)
+    }
+
+    /// Update link_offset of a leaf entry in-place. Copy on write. Return the new leaf_offset
+    /// if it's copied from disk.
+    ///
+    /// Note: the old leaf is expected to be no longer needed. If that's not true, don't call
+    /// this function.
+    #[inline]
+    fn set_link(self, index: &mut Index, link_offset: LinkOffset) -> io::Result<LeafOffset> {
+        if self.is_dirty() {
+            index.dirty_leafs[self.dirty_index()].link_offset = link_offset;
+            Ok(self)
+        } else {
+            let entry = MemLeaf::read_from(&index.buf, u64::from(self))?;
+            Ok(Self::create(index, link_offset, entry.key_offset))
+        }
+    }
+}
+
+impl LinkOffset {
+    /// Get value.
+    #[inline]
+    pub fn value(self, index: &Index) -> io::Result<u64> {
+        if self.is_dirty() {
+            Ok(index.dirty_links[self.dirty_index()].value)
+        } else {
+            let (value, _) = index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            Ok(value)
+        }
+    }
+
+    /// Create a new link entry that chains this entry.
+    /// Return new `LinkOffset`
+    fn create(self, index: &mut Index, value: u64) -> LinkOffset {
+        let new_link = MemLink {
+            value,
+            next_link_offset: self.into(),
+        };
+        let len = index.dirty_links.len();
+        index.dirty_links.push(new_link);
+        LinkOffset::from_dirty_index(len)
+    }
+}
+
+impl KeyOffset {
+    /// Key content of a key entry.
+    #[inline]
+    fn key_content(self, index: &Index) -> io::Result<&[u8]> {
+        if self.is_dirty() {
+            Ok(&index.dirty_keys[self.dirty_index()].key[..])
+        } else {
+            let (key_len, vlq_len): (usize, _) =
+                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let start = usize::from(self) + TYPE_BYTES + vlq_len;
+            let end = start + key_len;
+            if end > index.buf.len() {
+                Err(InvalidData.into())
+            } else {
+                Ok(&index.buf[start..end])
+            }
+        }
+    }
+
+    /// Create a new in-memory key entry.
+    #[inline]
+    fn create(index: &mut Index, key: &[u8]) -> KeyOffset {
+        let len = index.dirty_keys.len();
+        index.dirty_keys.push(MemKey {
+            key: Vec::from(key),
+        });
+        KeyOffset::from_dirty_index(len)
     }
 }
 
@@ -125,22 +502,24 @@ impl MemRadix {
         let mut pos = 0;
 
         check_type(buf, offset, TYPE_RADIX)?;
-        pos += 1;
+        pos += TYPE_BYTES;
 
-        let jumptable = buf.get(offset + pos..offset + pos + 16).ok_or(InvalidData)?;
-        pos += 16;
+        let jumptable = buf.get(offset + pos..offset + pos + JUMPTABLE_BYTES)
+            .ok_or(InvalidData)?;
+        pos += JUMPTABLE_BYTES;
 
         let (link_offset, len) = buf.read_vlq_at(offset + pos)?;
+        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf)?;
         pos += len;
 
-        let mut offsets = [0; 16];
+        let mut offsets = [Offset::default(); 16];
         for i in 0..16 {
             if jumptable[i] != 0 {
                 if jumptable[i] as usize != pos {
                     return Err(InvalidData.into());
                 }
                 let (v, len) = buf.read_vlq_at(offset + pos)?;
-                offsets[i] = v;
+                offsets[i] = Offset::from_disk(v)?;
                 pos += len;
             }
         }
@@ -157,12 +536,12 @@ impl MemRadix {
 
         buf.write_all(&[TYPE_RADIX])?;
         buf.write_all(&[0u8; 16])?;
-        buf.write_vlq(translate_offset(self.link_offset, offset_map))?;
+        buf.write_vlq(self.link_offset.to_disk(offset_map))?;
 
         for i in 0..16 {
             let v = self.offsets[i];
-            if v != 0 {
-                let v = translate_offset(v, offset_map);
+            if !v.is_null() {
+                let v = v.to_disk(offset_map);
                 buf[1 + i] = buf.len() as u8; // update jump table
                 buf.write_vlq(v)?;
             }
@@ -178,7 +557,9 @@ impl MemLeaf {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LEAF)?;
         let (key_offset, len) = buf.read_vlq_at(offset + 1)?;
+        let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, buf)?;
         let (link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf)?;
         Ok(MemLeaf {
             key_offset,
             link_offset,
@@ -187,8 +568,8 @@ impl MemLeaf {
 
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
         writer.write_all(&[TYPE_LEAF])?;
-        writer.write_vlq(translate_offset(self.key_offset, offset_map))?;
-        writer.write_vlq(translate_offset(self.link_offset, offset_map))?;
+        writer.write_vlq(self.key_offset.to_disk(offset_map))?;
+        writer.write_vlq(self.link_offset.to_disk(offset_map))?;
         Ok(())
     }
 }
@@ -200,6 +581,7 @@ impl MemLink {
         check_type(buf, offset, TYPE_LINK)?;
         let (value, len) = buf.read_vlq_at(offset + 1)?;
         let (next_link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        let next_link_offset = LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, buf)?;
         Ok(MemLink {
             value,
             next_link_offset,
@@ -209,7 +591,7 @@ impl MemLink {
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
         writer.write_all(&[TYPE_LINK])?;
         writer.write_vlq(self.value)?;
-        writer.write_vlq(translate_offset(self.next_link_offset, offset_map))?;
+        writer.write_vlq(self.next_link_offset.to_disk(offset_map))?;
         Ok(())
     }
 }
@@ -225,7 +607,7 @@ impl MemKey {
         Ok(MemKey { key })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &HashMap<u64, u64>) -> io::Result<()> {
         writer.write_all(&[TYPE_KEY])?;
         writer.write_vlq(self.key.len())?;
         writer.write_all(&self.key)?;
@@ -239,6 +621,7 @@ impl MemRoot {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_ROOT)?;
         let (radix_offset, len1) = buf.read_vlq_at(offset + 1)?;
+        let radix_offset = RadixOffset::from_offset(Offset::from_disk(radix_offset)?, buf)?;
         let (len, _): (usize, _) = buf.read_vlq_at(offset + 1 + len1)?;
         if len == 1 + len1 + 1 {
             Ok(MemRoot { radix_offset })
@@ -259,89 +642,11 @@ impl MemRoot {
     fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
-        buf.write_vlq(translate_offset(self.radix_offset, offset_map))?;
+        buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
         let len = buf.len() + 1;
         buf.write_vlq(len)?;
         writer.write_all(&buf)
     }
-}
-
-/// Represent an offset to a dirty entry of a variant type.
-/// The lowest 3 bits are used to represnet the actual type.
-enum DirtyOffset {
-    Radix(usize),
-    Leaf(usize),
-    Link(usize),
-    Key(usize),
-}
-
-impl DirtyOffset {
-    /// Get type_int for a given dirty_offset.
-    #[inline]
-    fn peek_type(dirty_offset: u64) -> u8 {
-        debug_assert!(dirty_offset >= DIRTY_OFFSET);
-        let x = dirty_offset - DIRTY_OFFSET;
-        (x & 7) as u8
-    }
-
-    /// Get the vec index for a given dirty_offset.
-    #[inline]
-    fn peek_index(dirty_offset: u64) -> usize {
-        debug_assert!(dirty_offset >= DIRTY_OFFSET);
-        let x = dirty_offset - DIRTY_OFFSET;
-        (x >> 3) as usize
-    }
-}
-
-impl From<u64> for DirtyOffset {
-    fn from(x: u64) -> DirtyOffset {
-        debug_assert!(x >= DIRTY_OFFSET);
-        let x = x - DIRTY_OFFSET;
-        let typeint = (x & 7) as u8;
-        let index = (x >> 3) as usize;
-        match typeint {
-            TYPE_RADIX => DirtyOffset::Radix(index),
-            TYPE_LEAF => DirtyOffset::Leaf(index),
-            TYPE_LINK => DirtyOffset::Link(index),
-            TYPE_KEY => DirtyOffset::Key(index),
-            _ => panic!("bug: unexpected dirty offset"),
-        }
-    }
-}
-
-impl Into<u64> for DirtyOffset {
-    fn into(self) -> u64 {
-        let v = match self {
-            DirtyOffset::Radix(x) => (TYPE_RADIX as u64 + ((x as u64) << 3)),
-            DirtyOffset::Leaf(x) => (TYPE_LEAF as u64 + ((x as u64) << 3)),
-            DirtyOffset::Link(x) => (TYPE_LINK as u64 + ((x as u64) << 3)),
-            DirtyOffset::Key(x) => (TYPE_KEY as u64 + ((x as u64) << 3)),
-        };
-        v + DIRTY_OFFSET
-    }
-}
-
-/// An Offset to an link entry. This is a standalone type so it cannot be
-/// constructed arbitarily.
-#[derive(Debug, PartialOrd, PartialEq, Copy, Clone)]
-pub struct LinkOffset(u64);
-
-/// Convert a dirty offset to an error. This should be applied to all
-/// offsets read from disk - there should never be references to in-memory
-/// data.
-///
-/// With the non_dirty check applied to everywhere, it's safe to assume
-/// an offset that is >= DIRTY_OFFSET has a valid content (i.e. it contains
-/// a valid vec index).
-#[inline]
-fn non_dirty(v: io::Result<u64>) -> io::Result<u64> {
-    v.and_then(|x| {
-        if x >= DIRTY_OFFSET {
-            Err(InvalidData.into())
-        } else {
-            Ok(x)
-        }
-    })
 }
 
 //// Main Index
@@ -403,7 +708,7 @@ impl Index {
             // Automatically locate the root entry
             if len == 0 {
                 // Empty file. Create root radix entry as an dirty entry
-                let radix_offset = DirtyOffset::Radix(0).into();
+                let radix_offset = RadixOffset::from_dirty_index(0);
                 (vec![MemRadix::default()], MemRoot { radix_offset })
             } else {
                 // Load root entry from the end of file.
@@ -458,7 +763,7 @@ impl Index {
         }
 
         let mut root_offset = 0;
-        if self.root.radix_offset < DIRTY_OFFSET {
+        if !self.root.radix_offset.is_dirty() {
             // Nothing changed
             return Ok(root_offset);
         }
@@ -486,26 +791,26 @@ impl Index {
             for (i, entry) in self.dirty_keys.iter().enumerate() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(DirtyOffset::Key(i).into(), offset);
+                offset_map.insert(KeyOffset::from_dirty_index(i).into(), offset);
             }
 
             for (i, entry) in self.dirty_links.iter().enumerate() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(DirtyOffset::Link(i).into(), offset);
+                offset_map.insert(LinkOffset::from_dirty_index(i).into(), offset);
             }
 
             for (i, entry) in self.dirty_leafs.iter().enumerate() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(DirtyOffset::Leaf(i).into(), offset);
+                offset_map.insert(LeafOffset::from_dirty_index(i).into(), offset);
             }
 
             // Write Radix entries in reversed order since former ones might refer to latter ones.
             for (i, entry) in self.dirty_radixes.iter().enumerate().rev() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(DirtyOffset::Radix(i).into(), offset);
+                offset_map.insert(RadixOffset::from_dirty_index(i).into(), offset);
             }
 
             root_offset = buf.len() as u64 + len;
@@ -537,36 +842,40 @@ impl Index {
     /// Lookup by key. Return the link offset (the head of the linked list), or 0
     /// if the key does not exist. This is a low-level API.
     pub fn get<K: AsRef<[u8]>>(&self, key: &K) -> io::Result<LinkOffset> {
-        let mut offset = self.root.radix_offset;
+        let mut offset: Offset = self.root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
 
-        while offset != 0 {
+        while !offset.is_null() {
             // Read the entry at "offset"
-            match self.peek_type(offset)? {
-                TYPE_RADIX => {
+            match offset.to_typed(&self.buf)? {
+                TypedOffset::Radix(radix) => {
                     match iter.next() {
                         None => {
                             // The key ends at this Radix entry.
-                            return self.peek_radix_entry_link_offset(offset)
-                                .map(|v| LinkOffset(v));
+                            return radix.link_offset(self);
                         }
                         Some(x) => {
-                            // Should follow the `x`-th child in the Radix entry.
-                            offset = self.peek_radix_entry_child(offset, x)?;
+                            // Follow the `x`-th child in the Radix entry.
+                            offset = radix.child(self, x)?;
                         }
                     }
                 }
-                TYPE_LEAF => {
-                    // Meet a leaf. If key matches, return the LinkOffset.
-                    return self.peek_leaf_entry_link_offset_if_matched(offset, key.as_ref())
-                        .map(|v| LinkOffset(v));
+                TypedOffset::Leaf(leaf) => {
+                    // Meet a leaf. If key matches, return the link offset.
+                    let (key_offset, link_offset) = leaf.key_and_link_offset(self)?;
+                    let stored_key = key_offset.key_content(self)?;
+                    if stored_key == key.as_ref() {
+                        return Ok(link_offset);
+                    } else {
+                        return Ok(LinkOffset::default());
+                    }
                 }
                 _ => return Err(InvalidData.into()),
             }
         }
 
         // Not found
-        Ok(LinkOffset(0))
+        Ok(LinkOffset::default())
     }
 
     /// Insert a new value as a head of the linked list associated with `key`.
@@ -595,47 +904,49 @@ impl Index {
         value: Option<u64>,
         link: Option<LinkOffset>,
     ) -> io::Result<()> {
-        let mut offset = self.root.radix_offset;
+        let mut offset: Offset = self.root.radix_offset.into();
         let mut iter = Base16Iter::from_base256(key);
         let mut step = 0;
         let key = key.as_ref();
 
-        let mut last_radix_offset = 0u64;
+        let mut last_radix = RadixOffset::default();
         let mut last_child = 0u8;
 
         loop {
-            match self.peek_type(offset)? {
-                TYPE_RADIX => {
-                    // Copy RadixEntry since we must modify it.
-                    offset = self.copy_radix_entry(offset)?;
-                    debug_assert!(offset > 0 && self.peek_type(offset)? == TYPE_RADIX);
+            match offset.to_typed(&self.buf)? {
+                TypedOffset::Radix(radix) => {
+                    // Copy radix entry since we must modify it.
+                    let radix = radix.copy(self)?;
+                    offset = radix.into();
 
-                    // Change the Root entry, or the previous Radix entry so it
-                    // points to the new offset.
                     if step == 0 {
-                        self.root.radix_offset = offset;
+                        self.root.radix_offset = radix;
                     } else {
-                        self.set_radix_entry_child(last_radix_offset, last_child, offset);
+                        last_radix.set_child(self, last_child, offset);
                     }
 
-                    last_radix_offset = offset;
+                    last_radix = radix;
 
-                    let e = &self.dirty_radixes[DirtyOffset::peek_index(offset)].clone();
                     match iter.next() {
                         None => {
-                            let link_offset =
-                                self.maybe_create_link_entry(e.link_offset, value, link);
-                            self.set_radix_entry_link(offset, link_offset);
+                            let old_link_offset = radix.link_offset(self)?;
+                            let new_link_offset =
+                                self.maybe_create_link_entry(old_link_offset, value, link);
+                            radix.set_link(self, new_link_offset);
                             return Ok(());
                         }
                         Some(x) => {
-                            let next_offset = e.offsets[x as usize];
-                            if next_offset == 0 {
+                            let next_offset = radix.child(self, x)?;
+                            if next_offset.is_null() {
                                 // "key" is longer than existing ones. Create key and leaf entries.
-                                let link_offset = self.maybe_create_link_entry(0, value, link);
-                                let key_offset = self.create_key_entry(key);
-                                let leaf_offset = self.create_leaf_entry(link_offset, key_offset);
-                                self.set_radix_entry_child(offset, x, leaf_offset);
+                                let link_offset = self.maybe_create_link_entry(
+                                    LinkOffset::default(),
+                                    value,
+                                    link,
+                                );
+                                let key_offset = KeyOffset::create(self, key);
+                                let leaf_offset = LeafOffset::create(self, link_offset, key_offset);
+                                radix.set_child(self, x, leaf_offset.into());
                                 return Ok(());
                             } else {
                                 offset = next_offset;
@@ -644,25 +955,26 @@ impl Index {
                         }
                     }
                 }
-                TYPE_LEAF => {
-                    let link_offset =
-                        self.peek_leaf_entry_link_offset_if_matched(offset, key.as_ref())?;
-
-                    if link_offset > 0 {
+                TypedOffset::Leaf(leaf) => {
+                    let (key_offset, link_offset) = leaf.key_and_link_offset(self)?;
+                    if key_offset.key_content(self)? == key.as_ref() {
                         // Key matched. Need to copy leaf entry.
                         let new_link_offset =
                             self.maybe_create_link_entry(link_offset, value, link);
-                        let new_leaf_offset = self.set_leaf_link(offset, new_link_offset)?;
-                        self.set_radix_entry_child(last_radix_offset, last_child, new_leaf_offset);
+                        let new_leaf_offset = leaf.set_link(self, new_link_offset)?;
+                        last_radix.set_child(self, last_child, new_leaf_offset.into());
                     } else {
                         // Key mismatch. Do a leaf split.
-                        let new_link_offset = self.maybe_create_link_entry(0, value, link);
+                        let new_link_offset =
+                            self.maybe_create_link_entry(LinkOffset::default(), value, link);
                         self.split_leaf(
-                            offset,
+                            leaf,
+                            key_offset,
                             key.as_ref(),
                             step,
-                            last_radix_offset,
+                            last_radix,
                             last_child,
+                            link_offset,
                             new_link_offset,
                         )?;
                     }
@@ -681,12 +993,14 @@ impl Index {
     #[inline]
     fn split_leaf(
         &mut self,
-        leaf_offset: u64,
-        key: &[u8],
+        old_leaf_offset: LeafOffset,
+        old_key_offset: KeyOffset,
+        new_key: &[u8],
         step: usize,
-        radix_offset: u64,
+        radix_offset: RadixOffset,
         child: u8,
-        new_link_offset: u64,
+        old_link_offset: LinkOffset,
+        new_link_offset: LinkOffset,
     ) -> io::Result<()> {
         // This is probably the most complex part. Here are some explanation about input parameters
         // and what this function is supposed to do for some cases:
@@ -698,10 +1012,10 @@ impl Index {
         //      radix1            | Radix(child2: radix2, ...)         |> steps
         //      ...               | ...                                | (for skipping check
         //      *radix_offset*    | Radix(*child*: *leaf_offset*, ...) /  of prefix in keys)
-        //      *leaf_offset*     | Leaf(...)
+        //      *old_leaf_offset* | Leaf(link_offset: *old_link_offset*, ...)
         //      *new_link_offset* | Link(...)
         //
-        //      *leaf_offset* is redundant, but lookup_and_update_link has it. Avoids a read.
+        //      old_* are redundant, but they are pre-calculated by the caller. So just reuse them.
         //
         // Here are 3 kinds of examples (Keys are embed in Leaf for simplicity):
         //
@@ -730,11 +1044,9 @@ impl Index {
         //           D |                     | Leaf("1234", Link: Y)
         //           E |                     | Radix(3: D)
 
-        let old_key = Vec::from(self.peek_leaf_entry_key(leaf_offset)?);
-        let new_key = key;
+        let old_key = Vec::from(old_key_offset.key_content(self)?);
         let mut old_iter = Base16Iter::from_base256(&old_key).skip(step);
         let mut new_iter = Base16Iter::from_base256(&new_key).skip(step);
-        let old_leaf_offset = leaf_offset;
 
         let mut last_radix_offset = radix_offset;
         let mut last_radix_child = child;
@@ -750,11 +1062,10 @@ impl Index {
             if let Some(b1) = b1 {
                 // Initial value for the b1-th child. Could be rewritten by
                 // "set_radix_entry_child" in the next loop iteration.
-                radix.offsets[b1 as usize] = old_leaf_offset;
+                radix.offsets[b1 as usize] = old_leaf_offset.into();
             } else {
                 // Example 3. old_key is a prefix of new_key. A leaf is still needed.
                 // The new leaf will be created by the next "if" block.
-                let old_link_offset = self.peek_leaf_entry_link_offset(old_leaf_offset)?;
                 radix.link_offset = old_link_offset;
             }
 
@@ -764,15 +1075,15 @@ impl Index {
                 completed = true;
             } else if b1 != b2 {
                 // Example 1 and Example 3. A new leaf is needed.
-                let new_key_offset = self.create_key_entry(new_key);
-                let new_leaf_offset = self.create_leaf_entry(new_link_offset, new_key_offset);
-                radix.offsets[b2.unwrap() as usize] = new_leaf_offset;
+                let new_key_offset = KeyOffset::create(self, new_key);
+                let new_leaf_offset = LeafOffset::create(self, new_link_offset, new_key_offset);
+                radix.offsets[b2.unwrap() as usize] = new_leaf_offset.into();
                 completed = true;
             }
 
             // Create the Radix entry, and connect it to the parent entry.
-            let offset = self.create_radix_entry(radix);
-            self.set_radix_entry_child(last_radix_offset, last_radix_child, offset);
+            let offset = RadixOffset::create(self, radix);
+            last_radix_offset.set_child(self, last_radix_child, offset.into());
 
             if completed {
                 break;
@@ -786,286 +1097,47 @@ impl Index {
         Ok(())
     }
 
-    /// Return the type_int (TYPE_RADIX, TYPE_LEAF, ...) for a given offset.
-    #[inline]
-    fn peek_type(&self, offset: u64) -> io::Result<u8> {
-        if offset >= DIRTY_OFFSET {
-            Ok(DirtyOffset::peek_type(offset))
-        } else {
-            self.buf
-                .get(offset as usize)
-                .map(|v| *v)
-                .ok_or(InvalidData.into())
-        }
-    }
-
-    /// Read the link offset from a Radix entry.
-    #[inline]
-    fn peek_radix_entry_link_offset(&self, offset: u64) -> io::Result<u64> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_RADIX);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            Ok(self.dirty_radixes[index].link_offset)
-        } else {
-            non_dirty(
-                self.buf
-                    .read_vlq_at(offset as usize + 1 + 16)
-                    .map(|(v, _)| v),
-            )
-        }
-    }
-
-    /// Lookup the `i`-th child inside a Radix entry.
-    /// Return stored offset, or 0 if that child does not exist.
-    #[inline]
-    fn peek_radix_entry_child(&self, offset: u64, i: u8) -> io::Result<u64> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_RADIX);
-        debug_assert!(i < 16);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            let e = &self.dirty_radixes[index];
-            Ok(e.offsets[i as usize])
-        } else {
-            // Read from jump table
-            match self.buf.get(offset as usize + 1 + i as usize) {
-                None => Err(InvalidData.into()),
-                Some(&jump) => non_dirty(
-                    self.buf
-                        .read_vlq_at(offset as usize + jump as usize)
-                        .map(|(v, _)| v),
-                ),
-            }
-        }
-    }
-
-    /// Return a reference to a Key pointed by a Leaf entry.
-    #[inline]
-    fn peek_leaf_entry_key(&self, offset: u64) -> io::Result<&[u8]> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            let leaf = &self.dirty_leafs[index];
-            self.peek_key_entry_content(leaf.key_offset)
-        } else {
-            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
-            non_dirty(Ok(key_offset))?;
-            self.peek_key_entry_content(key_offset)
-        }
-    }
-
-    /// Return the link offset stored in a leaf entry.
-    fn peek_leaf_entry_link_offset(&self, offset: u64) -> io::Result<u64> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            let leaf = &self.dirty_leafs[index];
-            Ok(leaf.link_offset)
-        } else {
-            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
-            non_dirty(Ok(key_offset))?;
-            non_dirty(
-                self.buf
-                    .read_vlq_at(offset as usize + 1 + vlq_len)
-                    .map(|(v, _)| v),
-            )
-        }
-    }
-
-    /// Return the value of a link entry.
-    fn peek_link_entry_value(&self, offset: u64) -> io::Result<u64> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LINK);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            let link = &self.dirty_links[index];
-            Ok(link.value)
-        } else {
-            let (value, _) = self.buf.read_vlq_at(offset as usize + 1)?;
-            non_dirty(Ok(value))
-        }
-    }
-
-    /// Return the link offset stored in a leaf entry if the key matches.
-    /// Otherwise return 0.
-    fn peek_leaf_entry_link_offset_if_matched(&self, offset: u64, key: &[u8]) -> io::Result<u64> {
-        debug_assert_eq!(self.peek_type(offset).unwrap(), TYPE_LEAF);
-        if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            let leaf = &self.dirty_leafs[index];
-            if self.check_key_entry_matched(leaf.key_offset, key)? {
-                Ok(leaf.link_offset)
-            } else {
-                Ok(0)
-            }
-        } else {
-            let (key_offset, vlq_len) = self.buf.read_vlq_at(offset as usize + 1)?;
-            non_dirty(Ok(key_offset))?;
-            if self.check_key_entry_matched(key_offset, key)? {
-                non_dirty(
-                    self.buf
-                        .read_vlq_at(offset as usize + 1 + vlq_len)
-                        .map(|(v, _)| v),
-                )
-            } else {
-                Ok(0)
-            }
-        }
-    }
-
-    /// Return a reference to the content of a key entry.
-    #[inline]
-    fn peek_key_entry_content(&self, offset: u64) -> io::Result<&[u8]> {
-        if self.peek_type(offset)? != TYPE_KEY {
-            Err(InvalidData.into())
-        } else if offset >= DIRTY_OFFSET {
-            let index = DirtyOffset::peek_index(offset);
-            Ok(&self.dirty_keys[index].key[..])
-        } else {
-            let (key_len, vlq_len): (usize, _) = self.buf.read_vlq_at(offset as usize + 1)?;
-            let start = offset as usize + 1 + vlq_len;
-            let end = start + key_len;
-            if end > self.buf.len() {
-                Err(InvalidData.into())
-            } else {
-                Ok(&self.buf[start..end])
-            }
-        }
-    }
-
-    /// Return true if the given key matched the key entry.
-    #[inline]
-    fn check_key_entry_matched(&self, offset: u64, key: &[u8]) -> io::Result<bool> {
-        Ok(self.peek_key_entry_content(offset)? == key)
-    }
-
-    /// Copy a Radix entry to dirty_radixes. Return its offset.
-    /// If the Radix entry is already dirty. Return its offset unchanged.
-    #[inline]
-    fn copy_radix_entry(&mut self, offset: u64) -> io::Result<u64> {
-        if offset < DIRTY_OFFSET {
-            let entry = MemRadix::read_from(&self.buf, offset)?;
-            Ok(self.create_radix_entry(entry))
-        } else {
-            Ok(offset)
-        }
-    }
-
-    /// Append a Radix entry to dirty_radixes. Return its offset.
-    #[inline]
-    fn create_radix_entry(&mut self, entry: MemRadix) -> u64 {
-        let index = self.dirty_radixes.len();
-        self.dirty_radixes.push(entry);
-        DirtyOffset::Radix(index).into()
-    }
-
-    /// Set value of a child of a Radix entry.
-    #[inline]
-    fn set_radix_entry_child(&mut self, radix_offset: u64, i: u8, value: u64) {
-        debug_assert!(radix_offset >= DIRTY_OFFSET);
-        debug_assert_eq!(DirtyOffset::peek_type(radix_offset), TYPE_RADIX);
-        self.dirty_radixes[DirtyOffset::peek_index(radix_offset)].offsets[i as usize] = value;
-    }
-
-    /// Set value of the link offset of a Radix entry.
-    #[inline]
-    fn set_radix_entry_link(&mut self, radix_offset: u64, link_offset: u64) {
-        debug_assert!(radix_offset >= DIRTY_OFFSET);
-        debug_assert_eq!(DirtyOffset::peek_type(radix_offset), TYPE_RADIX);
-        self.dirty_radixes[DirtyOffset::peek_index(radix_offset)].link_offset = link_offset;
-    }
-
     /// See `insert_advanced`. Create a new link entry if necessary and return its offset.
     fn maybe_create_link_entry(
         &mut self,
-        link_offset: u64,
+        link_offset: LinkOffset,
         value: Option<u64>,
         link: Option<LinkOffset>,
-    ) -> u64 {
-        let next_link_offset = link.map_or(link_offset, |v| v.0);
+    ) -> LinkOffset {
+        let link = link.or(Some(link_offset)).unwrap();
         if let Some(value) = value {
-            // Create a new Link entry
-            let new_link = MemLink {
-                value,
-                next_link_offset,
-            };
-            let index = self.dirty_links.len();
-            self.dirty_links.push(new_link);
-            DirtyOffset::Link(index).into()
+            link.create(self, value)
         } else {
-            next_link_offset
+            link
         }
-    }
-
-    /// Update link_offset of a leaf entry in-place. Copy on write. Return the new leaf_offset
-    /// if it's copied from disk.
-    ///
-    /// Note: the old leaf is expected to be no longer needed. If that's not true, don't call
-    /// this function.
-    #[inline]
-    fn set_leaf_link(&mut self, offset: u64, link_offset: u64) -> io::Result<u64> {
-        debug_assert_eq!(DirtyOffset::peek_type(offset), TYPE_LEAF);
-        if offset < DIRTY_OFFSET {
-            let entry = MemLeaf::read_from(&self.buf, offset)?;
-            Ok(self.create_leaf_entry(link_offset, entry.key_offset))
-        } else {
-            let index = DirtyOffset::peek_index(offset);
-            self.dirty_leafs[index].link_offset = link_offset;
-            Ok(offset)
-        }
-    }
-
-    /// Append a Leaf entry to dirty_leafs. Return its offset.
-    #[inline]
-    fn create_leaf_entry(&mut self, link_offset: u64, key_offset: u64) -> u64 {
-        let index = self.dirty_leafs.len();
-        self.dirty_leafs.push(MemLeaf {
-            link_offset,
-            key_offset,
-        });
-        DirtyOffset::Leaf(index).into()
-    }
-
-    /// Append a Key entry to dirty_keys. Return its offset.
-    #[inline]
-    fn create_key_entry(&mut self, key: &[u8]) -> u64 {
-        let index = self.dirty_keys.len();
-        self.dirty_keys.push(MemKey {
-            key: Vec::from(key),
-        });
-        DirtyOffset::Key(index).into()
     }
 }
 
 //// Debug Formatter
 
-fn fmt_offset(offset: u64, f: &mut Formatter) -> Result<(), fmt::Error> {
-    if offset >= DIRTY_OFFSET {
-        write!(f, "{:?}", DirtyOffset::from(offset))
-    } else if offset == 0 {
-        write!(f, "None")
-    } else {
-        write!(f, "Disk[{}]", offset)
-    }
-}
-
-impl Debug for DirtyOffset {
+impl Debug for Offset {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            DirtyOffset::Radix(x) => write!(f, "Radix[{}]", x),
-            DirtyOffset::Leaf(x) => write!(f, "Leaf[{}]", x),
-            DirtyOffset::Link(x) => write!(f, "Link[{}]", x),
-            DirtyOffset::Key(x) => write!(f, "Key[{}]", x),
+        if self.is_null() {
+            write!(f, "None")
+        } else if self.is_dirty() {
+            match self.to_typed(&b""[..]).unwrap() {
+                TypedOffset::Radix(x) => x.fmt(f),
+                TypedOffset::Leaf(x) => x.fmt(f),
+                TypedOffset::Link(x) => x.fmt(f),
+                TypedOffset::Key(x) => x.fmt(f),
+            }
+        } else {
+            write!(f, "Disk[{}]", self.0)
         }
     }
 }
 
 impl Debug for MemRadix {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Radix {{ link: ")?;
-        fmt_offset(self.link_offset, f)?;
+        write!(f, "Radix {{ link: {:?}", self.link_offset)?;
         for (i, v) in self.offsets.iter().cloned().enumerate() {
-            if v > 0 {
-                write!(f, ", {}: ", i)?;
-                fmt_offset(v, f)?;
+            if !v.is_null() {
+                write!(f, ", {}: {:?}", i, v)?;
             }
         }
         write!(f, " }}")
@@ -1074,19 +1146,21 @@ impl Debug for MemRadix {
 
 impl Debug for MemLeaf {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Leaf {{ key: ")?;
-        fmt_offset(self.key_offset, f)?;
-        write!(f, ", link: ")?;
-        fmt_offset(self.link_offset, f)?;
-        write!(f, " }}")
+        write!(
+            f,
+            "Leaf {{ key: {:?}, link: {:?} }}",
+            self.key_offset, self.link_offset
+        )
     }
 }
 
 impl Debug for MemLink {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Link {{ value: {}, next: ", self.value)?;
-        fmt_offset(self.next_link_offset, f)?;
-        write!(f, " }}")
+        write!(
+            f,
+            "Link {{ value: {}, next: {:?} }}",
+            self.value, self.next_link_offset
+        )
     }
 }
 
@@ -1102,17 +1176,18 @@ impl Debug for MemKey {
 
 impl Debug for MemRoot {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Root {{ radix: ")?;
-        fmt_offset(self.radix_offset, f)?;
-        write!(f, " }}")
+        write!(f, "Root {{ radix: {:?} }}", self.radix_offset)
     }
 }
 
 impl Debug for Index {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "Index {{ len: {}, root: ", self.buf.len())?;
-        fmt_offset(self.root.radix_offset, f)?;
-        write!(f, " }}\n")?;
+        write!(
+            f,
+            "Index {{ len: {}, root: {:?} }}\n",
+            self.buf.len(),
+            self.root.radix_offset
+        )?;
 
         // On-disk entries
         let offset_map = HashMap::new();
@@ -1192,59 +1267,6 @@ impl Debug for Index {
 mod tests {
     use super::*;
     use tempdir::TempDir;
-
-    quickcheck! {
-        fn test_radix_format_roundtrip(v: (u64, u64, u64, u64), link_offset: u64) -> bool {
-            let mut offsets = [0; 16];
-            offsets[(v.1 + v.2) as usize % 16] = v.0 % DIRTY_OFFSET;
-            offsets[(v.0 + v.3) as usize % 16] = v.1 % DIRTY_OFFSET;
-            offsets[(v.1 + v.3) as usize % 16] = v.2 % DIRTY_OFFSET;
-            offsets[(v.0 + v.2) as usize % 16] = v.3 % DIRTY_OFFSET;
-
-            let radix = MemRadix { offsets, link_offset };
-            let mut buf = vec![1];
-            radix.write_to(&mut buf, &HashMap::new()).expect("write");
-            let radix1 = MemRadix::read_from(buf, 1).unwrap();
-            radix1 == radix
-        }
-
-        fn test_leaf_format_roundtrip(key_offset: u64, link_offset: u64) -> bool {
-            let key_offset = key_offset % DIRTY_OFFSET;
-            let link_offset = link_offset % DIRTY_OFFSET;
-            let leaf = MemLeaf { key_offset, link_offset };
-            let mut buf = vec![1];
-            leaf.write_to(&mut buf, &HashMap::new()).expect("write");
-            let leaf1 = MemLeaf::read_from(buf, 1).unwrap();
-            leaf1 == leaf
-        }
-
-        fn test_link_format_roundtrip(value: u64, next_link_offset: u64) -> bool {
-            let next_link_offset = next_link_offset % DIRTY_OFFSET;
-            let link = MemLink { value, next_link_offset };
-            let mut buf = vec![1];
-            link.write_to(&mut buf, &HashMap::new()).expect("write");
-            let link1 = MemLink::read_from(buf, 1).unwrap();
-            link1 == link
-        }
-
-        fn test_key_format_roundtrip(key: Vec<u8>) -> bool {
-            let entry = MemKey { key };
-            let mut buf = vec![1];
-            entry.write_to(&mut buf, &HashMap::new()).expect("write");
-            let entry1 = MemKey::read_from(buf, 1).unwrap();
-            entry1 == entry
-        }
-
-        fn test_root_format_roundtrip(radix_offset: u64) -> bool {
-            let root = MemRoot { radix_offset };
-            let mut buf = vec![1];
-            root.write_to(&mut buf, &HashMap::new()).expect("write");
-            let root1 = MemRoot::read_from(&buf, 1).unwrap();
-            let end = buf.len() as u64;
-            let root2 = MemRoot::read_from_end(buf, end).unwrap();
-            root1 == root && root2 == root
-        }
-    }
 
     #[test]
     fn test_distinct_one_byte_keys() {
@@ -1453,9 +1475,9 @@ mod tests {
             }
 
             map.iter().all(|(key, value)| {
-                let link_offset = index.get(key).expect("lookup").0;
-                assert!(link_offset > 0);
-                index.peek_link_entry_value(link_offset).expect("peek") == *value
+                let link_offset = index.get(key).expect("lookup");
+                assert!(!link_offset.is_null());
+                link_offset.value(&index).unwrap() == *value
             })
         }
     }
