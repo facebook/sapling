@@ -60,16 +60,17 @@ class ChangelistImporter(object):
 
         moved = self._get_move_info(p4cl)
         node = self._create_commit(p4cl, p4flogs, removed, moved)
-        largefiles = self._get_largefiles(p4cl, added_or_modified)
+        largefiles = self._get_largefiles(p4cl, added_or_modified, node)
 
         return node, largefiles
 
-    def _get_largefiles(self, p4cl, files):
+    def _get_largefiles(self, p4cl, files, node):
         largefiles = []
+        ctx = self.repo[node]
         for p4path, hgpath in files:
             flog = self.repo.file(hgpath)
-            node = flog.tip()
-            islfs, oid = lfs.getlfsinfo(flog, node)
+            fnode = ctx.filenode(hgpath)
+            islfs, oid = lfs.getlfsinfo(flog, fnode)
             if islfs:
                 largefiles.append((p4cl.cl, p4path, oid))
                 self.ui.debug('largefile: %s, oid: %s\n' % (hgpath, oid))
