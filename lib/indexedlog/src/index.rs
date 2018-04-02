@@ -885,23 +885,15 @@ impl Index {
 
     /// Update the linked list for a given key.
     ///
-    /// - If `value` is not None, `link` is None, a new link entry with
-    ///   `value` will be created, and connect to the existing linked
-    ///   list pointed by `key`. `key` will point to the new link entry.
-    /// - If `value` is None, `link` is not None, `key` will point
-    ///   to `link` directly.  This can be used to make multiple
-    ///   keys share (part of) a linked list.
-    /// - If `value` is not None, and `link` is not None, a new link entry
-    ///   with `value` will be created, and connect to `link`. `key` will
-    ///   point to the new link entry.
-    /// - If `value` and `link` are None. Everything related to `key` is
-    ///   marked "dirty" without changing their actual logic value.
+    /// - If `link` is None, behave like `insert`.
+    /// - If `link` is not None, ignore the existing value `key` has, create a link entry that
+    ///   chains to the given `link` offset.
     ///
     /// This is a low-level API.
     pub fn insert_advanced<K: AsRef<[u8]>>(
         &mut self,
         key: &K,
-        value: Option<u64>,
+        value: u64,
         link: Option<LinkOffset>,
     ) -> io::Result<()> {
         let mut offset: Offset = self.root.radix_offset.into();
@@ -931,7 +923,7 @@ impl Index {
                         None => {
                             let old_link_offset = radix.link_offset(self)?;
                             let new_link_offset =
-                                self.maybe_create_link_entry(old_link_offset, value, link);
+                                link.unwrap_or(old_link_offset).create(self, value);
                             radix.set_link(self, new_link_offset);
                             return Ok(());
                         }
@@ -939,11 +931,8 @@ impl Index {
                             let next_offset = radix.child(self, x)?;
                             if next_offset.is_null() {
                                 // "key" is longer than existing ones. Create key and leaf entries.
-                                let link_offset = self.maybe_create_link_entry(
-                                    LinkOffset::default(),
-                                    value,
-                                    link,
-                                );
+                                let link_offset =
+                                    link.unwrap_or(LinkOffset::default()).create(self, value);
                                 let key_offset = KeyOffset::create(self, key);
                                 let leaf_offset = LeafOffset::create(self, link_offset, key_offset);
                                 radix.set_child(self, x, leaf_offset.into());
@@ -959,14 +948,13 @@ impl Index {
                     let (key_offset, link_offset) = leaf.key_and_link_offset(self)?;
                     if key_offset.key_content(self)? == key.as_ref() {
                         // Key matched. Need to copy leaf entry.
-                        let new_link_offset =
-                            self.maybe_create_link_entry(link_offset, value, link);
+                        let new_link_offset = link.unwrap_or(link_offset).create(self, value);
                         let new_leaf_offset = leaf.set_link(self, new_link_offset)?;
                         last_radix.set_child(self, last_child, new_leaf_offset.into());
                     } else {
                         // Key mismatch. Do a leaf split.
                         let new_link_offset =
-                            self.maybe_create_link_entry(LinkOffset::default(), value, link);
+                            link.unwrap_or(LinkOffset::default()).create(self, value);
                         self.split_leaf(
                             leaf,
                             key_offset,
@@ -1095,21 +1083,6 @@ impl Index {
         }
 
         Ok(())
-    }
-
-    /// See `insert_advanced`. Create a new link entry if necessary and return its offset.
-    fn maybe_create_link_entry(
-        &mut self,
-        link_offset: LinkOffset,
-        value: Option<u64>,
-        link: Option<LinkOffset>,
-    ) -> LinkOffset {
-        let link = link.or(Some(link_offset)).unwrap();
-        if let Some(value) = value {
-            link.create(self, value)
-        } else {
-            link
-        }
     }
 }
 
@@ -1299,7 +1272,7 @@ mod tests {
 
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(&[0x34], 99.into(), link.into())
+            .insert_advanced(&[0x34], 99, link.into())
             .expect("update");
         assert_eq!(
             format!("{:?}", index),
@@ -1347,7 +1320,7 @@ mod tests {
         // After 2nd flush. There are 2 roots.
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(&[0x34], 99.into(), link.into())
+            .insert_advanced(&[0x34], 99, link.into())
             .expect("update");
         index.flush().expect("flush");
         assert_eq!(
