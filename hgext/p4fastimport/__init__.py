@@ -167,6 +167,20 @@ def getfilelist(ui, p4filelist):
                                                     fileinfo['depotFile']))
     return filelist
 
+def sanitizeopts(repo, opts):
+    if opts.get('base') and not opts.get('bookmark'):
+        raise error.Abort(_('must set --bookmark when using --base'))
+    if opts.get('bookmark'):
+        scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
+    limit = opts.get('limit')
+    if limit:
+        try:
+            limit = int(limit)
+        except ValueError:
+            raise error.Abort(_('--limit should be an integer, got %s') % limit)
+        if limit <= 0:
+            raise error.Abort(_('--limit should be > 0, got %d') % limit)
+
 def startfrom(ui, repo, opts):
     base, dest = 'null', 'tip'
     if opts.get('bookmark'):
@@ -212,11 +226,7 @@ def p4fastimport(ui, repo, client, **opts):
     if 'fncache' in repo.requirements:
         raise error.Abort(_('fncache must be disabled'))
 
-    if opts.get('base') and not opts.get('bookmark'):
-        raise error.Abort(_('must set --bookmark when using --base'))
-
-    if opts.get('bookmark'):
-        scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
+    sanitizeopts(repo, opts)
 
     if len(repo) > 0:
         p1ctx, startcl, isbranchpoint = startfrom(ui, repo, opts)
@@ -342,12 +352,14 @@ def p4fastimport(ui, repo, client, **opts):
     'p4seqimport',
     [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
      ('B', 'bookmark', '', _('bookmark to set'), _('NAME')),
-     ('', 'base', '', _('base changeset (must exist in the repository)'))],
+     ('', 'base', '', _('base changeset (must exist in the repository)')),
+     ('', 'limit', '', _('max number of changelists to import'), _('N'))],
     _('[-P PATH] [-B NAME] client'),
 )
 def p4seqimport(ui, repo, client, **opts):
     '''Sequentially import changelists'''
     enforce_p4_client_exists(client)
+    sanitizeopts(repo, opts)
 
 @command(
         'p4syncimport',
@@ -356,8 +368,7 @@ def p4seqimport(ui, repo, client, **opts):
         _('[-P PATH] [-B NAME] oldclient newclient'),
         )
 def p4syncimport(ui, repo, oldclient, newclient, **opts):
-    if opts.get('bookmark'):
-        scmutil.checknewlabel(repo, opts['bookmark'], 'bookmark')
+    sanitizeopts(repo, opts)
 
     if len(repo) == 0:
         raise error.Abort(_('p4 sync commit does not support empty repo yet.'))
