@@ -43,9 +43,10 @@ Populate depot
 Run seqimport
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT
+  $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 1
   loading changelist numbers.
   2 changelists to import.
+  importing 1 only because of --limit.
   importing CL1
   adding Main/a
   adding Main/b
@@ -55,7 +56,10 @@ Run seqimport
   committing manifest
   committing changelog
   updating the branch cache
-  committed changeset 0:* (glob)
+  $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 50
+  incremental import from changelist: 2, node: * (glob)
+  loading changelist numbers.
+  1 changelists to import.
   importing CL2
   adding Main/c
   copying Main/a to Main/amove
@@ -68,7 +72,9 @@ Run seqimport
   committing manifest
   committing changelog
   updating the branch cache
-  committed changeset 1:* (glob)
+  $ hg log -T '{desc} CL={extras.p4changelist}\n'
+  second CL=2
+  first CL=1
   $ hg log -T "$HGLOGTEMPLATE"
   second
   ADD=Main/amove Main/c

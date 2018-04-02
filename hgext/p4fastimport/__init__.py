@@ -174,7 +174,10 @@ def getchangelists(ui, client, startcl, limit=None):
     ui.note(_('%d changelists to import.\n') % len(changelists))
 
     if limit:
-        changelists = changelists[:int(limit)]
+        limit = int(limit)
+        if limit < len(changelists):
+            ui.debug('importing %d only because of --limit.\n' % limit)
+            changelists = changelists[:limit]
     return changelists
 
 def getfilelist(ui, p4filelist):
@@ -367,14 +370,9 @@ def p4seqimport(ui, repo, client, **opts):
     enforce_p4_client_exists(client)
     sanitizeopts(repo, opts)
 
-    # TODO figure out startcl from repo
-    '''
-    if len(repo) > 0:
-        p1ctx, startcl, isbranchpoint = startfrom(ui, repo, opts)
-    else:
-        p1ctx, startcl, isbranchpoint = repo['tip'], None, False
-    '''
     startcl = None
+    if len(repo) > 0:
+        startcl = startfrom(ui, repo, opts)[1]
 
     changelists = getchangelists(ui, client, startcl, limit=opts.get('limit'))
     if len(changelists) == 0:

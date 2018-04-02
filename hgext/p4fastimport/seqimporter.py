@@ -93,11 +93,9 @@ class ChangelistImporter(object):
         if removed:
             commands.remove(self.ui, self.repo, *removed)
 
-        commands.commit(
-            self.ui,
-            self.repo,
-            message=p4cl.description,
+        self.repo.commit(
+            text=p4cl.description,
             date=p4cl.hgdate,
             user=p4cl.user,
-            # TODO add p4 CL number as extra
+            extra={'p4changelist': p4cl.cl},
         )

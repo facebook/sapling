@@ -64,6 +64,8 @@ Simple import
   $ hg p4fastimport --bookmark master --limit 2 --debug -P $P4ROOT hg-p4-import
   loading changelist numbers.
   3 changelists to import.
+  updating the branch cache (?)
+  importing 2 only because of --limit.
   loading list of files.
   3 files to import.
   reading filelog * (glob)
@@ -81,7 +83,7 @@ Simple import
   changelist 2: writing manifest. node: e2b9d9177f8d p1: a9f7e8df2a65 p2: 000000000000 linkrev: 1
   changelist 2: writing changelog: second
   writing bookmark
-  updating the branch cache (?)
+  updating the branch cache
   2 revision(s), 3 file(s) imported.
   $ hg p4fastimport --bookmark master --limit 2 --debug -P $P4ROOT hg-p4-import
   incremental import from changelist: 3, node: * (glob)
