@@ -29,10 +29,9 @@ fn main() {
 
     bench("index insertion", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let idx = Index::open(dir.path().join("i"), 0).expect("open");
+        let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
         elapsed(move || {
-            let mut idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                     .expect("insert");
@@ -49,7 +48,6 @@ fn main() {
                 .expect("insert");
         }
         elapsed(|| {
-            let mut idx = idx.clone().unwrap();
             idx.flush().expect("flush");
         })
     });
@@ -63,7 +61,6 @@ fn main() {
                 .expect("insert");
         }
         elapsed(move || {
-            let idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
             }
@@ -80,37 +77,9 @@ fn main() {
         }
         idx.flush().expect("flush");
         elapsed(move || {
-            let idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
             }
-        })
-    });
-
-    bench("index clone (memory)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
-        let buf = gen_buf(N * 20);
-        for i in 0..N {
-            idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
-                .expect("insert");
-        }
-        elapsed(move || {
-            let mut _idx = idx.clone().unwrap();
-        })
-    });
-
-    bench("index clone (disk)", || {
-        let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
-        let buf = gen_buf(N * 20);
-        for i in 0..N {
-            idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
-                .expect("insert");
-        }
-        idx.flush().expect("flush");
-        elapsed(move || {
-            let mut _idx = idx.clone().unwrap();
         })
     });
 }
