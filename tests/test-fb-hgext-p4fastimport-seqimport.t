@@ -72,15 +72,11 @@ Add a largefile and change symlink to be a regular file
 Run seqimport limiting to one changelist
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 1
+  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 1 --traceback
   loading changelist numbers.
   3 changelists to import.
   importing 1 only because of --limit.
   importing CL1
-  adding Main/a
-  adding Main/b
-  adding Main/symlink
-  adding Main/symlinktosymlink
   committing files:
   Main/a
   Main/b
@@ -90,7 +86,6 @@ Run seqimport limiting to one changelist
   committing changelog
   writing metadata to sqlite
   updating the branch cache
-  calling hook commit.lfs: hgext.lfs.checkrequireslfs
 
 Assert bookmark was written
   $ hg log -r master -T '{desc}\n'
@@ -108,14 +103,11 @@ Confirm Main/symlink is a link to Main/b in hg as well
   symlink (no-eol)
 
 Run seqimport again for up to 50 changelists
-  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 50
+  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 50 --traceback
   incremental import from changelist: 2, node: * (glob)
   loading changelist numbers.
   2 changelists to import.
   importing CL2
-  adding Main/c
-  copying Main/a to Main/amove
-  removing Main/a
   committing files:
   Main/amove
    Main/amove: copy Main/a:* (glob)
@@ -125,7 +117,6 @@ Run seqimport again for up to 50 changelists
   committing changelog
   writing metadata to sqlite
   importing CL3
-  adding Main/largefile
   committing files:
   Main/largefile
   Main/symlink
@@ -135,8 +126,6 @@ Run seqimport again for up to 50 changelists
   writing lfs metadata to sqlite
   writing metadata to sqlite
   updating the branch cache
-  calling hook commit.lfs: hgext.lfs.checkrequireslfs
-  calling hook commit.lfs: hgext.lfs.checkrequireslfs
 
 Main/symlink is no longer a symlink
   $ hg manifest -vr tip | grep Main/symlink
@@ -175,7 +164,7 @@ Confirm p4changelist is in commit extras
        1         3       6     -1       1 57fe91e2a37a 1e88685f5dde 000000000000
 
 Ensure Main/amove was moved and modified
-  $ hg cat Main/amove
+  $ hg cat -r tip Main/amove
   a
   modified
 

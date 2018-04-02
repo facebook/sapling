@@ -374,8 +374,9 @@ def p4seqimport(ui, repo, client, **opts):
     sanitizeopts(repo, opts)
 
     startcl = None
+    ctx = repo['tip']
     if len(repo) > 0:
-        startcl = startfrom(ui, repo, opts)[1]
+        ctx, startcl = startfrom(ui, repo, opts)[:2]
 
     changelists = getchangelists(ui, client, startcl, limit=opts.get('limit'))
     if len(changelists) == 0:
@@ -385,6 +386,7 @@ def p4seqimport(ui, repo, client, **opts):
     climporter = seqimporter.ChangelistImporter(
         ui,
         repo,
+        ctx,
         client,
         opts.get('path'),
         opts.get('bookmark'),
