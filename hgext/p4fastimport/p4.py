@@ -320,6 +320,18 @@ def get_filelogs_at_cl(client, clnum):
     except Exception:
         raise P4Exception(stdout)
 
+_usermap = None
+def getuser(username):
+    '''Translates username (usually unixname) to 'Full Name <emailaddress>'
+    defaults to username if not found on p4 users list'''
+    global _usermap
+    if _usermap is None:
+        _usermap = {
+            u['User']: '%s <%s>' % (u['FullName'], u['Email'])
+            for u in parse_usermap()
+        }
+    return _usermap.get(username, username)
+
 class P4Filelog(object):
     def __init__(self, depotfile, data):
         self._data = data
@@ -424,6 +436,21 @@ class P4Changelist(object):
     @property
     def cl(self):
         return self._clnum
+
+    @property
+    def hgdate(self):
+        return (self.parsed['time'], 0)
+
+    @property
+    def description(self):
+        desc = self.parsed['desc']
+        if desc == '':
+            desc = '** empty changelist description **'
+        return desc.decode('ascii', 'ignore')
+
+    @property
+    def user(self):
+        return getuser(self.parsed['user'])
 
     @property
     def origcl(self):

@@ -104,13 +104,6 @@ class ChangeManifestImporter(object):
         self._importset = importset
         self._p1ctx = p1ctx
 
-    @util.propertycache
-    def usermap(self):
-        m = {}
-        for user in p4.parse_usermap():
-            m[user['User']] = '%s <%s>' % (user['FullName'], user['Email'])
-        return m
-
     def create(self, *args, **kwargs):
         return list(self.creategen(*args, **kwargs))
 
@@ -214,19 +207,13 @@ class ChangeManifestImporter(object):
                     'node: %s p1: %s p2: %s linkrev: %d\n' % (
                     change.cl, short(mp1), short(oldmp1), short(mp2), linkrev))
 
-                desc = change.parsed['desc']
-                if desc == '':
-                    desc = '** empty changelist description **'
-                desc = desc.decode('ascii', 'ignore')
-
+                desc = change.description
                 shortdesc = desc.splitlines()[0]
-                username = change.parsed['user']
-                username = self.usermap.get(username, username)
                 self._ui.debug('changelist %d: writing changelog: %s\n' % (
                     change.cl, shortdesc))
                 cp1 = self.writechangelog(
                         clog, mp1, changed, desc, tr, cp1, cp2,
-                        username, (change.parsed['time'], 0), change.cl)
+                        change.user, change.hgdate, change.cl)
                 yield change.cl, cp1
 
     def writechangelog(

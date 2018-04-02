@@ -72,14 +72,12 @@ class ChangelistImporter(object):
         if removed:
             commands.remove(self.ui, self.repo, *removed)
 
-        parsed_cl = p4cl.parsed
-        # TODO treat desc and user same way as fastimport
         commands.commit(
             self.ui,
             self.repo,
-            message=parsed_cl['desc'],
-            date=(parsed_cl['time'], 0),
-            user=parsed_cl['user'],
+            message=p4cl.description,
+            date=p4cl.hgdate,
+            user=p4cl.user,
             # TODO add p4 CL number as extra
         )
         # TODO deal with moved files
