@@ -48,6 +48,7 @@ use std::path::Path;
 use std::io::ErrorKind::InvalidData;
 
 use base16::Base16Iter;
+use checksum_table::ChecksumTable;
 use lock::ScopedFileLock;
 use utils::mmap_readonly;
 
@@ -704,6 +705,9 @@ pub struct Index {
     dirty_leafs: Vec<MemLeaf>,
     dirty_links: Vec<MemLink>,
     dirty_keys: Vec<MemKey>,
+
+    // Optional checksum table.
+    checksum: Option<ChecksumTable>,
 }
 
 impl Index {
@@ -714,7 +718,10 @@ impl Index {
     ///
     /// If `root_offset` is not 0, read the root entry from the given offset.
     /// Otherwise, read the root entry from the end of the file.
-    pub fn open<P: AsRef<Path>>(path: P, root_offset: u64) -> io::Result<Self> {
+    ///
+    /// If `checksummed` is true, integrity check will be performed. This
+    /// helps detect file corruption due to OS crashes.
+    pub fn open<P: AsRef<Path>>(path: P, root_offset: u64, checksumed: bool) -> io::Result<Self> {
         let open_result = OpenOptions::new()
             .read(true)
             .write(true)
@@ -724,7 +731,7 @@ impl Index {
 
         // Fallback to open the file as read-only.
         let (read_only, mut file) = if open_result.is_err() {
-            (true, OpenOptions::new().read(true).open(path)?)
+            (true, OpenOptions::new().read(true).open(path.as_ref())?)
         } else {
             (false, open_result.unwrap())
         };
@@ -740,11 +747,21 @@ impl Index {
             }
         };
 
+        let mut checksum = if checksummed {
+            Some(ChecksumTable::new(&path)?)
+        } else {
+            None
+        };
+
         let (dirty_radixes, root) = if root_offset == 0 {
             // Automatically locate the root entry
             if len == 0 {
-                // Empty file. Create root radix entry as an dirty entry
+                // Empty file. Create root radix entry as an dirty entry, and
+                // rebuild checksum table (in case it's corrupted).
                 let radix_offset = RadixOffset::from_dirty_index(0);
+                if let Some(ref mut table) = checksum {
+                    table.clear();
+                }
                 (vec![MemRadix::default()], MemRoot { radix_offset })
             } else {
                 // Load root entry from the end of file.
@@ -764,6 +781,7 @@ impl Index {
             dirty_links: vec![],
             dirty_leafs: vec![],
             dirty_keys: vec![],
+            checksum,
         })
     }
 
@@ -775,6 +793,10 @@ impl Index {
             // Break the append-only property
             return Err(InvalidData.into());
         }
+        let checksum = match self.checksum {
+            Some(ref table) => Some(table.clone()?),
+            None => None,
+        };
         Ok(Index {
             file,
             buf: mmap,
@@ -784,6 +806,7 @@ impl Index {
             dirty_leafs: self.dirty_leafs.clone(),
             dirty_links: self.dirty_links.clone(),
             dirty_radixes: self.dirty_radixes.clone(),
+            checksum,
         })
     }
 
@@ -1281,10 +1304,12 @@ mod tests {
     use std::collections::HashMap;
     use tempdir::TempDir;
 
+    const CHECKSUM: bool = true;
+
     #[test]
     fn test_distinct_one_byte_keys() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
         assert_eq!(
             format!("{:?}", index),
             "Index { len: 1, root: Radix[0] }\n\
@@ -1331,7 +1356,7 @@ mod tests {
     #[test]
     fn test_distinct_one_byte_keys_flush() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
 
         // 1st flush.
         assert_eq!(index.flush().expect("flush"), 19);
@@ -1383,7 +1408,7 @@ mod tests {
     #[test]
     fn test_leaf_split() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
 
         // Example 1: two keys are not prefixes of each other
         index.insert(&[0x12, 0x34], 5).expect("insert");
@@ -1411,7 +1436,7 @@ mod tests {
         );
 
         // Example 2: new key is a prefix of the old key
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
         index.insert(&[0x12, 0x34], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1427,7 +1452,7 @@ mod tests {
         );
 
         // Example 3: old key is a prefix of the new key
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
@@ -1445,7 +1470,7 @@ mod tests {
         );
 
         // Same key. Multiple values.
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1462,7 +1487,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
 
         index.insert(&[], 55).expect("insert");
         index.insert(&[0x12], 77).expect("insert");
@@ -1476,7 +1501,7 @@ mod tests {
     quickcheck! {
         fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
             let dir = TempDir::new("index").expect("tempdir");
-            let mut index = Index::open(dir.path().join("a"), 0).expect("open");
+            let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
 
             for (key, value) in &map {
                 index.insert(key, *value).expect("insert");
@@ -1484,7 +1509,7 @@ mod tests {
 
             if flush {
                 let root_offset = index.flush().expect("flush");
-                index = Index::open(dir.path().join("a"), root_offset).expect("open");
+                index = Index::open(dir.path().join("a"), root_offset, CHECKSUM).expect("open");
             }
 
             map.iter().all(|(key, value)| {

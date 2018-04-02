@@ -2,6 +2,7 @@
 
 use atomicwrites::{AllowOverwrite, AtomicFile};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use fs2::FileExt;
 use memmap::Mmap;
 use std::cell::RefCell;
 use std::fs::{File, OpenOptions};
@@ -176,6 +177,25 @@ impl ChecksumTable {
             checksum_path,
             checksums,
             checked: RefCell::new(checked),
+        })
+    }
+
+    /// Clone the checksum table.
+    pub fn clone(&self) -> io::Result<Self> {
+        let file = self.file.duplicate()?;
+        let mmap = mmap_readonly(&file)?.0;
+        if mmap.len() < self.buf.len() {
+            // Break the append-only property
+            return Err(io::ErrorKind::InvalidData.into());
+        }
+        Ok(ChecksumTable {
+            file,
+            buf: mmap,
+            checksum_path: self.checksum_path.clone(),
+            chunk_size: self.chunk_size,
+            end: self.end,
+            checksums: self.checksums.clone(),
+            checked: self.checked.clone(),
         })
     }
 
