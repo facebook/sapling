@@ -27,15 +27,17 @@ class ChangelistImporter(object):
         try:
             wlock = self.repo.wlock()
             lock = self.repo.lock()
-            self._import(p4cl)
+            return self._import(p4cl)
         except Exception as e:
             self.ui.write_err(_('Failed importing CL%d: %s\n') % (p4cl.cl, e))
-            raise e
+            raise
         finally:
             lockmod.release(lock, wlock)
 
     def _import(self, p4cl):
-        '''Converts the provided p4 CL into a commit in hg'''
+        '''Converts the provided p4 CL into a commit in hg.
+        Returns a tuple containing the hg node and from the corresponding
+        commit and the list of largefiles that were in this commit'''
         self.ui.debug('importing CL%d\n' % p4cl.cl)
         fstat = p4.parse_fstat(p4cl.cl, self.client)
         added, removed = [], []
@@ -55,7 +57,10 @@ class ChangelistImporter(object):
         move_dsts = set(mi.dst for mi in moved)
         added = [fname for fname in added if fname not in move_dsts]
 
-        self._create_commit(p4cl, added, moved, removed)
+        node = self._create_commit(p4cl, added, moved, removed)
+        # TODO properly handle large files (second return here)
+        largefiles = []
+        return node, largefiles
 
     def _safe_open(self, path):
         '''Returns file handle for path, creating non-existing directories'''
@@ -93,7 +98,7 @@ class ChangelistImporter(object):
         if removed:
             commands.remove(self.ui, self.repo, *removed)
 
-        self.repo.commit(
+        return self.repo.commit(
             text=p4cl.description,
             date=p4cl.hgdate,
             user=p4cl.user,

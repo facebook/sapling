@@ -1,6 +1,10 @@
 #require p4
 
   $ . $TESTDIR/p4setup.sh
+  $ cat >> $HGRCPATH<<EOF
+  > [p4fastimport]
+  > metadata=metadata.sql
+  > EOF
   $ T_HGADD='ADD={file_adds}\n'
   $ T_HGDEL='DEL={file_dels}\n'
   $ T_HGMOD='MOD={file_mods}\n'
@@ -56,6 +60,7 @@ Run seqimport
   committing manifest
   committing changelog
   updating the branch cache
+  writing metadata to sqlite
   $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 50
   incremental import from changelist: 2, node: * (glob)
   loading changelist numbers.
@@ -72,6 +77,7 @@ Run seqimport
   committing manifest
   committing changelog
   updating the branch cache
+  writing metadata to sqlite
   $ hg log -T '{desc} CL={extras.p4changelist}\n'
   second CL=2
   first CL=1
@@ -96,6 +102,11 @@ Ensure Main/amove was moved and modified
   $ hg cat Main/amove
   a
   modified
+
+Verify that metadata is populated in sqlite file
+  $ sqlite3 metadata.sql "SELECT * FROM revision_mapping"
+  1|1|* (glob)
+  2|2|* (glob)
 
 End Test
   stopping the p4 server

@@ -235,6 +235,17 @@ def startfrom(ui, repo, opts):
         return ctx, startcl, False
     raise error.Abort(_('no valid p4 changelist number.'))
 
+def updatemetadata(ui, revisions, largefiles):
+    lfsmetadata = ui.config('p4fastimport', 'lfsmetadata', None)
+    if len(largefiles) > 0 and lfsmetadata is not None:
+        ui.note(_('writing lfs metadata to sqlite\n'))
+        writelfsmetadata(largefiles, revisions, lfsmetadata)
+
+    metadata = ui.config('p4fastimport', 'metadata', None)
+    if len(revisions) > 0 and metadata is not None:
+        ui.note(_('writing metadata to sqlite\n'))
+        writerevmetadata(revisions, metadata)
+
 cmdtable = {}
 command = registrar.command(cmdtable)
 
@@ -339,15 +350,7 @@ def p4fastimport(ui, repo, client, **opts):
                     ui.note(_('writing bookmark\n'))
                     writebookmark(tr, repo, revisions, opts['bookmark'])
 
-                if ui.config('p4fastimport', 'lfsmetadata', None) is not None:
-                    ui.note(_('writing lfs metadata to sqlite\n'))
-                    writelfsmetadata(largefiles, revisions,
-                         ui.config('p4fastimport', 'lfsmetadata', None))
-
-                if ui.config('p4fastimport', 'metadata', None) is not None:
-                    ui.note(_('writing metadata to sqlite\n'))
-                    writerevmetadata(revisions,
-                         ui.config('p4fastimport', 'metadata', None))
+                updatemetadata(ui, revisions, largefiles)
 
                 tr.close()
                 ui.note(_('%d revision(s), %d file(s) imported.\n') % (
@@ -382,7 +385,8 @@ def p4seqimport(ui, repo, client, **opts):
     storepath = opts.get('path')
     climporter = seqimporter.ChangelistImporter(ui, repo, client, storepath)
     for p4cl in changelists:
-        climporter.importcl(p4cl)
+        node, largefiles = climporter.importcl(p4cl)
+        updatemetadata(ui, [(p4cl.cl, hex(node))], largefiles)
 
 @command(
         'p4syncimport',
