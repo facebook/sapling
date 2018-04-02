@@ -76,6 +76,11 @@ class Abort(Hint, Exception):
     """Raised if a command needs to print an error and exit."""
     __bytes__ = _tobytes
 
+class UncommitedChangesAbort(Abort):
+    """Raised if there are uncommited changs and the command requires a clean
+    working copy
+    """
+
 class HookLoadError(Abort):
     """raised when loading a hook fails, aborting an operation
 

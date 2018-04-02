@@ -2,6 +2,7 @@
   $ cat << EOF >> $HGRCPATH
   > [extensions]
   > amend=
+  > purge=
   > rebase=
   > [rebase]
   > experimental.inmemory=1
@@ -282,3 +283,40 @@ Test inmemorydisallowedpaths carve-out:
   
   $ hg rebase -r 5 -d 0 --debug | grep disabling
   [1]
+
+Allow the working copy parent to be rebased with IMM, if configured:
+  $ cat <<EOF >> .hg/hgrc
+  > [rebase]
+  > experimental.inmemory.canrebaseworkingcopy=True
+  > experimental.inmemorywarning=rebasing in-memory!
+  > EOF
+  $ hg up -C 6
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg rebase -r . -d 5
+  rebasing in-memory!
+  rebasing 6:f19e4c5309bc "h" (tip)
+  saved backup bundle to $TESTTMP/repo1/repo2/.hg/strip-backup/f19e4c5309bc-e3db5525-rebase.hg
+  $ hg tglog
+  @  6: 0b514f19a9ab 'h'
+  |
+  o  5: f3a876323b82 'g'
+  |
+  | o  4: 6af061510c70 'e -> c'
+  | |
+  +---o  3: 844a7de3e617 'c'
+  | |
+  | o  2: 09c044d2cb43 'd'
+  | |
+  | o  1: fc055c3b4d33 'b'
+  |/
+  o  0: b173517d0057 'a'
+  
+
+Ensure if we rebase the WCP, we still require the working copy to be clean up
+front:
+  $ echo 'd' > i
+  $ hg add i
+  $ hg rebase -r . -d 0
+  abort: uncommitted changes
+  [255]
+  $ hg up -Cq .

@@ -50,6 +50,7 @@ from mercurial import (
     revsetlang,
     scmutil,
     smartset,
+    templatefilters,
     util,
 )
 
@@ -73,6 +74,8 @@ command = registrar.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'ships-with-hg-core'
+
+colortable = {'rebase.manual.update': 'yellow'}
 
 def _nothingtorebase():
     return 1
@@ -601,10 +604,25 @@ class rebaseruntime(object):
         if newwd < 0:
             # original directory is a parent of rebase set root or ignored
             newwd = self.originalwd
-        if (newwd not in [c.rev() for c in repo[None].parents()] and
-                not self.inmemory):
+
+        if newwd not in [c.rev() for c in repo[None].parents()]:
             ui.note(_("update back to initial working directory parent\n"))
-            hg.updaterepo(repo, newwd, False)
+            try:
+                hg.updaterepo(repo, newwd, False)
+            except error.UpdateAbort:
+                if self.inmemory:
+                    # Print a nice message rather than aborting/restarting.
+                    newctx = repo[newwd]
+                    firstline = templatefilters.firstline(newctx.description())
+                    ui.warn(_("important: run `hg up %s` to get the new "
+                              "version of your current commit (\"%s\")\n"
+                              "(this was not done automatically because you "
+                              "made working copy changes during the "
+                              "rebase)\n") %
+                              (short(newctx.node()), firstline),
+                        label='rebase.manual.update')
+                else:
+                    raise # Keep old behavior
 
         collapsedas = None
         if not self.keepf:
@@ -768,6 +786,11 @@ def rebase(ui, repo, **opts):
       [rebase]
       experimental.inmemory = True
 
+    This won't rebase the working copy by default, but you can change that::
+
+      [rebase]
+      experimental.inmemory.canrebaseworkingcopy = True
+
     It will also print a configurable warning::
 
       [rebase]
@@ -843,6 +866,13 @@ def rebase(ui, repo, **opts):
             # This can occur if in-memory was turned off and then legitimate
             # conflicts were raised. Raise as usual.
             raise
+        except error.UncommitedChangesAbort:
+            # This is a legitimate error with IMM when rebasing the working
+            # copy. Throw it up to the user.
+            raise
+        except error.UpdateAbort:
+            # Same as `UncommitedChangesAbort`.
+            raise
         except error.InMemoryMergeConflictsError as e:
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
@@ -853,6 +883,8 @@ def rebase(ui, repo, **opts):
             _origrebase(ui, repo, rbsrt, **{'abort': True})
             return _origrebase(ui, repo, rbsrt, **opts)
         except Exception as e:
+            # Catch generic exceptions and restart the rebase without IMM. Any
+            # cases that _shouldn't_ restart must be caught above.
             # In-memory merge can be turned off during `_origrebase` (see
             # `_shoulddisableimm()`). So we double check the value of
             # `rbsrt.inmemory`.
@@ -945,26 +977,25 @@ def _origrebase(ui, repo, rbsrt, **opts):
 
         rbsrt._finishrebase()
 
-def _shoulddisableimm(ui, repo, rebaseset):
+def _shoulddisableimm(ui, repo, rebaseset, rebasingwcp):
     """returns if we should disable in-memory merge based on the rebaseset"""
-    # If rebasing the working copy parent, force in-memory merge to be off.
+    # If rebasing the working copy parent, force in-memory merge to be off,
+    # unless ``experimental.inmemory.canrebaseworkingcopy`` is True.
     #
     # This is because the extra work of checking out the newly rebased commit
-    # outweights the benefits of rebasing in-memory, and executing an extra
-    # update command adds a bit of overhead, so better to just do it on disk. In
-    # all other cases leave it on.
-    #
-    # Note that there are cases where this isn't true -- e.g., rebasing large
-    # stacks that include the WCP. However, I'm not yet sure where the cutoff
-    # is.
-    rebasingwcp = repo['.'].rev() in rebaseset
+    # might outweight the benefits of rebasing in-memory.
     ui.log("rebase", "", rebase_rebasing_wcp=rebasingwcp)
+    allowwcprebase = ui.configbool("rebase",
+        "experimental.inmemory.canrebaseworkingcopy", False)
     if rebasingwcp:
-        whynotimm = "wcp in rebaseset"
-        msg = "disabling IMM because: %s" % whynotimm
-        ui.log("rebase", msg, why_not_imm=whynotimm)
-        ui.debug(msg + '\n')
-        return True
+        if allowwcprebase:
+            cmdutil.bailifchanged(repo)
+        else:
+            whynotimm = "wcp in rebaseset\n"
+            msg = "disabling IMM because: %s" % whynotimm
+            ui.log("rebase", msg, why_not_imm=whynotimm)
+            ui.debug(msg + '\n')
+            return True
 
     # Check for paths in the rebaseset that are likely to later trigger
     # conflicts or a mergedriver run (and thus cause the whole rebase to later
@@ -1080,7 +1111,9 @@ def _definedestmap(ui, repo, rbsrt, destf=None, srcf=None, basef=None,
             return None
 
     # Possibly disable in-memory merge based on the rebaseset.
-    if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset):
+    rbsrt.rebasingwcp = repo['.'].rev() in rebaseset
+    if rbsrt.inmemory and _shoulddisableimm(ui, repo, rebaseset,
+                                            rbsrt.rebasingwcp):
         rbsrt.inmemory = False
 
         # Check for local changes since we did not before.

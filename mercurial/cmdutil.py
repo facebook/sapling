@@ -763,7 +763,7 @@ def bailifchanged(repo, merge=True, hint=None):
         raise error.Abort(_('outstanding uncommitted merge'), hint=hint)
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
-        raise error.Abort(_('uncommitted changes'), hint=hint)
+        raise error.UncommitedChangesAbort(_('uncommitted changes'), hint=hint)
     ctx = repo[None]
     for s in sorted(ctx.substate):
         ctx.sub(s).bailifchanged(hint=hint)
