@@ -86,9 +86,12 @@ struct MemRoot {
     pub radix_offset: RadixOffset,
 }
 
+// Shorter alias to `Option<ChecksumTable>`
+type Checksum = Option<ChecksumTable>;
+
 // Helper method to do checksum
 #[inline]
-fn verify_checksum(checksum: &Option<ChecksumTable>, start: u64, length: u64) -> io::Result<()> {
+fn verify_checksum(checksum: &Checksum, start: u64, length: u64) -> io::Result<()> {
     if let &Some(ref table) = checksum {
         if !table.check_range(start, length) {
             return Err(io::Error::new(InvalidData, "integrity check failed"));
@@ -626,11 +629,7 @@ impl MemKey {
 }
 
 impl MemRoot {
-    fn read_from<B: AsRef<[u8]>>(
-        buf: B,
-        offset: u64,
-        checksum: &Option<ChecksumTable>,
-    ) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_ROOT)?;
@@ -645,11 +644,7 @@ impl MemRoot {
         }
     }
 
-    fn read_from_end<B: AsRef<[u8]>>(
-        buf: B,
-        end: u64,
-        checksum: &Option<ChecksumTable>,
-    ) -> io::Result<Self> {
+    fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64, checksum: &Checksum) -> io::Result<Self> {
         if end > 1 {
             let (size, _): (u64, _) = buf.as_ref().read_vlq_at(end as usize - 1)?;
             Self::read_from(buf, end - size, checksum)
@@ -725,7 +720,7 @@ pub struct Index {
     dirty_keys: Vec<MemKey>,
 
     // Optional checksum table.
-    checksum: Option<ChecksumTable>,
+    checksum: Checksum,
 }
 
 impl Index {
