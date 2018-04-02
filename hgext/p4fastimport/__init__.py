@@ -384,7 +384,7 @@ def p4seqimport(ui, repo, client, **opts):
     storepath = opts.get('path')
     climporter = seqimporter.ChangelistImporter(ui, repo, client, storepath)
     for p4cl in changelists:
-        climporter.importcl(p4cl.cl)
+        climporter.importcl(p4cl)
 
 @command(
         'p4syncimport',

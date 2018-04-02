@@ -1,6 +1,11 @@
 #require p4
 
   $ . $TESTDIR/p4setup.sh
+  $ T_HGADD='ADD={file_adds}\n'
+  $ T_HGDEL='DEL={file_dels}\n'
+  $ T_HGMOD='MOD={file_mods}\n'
+  $ T_HGCOP='COP\n{file_copies % "{source} => {name}\n"}'
+  $ HGLOGTEMPLATE="{desc}\n${T_HGADD}${T_HGDEL}${T_HGMOD}${T_HGCOP}"
 
 Populate depot
   $ mkdir Main
@@ -41,17 +46,42 @@ Run seqimport
   loading changelist numbers.
   2 changelists to import.
   importing CL1
-  added: Main/a Main/b
+  adding Main/a
+  adding Main/b
+  committing files:
+  Main/a
+  Main/b
+  committing manifest
+  committing changelog
+  updating the branch cache
+  committed changeset 0:* (glob)
   importing CL2
-  added: Main/amove Main/c
-  removed: Main/a
-  $ cat Main/amove
-  a
-  $ cat Main/b
-  b
-  bb
-  $ cat Main/c
-  c
+  adding Main/amove
+  adding Main/c
+  removing Main/a
+  committing files:
+  Main/amove
+  Main/b
+  Main/c
+  committing manifest
+  committing changelog
+  updating the branch cache
+  committed changeset 1:* (glob)
+  $ hg log -T "$HGLOGTEMPLATE"
+  second
+  ADD=Main/amove Main/c
+  DEL=Main/a
+  MOD=Main/b
+  COP
+  first
+  ADD=Main/a Main/b
+  DEL=
+  MOD=
+  COP
+  $ hg debugindex Main/b
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0       3     -1       0 1e88685f5dde 000000000000 000000000000
+       1         3       6     -1       1 57fe91e2a37a 1e88685f5dde 000000000000
 
 End Test
   stopping the p4 server
