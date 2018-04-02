@@ -31,7 +31,9 @@ hex = node.hex
 @command('^fold|squash',
          [('r', 'rev', [], _("revision to fold")),
           ('', 'exact', None, _("only fold specified revisions")),
-          ('', 'from', None, _("fold linearly to working copy parent")),
+          ('', 'from', None,
+            _("fold linearly from current revision to specified revision")
+          ),
           ('', 'no-rebase', False, _("don't rebase descendants after split")),
          ] + (commands.commitopts + commands.commitopts2 +
               commands.formatteropts),
@@ -39,29 +41,29 @@ hex = node.hex
 def fold(ui, repo, *revs, **opts):
     """fold multiple revisions into a single one
 
-    With --from, folds all the revisions linearly between the given revisions
-    and the parent of the working directory.
+    With --from, folds all the revisions linearly between the current revision
+    and the specified revision.
 
-    With --exact, folds only the specified revisions while ignoring the
-    parent of the working directory. In this case, the given revisions must
-    form a linear unbroken chain.
+    With --exact, folds only the specified revisions while ignoring the revision
+    currently checked out. The given revisions must form a linear unbroken
+    chain.
 
     .. container:: verbose
 
      Some examples:
 
-     - Fold the current revision with its parent::
+     - Fold from the current revision to its parent::
 
          hg fold --from .^
 
-     - Fold all draft revisions with working directory parent::
+     - Fold all draft revisions into the current revision::
 
          hg fold --from 'draft()'
 
        See :hg:`help phases` for more about draft revisions and
        :hg:`help revsets` for more about the `draft()` keyword
 
-     - Fold revisions between 3 and 6 with the working directory parent::
+     - Fold revisions between 3 and 6 into the current revision::
 
          hg fold --from 3::6
 
