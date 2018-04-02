@@ -26,6 +26,7 @@ Populate depot
   //depot/Main/b#1 - opened for edit
   $ p4 move Main/a Main/amove
   //depot/Main/amove#1 - moved from //depot/Main/a#1
+  $ echo modified >> Main/amove
   $ echo bb >> Main/b
   $ echo c >> Main/c
   $ p4 add Main/c
@@ -56,11 +57,12 @@ Run seqimport
   updating the branch cache
   committed changeset 0:* (glob)
   importing CL2
-  adding Main/amove
   adding Main/c
+  copying Main/a to Main/amove
   removing Main/a
   committing files:
   Main/amove
+   Main/amove: copy Main/a:* (glob)
   Main/b
   Main/c
   committing manifest
@@ -73,6 +75,7 @@ Run seqimport
   DEL=Main/a
   MOD=Main/b
   COP
+  Main/a => Main/amove
   first
   ADD=Main/a Main/b
   DEL=
@@ -82,6 +85,11 @@ Run seqimport
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0       3     -1       0 1e88685f5dde 000000000000 000000000000
        1         3       6     -1       1 57fe91e2a37a 1e88685f5dde 000000000000
+
+Ensure Main/amove was moved and modified
+  $ hg cat Main/amove
+  a
+  modified
 
 End Test
   stopping the p4 server

@@ -484,6 +484,7 @@ class P4Changelist(object):
             files[filename] = {
                 'rev': int(info[ridx]),
                 'action': info[aidx],
+                'src': info.get('fromFile%d' % i, None),
             }
             i += 1
         return {

@@ -1,6 +1,7 @@
 # (c) 2017-present Facebook Inc.
 from __future__ import absolute_import
 
+import collections
 import errno
 import os
 
@@ -11,6 +12,8 @@ from mercurial import (
 )
 
 from . import importer, p4
+
+MoveInfo = collections.namedtuple('MoveInfo', ['src', 'dst'])
 
 class ChangelistImporter(object):
     def __init__(self, ui, repo, client, storepath):
@@ -35,7 +38,7 @@ class ChangelistImporter(object):
         '''Converts the provided p4 CL into a commit in hg'''
         self.ui.debug('importing CL%d\n' % p4cl.cl)
         fstat = p4.parse_fstat(p4cl.cl, self.client)
-        added, moved, removed = [], [], []
+        added, removed = [], []
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
@@ -47,6 +50,11 @@ class ChangelistImporter(object):
                     f.write(self._get_file_content(p4path, p4cl.cl))
                 if action in p4.ACTION_ADD:
                     added.append(hgpath)
+
+        moved = self._get_move_info(p4cl)
+        move_dsts = set(mi.dst for mi in moved)
+        added = [fname for fname in added if fname not in move_dsts]
+
         self._create_commit(p4cl, added, moved, removed)
 
     def _safe_open(self, path):
@@ -59,6 +67,17 @@ class ChangelistImporter(object):
                 raise err
         return open(path, 'w')
 
+    def _get_move_info(self, p4cl):
+        '''Returns a list of MoveInfo, i.e. (src, dst) for each moved file'''
+        moves = []
+        for filename, info in p4cl.parsed['files'].items():
+            src = info.get('src')
+            if src:
+                hgsrc = importer.relpath(self.client, src)
+                hgdst = importer.relpath(self.client, filename)
+                moves.append(MoveInfo(hgsrc, hgdst))
+        return moves
+
     def _get_file_content(self, p4path, clnum):
         '''Returns file content for file in p4path'''
         # TODO try to get file from local stores instead of resorting to
@@ -69,6 +88,8 @@ class ChangelistImporter(object):
         '''Performs all hg add/mv/rm and creates a commit'''
         if added:
             commands.add(self.ui, self.repo, *added)
+        for mi in moved:
+            commands.copy(self.ui, self.repo, mi.src, mi.dst, after=True)
         if removed:
             commands.remove(self.ui, self.repo, *removed)
 
@@ -80,4 +101,3 @@ class ChangelistImporter(object):
             user=p4cl.user,
             # TODO add p4 CL number as extra
         )
-        # TODO deal with moved files
