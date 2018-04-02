@@ -57,7 +57,7 @@ A differs between Main and Release
 
 Setup hg repo
   $ cd $hgwd
-  $ hg init
+  $ hg init --config 'format.usefncache=False'
 
 Import Main!!
   $ hg p4seqimport -B master -P $P4ROOT hg-p4-import

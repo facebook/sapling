@@ -372,6 +372,8 @@ def p4fastimport(ui, repo, client, **opts):
 )
 def p4seqimport(ui, repo, client, **opts):
     '''Sequentially import changelists'''
+    if 'fncache' in repo.requirements:
+        raise error.Abort(_('fncache must be disabled'))
     enforce_p4_client_exists(client)
     sanitizeopts(repo, opts)
 
@@ -391,12 +393,14 @@ def p4seqimport(ui, repo, client, **opts):
         ctx,
         client,
         opts.get('path'),
-        opts.get('bookmark'),
     )
-    with repo.wlock(), repo.lock(), repo.transaction('seqimport'):
+    with repo.wlock(), repo.lock(), repo.transaction('seqimport') as tr:
+        node = None
         for p4cl in changelists:
             node, largefiles = climporter.importcl(p4cl)
             updatemetadata(ui, [(p4cl.cl, hex(node))], largefiles)
+        if node is not None and opts.get('bookmark'):
+            writebookmark(tr, repo, [(None, hex(node))], opts['bookmark'])
 
 @command(
         'p4syncimport',

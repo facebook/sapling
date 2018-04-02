@@ -1,8 +1,6 @@
 # (c) 2017-present Facebook Inc.
 from __future__ import absolute_import
 
-import errno
-import os
 import re
 
 from mercurial.i18n import _
@@ -13,30 +11,21 @@ from mercurial import (
 from . import importer, lfs, p4
 
 class ChangelistImporter(object):
-    def __init__(self, ui, repo, ctx, client, storepath, bookmark):
+    def __init__(self, ui, repo, ctx, client, storepath):
         self.ui = ui
         self.repo = repo
         self.node = self.repo[ctx].node()
         self.client = client
         self.storepath = storepath
-        self.bookmark = bookmark
 
     def importcl(self, p4cl, bookmark=None):
         try:
             ctx, largefiles = self._import(p4cl)
             self.node = self.repo[ctx].node()
-            self._update_bookmark()
             return ctx, largefiles
         except Exception as e:
             self.ui.write_err(_('Failed importing CL%d: %s\n') % (p4cl.cl, e))
             raise
-
-    def _update_bookmark(self):
-        if not self.bookmark:
-            return
-        tr = self.repo.currenttransaction()
-        changes = [(self.bookmark, self.node)]
-        self.repo._bookmarks.applychanges(self.repo, tr, changes)
 
     def _import(self, p4cl):
         '''Converts the provided p4 CL into a commit in hg.
@@ -75,16 +64,6 @@ class ChangelistImporter(object):
                 largefiles.append((p4cl.cl, p4path, oid))
                 self.ui.debug('largefile: %s, oid: %s\n' % (hgpath, oid))
         return largefiles
-
-    def _safe_open(self, path):
-        '''Returns file handle for path, creating non-existing directories'''
-        dirname = os.path.dirname(path)
-        try:
-            os.makedirs(dirname)
-        except OSError as err:
-            if err.errno != errno.EEXIST or not os.path.isdir(dirname):
-                raise err
-        return open(path, 'w')
 
     def _get_move_info(self, p4cl):
         '''Returns a dict where entries are (dst, src)'''
