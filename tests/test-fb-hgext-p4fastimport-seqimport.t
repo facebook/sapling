@@ -72,7 +72,7 @@ Add a largefile and change symlink to be a regular file
 Run seqimport limiting to one changelist
   $ cd $hgwd
   $ hg init --config 'format.usefncache=False'
-  $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 1
+  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 1
   loading changelist numbers.
   3 changelists to import.
   importing 1 only because of --limit.
@@ -88,9 +88,13 @@ Run seqimport limiting to one changelist
   Main/symlinktosymlink
   committing manifest
   committing changelog
+  writing metadata to sqlite
   updating the branch cache
   calling hook commit.lfs: hgext.lfs.checkrequireslfs
-  writing metadata to sqlite
+
+Assert bookmark was written
+  $ hg log -r master -T '{desc}\n'
+  first
 
 Confirm Main/symlink is a link to Main/b in hg as well
   $ hg manifest -vr tip
@@ -104,7 +108,7 @@ Confirm Main/symlink is a link to Main/b in hg as well
   symlink (no-eol)
 
 Run seqimport again for up to 50 changelists
-  $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 50
+  $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 50
   incremental import from changelist: 2, node: * (glob)
   loading changelist numbers.
   2 changelists to import.
@@ -119,8 +123,6 @@ Run seqimport again for up to 50 changelists
   Main/c
   committing manifest
   committing changelog
-  updating the branch cache
-  calling hook commit.lfs: hgext.lfs.checkrequireslfs
   writing metadata to sqlite
   importing CL3
   adding Main/largefile
@@ -129,16 +131,21 @@ Run seqimport again for up to 50 changelists
   Main/symlink
   committing manifest
   committing changelog
-  updating the branch cache
   largefile: Main/largefile, oid: 3c2631136e12ba309517e289322ea95ccc93a30d04265e7ea1fdf643fe59ed07
-  calling hook commit.lfs: hgext.lfs.checkrequireslfs
   writing lfs metadata to sqlite
   writing metadata to sqlite
+  updating the branch cache
+  calling hook commit.lfs: hgext.lfs.checkrequireslfs
+  calling hook commit.lfs: hgext.lfs.checkrequireslfs
 
 Main/symlink is no longer a symlink
   $ hg manifest -vr tip | grep Main/symlink
   644   Main/symlink
   644 @ Main/symlinktosymlink
+
+Verify master points at the latest imported CL
+  $ hg log -r master -T '{desc}\n'
+  third
 
 Confirm p4changelist is in commit extras
   $ hg log -T '{desc} CL={extras.p4changelist}\n'

@@ -7,8 +7,8 @@ import os
 
 from mercurial.i18n import _
 from mercurial import (
+    bookmarks,
     commands,
-    lock as lockmod,
 )
 
 from . import importer, lfs, p4
@@ -16,23 +16,27 @@ from . import importer, lfs, p4
 MoveInfo = collections.namedtuple('MoveInfo', ['src', 'dst'])
 
 class ChangelistImporter(object):
-    def __init__(self, ui, repo, client, storepath):
+    def __init__(self, ui, repo, client, storepath, bookmark):
         self.ui = ui
         self.repo = repo
         self.client = client
         self.storepath = storepath
+        self.bookmark = bookmark
 
-    def importcl(self, p4cl):
-        wlock = lock = None
+    def importcl(self, p4cl, bookmark=None):
         try:
-            wlock = self.repo.wlock()
-            lock = self.repo.lock()
-            return self._import(p4cl)
+            node, largefiles = self._import(p4cl)
+            self._update_bookmark(node)
+            return node, largefiles
         except Exception as e:
             self.ui.write_err(_('Failed importing CL%d: %s\n') % (p4cl.cl, e))
             raise
-        finally:
-            lockmod.release(lock, wlock)
+
+    def _update_bookmark(self, rev):
+        if not self.bookmark:
+            return
+        tr = self.repo.currenttransaction()
+        bookmarks.addbookmarks(self.repo, tr, [self.bookmark], rev, force=True)
 
     def _import(self, p4cl):
         '''Converts the provided p4 CL into a commit in hg.

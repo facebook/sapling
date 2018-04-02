@@ -382,11 +382,17 @@ def p4seqimport(ui, repo, client, **opts):
         ui.note(_('no changes to import, exiting.\n'))
         return
 
-    storepath = opts.get('path')
-    climporter = seqimporter.ChangelistImporter(ui, repo, client, storepath)
-    for p4cl in changelists:
-        node, largefiles = climporter.importcl(p4cl)
-        updatemetadata(ui, [(p4cl.cl, hex(node))], largefiles)
+    climporter = seqimporter.ChangelistImporter(
+        ui,
+        repo,
+        client,
+        opts.get('path'),
+        opts.get('bookmark'),
+    )
+    with repo.wlock(), repo.lock(), repo.transaction('seqimport'):
+        for p4cl in changelists:
+            node, largefiles = climporter.importcl(p4cl)
+            updatemetadata(ui, [(p4cl.cl, hex(node))], largefiles)
 
 @command(
         'p4syncimport',
