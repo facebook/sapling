@@ -1033,7 +1033,14 @@ impl Index {
         //           D |                     | Leaf("1234", Link: Y)
         //           E |                     | Radix(3: D)
 
-        let old_key = Vec::from(old_key_offset.key_content(self)?);
+        // About safety: This is to avoid a memory copy / allocation.
+        // `old_key` and `old_iter` are only valid before `dirty_keys` being resized.
+        // `KeyOffset::create` might resize it. But `old_iter` and `old_key` are not used
+        // after `KeyOffset::create`. So it's safe. `b1` is a copy of `u8`, not `&u8`.
+        let old_key = {
+            let k = old_key_offset.key_content(self)?;
+            unsafe { &*(k as (*const [u8])) }
+        };
         let mut old_iter = Base16Iter::from_base256(&old_key).skip(step);
         let mut new_iter = Base16Iter::from_base256(&new_key).skip(step);
 
