@@ -1,6 +1,5 @@
 extern crate atomicwrites;
 extern crate byteorder;
-extern crate failure;
 extern crate fs2;
 extern crate memmap;
 #[cfg(test)]

@@ -1,12 +1,11 @@
-#[macro_use]
-extern crate criterion;
 extern crate indexedlog;
+extern crate minibench;
 extern crate rand;
 extern crate tempdir;
 
-use criterion::Criterion;
 use indexedlog::Index;
 use indexedlog::base16::Base16Iter;
+use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
 use tempdir::TempDir;
 
@@ -19,29 +18,29 @@ fn gen_buf(size: usize) -> Vec<u8> {
     buf
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("base16 iterating 1M bytes", |b| {
+fn main() {
+    bench("base16 iterating 1M bytes", || {
         let x = vec![4u8; 1000000];
-        b.iter(|| {
+        elapsed(|| {
             let y: u8 = Base16Iter::from_base256(&x).sum();
             assert_eq!(y, (4 * 1000000) as u8);
         })
     });
 
-    c.bench_function("index insertion", |b| {
+    bench("index insertion", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
-        b.iter(move || {
+        elapsed(move || {
             let mut idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                     .expect("insert");
             }
-        });
+        })
     });
 
-    c.bench_function("index flush", |b| {
+    bench("index flush", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
@@ -49,13 +48,13 @@ fn criterion_benchmark(c: &mut Criterion) {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                 .expect("insert");
         }
-        b.iter(|| {
+        elapsed(|| {
             let mut idx = idx.clone().unwrap();
-            idx.flush().expect("flush")
-        });
+            idx.flush().expect("flush");
+        })
     });
 
-    c.bench_function("index lookup (memory)", |b| {
+    bench("index lookup (memory)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
@@ -63,15 +62,15 @@ fn criterion_benchmark(c: &mut Criterion) {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                 .expect("insert");
         }
-        b.iter(move || {
+        elapsed(move || {
             let idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
             }
-        });
+        })
     });
 
-    c.bench_function("index lookup (disk)", |b| {
+    bench("index lookup (disk)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
@@ -80,15 +79,15 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .expect("insert");
         }
         idx.flush().expect("flush");
-        b.iter(move || {
+        elapsed(move || {
             let idx = idx.clone().unwrap();
             for i in 0..N {
                 idx.get(&&buf[20 * i..20 * (i + 1)]).expect("lookup");
             }
-        });
+        })
     });
 
-    c.bench_function("index clone (memory)", |b| {
+    bench("index clone (memory)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
@@ -96,12 +95,12 @@ fn criterion_benchmark(c: &mut Criterion) {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
                 .expect("insert");
         }
-        b.iter(move || {
+        elapsed(move || {
             let mut _idx = idx.clone().unwrap();
-        });
+        })
     });
 
-    c.bench_function("index clone (disk)", |b| {
+    bench("index clone (disk)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");
         let buf = gen_buf(N * 20);
@@ -110,15 +109,8 @@ fn criterion_benchmark(c: &mut Criterion) {
                 .expect("insert");
         }
         idx.flush().expect("flush");
-        b.iter(move || {
+        elapsed(move || {
             let mut _idx = idx.clone().unwrap();
-        });
+        })
     });
 }
-
-criterion_group!{
-    name=benches;
-    config=Criterion::default().sample_size(20);
-    targets=criterion_benchmark
-}
-criterion_main!(benches);
