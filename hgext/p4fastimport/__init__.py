@@ -237,13 +237,15 @@ def startfrom(ui, repo, opts):
 
 def updatemetadata(ui, revisions, largefiles):
     lfsmetadata = ui.config('p4fastimport', 'lfsmetadata', None)
-    if len(largefiles) > 0 and lfsmetadata is not None:
-        ui.note(_('writing lfs metadata to sqlite\n'))
+    if lfsmetadata is not None:
+        if len(largefiles) > 0:
+            ui.note(_('writing lfs metadata to sqlite\n'))
         writelfsmetadata(largefiles, revisions, lfsmetadata)
 
     metadata = ui.config('p4fastimport', 'metadata', None)
-    if len(revisions) > 0 and metadata is not None:
-        ui.note(_('writing metadata to sqlite\n'))
+    if metadata is not None:
+        if len(revisions) > 0:
+            ui.note(_('writing metadata to sqlite\n'))
         writerevmetadata(revisions, metadata)
 
 cmdtable = {}
