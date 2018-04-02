@@ -52,24 +52,42 @@ class perftestsuite(object):
     A simple integration test suite that runs against an existing repo, with the
     goal of logging perf numbers to CI.
     """
-    def __init__(self, repo, publish=False):
+    def __init__(self, repo, publish=False, profile=False, printout=False):
         self.repo = repo
         self.ui = repo.ui
         self.publish = publish
+        self.profile = profile
+        self.printout = printout
         self.order = [
             'commit',
             'amend',
             'status',
             'revert',
             'rebase',
+            'immrebase',
             'pull',
         ]
         self.editsgenerator = editsgenerator.randomeditsgenerator(repo[None])
+
+        if profile:
+            self.profileargs = ['--profile']
+        else:
+            self.profileargs = []
 
     def run(self):
         for cmd in self.order:
             func = getattr(self, 'test' + cmd)
             func()
+
+    def _runtimeprofile(self, cmd, args=None, metricname=None):
+        """Runs ``cmd`` with ``args`` and sends th result to ODS; also adds
+        --profile, if requested."""
+        if args is None:
+            args = []
+        if metricname is None:
+            metricname = cmd
+        with self.time(metricname):
+            self._run([cmd] + args + self.profileargs)
 
     @contextlib.contextmanager
     def time(self, cmd):
@@ -91,37 +109,42 @@ class perftestsuite(object):
         self.editsgenerator.makerandomedits(self.repo[None])
         self._run(['status'])
         self._run(['addremove'])
-        with self.time('commit'):
-            self._run(['commit', '-m', 'test commit'])
+        self._runtimeprofile('commit', ['-m', 'test commit'])
 
     def testamend(self):
         self.editsgenerator.makerandomedits(self.repo[None])
         self._run(['status'])
         self._run(['addremove'])
-        with self.time('amend'):
-            self._run(['amend'])
+        self._runtimeprofile('amend')
 
     def teststatus(self):
         self.editsgenerator.makerandomedits(self.repo[None])
-        with self.time('status'):
-            self._run(['status'])
+        self._runtimeprofile('status')
 
     def testrevert(self):
         self.editsgenerator.makerandomedits(self.repo[None])
-        with self.time('revert'):
-            self._run(['revert', '--all'])
+        self._runtimeprofile('revert', ['--all'])
 
     def testpull(self):
         # TODO: Log the master rev at start, (real)strip N commits, then pull
         # that rev, to reduce the variability.
-        with self.time('pull'):
-            self._run(['pull'])
+        self._runtimeprofile('pull')
 
     def testrebase(self):
-        distance = self.ui.configint("perfsuite", "rebasedistance", 1000)
-        with self.time('rebase'):
-            self._run(['rebase', '-s', '. % master', '-d',
-                       "master~%d" % distance])
+        dist = self.ui.configint("perfsuite", "rebase.masterdistance", 1000)
+        self._runtimeprofile('rebase', ['-s', '. % master', '-d',
+                                        "master~%d" % dist])
+
+    def testimmrebase(self):
+        dist = self.ui.configint("perfsuite", "immrebase.masterdistance", 100)
+        self._run(['update', '-C', 'master'])
+        configs = {
+            ('rebase', 'experimental.inmemory.nomergedriver'): False,
+            ('rebase', 'experimental.inmemory'): True,
+        }
+        with self.ui.configoverride(configs):
+            self._runtimeprofile('rebase', ['-r', 'draft()', '-d',
+                           "master~%d" % dist], metricname='immrebase')
 
     def _run(self, cmd, cwd=None, env=None, stderr=False, utf8decode=True,
             input=None, timeout=0, returncode=False):
@@ -145,7 +168,7 @@ class perftestsuite(object):
             err = err.decode('utf-8')
 
         if p.returncode != 0 and returncode is False:
-            self.ui.warn(_('run call failed!'))
+            self.ui.warn(_('run call failed!\n'))
             # Sometimes git or hg error output can be very big.
             # Let's limit stderr and stdout to 1000
             OUTPUT_LIMIT = 1000
@@ -157,12 +180,18 @@ class perftestsuite(object):
             ex = subprocess.CalledProcessError(p.returncode, cmdstr)
             ex.output = out
             raise ex
+
+        if out and self.printout:
+            self.ui.warn(_("stdout: %s\n") % out)
+        if err and self.printout:
+            self.ui.warn(_("stderr: %s\n") % err)
+
         if returncode:
             return out, err, p.returncode
 
         if stderr:
-            return out, err
-        return out
+            return out, err, None
+        return out, "", None
 
     def _safe_bytes_to_str(self, val):
         if isinstance(val, bytes):
@@ -188,7 +217,9 @@ class perftestsuite(object):
 
 @command('perftestsuite', [
     ('r', 'rev', '', _('rev to update to first')),
-    ('', 'publish', False, _('whether to publish metrics')),
+    ('', 'publish', False, _('whether to publish the metrics')),
+    ('', 'use-profile', False, _('whether to run commands in profile mode')),
+    ('', 'print', False, _('whether to print commands\' stdout and stderr')),
     ('', 'seed', 0, _('random seed to use')),
 ], _('hg perftestsuite'))
 def perftestsuitecmd(ui, repo, *revs, **opts):
@@ -198,7 +229,8 @@ def perftestsuitecmd(ui, repo, *revs, **opts):
     The rebase distance is configurable::
 
     [perfsuite]
-    rebasedistance = 1000
+    rebase.masterdistance = 100
+    immrebase.masterdistance = 100
 
     The metrics endpoint is configurable::
 
@@ -212,6 +244,10 @@ def perftestsuitecmd(ui, repo, *revs, **opts):
         ui.status(_("updating to %s...\n") % (opts['rev']))
         commands.update(ui, repo, scmutil.revsingle(repo, opts['rev']).rev())
 
-    suite = perftestsuite(repo, publish=opts['publish'])
+    suite = perftestsuite(repo,
+        publish=opts['publish'],
+        profile=opts['use_profile'],
+        printout=opts['print'],
+    )
     suite.run()
 
