@@ -72,7 +72,7 @@ struct MemLeaf {
 
 #[derive(Clone, PartialEq)]
 struct MemKey {
-    pub key: Vec<u8>, // base256
+    pub key: Box<[u8]>, // base256
 }
 
 #[derive(Clone, PartialEq)]
@@ -479,7 +479,7 @@ impl KeyOffset {
     fn create(index: &mut Index, key: &[u8]) -> KeyOffset {
         let len = index.dirty_keys.len();
         index.dirty_keys.push(MemKey {
-            key: Vec::from(key),
+            key: Vec::from(key).into_boxed_slice(),
         });
         KeyOffset::from_dirty_index(len)
     }
@@ -603,7 +603,8 @@ impl MemKey {
         check_type(buf, offset, TYPE_KEY)?;
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
         let key = Vec::from(buf.get(offset + 1 + len..offset + 1 + len + key_len)
-            .ok_or(InvalidData)?);
+            .ok_or(InvalidData)?)
+            .into_boxed_slice();
         Ok(MemKey { key })
     }
 
