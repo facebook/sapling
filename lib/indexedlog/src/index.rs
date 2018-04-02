@@ -326,9 +326,9 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(index.dirty_radixes[self.dirty_index()].link_offset)
         } else {
-            let (v, _) = index
-                .buf
-                .read_vlq_at(TYPE_BYTES + JUMPTABLE_BYTES + usize::from(self))?;
+            let start = TYPE_BYTES + JUMPTABLE_BYTES + usize::from(self);
+            let (v, vlq_len) = index.buf.read_vlq_at(start)?;
+            index.verify_checksum(start as u64, vlq_len as u64)?;
             LinkOffset::from_offset(Offset::from_disk(v)?, &index.buf, &index.checksum)
         }
     }
@@ -345,7 +345,8 @@ impl RadixOffset {
             match index.buf.get(usize::from(self) + TYPE_BYTES + i as usize) {
                 None => Err(InvalidData.into()),
                 Some(&jump) => {
-                    let (v, _) = index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
+                    let (v, vlq_len) = index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
+                    index.verify_checksum(u64::from(self), jump as u64 + vlq_len as u64)?;
                     Offset::from_disk(v)
                 }
             }
@@ -411,7 +412,7 @@ impl LeafOffset {
                 &index.buf,
                 &index.checksum,
             )?;
-            let (link_offset, _) = index
+            let (link_offset, vlq_len2) = index
                 .buf
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
             let link_offset = LinkOffset::from_offset(
@@ -419,6 +420,7 @@ impl LeafOffset {
                 &index.buf,
                 &index.checksum,
             )?;
+            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
             Ok((key_offset, link_offset))
         }
     }
@@ -458,7 +460,8 @@ impl LinkOffset {
         if self.is_dirty() {
             Ok(index.dirty_links[self.dirty_index()].value)
         } else {
-            let (value, _) = index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let (value, vlq_len) = index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len) as u64)?;
             Ok(value)
         }
     }
@@ -487,6 +490,7 @@ impl KeyOffset {
                 index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
             let start = usize::from(self) + TYPE_BYTES + vlq_len;
             let end = start + key_len;
+            index.verify_checksum(u64::from(self), end as u64 - u64::from(self))?;
             if end > index.buf.len() {
                 Err(InvalidData.into())
             } else {
@@ -1177,6 +1181,12 @@ impl Index {
         }
 
         Ok(())
+    }
+
+    /// Verify checksum for the given range. Internal API used by `*Offset` structs.
+    #[inline]
+    fn verify_checksum(&self, start: u64, length: u64) -> io::Result<()> {
+        verify_checksum(&self.checksum, start, length)
     }
 }
 
