@@ -22,18 +22,22 @@ Populate depot
   $ echo b > Main/b
   $ ln -s b Main/symlink
   $ ln -s symlink Main/symlinktosymlink
+  $ echo 'echo hi' > Main/x
   $ p4 add Main/a Main/b Main/symlink Main/symlinktosymlink
   //depot/Main/a#1 - opened for add
   //depot/Main/b#1 - opened for add
   //depot/Main/symlink#1 - opened for add
   //depot/Main/symlinktosymlink#1 - opened for add
+  $ p4 add -t text+x Main/x
+  //depot/Main/x#1 - opened for add
   $ p4 submit -d first
   Submitting change 1.
-  Locking 4 files ...
+  Locking 5 files ...
   add //depot/Main/a#1
   add //depot/Main/b#1
   add //depot/Main/symlink#1
   add //depot/Main/symlinktosymlink#1
+  add //depot/Main/x#1
   Change 1 submitted.
 
   $ p4 edit Main/a Main/b
@@ -59,14 +63,16 @@ Add a largefile and change symlink to be a regular file
   $ echo thisisalargefile! > Main/largefile
   $ p4 add Main/largefile
   //depot/Main/largefile#1 - opened for add
-  $ p4 edit -t text Main/symlink
+  $ p4 edit -t text Main/symlink Main/x
   //depot/Main/symlink#1 - opened for edit
+  //depot/Main/x#1 - opened for edit
   $ echo notsymlink > Main/symlink
   $ p4 submit -d third
   Submitting change 3.
-  Locking 2 files ...
+  Locking 3 files ...
   add //depot/Main/largefile#1
   edit //depot/Main/symlink#2
+  edit //depot/Main/x#2
   Change 3 submitted.
 
 Run seqimport limiting to one changelist
@@ -82,6 +88,7 @@ Run seqimport limiting to one changelist
   Main/b
   Main/symlink
   Main/symlinktosymlink
+  Main/x
   committing manifest
   committing changelog
   writing metadata to sqlite
@@ -91,12 +98,13 @@ Assert bookmark was written
   $ hg log -r master -T '{desc}\n'
   first
 
-Confirm Main/symlink is a link to Main/b in hg as well
+Confirm executable / symlinks are imported correctly
   $ hg manifest -vr tip
   644   Main/a
   644   Main/b
   644 @ Main/symlink
   644 @ Main/symlinktosymlink
+  755 * Main/x
   $ hg cat -r tip Main/symlink
   b (no-eol)
   $ hg cat -r tip Main/symlinktosymlink
@@ -120,6 +128,7 @@ Run seqimport again for up to 50 changelists
   committing files:
   Main/largefile
   Main/symlink
+  Main/x
   committing manifest
   committing changelog
   largefile: Main/largefile, oid: 3c2631136e12ba309517e289322ea95ccc93a30d04265e7ea1fdf643fe59ed07
@@ -127,10 +136,11 @@ Run seqimport again for up to 50 changelists
   writing metadata to sqlite
   updating the branch cache
 
-Main/symlink is no longer a symlink
-  $ hg manifest -vr tip | grep Main/symlink
+Confirm Main/x is no longer executable and Main/symlink is no longer a symlink
+  $ hg manifest -vr tip | egrep "Main/(symlink|x)"
   644   Main/symlink
   644 @ Main/symlinktosymlink
+  644   Main/x
 
 Verify master points at the latest imported CL
   $ hg log -r master -T '{desc}\n'
@@ -145,7 +155,7 @@ Confirm p4changelist is in commit extras
   third
   ADD=Main/largefile
   DEL=
-  MOD=Main/symlink
+  MOD=Main/symlink Main/x
   COP
   second
   ADD=Main/amove Main/c
@@ -154,7 +164,7 @@ Confirm p4changelist is in commit extras
   COP
   Main/a => Main/amove
   first
-  ADD=Main/a Main/b Main/symlink Main/symlinktosymlink
+  ADD=Main/a Main/b Main/symlink Main/symlinktosymlink Main/x
   DEL=
   MOD=
   COP

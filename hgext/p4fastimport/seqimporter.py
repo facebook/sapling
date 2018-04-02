@@ -117,8 +117,8 @@ class ChangelistImporter(object):
                 path,
                 data,
                 islink=islink,
+                isexec=p4flog.isexec(p4cl.cl),
                 copied=moved.get(path),
-                # TODO deal with executable files
             )
 
         return context.memctx(
