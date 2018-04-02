@@ -358,7 +358,7 @@ impl RadixOffset {
         if self.is_dirty() {
             Ok(self)
         } else {
-            let entry = MemRadix::read_from(&index.buf, u64::from(self))?;
+            let entry = MemRadix::read_from(&index.buf, u64::from(self), &index.checksum)?;
             let len = index.dirty_radixes.len();
             index.dirty_radixes.push(entry);
             Ok(RadixOffset::from_dirty_index(len))
@@ -436,7 +436,7 @@ impl LeafOffset {
             index.dirty_leafs[self.dirty_index()].link_offset = link_offset;
             Ok(self)
         } else {
-            let entry = MemLeaf::read_from(&index.buf, u64::from(self))?;
+            let entry = MemLeaf::read_from(&index.buf, u64::from(self), &index.checksum)?;
             Ok(Self::create(index, link_offset, entry.key_offset))
         }
     }
@@ -508,7 +508,7 @@ fn check_type(buf: &[u8], offset: usize, expected: u8) -> io::Result<()> {
 }
 
 impl MemRadix {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         let mut pos = 0;
@@ -535,6 +535,7 @@ impl MemRadix {
                 pos += len;
             }
         }
+        verify_checksum(checksum, offset as u64, pos as u64)?;
 
         Ok(MemRadix {
             offsets,
@@ -564,14 +565,15 @@ impl MemRadix {
 }
 
 impl MemLeaf {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LEAF)?;
-        let (key_offset, len) = buf.read_vlq_at(offset + 1)?;
+        let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
         let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, buf)?;
-        let (link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf)?;
+        verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLeaf {
             key_offset,
             link_offset,
@@ -587,13 +589,14 @@ impl MemLeaf {
 }
 
 impl MemLink {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LINK)?;
-        let (value, len) = buf.read_vlq_at(offset + 1)?;
-        let (next_link_offset, _) = buf.read_vlq_at(offset + len + 1)?;
+        let (value, len1) = buf.read_vlq_at(offset + 1)?;
+        let (next_link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         let next_link_offset = LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, buf)?;
+        verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLink {
             value,
             next_link_offset,
@@ -609,14 +612,16 @@ impl MemLink {
 }
 
 impl MemKey {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_KEY)?;
         let (key_len, len): (usize, _) = buf.read_vlq_at(offset + 1)?;
-        let key = Vec::from(buf.get(offset + 1 + len..offset + 1 + len + key_len)
-            .ok_or(InvalidData)?)
+        let key = Vec::from(buf.get(
+            offset + TYPE_BYTES + len..offset + TYPE_BYTES + len + key_len,
+        ).ok_or(InvalidData)?)
             .into_boxed_slice();
+        verify_checksum(checksum, offset as u64, (TYPE_BYTES + len + key_len) as u64)?;
         Ok(MemKey { key })
     }
 
@@ -1254,22 +1259,22 @@ impl Debug for Index {
             let i = i as u64;
             match type_int {
                 TYPE_RADIX => {
-                    let e = MemRadix::read_from(&self.buf, i).expect("read");
+                    let e = MemRadix::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_LEAF => {
-                    let e = MemLeaf::read_from(&self.buf, i).expect("read");
+                    let e = MemLeaf::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_LINK => {
-                    let e = MemLink::read_from(&self.buf, i).expect("read");
+                    let e = MemLink::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_KEY => {
-                    let e = MemKey::read_from(&self.buf, i).expect("read");
+                    let e = MemKey::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
