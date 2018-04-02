@@ -33,10 +33,10 @@ import json
 import sqlite3
 
 from . import (
-    p4,
     importer,
+    p4,
+    seqimporter,
 )
-
 from .util import decodefileflags, getcl, lastcl, runworker
 
 from mercurial.i18n import _
@@ -380,6 +380,11 @@ def p4seqimport(ui, repo, client, **opts):
     if len(changelists) == 0:
         ui.note(_('no changes to import, exiting.\n'))
         return
+
+    storepath = opts.get('path')
+    climporter = seqimporter.ChangelistImporter(ui, repo, client, storepath)
+    for p4cl in changelists:
+        climporter.importcl(p4cl.cl)
 
 @command(
         'p4syncimport',

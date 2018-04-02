@@ -101,7 +101,6 @@ outputs, which should be fixed later.
   hgext/infinitepush/infinitepushcommands.py:32: symbol import follows non-symbol import: mercurial.node
   hgext/infinitepush/infinitepushcommands.py:33: symbol import follows non-symbol import: mercurial.i18n
   hgext/lz4revlog.py:76: relative import of stdlib module
-  hgext/p4fastimport/__init__.py:35: imports from hgext.p4fastimport not lexically sorted: importer < p4
   hgext/p4fastimport/__init__.py:40: direct symbol import decodefileflags, getcl, lastcl, runworker from hgext.p4fastimport.util
   hgext/p4fastimport/__init__.py:40: symbol import follows non-symbol import: hgext.p4fastimport.util
   hgext/p4fastimport/__init__.py:42: symbol import follows non-symbol import: mercurial.i18n
