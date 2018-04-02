@@ -168,8 +168,8 @@ impl Offset {
 
     /// Convert to `TypedOffset`.
     #[inline]
-    fn to_typed(self, buf: &[u8]) -> io::Result<TypedOffset> {
-        let type_int = self.type_int(buf)?;
+    fn to_typed(self, buf: &[u8], checksum: &Checksum) -> io::Result<TypedOffset> {
+        let type_int = self.type_int(buf, checksum)?;
         match type_int {
             TYPE_RADIX => Ok(TypedOffset::Radix(RadixOffset(self))),
             TYPE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
@@ -181,12 +181,13 @@ impl Offset {
 
     /// Read the `type_int` value.
     #[inline]
-    fn type_int(self, buf: &[u8]) -> io::Result<u8> {
+    fn type_int(self, buf: &[u8], checksum: &Checksum) -> io::Result<u8> {
         if self.is_null() {
             Err(InvalidData.into())
         } else if self.is_dirty() {
             Ok(((self.0 - DIRTY_OFFSET) & ((1 << TYPE_BITS) - 1)) as u8)
         } else {
+            verify_checksum(checksum, self.0, TYPE_BYTES as u64)?;
             match buf.get(self.0 as usize) {
                 Some(x) => Ok(*x as u8),
                 _ => return Err(InvalidData.into()),
@@ -216,11 +217,11 @@ trait TypedOffsetMethods: Sized {
     }
 
     #[inline]
-    fn from_offset(offset: Offset, buf: &[u8]) -> io::Result<Self> {
+    fn from_offset(offset: Offset, buf: &[u8], checksum: &Checksum) -> io::Result<Self> {
         if offset.is_null() {
             Ok(Self::from_offset_unchecked(offset))
         } else {
-            let type_int = offset.type_int(buf)?;
+            let type_int = offset.type_int(buf, checksum)?;
             if type_int == Self::type_int() {
                 Ok(Self::from_offset_unchecked(offset))
             } else {
@@ -328,7 +329,7 @@ impl RadixOffset {
             let (v, _) = index
                 .buf
                 .read_vlq_at(TYPE_BYTES + JUMPTABLE_BYTES + usize::from(self))?;
-            LinkOffset::from_offset(Offset::from_disk(v)?, &index.buf)
+            LinkOffset::from_offset(Offset::from_disk(v)?, &index.buf, &index.checksum)
         }
     }
 
@@ -405,11 +406,19 @@ impl LeafOffset {
         } else {
             let (key_offset, vlq_len): (u64, _) =
                 index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
-            let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, &index.buf)?;
+            let key_offset = KeyOffset::from_offset(
+                Offset::from_disk(key_offset)?,
+                &index.buf,
+                &index.checksum,
+            )?;
             let (link_offset, _) = index
                 .buf
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
-            let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, &index.buf)?;
+            let link_offset = LinkOffset::from_offset(
+                Offset::from_disk(link_offset)?,
+                &index.buf,
+                &index.checksum,
+            )?;
             Ok((key_offset, link_offset))
         }
     }
@@ -521,7 +530,7 @@ impl MemRadix {
         pos += JUMPTABLE_BYTES;
 
         let (link_offset, len) = buf.read_vlq_at(offset + pos)?;
-        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf)?;
+        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
         pos += len;
 
         let mut offsets = [Offset::default(); 16];
@@ -570,9 +579,9 @@ impl MemLeaf {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LEAF)?;
         let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-        let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, buf)?;
+        let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, buf, checksum)?;
         let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
-        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf)?;
+        let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
         verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLeaf {
             key_offset,
@@ -595,7 +604,8 @@ impl MemLink {
         check_type(buf, offset, TYPE_LINK)?;
         let (value, len1) = buf.read_vlq_at(offset + 1)?;
         let (next_link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
-        let next_link_offset = LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, buf)?;
+        let next_link_offset =
+            LinkOffset::from_offset(Offset::from_disk(next_link_offset)?, buf, checksum)?;
         verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
         Ok(MemLink {
             value,
@@ -639,7 +649,8 @@ impl MemRoot {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_ROOT)?;
         let (radix_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-        let radix_offset = RadixOffset::from_offset(Offset::from_disk(radix_offset)?, buf)?;
+        let radix_offset =
+            RadixOffset::from_offset(Offset::from_disk(radix_offset)?, buf, checksum)?;
         let (len, len2): (usize, _) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         if len == TYPE_BYTES + len1 + len2 {
             verify_checksum(checksum, offset as u64, len as u64)?;
@@ -693,7 +704,7 @@ impl OffsetMap {
     fn get(&self, offset: Offset) -> u64 {
         // The caller makes sure offset is dirty.
         debug_assert!(offset.is_dirty());
-        match offset.to_typed(&b""[..]).unwrap() {
+        match offset.to_typed(&b""[..], &None).unwrap() {
             // Radix entries are pushed in the reversed order. So the index needs to be
             // reversed.
             TypedOffset::Radix(x) => self.radix_map[self.radix_len - 1 - x.dirty_index()],
@@ -923,7 +934,7 @@ impl Index {
 
         while !offset.is_null() {
             // Read the entry at "offset"
-            match offset.to_typed(&self.buf)? {
+            match offset.to_typed(&self.buf, &self.checksum)? {
                 TypedOffset::Radix(radix) => {
                     match iter.next() {
                         None => {
@@ -981,7 +992,7 @@ impl Index {
         let mut last_child = 0u8;
 
         loop {
-            match offset.to_typed(&self.buf)? {
+            match offset.to_typed(&self.buf, &self.checksum)? {
                 TypedOffset::Radix(radix) => {
                     // Copy radix entry since we must modify it.
                     let radix = radix.copy(self)?;
@@ -1176,7 +1187,7 @@ impl Debug for Offset {
         if self.is_null() {
             write!(f, "None")
         } else if self.is_dirty() {
-            match self.to_typed(&b""[..]).unwrap() {
+            match self.to_typed(&b""[..], &None).unwrap() {
                 TypedOffset::Radix(x) => x.fmt(f),
                 TypedOffset::Leaf(x) => x.fmt(f),
                 TypedOffset::Link(x) => x.fmt(f),
