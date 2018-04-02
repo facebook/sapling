@@ -124,18 +124,24 @@ class _systemawarecachelimit(object):
         try:
             if repo is None and (opener is None or ui is None):
                 raise error.Abort("Need to specify repo or (opener and ui)")
-            if repo is not None:
+            st = None
+            if not util.safehasattr(os, 'statvfs'):
+                self.free = 0
+                self.total = 0
+            elif repo is not None:
                 st = os.statvfs(repo.root)
             else:
                 st = os.statvfs(opener.join(None))
+            if st is not None:
+                self.free = st.f_bavail * st.f_frsize
+                self.total = st.f_blocks * st.f_frsize
         except (OSError, IOError) as ex:
             if ex.errno == errno.EACCES:
                 self.free = 0
                 self.total = 0
                 return
             raise
-        self.free = st.f_bavail * st.f_frsize
-        self.total = st.f_blocks * st.f_frsize
+
         # Read parameters from config
         if repo is not None:
             self.config = self.parseconfig(repo.ui)
