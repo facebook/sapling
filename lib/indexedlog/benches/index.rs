@@ -4,7 +4,6 @@ extern crate rand;
 extern crate tempdir;
 
 use indexedlog::Index;
-use indexedlog::base16::Base16Iter;
 use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
 use tempdir::TempDir;
@@ -19,14 +18,6 @@ fn gen_buf(size: usize) -> Vec<u8> {
 }
 
 fn main() {
-    bench("base16 iterating 1M bytes", || {
-        let x = vec![4u8; 1000000];
-        elapsed(|| {
-            let y: u8 = Base16Iter::from_base256(&x).sum();
-            assert_eq!(y, (4 * 1000000) as u8);
-        })
-    });
-
     bench("index insertion", || {
         let dir = TempDir::new("index").expect("TempDir::new");
         let mut idx = Index::open(dir.path().join("i"), 0).expect("open");

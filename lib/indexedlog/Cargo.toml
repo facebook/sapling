@@ -17,5 +17,9 @@ rand = "*"
 tempdir = "*"
 
 [[bench]]
-name = "bench"
+name = "index"
+harness = false
+
+[[bench]]
+name = "misc"
 harness = false
