@@ -155,6 +155,28 @@ def enforce_p4_client_exists(client):
     if not p4.exists_client(client):
         raise error.Abort(_('p4 client %s does not exist.') % client)
 
+def getchangelists(ui, client, startcl, limit=None):
+    '''
+        Returns a sorted list of changelists affecting client,
+        starting at startcl.
+        If a limit N is provided, return only the first N changelists.
+    '''
+    ui.note(_('loading changelist numbers.\n'))
+    ignore_user = ui.config('p4fastimport', 'ignore-user')
+    ignore_time_delta = ui.config('p4fastimport', 'ignore-time-delta')
+    if ignore_user is None or ignore_time_delta is None:
+        changelists = sorted(p4.parse_changes(client, startcl=startcl))
+    else:
+        changelists = list(itertools.takewhile(
+            lambda cl: not (cl._user == ignore_user
+                        and cl._commit_time_diff < ignore_time_delta),
+            sorted(p4.parse_changes(client, startcl=startcl))))
+    ui.note(_('%d changelists to import.\n') % len(changelists))
+
+    if limit:
+        changelists = changelists[:int(limit)]
+    return changelists
+
 def getfilelist(ui, p4filelist):
     filelist = set()
     for fileinfo in p4filelist:
@@ -236,23 +258,7 @@ def p4fastimport(ui, repo, client, **opts):
     # 0. Fail if the specified client does not exist
     enforce_p4_client_exists(client)
     # 1. Return all the changelists touching files in a given client view.
-    ui.note(_('loading changelist numbers.\n'))
-    ignore_user = ui.config('p4fastimport', 'ignore-user')
-    ignore_time_delta = ui.config('p4fastimport', 'ignore-time-delta')
-    if ignore_user is None or ignore_time_delta is None:
-        changelists = sorted(p4.parse_changes(client, startcl=startcl))
-    else:
-        changelists = list(itertools.takewhile(
-            lambda cl: not (cl._user == ignore_user
-                        and cl._commit_time_diff < ignore_time_delta),
-            sorted(p4.parse_changes(client, startcl=startcl))))
-    ui.note(_('%d changelists to import.\n') % len(changelists))
-
-    limit = len(changelists)
-    if opts.get('limit'):
-        limit = int(opts.get('limit'))
-        changelists = changelists[0:limit]
-
+    changelists = getchangelists(ui, client, startcl, limit=opts.get('limit'))
     if len(changelists) == 0:
         return
 
@@ -360,6 +366,20 @@ def p4seqimport(ui, repo, client, **opts):
     '''Sequentially import changelists'''
     enforce_p4_client_exists(client)
     sanitizeopts(repo, opts)
+
+    # TODO figure out startcl from repo
+    '''
+    if len(repo) > 0:
+        p1ctx, startcl, isbranchpoint = startfrom(ui, repo, opts)
+    else:
+        p1ctx, startcl, isbranchpoint = repo['tip'], None, False
+    '''
+    startcl = None
+
+    changelists = getchangelists(ui, client, startcl, limit=opts.get('limit'))
+    if len(changelists) == 0:
+        ui.note(_('no changes to import, exiting.\n'))
+        return
 
 @command(
         'p4syncimport',
