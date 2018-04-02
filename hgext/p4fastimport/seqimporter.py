@@ -3,6 +3,7 @@ from __future__ import absolute_import
 
 import errno
 import os
+import re
 
 from mercurial.i18n import _
 from mercurial import (
@@ -110,6 +111,8 @@ class ChangelistImporter(object):
                 # p4 will give us content with a trailing newline, symlinks
                 # cannot end with newline
                 data = data.rstrip()
+            if p4flog.iskeyworded(p4cl.cl):
+                data = re.sub(importer.KEYWORD_REGEX, r'$\1$', data)
 
             return context.memfilectx(
                 repo,

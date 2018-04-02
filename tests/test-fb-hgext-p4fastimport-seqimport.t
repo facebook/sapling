@@ -5,7 +5,7 @@
   > [extensions]
   > lfs=
   > [lfs]
-  > threshold=16
+  > threshold=160
   > [p4fastimport]
   > lfsmetadata=metadata.sql
   > metadata=metadata.sql
@@ -23,6 +23,9 @@ Populate depot
   $ ln -s b Main/symlink
   $ ln -s symlink Main/symlinktosymlink
   $ echo 'echo hi' > Main/x
+  $ for kwh in Id Header Date DateTime Change File Revision Author; do
+  > echo "\$$kwh\$" >> Main/kw;
+  > done
   $ p4 add Main/a Main/b Main/symlink Main/symlinktosymlink
   //depot/Main/a#1 - opened for add
   //depot/Main/b#1 - opened for add
@@ -30,16 +33,32 @@ Populate depot
   //depot/Main/symlinktosymlink#1 - opened for add
   $ p4 add -t text+x Main/x
   //depot/Main/x#1 - opened for add
+  $ p4 add -t text+k Main/kw
+  //depot/Main/kw#1 - opened for add
   $ p4 submit -d first
   Submitting change 1.
-  Locking 5 files ...
+  Locking 6 files ...
   add //depot/Main/a#1
   add //depot/Main/b#1
+  add //depot/Main/kw#1
   add //depot/Main/symlink#1
   add //depot/Main/symlinktosymlink#1
   add //depot/Main/x#1
   Change 1 submitted.
+  //depot/Main/kw#1 - refreshing
 
+Confirm keyworded file was expanded
+  $ p4 print -q Main/kw
+  $Id: //depot/Main/kw#1 $
+  $Header: //depot/Main/kw#1 $
+  $Date: * $ (glob)
+  $DateTime: * $ (glob)
+  $Change: 1 $
+  $File: //depot/Main/kw $
+  $Revision: #1 $
+  $Author: * $ (glob)
+
+Modify and move file
   $ p4 edit Main/a Main/b
   //depot/Main/a#1 - opened for edit
   //depot/Main/b#1 - opened for edit
@@ -60,7 +79,7 @@ Populate depot
   Change 2 submitted.
 
 Add a largefile and change symlink to be a regular file
-  $ echo thisisalargefile! > Main/largefile
+  $ for i in {1..10}; do echo thisisalargefile! >> Main/largefile; done
   $ p4 add Main/largefile
   //depot/Main/largefile#1 - opened for add
   $ p4 edit -t text Main/symlink Main/x
@@ -86,6 +105,7 @@ Run seqimport limiting to one changelist
   committing files:
   Main/a
   Main/b
+  Main/kw
   Main/symlink
   Main/symlinktosymlink
   Main/x
@@ -102,6 +122,7 @@ Confirm executable / symlinks are imported correctly
   $ hg manifest -vr tip
   644   Main/a
   644   Main/b
+  644   Main/kw
   644 @ Main/symlink
   644 @ Main/symlinktosymlink
   755 * Main/x
@@ -109,6 +130,17 @@ Confirm executable / symlinks are imported correctly
   b (no-eol)
   $ hg cat -r tip Main/symlinktosymlink
   symlink (no-eol)
+
+Check that kw file had content replaced
+  $ hg cat -r tip Main/kw
+  $Id$
+  $Header$
+  $Date$
+  $DateTime$
+  $Change$
+  $File$
+  $Revision$
+  $Author$
 
 Run seqimport again for up to 50 changelists
   $ hg p4seqimport --debug -P $P4ROOT -B master $P4CLIENT --limit 50 --traceback
@@ -131,7 +163,7 @@ Run seqimport again for up to 50 changelists
   Main/x
   committing manifest
   committing changelog
-  largefile: Main/largefile, oid: 3c2631136e12ba309517e289322ea95ccc93a30d04265e7ea1fdf643fe59ed07
+  largefile: Main/largefile, oid: 9586437c941c1df9d22f2f2775f00af95943f9de519ee478c45d56bbd002cc95
   writing lfs metadata to sqlite
   writing metadata to sqlite
   updating the branch cache
@@ -164,7 +196,7 @@ Confirm p4changelist is in commit extras
   COP
   Main/a => Main/amove
   first
-  ADD=Main/a Main/b Main/symlink Main/symlinktosymlink Main/x
+  ADD=Main/a Main/b Main/kw Main/symlink Main/symlinktosymlink Main/x
   DEL=
   MOD=
   COP
