@@ -145,6 +145,16 @@ def create(tr, ui, repo, importset, p1ctx, filelogs):
             'localname': fi.relpath,
         })
 
+def enforce_p4_client_exists(client):
+    # A client defines checkout behavior for a user. It contains a list of
+    # views. A view defines a set of files and directories to check out from a
+    # Perforce server and their mappins to local disk, e.g.:
+    #   //depot/foo/... //client/x/...
+    #    would map the files that are stored on the
+    #   server under foo/* locally under x/*.
+    if not p4.exists_client(client):
+        raise error.Abort(_('p4 client %s does not exist.') % client)
+
 def getfilelist(ui, p4filelist):
     filelist = set()
     for fileinfo in p4filelist:
@@ -213,17 +223,8 @@ def p4fastimport(ui, repo, client, **opts):
     else:
         p1ctx, startcl, isbranchpoint = repo['tip'], None, False
 
-    # A client defines checkout behavior for a user. It contains a list of
-    # views.A view defines a set of files and directories to check out from a
-    # Perforce server and their mappins to local disk, e.g.:
-    #   //depot/foo/... //client/x/...
-    #    would map the files that are stored on the
-    #   server under foo/* locally under x/*.
-
     # 0. Fail if the specified client does not exist
-    if not p4.exists_client(client):
-        raise error.Abort(_('p4 client %s does not exist.') % client)
-
+    enforce_p4_client_exists(client)
     # 1. Return all the changelists touching files in a given client view.
     ui.note(_('loading changelist numbers.\n'))
     ignore_user = ui.config('p4fastimport', 'ignore-user')
@@ -338,6 +339,17 @@ def p4fastimport(ui, repo, client, **opts):
             ftr.release()
 
 @command(
+    'p4seqimport',
+    [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
+     ('B', 'bookmark', '', _('bookmark to set'), _('NAME')),
+     ('', 'base', '', _('base changeset (must exist in the repository)'))],
+    _('[-P PATH] [-B NAME] client'),
+)
+def p4seqimport(ui, repo, client, **opts):
+    '''Sequentially import changelists'''
+    enforce_p4_client_exists(client)
+
+@command(
         'p4syncimport',
         [('P', 'path', '.', _('path to the local depot store'), _('PATH')),
          ('B', 'bookmark', '', _('bookmark to set'), _('NAME'))],
@@ -353,10 +365,8 @@ def p4syncimport(ui, repo, oldclient, newclient, **opts):
     p1ctx, startcl, __ = startfrom(ui, repo, opts)
 
     # Fail if the specified client does not exist
-    if not p4.exists_client(oldclient):
-        raise error.Abort(_('p4 client %s does not exist.') % oldclient)
-    if not p4.exists_client(newclient):
-        raise error.Abort(_('p4 client %s does not exist.') % newclient)
+    enforce_p4_client_exists(oldclient)
+    enforce_p4_client_exists(newclient)
 
     # Get a list of files that we will have to import
     oldcl = p4.get_latest_cl(oldclient)

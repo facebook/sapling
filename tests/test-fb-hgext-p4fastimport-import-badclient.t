@@ -42,6 +42,9 @@ Simple import
   $ hg p4fastimport --bookmark master --debug -P $P4ROOT foo-does-not-exist
   abort: p4 client foo-does-not-exist does not exist.
   [255]
+  $ hg p4seqimport --debug -B master -P $P4ROOT bar-does-not-exist
+  abort: p4 client bar-does-not-exist does not exist.
+  [255]
 
 End Test
 
