@@ -44,13 +44,22 @@ class ChangelistImporter(object):
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
+            data = {p4cl.cl: {'action': action, 'type': info['type']}}
+            p4flog = p4.P4Filelog(p4path, data)
             hgpath = importer.relpath(self.client, p4path)
             if action in p4.ACTION_DELETE + p4.ACTION_ARCHIVE:
                 removed.append(hgpath)
             else:
                 added_or_modified.append((p4path, hgpath))
-                with self._safe_open(hgpath) as f:
-                    f.write(self._get_file_content(p4path, p4cl.cl))
+                file_content = self._get_file_content(p4path, p4cl.cl)
+                if p4flog.issymlink(p4cl.cl):
+                    target = file_content.rstrip()
+                    os.symlink(target, hgpath)
+                else:
+                    if os.path.islink(hgpath):
+                        os.remove(hgpath)
+                    with self._safe_open(hgpath) as f:
+                        f.write(file_content)
                 if action in p4.ACTION_ADD:
                     added.append(hgpath)
 

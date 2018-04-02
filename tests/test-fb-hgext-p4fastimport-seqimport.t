@@ -20,14 +20,20 @@ Populate depot
   $ mkdir Main
   $ echo a > Main/a
   $ echo b > Main/b
-  $ p4 add Main/a Main/b
+  $ ln -s b Main/symlink
+  $ ln -s symlink Main/symlinktosymlink
+  $ p4 add Main/a Main/b Main/symlink Main/symlinktosymlink
   //depot/Main/a#1 - opened for add
   //depot/Main/b#1 - opened for add
+  //depot/Main/symlink#1 - opened for add
+  //depot/Main/symlinktosymlink#1 - opened for add
   $ p4 submit -d first
   Submitting change 1.
-  Locking 2 files ...
+  Locking 4 files ...
   add //depot/Main/a#1
   add //depot/Main/b#1
+  add //depot/Main/symlink#1
+  add //depot/Main/symlinktosymlink#1
   Change 1 submitted.
 
   $ p4 edit Main/a Main/b
@@ -49,14 +55,18 @@ Populate depot
   add //depot/Main/c#1
   Change 2 submitted.
 
-Add a largefile
+Add a largefile and change symlink to be a regular file
   $ echo thisisalargefile! > Main/largefile
   $ p4 add Main/largefile
   //depot/Main/largefile#1 - opened for add
+  $ p4 edit -t text Main/symlink
+  //depot/Main/symlink#1 - opened for edit
+  $ echo notsymlink > Main/symlink
   $ p4 submit -d third
   Submitting change 3.
-  Locking 1 files ...
+  Locking 2 files ...
   add //depot/Main/largefile#1
+  edit //depot/Main/symlink#2
   Change 3 submitted.
 
 Run seqimport limiting to one changelist
@@ -69,14 +79,29 @@ Run seqimport limiting to one changelist
   importing CL1
   adding Main/a
   adding Main/b
+  adding Main/symlink
+  adding Main/symlinktosymlink
   committing files:
   Main/a
   Main/b
+  Main/symlink
+  Main/symlinktosymlink
   committing manifest
   committing changelog
   updating the branch cache
   calling hook commit.lfs: hgext.lfs.checkrequireslfs
   writing metadata to sqlite
+
+Confirm Main/symlink is a link to Main/b in hg as well
+  $ hg manifest -vr tip
+  644   Main/a
+  644   Main/b
+  644 @ Main/symlink
+  644 @ Main/symlinktosymlink
+  $ hg cat -r tip Main/symlink
+  b (no-eol)
+  $ hg cat -r tip Main/symlinktosymlink
+  symlink (no-eol)
 
 Run seqimport again for up to 50 changelists
   $ hg p4seqimport --debug -P $P4ROOT $P4CLIENT --limit 50
@@ -101,6 +126,7 @@ Run seqimport again for up to 50 changelists
   adding Main/largefile
   committing files:
   Main/largefile
+  Main/symlink
   committing manifest
   committing changelog
   updating the branch cache
@@ -108,6 +134,11 @@ Run seqimport again for up to 50 changelists
   calling hook commit.lfs: hgext.lfs.checkrequireslfs
   writing lfs metadata to sqlite
   writing metadata to sqlite
+
+Main/symlink is no longer a symlink
+  $ hg manifest -vr tip | grep Main/symlink
+  644   Main/symlink
+  644 @ Main/symlinktosymlink
 
 Confirm p4changelist is in commit extras
   $ hg log -T '{desc} CL={extras.p4changelist}\n'
@@ -118,7 +149,7 @@ Confirm p4changelist is in commit extras
   third
   ADD=Main/largefile
   DEL=
-  MOD=
+  MOD=Main/symlink
   COP
   second
   ADD=Main/amove Main/c
@@ -127,7 +158,7 @@ Confirm p4changelist is in commit extras
   COP
   Main/a => Main/amove
   first
-  ADD=Main/a Main/b
+  ADD=Main/a Main/b Main/symlink Main/symlinktosymlink
   DEL=
   MOD=
   COP
