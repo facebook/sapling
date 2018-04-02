@@ -39,7 +39,6 @@
 //!   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
 //!   (16-bit) bitmask but that hurts lookup performance.
 
-use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
@@ -145,10 +144,10 @@ impl Offset {
     /// Convert a possibly "dirty" offset to a non-dirty offset.
     /// Useful when writing offsets to disk.
     #[inline]
-    fn to_disk(self, offset_map: &HashMap<u64, u64>) -> u64 {
+    fn to_disk(self, offset_map: &OffsetMap) -> u64 {
         if self.is_dirty() {
             // Should always find a value. Otherwise it's a programming error about write order.
-            *offset_map.get(&self.0).unwrap()
+            offset_map.get(self)
         } else {
             self.0
         }
@@ -530,7 +529,7 @@ impl MemRadix {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         // Approximate size good enough for an average radix entry
         let mut buf = Vec::with_capacity(1 + 16 + 5 * 17);
 
@@ -566,7 +565,7 @@ impl MemLeaf {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_LEAF])?;
         writer.write_vlq(self.key_offset.to_disk(offset_map))?;
         writer.write_vlq(self.link_offset.to_disk(offset_map))?;
@@ -588,7 +587,7 @@ impl MemLink {
         })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_LINK])?;
         writer.write_vlq(self.value)?;
         writer.write_vlq(self.next_link_offset.to_disk(offset_map))?;
@@ -608,7 +607,7 @@ impl MemKey {
         Ok(MemKey { key })
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, _: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
         writer.write_all(&[TYPE_KEY])?;
         writer.write_vlq(self.key.len())?;
         writer.write_all(&self.key)?;
@@ -640,13 +639,49 @@ impl MemRoot {
         }
     }
 
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &HashMap<u64, u64>) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
         buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
         let len = buf.len() + 1;
         buf.write_vlq(len)?;
         writer.write_all(&buf)
+    }
+}
+
+#[derive(Default)]
+struct OffsetMap {
+    radix_len: usize,
+    radix_map: Vec<u64>,
+    leaf_map: Vec<u64>,
+    link_map: Vec<u64>,
+    key_map: Vec<u64>,
+}
+
+impl OffsetMap {
+    fn with_capacity(index: &Index) -> OffsetMap {
+        let radix_len = index.dirty_radixes.len();
+        OffsetMap {
+            radix_len,
+            radix_map: Vec::with_capacity(radix_len),
+            leaf_map: Vec::with_capacity(index.dirty_leafs.len()),
+            link_map: Vec::with_capacity(index.dirty_links.len()),
+            key_map: Vec::with_capacity(index.dirty_keys.len()),
+        }
+    }
+
+    #[inline]
+    fn get(&self, offset: Offset) -> u64 {
+        // The caller makes sure offset is dirty.
+        debug_assert!(offset.is_dirty());
+        match offset.to_typed(&b""[..]).unwrap() {
+            // Radix entries are pushed in the reversed order. So the index needs to be
+            // reversed.
+            TypedOffset::Radix(x) => self.radix_map[self.radix_len - 1 - x.dirty_index()],
+            TypedOffset::Leaf(x) => self.leaf_map[x.dirty_index()],
+            TypedOffset::Link(x) => self.link_map[x.dirty_index()],
+            TypedOffset::Key(x) => self.key_map[x.dirty_index()],
+        }
     }
 }
 
@@ -771,15 +806,11 @@ impl Index {
 
         // Critical section: need write lock
         {
+            let mut offset_map = OffsetMap::with_capacity(self);
             let estimated_dirty_bytes = self.dirty_links.len() * 50;
-            let estimated_dirty_offsets = self.dirty_links.len() + self.dirty_keys.len()
-                + self.dirty_leafs.len()
-                + self.dirty_radixes.len();
-
             let mut lock = ScopedFileLock::new(&mut self.file, true)?;
             let len = lock.as_mut().seek(SeekFrom::End(0))?;
             let mut buf = Vec::with_capacity(estimated_dirty_bytes);
-            let mut offset_map = HashMap::with_capacity(estimated_dirty_offsets);
 
             // Write in the following order:
             // header, keys, links, leafs, radixes, root.
@@ -789,29 +820,29 @@ impl Index {
                 buf.write_all(&[TYPE_HEAD])?;
             }
 
-            for (i, entry) in self.dirty_keys.iter().enumerate() {
+            for entry in self.dirty_keys.iter() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(KeyOffset::from_dirty_index(i).into(), offset);
+                offset_map.key_map.push(offset);
             }
 
-            for (i, entry) in self.dirty_links.iter().enumerate() {
+            for entry in self.dirty_links.iter() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(LinkOffset::from_dirty_index(i).into(), offset);
+                offset_map.link_map.push(offset);
             }
 
-            for (i, entry) in self.dirty_leafs.iter().enumerate() {
+            for entry in self.dirty_leafs.iter() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(LeafOffset::from_dirty_index(i).into(), offset);
+                offset_map.leaf_map.push(offset);
             }
 
             // Write Radix entries in reversed order since former ones might refer to latter ones.
-            for (i, entry) in self.dirty_radixes.iter().enumerate().rev() {
+            for entry in self.dirty_radixes.iter().rev() {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
-                offset_map.insert(RadixOffset::from_dirty_index(i).into(), offset);
+                offset_map.radix_map.push(offset);
             }
 
             root_offset = buf.len() as u64 + len;
@@ -1171,7 +1202,7 @@ impl Debug for Index {
         )?;
 
         // On-disk entries
-        let offset_map = HashMap::new();
+        let offset_map = OffsetMap::default();
         let mut buf = Vec::with_capacity(self.buf.len());
         buf.push(TYPE_HEAD);
         loop {
@@ -1247,6 +1278,7 @@ impl Debug for Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use tempdir::TempDir;
 
     #[test]
