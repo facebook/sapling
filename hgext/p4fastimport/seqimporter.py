@@ -11,7 +11,7 @@ from mercurial import (
     lock as lockmod,
 )
 
-from . import importer, p4
+from . import importer, lfs, p4
 
 MoveInfo = collections.namedtuple('MoveInfo', ['src', 'dst'])
 
@@ -36,11 +36,11 @@ class ChangelistImporter(object):
 
     def _import(self, p4cl):
         '''Converts the provided p4 CL into a commit in hg.
-        Returns a tuple containing the hg node and from the corresponding
-        commit and the list of largefiles that were in this commit'''
+        Returns a tuple containing hg node and largefiles for new commit'''
         self.ui.debug('importing CL%d\n' % p4cl.cl)
         fstat = p4.parse_fstat(p4cl.cl, self.client)
         added, removed = [], []
+        added_or_modified = []
         for info in fstat:
             action = info['action']
             p4path = info['depotFile']
@@ -48,6 +48,7 @@ class ChangelistImporter(object):
             if action in p4.ACTION_DELETE + p4.ACTION_ARCHIVE:
                 removed.append(hgpath)
             else:
+                added_or_modified.append((p4path, hgpath))
                 with self._safe_open(hgpath) as f:
                     f.write(self._get_file_content(p4path, p4cl.cl))
                 if action in p4.ACTION_ADD:
@@ -58,9 +59,19 @@ class ChangelistImporter(object):
         added = [fname for fname in added if fname not in move_dsts]
 
         node = self._create_commit(p4cl, added, moved, removed)
-        # TODO properly handle large files (second return here)
-        largefiles = []
+        largefiles = self._get_largefiles(p4cl, added_or_modified)
         return node, largefiles
+
+    def _get_largefiles(self, p4cl, files):
+        largefiles = []
+        for p4path, hgpath in files:
+            flog = self.repo.file(hgpath)
+            node = flog.tip()
+            islfs, oid = lfs.getlfsinfo(flog, node)
+            if islfs:
+                largefiles.append((p4cl.cl, p4path, oid))
+                self.ui.debug('largefile: %s, oid: %s\n' % (hgpath, oid))
+        return largefiles
 
     def _safe_open(self, path):
         '''Returns file handle for path, creating non-existing directories'''

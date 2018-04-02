@@ -11,13 +11,12 @@ from mercurial.i18n import _
 from mercurial.node import nullid, short
 from mercurial import (
     error,
-    extensions,
     manifest,
     progress,
     util,
 )
 
-from . import p4
+from . import lfs, p4
 from .util import caseconflict, localpath, runworker
 
 KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
@@ -421,13 +420,6 @@ class FileImporter(object):
     def hgfilelog(self):
         return self._repo.file(self.relpath)
 
-    def findlfs(self):
-        try:
-            return extensions.find('lfs')
-        except KeyError:
-            pass
-        return None
-
     def create(self, tr, copy_tracer=None):
         assert tr is not None
         p4fi = P4FileImporter(self._p4filelog)
@@ -457,7 +449,6 @@ class FileImporter(object):
         hgfilelog = self.hgfilelog()
         origlen = len(hgfilelog)
         largefiles = []
-        lfsext = self.findlfs()
         for c in sorted(revs):
             if self._p4filelog.isdeleted(c.cl):
                 wasdeleted = True
@@ -513,10 +504,8 @@ class FileImporter(object):
                         hgfile, c.cl))
             baserevatcl[c.cl] = baserev
 
-            if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
-                lfspointer = lfsext.pointer.deserialize(
-                        hgfilelog.revision(node, raw=True))
-                oid = lfspointer.oid()
+            islfs, oid = lfs.getlfsinfo(hgfilelog, node)
+            if islfs:
                 largefiles.append((c.cl, self.depotfile, oid))
                 self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
 
@@ -545,7 +534,6 @@ class SyncFileImporter(FileImporter):
         assert tr is not None
 
         fileflags = collections.defaultdict(dict)
-        lfsext = self.findlfs()
 
         linkrev = len(self._repo)
         fparent1, fparent2 = nullid, nullid
@@ -578,10 +566,8 @@ class SyncFileImporter(FileImporter):
                 len(text), src, self.relpath))
 
         largefiles = []
-        if lfsext and lfsext.wrapper._islfs(hgfilelog, node):
-            lfspointer = lfsext.pointer.deserialize(
-                    hgfilelog.revision(node, raw=True))
-            oid = lfspointer.oid()
+        islfs, oid = lfs.getlfsinfo(hgfilelog, node)
+        if islfs:
             largefiles.append((self._cl, self._p4filelog.depotfile, oid))
             self._ui.debug('largefile: %s, oid: %s\n' % (self.relpath, oid))
 
