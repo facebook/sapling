@@ -45,6 +45,13 @@ Run seqimport
   importing CL2
   added: Main/amove Main/c
   removed: Main/a
+  $ cat Main/amove
+  a
+  $ cat Main/b
+  b
+  bb
+  $ cat Main/c
+  c
 
 End Test
   stopping the p4 server
