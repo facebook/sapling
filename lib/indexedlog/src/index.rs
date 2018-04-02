@@ -56,7 +56,7 @@ use fs2::FileExt;
 use memmap::Mmap;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
-//// Structures related to file format
+//// Structures and serialization
 
 #[derive(Clone, PartialEq, Default)]
 struct MemRadix {
@@ -86,7 +86,16 @@ struct MemRoot {
     pub radix_offset: RadixOffset,
 }
 
-//// Serialization
+// Helper method to do checksum
+#[inline]
+fn verify_checksum(checksum: &Option<ChecksumTable>, start: u64, length: u64) -> io::Result<()> {
+    if let &Some(ref table) = checksum {
+        if !table.check_range(start, length) {
+            return Err(io::Error::new(InvalidData, "integrity check failed"));
+        }
+    }
+    Ok(())
+}
 
 // Offsets that are >= DIRTY_OFFSET refer to in-memory entries that haven't been
 // written to disk. Offsets < DIRTY_OFFSET are on-disk offsets.
@@ -617,24 +626,33 @@ impl MemKey {
 }
 
 impl MemRoot {
-    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64) -> io::Result<Self> {
+    fn read_from<B: AsRef<[u8]>>(
+        buf: B,
+        offset: u64,
+        checksum: &Option<ChecksumTable>,
+    ) -> io::Result<Self> {
         let buf = buf.as_ref();
         let offset = offset as usize;
         check_type(buf, offset, TYPE_ROOT)?;
-        let (radix_offset, len1) = buf.read_vlq_at(offset + 1)?;
+        let (radix_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
         let radix_offset = RadixOffset::from_offset(Offset::from_disk(radix_offset)?, buf)?;
-        let (len, _): (usize, _) = buf.read_vlq_at(offset + 1 + len1)?;
-        if len == 1 + len1 + 1 {
+        let (len, len2): (usize, _) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
+        if len == TYPE_BYTES + len1 + len2 {
+            verify_checksum(checksum, offset as u64, len as u64)?;
             Ok(MemRoot { radix_offset })
         } else {
             Err(InvalidData.into())
         }
     }
 
-    fn read_from_end<B: AsRef<[u8]>>(buf: B, end: u64) -> io::Result<Self> {
+    fn read_from_end<B: AsRef<[u8]>>(
+        buf: B,
+        end: u64,
+        checksum: &Option<ChecksumTable>,
+    ) -> io::Result<Self> {
         if end > 1 {
             let (size, _): (u64, _) = buf.as_ref().read_vlq_at(end as usize - 1)?;
-            Self::read_from(buf, end - size)
+            Self::read_from(buf, end - size, checksum)
         } else {
             Err(InvalidData.into())
         }
@@ -765,11 +783,11 @@ impl Index {
                 (vec![MemRadix::default()], MemRoot { radix_offset })
             } else {
                 // Load root entry from the end of file.
-                (vec![], MemRoot::read_from_end(&mmap, len)?)
+                (vec![], MemRoot::read_from_end(&mmap, len, &checksum)?)
             }
         } else {
             // Load root entry from given offset.
-            (vec![], MemRoot::read_from(&mmap, root_offset)?)
+            (vec![], MemRoot::read_from(&mmap, root_offset, &checksum)?)
         };
 
         Ok(Index {
@@ -882,7 +900,10 @@ impl Index {
                 return Err(io::ErrorKind::UnexpectedEof.into());
             }
 
-            self.root = MemRoot::read_from_end(&self.buf, new_len)?;
+            if let Some(ref mut table) = self.checksum {
+                table.update(None)?;
+            }
+            self.root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
         }
 
         // Outside critical section
@@ -1258,7 +1279,7 @@ impl Debug for Index {
                     write!(f, "{:?}\n", e)?;
                 }
                 TYPE_ROOT => {
-                    let e = MemRoot::read_from(&self.buf, i).expect("read");
+                    let e = MemRoot::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
