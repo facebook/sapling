@@ -284,6 +284,32 @@ server has treemanifest enabled.
   added 0 changesets with 1 changes to 1 files
   $ cd ..
 
+Verify pushbackup in a treeonly client will convert old flat manifests into
+trees
+  $ hgcloneshallow ssh://user@dummy/master ondemandconvertclient -q
+  $ cd ondemandconvertclient
+  $ echo >> foo
+  $ hg commit -Aqm 'add foo'
+  $ hg up -q '.^'
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > treemanifest=
+  > 
+  > [remotefilelog]
+  > usefastdatapack=True
+  > 
+  > [treemanifest]
+  > treeonly=True
+  > sendtrees=True
+  > EOF
+  $ hg pushbackup
+  starting backup * (glob)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     7e75be1136c3  add foo
+  finished in * seconds (glob)
+  $ cd ..
+
 Verify its not on the server
   $ cd master
   $ hg log -G

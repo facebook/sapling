@@ -547,10 +547,9 @@ def cansendtrees(repo, nodes, source=None, bundlecaps=None, b2caps=None):
         repo.prefetchtrees(c.manifestnode() for c in ctxs
                 if prefetch == AllTrees or c.phase() != phases.public)
     except shallowutil.MissingNodesError:
-        if treeonly:
-            raise
-        # During migrations, we may be sending flat manifests that don't
-        # have tree equivalents (like an old commit made before the
-        # conversion). In that case, don't worry if the prefetch fails.
+        # The server may not always have the manifests (like when we need to do
+        # a conversion from a flat manifest to a tree), so eat it and let the
+        # later fetch fail if necessary.
+        pass
 
     return result
