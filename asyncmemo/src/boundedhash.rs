@@ -129,6 +129,13 @@ where
         // Remove the key if it's already in the hash
         let oldv = self.hash.remove(&k);
         if let Some(ref removed) = oldv {
+            // XXX Debug code to try and figure out T27701455.
+            assert!(
+                self.keysizes >= k.get_weight(),
+                "ASSERTION FAILED: keysizes: {}, weight: {}",
+                self.keysizes,
+                k.get_weight(),
+            );
             self.keysizes -= k.get_weight();
             self.entrysizes -= removed.get_weight();
         }
