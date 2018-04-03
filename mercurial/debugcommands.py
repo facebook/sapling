@@ -457,7 +457,9 @@ def _debugdisplaystyle(ui):
             # 50
             ui.write(': ')
             ui.write(' ' * (max(0, width - len(label))))
-            ui.write(', '.join(ui.label(e, e) for e in effects.split()))
+            def labelparts(l):
+                return ':'.join(ui.label(e, e) for e in l.split(':'))
+            ui.write(', '.join(labelparts(e) for e in effects.split()))
         ui.write('\n')
 
 @command('debugcreatestreamclonebundle', [], 'FILE')
