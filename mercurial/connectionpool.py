@@ -18,7 +18,18 @@ class connectionpool(object):
         self._repo = repo
         self._pool = dict()
 
-    def get(self, path):
+    def get(self, path, opts=None):
+        # Prevent circular dependency
+        from . import hg
+
+        if opts is None:
+            opts = {}
+        if opts.get('ssh') or opts.get('remotecmd'):
+            self._repo.ui.debug("not using connection pool due to ssh or "
+                                "remotecmd option being set\n")
+            peer = hg.peer(self._repo.ui, opts, path)
+            return standaloneconnection(peer)
+
         pathpool = self._pool.get(path)
         if pathpool is None:
             pathpool = list()
@@ -47,8 +58,6 @@ class connectionpool(object):
                     peer.pipee.close()
                 return orig()
 
-            # Prevent circular dependency
-            from . import hg
             peer = hg.peer(self._repo.ui, {}, path)
             if util.safehasattr(peer, 'cleanup'):
                 extensions.wrapfunction(peer, 'cleanup', _cleanup)
@@ -62,6 +71,20 @@ class connectionpool(object):
             for conn in pathpool:
                 conn.close()
             del pathpool[:]
+
+class standaloneconnection(object):
+    def __init__(self, peer):
+        self.peer = peer
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def close(self):
+        if util.safehasattr(self.peer, 'cleanup'):
+            self.peer.cleanup()
 
 class connection(object):
     def __init__(self, pool, peer):

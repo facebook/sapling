@@ -3981,8 +3981,9 @@ def pull(ui, repo, source="default", **opts):
 
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     ui.status(_('pulling from %s\n') % util.hidepassword(source))
-    other = hg.peer(repo, opts, source)
-    try:
+
+    with repo.connectionpool.get(source, opts=opts) as conn:
+        other = conn.peer
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
 
@@ -4051,8 +4052,6 @@ def pull(ui, repo, source="default", **opts):
         finally:
             del repo._subtoppath
 
-    finally:
-        other.close()
     return ret
 
 @command('^push',
