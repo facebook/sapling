@@ -265,10 +265,17 @@ class datapack(basepack.basepack):
         for f, n, deltabase, deltalen in self.iterentries():
             yield f, n
 
-    def iterentries(self):
+    def iterentries(self, yieldall=False):
+        """Yields (filename, node, deltabase, datalength) for each entry.
+
+        If ``yieldall`` is True, yields
+          (filename, node, deltabase, datalength, delta, meta).
+        """
         # Start at 1 to skip the header
         offset = 1
         data = self._data
+        delta = None
+        meta = None
         while offset < self.datasize:
             oldoffset = offset
 
@@ -293,6 +300,9 @@ class datapack(basepack.basepack):
             # it has to be at least long enough for the lz4 header.
             assert deltalen >= 4
 
+            if yieldall:
+                delta = lz4decompress(data[offset:offset + deltalen])
+
             # python-lz4 stores the length of the uncompressed field as a
             # little-endian 32-bit integer at the start of the data.
             uncompressedlen = struct.unpack('<I', data[offset:offset + 4])[0]
@@ -301,9 +311,15 @@ class datapack(basepack.basepack):
             if self.VERSION == 1:
                 # <4 byte len> + <metadata-list>
                 metalen = struct.unpack('!I', data[offset:offset + 4])[0]
-                offset += 4 + metalen
+                offset += 4
+                if yieldall:
+                    meta = data[offset:offset + metalen]
+                offset += metalen
 
-            yield (filename, node, deltabase, uncompressedlen)
+            if yieldall:
+                yield (filename, node, deltabase, uncompressedlen, delta, meta)
+            else:
+                yield (filename, node, deltabase, uncompressedlen)
 
             # If we've read a lot of data from the mmap, free some memory.
             self._pagedin += offset - oldoffset
