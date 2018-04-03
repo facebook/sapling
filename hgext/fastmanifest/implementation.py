@@ -218,7 +218,7 @@ class hybridmanifest(object):
     __bool__ = __nonzero__
 
     def __len__(self):
-        return self._manifest('__len__').__len__()
+        return len(self._manifest('__len__'))
 
     def text(self, *args, **kwargs):
         # Normally we would prefer treemanifest instead of flat, but for text()

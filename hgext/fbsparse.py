@@ -979,7 +979,7 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
             with progress.spinner(ui, 'calculating total manifest size'):
                 try:
                     totalfiles = len(mf)
-                except AttributeError:
+                except TypeError:
                     # treemanifest does not implement __len__ :-(
                     totalfiles = sum(1 for __ in mf)
 
