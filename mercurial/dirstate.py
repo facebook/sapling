@@ -164,7 +164,10 @@ class dirstate(object):
     @rootcache('.hgignore')
     def _ignore(self):
         files = self._ignorefiles()
-        gitignore = matchmod.gitignorematcher(self._root, '')
+        if self._ui.configbool('ui', 'gitignore'):
+            gitignore = matchmod.gitignorematcher(self._root, '')
+        else:
+            gitignore = matchmod.nevermatcher(self._root, '')
         if not files:
             return gitignore
 

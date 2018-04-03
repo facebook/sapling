@@ -998,6 +998,9 @@ coreconfigitem('ui', 'formatjson',
 coreconfigitem('ui', 'formatted',
     default=None,
 )
+coreconfigitem('ui', 'gitignore',
+    default=False,
+)
 coreconfigitem('ui', 'graphnodetemplate',
     default=None,
 )

@@ -3,8 +3,11 @@
 
 gitignore is used when there is no hgignore:
 
-  $ hg debugignore
+  $ hg debugignore --config ui.gitignore=1
   <gitignorematcher>
+
+  $ hg debugignore --config ui.gitignore=0
+  <nevermatcher>
 
 Issue562: .hgignore requires newline at end:
 
@@ -197,8 +200,11 @@ Test relative ignore path (issue4473):
   $ hg status .
   A b.o
 
-  $ hg debugignore
+  $ hg debugignore --config ui.gitignore=1
   <unionmatcher matchers=[<gitignorematcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
+
+  $ hg debugignore
+  <unionmatcher matchers=[<nevermatcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
 
   $ hg debugignore b.o
   b.o is ignored

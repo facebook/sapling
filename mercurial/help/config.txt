@@ -2084,6 +2084,9 @@ User interface controls.
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. (default: ISO-8859-1)
 
+``gitignore``
+    Respect gitignore or not. (default: False)
+
 ``graphnodetemplate``
     The template used to print changeset nodes in an ASCII revision graph.
     (default: ``{graphnode}``)

@@ -1,4 +1,5 @@
   $ newrepo
+  $ setconfig ui.gitignore=1
 
   $ cat > .gitignore << EOF
   > *.tmp
