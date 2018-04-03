@@ -28,6 +28,7 @@ from . import (
     changegroup,
     changelog,
     color,
+    connectionpool,
     context,
     dirstate,
     dirstateguard,
@@ -488,6 +489,8 @@ class localrepository(object):
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
 
+        self.connectionpool = connectionpool.connectionpool(self)
+
         # A cache for various files under .hg/ that tracks file changes,
         # (used by the filecache decorator)
         #
@@ -571,6 +574,9 @@ class localrepository(object):
     @unfilteredmethod
     def close(self):
         self._writecaches()
+
+        if util.safehasattr(self, 'connectionpool'):
+            self.connectionpool.close()
 
         # If we have any pending manifests, commit them to disk.
         if 'manifestlog' in self.__dict__:

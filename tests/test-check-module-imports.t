@@ -183,22 +183,22 @@ outputs, which should be fixed later.
   hgext/remotefilelog/shallowbundle.py:12: imports from mercurial not lexically sorted: bundlerepo < match
   hgext/remotefilelog/shallowbundle.py:13: imports from mercurial not lexically sorted: error < util
   hgext/remotefilelog/shallowbundle.py:14: symbol import follows non-symbol import: mercurial.i18n
-  hgext/remotefilelog/shallowrepo.py:9: direct symbol import runshellcommand from hgext.extutil
-  hgext/remotefilelog/shallowrepo.py:12: imports from mercurial not lexically sorted: match < util
-  hgext/remotefilelog/shallowrepo.py:12: imports from mercurial not lexically sorted: progress < scmutil
-  hgext/remotefilelog/shallowrepo.py:21: direct symbol import remotefilelogcontentstore, unioncontentstore from hgext.remotefilelog.contentstore
-  hgext/remotefilelog/shallowrepo.py:21: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
-  hgext/remotefilelog/shallowrepo.py:22: direct symbol import remotecontentstore from hgext.remotefilelog.contentstore
-  hgext/remotefilelog/shallowrepo.py:22: symbol import follows non-symbol import: hgext.remotefilelog.contentstore
-  hgext/remotefilelog/shallowrepo.py:23: direct symbol import remotefilelogmetadatastore, unionmetadatastore from hgext.remotefilelog.metadatastore
-  hgext/remotefilelog/shallowrepo.py:23: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
-  hgext/remotefilelog/shallowrepo.py:24: direct symbol import remotemetadatastore from hgext.remotefilelog.metadatastore
-  hgext/remotefilelog/shallowrepo.py:24: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore
-  hgext/remotefilelog/shallowrepo.py:25: direct symbol import datapackstore from hgext.remotefilelog.datapack
-  hgext/remotefilelog/shallowrepo.py:25: symbol import follows non-symbol import: hgext.remotefilelog.datapack
-  hgext/remotefilelog/shallowrepo.py:26: direct symbol import historypackstore from hgext.remotefilelog.historypack
-  hgext/remotefilelog/shallowrepo.py:26: symbol import follows non-symbol import: hgext.remotefilelog.historypack
-  hgext/remotefilelog/shallowrepo.py:28: stdlib import "os" follows local import: hgext.remotefilelog.historypack
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import runshellcommand from hgext.extutil (glob)
+  hgext/remotefilelog/shallowrepo.py:*: imports from mercurial not lexically sorted: match < util (glob)
+  hgext/remotefilelog/shallowrepo.py:*: imports from mercurial not lexically sorted: progress < scmutil (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import remotefilelogcontentstore, unioncontentstore from hgext.remotefilelog.contentstore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.contentstore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import remotecontentstore from hgext.remotefilelog.contentstore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.contentstore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import remotefilelogmetadatastore, unionmetadatastore from hgext.remotefilelog.metadatastore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import remotemetadatastore from hgext.remotefilelog.metadatastore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.metadatastore (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import datapackstore from hgext.remotefilelog.datapack (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.datapack (glob)
+  hgext/remotefilelog/shallowrepo.py:*: direct symbol import historypackstore from hgext.remotefilelog.historypack (glob)
+  hgext/remotefilelog/shallowrepo.py:*: symbol import follows non-symbol import: hgext.remotefilelog.historypack (glob)
+  hgext/remotefilelog/shallowrepo.py:*: stdlib import "os" follows local import: hgext.remotefilelog.historypack (glob)
   hgext/remotefilelog/shallowutil.py:*: multiple imported names: errno, hashlib, os, stat, struct, tempfile (glob)
   hgext/remotefilelog/shallowutil.py:*: relative import of stdlib module (glob)
   hgext/remotefilelog/shallowutil.py:*: direct symbol import defaultdict from collections (glob)

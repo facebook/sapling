@@ -124,7 +124,6 @@ from mercurial import (
 from ..extlib import cstore
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
-    connectionpool,
     resolveprefetchopts,
     shallowbundle,
     shallowrepo,
@@ -302,9 +301,6 @@ def clientreposetup(repo):
             extensions.find('fastmanifest')
         except KeyError:
             raise error.Abort(_("cannot use treemanifest without fastmanifest"))
-
-    if not util.safehasattr(repo, 'connectionpool'):
-        repo.connectionpool = connectionpool.connectionpool(repo)
 
 def wraprepo(repo):
     class treerepository(repo.__class__):

@@ -11,7 +11,6 @@ from mercurial.i18n import _
 from mercurial.node import hex, nullid, nullrev
 from mercurial import encoding, error, localrepo, util, match, scmutil, progress
 from . import (
-    connectionpool,
     constants,
     fileserverclient,
     remotefilectx,
@@ -278,10 +277,6 @@ def wraprepo(repo):
                 results = [(path, hex(fnode)) for (path, fnode) in files]
                 repo.fileservice.prefetch(results)
 
-        def close(self):
-            super(shallowrepository, self).close()
-            self.connectionpool.close()
-
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, '')
@@ -292,8 +287,6 @@ def wraprepo(repo):
                                              None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern",
                                              None)
-    if not util.safehasattr(repo, 'connectionpool'):
-        repo.connectionpool = connectionpool.connectionpool(repo)
 
     if repo.includepattern or repo.excludepattern:
         repo.shallowmatch = match.match(repo.root, '', None,

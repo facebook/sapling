@@ -7,15 +7,10 @@
 
 from __future__ import absolute_import
 
-from mercurial import (
+from . import (
     extensions,
-    hg,
     sshpeer,
     util,
-)
-
-from . import (
-    shallowutil,
 )
 
 class connectionpool(object):
@@ -35,9 +30,9 @@ class connectionpool(object):
                 conn = pathpool.pop()
                 peer = conn.peer
                 # If the connection has died, drop it
-                if isinstance(peer, sshpeer.sshpeer):
-                    proc = shallowutil.trygetattr(
-                        peer, ('_subprocess', 'subprocess'))
+                if (isinstance(peer, sshpeer.sshpeer) and
+                    util.safehasattr(peer, '_subprocess')):
+                    proc = peer._subprocess
                     if proc.poll() is not None:
                         conn = None
             except IndexError:
@@ -52,6 +47,8 @@ class connectionpool(object):
                     peer.pipee.close()
                 return orig()
 
+            # Prevent circular dependency
+            from . import hg
             peer = hg.peer(self._repo.ui, {}, path)
             if util.safehasattr(peer, 'cleanup'):
                 extensions.wrapfunction(peer, 'cleanup', _cleanup)
