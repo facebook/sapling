@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import random
 import socket
 import string
-import sys
 
 from mercurial.i18n import _
 from mercurial import (
@@ -34,12 +33,10 @@ def clienttelemetryfunc(f):
     return f
 
 @clienttelemetryfunc
-def fullcommand(ui):
-    return ' '.join(sys.argv[1:])
-
-@clienttelemetryfunc
 def hostname(ui):
     return socket.gethostname()
+
+_correlator = None
 
 @clienttelemetryfunc
 def correlator(ui):
@@ -48,10 +45,12 @@ def correlator(ui):
     server.  This can be used to correlate the client logging to the server
     logging.
     """
-    alphabet = string.ascii_letters + string.digits
-    corr = ''.join(random.choice(alphabet) for _x in range(16))
-    ui.log('clienttelemetry', '', client_correlator=corr)
-    return corr
+    global _correlator
+    if _correlator is None:
+        alphabet = string.ascii_letters + string.digits
+        _correlator = ''.join(random.choice(alphabet) for _x in range(16))
+        ui.log('clienttelemetry', '', client_correlator=_correlator)
+    return _correlator
 
 # Client telemetry data is generated before connection and stored here.
 _clienttelemetrydata = {}
@@ -67,10 +66,12 @@ def _capabilities(orig, repo, proto):
     result.append('clienttelemetry')
     return result
 
-def _runcommand(orig, ui, options, cmd, cmdfunc):
+def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats,
+                cmdoptions):
     # Record the command that is running in the client telemetry data.
     _clienttelemetrydata['command'] = cmd
-    return orig(ui, options, cmd, cmdfunc)
+    _clienttelemetrydata['fullcommand'] = dispatch._formatargs(fullargs)
+    return orig(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions)
 
 def _peersetup(ui, peer):
     if peer.capable('clienttelemetry'):
@@ -85,4 +86,4 @@ def uisetup(ui):
     wireproto.wireprotocommand('clienttelemetry', '*')(_clienttelemetry)
     extensions.wrapfunction(wireproto, '_capabilities', _capabilities)
     hg.wirepeersetupfuncs.append(_peersetup)
-    extensions.wrapfunction(dispatch, '_runcommand', _runcommand)
+    extensions.wrapfunction(dispatch, 'runcommand', _runcommand)

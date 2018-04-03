@@ -35,9 +35,9 @@ check telemetry
   ...     for key in "command", "fullcommand":
   ...         print("%s: %s" % (key, parsedrecord["data"]["client_%s" % key]))
   command: clone
-  fullcommand: clone ssh://user@dummy/server local -q
+  fullcommand: clone 'ssh://user@dummy/server' local -q
   command: pull
   fullcommand: pull
   command: pull
-  fullcommand: pull --config clienttelemetry.announceremotehostname=False
+  fullcommand: pull --config 'clienttelemetry.announceremotehostname=False'
 
