@@ -343,8 +343,11 @@ def _load_overlay_tree(overlay_dir: str, inode_number: int) -> OverlayDir:
 
 
 def _print_overlay_tree(inode_number: int, path: str, tree_data: OverlayDir):
-    def hex(binhash):
-        return binascii.hexlify(binhash).decode('utf-8')
+    def hex(binhash) -> str:
+        if binhash is None:
+            return 'None'
+        else:
+            return binascii.hexlify(binhash).decode('utf-8')
 
     print('Inode {}: {}'.format(inode_number, path))
     if not tree_data.entries:
