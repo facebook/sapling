@@ -9,6 +9,7 @@ import time
 
 from mercurial.i18n import _
 from mercurial import (
+    error,
     policy,
     pycompat,
     util,
@@ -394,6 +395,9 @@ class mutablebasepack(versionmixin):
         self.sha = hashlib.sha1()
         self._closed = False
 
+        # Where the pack was written to, if closed successfully.
+        self._destpath = None
+
         # The opener provides no way of doing permission fixup on files created
         # via mkstemp, so we must fix it ourselves. We can probably fix this
         # upstream in vfs.mkstemp so we don't need to use the private method.
@@ -411,9 +415,16 @@ class mutablebasepack(versionmixin):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is None:
-            self.close()
+            self._destpath = self.close()
         else:
             self.abort()
+
+    @property
+    def destpath(self):
+        if self._destpath is None:
+            raise error.ProgrammingError(_(
+                "attempted to read mutabledatapack path before it was closed"))
+        return self._destpath
 
     def abort(self):
         # Unclean exit
