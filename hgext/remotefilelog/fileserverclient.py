@@ -106,9 +106,9 @@ def peersetup(ui, peer):
                 bundlecaps.append(excludecap)
             opts['bundlecaps'] = ','.join(bundlecaps)
 
-        def _callstream(self, command, **opts):
-            self._updatecallstreamopts(command, opts)
-            return super(remotefilepeer, self)._callstream(command, **opts)
+        def _callstream(self, cmd, **opts):
+            self._updatecallstreamopts(cmd, opts)
+            return super(remotefilepeer, self)._callstream(cmd, **opts)
 
     peer.__class__ = remotefilepeer
 
