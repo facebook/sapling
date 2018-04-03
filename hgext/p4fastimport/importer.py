@@ -37,6 +37,24 @@ def get_localname(client, p4filelogs):
         localname = relpath(client, depotfile)
         yield 1, json.dumps({depotfile:localname})
 
+def get_p4_file_content(storepath, p4filelog, p4cl):
+    p4path = p4filelog._depotfile
+    p4storepath = os.path.join(storepath, localpath(p4path))
+    if p4.config('caseHandling') == 'insensitive':
+        p4storepath = p4storepath.lower()
+    rcs = RCSImporter(p4storepath)
+    if p4cl.origcl in rcs.revisions:
+        return rcs.content(p4cl.origcl), 'rcs'
+    flat = FlatfileImporter(p4storepath)
+    if p4cl.origcl in flat.revisions:
+        return flat.content(p4cl.origcl), 'gzip'
+    p4fi = P4FileImporter(p4filelog)
+    if p4cl.cl in p4fi.revisions:
+        return p4fi.content(p4cl.cl), 'p4'
+    raise error.Abort(
+        'error generating file content %d %s' % (p4cl.cl, p4path)
+    )
+
 def get_filelogs_to_sync(ui, client, repo, p1ctx, cl, p4filelogs):
     # to categorize the list of p4 filelogs in current client spec.
     # it returns two lists:

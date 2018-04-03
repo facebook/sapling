@@ -85,7 +85,12 @@ class ChangelistImporter(object):
                 return None
 
             p4flog = p4flogs[path]
-            data = p4.get_file(p4flog._depotfile, clnum=p4cl.cl)
+            data, src = importer.get_p4_file_content(
+                self.storepath,
+                p4flog,
+                p4cl,
+            )
+            self.ui.debug('file: %s, src: %s\n' % (p4flog._depotfile, src))
             islink = p4flog.issymlink(p4cl.cl)
             if islink:
                 # p4 will give us content with a trailing newline, symlinks
