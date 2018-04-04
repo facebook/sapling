@@ -11,5 +11,5 @@ CREATE TABLE csparents (
   cs_id BIGINT NOT NULL,
   parent_id BIGINT NOT NULL,
   seq INTEGER NOT NULL,
-  PRIMARY KEY (cs_id, parent_id, seq)
+  PRIMARY KEY (cs_id, seq)
 );
