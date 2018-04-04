@@ -2031,5 +2031,26 @@ mod tests {
                 link_offset.value_and_next(&index).unwrap().0 == *value
             })
         }
+
+        fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
+            let dir = TempDir::new("index").expect("tempdir");
+            let mut index = open_opts().open(dir.path().join("a")).expect("open");
+
+            for (key, values) in &map {
+                for value in values.iter().rev() {
+                    index.insert(key, *value).expect("insert");
+                }
+                if values.len() == 0 {
+                    // Flush sometimes.
+                    index.flush().expect("flush");
+                }
+            }
+
+            map.iter().all(|(key, values)| {
+                let v: Vec<u64> =
+                    index.get(key).unwrap().values(&index).map(|v| v.unwrap()).collect();
+                v == *values
+            })
+        }
     }
 }
