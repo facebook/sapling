@@ -82,6 +82,9 @@
     # bundle for storage. Defaults to False.
     storeallparts = True
 
+    # Server-side option.  Maximum acceptable bundle size in megabytes.
+    maxbundlesize = 500
+
     [remotenames]
     # Client-side option
     # This option should be set only if remotenames extension is enabled.
@@ -1318,10 +1321,13 @@ def storebundle(op, params, bundlefile):
                 bundledata = f.read()
                 with logservicecall(log, 'bundlestore',
                                     bundlesize=len(bundledata)):
-                    bundlesizelimit = 100 * 1024 * 1024  # 100 MB
-                    if len(bundledata) > bundlesizelimit:
+                    bundlesizelimitmb = op.repo.ui.configint('infinitepush',
+                                                             'maxbundlesize',
+                                                             100)
+                    if len(bundledata) > bundlesizelimitmb * 1024 * 1024:
                         error_msg = ('bundle is too big: %d bytes. ' +
-                                     'max allowed size is 100 MB')
+                                     'max allowed size is %s MB'
+                                     % bundlesizelimitmb)
                         raise error.Abort(error_msg % (len(bundledata),))
                     key = store.write(bundledata)
 

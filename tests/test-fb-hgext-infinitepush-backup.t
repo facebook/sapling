@@ -602,3 +602,23 @@ Check if ssh batch mode enables only for background backup and not for foregroun
   $ waitbgbackup
   $ cat $TESTTMP/logs/test/* | debugsshcall
   running .* ".*/dummyssh" -bgssh 'user@dummy' 'hg -R repo serve --stdio' (re)
+
+Fail to push a backup by setting the server maxbundlesize very low
+  $ cp ../repo/.hg/hgrc $TESTTMP/server-hgrc.bak
+  $ cat >> ../repo/.hg/hgrc << EOF
+  > [infinitepush]
+  > maxbundlesize = 0
+  > EOF
+  $ mkcommit toobig
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     034e9a5a003f  toobig
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg isbackedup -r .
+  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 backed up
+  $ scratchnodes | grep 034e9a5a003f9f7dd44ab4b35187e833d0aad5c3
+  [1]
+
+  $ mv $TESTTMP/server-hgrc.bak ../repo/.hg/hgrc
