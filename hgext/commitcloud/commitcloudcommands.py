@@ -4,13 +4,15 @@
 # GNU General Public License version 2 or any later version.
 
 from __future__ import absolute_import
+
+# Standard Library
 import itertools
 import re
 import socket
 import time
 
+# Mercurial
 from mercurial.i18n import _
-
 from mercurial import (
     commands,
     node,
@@ -19,21 +21,50 @@ from mercurial import (
 )
 
 from . import (
+    commitcloudcommon,
+    commitcloudutil,
     service,
     state,
 )
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+highlightdebug = commitcloudcommon.highlightdebug
+highlightstatus = commitcloudcommon.highlightstatus
+
+@command('cloudregister', [('t', 'token', '', 'set secret access token')])
+def cloudregister(ui, repo, **opts):
+    """register your private access token with Commit Cloud for this host
+
+    This can be done in any hg repo with Commit Cloud enabled on the host
+    """
+    tokenlocator = commitcloudutil.TokenLocator(ui)
+    highlightstatus(ui, _('welcome to registration!\n'))
+
+    token = opts.get('token')
+    if not token:
+        token = tokenlocator.token
+        if not token:
+            msg = _('token is not provided and not found')
+            raise commitcloudcommon.RegistrationError(ui, msg)
+        else:
+            ui.status(_('you have been already registered\n'))
+            return
+    else:
+        if tokenlocator.token:
+            ui.status(_('your token will be updated\n'))
+        tokenlocator.settoken(token)
+    ui.status(_('registration successful\n'))
 
 @command('cloudsync')
 def cloudsync(ui, repo, **opts):
-    """Synchronize commits with the commit cloud service"""
+    """synchronize commits with the commit cloud service"""
 
     start = time.time()
     serv = service.get(ui)
     lastsyncstate = state.SyncState(repo)
     cloudrefs = serv.getreferences(lastsyncstate.version)
+    highlightstatus(ui, 'start synchronization\n')
 
     synced = False
     while not synced:
@@ -56,8 +87,8 @@ def cloudsync(ui, repo, **opts):
                 with repo.svfs.open('commitcloudpendingobsmarkers') as f:
                     _version, obsmarkers = obsolete._readmarkers(f.read())
             synced, cloudrefs = serv.updatereferences(
-                    lastsyncstate.version, lastsyncstate.heads, localheads,
-                    lastsyncstate.bookmarks, localbookmarks, obsmarkers)
+                lastsyncstate.version, lastsyncstate.heads, localheads,
+                lastsyncstate.bookmarks, localbookmarks, obsmarkers)
             if synced:
                 lastsyncstate.update(cloudrefs.version, localheads,
                                      localbookmarks)
@@ -65,11 +96,8 @@ def cloudsync(ui, repo, **opts):
                     repo.svfs.unlink('commitcloudpendingobsmarkers')
 
     elapsed = time.time() - start
-    ui.debug(
-        "%s cloudsync is done in %0.2f sec\n" % (
-            ui.label('#commitcloud', 'commitcloud.hashtag'),
-            elapsed)
-    )
+    highlightdebug(ui, _('cloudsync is done in %0.2f sec\n') % elapsed)
+    highlightstatus(ui, _('cloudsync done\n'))
 
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions('^pull')
@@ -108,7 +136,7 @@ def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
                     changes.append((forkname, node.bin(localnode)))
                     ui.warn(_('%s changed locally and remotely, '
                               'local bookmark renamed to %s\n') %
-                              (name, forkname))
+                            (name, forkname))
 
                 if cloudnode != lastnode:
                     if cloudnode is not None:
@@ -117,7 +145,7 @@ def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
                         else:
                             ui.warn(_('%s not found, '
                                       'not creating %s bookmark\n') %
-                                      (cloudnode, name))
+                                    (cloudnode, name))
                     else:
                         if localnode is not None and localnode != lastnode:
                             # Moved locally, deleted in the cloud, resurrect

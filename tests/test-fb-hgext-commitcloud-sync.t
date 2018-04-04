@@ -33,24 +33,52 @@
   $ mkcommit "base"
   $ cd ..
 
-Make the first clone of the server
-  $ hg clone ssh://user@dummy/server client1 -q
-  $ cd client1
-  $ cat >> .hg/hgrc << EOF
+Make shared part of config
+  $ cat >> shared.rc << EOF
   > [commitcloud]
   > servicetype = local
   > servicelocation = $TESTTMP
+  > user_token_path = $TESTTMP
+  > auth_help = visit htts://localhost/oauth to generate a registration token
+  > owner_team = The Test Team @ FB
   > EOF
+
+Make the first clone of the server
+  $ hg clone ssh://user@dummy/server client1 -q
+  $ cd client1
+  $ cat ../shared.rc >> .hg/hgrc
+Registration:
+  $ hg cloudregister
+  #commitcloud welcome to registration!
+  abort: #commitcloud registration error: token is not provided and not found
+  authentication instructions:
+  visit htts://localhost/oauth to generate a registration token
+  please contact The Test Team @ FB for more information
+  [255]
+  $ hg cloudregister -t xxxxxx
+  #commitcloud welcome to registration!
+  registration successful
+  $ hg cloudregister -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
+  #commitcloud welcome to registration!
+  abort: #commitcloud unexpected configuration error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
+  please contact The Test Team @ FB to report misconfiguration
+  [255]
+
   $ cd ..
 
 Make the second clone of the server
   $ hg clone ssh://user@dummy/server client2 -q
   $ cd client2
-  $ cat >> .hg/hgrc << EOF
-  > [commitcloud]
-  > servicetype = local
-  > servicelocation = $TESTTMP
-  > EOF
+  $ cat ../shared.rc >> .hg/hgrc
+Registration:
+  $ hg cloudregister
+  #commitcloud welcome to registration!
+  you have been already registered
+  $ hg cloudregister -t yyyyy
+  #commitcloud welcome to registration!
+  your token will be updated
+  registration successful
+
   $ cd ..
 
 Make a commit in the first client, and sync it
@@ -58,11 +86,14 @@ Make a commit in the first client, and sync it
   $ mkcommit "commit1"
   $ hg pushbackup -q
   $ hg cloudsync
+  #commitcloud start synchronization
+  #commitcloud cloudsync done
   $ cd ..
 
 Sync from the second client - the commit should appear
   $ cd client2
   $ hg cloudsync
+  #commitcloud start synchronization
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -71,6 +102,7 @@ Sync from the second client - the commit should appear
   added 1 changesets with 1 changes to 1 files
   new changesets fa5d62c46fd7
   (run 'hg update' to get a working copy)
+  #commitcloud cloudsync done
 
   $ hg up -q tip
   $ hg tglog
@@ -82,12 +114,15 @@ Make a commit from the second client and sync it
   $ mkcommit "commit2"
   $ hg pushbackup -q
   $ hg cloudsync
+  #commitcloud start synchronization
+  #commitcloud cloudsync done
   $ cd ..
 
 On the first client, make a bookmark, then sync - the bookmark and new commit should be synced
   $ cd client1
   $ hg bookmark -r 0 bookmark1
   $ hg cloudsync
+  #commitcloud start synchronization
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -96,6 +131,7 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   added 1 changesets with 1 changes to 2 files
   new changesets 02f6fc2b7154
   (run 'hg update' to get a working copy)
+  #commitcloud cloudsync done
   $ hg tglog
   o  02f6fc2b7154 'commit2'
   |
@@ -108,12 +144,14 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
 Sync the bookmark back to the second client
   $ cd client2
   $ hg cloudsync
+  #commitcloud start synchronization
   pulling from ssh://user@dummy/server
   no changes found
   adding changesets
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 2 files
+  #commitcloud cloudsync done
   $ hg tglog
   @  02f6fc2b7154 'commit2'
   |
@@ -124,12 +162,15 @@ Sync the bookmark back to the second client
 Move the bookmark on the second client, and then sync it
   $ hg bookmark -r 2 -f bookmark1
   $ hg cloudsync
+  #commitcloud start synchronization
+  #commitcloud cloudsync done
   $ cd ..
 
 Move the bookmark also on the first client, it should be forked in the sync
   $ cd client1
   $ hg bookmark -r 1 -f bookmark1
   $ hg cloudsync
+  #commitcloud start synchronization
   pulling from ssh://user@dummy/server
   no changes found
   adding changesets
@@ -137,6 +178,7 @@ Move the bookmark also on the first client, it should be forked in the sync
   adding file changes
   added 0 changesets with 0 changes to 2 files
   bookmark1 changed locally and remotely, local bookmark renamed to bookmark1-testhost
+  #commitcloud cloudsync done
   $ hg tglog
   o  02f6fc2b7154 'commit2' bookmark1
   |
@@ -153,6 +195,8 @@ Amend a commit
   rebasing 2:02f6fc2b7154 "commit2" (bookmark1)
   $ hg pushbackup -q
   $ hg cloudsync
+  #commitcloud start synchronization
+  #commitcloud cloudsync done
   $ hg tglog
   o  48610b1a7ec0 'commit2' bookmark1
   |
@@ -165,6 +209,7 @@ Amend a commit
 Sync the amended commit to the other client
   $ cd client2
   $ hg cloudsync
+  #commitcloud start synchronization
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets
@@ -173,6 +218,7 @@ Sync the amended commit to the other client
   added 2 changesets with 1 changes to 2 files (+1 heads)
   new changesets a7bb357e7299:48610b1a7ec0
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  #commitcloud cloudsync done
   $ hg up -q tip
   $ hg tglog
   @  48610b1a7ec0 'commit2' bookmark1

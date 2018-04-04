@@ -5,13 +5,12 @@
 
 from __future__ import absolute_import
 
+# Mercurial
+from mercurial import error
+
 from . import (
     httpsservice,
     localservice,
-)
-
-from mercurial import (
-    error,
 )
 
 def get(ui):

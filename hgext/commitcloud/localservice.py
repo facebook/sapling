@@ -5,12 +5,12 @@
 
 from __future__ import absolute_import
 
+# Standard Library
 import json
 import os
 
-from mercurial import (
-    error,
-)
+# Mercurial
+from mercurial import error
 
 from . import baseservice
 
@@ -19,6 +19,7 @@ class LocalService(baseservice.BaseService):
 
     There is no locking, so this is suitable only for use in unit tests.
     """
+
     def __init__(self, ui):
         self._ui = ui
         self.path = ui.config('commitcloud', 'servicelocation')
@@ -44,9 +45,11 @@ class LocalService(baseservice.BaseService):
     """ filter the obmarkers since the baseversion,
         this includes (baseversion, data[version]] obsmarkers
     """
+
     def _filteredobsmarkers(self, data, baseversion):
+        versions = range(baseversion, data['version'])
         data['new_obsmarkers'] = sum((data['obsmarkers'][str(n + 1)]
-            for n in range(baseversion, data['version'])), [])
+                                      for n in versions), [])
         del data['obsmarkers']
         return data
 
@@ -68,7 +71,7 @@ class LocalService(baseservice.BaseService):
                 self._filteredobsmarkers(data, baseversion))
 
     def updatereferences(self, version, oldheads, newheads, oldbookmarks,
-                          newbookmarks, newobsmarkers):
+                         newbookmarks, newobsmarkers):
         data = self._load()
         if version != data['version']:
             return False, self._makereferences(

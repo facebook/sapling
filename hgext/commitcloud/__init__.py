@@ -40,6 +40,17 @@
 
     # SSL certificates
     certs = /etc/pki/tls/certs/fb_certs.pem
+
+    # help message to provide instruction on registration process
+    auth_help = for register your private OAuth access token with Commit Cloud:
+                visit https://example.com/oauth/
+
+    # custom path to store authentication token (maybe used for testing)
+    # the path should exists
+    user_token_path = /tmp
+
+    # owner team, used for help messages
+    owner_team = "The Source Control Team"
 """
 
 from __future__ import absolute_import
@@ -54,7 +65,8 @@ from . import commitcloudcommands
 cmdtable = commitcloudcommands.cmdtable
 
 colortable = {
-    'commitcloud.hashtag': 'yellow',
+    'commitcloud.tag': 'yellow',
+    'commitcloud.team': 'bold',
 }
 
 def reposetup(ui, repo):

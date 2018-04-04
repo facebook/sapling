@@ -4,20 +4,22 @@
 # GNU General Public License version 2 or any later version.
 
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
 
+# Standard Library
+import abc
 import base64
 import collections
 
-from mercurial import (
-    obsolete,
-)
+# Mercurial
+from mercurial import obsolete
 
+abstractmethod = abc.abstractmethod
 References = collections.namedtuple('References',
                                     'version heads bookmarks obsmarkers')
 
 class BaseService(object):
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
+
     def _makereferences(self, data):
         """Makes a References object from JSON data
 
@@ -43,7 +45,7 @@ class BaseService(object):
 
     def _encodedmarkers(self, obsmarkers):
         return [base64.b64encode(m) for m in obsolete.encodemarkers(
-                    obsmarkers, False, obsolete._fm1version)]
+            obsmarkers, False, obsolete._fm1version)]
 
     @abstractmethod
     def updatereferences(self, version, oldheads, newheads, oldbookmarks,
