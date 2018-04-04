@@ -357,9 +357,19 @@ impl RadixOffset {
             match index.buf.get(usize::from(self) + TYPE_BYTES + i as usize) {
                 None => Err(InvalidData.into()),
                 Some(&jump) => {
-                    let (v, vlq_len) = index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
-                    index.verify_checksum(u64::from(self), jump as u64 + vlq_len as u64)?;
-                    Offset::from_disk(v)
+                    // jump is 0: special case - child is null
+                    if jump == 0 {
+                        index.verify_checksum(
+                            u64::from(self),
+                            (TYPE_BYTES + JUMPTABLE_BYTES) as u64,
+                        )?;
+                        Ok(Offset::default())
+                    } else {
+                        let (v, vlq_len) =
+                            index.buf.read_vlq_at(usize::from(self) + jump as usize)?;
+                        index.verify_checksum(u64::from(self), jump as u64 + vlq_len as u64)?;
+                        Offset::from_disk(v)
+                    }
                 }
             }
         }
