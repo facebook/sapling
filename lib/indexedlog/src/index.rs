@@ -415,12 +415,12 @@ impl RadixOffset {
 }
 
 impl LeafOffset {
-    /// Key and link offsets of a leaf entry.
+    /// Key content and link offsets of a leaf entry.
     #[inline]
-    fn key_and_link_offset(self, index: &Index) -> io::Result<(KeyOffset, LinkOffset)> {
+    fn key_and_link_offset(self, index: &Index) -> io::Result<(&[u8], LinkOffset)> {
         if self.is_dirty() {
             let e = &index.dirty_leafs[self.dirty_index()];
-            Ok((e.key_offset, e.link_offset))
+            Ok((e.key_offset.key_content(index)?, e.link_offset))
         } else {
             let (key_offset, vlq_len): (u64, _) =
                 index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
@@ -438,7 +438,7 @@ impl LeafOffset {
                 &index.checksum,
             )?;
             index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
-            Ok((key_offset, link_offset))
+            Ok((key_offset.key_content(index)?, link_offset))
         }
     }
 
@@ -1020,8 +1020,7 @@ impl Index {
                 }
                 TypedOffset::Leaf(leaf) => {
                     // Meet a leaf. If key matches, return the link offset.
-                    let (key_offset, link_offset) = leaf.key_and_link_offset(self)?;
-                    let stored_key = key_offset.key_content(self)?;
+                    let (stored_key, link_offset) = leaf.key_and_link_offset(self)?;
                     if stored_key == key.as_ref() {
                         return Ok(link_offset);
                     } else {
@@ -1103,8 +1102,17 @@ impl Index {
                     }
                 }
                 TypedOffset::Leaf(leaf) => {
-                    let (key_offset, link_offset) = leaf.key_and_link_offset(self)?;
-                    if key_offset.key_content(self)? == key.as_ref() {
+                    let (old_key, link_offset) = {
+                        let (old_key, link_offset) = leaf.key_and_link_offset(self)?;
+                        // Detach "old_key" from "self".
+                        // About safety: This is to avoid a memory copy / allocation.
+                        // `old_key` are only valid before `dirty_*keys` being resized.
+                        // `old_iter` (used by `split_leaf`) and `old_key` are not used
+                        // after creating a key. So it's safe to not copy it.
+                        let detached_key = unsafe { &*(old_key as (*const [u8])) };
+                        (detached_key, link_offset)
+                    };
+                    if old_key == key.as_ref() {
                         // Key matched. Need to copy leaf entry.
                         let new_link_offset = link.unwrap_or(link_offset).create(self, value);
                         let new_leaf_offset = leaf.set_link(self, new_link_offset)?;
@@ -1115,7 +1123,7 @@ impl Index {
                             link.unwrap_or(LinkOffset::default()).create(self, value);
                         self.split_leaf(
                             leaf,
-                            key_offset,
+                            old_key,
                             key.as_ref(),
                             step,
                             last_radix,
@@ -1140,7 +1148,7 @@ impl Index {
     fn split_leaf(
         &mut self,
         old_leaf_offset: LeafOffset,
-        old_key_offset: KeyOffset,
+        old_key: &[u8],
         new_key: &[u8],
         step: usize,
         radix_offset: RadixOffset,
@@ -1190,14 +1198,11 @@ impl Index {
         //           D |                     | Leaf("1234", Link: Y)
         //           E |                     | Radix(3: D)
 
-        // About safety: This is to avoid a memory copy / allocation.
-        // `old_key` and `old_iter` are only valid before `dirty_keys` being resized.
-        // `KeyOffset::create` might resize it. But `old_iter` and `old_key` are not used
-        // after `KeyOffset::create`. So it's safe. `b1` is a copy of `u8`, not `&u8`.
-        let old_key = {
-            let k = old_key_offset.key_content(self)?;
-            unsafe { &*(k as (*const [u8])) }
-        };
+        // UNSAFE NOTICE: Read the "UNSAFE NOTICE" inside `insert_advanced` to learn more.
+        // Basically, `old_iter` is only guaranteed available if there is no insertion to
+        // `self.dirty_keys` or `self.dirty_ext_keys`. That's true here since we won't read
+        // `old_iter` after creating new keys. But be aware of the constraint when modifying the
+        // code.
         let mut old_iter = Base16Iter::from_base256(&old_key).skip(step);
         let mut new_iter = Base16Iter::from_base256(&new_key).skip(step);
 
