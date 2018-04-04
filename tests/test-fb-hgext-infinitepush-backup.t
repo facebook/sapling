@@ -616,9 +616,22 @@ Fail to push a backup by setting the server maxbundlesize very low
   remote: pushing 1 commit:
   remote:     034e9a5a003f  toobig
   finished in \d+\.(\d+)? seconds (re)
+  abort: bundle is too big: 546 bytes. max allowed size is 0 MB
+  [255]
   $ hg isbackedup -r .
-  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 backed up
+  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 not backed up
   $ scratchnodes | grep 034e9a5a003f9f7dd44ab4b35187e833d0aad5c3
   [1]
 
+Set the limit back high, and try again
   $ mv $TESTTMP/server-hgrc.bak ../repo/.hg/hgrc
+  $ hg pushbackup
+  starting backup .* (re)
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     034e9a5a003f  toobig
+  finished in \d+\.(\d+)? seconds (re)
+  $ hg isbackedup -r .
+  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 backed up
+  $ scratchnodes | grep 034e9a5a003f9f7dd44ab4b35187e833d0aad5c3
+  034e9a5a003f9f7dd44ab4b35187e833d0aad5c3 78f78c7dbb5ec659cc375e5cabf70fc9f485a89d

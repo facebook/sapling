@@ -900,7 +900,16 @@ def _createbundler(ui, repo, other):
 def _sendbundle(bundler, other):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
-        other.unbundle(stream, ['force'], other.url())
+        reply = other.unbundle(stream, ['force'], other.url())
+        # Look for an error part in the response.  Note that we don't apply
+        # the reply bundle, as we're not expecting any response, except maybe
+        # an error.  If we receive any extra parts, that is an error.
+        for part in reply.iterparts():
+            if part.type == 'error:abort':
+                raise bundle2.AbortFromPart(part.params['message'],
+                                            hint=part.params.get('hint'))
+            else:
+                raise error.Abort(_('unexpected part in reply: %s') % part.type)
     except error.BundleValueError as exc:
         raise error.Abort(_('missing support for %s') % exc)
 
