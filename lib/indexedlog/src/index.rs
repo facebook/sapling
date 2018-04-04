@@ -478,7 +478,39 @@ impl LeafOffset {
     }
 }
 
+/// Iterator for values in the linked list
+pub struct LeafValueIter<'a> {
+    index: &'a Index,
+    offset: LinkOffset,
+}
+
+impl<'a> Iterator for LeafValueIter<'a> {
+    type Item = io::Result<u64>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset.is_null() {
+            None
+        } else {
+            match self.offset.value_and_next(self.index) {
+                Ok((value, next)) => {
+                    self.offset = next;
+                    Some(Ok(value))
+                }
+                Err(e) => Some(Err(e)),
+            }
+        }
+    }
+}
+
 impl LinkOffset {
+    /// Iterating through values referred by this linked list.
+    pub fn values<'a>(self, index: &'a Index) -> LeafValueIter<'a> {
+        LeafValueIter {
+            index,
+            offset: self,
+        }
+    }
+
     /// Get value, and the next link offset.
     #[inline]
     fn value_and_next(self, index: &Index) -> io::Result<(u64, LinkOffset)> {
@@ -1947,6 +1979,36 @@ mod tests {
             .open(dir.path().join("a"))
             .expect("open");
         index.flush().expect_err("cannot flush read-only index");
+    }
+
+    #[test]
+    fn test_linked_list_values() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = OpenOptions::new().open(dir.path().join("a")).expect("open");
+        let list = vec![11u64, 17, 19, 31];
+        for i in list.iter().rev() {
+            index.insert(&[], *i).expect("insert");
+        }
+
+        let list1: Vec<u64> = index
+            .get(&[])
+            .unwrap()
+            .values(&index)
+            .map(|v| v.unwrap())
+            .collect();
+        assert_eq!(list, list1);
+
+        index.flush().expect("flush");
+        let list2: Vec<u64> = index
+            .get(&[])
+            .unwrap()
+            .values(&index)
+            .map(|v| v.unwrap())
+            .collect();
+        assert_eq!(list, list2);
+
+        // Empty linked list
+        assert_eq!(index.get(&[1]).unwrap().values(&index).count(), 0);
     }
 
     quickcheck! {
