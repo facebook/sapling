@@ -44,7 +44,7 @@
 //!   long.
 
 use std::fmt::{self, Debug, Formatter};
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::ops::Deref;
 use std::path::Path;
@@ -813,6 +813,7 @@ pub struct Index {
 
     // Optional checksum table.
     checksum: Checksum,
+    checksum_chunk_size: u64,
 
     // Additional buffer for external keys.
     key_buf: Rc<AsRef<[u8]>>,
@@ -823,42 +824,98 @@ pub enum InsertKey<'a> {
     Reference((u64, u64)),
 }
 
-impl Index {
-    /// Open the index file as read-write. Fallback to read-only.
-    ///
-    /// The index is always writable because it buffers all writes in-memory.
-    /// read-only will only cause "flush" to fail.
-    ///
-    /// If `root_offset` is not 0, read the root entry from the given offset.
-    /// Otherwise, read the root entry from the end of the file.
-    ///
-    /// If `checksummed` is true, integrity check will be performed. This
-    /// helps detect file corruption due to OS crashes.
-    ///
-    /// If `key_buf` is set, the index can refer to offsets in the buffer
-    /// as keys to reduce its size. The part of key buffer being referred must
-    /// not be changed across index reloads. That could be done by making
-    /// `key_buf` backed by an append-only file.
-    pub fn open<P: AsRef<Path>>(
-        path: P,
-        root_offset: u64,
-        checksummed: bool,
-        key_buf: Option<Rc<AsRef<[u8]>>>,
-    ) -> io::Result<Self> {
-        let open_result = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .append(true)
-            .open(path.as_ref());
+#[derive(Clone)]
+pub struct OpenOptions {
+    checksum_chunk_size: u64,
+    root_offset: u64,
+    write: Option<bool>,
+    key_buf: Option<Rc<AsRef<[u8]>>>,
+}
 
-        // Fallback to open the file as read-only.
-        let (read_only, mut file) = if open_result.is_err() {
-            (true, OpenOptions::new().read(true).open(path.as_ref())?)
+impl OpenOptions {
+    /// Default options to open an index:
+    /// - no checksum
+    /// - no external key buffer
+    /// - read root entry from the end of the file
+    /// - open as read-write but fallback to read-only
+    pub fn new() -> OpenOptions {
+        OpenOptions {
+            checksum_chunk_size: 0,
+            root_offset: 0,
+            write: None,
+            key_buf: None,
+        }
+    }
+
+    /// Set checksum behavior.
+    /// - 0: don't do checksums
+    /// - >0: size of a checksum chunk and do verify checksums
+    /// Checksum is useful for detecting data corruption due to OS crashes.
+    /// For application crashes, explicitly specifying `root_offset`s would avoid data corruption
+    /// issues.
+    pub fn checksum_chunk_size(&mut self, checksum_chunk_size: u64) -> &mut Self {
+        self.checksum_chunk_size = checksum_chunk_size;
+        self
+    }
+
+    /// Whether writing is required:
+    /// - `None`: don't care, open as read-write but fallback to read-only. `flush()` may fail.
+    /// - `Some(false)`: open as read-only. `flush()` always fail.
+    /// - `Some(true)`: open as read-write. `open()` may fail. `flush()` will not fail.
+    ///
+    /// Note:  The index is always mutable in-memory. Only `flush()` may fail.
+    pub fn write(&mut self, value: Option<bool>) -> &mut Self {
+        self.write = value;
+        self
+    }
+
+    /// Specify the offset of the root entry.
+    ///
+    /// If it's 0, detect the root from the end of file.  This is useful for application to keep
+    /// track of multiple versions of the index, or maintain certain consistency across multiple
+    /// indexes so that read can be done lock-free.
+    ///
+    /// To get a root entry offset, collect the return value of `index.flush()`.
+    pub fn root_offset(&mut self, root_offset: u64) -> &mut Self {
+        self.root_offset = root_offset;
+        self
+    }
+
+    /// Specify the external key buffer.
+    ///
+    /// With an external key buffer, keys could be stored as references using
+    /// `index.insert_advanced` to save space.
+    pub fn key_buf(&mut self, buf: Option<Rc<AsRef<[u8]>>>) -> &mut Self {
+        self.key_buf = buf;
+        self
+    }
+
+    /// Open the index file with given options.
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> io::Result<Index> {
+        let open_result = if self.write == Some(false) {
+            fs::OpenOptions::new().read(true).open(path.as_ref())
         } else {
-            (false, open_result.unwrap())
+            fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .append(true)
+                .open(path.as_ref())
+        };
+        let (read_only, mut file) = match self.write {
+            Some(true) => (false, open_result?),
+            Some(false) => (true, open_result?),
+            None => {
+                // Fall back to open the file as read-only, automatically.
+                if open_result.is_err() {
+                    (true, fs::OpenOptions::new().read(true).open(path.as_ref())?)
+                } else {
+                    (false, open_result.unwrap())
+                }
+            }
         };
 
+        let root_offset = self.root_offset;
         let (mmap, len) = {
             if root_offset == 0 {
                 // Take the lock to read file length, since that decides root entry location.
@@ -870,7 +927,8 @@ impl Index {
             }
         };
 
-        let mut checksum = if checksummed {
+        let checksum_chunk_size = self.checksum_chunk_size;
+        let mut checksum = if checksum_chunk_size > 0 {
             Some(ChecksumTable::new(&path)?)
         } else {
             None
@@ -895,6 +953,8 @@ impl Index {
             (vec![], MemRoot::read_from(&mmap, root_offset, &checksum)?)
         };
 
+        let key_buf = self.key_buf.clone();
+
         Ok(Index {
             file,
             buf: mmap,
@@ -906,10 +966,13 @@ impl Index {
             dirty_keys: vec![],
             dirty_ext_keys: vec![],
             checksum,
+            checksum_chunk_size,
             key_buf: key_buf.unwrap_or(Rc::new(b"")),
         })
     }
+}
 
+impl Index {
     /// Clone the index.
     pub fn clone(&self) -> io::Result<Index> {
         let file = self.file.duplicate()?;
@@ -933,6 +996,7 @@ impl Index {
             dirty_links: self.dirty_links.clone(),
             dirty_radixes: self.dirty_radixes.clone(),
             checksum,
+            checksum_chunk_size: self.checksum_chunk_size,
             key_buf: self.key_buf.clone(),
         })
     }
@@ -1016,7 +1080,7 @@ impl Index {
             }
 
             if let Some(ref mut table) = self.checksum {
-                table.update(None)?;
+                table.update(self.checksum_chunk_size.into())?;
             }
             self.root = MemRoot::read_from_end(&self.buf, new_len, &self.checksum)?;
         }
@@ -1491,12 +1555,17 @@ mod tests {
     use std::collections::HashMap;
     use tempdir::TempDir;
 
-    const CHECKSUM: bool = true;
+    fn open_opts() -> OpenOptions {
+        let mut opts = OpenOptions::new();
+        // Use 1 as checksum chunk size to make sure checksum check covers necessary bytes.
+        opts.checksum_chunk_size(1);
+        opts
+    }
 
     #[test]
     fn test_distinct_one_byte_keys() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         assert_eq!(
             format!("{:?}", index),
             "Index { len: 1, root: Radix[0] }\n\
@@ -1543,7 +1612,7 @@ mod tests {
     #[test]
     fn test_distinct_one_byte_keys_flush() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
         assert_eq!(index.flush().expect("flush"), 19);
@@ -1595,7 +1664,7 @@ mod tests {
     #[test]
     fn test_leaf_split() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // Example 1: two keys are not prefixes of each other
         index.insert(&[0x12, 0x34], 5).expect("insert");
@@ -1623,7 +1692,7 @@ mod tests {
         );
 
         // Example 2: new key is a prefix of the old key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12, 0x34], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1639,7 +1708,7 @@ mod tests {
         );
 
         // Example 3: old key is a prefix of the new key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
@@ -1657,7 +1726,7 @@ mod tests {
         );
 
         // Same key. Multiple values.
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1676,7 +1745,7 @@ mod tests {
         // Similar with test_leaf_split, but flush the first key before inserting the second.
         // This triggers some new code paths.
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // Example 1: two keys are not prefixes of each other
         index.insert(&[0x12, 0x34], 5).expect("insert");
@@ -1708,7 +1777,7 @@ mod tests {
         );
 
         // Example 2: new key is a prefix of the old key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12, 0x34], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12], 7).expect("insert");
@@ -1731,7 +1800,7 @@ mod tests {
         );
 
         // Example 3: old key is a prefix of the new key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12, 0x78], 7).expect("insert");
@@ -1761,7 +1830,7 @@ mod tests {
         );
 
         // Same key. Multiple values.
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.flush().expect("flush");
         index.insert(&[0x12], 7).expect("insert");
@@ -1798,8 +1867,10 @@ mod tests {
     fn test_external_keys() {
         let buf = Rc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index =
-            Index::open(dir.path().join("a"), 0, CHECKSUM, Some(buf.clone())).expect("open");
+        let mut index = open_opts()
+            .key_buf(Some(buf.clone()))
+            .open(dir.path().join("a"))
+            .expect("open");
         index
             .insert_advanced(InsertKey::Reference((1, 2)), 55, None)
             .expect("insert");
@@ -1829,7 +1900,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         index.insert(&[], 55).expect("insert");
         index.insert(&[0x12], 77).expect("insert");
@@ -1840,10 +1911,29 @@ mod tests {
         assert_eq!(format!("{:?}", index), format!("{:?}", index2));
     }
 
+    #[test]
+    fn test_open_options_write() {
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = OpenOptions::new().open(dir.path().join("a")).expect("open");
+        index.insert(&[0x12], 77).expect("insert");
+        index.flush().expect("flush");
+
+        OpenOptions::new()
+            .write(Some(false))
+            .open(dir.path().join("b"))
+            .expect_err("open"); // file does not exist
+
+        let mut index = OpenOptions::new()
+            .write(Some(false))
+            .open(dir.path().join("a"))
+            .expect("open");
+        index.flush().expect_err("cannot flush read-only index");
+    }
+
     quickcheck! {
         fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
             let dir = TempDir::new("index").expect("tempdir");
-            let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+            let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
             for (key, value) in &map {
                 index.insert(key, *value).expect("insert");
@@ -1851,7 +1941,7 @@ mod tests {
 
             if flush {
                 let root_offset = index.flush().expect("flush");
-                index = Index::open(dir.path().join("a"), root_offset, CHECKSUM, None).unwrap();
+                index = open_opts().root_offset(root_offset).open(dir.path().join("a")).unwrap();
             }
 
             map.iter().all(|(key, value)| {

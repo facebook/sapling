@@ -3,7 +3,7 @@ extern crate minibench;
 extern crate rand;
 extern crate tempdir;
 
-use indexedlog::Index;
+use indexedlog::index::OpenOptions;
 use minibench::{bench, elapsed};
 use rand::{ChaChaRng, Rng};
 use tempdir::TempDir;
@@ -17,10 +17,17 @@ fn gen_buf(size: usize) -> Vec<u8> {
     buf
 }
 
+/// Default open options: 4K checksum chunk
+fn open_opts() -> OpenOptions {
+    let mut open_opts = OpenOptions::new();
+    open_opts.checksum_chunk_size(4096);
+    open_opts
+}
+
 fn main() {
     bench("index insertion", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0, true, None).expect("open");
+        let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         elapsed(move || {
             for i in 0..N {
@@ -32,7 +39,7 @@ fn main() {
 
     bench("index flush", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0, true, None).expect("open");
+        let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
@@ -45,7 +52,7 @@ fn main() {
 
     bench("index lookup (memory)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0, true, None).expect("open");
+        let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
@@ -60,7 +67,10 @@ fn main() {
 
     bench("index lookup (disk, no verify)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0, false, None).expect("open");
+        let mut idx = open_opts()
+            .checksum_chunk_size(0)
+            .open(dir.path().join("i"))
+            .expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
@@ -76,7 +86,7 @@ fn main() {
 
     bench("index lookup (disk, verified)", || {
         let dir = TempDir::new("index").expect("TempDir::new");
-        let mut idx = Index::open(dir.path().join("i"), 0, true, None).expect("open");
+        let mut idx = open_opts().open(dir.path().join("i")).expect("open");
         let buf = gen_buf(N * 20);
         for i in 0..N {
             idx.insert(&&buf[20 * i..20 * (i + 1)], i as u64)
