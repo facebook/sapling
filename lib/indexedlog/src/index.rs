@@ -469,15 +469,24 @@ impl LeafOffset {
 }
 
 impl LinkOffset {
-    /// Get value.
+    /// Get value, and the next link offset.
     #[inline]
-    pub fn value(self, index: &Index) -> io::Result<u64> {
+    fn value_and_next(self, index: &Index) -> io::Result<(u64, LinkOffset)> {
         if self.is_dirty() {
-            Ok(index.dirty_links[self.dirty_index()].value)
+            let e = &index.dirty_links[self.dirty_index()];
+            Ok((e.value, e.next_link_offset))
         } else {
             let (value, vlq_len) = index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
-            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len) as u64)?;
-            Ok(value)
+            let (next_link, vlq_len2) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
+            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
+            let next_link = LinkOffset::from_offset(
+                Offset::from_disk(next_link)?,
+                &index.buf,
+                &index.checksum,
+            )?;
+            Ok((value, next_link))
         }
     }
 
@@ -1947,7 +1956,7 @@ mod tests {
             map.iter().all(|(key, value)| {
                 let link_offset = index.get(key).expect("lookup");
                 assert!(!link_offset.is_null());
-                link_offset.value(&index).unwrap() == *value
+                link_offset.value_and_next(&index).unwrap().0 == *value
             })
         }
     }
