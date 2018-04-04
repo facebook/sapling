@@ -13,7 +13,7 @@
 //! ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
 //! ENTRY       := RADIX | LEAF | LINK | KEY | ROOT
 //! RADIX       := '\2' + JUMP_TABLE (16 bytes) + PTR(LINK) + PTR(RADIX | LEAF) * N
-//! LEAF        := '\3' + PTR(KEY) + PTR(LINK)
+//! LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
 //! LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
 //! KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
 //! EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
@@ -71,7 +71,7 @@ struct MemRadix {
 
 #[derive(Clone, PartialEq)]
 struct MemLeaf {
-    pub key_offset: KeyOffset,
+    pub key_offset: Offset,
     pub link_offset: LinkOffset,
 }
 
@@ -418,17 +418,13 @@ impl LeafOffset {
     /// Key content and link offsets of a leaf entry.
     #[inline]
     fn key_and_link_offset(self, index: &Index) -> io::Result<(&[u8], LinkOffset)> {
-        if self.is_dirty() {
+        let (key_offset, link_offset) = if self.is_dirty() {
             let e = &index.dirty_leafs[self.dirty_index()];
-            Ok((e.key_offset.key_content(index)?, e.link_offset))
+            (e.key_offset, e.link_offset)
         } else {
             let (key_offset, vlq_len): (u64, _) =
                 index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
-            let key_offset = KeyOffset::from_offset(
-                Offset::from_disk(key_offset)?,
-                &index.buf,
-                &index.checksum,
-            )?;
+            let key_offset = Offset::from_disk(key_offset)?;
             let (link_offset, vlq_len2) = index
                 .buf
                 .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len)?;
@@ -438,13 +434,20 @@ impl LeafOffset {
                 &index.checksum,
             )?;
             index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len + vlq_len2) as u64)?;
-            Ok((key_offset.key_content(index)?, link_offset))
-        }
+            (key_offset, link_offset)
+        };
+        // Read key content
+        let key_content = match key_offset.to_typed(&index.buf, &index.checksum)? {
+            TypedOffset::Key(x) => x.key_content(index)?,
+            TypedOffset::ExtKey(x) => x.key_content(index)?,
+            _ => return Err(InvalidData.into()),
+        };
+        Ok((key_content, link_offset))
     }
 
     /// Create a new in-memory leaf entry.
     #[inline]
-    fn create(index: &mut Index, link_offset: LinkOffset, key_offset: KeyOffset) -> LeafOffset {
+    fn create(index: &mut Index, link_offset: LinkOffset, key_offset: Offset) -> LeafOffset {
         let len = index.dirty_leafs.len();
         index.dirty_leafs.push(MemLeaf {
             link_offset,
@@ -527,6 +530,26 @@ impl KeyOffset {
     }
 }
 
+impl ExtKeyOffset {
+    /// Key content of a key entry.
+    #[inline]
+    fn key_content(self, index: &Index) -> io::Result<&[u8]> {
+        let (start, len) = if self.is_dirty() {
+            let e = &index.dirty_ext_keys[self.dirty_index()];
+            (e.start, e.len)
+        } else {
+            let (start, vlq_len1): (u64, _) =
+                index.buf.read_vlq_at(usize::from(self) + TYPE_BYTES)?;
+            let (len, vlq_len2): (u64, _) = index
+                .buf
+                .read_vlq_at(usize::from(self) + TYPE_BYTES + vlq_len1)?;
+            index.verify_checksum(u64::from(self), (TYPE_BYTES + vlq_len1 + vlq_len2) as u64)?;
+            (start, len)
+        };
+        Ok(&index.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize])
+    }
+}
+
 /// Check type for an on-disk entry
 fn check_type(buf: &[u8], offset: usize, expected: u8) -> io::Result<()> {
     let typeint = *(buf.get(offset).ok_or(InvalidData)?);
@@ -600,7 +623,7 @@ impl MemLeaf {
         let offset = offset as usize;
         check_type(buf, offset, TYPE_LEAF)?;
         let (key_offset, len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
-        let key_offset = KeyOffset::from_offset(Offset::from_disk(key_offset)?, buf, checksum)?;
+        let key_offset = Offset::from_disk(key_offset)?;
         let (link_offset, len2) = buf.read_vlq_at(offset + TYPE_BYTES + len1)?;
         let link_offset = LinkOffset::from_offset(Offset::from_disk(link_offset)?, buf, checksum)?;
         verify_checksum(checksum, offset as u64, (TYPE_BYTES + len1 + len2) as u64)?;
@@ -1091,7 +1114,8 @@ impl Index {
                                 let link_offset =
                                     link.unwrap_or(LinkOffset::default()).create(self, value);
                                 let key_offset = KeyOffset::create(self, key);
-                                let leaf_offset = LeafOffset::create(self, link_offset, key_offset);
+                                let leaf_offset =
+                                    LeafOffset::create(self, link_offset, key_offset.into());
                                 radix.set_child(self, x, leaf_offset.into());
                                 return Ok(());
                             } else {
@@ -1234,7 +1258,8 @@ impl Index {
             } else if b1 != b2 {
                 // Example 1 and Example 3. A new leaf is needed.
                 let new_key_offset = KeyOffset::create(self, new_key);
-                let new_leaf_offset = LeafOffset::create(self, new_link_offset, new_key_offset);
+                let new_leaf_offset =
+                    LeafOffset::create(self, new_link_offset, new_key_offset.into());
                 radix.offsets[b2.unwrap() as usize] = new_leaf_offset.into();
                 completed = true;
             }
