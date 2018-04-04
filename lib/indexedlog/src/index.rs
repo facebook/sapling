@@ -548,6 +548,14 @@ impl ExtKeyOffset {
         };
         Ok(&index.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize])
     }
+
+    /// Create a new in-memory external key entry.
+    #[inline]
+    fn create(index: &mut Index, start: u64, len: u64) -> ExtKeyOffset {
+        let i = index.dirty_ext_keys.len();
+        index.dirty_ext_keys.push(MemExtKey { start, len });
+        ExtKeyOffset::from_dirty_index(i)
+    }
 }
 
 /// Check type for an on-disk entry
@@ -812,6 +820,11 @@ pub struct Index {
     key_buf: Rc<AsRef<[u8]>>,
 }
 
+pub enum InsertKey<'a> {
+    Embed(&'a [u8]),
+    Reference((u64, u64)),
+}
+
 impl Index {
     /// Open the index file as read-write. Fallback to read-only.
     ///
@@ -1060,7 +1073,7 @@ impl Index {
 
     /// Insert a new value as a head of the linked list associated with `key`.
     pub fn insert<K: AsRef<[u8]>>(&mut self, key: &K, value: u64) -> io::Result<()> {
-        self.insert_advanced(key, value.into(), None)
+        self.insert_advanced(InsertKey::Embed(key.as_ref()), value.into(), None)
     }
 
     /// Update the linked list for a given key.
@@ -1068,18 +1081,29 @@ impl Index {
     /// - If `link` is None, behave like `insert`.
     /// - If `link` is not None, ignore the existing value `key` has, create a link entry that
     ///   chains to the given `link` offset.
+    /// - `key` could be embedded, or a reference to `key_buf` passed to `open`.
     ///
     /// This is a low-level API.
-    pub fn insert_advanced<K: AsRef<[u8]>>(
+    pub fn insert_advanced(
         &mut self,
-        key: &K,
+        key: InsertKey,
         value: u64,
         link: Option<LinkOffset>,
     ) -> io::Result<()> {
         let mut offset: Offset = self.root.radix_offset.into();
-        let mut iter = Base16Iter::from_base256(key);
         let mut step = 0;
-        let key = key.as_ref();
+        let (key, key_buf_offset) = match key {
+            InsertKey::Embed(k) => (k, None),
+            InsertKey::Reference((start, len)) => {
+                let key = &self.key_buf.as_ref().as_ref()[start as usize..(start + len) as usize];
+                // UNSAFE NOTICE: `key` is valid as long as `self.key_buf` is valid. `self.key_buf`
+                // won't be changed. So `self` can still be mutable without a read-only
+                // relationship with `key`.
+                let detached_key = unsafe { &*(key as (*const [u8])) };
+                (detached_key, Some((start, len)))
+            }
+        };
+        let mut iter = Base16Iter::from_base256(&key);
 
         let mut last_radix = RadixOffset::default();
         let mut last_child = 0u8;
@@ -1113,7 +1137,7 @@ impl Index {
                                 // "key" is longer than existing ones. Create key and leaf entries.
                                 let link_offset =
                                     link.unwrap_or(LinkOffset::default()).create(self, value);
-                                let key_offset = KeyOffset::create(self, key);
+                                let key_offset = self.create_key(key, key_buf_offset);
                                 let leaf_offset =
                                     LeafOffset::create(self, link_offset, key_offset.into());
                                 radix.set_child(self, x, leaf_offset.into());
@@ -1149,6 +1173,7 @@ impl Index {
                             leaf,
                             old_key,
                             key.as_ref(),
+                            key_buf_offset,
                             step,
                             last_radix,
                             last_child,
@@ -1174,6 +1199,7 @@ impl Index {
         old_leaf_offset: LeafOffset,
         old_key: &[u8],
         new_key: &[u8],
+        key_buf_offset: Option<(u64, u64)>,
         step: usize,
         radix_offset: RadixOffset,
         child: u8,
@@ -1257,9 +1283,8 @@ impl Index {
                 completed = true;
             } else if b1 != b2 {
                 // Example 1 and Example 3. A new leaf is needed.
-                let new_key_offset = KeyOffset::create(self, new_key);
-                let new_leaf_offset =
-                    LeafOffset::create(self, new_link_offset, new_key_offset.into());
+                let new_key_offset = self.create_key(new_key, key_buf_offset);
+                let new_leaf_offset = LeafOffset::create(self, new_link_offset, new_key_offset);
                 radix.offsets[b2.unwrap() as usize] = new_leaf_offset.into();
                 completed = true;
             }
@@ -1278,6 +1303,15 @@ impl Index {
         }
 
         Ok(())
+    }
+
+    /// Create a key (if key_buf_offset is None) or ext key (if key_buf_offset is set) entry.
+    #[inline]
+    fn create_key(&mut self, key: &[u8], key_buf_offset: Option<(u64, u64)>) -> Offset {
+        match key_buf_offset {
+            None => KeyOffset::create(self, key).into(),
+            Some((start, len)) => ExtKeyOffset::create(self, start, len).into(),
+        }
     }
 
     /// Verify checksum for the given range. Internal API used by `*Offset` structs.
@@ -1445,6 +1479,10 @@ impl Debug for Index {
             write!(f, "{:?}\n", e)?;
         }
 
+        for (i, e) in self.dirty_ext_keys.iter().enumerate() {
+            write!(f, "ExtKey[{}]: {:?}\n", i, e)?;
+        }
+
         Ok(())
     }
 }
@@ -1488,7 +1526,7 @@ mod tests {
 
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(&[0x34], 99, link.into())
+            .insert_advanced(InsertKey::Embed(&[0x34]), 99, link.into())
             .expect("update");
         assert_eq!(
             format!("{:?}", index),
@@ -1536,7 +1574,7 @@ mod tests {
         // After 2nd flush. There are 2 roots.
         let link = index.get(&[0x12]).expect("get");
         index
-            .insert_advanced(&[0x34], 99, link.into())
+            .insert_advanced(InsertKey::Embed(&[0x34]), 99, link.into())
             .expect("update");
         index.flush().expect("flush");
         assert_eq!(
@@ -1632,6 +1670,38 @@ mod tests {
              Link[0]: Link { value: 5, next: None }\n\
              Link[1]: Link { value: 7, next: Link[0] }\n\
              Key[0]: Key { key: 12 }\n"
+        );
+    }
+
+    #[test]
+    fn test_external_keys() {
+        let buf = Rc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index =
+            Index::open(dir.path().join("a"), 0, CHECKSUM, Some(buf.clone())).expect("open");
+        index
+            .insert_advanced(InsertKey::Reference((1, 2)), 55, None)
+            .expect("insert");
+        index.flush().expect("flush");
+        index
+            .insert_advanced(InsertKey::Reference((1, 3)), 77, None)
+            .expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 32, root: Radix[0] }\n\
+             Disk[1]: ExtKey { start: 1, len: 2 }\n\
+             Disk[4]: Link { value: 55, next: None }\n\
+             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
+             Disk[10]: Radix { link: None, 3: Disk[7] }\n\
+             Disk[29]: Root { radix: Disk[10] }\n\
+             Radix[0]: Radix { link: None, 3: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 4: Radix[2] }\n\
+             Radix[2]: Radix { link: None, 5: Radix[3] }\n\
+             Radix[3]: Radix { link: None, 6: Radix[4] }\n\
+             Radix[4]: Radix { link: Disk[4], 7: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: ExtKey[0], link: Link[0] }\n\
+             Link[0]: Link { value: 77, next: None }\n\
+             ExtKey[0]: ExtKey { start: 1, len: 3 }\n"
         );
     }
 

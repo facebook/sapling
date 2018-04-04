@@ -14,7 +14,7 @@ extern crate vlqencoding;
 
 pub mod base16;
 mod checksum_table;
-mod index;
+pub mod index;
 mod lock;
 mod utils;
 
