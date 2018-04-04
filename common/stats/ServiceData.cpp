@@ -12,5 +12,12 @@
 static facebook::stats::ServiceData payload;
 
 namespace facebook {
-facebook::stats::ServiceData* fbData = &payload;
+namespace stats {
+
+ServiceData* ServiceData::get() {
+  return &payload;
 }
+} // namespace stats
+
+facebook::stats::ServiceData* fbData = &payload;
+} // namespace facebook

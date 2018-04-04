@@ -12,6 +12,8 @@
 #include <folly/Range.h>
 #include <chrono>
 
+#include "common/stats/ExportType.h"
+
 namespace facebook {
 
 class SpinLock {
@@ -23,15 +25,6 @@ public:
 };
 
 namespace stats {
-
-enum ExportType {
-  SUM,
-  COUNT,
-  AVG,
-  RATE,
-  PERCENT,
-  NUM_TYPES,
-};
 
 struct ExportedStat {
   void addValue(std::chrono::seconds, int64_t) {}

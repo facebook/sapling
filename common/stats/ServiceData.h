@@ -9,14 +9,18 @@
  */
 #pragma once
 
-#include "common/stats/ExportedStatMap.h"
 #include "common/stats/ExportedHistogramMap.h"
+#include "common/stats/ExportedStatMap.h"
+#include "common/stats/DynamicCounters.h"
+#include <folly/Range.h>
 #include <map>
 
 namespace facebook { namespace stats {
 
 class ServiceData {
-public:
+ public:
+  static ServiceData* get();
+
   ExportedStatMap* getStatMap() {
     static ExportedStatMap it;
     return &it;
@@ -25,11 +29,20 @@ public:
     static ExportedHistogramMap it;
     return &it;
   }
-  void getCounters(std::map<std::string, int64_t>&) {}
-  long getCounter(std::string) {return 0;};
-  long clearCounter(std::string) {return 0;};
+  std::map<std::string, int64_t> getCounters() const {
+    return std::map<std::string, int64_t>{};
+  }
+  void getCounters(std::map<std::string, int64_t>&) const {}
+  long getCounter(folly::StringPiece) const { return 0; };
+  long clearCounter(folly::StringPiece) { return 0; };
   void setUseOptionsAsFlags(bool) {}
   void setCounter(folly::StringPiece, uint32_t) {}
+  DynamicCounters *getDynamicCounters() {
+    return &counters_;
+  }
+
+ private:
+  DynamicCounters counters_;
 };
 
 }
