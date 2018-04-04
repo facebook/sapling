@@ -8,7 +8,6 @@ from __future__ import absolute_import
 # Standard Library
 import gzip
 import json
-import os
 import ssl
 import time
 
@@ -42,8 +41,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
        Commit Cloud Service
     """
 
-    def __init__(self, ui):
+    def __init__(self, ui, repo):
         self.ui = ui
+        self.repo = repo
         self.host = ui.config('commitcloud', 'host')
 
         # optional, but needed for using a sandbox
@@ -101,14 +101,18 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise commitcloudcommon.ConfigurationError(
                 self.ui, _('host is required'))
 
-        reponame = ui.config('paths', 'default')
-        if reponame:
-            self.repo_name = os.path.basename(reponame)
-        else:
+        workspacemanager = commitcloudutil.WorkspaceManager(self.repo)
+        self.repo_name = workspacemanager.reponame
+
+        if not self.repo_name:
             raise commitcloudcommon.ConfigurationError(
                 self.ui, _('unknown repo'))
 
-        self.workspace = commitcloudutil.getdefaultworspace(ui)
+        self.workspace = workspacemanager.workspace
+        if not self.workspace:
+            raise commitcloudcommon.WorkspaceError(
+                self.ui, _('undefined workspace'))
+
         self.ui.status(
             _("current workspace is '%s'\n") %
             self.workspace)

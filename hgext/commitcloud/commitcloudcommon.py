@@ -54,6 +54,14 @@ class RegistrationError(error.Abort):
             message = "%s: %s\n%s\n%s" % (topic, message, details, contact)
         super(RegistrationError, self).__init__(message, *args)
 
+class WorkspaceError(error.Abort):
+    def __init__(self, ui, message, *args):
+        topic = highlightmsg(ui, _('workspace error'))
+        details = _('your repo is not connected to any workspace\n'
+                    'please run `hg cloudjoin --help` for more details')
+        message = "%s: %s\n%s" % (topic, message, details)
+        super(WorkspaceError, self).__init__(message, *args)
+
 class ConfigurationError(error.Abort):
     def __init__(self, ui, message, *args):
         topic = highlightmsg(ui, _('unexpected configuration error'))

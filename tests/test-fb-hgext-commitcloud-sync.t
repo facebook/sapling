@@ -47,6 +47,13 @@ Make the first clone of the server
   $ hg clone ssh://user@dummy/server client1 -q
   $ cd client1
   $ cat ../shared.rc >> .hg/hgrc
+Joining before registration:
+  $ hg cloudjoin
+  abort: #commitcloud registration error: please run `hg cloudregister` before joining a workspace
+  authentication instructions:
+  visit htts://localhost/oauth to generate a registration token
+  please contact The Test Team @ FB for more information
+  [255]
 Registration:
   $ hg cloudregister
   #commitcloud welcome to registration!
@@ -63,6 +70,14 @@ Registration:
   abort: #commitcloud unexpected configuration error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
   please contact The Test Team @ FB to report misconfiguration
   [255]
+Joining:
+  $ hg cloudsync
+  abort: #commitcloud workspace error: undefined workspace
+  your repo is not connected to any workspace
+  please run `hg cloudjoin --help` for more details
+  [255]
+  $ hg cloudjoin
+  #commitcloud this repository is now part of the 'user/test/default' workspace for the 'server' repo
 
   $ cd ..
 
@@ -78,6 +93,9 @@ Registration:
   #commitcloud welcome to registration!
   your token will be updated
   registration successful
+Joining:
+  $ hg cloudjoin
+  #commitcloud this repository is now part of the 'user/test/default' workspace for the 'server' repo
 
   $ cd ..
 

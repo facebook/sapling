@@ -146,6 +146,53 @@ class TokenLocator(object):
         else:
             self._settokentofile(token)
 
-# Changed in D7414658
-def getdefaultworspace(ui):
-    return ui.username()
+class WorkspaceManager(object):
+    """
+    Set / get current workspace for Commit Cloud
+    """
+
+    filename = 'commitcloudrc'
+
+    def __init__(self, repo):
+        self.ui = repo.ui
+        self.repo = repo
+
+    def _getdefaultworkspacename(self):
+        '''
+        Worspace naming convention:
+        section/section_name/workspace_name
+            where section is one of ('user', 'group', 'team', 'project')
+        Examples:
+            team/source_control/shared
+            user/<username>/default
+            project/commit_cloud/default
+        '''
+        return 'user/' + util.shortuser(self.ui.username()) + '/default'
+
+    @property
+    def reponame(self):
+        return self.ui.config(
+            'remotefilelog', 'reponame', os.path.basename(
+                self.ui.config('paths', 'default')))
+
+    @property
+    def workspace(self):
+        if self.repo.svfs.exists(self.filename):
+            with self.repo.svfs.open(self.filename, r'rb') as f:
+                workspaceconfig = config.config()
+                workspaceconfig.read(self.filename, f)
+                return workspaceconfig.get('commitcloud', 'current_workspace')
+        else:
+            return None
+
+    def setworkspace(self, workspace=None):
+        if not workspace:
+            workspace = self._getdefaultworkspacename()
+        with self.repo.wlock(), self.repo.lock(), self.repo.svfs.open(
+                self.filename, 'w', atomictemp=True) as f:
+            f.write('[commitcloud]\n'
+                    'current_workspace=%s\n' % workspace)
+
+    def clearworkspace(self):
+        with self.repo.wlock(), self.repo.lock():
+            self.repo.svfs.unlink(self.filename)

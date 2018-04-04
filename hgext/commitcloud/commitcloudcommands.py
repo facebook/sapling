@@ -32,6 +32,39 @@ command = registrar.command(cmdtable)
 highlightdebug = commitcloudcommon.highlightdebug
 highlightstatus = commitcloudcommon.highlightstatus
 
+@command('cloudjoin')
+def cloudjoin(ui, repo, **opts):
+    """joins the local repository to a cloud workspace
+
+    This will keep all commits, bookmarks, and working copy parents
+    the same across all the repositories that are part of the same workspace.
+
+    For instance, a common use case is keeping laptop and desktop repos in sync.
+
+    Currently only a single default workspace for the user is supported.
+    """
+
+    if not commitcloudutil.TokenLocator(ui).token:
+        raise commitcloudcommon.RegistrationError(
+            ui, _('please run `hg cloudregister` before joining a workspace'))
+
+    workspacemanager = commitcloudutil.WorkspaceManager(repo)
+    workspacemanager.setworkspace()
+
+    highlightstatus(
+        ui, _("this repository is now part of the '%s' "
+              "workspace for the '%s' repo\n") %
+        (workspacemanager.workspace, workspacemanager.reponame))
+
+@command('cloudleave')
+def uncloudjoin(ui, repo, **opts):
+    """leave Commit Cloud synchronization
+
+    The command disconnect this local repo from any of Commit Cloud workspaces
+    """
+    commitcloudutil.WorkspaceManager(repo).clearworkspace()
+    highlightstatus(ui, _('you are no longer connected to a workspace\n'))
+
 @command('cloudregister', [('t', 'token', '', 'set secret access token')])
 def cloudregister(ui, repo, **opts):
     """register your private access token with Commit Cloud for this host
@@ -61,7 +94,7 @@ def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
 
     start = time.time()
-    serv = service.get(ui)
+    serv = service.get(ui, repo)
     lastsyncstate = state.SyncState(repo)
     cloudrefs = serv.getreferences(lastsyncstate.version)
     highlightstatus(ui, 'start synchronization\n')

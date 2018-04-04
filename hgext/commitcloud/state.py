@@ -6,20 +6,39 @@
 from __future__ import absolute_import
 
 # Standard Library
+import hashlib
 import json
 
+# Mercurial
+from mercurial.i18n import _
+
 from .. import shareutil
+from . import (
+    commitcloudcommon,
+    commitcloudutil,
+)
 
 class SyncState(object):
     """
     Stores the local record of what state was stored in the cloud at the
     last sync.
     """
-    filename = 'commitcloudstate'
 
     def __init__(self, repo):
         repo = shareutil.getsrcrepo(repo)
         self.repo = repo
+
+        # get current workspace
+        workspace = commitcloudutil.WorkspaceManager(repo).workspace
+        if not workspace:
+            raise commitcloudcommon.WorkspaceError(
+                repo.ui, _('undefined workspace'))
+
+        # make a valid filename
+        self.filename = 'commitcloudstate.' + ''.join(
+            x for x in workspace if x.isalnum()) + '.%s' % (
+                hashlib.sha256(workspace).hexdigest()[0:5])
+
         if repo.vfs.exists(self.filename):
             with repo.vfs.open(self.filename, 'r') as f:
                 data = json.load(f)
