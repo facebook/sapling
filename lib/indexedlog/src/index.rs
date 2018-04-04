@@ -173,12 +173,7 @@ impl Offset {
     /// Useful when writing offsets to disk.
     #[inline]
     fn to_disk(self, offset_map: &OffsetMap) -> u64 {
-        if self.is_dirty() {
-            // Should always find a value. Otherwise it's a programming error about write order.
-            offset_map.get(self)
-        } else {
-            self.0
-        }
+        offset_map.get(self)
     }
 
     /// Convert to `TypedOffset`.
@@ -778,16 +773,19 @@ impl OffsetMap {
 
     #[inline]
     fn get(&self, offset: Offset) -> u64 {
-        // The caller makes sure offset is dirty.
-        debug_assert!(offset.is_dirty());
-        match offset.to_typed(&b""[..], &None).unwrap() {
-            // Radix entries are pushed in the reversed order. So the index needs to be
-            // reversed.
-            TypedOffset::Radix(x) => self.radix_map[self.radix_len - 1 - x.dirty_index()],
-            TypedOffset::Leaf(x) => self.leaf_map[x.dirty_index()],
-            TypedOffset::Link(x) => self.link_map[x.dirty_index()],
-            TypedOffset::Key(x) => self.key_map[x.dirty_index()],
-            TypedOffset::ExtKey(x) => self.ext_key_map[x.dirty_index()],
+        if offset.is_dirty() {
+            match offset.to_typed(&b""[..], &None).unwrap() {
+                // Radix entries are pushed in the reversed order. So the index needs to be
+                // reversed.
+                TypedOffset::Radix(x) => self.radix_map[self.radix_len - 1 - x.dirty_index()],
+                TypedOffset::Leaf(x) => self.leaf_map[x.dirty_index()],
+                TypedOffset::Link(x) => self.link_map[x.dirty_index()],
+                TypedOffset::Key(x) => self.key_map[x.dirty_index()],
+                TypedOffset::ExtKey(x) => self.ext_key_map[x.dirty_index()],
+            }
+        } else {
+            // No need to translate.
+            offset.0
         }
     }
 }
