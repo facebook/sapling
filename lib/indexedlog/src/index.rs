@@ -16,6 +16,7 @@
 //! LEAF        := '\3' + PTR(KEY) + PTR(LINK)
 //! LINK        := '\4' + VLQ(VALUE) + PTR(NEXT_LINK | NULL)
 //! KEY         := '\5' + VLQ(KEY_LEN) + KEY_BYTES
+//! EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
 //! ROOT        := '\1' + PTR(RADIX) + ROOT_LEN (1 byte)
 //!
 //! PTR(ENTRY)  := VLQ(the offset of ENTRY)
@@ -38,12 +39,16 @@
 //! - The "JUMP_TABLE" in "RADIX" entry stores relative offsets to the actual value of
 //!   RADIX/LEAF offsets. It has redundant information. The more compact form is a 2-byte
 //!   (16-bit) bitmask but that hurts lookup performance.
+//! - The "EXT_KEY" type has a logically similar function with "KEY". But it refers to an external
+//!   buffer. This is useful to save spaces if the index is not a source of truth and keys are
+//!   long.
 
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
 use std::ops::Deref;
 use std::path::Path;
+use std::rc::Rc;
 
 use std::io::ErrorKind::InvalidData;
 
@@ -73,6 +78,12 @@ struct MemLeaf {
 #[derive(Clone, PartialEq)]
 struct MemKey {
     pub key: Box<[u8]>, // base256
+}
+
+#[derive(Clone, PartialEq)]
+struct MemExtKey {
+    pub start: u64,
+    pub len: u64,
 }
 
 #[derive(Clone, PartialEq)]
@@ -110,6 +121,7 @@ const TYPE_RADIX: u8 = 2;
 const TYPE_LEAF: u8 = 3;
 const TYPE_LINK: u8 = 4;
 const TYPE_KEY: u8 = 5;
+const TYPE_EXT_KEY: u8 = 6;
 
 // Bits needed to represent the above type integers.
 const TYPE_BITS: usize = 3;
@@ -133,6 +145,8 @@ struct LeafOffset(Offset);
 pub struct LinkOffset(Offset);
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 struct KeyOffset(Offset);
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+struct ExtKeyOffset(Offset);
 
 #[derive(Copy, Clone)]
 enum TypedOffset {
@@ -140,6 +154,7 @@ enum TypedOffset {
     Leaf(LeafOffset),
     Link(LinkOffset),
     Key(KeyOffset),
+    ExtKey(ExtKeyOffset),
 }
 
 impl Offset {
@@ -175,6 +190,7 @@ impl Offset {
             TYPE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
             TYPE_LINK => Ok(TypedOffset::Link(LinkOffset(self))),
             TYPE_KEY => Ok(TypedOffset::Key(KeyOffset(self))),
+            TYPE_EXT_KEY => Ok(TypedOffset::ExtKey(ExtKeyOffset(self))),
             _ => Err(InvalidData.into()),
         }
     }
@@ -318,6 +334,7 @@ impl_offset!(RadixOffset, TYPE_RADIX, "Radix");
 impl_offset!(LeafOffset, TYPE_LEAF, "Leaf");
 impl_offset!(LinkOffset, TYPE_LINK, "Link");
 impl_offset!(KeyOffset, TYPE_KEY, "Key");
+impl_offset!(ExtKeyOffset, TYPE_EXT_KEY, "ExtKey");
 
 impl RadixOffset {
     /// Link offset of a radix entry.
@@ -647,6 +664,28 @@ impl MemKey {
     }
 }
 
+impl MemExtKey {
+    fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
+        let buf = buf.as_ref();
+        let offset = offset as usize;
+        check_type(buf, offset, TYPE_EXT_KEY)?;
+        let (start, vlq_len1) = buf.read_vlq_at(offset + TYPE_BYTES)?;
+        let (len, vlq_len2) = buf.read_vlq_at(offset + TYPE_BYTES + vlq_len1)?;
+        verify_checksum(
+            checksum,
+            offset as u64,
+            (TYPE_BYTES + vlq_len1 + vlq_len2) as u64,
+        )?;
+        Ok(MemExtKey { start, len })
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, _: &OffsetMap) -> io::Result<()> {
+        writer.write_all(&[TYPE_EXT_KEY])?;
+        writer.write_vlq(self.start)?;
+        writer.write_vlq(self.len)
+    }
+}
+
 impl MemRoot {
     fn read_from<B: AsRef<[u8]>>(buf: B, offset: u64, checksum: &Checksum) -> io::Result<Self> {
         let buf = buf.as_ref();
@@ -690,6 +729,7 @@ struct OffsetMap {
     leaf_map: Vec<u64>,
     link_map: Vec<u64>,
     key_map: Vec<u64>,
+    ext_key_map: Vec<u64>,
 }
 
 impl OffsetMap {
@@ -701,6 +741,7 @@ impl OffsetMap {
             leaf_map: Vec::with_capacity(index.dirty_leafs.len()),
             link_map: Vec::with_capacity(index.dirty_links.len()),
             key_map: Vec::with_capacity(index.dirty_keys.len()),
+            ext_key_map: Vec::with_capacity(index.dirty_ext_keys.len()),
         }
     }
 
@@ -715,6 +756,7 @@ impl OffsetMap {
             TypedOffset::Leaf(x) => self.leaf_map[x.dirty_index()],
             TypedOffset::Link(x) => self.link_map[x.dirty_index()],
             TypedOffset::Key(x) => self.key_map[x.dirty_index()],
+            TypedOffset::ExtKey(x) => self.ext_key_map[x.dirty_index()],
         }
     }
 }
@@ -738,9 +780,13 @@ pub struct Index {
     dirty_leafs: Vec<MemLeaf>,
     dirty_links: Vec<MemLink>,
     dirty_keys: Vec<MemKey>,
+    dirty_ext_keys: Vec<MemExtKey>,
 
     // Optional checksum table.
     checksum: Checksum,
+
+    // Additional buffer for external keys.
+    key_buf: Rc<AsRef<[u8]>>,
 }
 
 impl Index {
@@ -754,7 +800,17 @@ impl Index {
     ///
     /// If `checksummed` is true, integrity check will be performed. This
     /// helps detect file corruption due to OS crashes.
-    pub fn open<P: AsRef<Path>>(path: P, root_offset: u64, checksumed: bool) -> io::Result<Self> {
+    ///
+    /// If `key_buf` is set, the index can refer to offsets in the buffer
+    /// as keys to reduce its size. The part of key buffer being referred must
+    /// not be changed across index reloads. That could be done by making
+    /// `key_buf` backed by an append-only file.
+    pub fn open<P: AsRef<Path>>(
+        path: P,
+        root_offset: u64,
+        checksummed: bool,
+        key_buf: Option<Rc<AsRef<[u8]>>>,
+    ) -> io::Result<Self> {
         let open_result = OpenOptions::new()
             .read(true)
             .write(true)
@@ -814,7 +870,9 @@ impl Index {
             dirty_links: vec![],
             dirty_leafs: vec![],
             dirty_keys: vec![],
+            dirty_ext_keys: vec![],
             checksum,
+            key_buf: key_buf.unwrap_or(Rc::new(b"")),
         })
     }
 
@@ -836,10 +894,12 @@ impl Index {
             read_only: self.read_only,
             root: self.root.clone(),
             dirty_keys: self.dirty_keys.clone(),
+            dirty_ext_keys: self.dirty_ext_keys.clone(),
             dirty_leafs: self.dirty_leafs.clone(),
             dirty_links: self.dirty_links.clone(),
             dirty_radixes: self.dirty_radixes.clone(),
             checksum,
+            key_buf: self.key_buf.clone(),
         })
     }
 
@@ -880,6 +940,12 @@ impl Index {
                 let offset = buf.len() as u64 + len;
                 entry.write_to(&mut buf, &offset_map)?;
                 offset_map.key_map.push(offset);
+            }
+
+            for entry in self.dirty_ext_keys.iter() {
+                let offset = buf.len() as u64 + len;
+                entry.write_to(&mut buf, &offset_map)?;
+                offset_map.ext_key_map.push(offset);
             }
 
             for entry in self.dirty_links.iter() {
@@ -926,6 +992,7 @@ impl Index {
         self.dirty_leafs.clear();
         self.dirty_links.clear();
         self.dirty_keys.clear();
+        self.dirty_ext_keys.clear();
 
         Ok(root_offset)
     }
@@ -1202,6 +1269,7 @@ impl Debug for Offset {
                 TypedOffset::Leaf(x) => x.fmt(f),
                 TypedOffset::Link(x) => x.fmt(f),
                 TypedOffset::Key(x) => x.fmt(f),
+                TypedOffset::ExtKey(x) => x.fmt(f),
             }
         } else {
             write!(f, "Disk[{}]", self.0)
@@ -1251,6 +1319,12 @@ impl Debug for MemKey {
     }
 }
 
+impl Debug for MemExtKey {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "ExtKey {{ start: {}, len: {} }}", self.start, self.len)
+    }
+}
+
 impl Debug for MemRoot {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(f, "Root {{ radix: {:?} }}", self.radix_offset)
@@ -1296,6 +1370,11 @@ impl Debug for Index {
                 }
                 TYPE_KEY => {
                     let e = MemKey::read_from(&self.buf, i, &None).expect("read");
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    write!(f, "{:?}\n", e)?;
+                }
+                TYPE_EXT_KEY => {
+                    let e = MemExtKey::read_from(&self.buf, i, &None).expect("read");
                     e.write_to(&mut buf, &offset_map).expect("write");
                     write!(f, "{:?}\n", e)?;
                 }
@@ -1351,7 +1430,7 @@ mod tests {
     #[test]
     fn test_distinct_one_byte_keys() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
         assert_eq!(
             format!("{:?}", index),
             "Index { len: 1, root: Radix[0] }\n\
@@ -1398,7 +1477,7 @@ mod tests {
     #[test]
     fn test_distinct_one_byte_keys_flush() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
 
         // 1st flush.
         assert_eq!(index.flush().expect("flush"), 19);
@@ -1450,7 +1529,7 @@ mod tests {
     #[test]
     fn test_leaf_split() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
 
         // Example 1: two keys are not prefixes of each other
         index.insert(&[0x12, 0x34], 5).expect("insert");
@@ -1478,7 +1557,7 @@ mod tests {
         );
 
         // Example 2: new key is a prefix of the old key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
         index.insert(&[0x12, 0x34], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1494,7 +1573,7 @@ mod tests {
         );
 
         // Example 3: old key is a prefix of the new key
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
@@ -1512,7 +1591,7 @@ mod tests {
         );
 
         // Same key. Multiple values.
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
         index.insert(&[0x12], 5).expect("insert");
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
@@ -1529,7 +1608,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let dir = TempDir::new("index").expect("tempdir");
-        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
 
         index.insert(&[], 55).expect("insert");
         index.insert(&[0x12], 77).expect("insert");
@@ -1543,7 +1622,7 @@ mod tests {
     quickcheck! {
         fn test_single_value(map: HashMap<Vec<u8>, u64>, flush: bool) -> bool {
             let dir = TempDir::new("index").expect("tempdir");
-            let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM).expect("open");
+            let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
 
             for (key, value) in &map {
                 index.insert(key, *value).expect("insert");
@@ -1551,7 +1630,7 @@ mod tests {
 
             if flush {
                 let root_offset = index.flush().expect("flush");
-                index = Index::open(dir.path().join("a"), root_offset, CHECKSUM).expect("open");
+                index = Index::open(dir.path().join("a"), root_offset, CHECKSUM, None).unwrap();
             }
 
             map.iter().all(|(key, value)| {
