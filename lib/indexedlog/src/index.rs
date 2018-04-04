@@ -1674,6 +1674,129 @@ mod tests {
     }
 
     #[test]
+    fn test_leaf_split_flush() {
+        // Similar with test_leaf_split, but flush the first key before inserting the second.
+        // This triggers some new code paths.
+        let dir = TempDir::new("index").expect("tempdir");
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+
+        // Example 1: two keys are not prefixes of each other
+        index.insert(&[0x12, 0x34], 5).expect("insert");
+        index.flush().expect("flush");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 33, root: Disk[11] }\n\
+             Disk[1]: Key { key: 12 34 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
+             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
+             Disk[30]: Root { radix: Disk[11] }\n"
+        );
+        index.insert(&[0x12, 0x78], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 33, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 34 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
+             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
+             Disk[30]: Root { radix: Disk[11] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: None, 3: Disk[8], 7: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Link[0]: Link { value: 7, next: None }\n\
+             Key[0]: Key { key: 12 78 }\n"
+        );
+
+        // Example 2: new key is a prefix of the old key
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        index.insert(&[0x12, 0x34], 5).expect("insert");
+        index.flush().expect("flush");
+        index.insert(&[0x12], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 61, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 34 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
+             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
+             Disk[30]: Root { radix: Disk[11] }\n\
+             Disk[33]: Link { value: 5, next: Disk[5] }\n\
+             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
+             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
+             Disk[58]: Root { radix: Disk[39] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: Link[0], 3: Disk[36] }\n\
+             Link[0]: Link { value: 7, next: None }\n"
+        );
+
+        // Example 3: old key is a prefix of the new key
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        index.insert(&[0x12], 5).expect("insert");
+        index.flush().expect("flush");
+        index.insert(&[0x12, 0x78], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 124, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 34 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
+             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
+             Disk[30]: Root { radix: Disk[11] }\n\
+             Disk[33]: Link { value: 5, next: Disk[5] }\n\
+             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
+             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
+             Disk[58]: Root { radix: Disk[39] }\n\
+             Disk[61]: Link { value: 5, next: None }\n\
+             Disk[64]: Radix { link: Disk[61], 3: Disk[36] }\n\
+             Disk[83]: Radix { link: None, 2: Disk[64] }\n\
+             Disk[102]: Radix { link: None, 1: Disk[83] }\n\
+             Disk[121]: Root { radix: Disk[102] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: Disk[61], 3: Disk[36], 7: Leaf[0] }\n\
+             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
+             Link[0]: Link { value: 7, next: None }\n\
+             Key[0]: Key { key: 12 78 }\n"
+        );
+
+        // Same key. Multiple values.
+        let mut index = Index::open(dir.path().join("a"), 0, CHECKSUM, None).expect("open");
+        index.insert(&[0x12], 5).expect("insert");
+        index.flush().expect("flush");
+        index.insert(&[0x12], 7).expect("insert");
+        assert_eq!(
+            format!("{:?}", index),
+            "Index { len: 189, root: Radix[0] }\n\
+             Disk[1]: Key { key: 12 34 }\n\
+             Disk[5]: Link { value: 5, next: None }\n\
+             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
+             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
+             Disk[30]: Root { radix: Disk[11] }\n\
+             Disk[33]: Link { value: 5, next: Disk[5] }\n\
+             Disk[36]: Leaf { key: Disk[1], link: Disk[33] }\n\
+             Disk[39]: Radix { link: None, 1: Disk[36] }\n\
+             Disk[58]: Root { radix: Disk[39] }\n\
+             Disk[61]: Link { value: 5, next: None }\n\
+             Disk[64]: Radix { link: Disk[61], 3: Disk[36] }\n\
+             Disk[83]: Radix { link: None, 2: Disk[64] }\n\
+             Disk[102]: Radix { link: None, 1: Disk[83] }\n\
+             Disk[121]: Root { radix: Disk[102] }\n\
+             Disk[124]: Link { value: 5, next: Disk[61] }\n\
+             Disk[127]: Radix { link: Disk[124], 3: Disk[36] }\n\
+             Disk[146]: Radix { link: None, 2: Disk[127] }\n\
+             Disk[165]: Radix { link: None, 1: Disk[146] }\n\
+             Disk[185]: Root { radix: Disk[165] }\n\
+             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
+             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
+             Radix[2]: Radix { link: Link[0], 3: Disk[36] }\n\
+             Link[0]: Link { value: 7, next: Disk[124] }\n"
+        );
+    }
+
+    #[test]
     fn test_external_keys() {
         let buf = Rc::new(vec![0x12u8, 0x34, 0x56, 0x78, 0x9a, 0xbc]);
         let dir = TempDir::new("index").expect("tempdir");
