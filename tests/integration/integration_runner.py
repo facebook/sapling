@@ -13,6 +13,7 @@ import os
 import shutil
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 
 import click
 
@@ -56,13 +57,21 @@ MONONOKE_SERVER_TARGET = '//scm/mononoke:mononoke'
     is_flag=True,
     help='keep temporary directory after running tests'
 )
+@click.option(
+    '--simple-test-selector',
+    default=None,
+    help='select an individual test to run',
+)
 @click.argument(
     'tests',
     nargs=-1,
     type=click.Path(),
 )
 @click.pass_context
-def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
+def run(
+    ctx, tests, dry_run, interactive, output, verbose, debug,
+    simple_test_selector, keep_tmpdir
+):
     runner = hg_run_tests.TestRunner()
 
     testdir = parutil.get_dir_path(TESTDIR_PATH)
@@ -85,6 +94,14 @@ def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
     if keep_tmpdir:
         args.append('--keep-tmpdir')
     args.extend(['-j', '%d' % multiprocessing.cpu_count()])
+    if simple_test_selector is not None:
+        suite, test = simple_test_selector.split(',', 1)
+        if suite != 'run-tests':
+            raise click.BadParameter(
+                'suite should always be "run-tests"', ctx,
+                param_hint='simple_test_selector'
+            )
+        args.append(test)
     if tests:
         args.extend(tests)
 
@@ -117,8 +134,15 @@ def run(ctx, tests, dry_run, interactive, output, verbose, debug, keep_tmpdir):
             ret = runner.run(args)
 
         if dry_run:
+            # The output must go to stdout. Set simple_test_selector to make
+            # execution runs simpler.
             with open(xunit_output, 'rb') as f:
-                sys.stdout.buffer.write(f.read())
+                xunit_xml = ET.parse(f)
+            xunit_xml.getroot().set(
+                'runner_capabilities', 'simple_test_selector'
+            )
+            xunit_xml.write(sys.stdout.buffer, xml_declaration=True)
+
         ctx.exit(ret)
     finally:
         try:
