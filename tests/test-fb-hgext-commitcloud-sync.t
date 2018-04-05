@@ -163,12 +163,6 @@ Sync the bookmark back to the second client
   $ cd client2
   $ hg cloudsync
   #commitcloud start synchronization
-  pulling from ssh://user@dummy/server
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 2 files
   #commitcloud cloudsync done
   $ hg tglog
   @  02f6fc2b7154 'commit2'
@@ -189,12 +183,6 @@ Move the bookmark also on the first client, it should be forked in the sync
   $ hg bookmark -r 1 -f bookmark1
   $ hg cloudsync
   #commitcloud start synchronization
-  pulling from ssh://user@dummy/server
-  no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 2 files
   bookmark1 changed locally and remotely, local bookmark renamed to bookmark1-testhost
   #commitcloud cloudsync done
   $ hg tglog

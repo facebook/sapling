@@ -95,6 +95,7 @@ def cloudsync(ui, repo, **opts):
 
     start = time.time()
     serv = service.get(ui, repo)
+
     lastsyncstate = state.SyncState(repo)
     cloudrefs = serv.getreferences(lastsyncstate.version)
     highlightstatus(ui, 'start synchronization\n')
@@ -136,8 +137,13 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions('^pull')
 
     # Pull all the new heads
-    pullopts['rev'] = cloudrefs.heads
-    pullcmd(ui, repo, **pullopts)
+    # so we need to filter cloudrefs before pull
+    # pull does't check if a rev is present locally
+    unfi = repo.unfiltered()
+    newheads = filter(lambda rev: rev not in unfi, cloudrefs.heads)
+    if newheads:
+        pullopts['rev'] = newheads
+        pullcmd(ui, repo, **pullopts)
 
     # Merge cloud bookmarks into the repo
     _mergebookmarks(ui, repo, cloudrefs.bookmarks, lastsyncstate.bookmarks)
