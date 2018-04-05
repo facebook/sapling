@@ -19,10 +19,10 @@ from . import (
     pycompat,
 )
 
-_kernel32 = ctypes.windll.kernel32
-_advapi32 = ctypes.windll.advapi32
-_user32 = ctypes.windll.user32
-_crypt32 = ctypes.windll.crypt32
+_kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+_advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
+_user32 = ctypes.WinDLL('user32', use_last_error=True)
+_crypt32 = ctypes.WinDLL('crypt32', use_last_error=True)
 
 _BOOL = ctypes.c_long
 _WORD = ctypes.c_ushort
