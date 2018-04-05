@@ -102,7 +102,6 @@ class EdenHgTestCase(testcase.EdenTestCase):
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
         self.amend_edenrc_before_clone()
-        self.mount = os.path.join(self.mounts_dir, 'main')
         self.eden.clone(self.backing_repo_name, self.mount, allow_empty=True)
 
         # Now create the repository object that refers to the eden client

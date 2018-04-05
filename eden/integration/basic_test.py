@@ -23,7 +23,7 @@ class BasicTest(testcase.EdenRepoTest):
     about the sample git repo and that it is correct are all
     things that are appropriate to include in this test case.
     '''
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.write_file('bdir/test.sh', '#!/bin/bash\necho test\n',
@@ -36,7 +36,7 @@ class BasicTest(testcase.EdenRepoTest):
             '.eden', 'adir', 'bdir', 'hello', 'slink'
         ])
 
-    def test_version(self):
+    def test_version(self) -> None:
         output = self.eden.run_cmd('version', cwd=self.mount)
         lines = output.splitlines()
 
@@ -57,7 +57,7 @@ class BasicTest(testcase.EdenRepoTest):
         running_info = lines[1]
         self.assertTrue(running_info.startswith('Running: '))
 
-    def test_fileList(self):
+    def test_fileList(self) -> None:
         entries = set(os.listdir(self.mount))
         self.assertEqual(self.expected_mount_entries, entries)
 
@@ -75,16 +75,16 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(slink)
         self.assertTrue(stat.S_ISLNK(st.st_mode))
 
-    def test_symlinks(self):
+    def test_symlinks(self) -> None:
         slink = os.path.join(self.mount, 'slink')
         self.assertEqual(os.readlink(slink), 'hello')
 
-    def test_regular(self):
+    def test_regular(self) -> None:
         hello = os.path.join(self.mount, 'hello')
         with open(hello, 'r') as f:
             self.assertEqual('hola\n', f.read())
 
-    def test_dir(self):
+    def test_dir(self) -> None:
         entries = sorted(os.listdir(os.path.join(self.mount, 'adir')))
         self.assertEqual(['file'], entries)
 
@@ -92,7 +92,7 @@ class BasicTest(testcase.EdenRepoTest):
         with open(filename, 'r') as f:
             self.assertEqual('foo!\n', f.read())
 
-    def test_create(self):
+    def test_create(self) -> None:
         filename = os.path.join(self.mount, 'notinrepo')
         with open(filename, 'w') as f:
             f.write('created\n')
@@ -107,7 +107,7 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertEqual(st.st_size, 8)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-    def test_overwrite(self):
+    def test_overwrite(self) -> None:
         hello = os.path.join(self.mount, 'hello')
         with open(hello, 'w') as f:
             f.write('replaced\n')
@@ -115,7 +115,7 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(hello)
         self.assertEqual(st.st_size, len('replaced\n'))
 
-    def test_append(self):
+    def test_append(self) -> None:
         hello = os.path.join(self.mount, 'bdir/test.sh')
         with open(hello, 'a') as f:
             f.write('echo more commands\n')
@@ -127,7 +127,7 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertEqual(expected_data, read_back)
         self.assertEqual(len(expected_data), st.st_size)
 
-    def test_materialize(self):
+    def test_materialize(self) -> None:
         hello = os.path.join(self.mount, 'hello')
         # Opening for write should materialize the file with the same
         # contents that we expect
@@ -137,7 +137,7 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(hello)
         self.assertEqual(st.st_size, len('hola\n'))
 
-    def test_mkdir(self):
+    def test_mkdir(self) -> None:
         # Can't create a directory inside a file that is in the store
         with self.assertRaises(OSError) as context:
             os.mkdir(os.path.join(self.mount, 'hello', 'world'))
@@ -174,8 +174,8 @@ class BasicTest(testcase.EdenRepoTest):
         st = os.lstat(deep_file)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-    def test_access(self):
-        def check_access(path, mode):
+    def test_access(self) -> None:
+        def check_access(path: str, mode: int) -> bool:
             return os.access(os.path.join(self.mount, path), mode)
 
         self.assertTrue(check_access('hello', os.R_OK))
@@ -201,7 +201,7 @@ class BasicTest(testcase.EdenRepoTest):
                          msg='attempting to run noexec.sh should fail with '
                          'EACCES')
 
-    def test_unmount(self):
+    def test_unmount(self) -> None:
         entries = set(os.listdir(self.mount))
         self.assertEqual(self.expected_mount_entries, entries)
 
@@ -219,7 +219,7 @@ class BasicTest(testcase.EdenRepoTest):
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
-    def test_unmount_remount(self):
+    def test_unmount_remount(self) -> None:
         # write a file into the overlay to test that it is still visible
         # when we remount.
         filename = os.path.join(self.mount, 'overlayonly')
@@ -247,7 +247,7 @@ class BasicTest(testcase.EdenRepoTest):
         with open(filename, 'r') as f:
             self.assertEqual('foo!\n', f.read(), msg='overlay file is correct')
 
-    def test_double_unmount(self):
+    def test_double_unmount(self) -> None:
         # Test calling "unmount" twice.  The second should fail, but edenfs
         # should still work normally afterwards
         self.eden.run_cmd('unmount', self.mount)
@@ -260,7 +260,7 @@ class BasicTest(testcase.EdenRepoTest):
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(['.eden', 'adir', 'bdir', 'hello', 'slink'], entries)
 
-    def test_statvfs(self):
+    def test_statvfs(self) -> None:
         hello_path = os.path.join(self.mount, 'hello')
         fs_info = os.statvfs(hello_path)
         self.assertGreaterEqual(fs_info.f_namemax, 255)

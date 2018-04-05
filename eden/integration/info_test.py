@@ -11,17 +11,13 @@ from .lib import testcase
 import json
 import os
 
-# This is the name of the default repository created by EdenRepoTestBase.
-repo_name = 'main'
-
-
 @testcase.eden_repo_test
 class InfoTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    def test_info_with_bind_mounts(self):
+    def test_info_with_bind_mounts(self) -> None:
         edenrc = os.path.join(os.environ['HOME'], '.edenrc')
         with open(edenrc, 'w') as f:
             f.write(
@@ -33,7 +29,7 @@ type = {repo_type}
 [bindmounts {repo_name}]
 buck-out = buck-out
 '''.format(
-                    repo_name=repo_name,
+                    repo_name=self.repo_name,
                     repo_path=self.repo.get_canonical_root(),
                     repo_type=self.repo.get_type()
                 )
@@ -42,7 +38,7 @@ buck-out = buck-out
         basename = 'eden_mount'
         tmp = os.path.join(self.tmp_dir, basename)
 
-        self.eden.run_cmd('clone', repo_name, tmp)
+        self.eden.run_cmd('clone', self.repo_name, tmp)
         info = self.eden.run_cmd('info', tmp)
 
         client_info = json.loads(info)
@@ -59,7 +55,7 @@ buck-out = buck-out
             }, client_info
         )
 
-    def test_relative_path(self):
+    def test_relative_path(self) -> None:
         '''
         Test calling "eden info <relative_path>" and make sure it gives
         the expected results.
@@ -80,7 +76,7 @@ buck-out = buck-out
             }, client_info
         )
 
-    def test_through_symlink(self):
+    def test_through_symlink(self) -> None:
         '''
         Test calling "eden info" through a symlink and make sure it gives
         the expected results.  This makes sure "eden info" resolves the path

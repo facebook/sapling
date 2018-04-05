@@ -23,14 +23,18 @@ from hypothesis.internal.detection import is_hypothesis_test
 from hypothesis.configuration import (
     set_hypothesis_home_dir,
     hypothesis_home_dir)
-from typing import Dict, List, Optional
+from typing import (
+    Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type
+)
 
+import eden.thrift
 from . import edenclient
 from . import hgrepo
 from . import gitrepo
+from . import repobase
 
 
-def is_sandcastle():
+def is_sandcastle() -> bool:
     return 'SANDCASTLE' in os.environ
 
 
@@ -76,7 +80,7 @@ if not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.
-    TestParent = typing.cast(typing.Type[unittest.TestCase], object)
+    TestParent = typing.cast(Type[unittest.TestCase], object)
 else:
     TestParent = unittest.TestCase
 
@@ -90,7 +94,10 @@ class EdenTestCase(TestParent):
     tearDown().
     '''
 
-    def run(self, report=None):
+    def run(
+        self,
+        report: Optional[unittest.result.TestResult] = None
+    ) -> unittest.result.TestResult:
         ''' Some slightly awful magic here to arrange for setUp and
             tearDown to be called at the appropriate times when hypothesis
             is enabled for a test case.
@@ -113,7 +120,7 @@ class EdenTestCase(TestParent):
         else:
             return super(EdenTestCase, self).run(report)
 
-    def report_time(self, event):
+    def report_time(self, event: str) -> None:
         '''
         report_time() is a helper function for logging how long different
         parts of the test took.
@@ -128,7 +135,7 @@ class EdenTestCase(TestParent):
                      event, since_start, since_last)
         self.last_event = now
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.start = time.time()
         self.last_event = self.start
 
@@ -141,8 +148,8 @@ class EdenTestCase(TestParent):
 
         self.addCleanup(self.report_time, 'clean up started')
 
-    def setup_eden_test(self):
-        def cleanup_tmp_dir():
+    def setup_eden_test(self) -> None:
+        def cleanup_tmp_dir() -> None:
             if os.environ.get('EDEN_TEST_NO_CLEANUP'):
                 print('Leaving behind eden test directory %r' % self.tmp_dir)
             else:
@@ -197,7 +204,9 @@ class EdenTestCase(TestParent):
         self.addCleanup(self.eden.cleanup)
         self.report_time('eden daemon started')
 
-    def get_thrift_client(self):
+        self.mount = os.path.join(self.mounts_dir, 'main')
+
+    def get_thrift_client(self) -> eden.thrift.EdenClient:
         '''
         Get a thrift client to the edenfs daemon.
         '''
@@ -223,7 +232,9 @@ class EdenTestCase(TestParent):
         '''
         return None
 
-    def create_repo(self, name, repo_class, **kwargs):
+    def create_repo(
+        self, name: str, repo_class: Type[repobase.Repository], **kwargs: Any
+    ) -> repobase.Repository:
         '''
         Create a new repository.
 
@@ -287,7 +298,7 @@ class EdenTestCase(TestParent):
         '''Unlink the file at the specified path relative to the clone.'''
         os.unlink(self.get_path(path))
 
-    def select_storage_engine(self):
+    def select_storage_engine(self) -> str:
         '''
         Prefer to use memory in the integration tests, but allow
         the tests that restart to override this and pick something else.
@@ -305,12 +316,10 @@ class EdenRepoTest(EdenTestCase):
     when subclassing from EdenRepoTest.  @eden_repo_test will automatically run
     your tests once per supported repository type.
     '''
-    def setup_eden_test(self):
+    def setup_eden_test(self) -> None:
         super().setup_eden_test()
 
         self.repo_name = 'main'
-        self.mount = os.path.join(self.mounts_dir, self.repo_name)
-
         self.repo = self.create_repo(self.repo_name, self.get_repo_class())
         self.populate_repo()
         self.report_time('repository setup done')
@@ -319,18 +328,24 @@ class EdenRepoTest(EdenTestCase):
         self.eden.clone(self.repo_name, self.mount)
         self.report_time('eden clone done')
 
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         raise NotImplementedError('individual test classes must implement '
                                   'populate_repo()')
 
-    def get_repo_class(self):
+    def get_repo_class(self) -> Type[repobase.Repository]:
         raise NotImplementedError('test subclasses must implement '
                                   'get_repo_class().  This is normally '
                                   'implemented automatically by '
                                   '@eden_repo_test')
 
 
-def _replicate_test(caller_scope, replicate, test_class, args, kwargs):
+def _replicate_test(
+    caller_scope: Dict[str, Any],
+    replicate: Callable[..., Iterable[Tuple[str, Type[EdenRepoTest]]]],
+    test_class: Type[EdenRepoTest],
+    args: Sequence[Any],
+    kwargs: Dict[str, Any]
+) -> None:
     for suffix, new_class in replicate(test_class, *args, **kwargs):
         # Set the name and module information on our new subclass
         name = test_class.__name__ + suffix
@@ -342,7 +357,9 @@ def _replicate_test(caller_scope, replicate, test_class, args, kwargs):
         caller_scope[name] = new_class
 
 
-def test_replicator(replicate):
+def test_replicator(
+    replicate: Callable[..., Iterable[Tuple[str, Type[EdenRepoTest]]]]
+) -> Callable[..., Any]:
     '''
     A helper function for implementing decorators that replicate TestCase
     classes so that the same test function can be run multiple times with
@@ -350,20 +367,27 @@ def test_replicator(replicate):
 
     See the @eden_repo_test decorator for an example of how this is used.
     '''
-    def decorator(*args, **kwargs):
+    def decorator(
+        *args: Any,
+        **kwargs: Any
+    ) -> Optional[Callable[[Type[EdenRepoTest]], None]]:
         # We do some rather hacky things here to define new test class types
         # in our caller's scope.  This is needed so that the unittest TestLoader
         # will find the subclasses we define.
-        caller_scope = inspect.currentframe().f_back.f_locals
+        current_frame = inspect.currentframe()
+        if current_frame is None:
+            raise Exception('we require a python interpreter with '
+                            'stack frame support')
+        caller_scope = current_frame.f_back.f_locals
 
         if len(args) == 1 and not kwargs and isinstance(args[0], type):
             # The decorator was invoked directly with the test class,
             # with no arguments or keyword arguments
             _replicate_test(caller_scope, replicate, args[0],
                             args=(), kwargs={})
-            return
+            return None
         else:
-            def inner_decorator(test_class):
+            def inner_decorator(test_class: Type[EdenRepoTest]) -> None:
                 _replicate_test(caller_scope, replicate, test_class,
                                 args, kwargs)
             return inner_decorator
@@ -371,7 +395,9 @@ def test_replicator(replicate):
     return decorator
 
 
-def _replicate_eden_repo_test(test_class):
+def _replicate_eden_repo_test(
+    test_class: Type[EdenRepoTest]
+) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     repo_types = [
         (hgrepo.HgRepository, 'Hg'),
         (gitrepo.GitRepository, 'Git'),
@@ -381,7 +407,7 @@ def _replicate_eden_repo_test(test_class):
         # Define a new class that derives from the input class
         # as well as the repo-specific parent class type
         class RepoSpecificTest(test_class):
-            def get_repo_class(self):
+            def get_repo_class(self) -> Type[repobase.Repository]:
                 return repo_class
 
         yield suffix, RepoSpecificTest

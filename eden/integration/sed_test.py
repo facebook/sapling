@@ -15,11 +15,11 @@ import subprocess
 
 @testcase.eden_repo_test
 class SedTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    def test_sed(self):
+    def test_sed(self) -> None:
         filename = os.path.join(self.mount, 'sedme')
 
         with open(filename, 'w') as f:

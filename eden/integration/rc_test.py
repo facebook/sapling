@@ -16,11 +16,11 @@ from eden.cli import util
 
 @testcase.eden_repo_test
 class RCTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('readme.txt', 'test\n')
         self.repo.commit('Initial commit.')
 
-    def test_eden_list(self):
+    def test_eden_list(self) -> None:
         mounts = self.eden.list_cmd()
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
@@ -33,7 +33,7 @@ class RCTest(testcase.EdenRepoTest):
         mounts = self.eden.list_cmd()
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts)
 
-    def test_unmount_rmdir(self):
+    def test_unmount_rmdir(self) -> None:
         clients = os.path.join(self.eden_dir, 'clients')
         client_names = os.listdir(clients)
         self.assertEqual(1, len(client_names),
@@ -60,7 +60,7 @@ class RCTest(testcase.EdenRepoTest):
         self.assertEqual({self.mount: self.eden.CLIENT_ACTIVE}, mounts,
                          msg='The client directory should have been restored')
 
-    def test_override_system_config(self):
+    def test_override_system_config(self) -> None:
         system_repo = self.create_repo('system_repo', self.get_repo_class())
 
         system_repo.write_file('hello.txt', 'hola\n')
@@ -68,6 +68,7 @@ class RCTest(testcase.EdenRepoTest):
 
         system_repo_path, system_repo_type = \
             util.get_repo_source_and_type(system_repo.path)
+        assert system_repo_type is not None
 
         # Create temporary system config
         f, path = tempfile.mkstemp(dir=self.system_config_dir)
@@ -93,8 +94,8 @@ type = ''' + system_repo_type + '''
         st = os.lstat(hello)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-        with open(hello, 'r') as f:
-            self.assertEqual('test\n', f.read())
+        with open(hello, 'r') as hello_file:
+            self.assertEqual('test\n', hello_file.read())
 
         # Add system_repo to system config file with new name
         repo_name = 'repo'
@@ -119,5 +120,5 @@ type = ''' + system_repo_type + '''
         st = os.lstat(hello)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-        with open(hello, 'r') as f:
-            self.assertEqual('hola\n', f.read())
+        with open(hello, 'r') as hello_file:
+            self.assertEqual('hola\n', hello_file.read())

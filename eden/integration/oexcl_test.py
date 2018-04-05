@@ -14,11 +14,11 @@ import os
 
 @testcase.eden_repo_test
 class OpenExclusiveTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('readme.txt', 'test\n')
         self.repo.commit('Initial commit.')
 
-    def test_oexcl(self):
+    def test_oexcl(self) -> None:
         filename = os.path.join(self.mount, 'makeme')
 
         fd = os.open(filename, os.O_EXCL | os.O_CREAT | os.O_RDWR)

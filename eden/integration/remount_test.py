@@ -14,17 +14,17 @@ from .lib import edenclient, gitrepo, hgrepo, testcase
 
 @testcase.eden_repo_test
 class RemountTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
-    def select_storage_engine(self):
+    def select_storage_engine(self) -> str:
         ''' we need to persist data across restarts '''
         return 'sqlite'
 
-    def test_remount_basic(self):
+    def test_remount_basic(self) -> None:
         # Mount multiple clients
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
@@ -41,7 +41,7 @@ class RemountTest(testcase.EdenRepoTest):
         entries = sorted(os.listdir(self.mount))
         self.assertEqual(['.eden', 'adir', 'hello', 'slink'], entries)
 
-    def test_git_and_hg(self):
+    def test_git_and_hg(self) -> None:
         # Create git and hg repositories for mounting
         repo_names = {'git': 'git_repo', 'hg': 'hg_repo'}
         git_repo = self.create_repo(repo_names['git'], gitrepo.GitRepository)
@@ -76,7 +76,7 @@ class RemountTest(testcase.EdenRepoTest):
                 with open(hello, 'r') as f:
                     self.assertEqual('hola\n', f.read())
 
-    def test_partial_unmount(self):
+    def test_partial_unmount(self) -> None:
         # Mount multiple clients
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
@@ -96,7 +96,7 @@ class RemountTest(testcase.EdenRepoTest):
         # Verify that unmounted client is not remounted
         self.assertFalse(os.path.exists(self.mount))
 
-    def test_restart_twice(self):
+    def test_restart_twice(self) -> None:
         # Mount multiple clients
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
@@ -122,7 +122,7 @@ class RemountTest(testcase.EdenRepoTest):
         self.assertFalse(os.path.exists(self.mount))
         self.assertFalse(os.path.exists(self.mount + "3"))
 
-    def test_try_remount_existing_mount(self):
+    def test_try_remount_existing_mount(self) -> None:
         '''Verify trying to mount an existing mount prints a sensible error.'''
         mount_destination = self.mount + '-0'
         self.eden.clone(self.repo_name, mount_destination)
@@ -134,7 +134,7 @@ class RemountTest(testcase.EdenRepoTest):
             context.exception.stderr)
         self.assertEqual(1, context.exception.returncode)
 
-    def test_empty_config_json(self):
+    def test_empty_config_json(self) -> None:
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
 
@@ -152,7 +152,7 @@ class RemountTest(testcase.EdenRepoTest):
         entries = sorted(os.listdir(self.mount))
         self.assertEqual([], entries)
 
-    def test_deleted_config_json(self):
+    def test_deleted_config_json(self) -> None:
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
 
@@ -170,7 +170,7 @@ class RemountTest(testcase.EdenRepoTest):
         entries = sorted(os.listdir(self.mount))
         self.assertEqual([], entries)
 
-    def test_incorrect_config_json(self):
+    def test_incorrect_config_json(self) -> None:
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
 
@@ -197,7 +197,7 @@ class RemountTest(testcase.EdenRepoTest):
         for incorrect_mount in config_data:
             self.assertFalse(os.path.isdir(incorrect_mount))
 
-    def test_bad_config_json(self):
+    def test_bad_config_json(self) -> None:
         for i in range(5):
             self.eden.clone(self.repo_name, self.mount + '-' + str(i))
 

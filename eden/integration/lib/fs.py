@@ -10,14 +10,24 @@
 import json
 import os
 import subprocess
+import typing
 
 from .find_executables import FSATTR
 
-def getxattr(abspath, attr):
-    raw_stdout = subprocess.check_output([FSATTR, '--attrName', attr, '--fileName', abspath])
-    return json.loads(raw_stdout)
+
+def getxattr(abspath: str, attr: str) -> str:
+    raw_stdout = subprocess.check_output(
+        [FSATTR, '--attrName', attr, '--fileName', abspath]
+    )
+    result = json.loads(raw_stdout)
+    # fsattr should always return a string here.  We just cast the result,
+    # without actually validating it for now.
+    return typing.cast(str, result)
 
 
-def listxattr(abspath):
+def listxattr(abspath: str) -> typing.Dict[str, str]:
     raw_stdout = subprocess.check_output([FSATTR, '--fileName', abspath])
-    return json.loads(raw_stdout)
+    result = json.loads(raw_stdout)
+    # fsattr should always return a dictionary here.  We just cast the
+    # result, without actually validating it for now.
+    return typing.cast(typing.Dict[str, str], result)

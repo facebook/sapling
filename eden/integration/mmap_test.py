@@ -30,12 +30,12 @@ libc.munmap.argtypes = [c_void_p, c_size_t]
 class MmapTest(testcase.EdenRepoTest):
     contents = 'abcdef'
 
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('filename', self.contents)
         self.repo.commit('Initial commit.')
         self.filename = os.path.join(self.mount, 'filename')
 
-    def test_mmap_in_backed_file_is_null_terminated(self):
+    def test_mmap_in_backed_file_is_null_terminated(self) -> None:
         fd = os.open(self.filename, os.O_RDONLY)
         try:
             size = os.fstat(fd).st_size
@@ -44,7 +44,9 @@ class MmapTest(testcase.EdenRepoTest):
             map_size = (size + 4095) // 4096 * 4096
             self.assertNotEqual(size, map_size)
 
-            m = libc.mmap(None, map_size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0)
+            m = libc.mmap(
+                None, map_size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0
+            )
             try:
                 # assert the additional mapped bytes are null, per `man 2 mmap`
                 for i in range(size, map_size):
@@ -54,7 +56,9 @@ class MmapTest(testcase.EdenRepoTest):
         finally:
             os.close(fd)
 
-    def test_mmap_is_null_terminated_after_truncate_and_write_to_overlay(self):
+    def test_mmap_is_null_terminated_after_truncate_and_write_to_overlay(
+        self
+    ) -> None:
         # WARNING: This test is very fiddly.
 
         # The bug is that if a file in Eden is opened with O_TRUNC followed by
@@ -96,7 +100,9 @@ class MmapTest(testcase.EdenRepoTest):
             map_size = (size + 4095) // 4096 * 4096
             self.assertNotEqual(size, map_size)
 
-            m = libc.mmap(None, map_size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0)
+            m = libc.mmap(
+                None, map_size, mmap.PROT_READ, mmap.MAP_PRIVATE, fd, 0
+            )
             try:
                 # Assert the additional mapped bytes are null, per `man 2 mmap`
                 for i in range(size, map_size):

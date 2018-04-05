@@ -26,11 +26,11 @@ repo_name = 'main'
 
 @testcase.eden_repo_test
 class CloneTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    def test_clone_to_non_existent_directory(self):
+    def test_clone_to_non_existent_directory(self) -> None:
         tmp = self._new_tmp_dir()
         non_existent_dir = os.path.join(tmp, 'foo/bar/baz')
 
@@ -38,7 +38,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(non_existent_dir, 'hello')),
                         msg='clone should succeed in non-existent directory')
 
-    def test_clone_to_existing_empty_directory(self):
+    def test_clone_to_existing_empty_directory(self) -> None:
         tmp = self._new_tmp_dir()
         empty_dir = os.path.join(tmp, 'foo/bar/baz')
         os.makedirs(empty_dir)
@@ -47,7 +47,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(empty_dir, 'hello')),
                         msg='clone should succeed in empty directory')
 
-    def test_clone_from_repo(self):
+    def test_clone_from_repo(self) -> None:
         # Specify the source of the clone as an existing local repo rather than
         # an alias for a config.
         destination_dir = self._new_tmp_dir()
@@ -55,7 +55,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(destination_dir, 'hello')),
                         msg='clone should succeed in empty directory')
 
-    def test_clone_from_eden_repo(self):
+    def test_clone_from_eden_repo(self) -> None:
         # Add a config alias for a repo with some bind mounts.
         edenrc = os.path.join(os.environ['HOME'], '.edenrc')
         with open(edenrc, 'w') as f:
@@ -87,7 +87,7 @@ class CloneTest(testcase.EdenRepoTest):
                         msg='clone should inherit its config from eden_clone1, '
                             'which should include the bind mounts.')
 
-    def test_clone_with_valid_revision_cmd_line_arg_works(self):
+    def test_clone_with_valid_revision_cmd_line_arg_works(self) -> None:
         tmp = self._new_tmp_dir()
         target = os.path.join(tmp, 'foo/bar/baz')
         self.eden.run_cmd('clone', '--snapshot', self.repo.get_head_hash(),
@@ -95,7 +95,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
                         msg='clone should succeed with --snapshop arg.')
 
-    def test_clone_with_short_revision_cmd_line_arg_works(self):
+    def test_clone_with_short_revision_cmd_line_arg_works(self) -> None:
         tmp = self._new_tmp_dir()
         target = os.path.join(tmp, 'foo/bar/baz')
         short = self.repo.get_head_hash()[:6]
@@ -103,7 +103,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertTrue(os.path.isfile(os.path.join(target, 'hello')),
                         msg='clone should succeed with short --snapshop arg.')
 
-    def test_clone_to_non_empty_directory_fails(self):
+    def test_clone_to_non_empty_directory_fails(self) -> None:
         tmp = self._new_tmp_dir()
         non_empty_dir = os.path.join(tmp, 'foo/bar/baz')
         os.makedirs(non_empty_dir)
@@ -116,7 +116,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertIn(os.strerror(errno.ENOTEMPTY), stderr,
                       msg='clone into non-empty dir should raise ENOTEMPTY')
 
-    def test_clone_with_invalid_revision_cmd_line_arg_fails(self):
+    def test_clone_with_invalid_revision_cmd_line_arg_fails(self) -> None:
         tmp = self._new_tmp_dir()
         empty_dir = os.path.join(tmp, 'foo/bar/baz')
         os.makedirs(empty_dir)
@@ -127,7 +127,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertIn('Obtained commit for repo is invalid', stderr,
                       msg='passing invalid commit on cmd line should fail')
 
-    def test_clone_to_file_fails(self):
+    def test_clone_to_file_fails(self) -> None:
         tmp = self._new_tmp_dir()
         non_empty_dir = os.path.join(tmp, 'foo/bar/baz')
         os.makedirs(non_empty_dir)
@@ -141,7 +141,9 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertIn(os.strerror(errno.ENOTDIR), stderr,
                       msg='clone into file should raise ENOTDIR')
 
-    def test_clone_to_non_existent_directory_that_is_under_a_file_fails(self):
+    def test_clone_to_non_existent_directory_that_is_under_a_file_fails(
+        self
+    ) -> None:
         tmp = self._new_tmp_dir()
         non_existent_dir = os.path.join(tmp, 'foo/bar/baz')
         with open(os.path.join(tmp, 'foo'), 'w') as f:
@@ -154,7 +156,7 @@ class CloneTest(testcase.EdenRepoTest):
                       msg='When the directory cannot be created because the '
                           'ancestor is a parent, clone should raise ENOTDIR')
 
-    def test_post_clone_hook(self):
+    def test_post_clone_hook(self) -> None:
         edenrc = os.path.join(os.environ['HOME'], '.edenrc')
         hooks_dir = os.path.join(self.tmp_dir, 'the_hooks')
         os.mkdir(hooks_dir)
@@ -196,7 +198,7 @@ echo -n "$1" >> "{scratch_file}"
         self.eden.start()
         self.assertEqual(new_contents, util.read_all(scratch_file))
 
-    def test_attempt_clone_invalid_repo_name(self):
+    def test_attempt_clone_invalid_repo_name(self) -> None:
         tmp = self._new_tmp_dir()
         repo_name = 'repo-name-that-is-not-in-the-config'
 
@@ -251,5 +253,5 @@ echo -n "$1" >> "{scratch_file}"
                          msg='Eden should have two mounts.')
         self.assertEqual('hola\n', util.read_all(os.path.join(tmp, 'hello')))
 
-    def _new_tmp_dir(self):
+    def _new_tmp_dir(self) -> str:
         return tempfile.mkdtemp(dir=self.tmp_dir)

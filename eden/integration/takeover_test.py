@@ -11,13 +11,14 @@ import os
 import resource
 import sys
 import threading
+from typing import Dict
 
 from .lib import testcase
 
 
 @testcase.eden_repo_test
 class TakeoverTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize
         self.page2 = "2" * self.pagesize
@@ -31,18 +32,18 @@ class TakeoverTest(testcase.EdenRepoTest):
         self.repo.write_file('src/test/test2.py', 'test2')
         self.commit2 = self.repo.commit('Initial commit.')
 
-    def select_storage_engine(self):
+    def select_storage_engine(self) -> str:
         ''' we need to persist data across restarts '''
         return 'sqlite'
 
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Dict[str, str]:
         if self._testMethodName == 'test_takeover_with_io':
             # test_takeover_with_io causes lots of I/O, so do not enable
             # verbose logging of I/O operations in this test.
             return {}
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
-    def do_takeover_test(self):
+    def do_takeover_test(self) -> None:
         hello = os.path.join(self.mount, 'tree/hello')
         deleted = os.path.join(self.mount, 'tree/deleted')
         deleted_local = os.path.join(self.mount, 'deleted-local')
@@ -126,10 +127,10 @@ class TakeoverTest(testcase.EdenRepoTest):
             self.assertEqual(self.page1, f.read(self.pagesize))
             self.assertEqual(self.page2, f.read(self.pagesize))
 
-    def test_takeover(self):
+    def test_takeover(self) -> None:
         return self.do_takeover_test()
 
-    def test_takeover_after_diff_revisions(self):
+    def test_takeover_after_diff_revisions(self) -> None:
         # Make a getScmStatusBetweenRevisions() call to Eden.
         # Previously this thrift call caused Eden to create temporary inode
         # objects outside of the normal root inode tree, and this would cause
@@ -141,7 +142,7 @@ class TakeoverTest(testcase.EdenRepoTest):
 
         return self.do_takeover_test()
 
-    def test_takeover_with_io(self):
+    def test_takeover_with_io(self) -> None:
         num_threads = 4
         write_chunk_size = 1024 * 1024
         max_file_length = write_chunk_size * 100
@@ -155,7 +156,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         stop = threading.Event()
         bufs = [b'x' * write_chunk_size, b'y' * write_chunk_size]
 
-        def do_io(thread_id, running_event):
+        def do_io(thread_id: int, running_event: threading.Event) -> None:
             path = os.path.join(
                 self.mount, 'src', 'test', 'data%d.log' % thread_id
             )
@@ -214,7 +215,7 @@ class TakeoverTest(testcase.EdenRepoTest):
 
     def test_takeover_preserves_inode_numbers_for_open_nonmaterialized_files(
         self
-    ):
+    ) -> None:
         hello = os.path.join(self.mount, 'tree/hello')
 
         fd = os.open(hello, os.O_RDONLY)

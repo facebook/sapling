@@ -17,12 +17,12 @@ import time
 
 @testcase.eden_repo_test
 class SetAttrTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
     # mtime should not get changed on permission changes
-    def test_chmod(self):
+    def test_chmod(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         st = os.lstat(filename)
@@ -35,7 +35,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertEqual(new_st.st_mode, st.st_mode | stat.S_IROTH)
 
-    def test_chown(self):
+    def test_chown(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         # Chown should fail with EPERM unless we are setting it
@@ -60,7 +60,7 @@ class SetAttrTest(testcase.EdenRepoTest):
             msg="changing gid of a file should raise EPERM/EACCES"
         )
 
-    def test_truncate(self):
+    def test_truncate(self) -> None:
         filename = os.path.join(self.mount, 'hello')
         st = os.lstat(filename)
 
@@ -74,7 +74,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
-    def test_utime(self):
+    def test_utime(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         # Update the atime and mtime to a time 5 seconds in the past.
@@ -90,7 +90,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertEqual(st.st_atime, timestamp)
         self.assertEqual(st.st_mtime, timestamp)
 
-    def test_touch(self):
+    def test_touch(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         now = time.time()
@@ -108,7 +108,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
 
-    def test_umask(self):
+    def test_umask(self) -> None:
         original_umask = os.umask(0o177)
         try:
             filename = os.path.join(self.mount, 'test1')
@@ -123,7 +123,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         finally:
             os.umask(original_umask)
 
-    def test_dir_addfile(self):
+    def test_dir_addfile(self) -> None:
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')
 
@@ -135,7 +135,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
-    def test_dir_delfile(self):
+    def test_dir_delfile(self) -> None:
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')
         self.write_file('test_file', 'test string')
@@ -148,7 +148,7 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(new_st.st_ctime, st.st_ctime)
         self.assertGreaterEqual(new_st.st_mtime, st.st_mtime)
 
-    def test_dir_change_filecontents(self):
+    def test_dir_change_filecontents(self) -> None:
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')
 
@@ -163,7 +163,7 @@ class SetAttrTest(testcase.EdenRepoTest):
 
     # Changing permisssions of directory should change
     # only ctime of the directory, but not mtime and atime.
-    def test_dir_change_perm(self):
+    def test_dir_change_perm(self) -> None:
         dirname = os.path.join(self.mount, 'test_dir')
         self.mkdir('test_dir')
 
@@ -177,7 +177,7 @@ class SetAttrTest(testcase.EdenRepoTest):
 
     # Read call on a file in Edenfs should modify the atime of the file.
     # Also, open call should not change the timeStamps of a file.
-    def test_timestamp_openfiles(self):
+    def test_timestamp_openfiles(self) -> None:
         filename = os.path.join(self.mount, 'hello')
         st = os.lstat(filename)
         with open(filename, 'r') as f:

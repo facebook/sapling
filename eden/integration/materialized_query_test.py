@@ -10,6 +10,8 @@
 import errno
 import os
 import stat
+from typing import Dict
+
 from .lib import testcase
 from facebook.eden import EdenService
 from facebook.eden.ttypes import FileInformationOrError
@@ -21,7 +23,7 @@ INITIAL_SEQ = 5
 class MaterializedQueryTest(testcase.EdenRepoTest):
     '''Check that materialization is represented correctly.'''
 
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.write_file('bdir/test.sh', '#!/bin/bash\necho test\n',
@@ -30,16 +32,16 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Dict[str, str]:
         return {'eden.fs.fuse.RequestData': 'DBG5'}
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.client = self.get_thrift_client()
         self.client.open()
         self.addCleanup(self.client.close)
 
-    def test_noEntries(self):
+    def test_noEntries(self) -> None:
         pos = self.client.getCurrentJournalPosition(self.mount)
         # setting up the .eden dir bumps the sequence number
         self.assertEqual(INITIAL_SEQ, pos.sequenceNumber)
@@ -52,7 +54,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(pos, changed.fromPosition)
         self.assertEqual(pos, changed.toPosition)
 
-    def test_getFileInformation(self):
+    def test_getFileInformation(self) -> None:
         """ verify that getFileInformation is consistent with the VFS """
 
         paths = ['', 'not-exist', 'hello', 'adir',
@@ -84,7 +86,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
                 self.assertEqual(e.errno, err.errorCode,
                                  msg='error code matches for ' + path)
 
-    def test_invalidProcessGeneration(self):
+    def test_invalidProcessGeneration(self) -> None:
         # Get a candidate position
         pos = self.client.getCurrentJournalPosition(self.mount)
 
@@ -96,7 +98,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(errno.ERANGE, context.exception.errorCode,
                          msg='Must return ERANGE')
 
-    def test_removeFile(self):
+    def test_removeFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
@@ -106,7 +108,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(set(), set(changed.changedPaths))
         self.assertEqual(set(['adir/file']), set(changed.removedPaths))
 
-    def test_renameFile(self):
+    def test_renameFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 
@@ -116,7 +118,7 @@ class MaterializedQueryTest(testcase.EdenRepoTest):
         self.assertEqual(set(), set(changed.changedPaths))
         self.assertEqual(set(['hello']), set(changed.removedPaths))
 
-    def test_addFile(self):
+    def test_addFile(self) -> None:
         initial_pos = self.client.getCurrentJournalPosition(self.mount)
         self.assertEqual(INITIAL_SEQ, initial_pos.sequenceNumber)
 

@@ -48,6 +48,18 @@ class Repository(object):
         '''Returns the 40-character hex hash for HEAD.'''
         raise NotImplementedError('subclasses must implement get_head_hash()')
 
+    def commit(self,
+               message: str,
+               author_name: Optional[str]=None,
+               author_email: Optional[str]=None,
+               date: Optional[datetime.datetime]=None,
+               amend: bool=False) -> str:
+        '''
+        Create a commit.
+        Returns the new commit hash as a 40-character hexadecimal string.
+        '''
+        raise NotImplementedError('subclasses must implement commit()')
+
     def add_file(self, path: str) -> None:
         self.add_files([path])
 

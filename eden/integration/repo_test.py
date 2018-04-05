@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016-present, Facebook, Inc.
 # All rights reserved.
 #
@@ -5,12 +7,9 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
+from typing import List
+
 from .lib import gitrepo
 from .lib import hgrepo
 from .lib import testcase
@@ -24,7 +23,7 @@ class RepoTest(testcase.EdenTestCase):
     actually need to run separately with git and mercurial repositories.  These
     tests don't actually mount anything in eden at all.
     '''
-    def test_list_repository(self):
+    def test_list_repository(self) -> None:
         self.assertEqual([], self._list_repos())
 
         config = '''\
@@ -53,7 +52,7 @@ type = hg
         expected = ['fbsource', 'git', 'hg-crew']
         self.assertEqual(expected, self._list_repos())
 
-    def test_add_multiple(self):
+    def test_add_multiple(self) -> None:
         hg_repo = self.create_repo('hg_repo', hgrepo.HgRepository)
         git_repo = self.create_repo('git_repo', gitrepo.GitRepository)
 
@@ -64,5 +63,5 @@ type = hg
         self.eden.add_repository('git1', git_repo.path)
         self.assertEqual(['git1', 'hg1', 'hg2'], self._list_repos())
 
-    def _list_repos(self):
+    def _list_repos(self) -> List[str]:
         return self.eden.repository_cmd().splitlines()

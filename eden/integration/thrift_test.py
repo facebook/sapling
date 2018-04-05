@@ -19,7 +19,7 @@ from .lib import testcase
 
 @testcase.eden_repo_test
 class ThriftTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('README', 'docs\n')
         self.repo.write_file('adir/file', 'foo!\n')
@@ -32,32 +32,34 @@ class ThriftTest(testcase.EdenRepoTest):
         self.repo.remove_file('README')
         self.commit2 = self.repo.commit('Commit 2.')
 
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         self.client = self.get_thrift_client()
         self.client.open()
         self.addCleanup(self.client.close)
 
-    def get_loaded_inodes_count(self, path):
+    def get_loaded_inodes_count(self, path: str) -> int:
         result = self.client.debugInodeStatus(self.mount, path)
         inode_count = 0
         for item in result:
+            assert item.entries is not None
             for inode in item.entries:
                 if inode.loaded:
                     inode_count += 1
         return inode_count
 
-    def test_list_mounts(self):
+    def test_list_mounts(self) -> None:
         mounts = self.client.listMounts()
         self.assertEqual(1, len(mounts))
 
         mount = mounts[0]
         self.assertEqual(self.mount, mount.mountPoint)
+        assert mount.edenClientPath is not None
         # The client path should always be inside the main eden directory
         self.assertTrue(mount.edenClientPath.startswith(self.eden.eden_dir),
                         msg='unexpected client path: %r' % mount.edenClientPath)
 
-    def test_get_sha1(self):
+    def test_get_sha1(self) -> None:
         expected_sha1_for_hello = hashlib.sha1(b'hola\n').digest()
         result_for_hello = SHA1Result()
         result_for_hello.set_sha1(expected_sha1_for_hello)
@@ -73,30 +75,30 @@ class ThriftTest(testcase.EdenRepoTest):
             ], self.client.getSHA1(self.mount, ['hello', 'adir/file'])
         )
 
-    def test_get_sha1_throws_for_empty_string(self):
+    def test_get_sha1_throws_for_empty_string(self) -> None:
         results = self.client.getSHA1(self.mount, [''])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], 'path cannot be the empty string')
 
-    def test_get_sha1_throws_for_directory(self):
+    def test_get_sha1_throws_for_directory(self) -> None:
         results = self.client.getSHA1(self.mount, ['adir'])
         self.assertEqual(1, len(results))
         self.assert_error(results[0], 'adir: Is a directory')
 
-    def test_get_sha1_throws_for_non_existent_file(self):
+    def test_get_sha1_throws_for_non_existent_file(self) -> None:
         results = self.client.getSHA1(self.mount, ['i_do_not_exist'])
         self.assertEqual(1, len(results))
         self.assert_error(results[0],
                           'i_do_not_exist: No such file or directory')
 
-    def test_get_sha1_throws_for_symlink(self):
+    def test_get_sha1_throws_for_symlink(self) -> None:
         '''Fails because caller should resolve the symlink themselves.'''
         results = self.client.getSHA1(self.mount, ['slink'])
         self.assertEqual(1, len(results))
         self.assert_error(results[0],
                           'slink: file is a symlink: Invalid argument')
 
-    def assert_error(self, sha1result, error_message):
+    def assert_error(self, sha1result: SHA1Result, error_message: str) -> None:
         self.assertIsNotNone(sha1result, msg='Must pass a SHA1Result')
         self.assertEqual(
             SHA1Result.ERROR,
@@ -107,7 +109,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertIsNotNone(error)
         self.assertEqual(error_message, error.message)
 
-    def test_glob(self):
+    def test_glob(self) -> None:
         self.assertEqual(
             ['adir/file'], self.client.glob(self.mount, ['a*/file']))
         self.assertCountEqual(
@@ -139,7 +141,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertIn('unterminated bracket sequence',
                       str(ctx.exception))
 
-    def test_unload_free_inodes(self):
+    def test_unload_free_inodes(self) -> None:
         for i in range(100):
             self.write_file('testfile%d.txt' % i, 'unload test case')
 
@@ -159,17 +161,13 @@ class ThriftTest(testcase.EdenRepoTest):
             'Number of loaded inodes should reduce after unload'
         )
 
-    def read_file(self, filename):
-        with open(filename, 'r') as f:
-            f.read()
-
-    def get_counter(self, name):
+    def get_counter(self, name: str) -> int:
         self.client.flushStatsNow()
         return self.client.getCounters()[name]
 
-    def test_invalidate_inode_cache(self):
-        filename = os.path.join(self.mount, 'bdir/file')
-        dirname = os.path.join(self.mount, 'bdir/')
+    def test_invalidate_inode_cache(self) -> None:
+        filename = 'bdir/file'
+        full_dirname = os.path.join(self.mount, 'bdir/')
 
         # Exercise eden a bit to make sure counters are ready
         for _ in range(20):
@@ -192,16 +190,16 @@ class ThriftTest(testcase.EdenRepoTest):
 
         lookups = self.get_counter("fuse.lookup_us.count")
         # -hl makes ls to do a lookup of the file to determine type
-        os.system("ls -hl " + dirname + " > /dev/null")
+        os.system("ls -hl " + full_dirname + " > /dev/null")
         lookups_1ls = self.get_counter("fuse.lookup_us.count")
         # equal, the file was lookup'ed above.
         self.assertEqual(lookups, lookups_1ls)
         self.client.invalidateKernelInodeCache(self.mount, 'bdir')
-        os.system("ls -hl " + dirname + " > /dev/null")
+        os.system("ls -hl " + full_dirname + " > /dev/null")
         lookups_2ls = self.get_counter("fuse.lookup_us.count")
         self.assertEqual(lookups_1ls + 1, lookups_2ls)
 
-    def test_diff_revisions(self):
+    def test_diff_revisions(self) -> None:
         # Convert the commit hashes to binary for the thrift call
         with self.get_thrift_client() as client:
             diff = client.getScmStatusBetweenRevisions(
@@ -219,7 +217,7 @@ class ThriftTest(testcase.EdenRepoTest):
             }
         )
 
-    def test_diff_revisions_hex(self):
+    def test_diff_revisions_hex(self) -> None:
         # Watchman currently clals getScmStatusBetweenRevisions()
         # with 40-byte hexadecimal commit IDs, so make sure that works.
         with self.get_thrift_client() as client:

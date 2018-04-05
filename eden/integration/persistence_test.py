@@ -9,22 +9,23 @@
 
 import os
 import unittest
+from typing import Dict
 
 from .lib import testcase
 
 
 @testcase.eden_repo_test
 class PersistenceTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('file_in_root', 'contents1')
         self.repo.write_file('subdir/file_in_subdir', 'contents2')
         self.repo.commit('Initial commit.')
 
-    def edenfs_logging_settings(self):
+    def edenfs_logging_settings(self) -> Dict[str, str]:
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
 
     @unittest.skip('TODO: this is not fully implemented yet')
-    def test_preserves_inode_numbers_and_timestamps_for_nonmaterialized_inodes_across_restarts(self):
+    def test_preserves_nonmaterialized_inode_numbers(self) -> None:
         inode_paths = [
             'file_in_root',
             'subdir',  # we care about trees too
@@ -42,7 +43,8 @@ class PersistenceTest(testcase.EdenRepoTest):
             os.lstat(os.path.join(self.mount, path))
             for path in inode_paths]
 
-        for (path, old_stat, new_stat) in zip(inode_paths, old_stats, new_stats):
+        for (path, old_stat,
+             new_stat) in zip(inode_paths, old_stats, new_stats):
             self.assertEqual(old_stat.st_ino, new_stat.st_ino,
                              f"inode numbers must line up for path {path}")
             self.assertEqual(old_stat.st_atime, new_stat.st_atime,

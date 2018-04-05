@@ -15,13 +15,13 @@ import shutil
 
 @testcase.eden_repo_test
 class UnlinkTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')
         self.repo.symlink('slink', 'hello')
         self.repo.commit('Initial commit.')
 
-    def test_unlink(self):
+    def test_unlink(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         # This file is part of the git repo
@@ -36,20 +36,20 @@ class UnlinkTest(testcase.EdenRepoTest):
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='lstat on a removed file raises ENOENT')
 
-    def test_unlink_bogus_file(self):
+    def test_unlink_bogus_file(self) -> None:
         with self.assertRaises(OSError) as context:
             os.unlink(os.path.join(self.mount, 'this-file-does-not-exist'))
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='unlink raises ENOENT for nonexistent file')
 
-    def test_unlink_dir(self):
+    def test_unlink_dir(self) -> None:
         adir = os.path.join(self.mount, 'adir')
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
         self.assertEqual(context.exception.errno, errno.EISDIR,
                          msg='unlink on a dir raises EISDIR')
 
-    def test_unlink_empty_dir(self):
+    def test_unlink_empty_dir(self) -> None:
         adir = os.path.join(self.mount, 'an-empty-dir')
         os.mkdir(adir)
         with self.assertRaises(OSError) as context:
@@ -57,7 +57,7 @@ class UnlinkTest(testcase.EdenRepoTest):
         self.assertEqual(context.exception.errno, errno.EISDIR,
                          msg='unlink on an empty dir raises EISDIR')
 
-    def test_rmdir_file(self):
+    def test_rmdir_file(self) -> None:
         filename = os.path.join(self.mount, 'hello')
 
         with self.assertRaises(OSError) as context:
@@ -65,7 +65,7 @@ class UnlinkTest(testcase.EdenRepoTest):
         self.assertEqual(context.exception.errno, errno.ENOTDIR,
                          msg='rmdir on a file raises ENOTDIR')
 
-    def test_rmdir(self):
+    def test_rmdir(self) -> None:
         adir = os.path.join(self.mount, 'adir')
         with self.assertRaises(OSError) as context:
             os.rmdir(adir)
@@ -78,7 +78,7 @@ class UnlinkTest(testcase.EdenRepoTest):
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='lstat on a removed dir raises ENOENT')
 
-    def test_rmdir_overlay(self):
+    def test_rmdir_overlay(self) -> None:
         # Ensure that removing dirs works with things we make in the overlay
         deep_root = os.path.join(self.mount, 'buck-out')
         deep_name = os.path.join(deep_root, 'foo', 'bar', 'baz')

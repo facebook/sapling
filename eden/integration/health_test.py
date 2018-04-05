@@ -11,12 +11,12 @@ from .lib import edenclient, testcase
 
 
 class HealthTest(testcase.EdenTestCase):
-    def test_is_healthy(self):
+    def test_is_healthy(self) -> None:
         self.assertTrue(self.eden.is_healthy())
         self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
 
-    def test_disconnected_daemon_is_not_healthy(self):
+    def test_disconnected_daemon_is_not_healthy(self) -> None:
         # Create a new edenfs instance that is never started, and make sure
         # it is not healthy.
         with edenclient.EdenFS() as client:

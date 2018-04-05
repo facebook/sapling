@@ -15,11 +15,11 @@ import time
 
 @testcase.eden_repo_test
 class DebugGetPathTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    def test_getpath_root_inode(self):
+    def test_getpath_root_inode(self) -> None:
         '''
         Test that calling `eden debug getpath 1` returns the path to the eden
         mount, and indicates that the inode is loaded.
@@ -32,10 +32,10 @@ class DebugGetPathTest(testcase.EdenRepoTest):
 
         self.assertEqual('loaded ' + self.mount + '\n', output)
 
-    def test_getpath_dot_eden_inode(self):
+    def test_getpath_dot_eden_inode(self) -> None:
         '''
-        Test that calling `eden debug getpath ${ino}` returns the path to the .eden
-        directory, and indicates that the inode is loaded.
+        Test that calling `eden debug getpath ${ino}` returns the path to the
+        .eden directory, and indicates that the inode is loaded.
         '''
         st = os.lstat(os.path.join(self.mount, '.eden'))
         self.assertTrue(stat.S_ISDIR(st.st_mode))
@@ -51,7 +51,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
             'loaded ' + os.path.join(self.mount, '.eden') + '\n',
             output)
 
-    def test_getpath_invalid_inode(self):
+    def test_getpath_invalid_inode(self) -> None:
         '''
         Test that calling `eden debug getpath 1234` raises an error since
         1234 is not a valid inode number
@@ -65,7 +65,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
             self.assertIn('unknown inode number 1234',
                           context.exception.stderr.decode())
 
-    def test_getpath_unloaded_inode(self):
+    def test_getpath_unloaded_inode(self) -> None:
         '''
         Test that calling `eden debug getpath` on an unloaded inode returns the
         correct path and indicates that it is unloaded
@@ -90,7 +90,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
             f'unloaded {filepath}\n',
             output)
 
-    def test_getpath_unloaded_inode_rename_parent(self):
+    def test_getpath_unloaded_inode_rename_parent(self) -> None:
         '''
         Test that when an unloaded inode has one of its parents renamed,
         `eden debug getpath` returns the new path
@@ -118,7 +118,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
             os.path.join(self.mount, 'newname', 'bar', 'test.txt') + '\n',
             output)
 
-    def unload_one_inode_under(self, path):
+    def unload_one_inode_under(self, path: str) -> None:
         # TODO: To support unloading more than one inode, sum the return value
         # until count is reached our the attempt limit has been reached.
         remaining_attempts = 5
@@ -135,7 +135,7 @@ class DebugGetPathTest(testcase.EdenRepoTest):
                 time.sleep(1)
                 continue
 
-    def test_getpath_unlinked_inode(self):
+    def test_getpath_unlinked_inode(self) -> None:
         '''
         Test that when an inode is unlinked, `eden debug getpath` indicates
         that it is unlinked

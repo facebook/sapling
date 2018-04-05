@@ -13,17 +13,17 @@ import hashlib
 import os
 
 
-def sha1(value):
+def sha1(value: bytes) -> str:
     return hashlib.sha1(value).hexdigest()
 
 
 @testcase.eden_repo_test
 class XattrTest(testcase.EdenRepoTest):
-    def populate_repo(self):
+    def populate_repo(self) -> None:
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
 
-    def test_get_sha1_xattr(self):
+    def test_get_sha1_xattr(self) -> None:
         filename = os.path.join(self.mount, 'hello')
         xattr = fs.getxattr(filename, 'user.sha1')
         contents = open(filename, 'rb').read()
@@ -47,7 +47,7 @@ class XattrTest(testcase.EdenRepoTest):
         self.assertEqual(sha1(b'foobarbaz'),
                          fs.getxattr(filename, 'user.sha1'))
 
-    def test_listxattr(self):
+    def test_listxattr(self) -> None:
         filename = os.path.join(self.mount, 'hello')
         xattrs = fs.listxattr(filename)
         contents = open(filename, 'rb').read()
