@@ -42,6 +42,7 @@ Test that output remains the same with multiple invocations.
   # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   xx
   
+  no value found for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
   no value found for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from local
   falling back for value buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1
   set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to memcache
@@ -159,6 +160,30 @@ Test that localcache gets hit if memcache is off
   +x
   +x
 
+Test that disabling the cache entirely doesn't break things
+  $ hg --debug --config simplecache.caches= export
+  exporting patch:
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID a5d935fe38ada2b984c29e4e02bffd7f19bf818d
+  # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
+  xx
+  
+  falling back for value buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1
+  diff -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d x
+  --- a/x	Thu Jan 01 00:00:00 1970 +0000
+  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +0,0 @@
+  -x
+  diff -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d y
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/y	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,2 @@
+  +x
+  +x
+
 Test that corrupt caches are gracefully ignored, and updated
   $ printf "set cca.hg.buildstatus:0632994590a85631ac9ce1a256862a1683a3ce56:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 0 0 5\r\nhello\r\n" | nc localhost 11101
   STORED\r (esc)
@@ -211,6 +236,7 @@ Test strange (unicode) filenames
   # Parent  a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   unicode test
   
+  no value found for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from memcache
   no value found for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from local
   falling back for value buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1
   set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to memcache

@@ -287,8 +287,7 @@ def cacheget(key, serializer, ui, default=None, _adjusted=False):
         except Exception as inst:
             _debug(ui, 'error getting or deserializing key %s: %s\n'
                      % (key, inst))
-
-    _debug(ui, 'no value found for key %s from %s\n' % (key, name))
+        _debug(ui, 'no value found for key %s from %s\n' % (key, name))
     return default
 
 def cacheset(key, value, serializer, ui, _adjusted=False):
