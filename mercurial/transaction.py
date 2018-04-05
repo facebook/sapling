@@ -616,7 +616,11 @@ def rollback(opener, vfsmap, file, report, checkambigfiles=None):
                     if line:
                         # Shave off the trailing newline
                         line = line[:-1]
-                        l, f, b, c = line.split('\0')
+                        try:
+                            l, f, b, c = line.split('\0')
+                        except ValueError:
+                            raise AssertionError("Invalid line format in {}: {}"
+                                                 .format(backupjournal, line))
                         backupentries.append((l, f, b, bool(c)))
             else:
                 report(_("journal was created by a different version of "
