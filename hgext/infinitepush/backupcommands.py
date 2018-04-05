@@ -908,6 +908,8 @@ def _sendbundle(bundler, other):
             if part.type == 'error:abort':
                 raise bundle2.AbortFromPart(part.params['message'],
                                             hint=part.params.get('hint'))
+            elif part.type == 'reply:changegroup':
+                pass
             else:
                 raise error.Abort(_('unexpected part in reply: %s') % part.type)
     except error.BundleValueError as exc:
