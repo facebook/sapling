@@ -196,3 +196,6 @@ class WorkspaceManager(object):
     def clearworkspace(self):
         with self.repo.wlock(), self.repo.lock():
             self.repo.svfs.unlink(self.filename)
+
+def getworkspacename(repo):
+    return WorkspaceManager(repo).workspace

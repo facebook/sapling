@@ -33,10 +33,11 @@ class SyncState(object):
     @staticmethod
     def erasestate(repo):
         # get current workspace
-        workspace = commitcloudutil.WorkspaceManager(repo).workspace
+        workspace = commitcloudutil.getworkspacename(repo)
         if not workspace:
             raise commitcloudcommon.WorkspaceError(
                 repo.ui, _('undefined workspace'))
+
         filename = SyncState._filename(workspace)
         # clean up the current state in force recover mode
         if repo.svfs.exists(filename):
@@ -45,7 +46,7 @@ class SyncState(object):
 
     def __init__(self, repo):
         # get current workspace
-        workspace = commitcloudutil.WorkspaceManager(repo).workspace
+        workspace = commitcloudutil.getworkspacename(repo)
         if not workspace:
             raise commitcloudcommon.WorkspaceError(
                 repo.ui, _('undefined workspace'))

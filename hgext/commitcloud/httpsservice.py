@@ -13,10 +13,7 @@ import time
 
 # Mercurial
 from mercurial.i18n import _
-from mercurial import (
-    error,
-    util,
-)
+from mercurial import util
 
 from . import (
     baseservice,
@@ -138,8 +135,11 @@ class HttpsCommitCloudService(baseservice.BaseService):
             try:
                 self.connection.request('POST', path, rdata, self.headers)
                 resp = self.connection.getresponse()
+                if resp.status == 401:
+                    raise commitcloudcommon.RegistrationError(self.ui,
+                        _('unauthorized client (token is invalid)'))
                 if resp.status != 200:
-                    raise error.Abort(resp.reason)
+                    raise commitcloudcommon.ServiceError(self.ui, resp.reason)
                 if resp.getheader('Content-Encoding') == 'gzip':
                     resp = gzip.GzipFile(fileobj=util.stringio(resp.read()))
                 return json.load(resp)
@@ -148,7 +148,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
             time.sleep(sl)
             sl *= 2
         if e:
-            raise error.Abort(str(e))
+            raise commitcloudcommon.ServiceError(self.ui, str(e))
 
     def getreferences(self, baseversion):
         highlightdebug(self.ui, "sending 'get_references' request\n")
