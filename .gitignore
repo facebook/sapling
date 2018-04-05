@@ -68,6 +68,7 @@ hgext/extlib/litemmap.c
 SOURCES/
 # Build output
 build/
+debbuild/
 rpmbuild/
 
 # Rust libraries and extensions
