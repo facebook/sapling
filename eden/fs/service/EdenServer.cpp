@@ -161,9 +161,8 @@ EdenServer::EdenServer(
 
 EdenServer::~EdenServer() {}
 
-folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
-  std::vector<Future<Optional<TakeoverData::MountInfo>>> futures;
-  std::vector<AbsolutePath> mountPaths;
+Future<Unit> EdenServer::unmountAll() {
+  std::vector<Future<Unit>> futures;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
@@ -171,30 +170,52 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
       auto& info = entry.second;
 
       try {
-        mountPaths.emplace_back(mountPath);
-        if (doTakeover) {
-          info.takeoverPromise.emplace();
-          auto future = info.takeoverPromise->getFuture();
-          info.edenMount->getFuseChannel()->takeoverStop();
-          futures.emplace_back(future.then(
-              [self = this,
-               edenMount = info.edenMount](TakeoverData::MountInfo takeover)
-                  -> Optional<TakeoverData::MountInfo> {
-                if (!takeover.fuseFD) {
-                  return folly::none;
-                }
-                self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
-                    edenMount->getPath().stringPiece());
-                return takeover;
-              }));
-        } else {
-          serverState_.getPrivHelper()->fuseUnmount(mountPath);
-          futures.push_back(info.unmountPromise.getFuture().then(
-              [] { return Optional<TakeoverData::MountInfo>{}; }));
-        }
+        serverState_.getPrivHelper()->fuseUnmount(mountPath);
+        futures.emplace_back(info.unmountPromise.getFuture());
       } catch (const std::exception& ex) {
         XLOG(ERR) << "Failed to perform unmount for \"" << mountPath
                   << "\": " << folly::exceptionStr(ex);
+        futures.push_back(makeFuture<Unit>(
+            folly::exception_wrapper(std::current_exception(), ex)));
+      }
+    }
+  }
+  // Use collectAll() rather than collect() to wait for all of the unmounts
+  // to complete, and only check for errors once everything has finished.
+  return folly::collectAll(futures).then(
+      [](std::vector<folly::Try<Unit>> results) {
+        for (const auto& result : results) {
+          result.throwIfFailed();
+        }
+      });
+}
+
+Future<TakeoverData> EdenServer::stopMountsForTakeover() {
+  std::vector<Future<Optional<TakeoverData::MountInfo>>> futures;
+  {
+    const auto mountPoints = mountPoints_.wlock();
+    for (auto& entry : *mountPoints) {
+      const auto& mountPath = entry.first;
+      auto& info = entry.second;
+
+      try {
+        info.takeoverPromise.emplace();
+        auto future = info.takeoverPromise->getFuture();
+        info.edenMount->getFuseChannel()->takeoverStop();
+        futures.emplace_back(future.then(
+            [self = this,
+             edenMount = info.edenMount](TakeoverData::MountInfo takeover)
+                -> Optional<TakeoverData::MountInfo> {
+              if (!takeover.fuseFD) {
+                return folly::none;
+              }
+              self->serverState_.getPrivHelper()->fuseTakeoverShutdown(
+                  edenMount->getPath().stringPiece());
+              return takeover;
+            }));
+      } catch (const std::exception& ex) {
+        XLOG(ERR) << "Error while stopping \"" << mountPath
+                  << "\" for takeover: " << folly::exceptionStr(ex);
         futures.push_back(makeFuture<Optional<TakeoverData::MountInfo>>(
             folly::exception_wrapper(std::current_exception(), ex)));
       }
@@ -203,41 +224,32 @@ folly::Future<Optional<TakeoverData>> EdenServer::unmountAll(bool doTakeover) {
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
   return folly::collectAll(futures).then(
-      [doTakeover](
-          std::vector<folly::Try<Optional<TakeoverData::MountInfo>>> results)
-          -> Optional<TakeoverData> {
-        if (doTakeover) {
-          TakeoverData data;
-          data.mountPoints.reserve(results.size());
-          for (auto& result : results) {
-            // If something went wrong shutting down a mount point,
-            // log the error but continue trying to perform graceful takeover
-            // of the other mount points.
-            if (!result.hasValue()) {
-              XLOG(ERR) << "error stopping mount during takeover shutdown: "
-                        << result.exception().what();
-              continue;
-            }
-
-            // result might be a successful Try with an empty Optional.
-            // This could happen if the mount point was unmounted while we were
-            // in the middle of stopping it for takeover.  Just skip this mount
-            // in this case.
-            if (!result.value().hasValue()) {
-              XLOG(WARN) << "mount point was unmounted during "
-                            "takeover shutdown";
-              continue;
-            }
-
-            data.mountPoints.emplace_back(std::move(result.value().value()));
+      [](std::vector<folly::Try<Optional<TakeoverData::MountInfo>>> results) {
+        TakeoverData data;
+        data.mountPoints.reserve(results.size());
+        for (auto& result : results) {
+          // If something went wrong shutting down a mount point,
+          // log the error but continue trying to perform graceful takeover
+          // of the other mount points.
+          if (!result.hasValue()) {
+            XLOG(ERR) << "error stopping mount during takeover shutdown: "
+                      << result.exception().what();
+            continue;
           }
-          return data;
-        }
 
-        for (const auto& result : results) {
-          result.throwIfFailed();
+          // result might be a successful Try with an empty Optional.
+          // This could happen if the mount point was unmounted while we were
+          // in the middle of stopping it for takeover.  Just skip this mount
+          // in this case.
+          if (!result.value().hasValue()) {
+            XLOG(WARN) << "mount point was unmounted during "
+                          "takeover shutdown";
+            continue;
+          }
+
+          data.mountPoints.emplace_back(std::move(result.value().value()));
         }
-        return folly::none;
+        return data;
       });
 }
 
@@ -441,44 +453,40 @@ void EdenServer::run() {
 
 Future<Unit> EdenServer::performTakeoverShutdown(folly::File thriftSocket) {
   // stop processing new FUSE requests for the mounts,
-  return unmountAll(/*doTakeover=*/true)
-      .then([this, socket = std::move(thriftSocket)](
-                Optional<TakeoverData> data) mutable {
-        // Destroy the local store and backing stores.
-        // We shouldn't access the local store any more after giving up our
-        // lock, and we need to close it to release its lock before the new
-        // edenfs process tries to open it.
-        backingStores_.wlock()->clear();
-        // Explicit close the LocalStore before we reset our pointer, to
-        // ensure we release the RocksDB lock.  Since this is managed with a
-        // shared_ptr it is somewhat hard to confirm if we really have the
-        // last reference to it.
-        localStore_->close();
-        localStore_.reset();
+  return stopMountsForTakeover().then([this, socket = std::move(thriftSocket)](
+                                          TakeoverData&& takeover) mutable {
+    // Destroy the local store and backing stores.
+    // We shouldn't access the local store any more after giving up our
+    // lock, and we need to close it to release its lock before the new
+    // edenfs process tries to open it.
+    backingStores_.wlock()->clear();
+    // Explicit close the LocalStore before we reset our pointer, to
+    // ensure we release the RocksDB lock.  Since this is managed with a
+    // shared_ptr it is somewhat hard to confirm if we really have the
+    // last reference to it.
+    localStore_->close();
+    localStore_.reset();
 
-        // Stop the privhelper process.
-        shutdownPrivhelper();
+    // Stop the privhelper process.
+    shutdownPrivhelper();
 
-        auto& takeover = data.value();
+    takeover.lockFile = std::move(lockFile_);
+    auto future = takeover.takeoverComplete.getFuture();
+    takeover.thriftSocket = std::move(socket);
 
-        takeover.lockFile = std::move(lockFile_);
-        auto future = takeover.takeoverComplete.getFuture();
-        takeover.thriftSocket = std::move(socket);
-
-        takeoverPromise_.setValue(std::move(takeover));
-        return future;
-      });
+    takeoverPromise_.setValue(std::move(takeover));
+    return future;
+  });
 }
 
 Future<Unit> EdenServer::performNormalShutdown() {
   takeoverServer_.reset();
 
   // Clean up all the server mount points before shutting down the privhelper.
-  auto shutdownFuture = unmountAll(/*doTakeover=*/false);
-
-  shutdownPrivhelper();
-
-  return shutdownFuture.then([](Optional<TakeoverData>) { return Unit{}; });
+  return unmountAll().then([this](folly::Try<Unit>&& result) {
+    shutdownPrivhelper();
+    result.throwIfFailed();
+  });
 }
 
 void EdenServer::shutdownPrivhelper() {
