@@ -18,7 +18,7 @@ PAYLOAD = b'W00t\n'
 
 
 @testcase.eden_repo_test
-class UnixSocketTest:
+class UnixSocketTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')

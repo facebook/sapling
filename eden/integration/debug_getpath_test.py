@@ -14,7 +14,7 @@ import stat
 import time
 
 @testcase.eden_repo_test
-class DebugGetPathTest:
+class DebugGetPathTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')

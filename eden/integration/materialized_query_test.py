@@ -18,7 +18,7 @@ from facebook.eden.ttypes import FileInformationOrError
 INITIAL_SEQ = 5
 
 @testcase.eden_repo_test
-class MaterializedQueryTest:
+class MaterializedQueryTest(testcase.EdenRepoTest):
     '''Check that materialization is represented correctly.'''
 
     def populate_repo(self):

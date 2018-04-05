@@ -15,7 +15,7 @@ from eden.cli import util
 
 
 @testcase.eden_repo_test
-class RCTest:
+class RCTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('readme.txt', 'test\n')
         self.repo.commit('Initial commit.')

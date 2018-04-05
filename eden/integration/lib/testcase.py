@@ -76,7 +76,7 @@ if not edenclient.can_run_eden():
     # This is avoiding a reporting noise issue in our CI that files
     # tasks about skipped tests.  Let's just skip defining most of them
     # to avoid the noise if we know that they won't work anyway.
-    TestParent = typing.cast(unittest.TestCase, object)
+    TestParent = typing.cast(typing.Type[unittest.TestCase], object)
 else:
     TestParent = unittest.TestCase
 
@@ -310,11 +310,15 @@ class EdenTestCase(TestParent):
         return 'memory'
 
 
-class EdenRepoTestBase(EdenTestCase):
+class EdenRepoTest(EdenTestCase):
     '''
     Base class for EdenHgTest and EdenGitTest.
 
     This sets up a repository and mounts it before starting each test function.
+
+    You normally should put the @eden_repo_test decorator on your test
+    when subclassing from EdenRepoTest.  @eden_repo_test will automatically run
+    your tests once per supported repository type.
     '''
     def setup_eden_test(self):
         super().setup_eden_test()
@@ -334,28 +338,11 @@ class EdenRepoTestBase(EdenTestCase):
         raise NotImplementedError('individual test classes must implement '
                                   'populate_repo()')
 
-class EdenHgTest(EdenRepoTestBase):
-    '''
-    Subclass of EdenTestCase which uses a single mercurial repository and
-    eden mount.
-
-    The repository is available as self.repo, and the client mount path is
-    available as self.mount
-    '''
     def get_repo_class(self):
-        return hgrepo.HgRepository
-
-
-class EdenGitTest(EdenRepoTestBase):
-    '''
-    Subclass of EdenTestCase which uses a single mercurial repository and
-    eden mount.
-
-    The repository is available as self.repo, and the client mount path is
-    available as self.mount
-    '''
-    def get_repo_class(self):
-        return gitrepo.GitRepository
+        raise NotImplementedError('test subclasses must implement '
+                                  'get_repo_class().  This is normally '
+                                  'implemented automatically by '
+                                  '@eden_repo_test')
 
 
 def _replicate_test(caller_scope, replicate, test_class, args, kwargs):
@@ -401,15 +388,16 @@ def test_replicator(replicate):
 
 def _replicate_eden_repo_test(test_class):
     repo_types = [
-        (EdenHgTest, 'Hg'),
-        (EdenGitTest, 'Git'),
+        (hgrepo.HgRepository, 'Hg'),
+        (gitrepo.GitRepository, 'Git'),
     ]
 
-    for (parent_class, suffix) in repo_types:
+    for (repo_class, suffix) in repo_types:
         # Define a new class that derives from the input class
         # as well as the repo-specific parent class type
-        class RepoSpecificTest(test_class, parent_class):
-            pass
+        class RepoSpecificTest(test_class):
+            def get_repo_class(self):
+                return repo_class
 
         yield suffix, RepoSpecificTest
 

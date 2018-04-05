@@ -15,7 +15,7 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-class BasicTest:
+class BasicTest(testcase.EdenRepoTest):
     '''Exercise some fundamental properties of the filesystem.
 
     Listing directories, checking stat information, asserting

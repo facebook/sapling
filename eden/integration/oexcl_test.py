@@ -13,7 +13,7 @@ import os
 
 
 @testcase.eden_repo_test
-class OpenExclusiveTest:
+class OpenExclusiveTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('readme.txt', 'test\n')
         self.repo.commit('Initial commit.')

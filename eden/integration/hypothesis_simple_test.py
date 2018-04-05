@@ -14,7 +14,7 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-class HypothesisSimpleTest:
+class HypothesisSimpleTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.write_file('adir/file', 'foo!\n')

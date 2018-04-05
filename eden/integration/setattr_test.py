@@ -16,7 +16,7 @@ import time
 
 
 @testcase.eden_repo_test
-class SetAttrTest:
+class SetAttrTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')

@@ -16,7 +16,7 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-class TakeoverTest:
+class TakeoverTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.pagesize = resource.getpagesize()
         self.page1 = "1" * self.pagesize

@@ -27,7 +27,7 @@ libc.munmap.argtypes = [c_void_p, c_size_t]
 
 
 @testcase.eden_repo_test
-class MmapTest:
+class MmapTest(testcase.EdenRepoTest):
     contents = 'abcdef'
 
     def populate_repo(self):

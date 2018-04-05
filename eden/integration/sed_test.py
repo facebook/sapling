@@ -14,7 +14,7 @@ import subprocess
 
 
 @testcase.eden_repo_test
-class SedTest:
+class SedTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')

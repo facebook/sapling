@@ -16,7 +16,7 @@ repo_name = 'main'
 
 
 @testcase.eden_repo_test
-class InfoTest:
+class InfoTest(testcase.EdenRepoTest):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
         self.repo.commit('Initial commit.')
