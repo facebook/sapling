@@ -15,8 +15,10 @@ import time
 from mercurial.i18n import _
 from mercurial import (
     commands,
+    hg,
     node,
     obsolete,
+    obsutil,
     registrar,
 )
 
@@ -93,6 +95,8 @@ def cloudregister(ui, repo, **opts):
 def cloudsync(ui, repo, **opts):
     """synchronize commits with the commit cloud service"""
 
+    currentnode = repo['.'].node()
+
     start = time.time()
     serv = service.get(ui, repo)
 
@@ -133,6 +137,31 @@ def cloudsync(ui, repo, **opts):
     highlightdebug(ui, _('cloudsync is done in %0.2f sec\n') % elapsed)
     highlightstatus(ui, _('cloudsync done\n'))
 
+    if repo['.'].node() != currentnode:
+        return 0
+
+    destination = finddestinationnode(repo, currentnode)
+
+    if destination == currentnode:
+        return 0
+
+    if destination and destination in repo:
+        highlightstatus(
+            ui, _(
+                'current revision %s has been moved remotely to %s\n') %
+            (node.short(currentnode), node.short(
+                destination)))
+        if ui.configbool('commitcloud', 'updateonmove'):
+            return _update(ui, repo, destination)
+    else:
+        highlightstatus(
+            ui,
+            _('current revision %s has been replaced remotely '
+                'with multiple revisions\n'
+              'Please run `hg update` to go to the desired revision\n') %
+            node.short(currentnode))
+        return 0
+
 @command('cloudrecover')
 def cloudrecover(ui, repo, **opts):
     """recover Commit Cloud State
@@ -165,6 +194,13 @@ def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(cloudrefs.version, cloudrefs.heads,
                          cloudrefs.bookmarks)
+
+def _update(ui, repo, destination):
+    # update to new head with merging local uncommited changes
+    ui.status(_('updating to %s\n') % node.short(destination))
+    updatecheck = 'none'
+    return hg.updatetotally(ui, repo, destination, destination,
+                            updatecheck=updatecheck)
 
 def _mergebookmarks(ui, repo, cloudbookmarks, lastsyncbookmarks):
     localbookmarks = _getbookmarks(repo)
@@ -236,3 +272,19 @@ def _getcommandandoptions(command):
     cmd = commands.table[command][0]
     opts = dict(opt[1:3] for opt in commands.table[command][1])
     return cmd, opts
+
+def getsuccessorsnodes(repo, node):
+    successors = repo.obsstore.successors.get(node, ())
+    for successor in successors:
+        m = obsutil.marker(repo, successor)
+        for snode in m.succnodes():
+            if snode and snode != node:
+                yield snode
+
+def finddestinationnode(repo, node):
+    nodes = list(getsuccessorsnodes(repo, node))
+    if len(nodes) == 1:
+        return finddestinationnode(repo, nodes[0])
+    if len(nodes) == 0:
+        return node
+    return None

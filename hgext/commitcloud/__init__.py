@@ -51,6 +51,9 @@
 
     # owner team, used for help messages
     owner_team = "The Source Control Team"
+
+    # update to a new revision if the current revision has been moved
+    updateonmove = true
 """
 
 from __future__ import absolute_import
