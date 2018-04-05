@@ -81,6 +81,13 @@ class ServiceError(error.Abort):
         message = "%s: '%s'\n%s\n%s" % (topic, message, details, contact)
         super(ServiceError, self).__init__(message, *args)
 
+class InvalidWorkspaceDataError(error.Abort):
+    def __init__(self, ui, message, *args):
+        topic = highlightmsg(ui, _('invalid workspace data'))
+        details = _('please run `hg cloudrecover`')
+        message = "%s: '%s'\n%s" % (topic, message, details)
+        super(InvalidWorkspaceDataError, self).__init__(message, *args)
+
 '''
 Commit Cloud message wrappers
 '''

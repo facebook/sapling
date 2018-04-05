@@ -133,6 +133,17 @@ def cloudsync(ui, repo, **opts):
     highlightdebug(ui, _('cloudsync is done in %0.2f sec\n') % elapsed)
     highlightstatus(ui, _('cloudsync done\n'))
 
+@command('cloudrecover')
+def cloudrecover(ui, repo, **opts):
+    """recover Commit Cloud State
+
+    It cleans up Commit Cloud internal files in the repo
+    and synchronize it from scratch
+    """
+    highlightstatus(ui, 'start recovering\n')
+    state.SyncState.erasestate(repo)
+    cloudsync(ui, repo, **opts)
+
 def _applycloudchanges(ui, repo, lastsyncstate, cloudrefs):
     pullcmd, pullopts = _getcommandandoptions('^pull')
 

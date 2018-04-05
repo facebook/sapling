@@ -23,25 +23,44 @@ class SyncState(object):
     Stores the local record of what state was stored in the cloud at the
     last sync.
     """
+    @staticmethod
+    def _filename(workspace):
+        # make a unique valid filename
+        return 'commitcloudstate.' + ''.join(
+            x for x in workspace if x.isalnum()) + '.%s' % (
+                hashlib.sha256(workspace).hexdigest()[0:5])
+
+    @staticmethod
+    def erasestate(repo):
+        # get current workspace
+        workspace = commitcloudutil.WorkspaceManager(repo).workspace
+        if not workspace:
+            raise commitcloudcommon.WorkspaceError(
+                repo.ui, _('undefined workspace'))
+        filename = SyncState._filename(workspace)
+        # clean up the current state in force recover mode
+        if repo.svfs.exists(filename):
+            with repo.wlock(), repo.lock():
+                repo.svfs.unlink(filename)
 
     def __init__(self, repo):
-        repo = shareutil.getsrcrepo(repo)
-        self.repo = repo
-
         # get current workspace
         workspace = commitcloudutil.WorkspaceManager(repo).workspace
         if not workspace:
             raise commitcloudcommon.WorkspaceError(
                 repo.ui, _('undefined workspace'))
 
-        # make a valid filename
-        self.filename = 'commitcloudstate.' + ''.join(
-            x for x in workspace if x.isalnum()) + '.%s' % (
-                hashlib.sha256(workspace).hexdigest()[0:5])
+        self.filename = SyncState._filename(workspace)
+        repo = shareutil.getsrcrepo(repo)
+        self.repo = repo
+        if repo.svfs.exists(self.filename):
+            with repo.svfs.open(self.filename, 'r') as f:
+                try:
+                    data = json.load(f)
+                except Exception:
+                    raise commitcloudcommon.InvalidWorkspaceDataError(
+                        repo.ui, _('failed to parse %s') % self.filename)
 
-        if repo.vfs.exists(self.filename):
-            with repo.vfs.open(self.filename, 'r') as f:
-                data = json.load(f)
                 self.version = data['version']
                 self.heads = [h.encode() for h in data['heads']]
                 self.bookmarks = {n.encode('utf-8'): v.encode()
@@ -57,8 +76,8 @@ class SyncState(object):
             'heads': newheads,
             'bookmarks': newbookmarks,
         }
-        with self.repo.wlock():
-            with self.repo.vfs.open(self.filename, 'w', atomictemp=True) as f:
+        with self.repo.wlock(), self.repo.lock():
+            with self.repo.svfs.open(self.filename, 'w', atomictemp=True) as f:
                 json.dump(data, f)
         self.version = newversion
         self.heads = newheads
