@@ -132,28 +132,39 @@ class EdenTestCase(TestParent):
         self.start = time.time()
         self.last_event = self.start
 
-        self.eden = None
-        self.old_home = None
+        # Add a cleanup event just to log once the other cleanup
+        # actions have completed.
+        self.addCleanup(self.report_time, 'clean up done')
 
-        # Call setup_eden_test() to do most of the setup work, and call
-        # tearDown() on any error.  tearDown() won't be called by default if
-        # setUp() throws.
-        try:
-            self.setup_eden_test()
-        except Exception as ex:
-            self.tearDown()
-            raise
+        self.setup_eden_test()
         self.report_time('test setup done')
 
+        self.addCleanup(self.report_time, 'clean up started')
+
     def setup_eden_test(self):
+        def cleanup_tmp_dir():
+            if os.environ.get('EDEN_TEST_NO_CLEANUP'):
+                print('Leaving behind eden test directory %r' % self.tmp_dir)
+            else:
+                shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
         self.tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
+        self.addCleanup(cleanup_tmp_dir)
 
         # The home directory, to make sure eden looks at this rather than the
         # real home directory of the user running the tests.
         self.home_dir = os.path.join(self.tmp_dir, 'homedir')
         os.mkdir(self.home_dir)
-        self.old_home = os.getenv('HOME')
+        old_home = os.getenv('HOME')
+
+        def restore_home():
+            if old_home is None:
+                del os.environ['HOME']
+            else:
+                os.environ['HOME'] = old_home
+
         os.environ['HOME'] = self.home_dir
+        self.addCleanup(restore_home)
 
         # TODO: Make this configurable via ~/.edenrc.
         # The eden config directory.
@@ -183,34 +194,8 @@ class EdenTestCase(TestParent):
                                       extra_args=extra_args,
                                       storage_engine=storage_engine)
         self.eden.start()
+        self.addCleanup(self.eden.cleanup)
         self.report_time('eden daemon started')
-
-    def tearDown(self):
-        self.report_time('tear down started')
-        error = None
-        try:
-            if self.eden is not None:
-                self.eden.cleanup()
-        except Exception as ex:
-            error = ex
-
-        if self.old_home is not None:
-            os.environ['HOME'] = self.old_home
-            self.old_home = None
-
-        if self.tmp_dir is not None:
-            if os.environ.get('EDEN_TEST_NO_CLEANUP'):
-                print('Leaving behind eden test directory %r' % self.tmp_dir)
-            else:
-                shutil.rmtree(self.tmp_dir, ignore_errors=True)
-            self.tmp_dir = None
-
-        self.report_time('tear down done')
-
-        # Re-raise any error that occurred, after we finish
-        # trying to clean up our directories.
-        if error is not None:
-            raise error
 
     def get_thrift_client(self):
         '''
