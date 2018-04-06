@@ -814,6 +814,39 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
           PathComponentPiece{"differentfile.txt"}));
 }
 
+TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("dir/sub/file.txt", "contents");
+  TestMount testMount{builder1};
+
+  // Prepare a second commit, removing dir/sub.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("dir/tree/differentfile.txt", "differentcontents");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Load "dir/sub".
+  auto subTree = testMount.getEdenMount()
+                     ->getInode(RelativePathPiece{"dir/sub"})
+                     .get(1ms)
+                     .asTreePtr();
+  auto subInodeNumber = subTree->getNodeId();
+  subTree.reset();
+
+  // Allocated inode numbers are saved during takeover.
+  testMount.remountGracefully();
+
+  EXPECT_TRUE(testMount.hasOverlayData(subInodeNumber));
+
+  // Checkout to a revision without "dir/sub".
+  auto checkoutResult =
+      testMount.getEdenMount()->checkout(makeTestHash("2")).get(1ms);
+  EXPECT_EQ(0, checkoutResult.size());
+
+  EXPECT_FALSE(testMount.hasOverlayData(subInodeNumber));
+}
+
 TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   // This test is designed to stress the logic in
   // TreeInode::processCheckoutEntry that decides whether it's necessary to load

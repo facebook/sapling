@@ -2391,17 +2391,25 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
         ctx, oldScmEntry, newScmEntry, std::move(childPtr));
   }
 
+  // If true, preserve inode numbers for files that have been accessed and
+  // still remain when a tree transitions from A -> B.  This is really expensive
+  // because it means we must load TreeInodes for all trees that have ever
+  // allocated inode numbers.
+  constexpr bool kPreciseInodeNumberMemory = false;
+
   // If a load for this entry is in progress, then we have to wait for the
   // load to finish.  Loading the inode ourself will wait for the existing
   // attempt to finish.
   // We also have to load the inode if it is materialized so we can
   // check its contents to see if there are conflicts or not.
-  if (getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
-      entry.isMaterialized()) {
+  if (entry.isMaterialized() ||
+      getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
+      (kPreciseInodeNumberMemory && entry.isDirectory() &&
+       getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
-    // This child is potentially modified, but is not currently loaded.
-    // Start loading it and create a CheckoutAction to process it once it
-    // is loaded.
+    // This child is potentially modified (or has saved state that must be
+    // updated), but is not currently loaded. Start loading it and create a
+    // CheckoutAction to process it once it is loaded.
     auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
     return make_unique<CheckoutAction>(
         ctx, oldScmEntry, newScmEntry, std::move(inodeFuture));
@@ -2418,9 +2426,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     conflictType = ConflictType::MODIFIED_MODIFIED;
   }
   if (conflictType != ConflictType::ERROR) {
-    // If this is are a directory we unfortunately have to load the directory
-    // and recurse into it just so we can accurately report the list of files
-    // with conflicts.
+    // If this is a directory we unfortunately have to load it and recurse into
+    // it just so we can accurately report the list of files with conflicts.
     if (entry.isDirectory()) {
       auto inodeFuture = loadChildLocked(contents, name, entry, pendingLoads);
       return make_unique<CheckoutAction>(
@@ -2439,6 +2446,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     return nullptr;
   }
 
+  auto oldEntryInodeNumber = entry.getInodeNumber();
+
   // Update the entry
   if (!newScmEntry) {
     // TODO: remove entry.getInodeNumber() from both the overlay and the
@@ -2453,9 +2462,22 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                   newScmEntry->getHash()};
   }
 
+  // Contents have changed and the entry is not materialized, but we may have
+  // allocated and remembered inode numbers for this tree.  It's much faster to
+  // simply forget the inode numbers we allocated here -- if we were a real
+  // filesystem, it's as if the entire subtree got deleted and checked out
+  // from scratch.  (Note: if anything uses Watchman and cares precisely about
+  // inode numbers, it could miss changes.)
+  if (!kPreciseInodeNumberMemory && entry.isDirectory()) {
+    XLOG(DBG5) << "recursively removing overlay data for "
+               << oldEntryInodeNumber << "(" << getLogPath() << " / " << name
+               << ")";
+    getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
+  }
+
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
-  // materialized correctly.
+  // materialized if necessary.
 
   // We removed or replaced an entry - invalidate it.
   auto* fuseChannel = getMount()->getFuseChannel();

@@ -256,6 +256,10 @@ void TestMount::resetCommit(
   edenMount_->resetParent(commitHash);
 }
 
+bool TestMount::hasOverlayData(InodeNumber ino) const {
+  return edenMount_->getOverlay()->hasOverlayData(ino);
+}
+
 void TestMount::setInitialCommit(Hash commitHash) {
   // Write the commit hash to the snapshot file
   auto snapshotPath = config_->getSnapshotPath();

@@ -722,6 +722,8 @@ void InodeMap::unloadInode(
     // have children again, so there's no need to write it into the overlay.
     // Data for unlinked, unreferenced inodes is deleted below anyway.
     if (!treeContentsLock->isMaterialized() && !isUnlinked) {
+      XLOG(DBG5) << "saving non-materialized tree " << asTree->getNodeId()
+                 << " (" << asTree->getLogPath() << ") to overlay";
       asTree->getOverlay()->saveOverlayDir(
           inode->getNodeId(), *treeContentsLock);
     }

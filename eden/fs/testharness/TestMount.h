@@ -260,6 +260,11 @@ class TestMount {
   void resetCommit(FakeTreeBuilder& builder, bool setReady);
   void resetCommit(Hash commitHash, FakeTreeBuilder& builder, bool setReady);
 
+  /**
+   * Returns true if the overlay contains a file for this inode.
+   */
+  bool hasOverlayData(InodeNumber inodeNumber) const;
+
  private:
   void initTestDirectory();
   void setInitialCommit(Hash commitHash);

@@ -60,6 +60,16 @@ class Overlay {
   void removeOverlayData(InodeNumber inodeNumber);
 
   /**
+   * Remove the overlay data for the given tree inode and recursively remove
+   * everything beneath it too.
+   *
+   * Must only be called on trees.
+   */
+  void recursivelyRemoveOverlayData(InodeNumber inodeNumber);
+
+  bool hasOverlayData(InodeNumber inodeNumber);
+
+  /**
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header
    * populates st_atim, st_mtim, st_ctim and returns the file.

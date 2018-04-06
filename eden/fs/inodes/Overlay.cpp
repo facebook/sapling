@@ -303,6 +303,49 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   }
 }
 
+void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
+  std::queue<InodeNumber> queue;
+  queue.push(inodeNumber);
+
+  while (!queue.empty()) {
+    auto ino = queue.front();
+    queue.pop();
+
+    // This could be done more efficiently.
+    InodeTimestamps dummy;
+    auto dirData = deserializeOverlayDir(ino, dummy);
+    if (!dirData.hasValue()) {
+      XLOG(DBG2) << "no dir data for inode " << ino;
+      continue;
+    }
+    const auto& dir = dirData.value();
+
+    for (auto& iter : dir.entries) {
+      const auto& value = iter.second;
+      if (S_ISDIR(value.mode) && value.inodeNumber) {
+        queue.push(InodeNumber::fromThrift(value.inodeNumber));
+      }
+    }
+
+    XLOG(DBG3) << "removing overlay data for inode " << ino;
+    removeOverlayData(ino);
+  }
+}
+
+bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
+  // TODO: It might be worth maintaining a memory-mapped set to rapidly
+  // query whether the overlay has an entry for a particular inode.  As it is,
+  // this function requires a syscall to see if the overlay has an entry.
+  InodePath path;
+  getFilePath(inodeNumber, path);
+  struct stat st;
+  if (0 == fstatat(dirFile_.fd(), path.data(), &st, AT_SYMLINK_NOFOLLOW)) {
+    return S_ISREG(st.st_mode);
+  } else {
+    return false;
+  }
+}
+
 InodeNumber Overlay::getMaxRecordedInode() {
   // TODO: We should probably store the max inode number in the header file
   // during graceful unmount.  When opening an overlay we can then simply read
