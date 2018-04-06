@@ -18,9 +18,9 @@ use mercurial_types::nodehash::EntryId;
 
 pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
-pub fn make_file<C: AsRef<str>>(content: C) -> ContentFactory {
-    let content = content.as_ref().to_owned().into_bytes();
-    Arc::new(move || Content::File(Blob::Dirty(Bytes::from(content.clone()))))
+pub fn make_file<C: Into<Bytes>>(content: C) -> ContentFactory {
+    let content = content.into();
+    Arc::new(move || Content::File(Blob::Dirty(content.clone())))
 }
 
 #[derive(Clone)]
