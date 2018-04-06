@@ -41,6 +41,9 @@ Test empty journal
   $ hg journal foo
   previous locations of 'foo':
   no recorded locations
+  $ hg journal -Tjson 2> /dev/null
+  [
+  ]
 
 Test that working copy changes are tracked
 

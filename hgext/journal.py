@@ -513,5 +513,5 @@ def journal(ui, repo, *args, **opts):
 
     fm.end()
 
-    if entry is None:
+    if entry is None and not opts.get("template"):
         ui.status(_("no recorded locations\n"))
