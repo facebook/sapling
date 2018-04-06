@@ -56,7 +56,8 @@ use std::thread;
 use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets, SqliteChangesets};
 use clap::{App, Arg, ArgMatches};
-use dieselfilenodes::{SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
+use db::{get_connection_params, InstanceRequirement, ProxyRequirement};
+use dieselfilenodes::{MysqlFilenodes, SqliteFilenodes, DEFAULT_INSERT_CHUNK_SIZE};
 use failure::{Error, Result, ResultExt, SlogKVError};
 use filenodes::{FilenodeInfo, Filenodes};
 use futures::{stream, Future, IntoFuture, Stream};
@@ -120,6 +121,7 @@ fn run_blobimport<In, Out>(
     commits_limit: Option<u64>,
     max_blob_size: Option<usize>,
     inmemory_logs_capacity: Option<usize>,
+    xdb_tier: Option<In>,
 ) -> Result<()>
 where
     In: Into<PathBuf>,
@@ -192,12 +194,11 @@ where
         .name("filenodeinserts".to_owned())
         .spawn({
             let output = output.clone();
+            let xdb_tier = xdb_tier.map(|tier| tier.into()).clone();
             move || {
                 let mut core = Core::new().expect("cannot create core in iothread");
-                let filenodes = SqliteFilenodes::create(
-                    output.into().join("filenodes").to_string_lossy(),
-                    DEFAULT_INSERT_CHUNK_SIZE,
-                ).expect("cannot connect to mysql filenodes");
+                let filenodes = open_filenodes_store(output.into(), xdb_tier)
+                    .expect("cannot open filenodes store");
                 let insert_filenodes = filenodes.add_filenodes(
                     filenodes_receiver
                         .map_err(|()| failure::err_msg("failed to receive filenodes"))
@@ -277,6 +278,30 @@ fn open_changesets_store(mut output: PathBuf) -> Result<Arc<Changesets>> {
     Ok(Arc::new(SqliteChangesets::create(
         output.to_string_lossy(),
     )?))
+}
+
+fn open_filenodes_store(mut output: PathBuf, xdb_tier: Option<PathBuf>) -> Result<Arc<Filenodes>> {
+    match xdb_tier {
+        Some(tier) => {
+            let connection_params = get_connection_params(
+                tier.to_string_lossy(),
+                InstanceRequirement::Master,
+                None,
+                Some(ProxyRequirement::Forbidden),
+            ).expect("cannot create ConnectionParams");
+            Ok(Arc::new(MysqlFilenodes::open(
+                connection_params,
+                DEFAULT_INSERT_CHUNK_SIZE,
+            )?))
+        }
+        None => {
+            output.push("filenodes");
+            Ok(Arc::new(SqliteFilenodes::create(
+                output.to_string_lossy(),
+                DEFAULT_INSERT_CHUNK_SIZE,
+            )?))
+        }
+    }
 }
 
 fn open_repo<P: Into<PathBuf>>(
@@ -405,6 +430,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             --commits-limit [LIMIT]  'import only LIMIT first commits from revlog repo'
             --max-blob-size [LIMIT]  'max size of the blob to be inserted'
             --inmemory-logs-capacity [CAPACITY]  'max number of filelogs and treelogs in memory'
+            --xdb-tier [TIER]        'string that specifies a mysql tier used to store data'
         "#,
         )
         .arg(
@@ -532,6 +558,7 @@ fn main() {
                     .parse()
                     .expect("inmemory_logs_capacity must be positive integer")
             }),
+            matches.value_of("xdb-tier"),
         )?;
 
         if matches.value_of("blobstore").unwrap() == "rocksdb" && postpone_compaction {
