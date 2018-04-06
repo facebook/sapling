@@ -744,7 +744,11 @@ impl HgCommands for RepoClient {
                 })
                 .boxify()
         } else {
-            info!(self.get_logger(), "unsupported listkeys namespace: {}", namespace);
+            info!(
+                self.get_logger(),
+                "unsupported listkeys namespace: {}",
+                namespace
+            );
             future::ok(HashMap::new()).boxify()
         }
     }
