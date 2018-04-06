@@ -458,7 +458,7 @@ class chgcmdserver(commandserver.server):
         """
         l = self._readlist()
         try:
-            newenv = dict(s.split('=', 1) for s in l)
+            newenv = dict(s.split('=', 1) for s in l if '=' in s)
         except ValueError:
             raise ValueError('unexpected value in setenv request')
         _log('setenv: %r\n' % sorted(newenv.keys()))
