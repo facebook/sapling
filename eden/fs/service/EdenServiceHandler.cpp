@@ -493,14 +493,34 @@ folly::Optional<mode_t> EdenServiceHandler::isInManifestAsFile(
 folly::Future<std::unique_ptr<ScmStatus>>
 EdenServiceHandler::future_getScmStatus(
     std::unique_ptr<std::string> mountPoint,
-    bool listIgnored) {
+    bool listIgnored,
+    std::unique_ptr<std::string> commitHash) {
   auto helper = INSTRUMENT_THRIFT_CALL(
       folly::LogLevel::DBG2,
       *mountPoint,
-      folly::format("listIgnored={}", listIgnored ? "true" : "false"));
+      folly::format(
+          "listIgnored={}, commitHash={}",
+          listIgnored ? "true" : "false",
+          *commitHash));
 
   auto mount = server_->getMount(*mountPoint);
-  return helper->wrapFuture(diffMountForStatus(mount.get(), listIgnored));
+  Hash hash;
+  if (commitHash->empty()) {
+    // Older clients did not send the commit hash, and expected us to diff
+    // against what we currently believe to be the root commit.
+    //
+    // This is problematic since there are potential race conditions if a
+    // commit/checkout was just performed and eden diffs against a different
+    // commit than what the client was expecting.
+    //
+    // For now we still support this old behavior, but we should drop support
+    // for this once the changes to the client-side code have been fully
+    // deployed.
+    hash = mount->getParentCommits().parent1();
+  } else {
+    hash = hashFromThrift(*commitHash);
+  }
+  return helper->wrapFuture(diffMountForStatus(mount.get(), hash, listIgnored));
 }
 
 folly::Future<std::unique_ptr<ScmStatus>>

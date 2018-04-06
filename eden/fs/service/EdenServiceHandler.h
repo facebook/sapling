@@ -95,7 +95,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatus(
       std::unique_ptr<std::string> mountPoint,
-      bool listIgnored) override;
+      bool listIgnored,
+      std::unique_ptr<std::string> commitHash) override;
 
   folly::Future<std::unique_ptr<ScmStatus>> future_getScmStatusBetweenRevisions(
       std::unique_ptr<std::string> mountPoint,

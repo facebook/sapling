@@ -169,13 +169,16 @@ class DiffTest {
                             mount_.getEdenMount()->getObjectStore(),
                             systemWideIgnoreFileContents,
                             userIgnoreFileContents};
-    auto diffFuture = mount_.getEdenMount()->diff(&diffContext);
+    auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
+    auto diffFuture = mount_.getEdenMount()->diff(&diffContext, commitHash);
     EXPECT_FUTURE_RESULT(diffFuture);
     return callback.extractResults();
   }
   folly::Future<DiffResults> diffFuture(bool listIgnored = false) {
     auto callback = std::make_unique<DiffResultsCallback>();
-    auto diffFuture = mount_.getEdenMount()->diff(callback.get(), listIgnored);
+    auto commitHash = mount_.getEdenMount()->getParentCommits().parent1();
+    auto diffFuture =
+        mount_.getEdenMount()->diff(callback.get(), commitHash, listIgnored);
     return diffFuture.then([callback = std::move(callback)]() {
       return callback->extractResults();
     });

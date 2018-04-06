@@ -562,21 +562,24 @@ std::unique_ptr<DiffContext> EdenMount::createDiffContext(
       callback, listIgnored, getObjectStore(), serverState_->getUserInfo());
 }
 
-Future<Unit> EdenMount::diff(const DiffContext* ctxPtr) const {
+Future<Unit> EdenMount::diff(const DiffContext* ctxPtr, Hash commitHash) const {
   auto rootInode = getRootInode();
-  return getRootTreeFuture().then([ctxPtr, rootInode = std::move(rootInode)](
-                                      std::shared_ptr<const Tree>&& rootTree) {
-    return rootInode->diff(
-        ctxPtr,
-        RelativePathPiece{},
-        std::move(rootTree),
-        ctxPtr->getToplevelIgnore(),
-        false);
-  });
+  return objectStore_->getTreeForCommit(commitHash)
+      .then([ctxPtr, rootInode = std::move(rootInode)](
+                std::shared_ptr<const Tree>&& rootTree) {
+        return rootInode->diff(
+            ctxPtr,
+            RelativePathPiece{},
+            std::move(rootTree),
+            ctxPtr->getToplevelIgnore(),
+            false);
+      });
 }
 
-Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
-    const {
+Future<Unit> EdenMount::diff(
+    InodeDiffCallback* callback,
+    Hash commitHash,
+    bool listIgnored) const {
   // Create a DiffContext object for this diff operation.
   auto context = createDiffContext(callback, listIgnored);
   const DiffContext* ctxPtr = context.get();
@@ -585,7 +588,7 @@ Future<Unit> EdenMount::diff(InodeDiffCallback* callback, bool listIgnored)
   // exists until the diff completes.
   auto stateHolder = [ctx = std::move(context)]() {};
 
-  return diff(ctxPtr).ensure(std::move(stateHolder));
+  return diff(ctxPtr, commitHash).ensure(std::move(stateHolder));
 }
 
 void EdenMount::resetParents(const ParentCommits& parents) {

@@ -436,12 +436,15 @@ service EdenService extends fb303.FacebookService {
 
 
   /**
+   * Get the status of the working directory against the specified commit.
+   *
    * This may exclude special files according to the rules of the underlying
    * SCM system, such as the .git folder in Git and the .hg folder in Mercurial.
    */
   ScmStatus getScmStatus(
     1: string mountPoint,
     2: bool listIgnored,
+    3: BinaryHash commit,
   ) throws (1: EdenError ex)
 
   /**

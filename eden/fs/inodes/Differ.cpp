@@ -100,12 +100,11 @@ std::ostream& operator<<(std::ostream& os, const ScmStatus& status) {
   return os;
 }
 
-folly::Future<std::unique_ptr<ScmStatus>> diffMountForStatus(
-    const EdenMount* mount,
-    bool listIgnored) {
+folly::Future<std::unique_ptr<ScmStatus>>
+diffMountForStatus(const EdenMount* mount, Hash commitHash, bool listIgnored) {
   auto callback = std::make_unique<ThriftStatusCallback>();
   auto callbackPtr = callback.get();
-  return mount->diff(callbackPtr, listIgnored)
+  return mount->diff(callbackPtr, commitHash, listIgnored)
       .then([callback = std::move(callback)]() {
         return std::make_unique<ScmStatus>(callback->extractStatus());
       });

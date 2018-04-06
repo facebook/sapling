@@ -302,7 +302,8 @@ class EdenMount {
    * The caller must ensure that the DiffContext object ctsPtr points to
    * exists at least until the returned Future completes.
    */
-  folly::Future<folly::Unit> diff(const DiffContext* ctxPtr) const;
+  folly::Future<folly::Unit> diff(const DiffContext* ctxPtr, Hash commitHash)
+      const;
 
   /**
    * Compute differences between the current commit and the working directory
@@ -322,6 +323,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> diff(
       InodeDiffCallback* callback,
+      Hash commitHash,
       bool listIgnored = false) const;
 
   /**
