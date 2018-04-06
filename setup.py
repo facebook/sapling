@@ -889,7 +889,6 @@ packages = ['mercurial',
 common_depends = ['mercurial/bitmanipulation.h',
                   'mercurial/compat.h',
                   'mercurial/cext/util.h']
-common_include_dirs = ['.']
 
 def get_env_path_list(var_name, default=None):
     '''Get a path list from an environment variable.  The variable is parsed as
@@ -929,6 +928,7 @@ if include_dirs is None:
             '/opt/local/include',
             '/opt/homebrew/include/',
         ])
+include_dirs = ['.'] + include_dirs
 
 library_dirs = get_env_path_list('LIBRARY_DIRS')
 if library_dirs is None:
@@ -970,18 +970,18 @@ if sys.platform == 'darwin':
 
 extmodules = [
     Extension('mercurial.cext.base85', ['mercurial/cext/base85.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               depends=common_depends),
     Extension('mercurial.cext.bdiff', ['mercurial/bdiff.c',
                                        'mercurial/cext/bdiff.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               depends=common_depends + ['mercurial/bdiff.h']),
     Extension('mercurial.cext.diffhelpers', ['mercurial/cext/diffhelpers.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               depends=common_depends),
     Extension('mercurial.cext.mpatch', ['mercurial/mpatch.c',
                                         'mercurial/cext/mpatch.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               depends=common_depends),
     Extension('mercurial.cext.parsers', ['mercurial/cext/charencode.c',
                                          'mercurial/cext/dirs.c',
@@ -989,10 +989,10 @@ extmodules = [
                                          'mercurial/cext/parsers.c',
                                          'mercurial/cext/pathencode.c',
                                          'mercurial/cext/revlog.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               depends=common_depends + ['mercurial/cext/charencode.h']),
     Extension('mercurial.cext.osutil', ['mercurial/cext/osutil.c'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               extra_compile_args=osutil_cflags,
               extra_link_args=osutil_ldflags,
               depends=common_depends),
@@ -1005,7 +1005,7 @@ extmodules = [
                   'lib/third-party/xdiff/xutils.c',
                   'mercurial/cext/xdiff.c',
               ],
-              include_dirs=common_include_dirs + [
+              include_dirs=include_dirs + [
                   'lib/third-party/xdiff',
               ],
               depends=common_depends + [
@@ -1037,7 +1037,7 @@ if not iswindows:
                 'hgext/extlib/ctreemanifest/manifest_ptr.cpp',
                 'hgext/extlib/ctreemanifest/treemanifest.cpp',
             ],
-            include_dirs=common_include_dirs,
+            include_dirs=include_dirs,
             library_dirs=[
                 'build/' + distutils_dir_name('lib'),
             ] + library_dirs,
@@ -1064,7 +1064,7 @@ if not iswindows:
                      'hgext/extlib/cfastmanifest/tree_iterator.c',
                      'hgext/extlib/cfastmanifest/tree_path.c',
             ],
-            include_dirs=common_include_dirs,
+            include_dirs=include_dirs,
             library_dirs=library_dirs,
             libraries=[SHA1_LIBRARY],
             extra_compile_args=filter(None, [
@@ -1094,11 +1094,11 @@ extmodules += cythonize([
               extra_compile_args=filter(None, [PRODUCEDEBUGSYMBOLS])),
     Extension('hgext.traceprof',
               sources=['hgext/traceprof.pyx'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS])),
     Extension('hgext.extlib.linelog',
               sources=['hgext/extlib/linelog.pyx'],
-              include_dirs=common_include_dirs,
+              include_dirs=include_dirs,
               extra_compile_args=filter(None, [STDC99, PRODUCEDEBUGSYMBOLS])),
 ], compiler_directives=cythonopts)
 
