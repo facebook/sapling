@@ -187,13 +187,15 @@ class sqlindexapi(indexapi):
         """
         if not self._connected:
             self.sqlconnect()
+
+        # build and execute detete query
         self.log.info("DELETE BOOKMARKS: %s" % patterns)
-        for pattern in patterns:
-            pattern = _convertbookmarkpattern(pattern)
-            self.sqlcursor.execute(
-                "DELETE from bookmarkstonode WHERE bookmark LIKE (%s) "
-                "and reponame = %s",
-                params=(pattern, self.reponame))
+        patterns = [_convertbookmarkpattern(pattern) for pattern in patterns]
+        condition1 = 'reponame = %s'
+        condition2 = ' OR '.join(('bookmark LIKE (%s)',) * len(patterns))
+        query = 'DELETE FROM bookmarkstonode WHERE (%s) AND (%s)' % (
+                 condition1, condition2)
+        self.sqlcursor.execute(query, params=[self.reponame] + patterns)
 
     def getbundle(self, node):
         """Returns the bundleid for the bundle that contains the given node."""
