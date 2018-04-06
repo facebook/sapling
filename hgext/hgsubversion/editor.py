@@ -207,6 +207,7 @@ class HgEditor(svnwrap.Editor):
         # A map from directory baton to path
         self._opendirs = {}
         self._missing = set()
+        self._manifestfiles = None
 
     def _openfile(self, path, data, isexec, islink, copypath, create=False):
         if path in self._openpaths:
@@ -267,6 +268,19 @@ class HgEditor(svnwrap.Editor):
                 self._deleted.discard(f)
                 self._missing.add(f)
 
+    def get_files_in_dir(self, ctx, dir):
+        assert dir == '' or dir.endswith('/')
+        if self._manifestfiles is None:
+            self._manifestfiles = ctx.manifest().text().splitlines()
+
+        files = self._manifestfiles
+        import bisect
+        cur = bisect.bisect_left(files, dir)
+
+        while cur < len(files) and files[cur].startswith(dir):
+            yield files[cur].split('\0')[0]
+            cur += 1
+
     @svnwrap.ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
         self._checkparentdir(parent_baton)
@@ -303,7 +317,8 @@ class HgEditor(svnwrap.Editor):
                     br_path2 = br_path + '/'
                 # assuming it is a directory
                 self.current.externals[path] = None
-                for f in ctx.walk(util.PrefixMatch(br_path2)):
+
+                for f in self.get_files_in_dir(ctx, br_path2):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     self._deletefile(f_p)
             self._deletefile(path)

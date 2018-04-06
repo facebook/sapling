@@ -232,34 +232,6 @@ def parseurl(url, heads=None):
         checkout = heads[0]
     return svn_url, heads, checkout
 
-class PrefixMatch(object):
-    def __init__(self, prefix):
-        self.p = prefix
-
-    def files(self):
-        return []
-
-    def __call__(self, fn):
-        return fn.startswith(self.p)
-
-    def bad(self, f, msg):
-        pass
-
-    def always(self):
-        return False
-
-    def isexact(self):
-        return False
-
-    def anypats(self):
-        return True
-
-    def prefix(self):
-        return False
-
-    def visitdir(self, _dir):
-        return True
-
 def outgoing_revisions(repo, reverse_map, sourcerev):
     """Given a repo and an hg_editor, determines outgoing revisions for the
     current working copy state.
