@@ -30,8 +30,8 @@ use bytes::Bytes;
 use futures::Future;
 
 use blobrepo::{compute_changed_files, BlobRepo};
-use mercurial_types::{manifest, Blob, Changeset, Entry, EntryId, HgChangesetId, HgManifestId,
-                      MPath, MPathElement, RepoPath};
+use mercurial_types::{manifest, Blob, Changeset, Entry, EntryId, FileType, HgChangesetId,
+                      HgManifestId, MPath, MPathElement, RepoPath};
 
 mod stats_units;
 #[macro_use]
@@ -56,7 +56,7 @@ fn upload_blob_no_parents(repo: BlobRepo) {
     let (entry, path) = run_future(future).unwrap();
     assert!(path == fake_path);
     assert!(entry.get_hash() == &EntryId::new(expected_hash));
-    assert!(entry.get_type() == manifest::Type::File);
+    assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
@@ -96,7 +96,7 @@ fn upload_blob_one_parent(repo: BlobRepo) {
 
     assert!(path == fake_path);
     assert!(entry.get_hash() == &EntryId::new(expected_hash));
-    assert!(entry.get_type() == manifest::Type::File);
+    assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );

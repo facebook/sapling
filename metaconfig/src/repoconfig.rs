@@ -233,7 +233,7 @@ mod test {
 
     use std::sync::Arc;
 
-    use mercurial_types::Type;
+    use mercurial_types::{FileType, Type};
     use mercurial_types_mocks::manifest::{make_file, MockManifest};
 
     #[test]
@@ -253,19 +253,27 @@ mod test {
         "#;
 
         let my_path_manifest = MockManifest::with_content(vec![
-            ("my_files", Arc::new(|| unimplemented!()), Type::File),
+            (
+                "my_files",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
         ]);
 
         let repos_manifest = MockManifest::with_content(vec![
-            ("fbsource", make_file(fbsource_content), Type::File),
-            ("www", make_file(www_content), Type::File),
+            (
+                "fbsource",
+                make_file(fbsource_content),
+                Type::File(FileType::Regular),
+            ),
+            ("www", make_file(www_content), Type::File(FileType::Regular)),
         ]);
 
         let repoconfig = RepoConfigs::read_manifest(&MockManifest::with_content(vec![
             (
                 "my_path",
                 Arc::new(move || Content::Tree(Box::new(my_path_manifest.clone()))),
-                Type::File,
+                Type::File(FileType::Regular),
             ),
             (
                 "repos",

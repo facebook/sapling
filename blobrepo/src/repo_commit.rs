@@ -134,9 +134,7 @@ impl UploadEntries {
                             }
                         };
                         let path = match entry.get_type() {
-                            manifest::Type::File
-                            | manifest::Type::Symlink
-                            | manifest::Type::Executable => RepoPath::FilePath(mpath),
+                            manifest::Type::File(_) => RepoPath::FilePath(mpath),
                             manifest::Type::Tree => RepoPath::DirectoryPath(mpath),
                         };
                         let mut inner = inner_mutex.lock().expect("Lock poisoned");

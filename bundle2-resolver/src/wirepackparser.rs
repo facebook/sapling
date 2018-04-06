@@ -210,7 +210,7 @@ mod test {
 
     use mercurial::manifest::Details;
     use mercurial::mocks as nodehash_mocks;
-    use mercurial_types::MPath;
+    use mercurial_types::{FileType, MPath};
     use mercurial_types::manifest::Type;
 
     #[test]
@@ -303,7 +303,7 @@ mod test {
                 MPath::new("test_dir/test_file").unwrap() =>
                 Details::new(
                     mercurial::EntryId::new(nodehash_mocks::ONES_HASH),
-                    Type::File,
+                    Type::File(FileType::Regular),
                 ),
                 MPath::new("test_dir2/test_manifest").unwrap() =>
                 Details::new(

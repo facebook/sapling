@@ -10,7 +10,7 @@ use failure::Error;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
-use mononoke_types::{MPath, MPathElement};
+use mononoke_types::{FileType, MPath, MPathElement};
 
 use blob::Blob;
 use blobnode::Parents;
@@ -127,19 +127,17 @@ impl Manifest for Box<Manifest> {
 /// Tree is a reference to another Manifest (directory-like) object.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 pub enum Type {
-    File,
-    Symlink,
+    File(FileType),
     Tree,
-    Executable,
 }
 
 impl Display for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
-            &Type::Symlink => "l",
-            &Type::Executable => "x",
-            &Type::Tree => "t",
-            &Type::File => "",
+        let s = match *self {
+            Type::Tree => "t",
+            Type::File(FileType::Symlink) => "l",
+            Type::File(FileType::Executable) => "x",
+            Type::File(FileType::Regular) => "",
         };
         write!(fmt, "{}", s)
     }

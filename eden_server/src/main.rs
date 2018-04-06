@@ -67,7 +67,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_stats::{Stats, Timed};
 use hyper::StatusCode;
 use hyper::server::{Http, Request, Response, Service};
-use mercurial_types::{Changeset, NodeHash, RepositoryId};
+use mercurial_types::{Changeset, FileType, NodeHash, RepositoryId};
 use mercurial_types::nodehash::HgChangesetId;
 use native_tls::TlsAcceptor;
 use native_tls::backend::openssl::TlsAcceptorBuilderExt;
@@ -167,12 +167,33 @@ lazy_static! {
     };
 }
 
+// Earlier versions of mercurial_types::Type had the same definition as MetadataType. These
+// instances would get serialized and sent over the JSON API. Convert to this private enum
+// to keep the API the same.
+#[derive(Clone, Copy, Debug, Serialize)]
+enum MetadataType {
+    File,
+    Executable,
+    Symlink,
+    Tree,
+}
+
+impl From<mercurial_types::Type> for MetadataType {
+    fn from(ty: mercurial_types::Type) -> Self {
+        match ty {
+            mercurial_types::Type::File(FileType::Regular) => MetadataType::File,
+            mercurial_types::Type::File(FileType::Symlink) => MetadataType::Symlink,
+            mercurial_types::Type::File(FileType::Executable) => MetadataType::Executable,
+            mercurial_types::Type::Tree => MetadataType::Tree,
+        }
+    }
+}
 #[derive(Serialize)]
 struct TreeMetadata {
     hash: NodeHash,
     path: PathBuf,
     #[serde(rename = "type")]
-    ty: mercurial_types::Type,
+    ty: MetadataType,
     size: Option<usize>,
 }
 
@@ -186,7 +207,7 @@ impl TreeMetadata {
         TreeMetadata {
             hash: entry.get_hash().into_nodehash().clone(),
             path: PathBuf::from(OsString::from_vec(Vec::from(name))),
-            ty: entry.get_type(),
+            ty: entry.get_type().into(),
             size,
         }
     }

@@ -14,7 +14,7 @@ use futures::future::{Future, IntoFuture};
 use futures::stream::{self, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
-use mercurial_types::{Entry, MPathElement, Manifest, Type};
+use mercurial_types::{Entry, FileType, MPathElement, Manifest, Type};
 use mercurial_types::nodehash::{EntryId, HgManifestId, NodeHash, NULL_HASH};
 
 use blobstore::Blobstore;
@@ -188,11 +188,11 @@ impl Details {
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
         let flag = if flags.len() == 0 {
-            Type::File
+            Type::File(FileType::Regular)
         } else {
             match flags[0] {
-                b'l' => Type::Symlink,
-                b'x' => Type::Executable,
+                b'l' => Type::File(FileType::Symlink),
+                b'x' => Type::File(FileType::Executable),
                 b't' => Type::Tree,
                 unk => bail_msg!("Unknown flag {}", unk),
             }

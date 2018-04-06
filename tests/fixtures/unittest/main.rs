@@ -17,7 +17,7 @@ extern crate mercurial_types;
 use ascii::AsciiString;
 use bytes::Bytes;
 use futures::executor::spawn;
-use mercurial_types::{Changeset, MPathElement};
+use mercurial_types::{Changeset, FileType, MPathElement};
 use mercurial_types::manifest::{Content, Type};
 use mercurial_types::nodehash::{HgChangesetId, NodeHash};
 
@@ -102,7 +102,7 @@ fn check_head_has_file() {
             .wait_future()
             .expect("Can't fetch file")
             .expect("Can't read file");
-        assert!(files.get_type() == Type::File);
+        assert!(files.get_type() == Type::File(FileType::Regular));
         let content_future = files.get_content();
         let content = spawn(content_future)
             .wait_future()

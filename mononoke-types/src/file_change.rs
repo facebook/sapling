@@ -112,6 +112,14 @@ impl Arbitrary for FileChange {
     }
 }
 
+/// Type of a file.
+///
+/// Regular and Executable are identical - they both represent files containing arbitrary content.
+/// The only difference is that the Executables are created with executable permission when
+/// checked out.
+///
+/// Symlink is also the same as Regular, but the content of the file is interpolated into a path
+/// being traversed during lookup.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize)]
 pub enum FileType {
     Regular,

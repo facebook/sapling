@@ -107,7 +107,7 @@ pub use utils::percent_encode;
 
 // Re-exports from mononoke-types. Eventually these should go away and everything should depend
 // directly on mononoke-types;
-pub use mononoke_types::{MPath, MPathElement, RepoPath};
+pub use mononoke_types::{FileType, MPath, MPathElement, RepoPath};
 
 pub use errors::{Error, ErrorKind};
 

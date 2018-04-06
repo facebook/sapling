@@ -156,7 +156,7 @@ fn upload_entry(
     };
     let path = match ty {
         Type::Tree => RepoPath::DirectoryPath(path),
-        Type::File | Type::Symlink | Type::Executable => RepoPath::FilePath(path),
+        Type::File(_) => RepoPath::FilePath(path),
     };
 
     let content = entry.get_raw_content().and_then(move |content| {

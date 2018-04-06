@@ -19,7 +19,7 @@ use quickcheck::{Arbitrary, Gen};
 use blobrepo::{BlobEntry, BlobRepo};
 use mercurial;
 use mercurial_bundles::changegroup::CgDeltaChunk;
-use mercurial_types::{delta, manifest, Blob, Delta, MPath, NodeHash, RepoPath};
+use mercurial_types::{delta, manifest, Blob, Delta, FileType, MPath, NodeHash, RepoPath};
 
 use errors::*;
 use stats::*;
@@ -50,8 +50,13 @@ impl UploadableBlob for Filelog {
         let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
         let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
 
-        repo.upload_entry(self.blob, manifest::Type::File, p1, p2, path.clone())
-            .map(move |(_node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
+        repo.upload_entry(
+            self.blob,
+            manifest::Type::File(FileType::Regular),
+            p1,
+            p2,
+            path.clone(),
+        ).map(move |(_node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
     }
 }
 

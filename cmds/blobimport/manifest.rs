@@ -91,10 +91,9 @@ pub(crate) fn get_entry_stream(
                 "internal error: joined root path with root manifest",
             ))).boxify();
         }
-        Some(path) => if entry.get_type() == Type::Tree {
-            RepoPath::DirectoryPath(path.clone())
-        } else {
-            RepoPath::FilePath(path.clone())
+        Some(path) => match entry.get_type() {
+            Type::Tree => RepoPath::DirectoryPath(path.clone()),
+            Type::File(_) => RepoPath::FilePath(path.clone()),
         },
     };
     let revlog = revlog_repo.get_path_revlog(&repopath);
@@ -119,9 +118,7 @@ pub(crate) fn get_entry_stream(
     }
 
     match entry.get_type() {
-        Type::File | Type::Executable | Type::Symlink => {
-            futures::stream::once(Ok((entry, repopath))).boxify()
-        }
+        Type::File(_) => futures::stream::once(Ok((entry, repopath))).boxify(),
         Type::Tree => entry
             .get_content()
             .and_then(|content| match content {

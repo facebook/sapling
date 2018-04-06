@@ -185,7 +185,7 @@ mod test {
     use super::*;
     use test::*;
 
-    use mercurial_types::MPath;
+    use mercurial_types::{FileType, MPath};
     use mercurial_types_mocks::manifest::MockManifest;
     use node::VfsWalker;
 
@@ -216,17 +216,38 @@ mod test {
 
     fn example_vfs() -> ManifestVfsDir {
         let a_manifest = MockManifest::with_content(vec![
-            ("b", Arc::new(|| unimplemented!()), Type::File),
-            ("ab", Arc::new(|| unimplemented!()), Type::File),
+            (
+                "b",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
+            (
+                "ab",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
         ]);
 
         let d_manifest = MockManifest::with_content(vec![
-            ("e", Arc::new(|| unimplemented!()), Type::File),
-            ("da", Arc::new(|| unimplemented!()), Type::File),
+            (
+                "e",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
+            (
+                "da",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
         ]);
 
-        let ca_manifest =
-            MockManifest::with_content(vec![("afsd", Arc::new(|| unimplemented!()), Type::File)]);
+        let ca_manifest = MockManifest::with_content(vec![
+            (
+                "afsd",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
+        ]);
 
         let c_manifest = MockManifest::with_content(vec![
             (
@@ -252,7 +273,11 @@ mod test {
                 Arc::new(move || Content::Tree(Box::new(c_manifest.clone()))),
                 Type::Tree,
             ),
-            ("f", Arc::new(|| unimplemented!()), Type::File),
+            (
+                "f",
+                Arc::new(|| unimplemented!()),
+                Type::File(FileType::Regular),
+            ),
         ]);
 
         vfs_from_manifest(&root_manifest)

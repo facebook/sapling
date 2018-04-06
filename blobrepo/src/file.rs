@@ -13,7 +13,8 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 
 use mercurial::file;
-use mercurial_types::{Blob, BlobNode, HgManifestId, MPath, MPathElement, NodeHash, Parents};
+use mercurial_types::{Blob, BlobNode, FileType, HgManifestId, MPath, MPathElement, NodeHash,
+                      Parents};
 use mercurial_types::manifest::{Content, Entry, Manifest, Type};
 use mercurial_types::nodehash::EntryId;
 
@@ -139,9 +140,9 @@ impl Entry for BlobEntry {
                         bytes.slice_from(off)
                     };
                     let res = match ty {
-                        Type::File => Content::File(Blob::from(blob)),
-                        Type::Executable => Content::Executable(Blob::from(blob)),
-                        Type::Symlink => Content::Symlink(MPath::new(blob)?),
+                        Type::File(FileType::Regular) => Content::File(Blob::from(blob)),
+                        Type::File(FileType::Executable) => Content::Executable(Blob::from(blob)),
+                        Type::File(FileType::Symlink) => Content::Symlink(MPath::new(blob)?),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
 

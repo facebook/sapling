@@ -222,7 +222,7 @@ pub fn recursive_entry_stream(
     entry: Box<Entry + Sync>,
 ) -> BoxStream<(Option<MPath>, Box<Entry + Sync>), Error> {
     let subentries = match entry.get_type() {
-        Type::File | Type::Symlink | Type::Executable => empty().boxify(),
+        Type::File(_) => empty().boxify(),
         Type::Tree => {
             let entry_basename = entry.get_name();
             let path = MPath::join_opt(rootpath.as_ref(), entry_basename);

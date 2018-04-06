@@ -23,7 +23,7 @@ use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
 use futures::future;
-use mercurial_types::{Changeset, Entry, MPath, Manifest, RepoPath, Type, NULL_HASH};
+use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
                                       EntryStatus};
@@ -81,8 +81,8 @@ fn count_entries(entries: &Vec<ChangedEntry>) -> (usize, usize, usize) {
 fn test_diff_sorted_vecs_simple() {
     let path = RepoPath::file("file.txt").unwrap();
 
-    let left_entry = get_entry(Type::File, get_hash('1'), path.clone());
-    let right_entry = get_entry(Type::File, get_hash('2'), path.clone());
+    let left_entry = get_entry(Type::File(FileType::Regular), get_hash('1'), path.clone());
+    let right_entry = get_entry(Type::File(FileType::Regular), get_hash('2'), path.clone());
     let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
     assert_eq!(res.len(), 1);
@@ -90,7 +90,7 @@ fn test_diff_sorted_vecs_simple() {
     assert_eq!(modified, 1);
 
     // With different types we should get added and deleted entries
-    let left_entry = get_entry(Type::File, get_hash('1'), path.clone());
+    let left_entry = get_entry(Type::File(FileType::Regular), get_hash('1'), path.clone());
     let right_entry = get_entry(Type::Tree, get_hash('2'), path.clone());
     let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
@@ -105,8 +105,8 @@ fn test_diff_sorted_vecs_added_deleted() {
     let left_path = RepoPath::file("file1.txt").unwrap();
     let right_path = RepoPath::file("file2.txt").unwrap();
 
-    let left_entry = get_entry(Type::File, get_hash('1'), left_path);
-    let right_entry = get_entry(Type::File, get_hash('2'), right_path);
+    let left_entry = get_entry(Type::File(FileType::Regular), get_hash('1'), left_path);
+    let right_entry = get_entry(Type::File(FileType::Regular), get_hash('2'), right_path);
     let res = diff_sorted_vecs(None, vec![left_entry], vec![right_entry]);
 
     assert_eq!(res.len(), 2);
@@ -121,9 +121,17 @@ fn test_diff_sorted_vecs_one_added_one_same() {
         let left_path_first = RepoPath::file("a.txt").unwrap();
         let path_second = RepoPath::file("file.txt").unwrap();
 
-        let left_entry_first = get_entry(Type::File, get_hash('1'), left_path_first);
-        let left_entry_second = get_entry(Type::File, get_hash('2'), path_second.clone());
-        let right_entry = get_entry(Type::File, get_hash('2'), path_second);
+        let left_entry_first = get_entry(
+            Type::File(FileType::Regular),
+            get_hash('1'),
+            left_path_first,
+        );
+        let left_entry_second = get_entry(
+            Type::File(FileType::Regular),
+            get_hash('2'),
+            path_second.clone(),
+        );
+        let right_entry = get_entry(Type::File(FileType::Regular), get_hash('2'), path_second);
 
         let res = diff_sorted_vecs(
             None,
@@ -141,9 +149,17 @@ fn test_diff_sorted_vecs_one_added_one_same() {
         let path_first = RepoPath::file("file.txt").unwrap();
         let left_path_second = RepoPath::file("z.txt").unwrap();
 
-        let left_entry_first = get_entry(Type::File, get_hash('1'), path_first.clone());
-        let left_entry_second = get_entry(Type::File, get_hash('2'), left_path_second);
-        let right_entry = get_entry(Type::File, get_hash('1'), path_first);
+        let left_entry_first = get_entry(
+            Type::File(FileType::Regular),
+            get_hash('1'),
+            path_first.clone(),
+        );
+        let left_entry_second = get_entry(
+            Type::File(FileType::Regular),
+            get_hash('2'),
+            left_path_second,
+        );
+        let right_entry = get_entry(Type::File(FileType::Regular), get_hash('1'), path_first);
 
         let res = diff_sorted_vecs(
             None,
@@ -161,7 +177,7 @@ fn test_diff_sorted_vecs_one_added_one_same() {
 fn test_diff_sorted_vecs_one_empty() {
     let path = RepoPath::file("file.txt").unwrap();
 
-    let entry = get_entry(Type::File, get_hash('1'), path);
+    let entry = get_entry(Type::File(FileType::Regular), get_hash('1'), path);
     let res = diff_sorted_vecs(None, vec![entry], vec![]);
 
     assert_eq!(res.len(), 1);

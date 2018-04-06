@@ -17,7 +17,7 @@ use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use errors::*;
 use failure;
 use file;
-use mercurial_types::{Blob, MPath, MPathElement, RepoPath};
+use mercurial_types::{Blob, FileType, MPath, MPathElement, RepoPath};
 use mercurial_types::manifest::Type;
 
 use blobnode::{BlobNode, Parents};
@@ -217,11 +217,11 @@ impl Details {
         ensure_msg!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
         let flag = if flags.len() == 0 {
-            Type::File
+            Type::File(FileType::Regular)
         } else {
             match flags[0] {
-                b'l' => Type::Symlink,
-                b'x' => Type::Executable,
+                b'l' => Type::File(FileType::Symlink),
+                b'x' => Type::File(FileType::Executable),
                 b't' => Type::Tree,
                 unk => bail_msg!("Unknown flag {}", unk),
             }
@@ -246,7 +246,7 @@ impl Details {
     }
 
     pub fn is_symlink(&self) -> bool {
-        self.flag == Type::Symlink
+        self.flag == Type::File(FileType::Symlink)
     }
 
     pub fn is_tree(&self) -> bool {
@@ -254,11 +254,11 @@ impl Details {
     }
 
     pub fn is_executable(&self) -> bool {
-        self.flag == Type::Executable
+        self.flag == Type::File(FileType::Executable)
     }
 
     pub fn is_file(&self) -> bool {
-        self.flag == Type::File
+        self.flag == Type::File(FileType::Regular)
     }
 }
 
@@ -360,9 +360,13 @@ impl RevlogEntry {
                 match self.get_type() {
                     // Mercurial file blob can have metadata, but tree manifest can't
                     // So strip metdata from everything except for Tree
-                    Type::File => Ok(EntryContent::File(strip_file_metadata(data))),
-                    Type::Executable => Ok(EntryContent::Executable(strip_file_metadata(data))),
-                    Type::Symlink => {
+                    Type::File(FileType::Regular) => {
+                        Ok(EntryContent::File(strip_file_metadata(data)))
+                    }
+                    Type::File(FileType::Executable) => {
+                        Ok(EntryContent::Executable(strip_file_metadata(data)))
+                    }
+                    Type::File(FileType::Symlink) => {
                         let data = strip_file_metadata(data);
                         let data = data.as_slice()
                             .ok_or(failure::err_msg("missing symlink blob data"))?;
@@ -492,7 +496,7 @@ mod test {
                             entryid: EntryId::new(
                                 "da39a3ee5e6b4b0d3255bfef95601890afd80709".parse().unwrap(),
                             ),
-                            flag: Type::Symlink,
+                            flag: Type::File(FileType::Symlink),
                         },
                     ),
                 ];
