@@ -311,6 +311,45 @@ impl MPath {
         }
     }
 
+    /// The number of components in this path.
+    pub fn num_components(&self) -> usize {
+        self.elements.len()
+    }
+
+    /// The number of leading components that are common.
+    pub fn common_components<'a, E: IntoIterator<Item = &'a MPathElement>>(
+        &self,
+        other: E,
+    ) -> usize {
+        self.elements
+            .iter()
+            .zip(other)
+            .take_while(|&(e1, e2)| e1 == e2)
+            .count()
+    }
+
+    /// The final component of this path.
+    pub fn basename(&self) -> &MPathElement {
+        self.elements
+            .last()
+            .expect("MPaths have at least one component")
+    }
+
+    /// Create a new path with the number of leading components specified.
+    pub fn take_prefix_components(&self, components: usize) -> Result<Option<MPath>> {
+        match components {
+            0 => Ok(None),
+            x if x > self.num_components() => bail_msg!(
+                "taking {} components but path only has {}",
+                components,
+                self.num_components()
+            ),
+            _ => Ok(Some(MPath {
+                elements: self.elements[..components].to_vec(),
+            })),
+        }
+    }
+
     pub fn generate<W: Write>(&self, out: &mut W) -> io::Result<()> {
         out.write_all(&self.to_vec())
     }
@@ -543,6 +582,34 @@ mod test {
         assert_empty("//");
         assert_empty("///");
         assert_empty("////");
+    }
+
+    #[test]
+    fn components() {
+        let foo = MPath::new("foo").unwrap();
+        let foo_bar1 = MPath::new("foo/bar1").unwrap();
+        let foo_bar12 = MPath::new("foo/bar12").unwrap();
+        let baz = MPath::new("baz").unwrap();
+
+        assert_eq!(foo.common_components(&foo), 1);
+        assert_eq!(foo.common_components(&foo_bar1), 1);
+        assert_eq!(foo.common_components(&foo_bar12), 1);
+        assert_eq!(foo_bar1.common_components(&foo_bar1), 2);
+        assert_eq!(foo.common_components(&baz), 0);
+        assert_eq!(foo.common_components(MPath::iter_opt(None)), 0);
+
+        assert_eq!(foo_bar1.take_prefix_components(0).unwrap(), None);
+        assert_eq!(
+            foo_bar1.take_prefix_components(1).unwrap(),
+            Some(foo.clone())
+        );
+        assert_eq!(
+            foo_bar1.take_prefix_components(2).unwrap(),
+            Some(foo_bar1.clone())
+        );
+        foo_bar1
+            .take_prefix_components(3)
+            .expect_err("unexpected OK - too many components");
     }
 
     #[test]

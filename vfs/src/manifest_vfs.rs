@@ -205,7 +205,10 @@ mod test {
 
     #[test]
     fn test_empty_vfs() {
-        let vfs = get_vfs(Vec::<&str>::new());
+        let manifest = MockManifest::from_description_string("").expect("empty manifest is valid");
+        let vfs = vfs_from_manifest(&manifest)
+            .wait()
+            .expect("failed to get vfs");
         assert!(vfs.read().is_empty());
 
         match vfs.step(&pel("a")) {
@@ -215,70 +218,15 @@ mod test {
     }
 
     fn example_vfs() -> ManifestVfsDir {
-        let a_manifest = MockManifest::with_content(vec![
-            (
-                "b",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-            (
-                "ab",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-        ]);
-
-        let d_manifest = MockManifest::with_content(vec![
-            (
-                "e",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-            (
-                "da",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-        ]);
-
-        let ca_manifest = MockManifest::with_content(vec![
-            (
-                "afsd",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-        ]);
-
-        let c_manifest = MockManifest::with_content(vec![
-            (
-                "d",
-                Arc::new(move || Content::Tree(Box::new(d_manifest.clone()))),
-                Type::Tree,
-            ),
-            (
-                "ca",
-                Arc::new(move || Content::Tree(Box::new(ca_manifest.clone()))),
-                Type::Tree,
-            ),
-        ]);
-
-        let root_manifest = MockManifest::with_content(vec![
-            (
-                "a",
-                Arc::new(move || Content::Tree(Box::new(a_manifest.clone()))),
-                Type::Tree,
-            ),
-            (
-                "c",
-                Arc::new(move || Content::Tree(Box::new(c_manifest.clone()))),
-                Type::Tree,
-            ),
-            (
-                "f",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-        ]);
+        let paths = btreemap! {
+            "a/b" => (FileType::Regular, ""),
+            "a/ab" => (FileType::Regular, ""),
+            "c/d/e" => (FileType::Regular, ""),
+            "c/d/da" => (FileType::Regular, ""),
+            "c/ca/afsd" => (FileType::Regular, ""),
+            "f" => (FileType::Regular, ""),
+        };
+        let root_manifest = MockManifest::from_paths(paths).expect("invalid manifest?");
 
         vfs_from_manifest(&root_manifest)
             .wait()

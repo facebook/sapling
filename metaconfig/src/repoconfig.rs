@@ -231,10 +231,8 @@ impl TryFrom<RawRepoConfig> for RepoConfig {
 mod test {
     use super::*;
 
-    use std::sync::Arc;
-
-    use mercurial_types::{FileType, Type};
-    use mercurial_types_mocks::manifest::{make_file, MockManifest};
+    use mercurial_types::FileType;
+    use mercurial_types_mocks::manifest::MockManifest;
 
     #[test]
     fn test_read_manifest() {
@@ -252,35 +250,14 @@ mod test {
             scuba_table="scuba_table"
         "#;
 
-        let my_path_manifest = MockManifest::with_content(vec![
-            (
-                "my_files",
-                Arc::new(|| unimplemented!()),
-                Type::File(FileType::Regular),
-            ),
-        ]);
-
-        let repos_manifest = MockManifest::with_content(vec![
-            (
-                "fbsource",
-                make_file(fbsource_content),
-                Type::File(FileType::Regular),
-            ),
-            ("www", make_file(www_content), Type::File(FileType::Regular)),
-        ]);
-
-        let repoconfig = RepoConfigs::read_manifest(&MockManifest::with_content(vec![
-            (
-                "my_path",
-                Arc::new(move || Content::Tree(Box::new(my_path_manifest.clone()))),
-                Type::File(FileType::Regular),
-            ),
-            (
-                "repos",
-                Arc::new(move || Content::Tree(Box::new(repos_manifest.clone()))),
-                Type::Tree,
-            ),
-        ])).wait()
+        let paths = btreemap! {
+            "repos/fbsource" => (FileType::Regular, fbsource_content),
+            "repos/www" => (FileType::Regular, www_content),
+            "my_path/my_files" => (FileType::Regular, ""),
+        };
+        let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
+        let repoconfig = RepoConfigs::read_manifest(&root_manifest)
+            .wait()
             .expect("failed to read config from manifest");
 
         let mut repos = HashMap::new();

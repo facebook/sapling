@@ -10,16 +10,24 @@
 #![deny(warnings)]
 #![feature(try_from)]
 
-extern crate blobrepo;
+#[cfg(test)]
+extern crate bytes;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
-extern crate mercurial;
-extern crate mercurial_types;
+#[macro_use]
+#[cfg(test)]
+extern crate maplit;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate toml;
+
+extern crate blobrepo;
+extern crate mercurial;
+extern crate mercurial_types;
+#[cfg(test)]
+extern crate mercurial_types_mocks;
 extern crate vfs;
 
 pub mod errors;
@@ -28,6 +36,3 @@ pub mod repoconfig;
 pub use repoconfig::RepoConfigs;
 
 pub use errors::{Error, ErrorKind};
-
-#[cfg(test)]
-extern crate mercurial_types_mocks;

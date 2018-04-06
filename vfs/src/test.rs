@@ -4,15 +4,9 @@
 // This software may be used and distributed according to the terms of the
 // GNU General Public License version 2 or any later version.
 
-use futures::Future;
-
 use itertools::assert_equal;
 
 use mononoke_types::{MPath, MPathElement};
-
-use mercurial_types_mocks::manifest::MockManifest;
-
-use {vfs_from_manifest, ManifestVfsDir};
 
 pub fn pel(path: &'static str) -> MPathElement {
     MPath::new(path).unwrap().into_iter().next().unwrap()
@@ -26,10 +20,4 @@ where
     let mut paths: Vec<_> = paths.into_iter().cloned().collect();
     paths.sort();
     assert_equal(paths, expected.into_iter().map(pel));
-}
-
-pub fn get_vfs(paths: Vec<&'static str>) -> ManifestVfsDir {
-    vfs_from_manifest(&MockManifest::new(paths))
-        .wait()
-        .expect("failed to get vfs")
 }
