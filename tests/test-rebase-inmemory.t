@@ -209,7 +209,7 @@ Rerun with merge conflicts:
   $ hg rebase -r 3 -d 4
   rebasing 3:844a7de3e617 "c"
   merging c
-  hit merge conflicts; re-running rebase without in-memory merge (in-memory merge does not support merge conflicts)
+  hit merge conflicts; using on-disk merge instead (in-memory merge does not support merge conflicts)
   rebase aborted
   rebasing 3:844a7de3e617 "c"
   merging c

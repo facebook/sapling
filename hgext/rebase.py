@@ -876,9 +876,11 @@ def rebase(ui, repo, **opts):
         except error.InMemoryMergeConflictsError as e:
             # in-memory merge doesn't support conflicts, so if we hit any, abort
             # and re-run as an on-disk merge.
-            ui.warn(('hit merge conflicts; re-running rebase without in-memory'
-                      ' merge (%s)\n' % e))
+            ui.warn(('hit merge conflicts; using on-disk merge instead '
+                     '(%s)\n' % e))
             ui.log("rebase", "", rebase_imm_restart=True)
+            cmdutil.bailifchanged(repo,
+                hint=_('commit, shelve or remove them, then rerun the rebase'))
             rbsrt.inmemory = False
             _origrebase(ui, repo, rbsrt, **{'abort': True})
             return _origrebase(ui, repo, rbsrt, **opts)
@@ -889,11 +891,14 @@ def rebase(ui, repo, **opts):
             # `_shoulddisableimm()`). So we double check the value of
             # `rbsrt.inmemory`.
             if rbsrt.inmemory:
-                ui.warn(('hit error; re-running rebase without in-memory merge '
+                ui.warn(('hit error; using on-disk merge instead '
                          '(%s)\n' % e))
                 ui.log("rebase", "", rebase_imm_restart=True,
                     rebase_imm_exception=str(e))
                 inmemory = False
+                cmdutil.bailifchanged(repo,
+                    hint=_('commit, shelve or remove them, then rerun the '
+                           'rebase'))
                 try:
                     _origrebase(ui, repo, rbsrt, **{'abort': True})
                 except Exception as e:
