@@ -56,6 +56,10 @@ class InodeBase {
     return type_;
   }
 
+  bool isDir() const {
+    return type_ == dtype_t::Dir;
+  }
+
   /**
    * Gets the reference count of an inode.
    */

@@ -381,3 +381,50 @@ TEST_F(
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
+
+/**
+ * clang and gcc use the inode number of a header to determine whether it's the
+ * same file as one previously included and marked #pragma once.
+ *
+ * At least as long as the mount is up (including though graceful takeovers),
+ * Eden must provide consistent inode numbers.
+ */
+TEST_F(
+    InodePersistenceTreeTest,
+    preservesInodeNumbersForUnloadedInodesDuringTakeover) {
+  TestMount testMount{builder};
+  auto edenMount = testMount.getEdenMount();
+
+  auto tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
+  auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+  auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+
+  tree->incFuseRefcount();
+  file1->incFuseRefcount();
+  file2->incFuseRefcount();
+
+  auto oldTreeId = tree->getNodeId();
+  auto oldFile1Id = file1->getNodeId();
+  auto oldFile2Id = file2->getNodeId();
+
+  tree->decFuseRefcount();
+  file1->decFuseRefcount();
+  file2->decFuseRefcount();
+
+  edenMount.reset();
+  tree.reset();
+  file1.reset();
+  file2.reset();
+  testMount.remountGracefully();
+
+  edenMount = testMount.getEdenMount();
+
+  // Look up in a different order.
+  tree = edenMount->getInode(RelativePathPiece{"dir"}).get();
+  file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
+  file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
+
+  EXPECT_EQ(oldTreeId, tree->getNodeId());
+  EXPECT_EQ(oldFile1Id, file1->getNodeId());
+  EXPECT_EQ(oldFile2Id, file2->getNodeId());
+}
