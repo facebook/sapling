@@ -8,7 +8,6 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import datetime
-import distutils.spawn
 import os
 import subprocess
 import tempfile
@@ -18,6 +17,7 @@ from typing import Dict, List, Optional
 
 from . import repobase
 from .error import CommandError
+from .find_executables import FindExe
 
 
 class GitError(CommandError):
@@ -27,11 +27,7 @@ class GitError(CommandError):
 class GitRepository(repobase.Repository):
     def __init__(self, path: str) -> None:
         super().__init__(path)
-        git_bin = distutils.spawn.find_executable(
-            'git.real') or distutils.spawn.find_executable('git')
-        if git_bin is None:
-            raise Exception('unable to find git binary')
-        self.git_bin = git_bin
+        self.git_bin = FindExe.GIT
 
     def git(
         self,

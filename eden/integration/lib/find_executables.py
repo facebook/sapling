@@ -12,9 +12,13 @@ These utilities are only expected to work if `sys.argv[0]` is an executable
 being run in buck-out.
 '''
 
+import distutils.spawn
+import logging
 import os
 import sys
 from typing import Callable, Dict, List, Optional, Type
+
+from libfb.py import pathutils
 
 
 class cached_property(object):
@@ -96,7 +100,58 @@ class FindExeClass(object):
             ]
         )
 
-    def _find_exe(self, name, env, candidates):
+    @cached_property
+    def GIT(self) -> str:
+        git = distutils.spawn.find_executable(
+            'git.real') or distutils.spawn.find_executable('git')
+        if git is None:
+            raise Exception('unable to find git binary')
+        return git
+
+    @cached_property
+    def HG(self) -> str:
+        hg = self._find_hg()
+        logging.info('Found hg binary: %r', hg)
+        return hg
+
+    def _find_hg(self) -> str:
+        # If EDEN_HG_BINARY is set in the environment, use that.
+        hg_bin = os.environ.get('EDEN_HG_BINARY')
+        if hg_bin:
+            return hg_bin
+
+        start_path = os.path.abspath(sys.argv[0])
+        hg_bin = pathutils.get_build_rule_output_path(
+            '//scm/hg:hg',
+            pathutils.BuildRuleTypes.PYTHON_BINARY,
+            start_path=start_path,
+        )
+        if hg_bin:
+            return hg_bin
+
+        # TODO(T25533322): Once we are sure that `hg status` is a read-only
+        # operation in stock Hg (or at least when the Eden extension is
+        # enabled), go back to using the Rust wrapper for Hg by default.
+        if False:
+            hg_bin = pathutils.get_build_rule_output_path(
+                '//scm/telemetry/hg:hg',
+                pathutils.BuildRuleTypes.RUST_BINARY,
+                start_path=start_path,
+            )
+            if hg_bin:
+                return hg_bin
+
+        hg_bin = distutils.spawn.find_executable('hg.real')
+        if hg_bin:
+            return hg_bin
+
+        hg_bin = distutils.spawn.find_executable('hg')
+        if hg_bin:
+            return hg_bin
+
+        raise Exception('No hg binary found!')
+
+    def _find_exe(self, name: str, env: str, candidates: List[str]) -> str:
         if env is not None:
             path = os.environ.get(env)
             if path and not os.access(path, os.X_OK):
