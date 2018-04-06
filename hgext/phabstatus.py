@@ -185,7 +185,8 @@ def showsyncstatus(repo, ctx, templ, **args):
         return "sync"
     elif count == 1:
         precursors = list(obsutil.allpredecessors(repo.obsstore, [ctx.node()]))
-        hashes = [repo.unfiltered()[h].hex() for h in precursors if h in repo.unfiltered()]
+        hashes = [repo.unfiltered()[h].hex()
+                  for h in precursors if h in repo.unfiltered()]
         # hashes[0] is the current
         # hashes[1] is the previous
         if len(hashes) > 1 and hashes[1] == remote:
