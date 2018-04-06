@@ -470,8 +470,9 @@ def journal(ui, repo, *args, **opts):
         name = args[0]
 
     fm = ui.formatter('journal', opts)
+    ui.pager('journal')
 
-    if opts.get("template") != "json":
+    if not opts.get("template"):
         if name is None:
             displayname = _('the working copy and bookmarks')
         else:
@@ -480,7 +481,6 @@ def journal(ui, repo, *args, **opts):
 
     limit = cmdutil.loglimit(opts)
     entry = None
-    ui.pager('journal')
     for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break

@@ -192,7 +192,6 @@ Test that verbose, JSON, template and commit output work
   >      "
   > EOF
   $ hg journal -Tj -l1
-  previous locations of '.':
   CB9A9F314B8B07BA71012FCDBC544B5A4D82FF5B -> 1E6C11564562B4ED919BACA798BC4338BD299D6A
   - user: foobar
   - command: up
