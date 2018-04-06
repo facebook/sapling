@@ -19,10 +19,34 @@ class PersistenceTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
         self.repo.write_file('file_in_root', 'contents1')
         self.repo.write_file('subdir/file_in_subdir', 'contents2')
+        self.repo.write_file('subdir2/file_in_subdir2', 'contents3')
         self.repo.commit('Initial commit.')
+
+    # These tests restart Eden and expect data to have persisted.
+    def select_storage_engine(self) -> str:
+        return 'sqlite'
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
+
+    # It is not a strict requirement that Eden always remember inode numbers
+    # across restart -- we could theoretically drop them whenever we know it's
+    # not sensible for a program to remember them across whatever event.
+    #
+    # However, today we do remember them, and need to do so most of the time.
+    def test_preserves_inode_numbers_across_restarts(self):
+        before1 = os.lstat(os.path.join(self.mount, 'subdir/file_in_subdir'))
+        before2 = os.lstat(os.path.join(self.mount, 'subdir2/file_in_subdir2'))
+
+        self.eden.shutdown()
+        self.eden.start()
+
+        # stat in reverse order
+        after2 = os.lstat(os.path.join(self.mount, 'subdir2/file_in_subdir2'))
+        after1 = os.lstat(os.path.join(self.mount, 'subdir/file_in_subdir'))
+
+        self.assertEqual(before1.st_ino, after1.st_ino)
+        self.assertEqual(before2.st_ino, after2.st_ino)
 
     @unittest.skip('TODO: this is not fully implemented yet')
     def test_preserves_nonmaterialized_inode_numbers(self) -> None:
