@@ -942,6 +942,8 @@ if library_dirs is None:
         ])
     library_dirs.append('build/' + distutils_dir_name('lib'))
 
+extra_libs = get_env_path_list('EXTRA_LIBS', [])
+
 osutil_cflags = []
 osutil_ldflags = []
 
@@ -1128,6 +1130,12 @@ libraries = [
 sys.path.insert(0, 'contrib/python-zstandard')
 import setup_zstd
 extmodules.append(setup_zstd.get_c_extension(name='mercurial.zstd'))
+
+# let's add EXTRA_LIBS to every buildable
+for extmodule in extmodules:
+    extmodule.libraries.extend(extra_libs)
+for libname, libspec in libraries:
+    libspec['libraries'] = libspec.get('libraries', []) + extra_libs
 
 try:
     from distutils import cygwinccompiler
