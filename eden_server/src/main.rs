@@ -391,6 +391,7 @@ impl Service for EdenServer {
             .timed(move |stats, _| {
                 add_common_stats(&mut sample, &stats);
                 scuba.log(&sample);
+                Ok(())
             })
             .boxify()
     }

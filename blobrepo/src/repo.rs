@@ -411,6 +411,7 @@ impl BlobRepo {
                     if result.is_ok() {
                         log_upload_stats(logger, path, nodeid, "content_uploaded", stats)
                     }
+                    Ok(())
                 }
             });
         // Upload the new node
@@ -437,6 +438,7 @@ impl BlobRepo {
                         if result.is_ok() {
                             log_upload_stats(logger, path, nodeid, "finished", stats)
                         }
+                        Ok(())
                     }
                 })
                 .boxify(),
@@ -528,6 +530,7 @@ impl BlobRepo {
                     if result.is_ok() {
                         log_cs_future_stats(&logger, "changeset_created", stats, uuid);
                     }
+                    Ok(())
                 })
         };
 
@@ -539,6 +542,7 @@ impl BlobRepo {
                     if result.is_ok() {
                         log_cs_future_stats(&logger, "parents_complete", stats, uuid);
                     }
+                    Ok(())
                 }
             });
 
@@ -566,6 +570,7 @@ impl BlobRepo {
                         if result.is_ok() {
                             log_cs_future_stats(&logger, "finished", stats, uuid);
                         }
+                        Ok(())
                     }
                 })
                 .boxify()

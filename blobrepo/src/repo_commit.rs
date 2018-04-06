@@ -391,6 +391,7 @@ pub fn process_entries(
             if result.is_ok() {
                 log_cs_future_stats(&logger, "upload_entries", stats, uuid);
             }
+            Ok(())
         })
         .boxify()
 }
@@ -471,6 +472,7 @@ pub fn handle_parents(
             if result.is_ok() {
                 log_cs_future_stats(&logger, "wait_for_parents_ready", stats, uuid);
             }
+            Ok(())
         })
         .boxify()
 }

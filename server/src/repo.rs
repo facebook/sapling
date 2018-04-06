@@ -542,6 +542,7 @@ impl HgCommands for RepoClient {
             .collect()
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify()
     }
@@ -577,6 +578,7 @@ impl HgCommands for RepoClient {
             .inspect(move |resp| debug!(logger, "heads response: {:?}", resp))
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify()
     }
@@ -614,6 +616,7 @@ impl HgCommands for RepoClient {
             })
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify()
     }
@@ -686,6 +689,7 @@ impl HgCommands for RepoClient {
             })
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify()
     }
@@ -702,6 +706,7 @@ impl HgCommands for RepoClient {
             Err(err) => Err(err).into_future().boxify(),
         }.timed(move |stats, _| {
             add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            Ok(())
         })
             .boxify()
     }
@@ -720,6 +725,7 @@ impl HgCommands for RepoClient {
         future::ok(res)
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify()
     }
@@ -771,6 +777,7 @@ impl HgCommands for RepoClient {
 
         res.timed(move |stats, _| {
             add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+            Ok(())
         }).boxify()
     }
 
@@ -782,6 +789,7 @@ impl HgCommands for RepoClient {
         return self.gettreepack_untimed(params)
             .timed(move |stats, _| {
                 add_common_stats_and_send_to_scuba(scuba, &mut sample, &stats);
+                Ok(())
             })
             .boxify();
     }
@@ -796,6 +804,7 @@ impl HgCommands for RepoClient {
                 create_remotefilelog_blob(repo.hgrepo.clone(), node, path).timed(move |stats, _| {
                     let mut sample = repo.scuba_sample(ops::GETFILES);
                     add_common_stats_and_send_to_scuba(repo.scuba.clone(), &mut sample, &stats);
+                    Ok(())
                 })
             })
             .boxify()
