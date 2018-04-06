@@ -37,8 +37,8 @@ use heads::Heads;
 use manifoldblob::ManifoldBlob;
 use memblob::EagerMemblob;
 use memheads::MemHeads;
-use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, HgFileNodeId, MPath,
-                      Manifest, NodeHash, Parents, RepoPath, RepositoryId, Time};
+use mercurial_types::{Blob, BlobNode, Changeset, Entry, HgChangesetId, HgFileNodeId, Manifest,
+                      NodeHash, Parents, RepoPath, RepositoryId, Time};
 use mercurial_types::manifest;
 use mercurial_types::nodehash::HgManifestId;
 use rocksblob::Rocksblob;
@@ -50,7 +50,7 @@ use BlobManifest;
 use errors::*;
 use file::{fetch_file_content_and_renames_from_blobstore, BlobEntry};
 use repo_commit::*;
-use utils::{get_node, get_node_key, RawNodeBlob};
+use utils::{get_node_key, RawNodeBlob};
 
 pub struct BlobRepo {
     logger: Logger,
@@ -215,15 +215,45 @@ impl BlobRepo {
             .boxify()
     }
 
-    pub fn get_parents(&self, key: &NodeHash) -> BoxFuture<Parents, Error> {
-        get_node(&self.blobstore, *key)
-            .map(|rawnode| rawnode.parents)
+    pub fn get_parents(&self, path: &RepoPath, node: &NodeHash) -> BoxFuture<Parents, Error> {
+        let path = path.clone();
+        let node = HgFileNodeId::new(*node);
+        self.filenodes
+            .get_filenode(&path, &node, &self.repoid)
+            .and_then({
+                move |filenode| {
+                    filenode
+                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
+                        .map(|filenode| {
+                            let p1 = filenode.p1.map(|p| p.into_nodehash());
+                            let p2 = filenode.p2.map(|p| p.into_nodehash());
+                            Parents::new(p1.as_ref(), p2.as_ref())
+                        })
+                }
+            })
             .boxify()
     }
 
-    pub fn get_file_copy(&self, key: &NodeHash) -> BoxFuture<Option<(MPath, NodeHash)>, Error> {
-        fetch_file_content_and_renames_from_blobstore(&self.blobstore, *key)
-            .map(|contentrename| contentrename.1)
+    pub fn get_file_copy(
+        &self,
+        path: &RepoPath,
+        node: &NodeHash,
+    ) -> BoxFuture<Option<(RepoPath, NodeHash)>, Error> {
+        let path = path.clone();
+        let node = HgFileNodeId::new(*node);
+        self.filenodes
+            .get_filenode(&path, &node, &self.repoid)
+            .and_then({
+                move |filenode| {
+                    filenode
+                        .ok_or(ErrorKind::MissingFilenode(path, node).into())
+                        .map(|filenode| {
+                            filenode
+                                .copyfrom
+                                .map(|(repo, node)| (repo, node.into_nodehash()))
+                        })
+                }
+            })
             .boxify()
     }
 
@@ -283,10 +313,10 @@ impl BlobRepo {
     }
 
     pub fn get_linknode(&self, path: RepoPath, node: &NodeHash) -> BoxFuture<NodeHash, Error> {
+        let node = HgFileNodeId::new(*node);
         self.filenodes
-            .get_filenode(&path, &HgFileNodeId::new(*node), &self.repoid)
+            .get_filenode(&path, &node, &self.repoid)
             .and_then({
-                let node = *node;
                 move |filenode| {
                     filenode
                         .ok_or(ErrorKind::MissingFilenode(path, node).into())

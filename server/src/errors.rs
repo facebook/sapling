@@ -6,7 +6,11 @@
 
 pub use failure::{Error, Result, ResultExt};
 
+use mercurial_types::RepoPath;
+
 #[derive(Debug, Fail)]
 pub enum ErrorKind {
     #[fail(display = "failed to initialize server: {}", _0)] Initialization(&'static str),
+    #[fail(display = "internal error: file {} copied from directory {}", _0, _1)]
+    InconsistenCopyInfo(RepoPath, RepoPath),
 }

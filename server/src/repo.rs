@@ -886,6 +886,7 @@ fn get_file_history(
     let mut startstate = VecDeque::new();
     startstate.push_back(startnode);
     let seen_nodes: HashSet<_> = [startnode].iter().cloned().collect();
+    let path = RepoPath::FilePath(path);
 
     stream::unfold(
         (startstate, seen_nodes),
@@ -893,10 +894,17 @@ fn get_file_history(
             let (mut nodes, mut seen_nodes) = cur_data;
             let node = nodes.pop_front()?;
 
-            let parents = repo.get_parents(&node);
-            let copy = repo.get_file_copy(&node);
+            let parents = repo.get_parents(&path, &node);
+            let copy = repo.get_file_copy(&path, &node).and_then({
+                let path = path.clone();
+                move |filecopy| match filecopy {
+                    Some((RepoPath::FilePath(copyto), rev)) => Ok(Some((copyto, rev))),
+                    Some((copyto, _)) => Err(ErrorKind::InconsistenCopyInfo(path, copyto).into()),
+                    None => Ok(None),
+                }
+            });
 
-            let linknode = RepoPath::file(path.clone()).into_future().and_then({
+            let linknode = Ok(path.clone()).into_future().and_then({
                 let repo = repo.clone();
                 move |path| repo.get_linknode(path, &node)
             });
