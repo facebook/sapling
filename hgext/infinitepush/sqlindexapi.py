@@ -113,34 +113,46 @@ class sqlindexapi(indexapi):
             self.sqlconn.rollback()
 
     def addbundle(self, bundleid, nodesctx):
+        """Records bundles, mapping from node to bundle and metadata for nodes
+        """
         if not self._connected:
             self.sqlconnect()
+
+        # insert bundle
         self.log.info("ADD BUNDLE %r %r" % (self.reponame, bundleid))
         self.sqlcursor.execute(
             "INSERT INTO bundles(bundle, reponame) VALUES "
             "(%s, %s)", params=(bundleid, self.reponame))
-        for ctx in nodesctx:
-            self.sqlcursor.execute(
-                "INSERT INTO nodestobundle(node, bundle, reponame) "
-                "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE "
-                "bundle=VALUES(bundle)",
-                params=(ctx.hex(), bundleid, self.reponame))
 
-            extra = ctx.extra()
-            author_name = ctx.user()
-            committer_name = extra.get('committer', ctx.user())
-            author_date = int(ctx.date()[0])
-            committer_date = int(extra.get('committer_date', author_date))
-            self.sqlcursor.execute(
-                "INSERT IGNORE INTO nodesmetadata(node, message, p1, p2, "
-                "author, committer, author_date, committer_date, "
-                "reponame) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                params=(ctx.hex(), ctx.description(),
-                        ctx.p1().hex(), ctx.p2().hex(), author_name,
-                        committer_name, author_date, committer_date,
-                        self.reponame)
-            )
+        # insert nodes to bundle mapping
+
+        self.sqlcursor.executemany(
+            "INSERT INTO nodestobundle(node, bundle, reponame) "
+            "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE "
+            "bundle=VALUES(bundle)",
+            [(ctx.hex(), bundleid, self.reponame) for ctx in nodesctx])
+
+        # insert metadata
+        data = [(
+                ctx.hex(),         # node
+                ctx.description(), # message
+                ctx.p1().hex(),    # p1
+                ctx.p2().hex(),    # p2
+                ctx.user(),        # author
+                ctx.extra().get('committer', ctx.user()), # committer
+                int(ctx.date()[0]), # author_date
+                int(ctx.extra().get(
+                    'committer_date', int(ctx.date()[0]))), # committer_date
+                self.reponame       # reponame
+            ) for ctx in nodesctx]
+
+        self.sqlcursor.executemany(
+            "INSERT IGNORE INTO nodesmetadata(node, message, p1, p2, "
+            "author, committer, author_date, committer_date, "
+            "reponame) VALUES "
+            "(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            data
+        )
 
     def addbookmark(self, bookmark, node):
         """Takes a bookmark name and hash, and records mapping in the metadata
@@ -156,19 +168,17 @@ class sqlindexapi(indexapi):
             params=(bookmark, node, self.reponame))
 
     def addmanybookmarks(self, bookmarks):
+        """Records mapping of bookmarks and nodes"""
         if not self._connected:
             self.sqlconnect()
-        args = []
-        values = []
-        for bookmark, node in bookmarks.iteritems():
-            args.append('(%s, %s, %s)')
-            values.extend((bookmark, node, self.reponame))
-        args = ','.join(args)
 
-        self.sqlcursor.execute(
+        data = [(bookmark, node, self.reponame)
+            for bookmark, node in bookmarks.iteritems()]
+
+        self.sqlcursor.executemany(
             "INSERT INTO bookmarkstonode(bookmark, node, reponame) "
-            "VALUES %s ON DUPLICATE KEY UPDATE node=VALUES(node)" % args,
-            params=values)
+            "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE node=VALUES(node)",
+            data)
 
     def deletebookmarks(self, patterns):
         """Accepts list of bookmark patterns and deletes them.
