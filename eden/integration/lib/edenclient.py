@@ -21,7 +21,7 @@ from eden.cli import util
 
 import eden.thrift
 from fb303.ttypes import fb_status
-from .find_executables import EDEN_CLI, EDEN_DAEMON, EDEN_HG_IMPORT_HELPER
+from .find_executables import FindExe
 
 
 class EdenFS(object):
@@ -143,7 +143,7 @@ class EdenFS(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         '''
-        cmd = [EDEN_CLI, '--config-dir', self._eden_dir]
+        cmd = [FindExe.EDEN_CLI, '--config-dir', self._eden_dir]
         if self._etc_eden_dir:
             cmd += ['--etc-eden-dir', self._etc_eden_dir]
         if self._home_dir:
@@ -183,7 +183,7 @@ class EdenFS(object):
             # framework runs tests on each CPU core.
             '--num_hg_import_threads', '2',
             '--local_storage_engine_unsafe', self._storage_engine,
-            '--hgImportHelper', EDEN_HG_IMPORT_HELPER,
+            '--hgImportHelper', FindExe.EDEN_HG_IMPORT_HELPER,
             # Disable falling back to importing mercurial data using
             # flatmanifest when the repository supports treemanifest.
             # If an error occurs importing treemanifest data in a test this is
@@ -215,7 +215,7 @@ class EdenFS(object):
 
         args = self._get_eden_args(
             'daemon',
-            '--daemon-binary', EDEN_DAEMON,
+            '--daemon-binary', FindExe.EDEN_DAEMON,
             '--foreground',
         )
 

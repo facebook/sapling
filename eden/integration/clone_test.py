@@ -17,7 +17,7 @@ import unittest
 
 from eden.cli import util
 from .lib import edenclient, testcase
-from .lib.find_executables import EDEN_DAEMON
+from .lib.find_executables import FindExe
 
 
 # This is the name of the default repository created by EdenRepoTestBase.
@@ -237,7 +237,7 @@ echo -n "$1" >> "{scratch_file}"
         self.eden.run_cmd(
             'clone',
             '--daemon-binary',
-            EDEN_DAEMON,
+            FindExe.EDEN_DAEMON,
             self.repo.path,
             tmp,
             '--daemon-args',

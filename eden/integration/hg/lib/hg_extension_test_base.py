@@ -18,7 +18,7 @@ import subprocess
 
 def _find_post_clone() -> str:
     post_clone = (os.environ.get('EDENFS_POST_CLONE_PATH') or
-                  os.path.join(find_executables.BUCK_OUT,
+                  os.path.join(find_executables.FindExe.BUCK_OUT,
                                'gen/eden/hooks/hg/post-clone.par'))
     if not os.access(post_clone, os.X_OK):
         msg = ('unable to find post-clone script for integration testing: {!r}'
