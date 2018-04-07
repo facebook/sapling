@@ -7,10 +7,13 @@
 
 from __future__ import absolute_import
 
+import errno
 import os
 
 from . import (
+    config,
     encoding,
+    mdiff,
     pycompat,
     util,
 )
@@ -96,3 +99,45 @@ def defaultpagerenv():
     intended to be set before starting a pager.
     '''
     return {'LESS': 'FRX', 'LV': '-c'}
+
+def editconfig(path, section, name, value):
+    """Append a config item to the given config path.
+
+    Try to edit the config in-place without breaking config file syntax for
+    simple cases. Fallback to just append the new config.
+    """
+    content = ''
+    try:
+        content = util.readfile(path)
+    except IOError as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+    cfg = config.config()
+    cfg.parse('', content, include=lambda *args, **kwargs: None)
+    source = cfg.source(section, name)
+    edited = False
+
+    # in-place edit if possible
+    if source.startswith(':'):
+        # line index
+        index = int(source[1:]) - 1
+        lines = mdiff.splitnewlines(content)
+        # for simple case, we can edit the line in-place
+        if (# config line should still exist
+            index < len(lines)
+            # the line should start with "NAME ="
+            and lines[index].split('=')[0].rstrip() == name
+            # the next line should not be indented (a multi-line value)
+            and (index + 1 >= len(lines)
+                 or not lines[index + 1][:1].isspace())):
+            edited = True
+            # edit the line
+            content = ''.join(lines[:index] +
+                              ['%s = %s\n' % (name, value)] + lines[index + 1:])
+    if not edited:
+        # append as new config
+        if content:
+            content += '\n'
+        content += '[%s]\n%s = %s\n' % (section, name, value)
+    with util.atomictempfile(path) as f:
+        f.write(content)
