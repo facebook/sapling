@@ -34,8 +34,8 @@ Rebasing single changeset.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next
   abort: current changeset has no children
   [255]
@@ -88,8 +88,8 @@ Rebasing multiple changesets at once.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase --top
   rebasing 2:776c07fa2b12 "r2"
   rebasing 3:137d867d71d5 "r3"
@@ -114,8 +114,8 @@ Rebasing a stack one changeset at a time.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase
   rebasing 2:776c07fa2b12 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -164,8 +164,8 @@ Rebasing a stack two changesets at a time.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg next --rebase 2
   rebasing 2:776c07fa2b12 "r2"
   rebasing 3:137d867d71d5 "r3"
@@ -215,8 +215,8 @@ Rebasing after multiple amends.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amend 1" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg amend -m "amend 2"
   $ hg amend -m "amend 3"
   $ showgraph
@@ -256,8 +256,8 @@ Rebasing from below the amended changeset with the --newest flag.
   $ hg up 2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 776c07fa2b12 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
@@ -302,8 +302,8 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   $ hg up 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ mkcommit a
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -364,8 +364,8 @@ Test a situation where there is a conflict.
   $ echo "conflict" > c
   $ hg add c
   $ hg amend -m "amended to add c" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  4 amended to add c
   |

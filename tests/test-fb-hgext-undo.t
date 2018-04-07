@@ -1262,8 +1262,8 @@ Obsmarkers for instack amend
   $ hg update 0963
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch c5 && hg add c5 && hg amend c5
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 0963b9e31e70 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg log -G -T compact -l7
   @  30[tip]:25   e1c5a2a441f5   1970-01-01 00:00 +0000   test
   |    c3

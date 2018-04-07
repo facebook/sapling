@@ -501,8 +501,6 @@ Test amend inside exec rule:
   > pick 0d9a4961b100 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  warning: the changeset's children were left behind
-  (this is okay since a histedit is in progress)
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  5aeafddb5246 f

@@ -25,8 +25,8 @@ Test amend copytrace
   $ hg up -q ".^"
   $ hg mv a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
   rebasing 2:ad25e018afa9 "mod a"
   merging b and a to b
@@ -65,8 +65,8 @@ Test amend copytrace with multiple stacked commits
   $ hg mv a a1
   $ hg mv b b2
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of ec8c441da632 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg mv c c3
   $ hg amend
   $ hg rebase --restack
@@ -101,8 +101,8 @@ Test amend copytrace with multiple renames of the same file
   $ hg up -q ".^"
   $ hg mv a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg mv b c
   $ hg amend
   $ hg rebase --restack
@@ -134,8 +134,8 @@ Test amend copytrace with copies
   $ hg up -q ".~2"
   $ hg cp a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 0157114ee1b3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg cp i j
   $ hg amend
   $ hg cp b c
@@ -173,8 +173,8 @@ Test rebase after amend deletion of copy
   $ hg up -q ".^"
   $ hg cp a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rm b
   $ hg amend
   $ hg rebase --restack
@@ -199,8 +199,8 @@ Test failure to rebase deletion after rename
   $ hg up -q ".~2"
   $ hg mv a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
   rebasing 2:ad25e018afa9 "mod a"
   merging b and a to b
@@ -232,8 +232,8 @@ Test amend copytrace can be disabled
   $ hg up -q ".^"
   $ hg mv a b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 9f815da0cfb3 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg rebase --restack
   rebasing 2:ad25e018afa9 "mod a"
   other [source] changed a which local [dest] deleted

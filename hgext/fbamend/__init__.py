@@ -49,7 +49,10 @@ from __future__ import absolute_import
 
 import tempfile
 
-from mercurial.node import hex
+from mercurial.node import (
+    hex,
+    short,
+)
 from mercurial.i18n import _
 
 from mercurial import (
@@ -58,6 +61,7 @@ from mercurial import (
     commands,
     error,
     extensions,
+    hintutil,
     lock as lockmod,
     phases,
     registrar,
@@ -123,6 +127,11 @@ def hinthide():
 def hintstrip():
     return _("'hg strip' may be deprecated in the future - "
              "use 'hg uncommit' or 'hg undo -k' to undo commits")
+
+@hint('amend-restack')
+def hintrestack(node):
+    return _("descendants of %s are left behind - use 'hg restack' to rebase "
+             "them") % short(node)
 
 def uisetup(ui):
     hiddenoverride.uisetup(ui)
@@ -297,15 +306,8 @@ def amend(ui, repo, *pats, **opts):
                 else :
                     rebase = False
 
-        if haschildren and not rebase:
-            msg = _("warning: the changeset's children were left behind\n")
-            if _histediting(repo):
-                ui.warn(msg)
-                ui.status(_('(this is okay since a histedit is in progress)\n'))
-            else:
-                _usereducation(ui)
-                ui.warn(msg)
-                ui.status(_("(use 'hg restack' to rebase them)\n"))
+        if haschildren and not rebase and not _histediting(repo):
+            hintutil.trigger('amend-restack', old.node())
 
         changes = []
         # move old bookmarks to new node
@@ -426,14 +428,6 @@ def _preamendname(repo, node):
 
 def _histediting(repo):
     return repo.vfs.exists('histedit-state')
-
-def _usereducation(ui):
-    """
-    You can print out a message to the user here
-    """
-    education = ui.config('fbamend', 'education')
-    if education:
-        ui.warn(education + "\n")
 
 def _fixbookmarks(repo, revs):
     """Make any bookmarks pointing to the given revisions point to the

@@ -16,8 +16,8 @@ with the inhibit extension enabled.
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 66f7d451a68b are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg smartlog -T '{rev} {bookmarks}'
   @  4
   |

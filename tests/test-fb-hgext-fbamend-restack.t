@@ -60,8 +60,8 @@ Test basic case of a single amend in a small stack.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  4 add b
   |
@@ -100,8 +100,8 @@ Test multiple amends of same commit.
 
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ echo b >> b
   $ hg amend
   $ showgraph
@@ -133,8 +133,8 @@ Test conflict during rebasing.
   $ echo conflict > d
   $ hg add d
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  5 add b
   |
@@ -187,8 +187,8 @@ Test finding a stable base commit from within the old stack.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 3
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -223,8 +223,8 @@ Test finding a stable base commit from a new child of the amended commit.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ mkcommit e
   $ showgraph
   @  5 add e
@@ -263,16 +263,16 @@ a commit on top of one of the obsolete intermediate commits.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ mkcommit e
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [*] add b (glob)
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of c54ee8acf83d are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 5
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -316,14 +316,14 @@ behavior is now incorrect -- restack should always fix the whole stack.)
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 4538525df7e2 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -363,8 +363,8 @@ below the current commit alone.
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo d >> d
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 47d2a3944de8 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mkcommit f
@@ -409,8 +409,8 @@ Test having an unamended commit.
   [*] add b (glob)
   $ echo b >> b
   $ hg amend -m "Amended"
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ echo b >> b
   $ hg amend -m "Unamended"
   $ hg unamend
@@ -446,13 +446,13 @@ onto the newest successor of their parent.
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [*] add b (glob)
   $ hg amend -m "successor 1" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "successor 2" --no-rebase
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 1
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
@@ -490,8 +490,8 @@ since the successor is obsolete.
   [*] add b (glob)
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  3 add b
   |
@@ -504,8 +504,8 @@ since the successor is obsolete.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  4 add b
   |
@@ -543,14 +543,14 @@ Test recursive restacking -- basic case.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 4538525df7e2 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ showgraph
@@ -593,8 +593,8 @@ stack is lost upon rebasing lower levels.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >> b
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ mkcommit e
   $ mkcommit f
   $ hg prev
@@ -602,14 +602,14 @@ stack is lost upon rebasing lower levels.
   [*] add e (glob)
   $ echo e >> e
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of c1992d8998fa are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 2
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c >> c
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 4538525df7e2 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ mkcommit g
   $ mkcommit h
   $ hg prev
@@ -617,8 +617,8 @@ stack is lost upon rebasing lower levels.
   [*] add g (glob)
   $ echo g >> g
   $ hg amend
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 0261378a5dc1 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg up 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
@@ -899,14 +899,14 @@ Test commands.amend.autorebase=False flag - no changes to manifest and clean wor
   > EOS
   $ hg update B -q
   $ hg amend --config commands.amend.autorebase=False -m 'Unchanged manifest for B'
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [426bad] A
   $ hg amend --config commands.amend.autorebase=False -m 'Unchanged manifest for A'
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 426bada5c675 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
 Test auto-restack heuristics - manifest changes
   $ reset
@@ -920,8 +920,8 @@ Test auto-restack heuristics - manifest changes
   $ hg update B -q
   $ echo 'new b' > B
   $ hg amend -m 'Change manifest for B'
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
 Test auto-restack heuristics - no committed changes to manifest but dirty working directory
   $ reset
@@ -935,8 +935,8 @@ Test auto-restack heuristics - no committed changes to manifest but dirty workin
   $ hg update B -q
   $ echo 'new b' > B
   $ hg amend a -m 'Unchanged manifest, but dirty workdir'
-  warning: the changeset's children were left behind
-  (use 'hg restack' to rebase them)
+  hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
+  hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
 Test auto-restack heuristics - no changes to manifest but no children
   $ reset
