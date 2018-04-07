@@ -801,15 +801,20 @@ impl HgCommands for RepoClient {
         params
             .and_then(move |(node, path)| {
                 let repo = repo.clone();
-                create_remotefilelog_blob(repo.hgrepo.clone(), node, path).timed(move |stats, _| {
-                    let sample = repo.scuba_sample(ops::GETFILES);
-                    add_common_stats_and_send_to_scuba(
-                        repo.scuba.clone(),
-                        sample,
-                        stats,
-                        repo.remote.clone(),
+                create_remotefilelog_blob(repo.hgrepo.clone(), node, path.clone())
+                    .traced_global(
+                        "getfile",
+                        trace_args!("node" => format!("{}", node), "path" => format!("{}", path)),
                     )
-                })
+                    .timed(move |stats, _| {
+                        let sample = repo.scuba_sample(ops::GETFILES);
+                        add_common_stats_and_send_to_scuba(
+                            repo.scuba.clone(),
+                            sample,
+                            stats,
+                            repo.remote.clone(),
+                        )
+                    })
             })
             .boxify()
     }
@@ -908,6 +913,8 @@ fn get_file_history(
             let node = nodes.pop_front()?;
 
             let parents = repo.get_parents(&path, &node);
+            let parents = parents.traced_global("fetching parents", trace_args!());
+
             let copy = repo.get_file_copy(&path, &node).and_then({
                 let path = path.clone();
                 move |filecopy| match filecopy {
@@ -916,11 +923,13 @@ fn get_file_history(
                     None => Ok(None),
                 }
             });
+            let copy = copy.traced_global("fetching copy info", trace_args!());
 
             let linknode = Ok(path.clone()).into_future().and_then({
                 let repo = repo.clone();
                 move |path| repo.get_linknode(path, &node)
             });
+            let linknode = linknode.traced_global("fetching linknode info", trace_args!());
 
             let joined = parents
                 .join(linknode)
@@ -941,28 +950,30 @@ fn create_remotefilelog_blob(
     path: MPath,
 ) -> BoxFuture<Bytes, Error> {
     // raw_content includes copy information
-    let raw_content_bytes = repo.get_file_content(&node).and_then(move |raw_content| {
-        // requires digit counting to know for sure, use reasonable approximation
-        let approximate_header_size = 12;
-        let mut writer = Cursor::new(Vec::with_capacity(
-            approximate_header_size + raw_content.len(),
-        ));
+    let raw_content_bytes = repo.get_file_content(&node)
+        .and_then(move |raw_content| {
+            // requires digit counting to know for sure, use reasonable approximation
+            let approximate_header_size = 12;
+            let mut writer = Cursor::new(Vec::with_capacity(
+                approximate_header_size + raw_content.len(),
+            ));
 
-        // Write header
-        // TODO(stash): support LFS files using METAKEYFLAG
-        let res = write!(
-            writer,
-            "v1\n{}{}\n{}{}\0",
-            METAKEYSIZE,
-            raw_content.len(),
-            METAKEYFLAG,
-            0,
-        );
+            // Write header
+            // TODO(stash): support LFS files using METAKEYFLAG
+            let res = write!(
+                writer,
+                "v1\n{}{}\n{}{}\0",
+                METAKEYSIZE,
+                raw_content.len(),
+                METAKEYFLAG,
+                0,
+            );
 
-        res.and_then(|_| writer.write_all(&raw_content))
-            .map_err(Error::from)
-            .map(|_| writer.into_inner())
-    });
+            res.and_then(|_| writer.write_all(&raw_content))
+                .map_err(Error::from)
+                .map(|_| writer.into_inner())
+        })
+        .traced_global("fetching remotefilelog content", trace_args!());
 
     let file_history_bytes = get_file_history(repo, node, path)
         .collect()
@@ -1000,7 +1011,8 @@ fn create_remotefilelog_blob(
                 write!(writer, "\0")?;
             }
             Ok(writer.into_inner())
-        });
+        })
+        .traced_global("fetching file history", trace_args!());
 
     raw_content_bytes
         .join(file_history_bytes)
