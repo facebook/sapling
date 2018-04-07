@@ -1833,6 +1833,10 @@ help/ shows help topics
         "topic": "help"
       },
       {
+        "summary": "acknowledge hints",
+        "topic": "hint"
+      },
+      {
         "summary": "identify the working directory or specified revision",
         "topic": "identify"
       },

@@ -40,6 +40,7 @@ from . import (
     hbisect,
     help,
     hg,
+    hintutil,
     lock as lockmod,
     merge as mergemod,
     obsolete,
@@ -2688,6 +2689,20 @@ def help_(ui, name=None, **opts):
     formatted = help.formattedhelp(ui, commands, name, keep=keep, **opts)
     ui.pager('help')
     ui.write(formatted)
+
+@command('hint',
+         [('', 'ack', False, _('acknowledge and silence hints')),
+         ], _('[--ack] NAME ...'), norepo=True)
+def hint(ui, *names, **opts):
+    """acknowledge hints
+
+    ``hg hint --ack NAME`` modifies hgrc to silence hints starting with
+    ``hint[NAME]``.
+    """
+    if opts.get('ack') and names:
+        hintutil.silence(ui, names)
+        if not ui.quiet:
+            ui.write(_('hints about %s are silenced\n') % _(', ').join(names))
 
 @command('identify|id',
     [('r', 'rev', '',

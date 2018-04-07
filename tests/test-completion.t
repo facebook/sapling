@@ -24,6 +24,7 @@ Show all commands except debug commands
   grep
   heads
   help
+  hint
   identify
   import
   incoming
@@ -315,6 +316,7 @@ Show all commands + options
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command, keyword, system
+  hint: ack
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos

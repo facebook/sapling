@@ -317,6 +317,7 @@ Testing -h/--help:
    grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
+   hint          acknowledge hints
    identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
@@ -414,6 +415,7 @@ Testing -h/--help:
    grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
+   hint          acknowledge hints
    identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source

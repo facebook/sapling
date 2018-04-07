@@ -30,6 +30,7 @@
   $ hg showhint
   hint[export]: use 'hg export P' to show commit content
   hint[next]: use 'hg next' to go from X to Y
+  hint[hint-ack]: use 'hg hint --ack export next' to silence these hints
 
 Test HGPLAIN=1 silences all hints
 
@@ -39,6 +40,27 @@ Test silence configs
 
   $ hg showhint --config hint.ack-export=True
   hint[next]: use 'hg next' to go from X to Y
+  hint[hint-ack]: use 'hg hint --ack next' to silence these hints
   $ hg showhint --config hint.ack=next
   hint[export]: use 'hg export P' to show commit content
+  hint[hint-ack]: use 'hg hint --ack export' to silence these hints
   $ hg showhint --config hint.ack=*
+
+Test hint --ack command
+
+  $ HGRCPATH=$HGRCPATH:$HOME/.hgrc
+  $ hg hint --ack next hint-ack
+  hints about next, hint-ack are silenced
+  $ cat .hgrc
+  [hint]
+  ack = next hint-ack
+
+  $ hg showhint
+  hint[export]: use 'hg export P' to show commit content
+
+  $ hg hint --ack export -q
+  $ cat .hgrc
+  [hint]
+  ack = next hint-ack export
+
+  $ hg showhint

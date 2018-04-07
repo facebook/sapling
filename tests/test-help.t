@@ -74,6 +74,7 @@ Short help:
    grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
+   hint          acknowledge hints
    identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
@@ -165,6 +166,7 @@ Short help:
    grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
+   hint          acknowledge hints
    identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
@@ -988,6 +990,7 @@ Test that default list of commands omits extension commands
    grep          search revision history for a pattern in specified files
    heads         show branch heads
    help          show help for a given topic or a help overview
+   hint          acknowledge hints
    identify      identify the working directory or specified revision
    import        import an ordered set of patches
    incoming      show new changesets found in source
@@ -2565,6 +2568,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   summarize working directory state
+  </td></tr>
+  <tr><td>
+  <a href="/help/hint">
+  hint
+  </a>
+  </td><td>
+  acknowledge hints
   </td></tr>
   <tr><td>
   <a href="/help/identify">

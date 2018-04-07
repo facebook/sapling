@@ -8,6 +8,10 @@
 from __future__ import absolute_import
 
 from .i18n import _
+from . import (
+    rcutil,
+    util,
+)
 
 hinttable = {}
 messages = []
@@ -48,3 +52,18 @@ def show(ui):
             prefix = _prefix(ui, name)
             ui.write_err(('%s%s\n') % (prefix, msg.rstrip()))
             names.append(name)
+    if names and not isacked('hint-ack'):
+        prefix = _prefix(ui, 'hint-ack')
+        msg = (_("use 'hg hint --ack %s' to silence these hints\n")
+               % ' '.join(names))
+        ui.write_err(prefix + msg)
+
+def silence(ui, names):
+    """Silence given hints"""
+    path = rcutil.userrcpath()[0]
+    acked = ui.configlist('hint', 'ack')
+    for name in names:
+        if name not in acked:
+            acked.append(name)
+    value = ' '.join(util.shellquote(w) for w in acked)
+    rcutil.editconfig(path, 'hint', 'ack', value)
