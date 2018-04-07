@@ -62,6 +62,15 @@ Config::
 """
 from __future__ import absolute_import
 
+import inspect
+import json
+import os
+import re
+import shlex
+import stat
+import subprocess
+import time
+
 from mercurial.i18n import _
 from mercurial.node import (
     short,
@@ -70,12 +79,14 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
-    error,
     encoding,
+    error,
     extensions,
     hg,
+    hintutil,
     obsolete,
     patch,
+    pycompat,
     registrar,
     revsetlang,
     scmutil,
@@ -85,14 +96,6 @@ from mercurial import (
 )
 
 from . import rebase
-import inspect
-import json
-import os
-import re
-import shlex
-import subprocess
-import stat
-import time
 
 wrapcommand = extensions.wrapcommand
 wrapfunction = extensions.wrapfunction
@@ -272,7 +275,7 @@ def extsetup(ui):
          _('show diff stat per file in json (ADVANCED)')))
 
     pipei_bufsize = ui.configint('experimental', 'winpipebufsize', 4096)
-    if pipei_bufsize != 4096 and os.name == 'nt':
+    if pipei_bufsize != 4096 and pycompat.iswindows:
         wrapfunction(util, 'popen4', get_winpopen4(pipei_bufsize))
 
     # Tweak Behavior
@@ -491,7 +494,7 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # If the command succeed a message for 'hg update .^' will appear
     # suggesting to use hg prev
     if node == '.^':
-        ui.status(_("(hint: use 'hg prev' to move to the parent changeset)\n"))
+        hintutil.trigger('update-prev')
 
     return result
 
@@ -1055,7 +1058,8 @@ def get_winpopen4(pipei_bufsize):
     def winpopen4(orig, cmd, env=None, newlines=False, bufsize=-1):
         """Same as util.popen4, but manually creates an input pipe with a
         larger than default buffer"""
-        import msvcrt, _subprocess
+        import msvcrt
+        import _subprocess
         handles = _subprocess.CreatePipe(None, pipei_bufsize)
         rfd, wfd = [msvcrt.open_osfhandle(h, 0) for h in handles]
         handles[0].Detach()

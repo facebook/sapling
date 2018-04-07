@@ -69,6 +69,8 @@ Certain flags shouldn't work together.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
   ? foo
+  $ enable fbamend
   $ hg update ".^"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (hint: use 'hg prev' to move to the parent changeset)
+  hint[update-prev]: use 'hg prev' to move to the parent changeset
+  hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints

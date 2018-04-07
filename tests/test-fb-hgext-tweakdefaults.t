@@ -79,7 +79,8 @@ Dirty update allowed to same rev, with no conflicts, and --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (hint: use 'hg prev' to move to the parent changeset)
+  hint[update-prev]: use 'hg prev' to move to the parent changeset
+  hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints
   $ hg update --clean 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -398,6 +399,8 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ hg commit --date "1 1" -Aqm "dest commit for rebase"
   $ hg bookmark rebase_dest_test_1
   $ hg up -q ".^"
+  hint[update-prev]: use 'hg prev' to move to the parent changeset
+  hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints
   $ echo test_1 > rebase_source
   $ hg commit --date "1 1" -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_1
@@ -410,6 +413,8 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   $ hg commit -Aqm "dest commit for rebase"
   $ hg bookmark rebase_dest_test_2
   $ hg up -q ".^"
+  hint[update-prev]: use 'hg prev' to move to the parent changeset
+  hint[hint-ack]: use 'hg hint --ack update-prev' to silence these hints
   $ echo test_2 > rebase_source
   $ hg commit -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_2

@@ -221,17 +221,6 @@ outputs, which should be fixed later.
   hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.historypack (glob)
   hgext/treemanifest/__init__.py:*: direct symbol import _computeincrementaldatapack, _computeincrementalhistorypack, _runrepack, _topacks, backgroundrepack from hgext.remotefilelog.repack (glob)
   hgext/treemanifest/__init__.py:*: symbol import follows non-symbol import: hgext.remotefilelog.repack (glob)
-  hgext/tweakdefaults.py:69: imports from mercurial not lexically sorted: encoding < error
-  hgext/tweakdefaults.py:88: stdlib import "inspect" follows local import: hgext
-  hgext/tweakdefaults.py:89: stdlib import "json" follows local import: hgext
-  hgext/tweakdefaults.py:90: stdlib import "os" follows local import: hgext
-  hgext/tweakdefaults.py:91: stdlib import "re" follows local import: hgext
-  hgext/tweakdefaults.py:92: stdlib import "shlex" follows local import: hgext
-  hgext/tweakdefaults.py:93: stdlib import "subprocess" follows local import: hgext
-  hgext/tweakdefaults.py:94: imports not lexically sorted: stat < subprocess
-  hgext/tweakdefaults.py:94: stdlib import "stat" follows local import: hgext
-  hgext/tweakdefaults.py:95: stdlib import "time" follows local import: hgext
-  hgext/tweakdefaults.py:1058: multiple imported names: msvcrt, _subprocess
   hgext/undo.py:39: symbol import follows non-symbol import: mercurial.node
   tests/getflogheads.py:3: symbol import follows non-symbol import: mercurial.i18n
   tests/hghave.py:277: relative import of stdlib module

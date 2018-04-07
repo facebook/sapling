@@ -139,6 +139,10 @@ def hintautorebase():
              'could have happened - use --no-rebase or set '
              'commands.amend.autorebase=False to disable auto rebase')
 
+@hint('update-prev')
+def hintprev():
+    return _("use 'hg prev' to move to the parent changeset")
+
 def uisetup(ui):
     hiddenoverride.uisetup(ui)
     prune.uisetup(ui)
