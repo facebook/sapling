@@ -152,7 +152,7 @@ impl Debug for GetbundleArgs {
 
 /// The arguments that `gettreepack` accepts, in a separate struct for
 /// the convenience of callers.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GettreepackArgs {
     /// The directory of the tree to send (including its subdirectories). Can be empty, that means
     /// "root of the repo".

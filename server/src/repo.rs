@@ -789,7 +789,16 @@ impl HgCommands for RepoClient {
         let sample = self.repo.scuba_sample(ops::GETTREEPACK);
         let remote = self.repo.remote.clone();
 
-        return self.gettreepack_untimed(params)
+        return self.gettreepack_untimed(params.clone())
+            .traced_global(
+                "gettreepack",
+                trace_args!(
+                    "rootdir" => format!("{:?}", params.rootdir),
+                    "mfnodes" => format!("{:?}", params.mfnodes),
+                    "basemfnodes" => format!("{:?}", params.basemfnodes),
+                    "directories" => format!("{:?}", params.directories),
+                ),
+            )
             .timed(move |stats, _| add_common_stats_and_send_to_scuba(scuba, sample, stats, remote))
             .boxify();
     }
@@ -825,8 +834,10 @@ fn get_changed_entry_stream(
     mfid: &NodeHash,
     basemfid: &NodeHash,
 ) -> BoxStream<(Box<Entry + Sync>, NodeHash, Option<MPath>), Error> {
-    let manifest = repo.get_manifest_by_nodeid(mfid);
-    let basemanifest = repo.get_manifest_by_nodeid(basemfid);
+    let manifest = repo.get_manifest_by_nodeid(mfid)
+        .traced_global("fetch rootmf", trace_args!());
+    let basemanifest = repo.get_manifest_by_nodeid(basemfid)
+        .traced_global("fetch baserootmf", trace_args!());
 
     let changed_entries = manifest
         .join(basemanifest)
@@ -887,9 +898,19 @@ fn fetch_linknode(
         None => RepoPath::RootPath,
     };
 
+    let node = entry.get_hash().clone();
+    let path = repo_path.clone();
+
     let linknode_fut = repo.get_linknode(repo_path, &entry.get_hash().into_nodehash());
     linknode_fut
         .map(|linknode| (entry, linknode, basepath))
+        .traced_global(
+            "fetching linknode",
+            trace_args!(
+                "node" => format!("{}", node),
+                "path" => format!("{}", path)
+            ),
+        )
         .boxify()
 }
 
