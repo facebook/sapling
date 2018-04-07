@@ -17,7 +17,8 @@ Test hg bookmark works with hidden commits
   $ echo 1 >> a
   $ hg commit a -m a1
   $ hg prune da7a5140a611 -q
-  advice: 'hg hide' provides a better UI for hiding commits
+  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
+  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg bookmark b -r da7a5140a611 -q
 
 Same test but with remotenames enabled

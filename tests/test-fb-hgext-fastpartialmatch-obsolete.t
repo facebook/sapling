@@ -21,16 +21,18 @@
   $ cd repo
   $ mkcommit firstcommit
   $ hg prune .
-  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 000000000000
   1 changesets pruned
+  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
+  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg debugrebuildpartialindex
   $ hg debugcheckpartialindex
   $ mkcommit first
   $ hg debugcheckpartialindex
   $ hg prune -q .
-  advice: 'hg hide' provides a better UI for hiding commits
+  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
+  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg debugcheckpartialindex
 
 Try histedit

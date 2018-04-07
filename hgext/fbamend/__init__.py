@@ -84,6 +84,7 @@ from . import (
 )
 
 revsetpredicate = revsets.revsetpredicate
+hint = registrar.hint()
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -112,6 +113,16 @@ amendopts = [
     ('', 'fixup', None, _('rebase children from a previous amend')),
     ('', 'to', '', _('amend to a specific commit in the current stack')),
 ]
+
+@hint('strip-hide')
+def hinthide():
+    return _("'hg strip' may be deprecated in the future - "
+             "use 'hg hide' instead")
+
+@hint('strip-uncommit')
+def hintstrip():
+    return _("'hg strip' may be deprecated in the future - "
+             "use 'hg uncommit' or 'hg undo -k' to undo commits")
 
 def uisetup(ui):
     hiddenoverride.uisetup(ui)

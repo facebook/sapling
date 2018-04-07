@@ -81,8 +81,6 @@ outputs, which should be fixed later.
   hgext/fbamend/movement.py:10: direct symbol import count from itertools
   hgext/fbamend/movement.py:21: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/movement.py:22: symbol import follows non-symbol import: mercurial.node
-  hgext/fbamend/prune.py:14: imports from mercurial not lexically sorted: repair < util
-  hgext/fbamend/prune.py:26: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/restack.py:16: import should be relative: hgext
   hgext/fbamend/split.py:25: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/unamend.py:17: symbol import follows non-symbol import: mercurial.i18n

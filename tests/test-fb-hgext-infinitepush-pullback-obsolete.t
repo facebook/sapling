@@ -39,10 +39,11 @@ Do a backup and try to restore. Make sure it doesn't fail
   $ hg log -r . -T '{node}\n'
   edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff
   $ hg prune .
-  advice: 'hg hide' provides a better UI for hiding commits
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 000000000000
   1 changesets pruned
+  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
+  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg --hidden book -r edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff newbookonpruned
   $ hg pushbackup
   starting backup .* (re)

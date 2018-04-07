@@ -445,8 +445,9 @@ Prune it again and pull it via commit hash
   $ hg log -r scratch/mybranch -T '{node}\n'
   8872775dd97a750e1533dc1fbbca665644b32547
   $ hg prune -r scratch/mybranch
-  advice: 'hg hide' provides a better UI for hiding commits
   1 changesets pruned
+  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
+  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
   |

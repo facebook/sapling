@@ -11,19 +11,20 @@
 
 from __future__ import absolute_import
 
+from mercurial.i18n import _
 from mercurial import (
     bookmarks as bookmarksmod,
     commands,
     error,
     extensions,
+    hintutil,
     lock as lockmod,
     obsolete,
     registrar,
+    repair,
     scmutil,
     util,
-    repair,
 )
-from mercurial.i18n import _
 
 from . import common
 
@@ -122,11 +123,10 @@ def prune(ui, repo, *revs, **opts):
     ``--fold`` option.
     """
     if opts.get('keep', False):
-        advice = "'hg uncommit' provides a better UI for undoing commits " \
-                 "while keeping the changes\n"
+        hint = 'strip-uncommit'
     else:
-        advice = "'hg hide' provides a better UI for hiding commits\n"
-    ui.warn(_("advice: %s") % advice)
+        hint = 'strip-hide'
+    hintutil.trigger(hint)
 
     revs = scmutil.revrange(repo, list(revs) + opts.get('rev', []))
     succs = opts.get('succ', [])
