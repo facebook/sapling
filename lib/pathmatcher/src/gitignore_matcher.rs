@@ -1,7 +1,7 @@
 use ignore::Match;
 use ignore::gitignore::Gitignore;
-use lru_cache::LruCache;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 
 /// Lazy `.gitignore` matcher - load and unload `.gitignore` files on demand.
@@ -11,10 +11,11 @@ pub struct GitignoreMatcher {
     // PERF: Each Gitignore object stores "root" as "PathBuf" to support
     // matching against an absolute path. Since we enforce relative path
     // in the API, removing that "PathBuf" could reduce memory footprint.
-    submatchers: RefCell<LruCache<PathBuf, Box<GitignoreMatcher>>>,
-}
+    submatchers: RefCell<HashMap<PathBuf, Box<GitignoreMatcher>>>,
 
-const SUBMATCHER_CACHE_SIZE: usize = 32;
+    // Whether this directory is ignored or not.
+    ignored: bool,
+}
 
 /// Return (next_component, remaining_path), or None if remaining_path is empty.
 fn split_path(path: &Path) -> Option<(&Path, &Path)> {
@@ -58,9 +59,27 @@ impl GitignoreMatcher {
     /// `.gitignore` in subdirectories are parsed lazily.
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
         let ignore = Gitignore::new(root.as_ref().join(".gitignore")).0;
-        let submatchers = RefCell::new(LruCache::new(SUBMATCHER_CACHE_SIZE));
+        let submatchers = RefCell::new(HashMap::new());
         GitignoreMatcher {
             ignore,
+            submatchers,
+            ignored: false,
+        }
+    }
+
+    /// Like `new`, but might mark the subtree as "ignored" entirely.
+    /// Used internally by `match_subdir_path`.
+    fn new_with_rootmatcher(dir: &Path, root: &GitignoreMatcher) -> Self {
+        let dir_root_relative = dir.strip_prefix(root.ignore.path()).unwrap();
+        let submatchers = RefCell::new(HashMap::new());
+        let (ignored, ignore) = if root.match_relative(dir_root_relative, true) {
+            (true, Gitignore::empty())
+        } else {
+            (false, Gitignore::new(dir.join(".gitignore")).0)
+        };
+        GitignoreMatcher {
+            ignore,
+            ignored,
             submatchers,
         }
     }
@@ -71,33 +90,20 @@ impl GitignoreMatcher {
     /// ".." or ".".
     pub fn match_relative<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
         let path = path.as_ref();
-
-        self.match_path(path, is_dir) == MatchResult::Ignored
+        self.match_path(path, is_dir, self) == MatchResult::Ignored
     }
 
     /// Check .gitignore for the relative path.
-    fn match_path(&self, path: &Path, is_dir: bool) -> MatchResult {
-        // If parent directory is ignored. Then it's ignored.
-        //
-        // It's not needed for a typical directory walker (ex. the walker can
-        // notice "x/" is ignored, and skip walking into it, so whether "x/a"
-        // is ignored or not does not matter).  But is needed for non-walker
-        // cases (ex. got a list of full paths from somewhere).
-        //
-        // PERF: This adds undesirable, duplicated checks.  A solution might be
-        // changing all "foo" pattern to "foo/**".  Since the "root: PathBuf"
-        // memory usage is also undesirable. It might be worthwhile to reinvent
-        // gitignore logic using low-level GlobSet APIs.
-        if let Some(dirname) = path.parent() {
-            if self.match_path(dirname, true) == MatchResult::Ignored {
-                return MatchResult::Ignored;
-            }
+    fn match_path(&self, path: &Path, is_dir: bool, root: &GitignoreMatcher) -> MatchResult {
+        // Everything is ignored regardless if this directory is ignored.
+        if self.ignored {
+            return MatchResult::Ignored;
         }
 
         // Check subdir first. It can override this (parent) directory.
         let subdir_result = match split_path(path) {
             None => MatchResult::Unspecified,
-            Some((dir, rest)) => self.match_subdir_path(dir, rest, is_dir),
+            Some((dir, rest)) => self.match_subdir_path(dir, rest, is_dir, root),
         };
 
         match subdir_result {
@@ -108,20 +114,31 @@ impl GitignoreMatcher {
     }
 
     /// Check .gitignore in the subdirectory `name` for the path `rest`.
-    fn match_subdir_path(&self, name: &Path, rest: &Path, is_dir: bool) -> MatchResult {
-        let mut submatchers = self.submatchers.borrow_mut();
-        if let Some(m) = submatchers.get_mut(name) {
-            return m.as_ref().match_path(rest, is_dir);
+    /// Create submatcher on demand.
+    fn match_subdir_path(
+        &self,
+        name: &Path,
+        rest: &Path,
+        is_dir: bool,
+        root: &GitignoreMatcher,
+    ) -> MatchResult {
+        {
+            let submatchers = self.submatchers.borrow();
+            if let Some(m) = submatchers.get(name) {
+                return m.as_ref().match_path(rest, is_dir, root);
+            }
         }
-
-        let dir = self.ignore.path().join(name);
-        if dir.is_dir() {
-            let m = GitignoreMatcher::new(dir);
-            let result = m.match_path(rest, is_dir);
-            submatchers.insert(name.to_path_buf(), Box::new(m));
-            result
-        } else {
-            MatchResult::Unspecified
+        {
+            let dir = self.ignore.path().join(name);
+            if dir.is_dir() {
+                let m = GitignoreMatcher::new_with_rootmatcher(&dir, root);
+                let result = m.match_path(rest, is_dir, root);
+                let mut submatchers = self.submatchers.borrow_mut();
+                submatchers.insert(name.to_path_buf(), Box::new(m));
+                result
+            } else {
+                MatchResult::Unspecified
+            }
         }
     }
 }

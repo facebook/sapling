@@ -4,7 +4,6 @@ version = "0.1.0"
 
 [dependencies]
 ignore = "0.4"
-lru-cache = "0.1"
 
 [dev-dependencies]
 tempdir = "*"
