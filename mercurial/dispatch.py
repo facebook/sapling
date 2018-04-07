@@ -31,6 +31,7 @@ from . import (
     fancyopts,
     help,
     hg,
+    hintutil,
     hook,
     profiling,
     pycompat,
@@ -693,6 +694,7 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
         # run post-hook, passing command result
         hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
                   result=ret, pats=cmdpats, opts=cmdoptions)
+        hintutil.show(lui)
     except Exception:
         # run failure hook and re-raise
         hook.hook(lui, repo, "fail-%s" % cmd, False, args=" ".join(fullargs),

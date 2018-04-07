@@ -374,6 +374,7 @@ def loadall(ui, whitelist=None):
         commands,
         filemerge,
         fileset,
+        hintutil,
         revset,
         templatefilters,
         templatekw,
@@ -395,6 +396,7 @@ def loadall(ui, whitelist=None):
         ('templatefilter', templatefilters, 'loadfilter'),
         ('templatefunc', templater, 'loadfunction'),
         ('templatekeyword', templatekw, 'loadkeyword'),
+        ('hint', hintutil, 'loadhint'),
     ]
     _loadextra(ui, newindex, extraloaders)
 

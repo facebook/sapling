@@ -863,6 +863,20 @@ Supported arguments:
 ``color``
     Set branch edges color in hexadecimal RGB notation.
 
+``hint``
+--------
+
+Some commands show hints about features, like::
+
+    hint[import]: use 'hg import' to import commits exported by 'hg export'
+
+They can be silenced by ``hg hint --ack import``, which writes the
+``hint.ack`` config in user hgrc.
+
+``ack``
+    A list of hint IDs that were acknowledged so they will not
+    be shown again. If set to ``*``, silence all hints.
+
 ``hooks``
 ---------
 

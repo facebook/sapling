@@ -419,3 +419,23 @@ class internalmerge(_funcregistrarbase):
         func.mergetype = mergetype
         func.onfailure = onfailure
         func.precheck = precheck
+
+class hint(_funcregistrarbase):
+    """Decorator to register hint messages
+
+    Usage::
+
+        # register a hint message
+        hint = register.hint()
+
+        @hint('next')
+        def nextmsg(fromnode, tonode):
+            return (_('use "hg next" to go from %s to %s')
+                    % (short(fromnode), short(tonode)))
+
+        # trigger a hint message
+        def update(repo, destnode):
+            wnode = repo['.'].node()
+            if repo[destnode].p1().node() == wnode:
+                hint.trigger('next', wnode, tonode)
+    """

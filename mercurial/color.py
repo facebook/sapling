@@ -113,6 +113,7 @@ _defaultstyles = {
     'formatvariant.config.special': 'yellow',
     'formatvariant.config.default': 'green',
     'formatvariant.default': '',
+    'hint.prefix': 'yellow',
     'histedit.remaining': 'red bold',
     'ui.prompt': 'yellow',
     'log.changeset': 'yellow',
