@@ -878,15 +878,17 @@ Test auto-restack heuristics - no changes to manifest and clean working director
   > EOS
   $ hg update B -q
   $ hg amend -m 'Unchanged manifest for B'
-  (auto-rebasing descendants, use --no-rebase or set [commands] amend.autorebase=False in hgrc to disable this)
   rebasing 2:26805aba1e60 "C" (C)
+  hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
+  hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [426bad] A
   $ hg amend -m 'Unchanged manifest for A'
-  (auto-rebasing descendants, use --no-rebase or set [commands] amend.autorebase=False in hgrc to disable this)
   rebasing 3:5357953e3ea3 "Unchanged manifest for B"
   rebasing 4:b635bd2cf20b "C"
+  hint[amend-autorebase]: descendants have been auto-rebased because no merge conflict could have happened - use --no-rebase or set commands.amend.autorebase=False to disable auto rebase
+  hint[hint-ack]: use 'hg hint --ack amend-autorebase' to silence these hints
 
 Test commands.amend.autorebase=False flag - no changes to manifest and clean working directory
   $ reset

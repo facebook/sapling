@@ -133,6 +133,12 @@ def hintrestack(node):
     return _("descendants of %s are left behind - use 'hg restack' to rebase "
              "them") % short(node)
 
+@hint('amend-autorebase')
+def hintautorebase():
+    return _('descendants have been auto-rebased because no merge conflict '
+             'could have happened - use --no-rebase or set '
+             'commands.amend.autorebase=False to disable auto rebase')
+
 def uisetup(ui):
     hiddenoverride.uisetup(ui)
     prune.uisetup(ui)
@@ -298,10 +304,7 @@ def amend(ui, repo, *pats, **opts):
             if (old.manifestnode() == newcommit.manifestnode() and
                 not repo[None].dirty()):
                 if ui.configbool('commands', 'amend.autorebase'):
-                    ui.status(_('(auto-rebasing descendants, use --no-rebase'
-                            ' or set [commands] amend.autorebase=False in hgrc'
-                            ' to disable this)\n'))
-
+                    hintutil.trigger('amend-autorebase')
                     rebase = True
                 else :
                     rebase = False
