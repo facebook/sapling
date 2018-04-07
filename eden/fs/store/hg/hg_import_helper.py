@@ -541,10 +541,23 @@ class HgServer(object):
         self.debug('sent manifest with %d paths in %s seconds',
                    num_paths, time.time() - start)
 
+    def _get_manifest_node_impl(self, rev):
+        ctx = mercurial.scmutil.revsingle(self.repo, rev)
+        node_hash = ctx.manifestnode()
+        if not node_hash:
+            # For some reason ctx.manifestnode() can sometimes successfully
+            # return an empty string.  This does seem like a cache invalidation
+            # bug somehow, as it behaves correctly after restarting the
+            # process.  Ideally this broken behavior in mercurial should be
+            # fixed. For now translate this into an exception so we will retry
+            # after invalidating the cache.
+            raise Exception('mercurial bug: ctx.manifestnode() returned an '
+                            'empty string for commit %s' % (rev,))
+        return node_hash
+
     def get_manifest_node(self, rev):
         try:
-            ctx = mercurial.scmutil.revsingle(self.repo, rev)
-            return ctx.manifestnode()
+            return self._get_manifest_node_impl(rev)
         except Exception:
             # The mercurial call may fail with a "no node" error if this
             # revision in question has added to the repository after we
@@ -556,8 +569,7 @@ class HgServer(object):
             # 00changelog.i  The .a file contains pending commit data if a
             # transaction is in progress.
             self.repo.invalidate(clearfilecache=True)
-            ctx = mercurial.scmutil.revsingle(self.repo, rev)
-            return ctx.manifestnode()
+            return self._get_manifest_node_impl(rev)
 
     def get_file(self, path, rev_hash):
         try:
