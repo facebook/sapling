@@ -39,20 +39,13 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 
 	xpparam_t xpp = {
 	    XDF_INDENT_HEURISTIC, /* flags */
-	    NULL,                 /* anchors */
-	    0,                    /* anchors_nr */
 	};
 	xdemitconf_t xecfg = {
-	    0,                  /* ctxlen */
-	    0,                  /* interhunkctxlen */
 	    XDL_EMIT_BDIFFHUNK, /* flags */
-	    NULL,               /* find_func */
-	    NULL,               /* find_func_priv */
 	    hunk_consumer,      /* hunk_consume_func */
 	};
 	xdemitcb_t ecb = {
-	    rl,   /* priv */
-	    NULL, /* outf */
+	    rl, /* priv */
 	};
 
 	if (xdl_diff(&a, &b, &xpp, &xecfg, &ecb) != 0) {

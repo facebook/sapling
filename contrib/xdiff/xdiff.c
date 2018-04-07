@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,13 +35,10 @@ void readfile(const char *path, mmfile_t *file)
 	fclose(fp);
 }
 
-static int xdiff_outf(void *priv_, mmbuffer_t *mb, int nbuf)
+static int hunk_consumer(int64_t a1, int64_t a2, int64_t b1, int64_t b2,
+                         void *priv)
 {
-	int i;
-	for (i = 0; i < nbuf; i++) {
-		write(STDOUT_FILENO, mb[i].ptr, mb[i].size);
-	}
-	return 0;
+	printf("@@ -%ld,%ld +%ld,%ld @@\n", a1, a2, b1, b2);
 }
 
 int main(int argc, char const *argv[])
@@ -55,21 +53,14 @@ int main(int argc, char const *argv[])
 	readfile(argv[2], &b);
 
 	xpparam_t xpp = {
-	    0,    /* flags */
-	    NULL, /* anchors */
-	    0,    /* anchors_nr */
+	    0, /* flags */
 	};
 	xdemitconf_t xecfg = {
-	    3,    /* ctxlen */
-	    0,    /* interhunkctxlen */
-	    0,    /* flags */
-	    NULL, /* find_func */
-	    NULL, /* find_func_priv */
-	    NULL, /* hunk_consume_func */
+	    0,             /* flags */
+	    hunk_consumer, /* hunk_consume_func */
 	};
 	xdemitcb_t ecb = {
-	    0,           /* priv */
-	    &xdiff_outf, /* outf */
+	    0, /* priv */
 	};
 
 	xdl_diff(&a, &b, &xpp, &xecfg, &ecb);

@@ -1001,8 +1001,6 @@ extmodules = [
     Extension('mercurial.cext.xdiff',
               sources=[
                   'lib/third-party/xdiff/xdiffi.c',
-                  'lib/third-party/xdiff/xemit.c',
-                  'lib/third-party/xdiff/xmerge.c',
                   'lib/third-party/xdiff/xprepare.c',
                   'lib/third-party/xdiff/xutils.c',
                   'mercurial/cext/xdiff.c',
@@ -1013,7 +1011,6 @@ extmodules = [
               depends=common_depends + [
                   'lib/third-party/xdiff/xdiff.h',
                   'lib/third-party/xdiff/xdiffi.h',
-                  'lib/third-party/xdiff/xemit.h',
                   'lib/third-party/xdiff/xinclude.h',
                   'lib/third-party/xdiff/xmacros.h',
                   'lib/third-party/xdiff/xprepare.h',

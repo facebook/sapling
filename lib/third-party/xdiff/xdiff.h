@@ -28,120 +28,54 @@ extern "C" {
 #endif /* #ifdef __cplusplus */
 
 #include <stddef.h> /* size_t */
+#include <stdint.h>
 
 /* xpparm_t.flags */
 #define XDF_NEED_MINIMAL (1 << 0)
 
-#define XDF_IGNORE_WHITESPACE (1 << 1)
-#define XDF_IGNORE_WHITESPACE_CHANGE (1 << 2)
-#define XDF_IGNORE_WHITESPACE_AT_EOL (1 << 3)
-#define XDF_IGNORE_CR_AT_EOL (1 << 4)
-#define XDF_WHITESPACE_FLAGS (XDF_IGNORE_WHITESPACE | \
-			      XDF_IGNORE_WHITESPACE_CHANGE | \
-			      XDF_IGNORE_WHITESPACE_AT_EOL | \
-			      XDF_IGNORE_CR_AT_EOL)
-
-#define XDF_IGNORE_BLANK_LINES (1 << 7)
-
 #define XDF_INDENT_HEURISTIC (1 << 23)
 
-/* xdemitconf_t.flags */
-#define XDL_EMIT_FUNCNAMES (1 << 0)
-#define XDL_EMIT_FUNCCONTEXT (1 << 2)
 /* emit bdiff-style "matched" (a1, a2, b1, b2) hunks instead of "different"
  * (a1, a2 - a1, b1, b2 - b1) hunks */
 #define XDL_EMIT_BDIFFHUNK (1 << 4)
 
-#define XDL_MMB_READONLY (1 << 0)
-
-#define XDL_MMF_ATOMIC (1 << 0)
-
-#define XDL_BDOP_INS 1
-#define XDL_BDOP_CPY 2
-#define XDL_BDOP_INSB 3
-
-/* merge simplification levels */
-#define XDL_MERGE_MINIMAL 0
-#define XDL_MERGE_EAGER 1
-#define XDL_MERGE_ZEALOUS 2
-#define XDL_MERGE_ZEALOUS_ALNUM 3
-
-/* merge favor modes */
-#define XDL_MERGE_FAVOR_OURS 1
-#define XDL_MERGE_FAVOR_THEIRS 2
-#define XDL_MERGE_FAVOR_UNION 3
-
-/* merge output styles */
-#define XDL_MERGE_DIFF3 1
-
 typedef struct s_mmfile {
 	char *ptr;
-	long size;
+	int64_t size;
 } mmfile_t;
 
 typedef struct s_mmbuffer {
 	char *ptr;
-	long size;
+	int64_t size;
 } mmbuffer_t;
 
 typedef struct s_xpparam {
-	unsigned long flags;
-
-	/* See Documentation/diff-options.txt. */
-	char **anchors;
-	size_t anchors_nr;
+	uint64_t flags;
 } xpparam_t;
 
 typedef struct s_xdemitcb {
 	void *priv;
-	int (*outf)(void *, mmbuffer_t *, int);
 } xdemitcb_t;
 
-typedef long (*find_func_t)(const char *line, long line_len, char *buffer, long buffer_size, void *priv);
-
-typedef int (*xdl_emit_hunk_consume_func_t)(long start_a, long count_a,
-					    long start_b, long count_b,
+typedef int (*xdl_emit_hunk_consume_func_t)(int64_t start_a, int64_t count_a,
+					    int64_t start_b, int64_t count_b,
 					    void *cb_data);
 
 typedef struct s_xdemitconf {
-	long ctxlen;
-	long interhunkctxlen;
-	unsigned long flags;
-	find_func_t find_func;
-	void *find_func_priv;
+	uint64_t flags;
 	xdl_emit_hunk_consume_func_t hunk_func;
 } xdemitconf_t;
-
-typedef struct s_bdiffparam {
-	long bsize;
-} bdiffparam_t;
 
 
 #define xdl_malloc(x) malloc(x)
 #define xdl_free(ptr) free(ptr)
 #define xdl_realloc(ptr,x) realloc(ptr,x)
 
-void *xdl_mmfile_first(mmfile_t *mmf, long *size);
-long xdl_mmfile_size(mmfile_t *mmf);
+void *xdl_mmfile_first(mmfile_t *mmf, int64_t *size);
+int64_t xdl_mmfile_size(mmfile_t *mmf);
 
 int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
-
-typedef struct s_xmparam {
-	xpparam_t xpp;
-	int marker_size;
-	int level;
-	int favor;
-	int style;
-	const char *ancestor;	/* label for orig */
-	const char *file1;	/* label for mf1 */
-	const char *file2;	/* label for mf2 */
-} xmparam_t;
-
-#define DEFAULT_CONFLICT_MARKER_SIZE 7
-
-int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
-		xmparam_t const *xmp, mmbuffer_t *result);
 
 #ifdef __cplusplus
 }

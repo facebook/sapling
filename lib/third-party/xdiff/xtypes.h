@@ -27,35 +27,69 @@
 
 typedef struct s_chanode {
 	struct s_chanode *next;
-	long icurr;
+	int64_t icurr;
 } chanode_t;
 
 typedef struct s_chastore {
 	chanode_t *head, *tail;
-	long isize, nsize;
+	int64_t isize, nsize;
 	chanode_t *ancur;
 	chanode_t *sncur;
-	long scurr;
+	int64_t scurr;
 } chastore_t;
 
 typedef struct s_xrecord {
 	struct s_xrecord *next;
 	char const *ptr;
-	long size;
-	unsigned long ha;
+	int64_t size;
+	uint64_t ha;
 } xrecord_t;
 
 typedef struct s_xdfile {
+	/* manual memory management */
 	chastore_t rcha;
-	long nrec;
+
+	/* number of records (lines) */
+	int64_t nrec;
+
+	/* hash table size
+	 * the maximum hash value in the table is (1 << hbits) */
 	unsigned int hbits;
+
+	/* hash table, hash value => xrecord_t
+	 * note: xrecord_t is a linked list. */
 	xrecord_t **rhash;
-	long dstart, dend;
+
+	/* range excluding common prefix and suffix
+	 * [recs[i] for i in range(0, dstart)] are common prefix.
+	 * [recs[i] for i in range(dstart, dend + 1 - dstart)] are interesting
+	 * lines */
+	int64_t dstart, dend;
+
+	/* pointer to records (lines) */
 	xrecord_t **recs;
+
+	/* record changed, use original "recs" index
+	 * rchag[i] can be either 0 or 1. 1 means recs[i] (line i) is marked
+	 * "changed". */
 	char *rchg;
-	long *rindex;
-	long nreff;
-	unsigned long *ha;
+
+	/* cleaned-up record index => original "recs" index
+	 * clean-up means:
+	 *  rule 1. remove common prefix and suffix
+	 *  rule 2. remove records that are only on one side, since they can
+	 *          not match the other side
+	 * rindex[0] is likely dstart, if not removed up by rule 2.
+	 * rindex[nreff - 1] is likely dend, if not removed by rule 2.
+	 */
+	int64_t *rindex;
+
+	/* rindex size */
+	int64_t nreff;
+
+	/* cleaned-up record index => hash value
+	 * ha[i] = recs[rindex[i]]->ha */
+	uint64_t *ha;
 } xdfile_t;
 
 typedef struct s_xdfenv {
@@ -63,7 +97,7 @@ typedef struct s_xdfenv {
 
 	/* number of lines for common prefix and suffix that are removed
 	 * from xdf1 and xdf2 as a preprocessing step */
-	long nprefix, nsuffix;
+	int64_t nprefix, nsuffix;
 } xdfenv_t;
 
 
