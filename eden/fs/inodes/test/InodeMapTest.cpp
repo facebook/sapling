@@ -334,9 +334,9 @@ TEST_F(
   auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
   auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
 
-  EXPECT_EQ(1, tree->getRefcount());
-  EXPECT_EQ(1, file1->getRefcount());
-  EXPECT_EQ(1, file2->getRefcount());
+  EXPECT_EQ(1, tree->debugGetFuseRefcount());
+  EXPECT_EQ(1, file1->debugGetFuseRefcount());
+  EXPECT_EQ(1, file2->debugGetFuseRefcount());
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
@@ -373,9 +373,9 @@ TEST_F(
   auto file2 = edenMount->getInode(RelativePathPiece{"dir/file2.txt"}).get();
   auto file1 = edenMount->getInode(RelativePathPiece{"dir/file1.txt"}).get();
 
-  EXPECT_EQ(1, tree->getRefcount());
-  EXPECT_EQ(1, file1->getRefcount());
-  EXPECT_EQ(1, file2->getRefcount());
+  EXPECT_EQ(1, tree->debugGetFuseRefcount());
+  EXPECT_EQ(1, file1->debugGetFuseRefcount());
+  EXPECT_EQ(1, file2->debugGetFuseRefcount());
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());

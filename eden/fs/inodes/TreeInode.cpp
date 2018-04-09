@@ -3025,7 +3025,7 @@ uint64_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   TreeInodeDebugInfo info;
   info.inodeNumber = getNodeId().get();
-  info.refcount = getRefcount();
+  info.refcount = debugGetFuseRefcount();
 
   auto myPath = getPath();
   if (myPath.hasValue()) {

@@ -61,13 +61,6 @@ class InodeBase {
   }
 
   /**
-   * Gets the reference count of an inode.
-   */
-  uint32_t getRefcount() const {
-    return numFuseReferences_;
-  }
-
-  /**
    * Increment the number of references to this inode by its inode number.
    *
    * While the FUSE reference count is non-zero, the inode number will be
@@ -266,6 +259,18 @@ class InodeBase {
     // unloaded
     DCHECK_EQ(0, ptrAcquireCount_.load(std::memory_order_acquire));
 
+    return numFuseReferences_.load(std::memory_order_acquire);
+  }
+
+  /**
+   * Get the FUSE refcount for debugging or diagnostic purposes.
+   *
+   * This method should only be used during unit tests or diagnostic utilities.
+   * The FUSE refcount may change as soon as this function returns (before the
+   * caller has a chance to examine the result), so this should never be used
+   * for any real decision making purposes.
+   */
+  uint32_t debugGetFuseRefcount() const {
     return numFuseReferences_.load(std::memory_order_acquire);
   }
 
