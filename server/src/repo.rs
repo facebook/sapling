@@ -592,6 +592,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
+        info!(self.logger, "lookup: {:?}", key);
         // TODO(stash): T25928839 lookup should support bookmarks and prefixes too
         let repo = self.repo.hgrepo.clone();
         let scuba = self.repo.scuba.clone();
