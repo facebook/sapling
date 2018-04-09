@@ -197,8 +197,6 @@ class EdenMount {
 
   /**
    * Return the Overlay for this mount.
-   *
-   * This is valid only as long as the EdenMount object itself.
    */
   Overlay* getOverlay() {
     return overlay_.get();
