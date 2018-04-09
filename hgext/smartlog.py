@@ -658,10 +658,12 @@ def _smartlog(ui, repo, *pats, **opts):
         revs.update(scmutil.revrange(repo, [revstring]))
     else:
         revs.update(scmutil.revrange(repo, opts.get('rev')))
-        try:
-            masterrev = repo.revs('.').first()
-        except error.RepoLookupError:
-            masterrev = revs[0]
+        masterrev = _masterrev(repo, masterrevset)
+        if masterrev not in revs:
+            try:
+                masterrev = repo.revs('.').first()
+            except error.RepoLookupError:
+                masterrev = revs[0]
 
     if -1 in revs:
         revs.remove(-1)
