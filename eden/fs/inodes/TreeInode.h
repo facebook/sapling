@@ -355,7 +355,7 @@ class TreeInode : public InodeBase {
    */
   ObjectStore* getStore() const;
 
-  const std::shared_ptr<Overlay>& getOverlay() const;
+  Overlay* getOverlay() const;
   folly::Future<CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags);
   FileInodePtr symlink(PathComponentPiece name, folly::StringPiece contents);

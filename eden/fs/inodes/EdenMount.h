@@ -195,8 +195,13 @@ class EdenMount {
     return inodeMap_.get();
   }
 
-  const std::shared_ptr<Overlay>& getOverlay() const {
-    return overlay_;
+  /**
+   * Return the Overlay for this mount.
+   *
+   * This is valid only as long as the EdenMount object itself.
+   */
+  Overlay* getOverlay() {
+    return overlay_.get();
   }
 
   Journal& getJournal() {
@@ -561,7 +566,7 @@ class EdenMount {
   std::unique_ptr<InodeMap> inodeMap_;
   std::unique_ptr<EdenDispatcher> dispatcher_;
   std::unique_ptr<ObjectStore> objectStore_;
-  std::shared_ptr<Overlay> overlay_;
+  std::unique_ptr<Overlay> overlay_;
   InodeNumber dotEdenInodeNumber_{};
 
   /**

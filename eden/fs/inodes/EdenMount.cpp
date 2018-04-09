@@ -171,7 +171,7 @@ EdenMount::EdenMount(
       inodeMap_{new InodeMap(this)},
       dispatcher_{new EdenDispatcher(this)},
       objectStore_(std::move(objectStore)),
-      overlay_(std::make_shared<Overlay>(config_->getOverlayPath())),
+      overlay_(std::make_unique<Overlay>(config_->getOverlayPath())),
       bindMounts_(config_->getBindMounts()),
       mountGeneration_(globalProcessGeneration | ++mountGeneration),
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},

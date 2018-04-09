@@ -1645,7 +1645,7 @@ ObjectStore* TreeInode::getStore() const {
   return getMount()->getObjectStore();
 }
 
-const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
+Overlay* TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
