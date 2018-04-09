@@ -2187,7 +2187,7 @@ def _dograft(ui, repo, *revs, **opts):
         skipped.add(rev)
     revs = [r for r in revs if r not in skipped]
     if not revs:
-        return -1
+        raise error.Abort(_('empty revision set was specified'))
 
     # Don't check in the --continue case, in effect retaining --force across
     # --continues. That's because without --force, any revisions we decided to

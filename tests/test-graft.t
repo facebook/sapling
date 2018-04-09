@@ -65,6 +65,12 @@ Need to specify a rev:
   abort: no revisions specified
   [255]
 
+Empty revision set was specified
+
+  $ hg graft -r '2::1'
+  abort: empty revision set was specified
+  [255]
+
 Can't graft ancestor:
 
   $ hg graft 1 2
