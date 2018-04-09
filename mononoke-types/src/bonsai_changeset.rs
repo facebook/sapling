@@ -6,7 +6,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use failure::SyncFailure;
+use failure::{err_msg, SyncFailure};
 use quickcheck::{Arbitrary, Gen};
 
 use rust_thrift::compact_protocol;
@@ -23,8 +23,13 @@ use typed_hash::{ChangesetId, ChangesetIdContext};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BonsaiChangesetMut {
     pub parents: Vec<ChangesetId>,
-    pub user: String,
-    pub date: DateTime,
+    pub author: String,
+    pub author_date: DateTime,
+    pub committer: Option<String>,
+    // XXX should committer date always be recorded? If so, it should probably be a
+    // monotonically increasing value:
+    // max(author date, max(committer date of parents) + epsilon)
+    pub committer_date: Option<DateTime>,
     pub message: String,
     pub extra: BTreeMap<String, String>,
     pub file_changes: BTreeMap<MPath, FileChange>,
@@ -51,8 +56,14 @@ impl BonsaiChangeset {
                     .into_iter()
                     .map(|parent| ChangesetId::from_thrift(parent))
                     .collect::<Result<_>>()?,
-                user: tc.user,
-                date: DateTime::from_thrift(tc.date)?,
+                author: tc.author,
+                author_date: DateTime::from_thrift(tc.author_date
+                    .ok_or_else(|| err_msg("missing author date field"))?)?,
+                committer: tc.committer,
+                committer_date: match tc.committer_date {
+                    Some(dt) => Some(DateTime::from_thrift(dt)?),
+                    None => None,
+                },
                 message: tc.message,
                 extra: tc.extra,
                 file_changes: tc.file_changes
@@ -104,14 +115,30 @@ impl BonsaiChangeset {
         self.inner.file_deletes.iter()
     }
 
-    /// Get the user for this changeset.
-    pub fn user(&self) -> &str {
-        &self.inner.user
+    /// Get the author for this changeset.
+    pub fn author(&self) -> &str {
+        &self.inner.author
     }
 
-    /// Get the time and timezone for this changeset.
-    pub fn date(&self) -> &DateTime {
-        &self.inner.date
+    /// Get the author date (time and timezone) for this changeset.
+    pub fn author_date(&self) -> &DateTime {
+        &self.inner.author_date
+    }
+
+    /// Get the committer for this changeset.
+    pub fn committer(&self) -> Option<&str> {
+        match self.inner.committer {
+            Some(ref c) => Some(c.as_str()),
+            None => None,
+        }
+    }
+
+    /// Get the committer date (time and timezone) for this changeset.
+    pub fn committer_date(&self) -> Option<&DateTime> {
+        match self.inner.committer_date {
+            Some(ref dt) => Some(dt),
+            None => None,
+        }
     }
 
     /// Get the commit message.
@@ -149,8 +176,10 @@ impl BonsaiChangeset {
                 .into_iter()
                 .map(|parent| parent.into_thrift())
                 .collect(),
-            user: self.inner.user,
-            date: self.inner.date.into_thrift(),
+            author: self.inner.author,
+            author_date: Some(self.inner.author_date.into_thrift()),
+            committer: self.inner.committer,
+            committer_date: self.inner.committer_date.map(|dt| dt.into_thrift()),
             message: self.inner.message,
             extra: self.inner.extra,
             file_changes: self.inner
@@ -179,8 +208,10 @@ impl Arbitrary for BonsaiChangeset {
             parents,
             file_changes: BTreeMap::arbitrary(g),
             file_deletes: BTreeSet::arbitrary(g),
-            user: String::arbitrary(g),
-            date: DateTime::arbitrary(g),
+            author: String::arbitrary(g),
+            author_date: DateTime::arbitrary(g),
+            committer: Option::<String>::arbitrary(g),
+            committer_date: Option::<DateTime>::arbitrary(g),
             message: String::arbitrary(g),
             extra: BTreeMap::arbitrary(g),
         }.freeze()
@@ -199,8 +230,10 @@ impl Arbitrary for BonsaiChangeset {
                     parents,
                     file_changes,
                     file_deletes,
-                    user: cs.user.clone(),
-                    date: cs.date,
+                    author: cs.author.clone(),
+                    author_date: cs.author_date,
+                    committer: cs.committer.clone(),
+                    committer_date: cs.committer_date,
                     message: cs.message.clone(),
                     extra,
                 }.freeze()
@@ -239,8 +272,10 @@ mod test {
     fn fixed_blob() {
         let tc = BonsaiChangesetMut {
             parents: vec![],
-            user: "foo".into(),
-            date: DateTime::from_timestamp(1234567890, 36800).unwrap(),
+            author: "foo".into(),
+            author_date: DateTime::from_timestamp(1234567890, 36800).unwrap(),
+            committer: Some("bar".into()),
+            committer_date: Some(DateTime::from_timestamp(1500000000, -36800).unwrap()),
             message: "Commit message".into(),
             extra: BTreeMap::new(),
             file_changes: btreemap![
@@ -266,7 +301,7 @@ mod test {
             blob.id(),
             &ChangesetId::new(
                 Blake2::from_str(
-                    "c3571b7de4921fc0815756581a77ddff7b50be743480deb4f4c0c5dedb232393"
+                    "759d450632c77a186c75c1ea900279769a2392167513ec91fee2aa065fd487bc"
                 ).unwrap()
             )
         );

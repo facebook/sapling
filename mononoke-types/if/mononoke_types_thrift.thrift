@@ -62,16 +62,25 @@ typedef list<MPathElement> MPath (hs.newtype)
 // * Added and modified files are both part of file_changes.
 // * file_changes and file_deletes are at the end of the struct so that a
 //   deserializer that just wants to read metadata can stop early.
+// * The "required" fields are only for data that is absolutely core to the
+//   model. Note that Thrift does allow changing "required" to unqualified.
+// * Id and DateTime fields do not have a reasonable default value, so they must
+//   always be either "required" or "optional".
 struct BonsaiChangeset {
   1: required list<ChangesetId> parents,
-  2: required string user,
-  3: required DateTime date,
-  4: required string message,
-  5: required map<string, string> extra,
-  6: required map<MPath, FileChange> file_changes,
-  7: required set<MPath> file_deletes,
+  2: string author,
+  3: optional DateTime author_date,
+  // Mercurial won't necessarily have a committer, so this is optional.
+  4: optional string committer,
+  5: optional DateTime committer_date,
+  6: string message,
+  7: map<string, string> extra,
+  8: map<MPath, FileChange> file_changes,
+  9: set<MPath> file_deletes,
 }
 
+// DateTime fields do not have a reasonable default value! They must
+// always be required or optional.
 struct DateTime {
   1: required i64 timestamp_secs,
   // Timezones can go up to UTC+13 (which would be represented as -46800), so
@@ -91,7 +100,7 @@ enum FileType {
 
 struct FileChange {
   1: required ContentId content_id,
-  2: required FileType file_type,
+  2: FileType file_type,
   // size is a u64 stored as an i64
   3: required i64 size,
   4: optional MPath copy_from,
