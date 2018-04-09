@@ -102,9 +102,7 @@ class BuildRustExt(distutils.core.Command):
 
     def get_temp_path(self, ext):
         """Returns the path of the temporary directory to build in."""
-        return os.path.join(self.build_temp,
-                            os.path.dirname(ext.manifest),
-                            'target')
+        return os.path.join(self.build_temp, 'cargo-target')
 
     def get_temp_output(self, ext):
         """Returns the location in the temp directory of the output file."""
