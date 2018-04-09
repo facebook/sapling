@@ -62,6 +62,7 @@ CONFIG
   $MONONOKE_BLOBIMPORT --blobstore rocksdb --linknodes mononoke-config mononoke-config-rocks >> "$TESTTMP/mononoke-config-blobimport.out" 2>&1
   mkdir -p "mononoke-config-rocks"/.hg
   mkdir -p "mononoke-config-rocks"/books
+  mkdir -p "mononoke-config-rocks"/heads
 }
 
 function blobimport {
