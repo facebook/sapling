@@ -10,7 +10,7 @@ use failure::Error;
 use futures::future::{self, Future};
 use futures::stream::{self, Stream};
 
-use mononoke_types::{FileType, MPath, MPathElement};
+use mononoke_types::{FileType, MPathElement};
 
 use blob::Blob;
 use blobnode::Parents;
@@ -147,7 +147,9 @@ impl Display for Type {
 pub enum Content {
     File(Blob),       // TODO stream
     Executable(Blob), // TODO stream
-    Symlink(MPath),
+    // Symlinks typically point to files but can have arbitrary content, so represent them as
+    // blobs rather than as MPath instances.
+    Symlink(Blob), // TODO stream
     Tree(Box<Manifest + Sync>),
 }
 

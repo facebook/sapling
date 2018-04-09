@@ -142,7 +142,7 @@ impl Entry for BlobEntry {
                     let res = match ty {
                         Type::File(FileType::Regular) => Content::File(Blob::from(blob)),
                         Type::File(FileType::Executable) => Content::Executable(Blob::from(blob)),
-                        Type::File(FileType::Symlink) => Content::Symlink(MPath::new(blob)?),
+                        Type::File(FileType::Symlink) => Content::Symlink(Blob::from(blob)),
                         Type::Tree => Content::Tree(BlobManifest::parse(blobstore, blob)?.boxed()),
                     };
 
@@ -155,8 +155,9 @@ impl Entry for BlobEntry {
     fn get_size(&self) -> BoxFuture<Option<usize>, Error> {
         self.get_content()
             .and_then(|content| match content {
-                Content::File(data) | Content::Executable(data) => Ok(data.size()),
-                Content::Symlink(path) => Ok(Some(path.to_vec().len())),
+                Content::File(data) | Content::Executable(data) | Content::Symlink(data) => {
+                    Ok(data.size())
+                }
                 Content::Tree(_) => Ok(None),
             })
             .boxify()
