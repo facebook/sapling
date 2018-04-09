@@ -104,17 +104,17 @@ Run seqimport limiting to one changelist
   importing CL1
   committing files:
   Main/a
-  file: //depot/Main/a, src: p4
+  file: //depot/Main/a, src: * (glob)
   Main/b
-  file: //depot/Main/b, src: p4
+  file: //depot/Main/b, src: * (glob)
   Main/kw
-  file: //depot/Main/kw, src: p4
+  file: //depot/Main/kw, src: * (glob)
   Main/symlink
-  file: //depot/Main/symlink, src: p4
+  file: //depot/Main/symlink, src: * (glob)
   Main/symlinktosymlink
-  file: //depot/Main/symlinktosymlink, src: p4
+  file: //depot/Main/symlinktosymlink, src: * (glob)
   Main/x
-  file: //depot/Main/x, src: p4
+  file: //depot/Main/x, src: * (glob)
   committing manifest
   committing changelog
   writing metadata to sqlite
@@ -154,23 +154,23 @@ Run seqimport again for up to 50 changelists
   loading changelist numbers.
   2 changelists to import.
   importing CL2
-  file: //depot/Main/b, src: p4
+  file: //depot/Main/b, src: * (glob)
   committing files:
   Main/amove
-  file: //depot/Main/amove, src: p4
+  file: //depot/Main/amove, src: * (glob)
    Main/amove: copy Main/a:* (glob)
   Main/b
   Main/c
-  file: //depot/Main/c, src: p4
+  file: //depot/Main/c, src: * (glob)
   committing manifest
   committing changelog
   writing metadata to sqlite
   importing CL3
-  file: //depot/Main/symlink, src: p4
-  file: //depot/Main/x, src: p4
+  file: //depot/Main/symlink, src: * (glob)
+  file: //depot/Main/x, src: * (glob)
   committing files:
   Main/largefile
-  file: //depot/Main/largefile, src: p4
+  file: //depot/Main/largefile, src: * (glob)
   Main/symlink
   Main/x
   committing manifest
