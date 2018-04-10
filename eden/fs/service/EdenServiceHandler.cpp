@@ -95,21 +95,21 @@ namespace /* anonymous namespace for helper functions */ {
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
+  ThriftLogHelper(ThriftLogHelper&&) = default;
+  ThriftLogHelper& operator=(ThriftLogHelper&&) = default;
+
   template <typename... Args>
   ThriftLogHelper(
+      const folly::Logger& logger,
       folly::LogLevel level,
       folly::StringPiece itcFunctionName,
       folly::StringPiece itcFileName,
-      uint32_t itcLineNumber,
-      const Args&... rest)
+      uint32_t itcLineNumber)
       : itcFunctionName_(itcFunctionName),
         itcFileName_(itcFileName),
         itcLineNumber_(itcLineNumber),
         level_(level),
-        itcLogger_("eden.thrift." + itcFunctionName_.str()) {
-    TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_)
-        << itcFunctionName_ << "(" << toDelimWrapper(rest...) << ")";
-  }
+        itcLogger_(logger) {}
 
   ~ThriftLogHelper() {
     if (wrapperExecuted_) {
@@ -148,7 +148,7 @@ class ThriftLogHelper {
   folly::StringPiece itcFileName_;
   uint32_t itcLineNumber_;
   folly::LogLevel level_;
-  folly::Logger itcLogger_;
+  const folly::Logger& itcLogger_;
   folly::stop_watch<std::chrono::milliseconds> itcTimer_ = {};
   bool wrapperExecuted_ = false;
 };
@@ -162,12 +162,15 @@ class ThriftLogHelper {
 // When not attached to Future it will log the completion of the operation and
 // time taken to complete it.
 
-#define INSTRUMENT_THRIFT_CALL(level, ...)                          \
-  ([&](folly::StringPiece functionName,                             \
-       folly::StringPiece fileName,                                 \
-       uint32_t lineNumber) {                                       \
-    return (std::make_unique<ThriftLogHelper>(                      \
-        level, functionName, fileName, lineNumber, ##__VA_ARGS__)); \
+#define INSTRUMENT_THRIFT_CALL(level, ...)                                   \
+  ([&](folly::StringPiece functionName,                                      \
+       folly::StringPiece fileName,                                          \
+       uint32_t lineNumber) {                                                \
+    static folly::Logger logger("eden.thrift." + functionName.str());        \
+    TLOG(logger, folly::LogLevel::level, fileName, lineNumber)               \
+        << functionName << "(" << toDelimWrapper(__VA_ARGS__) << ")";        \
+    return ThriftLogHelper(                                                  \
+        logger, folly::LogLevel::level, functionName, fileName, lineNumber); \
   }(__func__, __FILE__, __LINE__))
 
 namespace facebook {
@@ -177,13 +180,12 @@ EdenServiceHandler::EdenServiceHandler(EdenServer* server)
     : FacebookBase2("Eden"), server_(server) {}
 
 facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG4);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
   return facebook::fb303::cpp2::fb_status::ALIVE;
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(folly::LogLevel::INFO, info->get_mountPoint());
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO, info->get_mountPoint());
   try {
     auto initialConfig = ClientConfig::loadFromClientDirectory(
         AbsolutePathPiece{info->mountPoint},
@@ -197,7 +199,7 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::INFO, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
   try {
     server_->unmount(*mountPoint).get();
   } catch (const EdenError& ex) {
@@ -208,7 +210,7 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   for (const auto& edenMount : server_->getMountPoints()) {
     MountInfo info;
     info.mountPoint = edenMount->getPath().value();
@@ -223,7 +225,7 @@ void EdenServiceHandler::checkOutRevision(
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG1,
+      DBG1,
       *mountPoint,
       logHash(*hash),
       folly::get_default(
@@ -238,8 +240,8 @@ void EdenServiceHandler::checkOutRevision(
 void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG1, *mountPoint, logHash(parents->parent1));
+  auto helper =
+      INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, logHash(parents->parent1));
   ParentCommits edenParents;
   edenParents.parent1() = hashFromThrift(parents->parent1);
   if (parents->__isset.parent2) {
@@ -254,9 +256,7 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> paths) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3,
-      *mountPoint,
-      "[" + folly::join(", ", *paths.get()) + "]");
+      DBG3, *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
 
   vector<Future<Hash>> futures;
   for (const auto& path : *paths) {
@@ -311,7 +311,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 void EdenServiceHandler::getBindMounts(
     std::vector<string>& out,
     std::unique_ptr<string> mountPointPtr) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3, *mountPointPtr);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPointPtr);
   auto mountPoint = *mountPointPtr.get();
   auto mountPointPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPoint);
@@ -326,7 +326,7 @@ void EdenServiceHandler::getBindMounts(
 void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto latest = edenMount->getJournal().getLatest();
 
@@ -350,7 +350,7 @@ void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG2, *mountPoint);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto delta = edenMount->getJournal().getLatest();
 
@@ -400,9 +400,7 @@ void EdenServiceHandler::getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3,
-      *mountPoint,
-      "[" + folly::join(", ", *paths.get()) + "]");
+      DBG3, *mountPoint, "[" + folly::join(", ", *paths.get()) + "]");
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -436,9 +434,7 @@ void EdenServiceHandler::glob(
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> globs) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3,
-      *mountPoint,
-      "[" + folly::join(", ", *globs.get()) + "]");
+      DBG3, *mountPoint, "[" + folly::join(", ", *globs.get()) + "]");
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
@@ -459,8 +455,7 @@ void EdenServiceHandler::getManifestEntry(
     ManifestEntry& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> relativePath) {
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3, *mountPoint, *relativePath);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, *relativePath);
   auto mount = server_->getMount(*mountPoint);
   auto filename = RelativePathPiece{*relativePath};
   auto mode = isInManifestAsFile(mount.get(), filename);
@@ -505,7 +500,7 @@ EdenServiceHandler::future_getScmStatus(
     bool listIgnored,
     std::unique_ptr<std::string> commitHash) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG2,
+      DBG2,
       *mountPoint,
       folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
       folly::to<string>("commitHash=", logHash(*commitHash)));
@@ -527,7 +522,7 @@ EdenServiceHandler::future_getScmStatus(
   } else {
     hash = hashFromThrift(*commitHash);
   }
-  return helper->wrapFuture(diffMountForStatus(mount.get(), hash, listIgnored));
+  return helper.wrapFuture(diffMountForStatus(mount.get(), hash, listIgnored));
 }
 
 folly::Future<std::unique_ptr<ScmStatus>>
@@ -536,18 +531,18 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
     std::unique_ptr<std::string> oldHash,
     std::unique_ptr<std::string> newHash) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG2,
+      DBG2,
       *mountPoint,
       folly::to<string>("oldHash=", logHash(*oldHash)),
       folly::to<string>("newHash=", logHash(*newHash)));
   auto id1 = hashFromThrift(*oldHash);
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
-  return helper->wrapFuture(diffCommits(mount->getObjectStore(), id1, id2)
-                                .then([](ScmStatus&& result) {
-                                  return make_unique<ScmStatus>(
-                                      std::move(result));
-                                }));
+  return helper.wrapFuture(diffCommits(mount->getObjectStore(), id1, id2)
+                               .then([](ScmStatus&& result) {
+                                 return make_unique<ScmStatus>(
+                                     std::move(result));
+                               }));
 }
 
 void EdenServiceHandler::debugGetScmTree(
@@ -555,8 +550,7 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -587,8 +581,7 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -613,8 +606,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -638,7 +630,7 @@ void EdenServiceHandler::debugInodeStatus(
     vector<TreeInodeDebugInfo>& inodeInfo,
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto edenMount = server_->getMount(*mountPoint);
 
   TreeInodePtr inode;
@@ -654,7 +646,7 @@ void EdenServiceHandler::debugInodeStatus(
 void EdenServiceHandler::debugOutstandingFuseCalls(
     std::vector<FuseCall>& outstandingCalls,
     std::unique_ptr<std::string> mountPoint) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG2);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
   auto edenMount = server_->getMount(*mountPoint);
   auto* fuseChannel = edenMount->getFuseChannel();
@@ -683,7 +675,7 @@ void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto inodeNum = static_cast<InodeNumber>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
 
@@ -701,7 +693,7 @@ void EdenServiceHandler::debugSetLogLevel(
     SetLogLevelResult& result,
     std::unique_ptr<std::string> category,
     std::unique_ptr<std::string> level) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG1);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
   // TODO: This is a temporary hack until Adam's upcoming log config parser
   // is ready.
   bool inherit = true;
@@ -720,8 +712,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path,
     std::unique_ptr<TimeSpec> age) {
-  auto helper =
-      INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG1, *mountPoint, *path);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG1, *mountPoint, *path);
   auto edenMount = server_->getMount(*mountPoint);
 
   TreeInodePtr inode;
@@ -738,7 +729,7 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 }
 
 void EdenServiceHandler::getStatInfo(InternalStats& result) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto mountList = server_->getMountPoints();
   for (auto& mount : mountList) {
     auto inodeMap = mount->getInodeMap();
@@ -780,7 +771,7 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
 }
 
 void EdenServiceHandler::flushStatsNow() {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   server_->flushStatsNow();
 }
 
@@ -814,7 +805,7 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
 }
 
 void EdenServiceHandler::shutdown() {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::INFO);
+  auto helper = INSTRUMENT_THRIFT_CALL(INFO);
   server_->stop();
 }
 } // namespace eden
