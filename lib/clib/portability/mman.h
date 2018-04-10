@@ -10,7 +10,9 @@
 #define FBHGEXT_CLIB_PORTABILITY_MMAN_H
 
 #if defined(_MSC_VER)
-#include "lib/third-party/mman-win32/mman.h"
+/* A fb-specific define which ensures that we use the static flavor of mman-win32 */
+#define MMAN_LIBRARY
+#include "sys/mman.h"
 #else
 #include <sys/mman.h>
 #endif
