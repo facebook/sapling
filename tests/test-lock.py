@@ -29,7 +29,8 @@ class lockwrapper(lock.lock):
         self._pidoffset = pidoffset
         super(lockwrapper, self).__init__(*args, **kwargs)
     def _getpid(self):
-        return super(lockwrapper, self)._getpid() + self._pidoffset
+        pid = super(lockwrapper, self)._getpid()
+        return "%s/%s" % (pid, self._pidoffset)
 
 class teststate(object):
     def __init__(self, testcase, dir, pidoffset=0):
@@ -289,7 +290,7 @@ class testlock(unittest.TestCase):
             self.fail("unexpected lock acquisition")
         except error.LockHeld as why:
             self.assertTrue(why.errno == errno.ETIMEDOUT)
-            self.assertTrue(why.locker == "")
+            self.assertTrue(why.locker == lock.emptylocker)
             state.assertlockexists(False)
 
 if __name__ == '__main__':

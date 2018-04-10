@@ -23,41 +23,104 @@ from . import (
     util,
 )
 
-def _getlockprefix():
-    """Return a string which is used to differentiate pid namespaces
+class _emptylocker(object):
+    def getwarning(self, l):
+        return _("waiting for lock on %r") % l.desc
+emptylocker = _emptylocker()
 
-    It's useful to detect "dead" processes and remove stale locks with
-    confidence. Typically it's just hostname. On modern linux, we include an
-    extra Linux-specific pid namespace identifier.
+class locker(object):
+    """Container for a process that originally created a file lock
+
+    It is constructed by parsing a `namespace:uniqueid` string, where
+    `namespace` can be:
+    - just a 'hostname' (Windows, non-pid-namespacing POSIX)
+    - 'hostname/pid-namespace' (modern linux)
+
+    `uniqueid` can be:
+    - just a 'pid' (POSIX)
     """
-    result = socket.gethostname()
-    if pycompat.ispy3:
-        result = result.encode(pycompat.sysstr(encoding.encoding), 'replace')
-    if pycompat.sysplatform.startswith('linux'):
-        try:
-            result += '/%x' % os.stat('/proc/self/ns/pid').st_ino
-        except OSError as ex:
-            if ex.errno not in (errno.ENOENT, errno.EACCES, errno.ENOTDIR):
-                raise
-    return result
+    _currentnamespace = None
+
+    def __init__(self, fromstr):
+        """Create a locker object by parsing a string
+
+        Modern `fromstr` should be a string of the following
+        format: `<namespacing part>:<identification part>`
+        Supports the following formats:
+        - `host:pid`
+        - `host/pidnamespace:pid`
+        - `host:pid/starttime"""
+        self.pidnamespace = None
+        self.host = None
+        self.pid = None
+
+        ns, uid = fromstr.split(':', 1)
+
+        if '/' in ns:
+            self.host, self.pidnamespace = ns.split('/', 1)
+        elif ns:
+            self.host = ns
+
+        self.pid = uid
+
+    def __eq__(self, other):
+        if other is None or other == emptylocker:
+            return False
+        if isinstance(other, str):
+            return self == locker(other)
+        return (self.namespace == other.namespace
+                and self.uniqueid == other.uniqueid)
+
+    @property
+    def namespace(self):
+        if self.pidnamespace:
+            return self.host + '/' + self.pidnamespace
+        return self.host
+
+    @property
+    def uniqueid(self):
+        return self.pid
+
+    @classmethod
+    def getcurrentnamespace(cls):
+        if cls._currentnamespace is not None:
+            return cls._currentnamespace
+        result = socket.gethostname()
+        if pycompat.ispy3:
+            result = result.encode(pycompat.sysstr(encoding.encoding),
+                                   'replace')
+        if pycompat.sysplatform.startswith('linux'):
+            try:
+                result += '/%x' % os.stat('/proc/self/ns/pid').st_ino
+            except OSError as ex:
+                if ex.errno not in (errno.ENOENT, errno.EACCES, errno.ENOTDIR):
+                    raise
+        cls._currentnamespace = result
+        return result
+
+    @staticmethod
+    def getcurrentid():
+        return str(util.getpid())
+
+    def issamenamespace(self):
+        """Check if the current process is in the same namespace as locker"""
+        return self.namespace == self.getcurrentnamespace()
+
+    def isrunning(self):
+        """Check if locker is still running"""
+        return util.testpid(int(self.pid))
+
+    def getwarning(self, l):
+        """Get a locker's warning string while trying to acquire `l` lock"""
+        msg = _("waiting for lock on %s held by process %r on host %r\n")
+        msg %= (l.desc, self.pid, self.host)
+        return ''.join(msg)
 
 def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
     the held lock while trying to acquires it."""
-
-    def printwarning(printer, locker):
-        """issue the usual "waiting on lock" message through any channel"""
-        # show more details for new-style locks
-        if ':' in locker:
-            host, pid = locker.split(":", 1)
-            msg = _("waiting for lock on %s held by process %r "
-                    "on host %r\n") % (l.desc, pid, host)
-        else:
-            msg = _("waiting for lock on %s held by %r\n") % (l.desc, locker)
-        printer(msg)
-
     l = lock(vfs, lockname, 0, *args, dolock=False, **kwargs)
 
     debugidx = 0 if (warntimeout and timeout) else -1
@@ -74,9 +137,9 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
             break
         except error.LockHeld as inst:
             if delay == debugidx:
-                printwarning(ui.debug, inst.locker)
+                ui.debug(inst.locker.getwarning(l))
             if delay == warningidx:
-                printwarning(ui.warn, inst.locker)
+                ui.warn(inst.locker.getwarning(l))
             if timeout <= delay:
                 raise error.LockHeld(errno.ETIMEDOUT, inst.filename,
                                      l.desc, inst.locker)
@@ -85,10 +148,11 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
 
     l.delay = delay
     if l.delay:
+        msg = _("got lock after %s seconds\n") % l.delay
         if 0 <= warningidx <= l.delay:
-            ui.warn(_("got lock after %s seconds\n") % l.delay)
+            ui.warn(msg)
         else:
-            ui.debug("got lock after %s seconds\n" % l.delay)
+            ui.debug(msg)
     if l.acquirefn:
         l.acquirefn()
     return l
@@ -111,7 +175,7 @@ class lock(object):
     # old-style lock: symlink to pid
     # new-style lock: symlink to hostname:pid
 
-    _host = None
+    _namespace = None
 
     def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
                  desc=None, inheritchecker=None, parentlock=None,
@@ -153,8 +217,11 @@ class lock(object):
         self.release()
 
     def _getpid(self):
-        # wrapper around util.getpid() to make testing easier
-        return util.getpid()
+        # wrapper around locker.getcurrentid() to make testing easier
+        return locker.getcurrentid()
+
+    def _getlockname(self):
+        return '%s:%s' % (locker.getcurrentnamespace(), self.pid)
 
     def lock(self):
         timeout = self.timeout
@@ -175,34 +242,32 @@ class lock(object):
         if self.held:
             self.held += 1
             return
-        if lock._host is None:
-            lock._host = _getlockprefix()
-        lockname = '%s:%d' % (lock._host, self.pid)
         retry = 5
         while not self.held and retry:
             retry -= 1
             try:
-                self.vfs.makelock(lockname, self.f)
+                self.vfs.makelock(self._getlockname(), self.f)
                 self.held = 1
             except (OSError, IOError) as why:
                 if why.errno == errno.EEXIST:
-                    locker = self._readlock()
-                    if locker is None:
+                    lockfilecontents = self._readlock()
+                    if lockfilecontents is None:
                         continue
+                    lockerdesc = locker(lockfilecontents)
 
                     # special case where a parent process holds the lock -- this
                     # is different from the pid being different because we do
                     # want the unlock and postrelease functions to be called,
                     # but the lockfile to not be removed.
-                    if locker == self.parentlock:
+                    if lockerdesc == self.parentlock:
                         self._parentheld = True
                         self.held = 1
                         return
-                    locker = self._testlock(locker)
-                    if locker is not None:
+                    lockerdesc = self._testlock(lockerdesc)
+                    if lockerdesc is not None:
                         raise error.LockHeld(errno.EAGAIN,
                                              self.vfs.join(self.f), self.desc,
-                                             locker)
+                                             lockerdesc)
                 else:
                     raise error.LockUnavailable(why.errno, why.strerror,
                                                 why.filename, self.desc)
@@ -210,8 +275,8 @@ class lock(object):
         if not self.held:
             # use empty locker to mean "busy for frequent lock/unlock
             # by many processes"
-            raise error.LockHeld(errno.EAGAIN,
-                                 self.vfs.join(self.f), self.desc, "")
+            raise error.LockHeld(errno.EAGAIN, self.vfs.join(self.f),
+                                 self.desc, emptylocker)
 
     def _readlock(self):
         """read lock and return its value
@@ -226,21 +291,11 @@ class lock(object):
                 return None
             raise
 
-    def _testlock(self, locker):
-        if locker is None:
+    def _testlock(self, lockerdesc):
+        if lockerdesc is None:
             return None
-        try:
-            host, pid = locker.split(":", 1)
-        except ValueError:
-            return locker
-        if host != lock._host:
-            return locker
-        try:
-            pid = int(pid)
-        except ValueError:
-            return locker
-        if util.testpid(pid):
-            return locker
+        if not lockerdesc.issamenamespace() or lockerdesc.isrunning():
+            return lockerdesc
         # if locker dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
@@ -248,7 +303,7 @@ class lock(object):
             self.vfs.unlink(self.f)
             l.release()
         except error.LockError:
-            return locker
+            return lockerdesc
 
     def testlock(self):
         """return id of locker if lock is valid, else None.
@@ -261,8 +316,8 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        locker = self._readlock()
-        return self._testlock(locker)
+        lockerdesc = locker(self._readlock())
+        return self._testlock(lockerdesc)
 
     @contextlib.contextmanager
     def inherit(self):
@@ -285,7 +340,7 @@ class lock(object):
         if self._parentheld:
             lockname = self.parentlock
         else:
-            lockname = '%s:%s' % (lock._host, self.pid)
+            lockname = self._getlockname()
         self._inherited = True
         try:
             yield lockname
