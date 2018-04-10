@@ -34,6 +34,7 @@ from . import (
     graphmod,
     match as matchmod,
     mdiff,
+    mergeutil,
     obsolete,
     patch,
     pathutil,
@@ -3189,6 +3190,11 @@ def amend(ui, repo, old, extra, pats, opts):
             assert not commitsubs
             if subs:
                 subrepo.writestate(repo, newsubstate)
+
+        # avoid cycle (TODO: should be removed in default branch)
+        from . import merge as mergemod
+        ms = mergemod.mergestate.read(repo)
+        mergeutil.checkunresolved(ms)
 
         filestoamend = set(f for f in wctx.files() if matcher(f))
 

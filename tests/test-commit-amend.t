@@ -417,6 +417,23 @@ Refuse to amend during a merge:
   [255]
   $ hg ci -m 'merge'
 
+Refuse to amend if there is a merge conflict (issue5805):
+
+  $ hg up -q foo
+  $ echo c > a
+  $ hg up default -t :fail
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg resolve -l
+  U a
+
+  $ hg ci --amend
+  abort: unresolved merge conflicts (see 'hg help resolve')
+  [255]
+
+  $ hg up -qC .
+
 Follow copies/renames:
 
   $ hg mv b c
