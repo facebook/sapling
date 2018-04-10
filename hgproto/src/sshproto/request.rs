@@ -454,18 +454,7 @@ fn parse_with_params(
               pairs => pairlist,
           })
         | command!("branchmap", Branchmap, parse_params, {})
-        | command!("branches", Branches, parse_params, {
-              nodes => hashlist,
-          })
-        | command!("clonebundles", Clonebundles, parse_params, {})
         | command!("capabilities", Capabilities, parse_params, {})
-        | command!("changegroup", Changegroup, parse_params, {
-              roots => hashlist,
-          })
-        | command!("changegroupsubset", Changegroupsubset, parse_params, {
-              heads => hashlist,
-              bases => hashlist,
-          })
         | call!(parse_command, "debugwireargs", parse_params, 2+1,
             |kv| Ok(Debugwireargs {
                 one: parseval(&kv, "one", ident_complete)?.to_vec(),
@@ -495,13 +484,6 @@ fn parse_with_params(
         | command_star!("known", Known, parse_params, {
               nodes => hashlist,
           })
-        | command!("pushkey", Pushkey, parse_params, {
-              namespace => ident_string,
-              key => ident_string,
-              old => nodehash,
-              new => nodehash,
-          })
-        | command!("streamout", Streamout, parse_params, {})
         | command!("unbundle", Unbundle, parse_params, {
               heads => stringlist,
           })
@@ -1148,65 +1130,10 @@ mod test_parse {
     }
 
     #[test]
-    fn test_parse_branches() {
-        let inp =
-            "branches\n\
-             nodes 163\n\
-             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222 \
-             3333333333333333333333333333333333333333 4444444444444444444444444444444444444444";
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Branches {
-                nodes: vec![hash_ones(), hash_twos(), hash_threes(), hash_fours()],
-            }),
-        );
-    }
-
-    #[test]
-    fn test_parse_clonebundles() {
-        let inp = "clonebundles\n";
-
-        test_parse(inp, Request::Single(SingleRequest::Clonebundles {}));
-    }
-
-    #[test]
     fn test_parse_capabilities() {
         let inp = "capabilities\n";
 
         test_parse(inp, Request::Single(SingleRequest::Capabilities {}));
-    }
-
-    #[test]
-    fn test_parse_changegroup() {
-        let inp =
-            "changegroup\n\
-             roots 81\n\
-             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Changegroup {
-                roots: vec![hash_ones(), hash_twos()],
-            }),
-        );
-    }
-
-    #[test]
-    fn test_parse_changegroupsubset() {
-        let inp =
-            "changegroupsubset\n\
-             heads 40\n\
-             1111111111111111111111111111111111111111\
-             bases 81\n\
-             2222222222222222222222222222222222222222 3333333333333333333333333333333333333333";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Changegroupsubset {
-                heads: vec![hash_ones()],
-                bases: vec![hash_twos(), hash_threes()],
-            }),
-        );
     }
 
     #[test]
@@ -1395,36 +1322,6 @@ mod test_parse {
                    nodes 0\n";
 
         test_parse(inp, Request::Single(SingleRequest::Known { nodes: vec![] }));
-    }
-
-    #[test]
-    fn test_parse_pushkey() {
-        let inp = "pushkey\n\
-                   namespace 9\n\
-                   bookmarks\
-                   key 6\n\
-                   foobar\
-                   old 40\n\
-                   1111111111111111111111111111111111111111\
-                   new 40\n\
-                   2222222222222222222222222222222222222222";
-
-        test_parse(
-            inp,
-            Request::Single(SingleRequest::Pushkey {
-                namespace: "bookmarks".to_string(),
-                key: "foobar".to_string(),
-                old: hash_ones(),
-                new: hash_twos(),
-            }),
-        );
-    }
-
-    #[test]
-    fn test_parse_streamout() {
-        let inp = "streamout\n";
-
-        test_parse(inp, Request::Single(SingleRequest::Streamout {}));
     }
 
     fn test_parse_unbundle_with(bundle: &[u8]) {

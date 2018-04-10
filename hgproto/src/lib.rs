@@ -57,15 +57,6 @@ mod handler;
 mod commands;
 pub mod sshproto;
 
-// result from `branches()`
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct BranchRes {
-    top: NodeHash,
-    node: NodeHash,
-    p0: Option<NodeHash>,
-    p1: Option<NodeHash>,
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub enum Request {
     Batch(Vec<SingleRequest>),
@@ -78,18 +69,7 @@ pub enum SingleRequest {
         pairs: Vec<(NodeHash, NodeHash)>,
     },
     Branchmap,
-    Branches {
-        nodes: Vec<NodeHash>,
-    },
-    Clonebundles,
     Capabilities,
-    Changegroup {
-        roots: Vec<NodeHash>,
-    },
-    Changegroupsubset {
-        bases: Vec<NodeHash>,
-        heads: Vec<NodeHash>,
-    },
     Debugwireargs {
         one: Vec<u8>,
         two: Vec<u8>,
@@ -107,13 +87,6 @@ pub enum SingleRequest {
     Known {
         nodes: Vec<NodeHash>,
     },
-    Pushkey {
-        namespace: String,
-        key: String,
-        old: NodeHash,
-        new: NodeHash,
-    },
-    Streamout,
     Unbundle {
         heads: Vec<String>,
     },
@@ -176,11 +149,7 @@ pub enum Response {
 pub enum SingleResponse {
     Between(Vec<Vec<NodeHash>>),
     Branchmap(HashMap<String, HashSet<NodeHash>>),
-    Branches(Vec<BranchRes>),
-    Clonebundles(String),
     Capabilities(Vec<String>),
-    Changegroup,
-    Changegroupsubset,
     Debugwireargs(Bytes),
     Getbundle(Bytes),
     Heads(HashSet<NodeHash>),
@@ -188,8 +157,6 @@ pub enum SingleResponse {
     Listkeys(HashMap<Vec<u8>, Vec<u8>>),
     Lookup(Bytes),
     Known(Vec<bool>),
-    Pushkey,
-    Streamout, /* (BoxStream<Vec<u8>, Error>) */
     ReadyForStream,
     Unbundle(Bytes),
     Gettreepack(Bytes),

@@ -556,21 +556,6 @@ impl HgCommands for RepoClient {
             .boxify()
     }
 
-    // @wireprotocommand('branchmap')
-    fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<NodeHash>>> {
-        // We have no plans to support mercurial branches and hence no plans for branchmap,
-        // so just return fake response.
-        future::ok(HashMap::new()).boxify()
-    }
-
-    // @wireprotocommand('changegroup', 'roots')
-    fn changegroup(&self, roots: Vec<NodeHash>) -> HgCommandRes<()> {
-        // TODO: streaming something
-        info!(self.logger, "changegroup roots {:?}", roots);
-
-        future::ok(()).boxify()
-    }
-
     // @wireprotocommand('heads')
     fn heads(&self) -> HgCommandRes<HashSet<NodeHash>> {
         // Get a stream of heads and collect them into a HashSet

@@ -30,7 +30,7 @@ use mercurial_types::{MPath, NodeHash};
 use tokio_io::AsyncRead;
 use tokio_io::codec::Decoder;
 
-use {BranchRes, GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
+use {GetbundleArgs, GettreepackArgs, SingleRequest, SingleResponse};
 
 use errors::*;
 
@@ -73,15 +73,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::Branches { nodes } => (
-                hgcmds
-                    .branches(nodes)
-                    .map(SingleResponse::Branches)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
             SingleRequest::Branchmap => (
                 hgcmds
                     .branchmap()
@@ -91,37 +82,10 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::Clonebundles => (
-                hgcmds
-                    .clonebundles()
-                    .map(SingleResponse::Clonebundles)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
             SingleRequest::Capabilities => (
                 hgcmds
                     .capabilities()
                     .map(SingleResponse::Capabilities)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
-            SingleRequest::Changegroup { roots } => (
-                hgcmds
-                    .changegroup(roots)
-                    .map(|_| SingleResponse::Changegroup)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
-            SingleRequest::Changegroupsubset { bases, heads } => (
-                hgcmds
-                    .changegroupsubset(bases, heads)
-                    .map(|_| SingleResponse::Changegroupsubset)
                     .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
@@ -184,29 +148,6 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 hgcmds
                     .known(nodes)
                     .map(SingleResponse::Known)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
-            SingleRequest::Pushkey {
-                namespace,
-                key,
-                old,
-                new,
-            } => (
-                hgcmds
-                    .pushkey(namespace, key, old, new)
-                    .map(|_| SingleResponse::Pushkey)
-                    .map_err(self::Error::into)
-                    .into_stream()
-                    .boxify(),
-                ok(instream).boxify(),
-            ),
-            SingleRequest::Streamout => (
-                hgcmds
-                    .stream_out()
-                    .map(|_| SingleResponse::Streamout)
                     .map_err(self::Error::into)
                     .into_stream()
                     .boxify(),
@@ -517,33 +458,14 @@ pub trait HgCommands {
 
     // @wireprotocommand('branchmap')
     fn branchmap(&self) -> HgCommandRes<HashMap<String, HashSet<NodeHash>>> {
-        unimplemented("branchmap")
-    }
-
-    // @wireprotocommand('branches', 'nodes')
-    fn branches(&self, _nodes: Vec<NodeHash>) -> HgCommandRes<Vec<BranchRes>> {
-        unimplemented("branches")
-    }
-
-    // @wireprotocommand('clonebundles', '')
-    fn clonebundles(&self) -> HgCommandRes<String> {
-        unimplemented("clonebundles")
+        // We have no plans to support mercurial branches and hence no plans for branchmap,
+        // so just return fake response.
+        future::ok(HashMap::new()).boxify()
     }
 
     // @wireprotocommand('capabilities')
     fn capabilities(&self) -> HgCommandRes<Vec<String>> {
         unimplemented("capabilities")
-    }
-
-    // @wireprotocommand('changegroup', 'roots')
-    fn changegroup(&self, _roots: Vec<NodeHash>) -> HgCommandRes<()> {
-        // TODO: streaming something
-        unimplemented("changegroup")
-    }
-
-    // @wireprotocommand('changegroupsubset', 'bases heads')
-    fn changegroupsubset(&self, _bases: Vec<NodeHash>, _heads: Vec<NodeHash>) -> HgCommandRes<()> {
-        unimplemented("changegroupsubset")
     }
 
     // @wireprotocommand('getbundle', '*')
@@ -575,23 +497,6 @@ pub trait HgCommands {
     // @wireprotocommand('known', 'nodes *')
     fn known(&self, _nodes: Vec<NodeHash>) -> HgCommandRes<Vec<bool>> {
         unimplemented("known")
-    }
-
-    // @wireprotocommand('pushkey', 'namespace key old new')
-    fn pushkey(
-        &self,
-        _namespace: String,
-        _key: String,
-        _old: NodeHash,
-        _new: NodeHash,
-    ) -> HgCommandRes<()> {
-        unimplemented("pushkey")
-    }
-
-    // @wireprotocommand('stream_out')
-    fn stream_out(&self) -> HgCommandRes<BoxStream<Vec<u8>, Error>> {
-        // XXX raw streaming?
-        unimplemented("stream_out")
     }
 
     // @wireprotocommand('unbundle', 'heads')
