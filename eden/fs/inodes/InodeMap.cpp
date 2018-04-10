@@ -9,6 +9,7 @@
  */
 #include "eden/fs/inodes/InodeMap.h"
 
+#include <boost/polymorphic_cast.hpp>
 #include <folly/Exception.h>
 #include <folly/Likely.h>
 #include <folly/experimental/logging/xlog.h>
@@ -22,6 +23,7 @@
 #include "eden/fs/utils/Bug.h"
 
 using folly::Future;
+using folly::Optional;
 using folly::Promise;
 using folly::throwSystemErrorExplicit;
 using folly::Unit;
@@ -30,6 +32,61 @@ using namespace std::literals::chrono_literals;
 
 namespace facebook {
 namespace eden {
+
+InodeMap::UnloadedInode::UnloadedInode(
+    InodeNumber num,
+    InodeNumber parentNum,
+    PathComponentPiece entryName)
+    : number(num), parent(parentNum), name(entryName) {}
+
+InodeMap::UnloadedInode::UnloadedInode(
+    InodeNumber num,
+    InodeNumber parentNum,
+    PathComponentPiece entryName,
+    bool isUnlinked,
+    mode_t mode,
+    folly::Optional<Hash> hash,
+    uint32_t fuseRefcount)
+    : number(num),
+      parent(parentNum),
+      name(entryName),
+      isUnlinked{isUnlinked},
+      mode{mode},
+      hash{hash},
+      numFuseReferences{fuseRefcount} {}
+
+InodeMap::UnloadedInode::UnloadedInode(
+    TreeInode* inode,
+    TreeInode* parent,
+    PathComponentPiece entryName,
+    bool isUnlinked,
+    folly::Optional<Hash> hash,
+    uint32_t fuseRefcount)
+    : number{inode->getNodeId()},
+      parent{parent->getNodeId()},
+      name{entryName},
+      isUnlinked{isUnlinked},
+      // There is no asTree->getMode() we can call,
+      // however, directories are always represented with
+      // this specific mode bit pattern in eden so we can
+      // force the value down here.
+      mode{S_IFDIR | 0755},
+      hash{hash},
+      numFuseReferences{fuseRefcount} {}
+
+InodeMap::UnloadedInode::UnloadedInode(
+    FileInode* inode,
+    TreeInode* parent,
+    PathComponentPiece entryName,
+    bool isUnlinked,
+    uint32_t fuseRefcount)
+    : number{inode->getNodeId()},
+      parent{parent->getNodeId()},
+      name{entryName},
+      isUnlinked{isUnlinked},
+      mode{inode->getMode()},
+      hash{inode->getBlobHash()},
+      numFuseReferences{fuseRefcount} {}
 
 InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
 
@@ -94,13 +151,12 @@ void InodeMap::initializeFromTakeover(
     auto unloadedEntry = UnloadedInode(
         InodeNumber::fromThrift(entry.inodeNumber),
         InodeNumber::fromThrift(entry.parentInode),
-        PathComponentPiece{entry.name});
-    unloadedEntry.numFuseReferences = entry.numFuseReferences;
-    unloadedEntry.isUnlinked = entry.isUnlinked;
-    if (!entry.hash.empty()) {
-      unloadedEntry.hash = hashFromThrift(entry.hash);
-    }
-    unloadedEntry.mode = entry.mode;
+        PathComponentPiece{entry.name},
+        entry.isUnlinked,
+        entry.mode,
+        entry.hash.empty() ? Optional<Hash>{folly::none}
+                           : Optional<Hash>{hashFromThrift(entry.hash)},
+        entry.numFuseReferences);
 
     auto result = data->unloadedInodes_.emplace(
         InodeNumber::fromThrift(entry.inodeNumber), std::move(unloadedEntry));
@@ -476,6 +532,12 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
   }
 }
 
+void InodeMap::setUnmounted() {
+  auto data = data_.wlock();
+  DCHECK(!data->isUnmounted_);
+  data->isUnmounted_ = true;
+}
+
 Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   // Record that we are in the process of shutting down.
   auto future = Future<folly::Unit>::makeEmpty();
@@ -697,9 +759,56 @@ void InodeMap::unloadInode(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
+  // Call updateOverlayForUnload() to update the overlay and compute
+  // if we need to remember an UnloadedInode entry.
+  auto unloadedEntry =
+      updateOverlayForUnload(inode, parent, name, isUnlinked, data);
+  if (unloadedEntry) {
+    // Insert the unloaded entry
+    XLOG(DBG7) << "inserting unloaded map entry for inode "
+               << inode->getNodeId();
+    auto ret = data->unloadedInodes_.emplace(
+        inode->getNodeId(), std::move(unloadedEntry.value()));
+    CHECK(ret.second);
+  }
+
+  auto numErased = data->loadedInodes_.erase(inode->getNodeId());
+  CHECK_EQ(numErased, 1) << "inconsistent loaded inodes data: "
+                         << inode->getLogPath();
+}
+
+Optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
+    InodeBase* inode,
+    TreeInode* parent,
+    PathComponentPiece name,
+    bool isUnlinked,
+    const folly::Synchronized<Members>::LockedPtr& data) {
+  // If the mount point has been unmounted, ignore any outstanding FUSE
+  // refcounts on inodes that still existed before it was unmounted.
+  // Everything is unreferenced by FUSE after an unmount operation, and we no
+  // longer need to remember anything in the unloadedInodes_ map.
+  if (data->isUnmounted_) {
+    XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId()
+               << " after unmount: " << inode->getLogPath();
+    if (isUnlinked) {
+      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+    } else {
+      inode->updateOverlayHeader();
+    }
+    return folly::none;
+  }
+
+  // If the tree is unlinked and no longer referenced we can delete it from
+  // the overlay and completely forget about it.
+  auto fuseCount = inode->getFuseRefcount();
+  if (isUnlinked && fuseCount == 0) {
+    XLOG(DBG5) << "forgetting unreferenced unlinked inode "
+               << inode->getNodeId() << ": " << inode->getLogPath();
+    mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+    return folly::none;
+  }
+
   auto* asTree = dynamic_cast<TreeInode*>(inode);
-  // Set only if asTree != nullptr.
-  folly::Synchronized<TreeInode::Dir>::LockedPtr treeContentsLock;
   if (asTree) {
     // Normally, acquiring the tree's contents lock while the InodeMap members
     // lock is held violates our lock hierarchy.  However, since this TreeInode
@@ -709,96 +818,71 @@ void InodeMap::unloadInode(
     // this function.  We could even add an unsafe "I'm in the ctor or dtor so
     // there cannot be any contention" accessor to folly::Synchronized to avoid
     // needing to acquire the lock.
-    treeContentsLock = asTree->getContents().wlock(0s);
+    auto treeContentsLock = asTree->getContents().wlock(0s);
     CHECK(treeContentsLock)
         << "TreeInode::Dir lock was held prior to unloadInode!";
-  }
 
-  // When unloading an inode, we need to remember all of the inode numbers of
-  // the children or at least update the timestamps.
-  if (asTree) {
     // If the tree is materialized, its state in the overlay should already be
     // up-to-date.  If the tree is unlinked, it has no children and will never
     // have children again, so there's no need to write it into the overlay.
-    // Data for unlinked, unreferenced inodes is deleted below anyway.
-    if (!treeContentsLock->isMaterialized() && !isUnlinked) {
+    if (!treeContentsLock->isMaterialized()) {
       XLOG(DBG5) << "saving non-materialized tree " << asTree->getNodeId()
                  << " (" << asTree->getLogPath() << ") to overlay";
       asTree->getOverlay()->saveOverlayDir(
           inode->getNodeId(), *treeContentsLock);
     }
-  } else {
-    // If the file is unlinked but there is still a FUSE refcount, the data
-    // from the overlay could still be referenced, so keep it up to date.
-    inode->updateOverlayHeader();
-  }
 
-  // If any of this inode's childrens are in unloadedInodes_, then this
-  // inode, as its parent, must not be forgotten.
-  auto hasRememberedChildren = [asTree,
-                                &treeContentsLock](const Members& data) {
-    if (!asTree) {
-      return false;
+    // If the fuse refcount is non-zero we have to remember this inode.
+    if (fuseCount > 0) {
+      XLOG(DBG5) << "unloading tree inode " << inode->getNodeId()
+                 << " with FUSE refcount=" << fuseCount << ": "
+                 << inode->getLogPath();
+      return UnloadedInode(
+          asTree,
+          parent,
+          name,
+          isUnlinked,
+          treeContentsLock->treeHash,
+          fuseCount);
     }
 
+    // If any of this inode's childrens are in unloadedInodes_, then this
+    // inode, as its parent, must not be forgotten.
     for (const auto& pair : treeContentsLock->entries) {
-      const auto& name = pair.first;
+      const auto& childName = pair.first;
       const auto& entry = pair.second;
-      if (data.unloadedInodes_.count(entry.getInodeNumber())) {
-        XLOG(DBG6) << "remembering inode " << asTree->getNodeId()
-                   << " because its child " << name << " was remembered";
-        return true;
+      if (data->unloadedInodes_.count(entry.getInodeNumber())) {
+        XLOG(DBG5) << "remembering inode " << asTree->getNodeId() << " ("
+                   << asTree->getLogPath() << ") because its child "
+                   << childName << " was remembered";
+        return UnloadedInode(
+            asTree,
+            parent,
+            name,
+            isUnlinked,
+            treeContentsLock->treeHash,
+            fuseCount);
       }
     }
-    return false;
-  };
-
-  auto fuseCount = inode->getFuseRefcount();
-  if (fuseCount > 0 || hasRememberedChildren(*data)) {
-    // Insert an unloaded entry
-    XLOG(DBG5) << "unloading inode " << inode->getNodeId()
-               << " with FUSE refcount=" << fuseCount << ": "
-               << inode->getLogPath();
-    auto unloadedEntry =
-        UnloadedInode(inode->getNodeId(), parent->getNodeId(), name);
-    unloadedEntry.numFuseReferences = fuseCount;
-    unloadedEntry.isUnlinked = isUnlinked;
-
-    if (asTree) {
-      unloadedEntry.hash = treeContentsLock->treeHash;
-      // There is no asTree->getMode() we can call,
-      // however, directories are always represented with
-      // this specific mode bit pattern in eden so we can
-      // force the value down here.
-      unloadedEntry.mode = S_IFDIR | 0755;
-    } else {
-      auto* asFile = dynamic_cast<const FileInode*>(inode);
-      unloadedEntry.hash = asFile->getBlobHash();
-      unloadedEntry.mode = asFile->getMode();
-    }
-
-    auto reverseInsertKey =
-        std::make_pair(unloadedEntry.parent, unloadedEntry.name.piece());
-    XLOG(DBG7) << "reverse unload emplace " << reverseInsertKey.first << ":"
-               << reverseInsertKey.second;
-    auto ret = data->unloadedInodes_.emplace(
-        inode->getNodeId(), std::move(unloadedEntry));
-    CHECK(ret.second);
+    return folly::none;
   } else {
-    XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId() << ": "
-               << inode->getLogPath();
-    // If this inode is unlinked, it can never be loaded again, since there are
-    // no outstanding pointer or fuse references to it, and it cannot be
-    // accessed by path either.  Delete any data about it from the overlay in
-    // this case.
-    if (isUnlinked) {
-      mount_->getOverlay()->removeOverlayData(inode->getNodeId());
+    // Make sure the timestamp fields are kept up-to-date in the overlay if
+    // this file is materialized.
+    inode->updateOverlayHeader();
+
+    // We have to remember files only if their FUSE refcount is non-zero
+    if (fuseCount > 0) {
+      XLOG(DBG5) << "unloading file inode " << inode->getNodeId()
+                 << " with FUSE refcount=" << fuseCount << ": "
+                 << inode->getLogPath();
+      auto* asFile = boost::polymorphic_downcast<FileInode*>(inode);
+      return UnloadedInode(asFile, parent, name, isUnlinked, fuseCount);
+    } else {
+      XLOG(DBG5) << "forgetting unreferenced file inode " << inode->getNodeId()
+                 << " : " << inode->getLogPath();
+      return folly::none;
     }
   }
-
-  auto numErased = data->loadedInodes_.erase(inode->getNodeId());
-  CHECK_EQ(numErased, 1) << "inconsistent loaded inodes data: "
-                         << inode->getLogPath();
 }
 
 bool InodeMap::shouldLoadChild(

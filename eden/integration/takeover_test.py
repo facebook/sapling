@@ -41,7 +41,11 @@ class TakeoverTest(testcase.EdenRepoTest):
             # test_takeover_with_io causes lots of I/O, so do not enable
             # verbose logging of I/O operations in this test.
             return {}
-        return {'eden.strace': 'DBG7', 'eden.fs.fuse': 'DBG7'}
+        return {
+            'eden.strace': 'DBG7',
+            'eden.fs.fuse': 'DBG7',
+            'eden.fs.inodes.InodeMap': 'DBG6',
+        }
 
     def do_takeover_test(self) -> None:
         hello = os.path.join(self.mount, 'tree/hello')

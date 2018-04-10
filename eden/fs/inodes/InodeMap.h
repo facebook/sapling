@@ -251,6 +251,15 @@ class InodeMap {
   void decFuseRefcount(InodeNumber number, uint32_t count = 1);
 
   /**
+   * Indicate that the mount point has been unmounted.
+   *
+   * Calling this before shutdown() will inform the InodeMap that it no longer
+   * needs to remember inodes with outstanding FUSE refcounts when shutting
+   * down.
+   */
+  void setUnmounted();
+
+  /**
    * Shutdown the InodeMap.
    *
    * The shutdown process must wait for all Inode objects in this InodeMap to
@@ -429,8 +438,28 @@ class InodeMap {
     UnloadedInode(
         InodeNumber num,
         InodeNumber parentNum,
-        PathComponentPiece entryName)
-        : number(num), parent(parentNum), name(entryName) {}
+        PathComponentPiece entryName);
+    UnloadedInode(
+        InodeNumber num,
+        InodeNumber parentNum,
+        PathComponentPiece entryName,
+        bool isUnlinked,
+        mode_t mode,
+        folly::Optional<Hash> hash,
+        uint32_t fuseRefcount);
+    UnloadedInode(
+        TreeInode* inode,
+        TreeInode* parent,
+        PathComponentPiece entryName,
+        bool isUnlinked,
+        folly::Optional<Hash> hash,
+        uint32_t fuseRefcount);
+    UnloadedInode(
+        FileInode* inode,
+        TreeInode* parent,
+        PathComponentPiece entryName,
+        bool isUnlinked,
+        uint32_t fuseRefcount);
 
     InodeNumber const number;
     InodeNumber const parent;
@@ -438,16 +467,11 @@ class InodeMap {
 
     /**
      * A boolean indicating if this inode is unlinked.
-     *
-     * TODO: For unlinked inodes we can't rely on the parent TreeInode to have
-     * data about this inode's mode and File/Blob hash.  We need to record
-     * enough information to be able to load it without a parent Tree.  We
-     * perhaps should record this data in the overlay and just use the overlay.
      */
-    bool isUnlinked{false};
+    bool const isUnlinked{false};
 
     /** The complete st_mode value for this entry */
-    mode_t mode{0};
+    mode_t const mode{0};
 
     /**
      * If the entry is not materialized, this contains the hash
@@ -456,7 +480,7 @@ class InodeMap {
      *
      * If the entry is materialized, this field is not set.
      */
-    folly::Optional<Hash> hash;
+    folly::Optional<Hash> const hash;
 
     /**
      * A list of promises waiting on this inode to be loaded.
@@ -527,6 +551,14 @@ class InodeMap {
     std::unordered_map<InodeNumber, UnloadedInode> unloadedInodes_;
 
     /**
+     * Indicates if the FUSE mount point has been unmounted.
+     *
+     * If this is true then the FUSE refcount on all inodes should be treated
+     * as 0, and we can forget all inodes while shutting down.
+     */
+    bool isUnmounted_{false};
+
+    /**
      * A promise to fulfill once shutdown() completes.
      *
      * This is only initialized when shutdown() is called, and will be
@@ -583,6 +615,20 @@ class InodeMap {
    * releasing the InodeMap lock.
    */
   void unloadInode(
+      InodeBase* inode,
+      TreeInode* parent,
+      PathComponentPiece name,
+      bool isUnlinked,
+      const folly::Synchronized<Members>::LockedPtr& lock);
+
+  /**
+   * Update the overlay data for an inode before unloading it.
+   * This is called as the first step of unloadInode().
+   *
+   * This returns an UnloadedInode if we need to remember this inode in the
+   * unloadedInodes_ map, or folly::none if we can forget about it completely.
+   */
+  folly::Optional<UnloadedInode> updateOverlayForUnload(
       InodeBase* inode,
       TreeInode* parent,
       PathComponentPiece name,

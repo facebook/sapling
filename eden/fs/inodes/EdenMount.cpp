@@ -702,6 +702,12 @@ void EdenMount::fuseInitSuccessful(
   std::move(fuseCompleteFuture)
       .via(serverState_->getThreadPool().get())
       .then([this](FuseChannel::StopData&& stopData) {
+        // If the FUSE device is no longer valid then the mount point has
+        // been unmounted.
+        if (!stopData.fuseDevice) {
+          inodeMap_->setUnmounted();
+        }
+
         std::vector<AbsolutePath> bindMounts;
         for (const auto& entry : bindMounts_) {
           bindMounts.push_back(entry.pathInMountDir);
