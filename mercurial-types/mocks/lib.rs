@@ -12,7 +12,12 @@ extern crate csv;
 #[macro_use]
 extern crate failure_ext as failure;
 extern crate futures;
+#[cfg(test)]
+#[macro_use]
+extern crate maplit;
 
+#[cfg(test)]
+extern crate async_unit;
 extern crate futures_ext;
 extern crate mercurial_types;
 

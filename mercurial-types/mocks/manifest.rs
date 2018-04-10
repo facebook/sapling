@@ -12,7 +12,7 @@ use std::sync::Arc;
 use bytes::Bytes;
 use csv::Reader;
 use failure::{Error, ResultExt};
-use futures::{stream, IntoFuture};
+use futures::{future, stream, IntoFuture};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 
 use mercurial_types::{Blob, Entry, FileType, MPath, MPathElement, Manifest, RepoPath, Type};
@@ -184,8 +184,8 @@ fn finalize_dirs(
 }
 
 impl Manifest for MockManifest {
-    fn lookup(&self, _path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
-        unimplemented!();
+    fn lookup(&self, path: &MPathElement) -> BoxFuture<Option<Box<Entry + Sync>>, Error> {
+        future::ok(self.entries.get(path).map(|e| e.clone().boxed())).boxify()
     }
     fn list(&self) -> BoxStream<Box<Entry + Sync>, Error> {
         stream::iter_ok(self.entries.clone().into_iter().map(|e| e.1.boxed())).boxify()
@@ -262,5 +262,77 @@ impl Entry for MockEntry {
     }
     fn get_name(&self) -> Option<&MPathElement> {
         self.name.as_ref()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use futures::Future;
+
+    use async_unit;
+
+    #[test]
+    fn lookup() {
+        async_unit::tokio_unit_test(|| {
+            let paths = btreemap! {
+                "foo/bar1" => (FileType::Regular, "bar1"),
+                "foo/bar2" => (FileType::Symlink, "bar2"),
+                "foo/baz/quux1" => (FileType::Executable, "quux1"),
+                "quux2" => (FileType::Regular, "quux2"),
+            };
+            let root_manifest = MockManifest::from_paths(paths).expect("manifest is valid");
+
+            assert!(
+                root_manifest
+                    .lookup(&MPathElement::new(b"not-present".to_vec()).unwrap())
+                    .wait()
+                    .expect("MockManifest should always return Ok")
+                    .is_none(),
+                "entry not present, should be None"
+            );
+            let foo_entry = root_manifest
+                .lookup(&MPathElement::new(b"foo".to_vec()).unwrap())
+                .wait()
+                .expect("MockManifest should always return Ok")
+                .expect("foo should be present");
+            let foo_content = foo_entry
+                .get_content()
+                .wait()
+                .expect("content fetch should work");
+            let foo_manifest = match foo_content {
+                Content::Tree(manifest) => manifest,
+                other => panic!("expected Tree content, found {:?}", other),
+            };
+
+            let bar1_entry = foo_manifest
+                .lookup(&MPathElement::new(b"bar1".to_vec()).unwrap())
+                .wait()
+                .expect("MockManifest should always return Ok")
+                .expect("bar1 should be present");
+            let bar1_content = bar1_entry
+                .get_content()
+                .wait()
+                .expect("content fetch should work");
+            match bar1_content {
+                Content::File(blob) => assert_eq!(blob.as_slice(), Some(&b"bar1"[..])),
+                other => panic!("expected File content, found {:?}", other),
+            };
+
+            let bar2_entry = foo_manifest
+                .lookup(&MPathElement::new(b"bar2".to_vec()).unwrap())
+                .wait()
+                .expect("MockManifest should always return Ok")
+                .expect("bar2 should be present");
+            let bar2_content = bar2_entry
+                .get_content()
+                .wait()
+                .expect("content fetch should work");
+            match bar2_content {
+                Content::Symlink(blob) => assert_eq!(blob.as_slice(), Some(&b"bar2"[..])),
+                other => panic!("expected Symlink content, found {:?}", other),
+            };
+        })
     }
 }

@@ -163,6 +163,17 @@ impl Content {
     }
 }
 
+impl fmt::Debug for Content {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Content::Tree(_) => write!(f, "Tree(...)"),
+            Content::File(ref blob) => f.debug_tuple("File").field(blob).finish(),
+            Content::Executable(ref blob) => f.debug_tuple("Executable").field(blob).finish(),
+            Content::Symlink(ref blob) => f.debug_tuple("Symlink").field(blob).finish(),
+        }
+    }
+}
+
 /// An entry represents a single entry in a Manifest
 ///
 /// The Entry has at least a name, a type, and the identity of the object it refers to
