@@ -183,6 +183,21 @@ def always(root, cwd):
 def never(root, cwd):
     return nevermatcher(root, cwd)
 
+def union(matches, root, cwd):
+    """Union a list of matchers.
+
+    If the list is empty, return nevermatcher.
+    If the list only contains one non-None value, return that matcher.
+    Otherwise return a union matcher.
+    """
+    matches = filter(None, matches)
+    if len(matches) == 0:
+        return nevermatcher(root, cwd)
+    elif len(matches) == 1:
+        return matches[0]
+    else:
+        return unionmatcher(matches)
+
 def badmatch(match, badfn):
     """Make a copy of the given matcher, replacing its bad method with the given
     one.

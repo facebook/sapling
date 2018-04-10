@@ -1007,6 +1007,9 @@ coreconfigitem('ui', 'gitignore',
 coreconfigitem('ui', 'graphnodetemplate',
     default=None,
 )
+coreconfigitem('ui', 'hgignore',
+    default=True,
+)
 coreconfigitem('ui', 'http2debuglevel',
     default=None,
 )

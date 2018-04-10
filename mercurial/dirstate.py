@@ -163,17 +163,22 @@ class dirstate(object):
 
     @rootcache('.hgignore')
     def _ignore(self):
-        files = self._ignorefiles()
+        # gitignore
         if self._ui.configbool('ui', 'gitignore'):
             gitignore = matchmod.gitignorematcher(self._root, '')
         else:
-            gitignore = matchmod.nevermatcher(self._root, '')
-        if not files:
-            return gitignore
+            gitignore = None
 
-        pats = ['include:%s' % f for f in files]
-        hgignore = matchmod.match(self._root, '', [], pats, warn=self._ui.warn)
-        return matchmod.unionmatcher([gitignore, hgignore])
+        # hgignore
+        files = self._ignorefiles()
+        if files:
+            pats = ['include:%s' % f for f in files]
+            hgignore = matchmod.match(self._root, '', [], pats,
+                                      warn=self._ui.warn)
+        else:
+            hgignore = None
+
+        return matchmod.union([gitignore, hgignore], self._root, '')
 
     @propertycache
     def _slash(self):
@@ -687,8 +692,9 @@ class dirstate(object):
 
     def _ignorefiles(self):
         files = []
-        if os.path.exists(self._join('.hgignore')):
-            files.append(self._join('.hgignore'))
+        if self._ui.configbool('ui', 'hgignore'):
+            if os.path.exists(self._join('.hgignore')):
+                files.append(self._join('.hgignore'))
         for name, path in self._ui.configitems("ui"):
             if name == 'ignore' or name.startswith('ignore.'):
                 # we need to use os.path.join here rather than self._join

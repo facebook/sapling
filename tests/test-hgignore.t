@@ -204,7 +204,10 @@ Test relative ignore path (issue4473):
   <unionmatcher matchers=[<gitignorematcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
 
   $ hg debugignore
-  <unionmatcher matchers=[<nevermatcher>, <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>]>
+  <includematcher includes='(?:(?:|.*/)[^/]*(?:/|$))'>
+
+  $ hg debugignore --config ui.hgignore=0
+  <includematcher includes=''>
 
   $ hg debugignore b.o
   b.o is ignored

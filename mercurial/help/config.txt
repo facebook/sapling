@@ -2099,11 +2099,14 @@ User interface controls.
     UTF-8. (default: ISO-8859-1)
 
 ``gitignore``
-    Respect gitignore or not. (default: False)
+    Respect ``.gitignore`` in every directory. (default: False)
 
 ``graphnodetemplate``
     The template used to print changeset nodes in an ASCII revision graph.
     (default: ``{graphnode}``)
+
+``hgignore``
+    Respect ``.hgignore`` at the root of a repo. (default: True)
 
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
