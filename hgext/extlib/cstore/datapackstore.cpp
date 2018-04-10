@@ -9,12 +9,12 @@
 
 #include "hgext/extlib/cstore/datapackstore.h"
 
-#include <dirent.h>
 #include <stdexcept>
 #include <stdlib.h>
 #include <sys/types.h>
 
 #include "hgext/extlib/cstore/key.h"
+#include "lib/clib/portability/dirent.h"
 
 namespace
 {
