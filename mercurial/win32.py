@@ -88,6 +88,7 @@ _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED = 0x2000
 
 # Process Security and Access Rights
 _PROCESS_QUERY_INFORMATION = 0x0400
+_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 # GetExitCodeProcess
 _STILL_ACTIVE = 259
@@ -307,6 +308,40 @@ def _getfileinfo(name):
         return fi
     finally:
         _kernel32.CloseHandle(fh)
+
+def getcurrentprocstarttime():
+    """Get current process start time
+
+    See _getprocstarttime docstring for more info"""
+    pid = _kernel32.GetCurrentProcessId()
+    return getprocstarttime(pid)
+
+def getprocstarttime(pid):
+    """Get the windows timestamp of process start time
+
+    Windows Timestamp in this context is a number of 100-nanosecond
+    time units since January 1, 1601 at Greenwich, England.
+
+    See https://msdn.microsoft.com/en-us/library/ms683223(VS.85).aspx"""
+    ph = _kernel32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, 1, pid)
+    if not ph or ph == _INVALID_HANDLE_VALUE:
+        raise ctypes.WinError(_kernel32.GetLastError())
+    try:
+        creationtime = _FILETIME()
+        exittime = _FILETIME()
+        kerneltime = _FILETIME()
+        usertime = _FILETIME()
+        success = _kernel32.GetProcessTimes(ph,
+                                            ctypes.byref(creationtime),
+                                            ctypes.byref(exittime),
+                                            ctypes.byref(kerneltime),
+                                            ctypes.byref(usertime))
+        if not success:
+            raise ctypes.WinError(_kernel32.GetLastError())
+        ct = (creationtime.dwHighDateTime << 32) + creationtime.dwLowDateTime
+        return ct
+    finally:
+        _kernel32.CloseHandle(ph)
 
 def checkcertificatechain(cert, build=True):
     '''Tests the given certificate to see if there is a complete chain to a
