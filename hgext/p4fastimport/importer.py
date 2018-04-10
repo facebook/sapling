@@ -26,10 +26,14 @@ KEYWORD_REGEX = "\$(Id|Header|DateTime|" + \
 #TODO: make p4 user configurable
 P4_ADMIN_USER = 'p4admin'
 
-def relpath(client, depotfile):
+def relpath(client, depotfile, ignore_nonexisting=False):
     where = p4.parse_where(client, depotfile)
-    filename = where['clientFile'].replace('//%s/' % client, '')
-    return p4.decodefilename(filename)
+    filename = where.get('clientFile')
+    if filename is not None:
+        filename = filename.replace('//%s/' % client, '')
+    elif not ignore_nonexisting:
+        raise error.Abort('Could not find file %s' % (depotfile))
+    return p4.decodefilename(filename) if filename is not None else filename
 
 def get_localname(client, p4filelogs):
     for p4fl in p4filelogs:

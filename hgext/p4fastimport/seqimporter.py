@@ -47,7 +47,7 @@ class ChangelistImporter(object):
             else:
                 added_or_modified.append((p4path, hgpath))
 
-        moved = self._get_move_info(p4cl)
+        moved = self._get_move_info(p4cl, p4flogs)
         node = self._create_commit(p4cl, p4flogs, removed, moved)
         largefiles = self._get_largefiles(p4cl, added_or_modified, node)
 
@@ -65,14 +65,30 @@ class ChangelistImporter(object):
                 self.ui.debug('largefile: %s, oid: %s\n' % (hgpath, oid))
         return largefiles
 
-    def _get_move_info(self, p4cl):
+    def _get_move_info(self, p4cl, p4flogs):
         '''Returns a dict where entries are (dst, src)'''
         moves = {}
+        files_in_clientspec = {
+            p4flog._depotfile: hgpath for hgpath, p4flog in p4flogs.items()
+        }
         for filename, info in p4cl.parsed['files'].items():
+            if filename not in files_in_clientspec:
+                continue
             src = info.get('src')
             if src:
-                hgsrc = importer.relpath(self.client, src)
-                hgdst = importer.relpath(self.client, filename)
+                hgdst = files_in_clientspec[filename]
+                # The below could return None if the source of the move is
+                # outside of client view. That is expected.
+                # This info will be used when creating the commit, and value of
+                # None in the moves dictionary is a no-op, it will treat it as
+                # an add in hg. As it just came into the client view we cannot
+                # store any move info for it in hg (even though it was a legit
+                # move in perforce).
+                hgsrc = importer.relpath(
+                    self.client,
+                    src,
+                    ignore_nonexisting=True,
+                )
                 moves[hgdst] = hgsrc
         return moves
 
