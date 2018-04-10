@@ -155,3 +155,64 @@ test sparse subcommands (help, verbose)
    cwd            List all names in this directory
   
   (some details hidden, use --verbose to show complete help)
+
+  $ hg help sparse explain
+  hg sparse explain [OPTION]... [PROFILE]...
+  
+  Show information on individual profiles
+  
+      If --verbose is given, calculates the file size impact of a profile
+      (slow).
+  
+  options:
+  
+   -r --rev REV           explain the profile(s) against the specified revision
+   -T --template TEMPLATE display with template
+  
+  subcommands:
+  
+   list           List available sparse profiles
+   explain        Show information on individual profiles
+   files          List all files included in a profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
+  
+  (some details hidden, use --verbose to show complete help)
+  $ hg sparse explain --nonesuch
+  hg sparse explain: option --nonesuch not recognized
+  hg sparse explain [OPTION]... [PROFILE]...
+  
+  Show information on individual profiles
+  
+  options:
+  
+   -r --rev REV           explain the profile(s) against the specified revision
+   -T --template TEMPLATE display with template
+  
+  subcommands:
+  
+   list           List available sparse profiles
+   explain        Show information on individual profiles
+   files          List all files included in a profiles
+   include        include files in the sparse checkout
+   exclude        exclude files in the sparse checkout
+   delete         delete an include/exclude rule
+   enableprofile  enables the specified profile
+   disableprofile disables the specified profile
+   reset          makes the repo full again
+   importrules    Directly import sparse profile rules
+   clear          Clear local sparse rules
+   refresh        Refreshes the files on disk based on the sparse rules
+   cwd            List all names in this directory
+  
+  (use 'hg sparse explain -h' to show more help)
+  [255]
+

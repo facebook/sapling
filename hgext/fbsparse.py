@@ -28,6 +28,7 @@ from mercurial import (
     registrar,
     patch,
     pycompat,
+    scmutil,
 )
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
@@ -612,7 +613,7 @@ def _wraprepo(ui, repo):
                     visited.add(profile)
 
                     try:
-                        raw = self.getrawprofile(profile, rev)
+                        raw = self.getrawprofile(profile, ctx.hex())
                     except error.ManifestLookupError:
                         msg = (
                             "warning: sparse profile '%s' not found "
@@ -959,7 +960,8 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
     matchers = {}
     to_store = {}
 
-    ctx = repo['.']
+    rev = kwargs.get('rev', '.')
+    ctx = scmutil.revsingle(repo, rev)
 
     templ = 'sparseprofilestats:%s:{}' % util.split(repo.root)[-1]
     def _genkey(path, *parts):
@@ -1014,7 +1016,8 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
                 if remotefilelog.shallowrepo.requirement in repo.requirements:
                     profilematchers = unionmatcher(
                         [matchers[k] for k in matchers if k])
-                    repo.prefetch(repo.revs('.'), matcher=profilematchers)
+                    repo.prefetch(
+                        repo.revs(ctx.hash()), matcher=profilematchers)
 
         with progress.bar(ui, _('calculating'), total=totalfiles) as prog:
             # only matchers for which there was no cache are processed
@@ -1024,8 +1027,7 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
                     if matcher(file):
                         results[c][0] += 1
                         if collectsize and c is not None:
-                            results[c][1] += repo.filectx(
-                                file, changeid='.').size()
+                            results[c][1] += ctx.filectx(file).size()
 
     results = {k: tuple(v) for k, v in results.items()}
     for c, key in to_store.items():
@@ -1336,7 +1338,11 @@ def _listprofiles(cmd, ui, repo, *pats, **opts):
                 fm.plain(' - %s' % info.get('title', b''), label=label)
             fm.plain('\n')
 
-@subcmd('explain')
+@subcmd('explain', [
+    ('r', 'rev', '', _('explain the profile(s) against the specified revision'),
+     _('REV')),
+    ] + commands.templateopts,
+    '[OPTION]... [PROFILE]...')
 def _explainprofile(cmd, ui, repo, *profiles, **opts):
     """Show information on individual profiles
 
@@ -1349,10 +1355,14 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
     if not profiles:
         raise error.Abort(_('no profiles specified'))
 
+    rev = scmutil.revrange(repo, [opts.get('rev') or '.']).last()
+    if rev is None:
+        raise error.Abort(_('empty revision set'))
+
     configs = []
     for i, p in enumerate(profiles):
         try:
-            raw = repo.getrawprofile(p, '.')
+            raw = repo.getrawprofile(p, rev)
         except KeyError:
             ui.warn(_('The profile %s was not found\n') % p)
             exitcode = 255
@@ -1360,7 +1370,8 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
         profile = repo.readsparseconfig(raw, p)
         configs.append(profile)
 
-    stats = _profilesizeinfo(ui, repo, *configs, collectsize=ui.verbose)
+    stats = _profilesizeinfo(
+        ui, repo, *configs, rev=rev, collectsize=ui.verbose)
     filecount, totalsize = stats[None]
 
     exitcode = 0

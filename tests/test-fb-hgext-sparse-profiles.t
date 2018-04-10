@@ -609,6 +609,18 @@ We can look at invididual profiles:
   Base profile including the profiles directory
   8
 
+The -r switch tells hg sparse explain to look at something other than the
+current working copy:
+
+  $ hg sparse reset
+  $ touch interesting/later_revision
+  $ hg commit -Aqm 'Add another file in a later revision'
+  $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r ".^"
+  9
+  $ hg sparse explain profiles/bar/ham -T "{stats.filecount}\n" -r .
+  10
+  $ hg up -q ".^"
+
 We can list the files in a profile with the hg sparse files command:
 
   $ hg sparse files profiles/bar/eggs
