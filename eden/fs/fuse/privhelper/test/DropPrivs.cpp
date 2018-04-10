@@ -22,11 +22,7 @@ DEFINE_string(logging, "", "Logging configuration");
 
 using namespace facebook::eden;
 
-namespace folly {
-const char* getBaseLoggingConfig() {
-  return "eden=INFO";
-}
-} // namespace folly
+FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
 
 /*
  * This is a samll helper program for manually testing the

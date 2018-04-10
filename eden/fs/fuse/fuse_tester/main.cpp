@@ -30,11 +30,7 @@ using std::string;
 DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
 DEFINE_string(logging, "", "The logging configuration");
 
-namespace folly {
-const char* getBaseLoggingConfig() {
-  return "eden=DBG2,eden.fs.fuse=DBG7";
-}
-} // namespace folly
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2,eden.fs.fuse=DBG7");
 
 namespace {
 class TestDispatcher : public Dispatcher {

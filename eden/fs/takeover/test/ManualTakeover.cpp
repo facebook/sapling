@@ -18,11 +18,7 @@
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 DEFINE_string(logging, "", "Logging configuration");
 
-namespace folly {
-const char* getBaseLoggingConfig() {
-  return "eden=DBG2";
-}
-} // namespace folly
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
 /*
  * This is a small tool for manually exercising the edenfs takover code.

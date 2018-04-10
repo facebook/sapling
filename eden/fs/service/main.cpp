@@ -36,14 +36,10 @@ DEFINE_string(logging, "", "Logging configuration");
 
 using namespace facebook::eden;
 
-namespace folly {
-const char* getBaseLoggingConfig() {
-  // Set the default log level for all eden logs to DBG2
-  // Also change the "default" log handler (which logs to stderr) to log
-  // messages asynchronously rather than blocking in the logging thread.
-  return "eden=DBG2; default:async=true";
-}
-} // namespace folly
+// Set the default log level for all eden logs to DBG2
+// Also change the "default" log handler (which logs to stderr) to log
+// messages asynchronously rather than blocking in the logging thread.
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
 int main(int argc, char** argv) {
   // Make sure to run this before any flag values are read.

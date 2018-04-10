@@ -61,11 +61,7 @@ using folly::StringPiece;
 using folly::io::Cursor;
 using std::string;
 
-namespace folly {
-const char* getBaseLoggingConfig() {
-  return "eden=DBG2";
-}
-} // namespace folly
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
 namespace {
 
