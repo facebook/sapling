@@ -733,10 +733,13 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getfiles', 'files*')
     fn getfiles(&self, params: BoxStream<(NodeHash, MPath), Error>) -> BoxStream<Bytes, Error> {
-        info!(self.logger, "getfiles");
+        let logger = self.logger.clone();
+        info!(logger, "getfiles");
         let repo = self.repo.clone();
+        let getfiles_buffer_size = 100; // TODO(stash): make it configurable
         params
-            .and_then(move |(node, path)| {
+            .map(move |(node, path)| {
+                debug!(logger, "get file request: {:?} {}", path, node);
                 let repo = repo.clone();
                 create_remotefilelog_blob(repo.hgrepo.clone(), node, path.clone())
                     .traced_global(
@@ -753,6 +756,7 @@ impl HgCommands for RepoClient {
                         )
                     })
             })
+            .buffered(getfiles_buffer_size)
             .boxify()
     }
 }
