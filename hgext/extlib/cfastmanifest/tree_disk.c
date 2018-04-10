@@ -8,10 +8,10 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <arpa/inet.h>
 
 #include "checksum.h"
 #include "hgext/extlib/cfastmanifest/tree.h"
+#include "lib/clib/portability/inet.h"
 #include "node.h"
 #include "tree_arena.h"
 

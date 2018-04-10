@@ -11,6 +11,7 @@
 #include "lib/clib/buffer.h"
 #include "lib/clib/convert.h"
 #include "lib/clib/portability/portability.h"
+#include "mercurial/compat.h"
 #include "path_buffer.h"
 #include "tree_arena.h"
 
