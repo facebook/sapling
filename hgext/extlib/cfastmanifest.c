@@ -16,16 +16,23 @@ typedef unsigned char bool;
 
 #include "hgext/extlib/cfastmanifest/tree.h"
 
+// clang-format off
+// clang thinks that PyObject_HEAD should be on the same line as the next line
+// since there is no semicolong after it. There is no semicolon because
+// PyObject_HEAD macro already contains one and MSVC does not support
+// extra semicolons.
 typedef struct {
-  PyObject_HEAD;
+  PyObject_HEAD
   tree_t *tree;
 } fastmanifest;
+// clang-format on
 
+// clang-format off
 typedef struct {
-  PyObject_HEAD;
+  PyObject_HEAD
   iterator_t *iterator;
 } fmIter;
-
+// clang-format on
 
 static PyTypeObject fastmanifestType;
 static PyTypeObject fastmanifestKeysIterator;

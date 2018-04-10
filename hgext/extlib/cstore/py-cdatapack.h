@@ -24,22 +24,30 @@ extern "C" {
 
 // ====  py_cdatapack PyObject declaration ====
 
+// clang-format off
+// clang thinks that PyObject_HEAD should be on the same line as the next line
+// since there is no semicolong after it. There is no semicolon because
+// PyObject_HEAD macro already contains one and MSVC does not support
+// extra semicolons.
 struct py_cdatapack {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   bool initialized;
   datapack_handle_t *handle;
 };
+// clang-format on
 
 // ====  py_cdatapack_iterator PyObject declaration ====
 
+// clang-format off
 typedef struct {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   py_cdatapack *datapack;
   const uint8_t *ptr;
   const uint8_t *end;
 } py_cdatapack_iterator;
+// clang-format on
 
 // ====  cdatapack_deltas_iterator class methods ====
 

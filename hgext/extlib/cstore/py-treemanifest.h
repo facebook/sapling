@@ -27,19 +27,27 @@
 #define FILENAME_BUFFER_SIZE 16348
 #define FLAG_SIZE 1
 
+// clang-format off
+// clang thinks that PyObject_HEAD should be on the same line as the next line
+// since there is no semicolong after it. There is no semicolon because
+// PyObject_HEAD macro already contains one and MSVC does not support
+// extra semicolons.
 struct py_treemanifest {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   treemanifest tm;
 };
+// clang-format on
 
+// clang-format off
 struct py_newtreeiter {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   FinalizeIterator iter;
 
   py_treemanifest *treemf;
 };
+// clang-format on
 
 static void newtreeiter_dealloc(py_newtreeiter *self);
 static PyObject *newtreeiter_iternext(py_newtreeiter *self);
@@ -74,13 +82,15 @@ static PyTypeObject newtreeiterType = {
     (iternextfunc)newtreeiter_iternext, /* tp_iternext: next() method */
 };
 
+// clang-format off
 struct py_subtreeiter {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   SubtreeIterator iter;
 
   py_treemanifest *treemf;
 };
+// clang-format on
 
 static void subtreeiter_dealloc(py_subtreeiter *self);
 static PyObject *subtreeiter_iternext(py_subtreeiter *self);
@@ -119,8 +129,9 @@ static PyTypeObject subtreeiterType = {
  * the fileiter above because it lets us just call the constructor on
  * fileiter, which will automatically populate all the members of fileiter.
  */
+// clang-format off
 struct py_fileiter {
-  PyObject_HEAD;
+  PyObject_HEAD
 
   fileiter iter;
 
@@ -131,6 +142,7 @@ struct py_fileiter {
   // over it.
   const py_treemanifest *treemf;
 };
+// clang-format on
 
 static void fileiter_dealloc(py_fileiter *self);
 static PyObject *fileiter_iterentriesnext(py_fileiter *self);
