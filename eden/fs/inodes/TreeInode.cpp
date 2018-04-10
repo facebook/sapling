@@ -2689,7 +2689,7 @@ void TreeInode::saveOverlayPostCheckout(
           return folly::none;
         }
 
-        // If if the child is not materialized, it is the same as some source
+        // If the child is not materialized, it is the same as some source
         // control object.  However, if it isn't the same as the object in our
         // Tree, we have to materialize ourself.
         if (inodeIter->second.getHash() != scmIter->getHash()) {
