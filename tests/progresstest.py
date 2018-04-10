@@ -75,7 +75,7 @@ def bytesprogresstest(ui):
 
 def uisetup(ui):
     class syncengine(progress._engine.__class__):
-        def _activate(self):
+        def _activate(self, ui):
             pass
 
         def _deactivate(self):

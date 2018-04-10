@@ -403,7 +403,7 @@ class engine(object):
 
     def register(self, bar):
         with self.lock():
-            self._activate()
+            self._activate(bar._ui)
             now = time.time()
             bar._enginestarttime = now
             bar._enginerenderer = getrenderer(bar)
@@ -428,7 +428,7 @@ class engine(object):
                 self._cond.notify_all()
             bar._enginerenderer = None
 
-    def _activate(self):
+    def _activate(self, ui):
         with self.lock():
             if not self._active:
                 self._active = True
@@ -436,11 +436,13 @@ class engine(object):
                                                 name="progress")
                 self._thread.daemon = True
                 self._thread.start()
+                ui.atexit(self._deactivate)
 
     def _deactivate(self):
-        with self.lock():
-            self._active = False
-            self._cond.notify_all()
+        if self._active:
+            with self.lock():
+                self._active = False
+                self._cond.notify_all()
             self._thread.join()
 
     def _run(self):
