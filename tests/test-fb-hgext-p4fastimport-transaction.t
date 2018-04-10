@@ -75,7 +75,6 @@ Verify
 Enable extensions that will test transaction recovery
 
   $ echo "[p4fastimport]" >> $HGRCPATH
-  $ echo "useworker=force" >> $HGRCPATH
 
 One more submit
 

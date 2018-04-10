@@ -57,8 +57,7 @@ def runworker(ui, fn, wargs, items):
     # drawback of spwaning. We are overwritign this if we force a
     # worker to run with a ridiculous high number.
     weight = 0.0  # disable worker
-    # useworker = ui.config('p4fastimport', 'useworker')
-    useworker = False
+    useworker = ui.config('p4fastimport', 'useworker')
     if useworker == 'force':
         weight = 100000.0  # force worker
     elif util.parsebool(useworker or ''):
@@ -68,4 +67,3 @@ def runworker(ui, fn, wargs, items):
     # https://www.mercurial-scm.org/repo/hg-committed/rev/9d3d56aa1a9f
     ui.flush()
     return worker.worker(ui, weight, fn, wargs, items)
-
