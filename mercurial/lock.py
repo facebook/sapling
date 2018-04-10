@@ -23,6 +23,9 @@ from . import (
     util,
 )
 
+if pycompat.iswindows:
+    from . import win32
+
 class _emptylocker(object):
     def getwarning(self, l):
         return _("waiting for lock on %r") % l.desc
@@ -38,6 +41,7 @@ class locker(object):
 
     `uniqueid` can be:
     - just a 'pid' (POSIX)
+    - pid/starttime (Windows)
     """
     _currentnamespace = None
 
@@ -53,6 +57,7 @@ class locker(object):
         self.pidnamespace = None
         self.host = None
         self.pid = None
+        self.starttime = None
 
         ns, uid = fromstr.split(':', 1)
 
@@ -61,7 +66,10 @@ class locker(object):
         elif ns:
             self.host = ns
 
-        self.pid = uid
+        if uid and '/' in uid:
+            self.pid, self.starttime = uid.split('/', 2)
+        else:
+            self.pid = uid
 
     def __eq__(self, other):
         if other is None or other == emptylocker:
@@ -79,6 +87,8 @@ class locker(object):
 
     @property
     def uniqueid(self):
+        if self.starttime is not None:
+            return self.pid + '/' + self.starttime
         return self.pid
 
     @classmethod
@@ -100,6 +110,8 @@ class locker(object):
 
     @staticmethod
     def getcurrentid():
+        if pycompat.iswindows:
+            return '%d/%d' % (util.getpid(), win32.getcurrentprocstarttime())
         return str(util.getpid())
 
     def issamenamespace(self):
@@ -108,7 +120,14 @@ class locker(object):
 
     def isrunning(self):
         """Check if locker is still running"""
-        return util.testpid(int(self.pid))
+        if self.pid is None:
+            return False
+        pid = int(self.pid)
+        starttime = self.starttime and int(self.starttime)
+        result = util.testpid(pid)
+        if result and pycompat.iswindows and starttime is not None:
+            result = starttime == win32.getprocstarttime(pid)
+        return result
 
     def getwarning(self, l):
         """Get a locker's warning string while trying to acquire `l` lock"""
