@@ -45,6 +45,7 @@ no-check-code
   syncing with mysql
   running hook presyncdb.sleep: sleep 5
   $ hg log -l 2 --template "second:{rev}\n" --debug
+  locker is still running (full unique id: '*') (glob)
   skipping database sync because another process is already syncing
   second:0
   $ sleep 5

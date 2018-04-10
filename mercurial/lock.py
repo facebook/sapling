@@ -140,7 +140,7 @@ def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
 
     This function is responsible to issue warnings and or debug messages about
     the held lock while trying to acquires it."""
-    l = lock(vfs, lockname, 0, *args, dolock=False, **kwargs)
+    l = lock(vfs, lockname, 0, *args, dolock=False, ui=ui, **kwargs)
 
     debugidx = 0 if (warntimeout and timeout) else -1
     warningidx = 0
@@ -198,7 +198,7 @@ class lock(object):
 
     def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
                  desc=None, inheritchecker=None, parentlock=None,
-                 dolock=True):
+                 dolock=True, ui=None):
         self.vfs = vfs
         self.f = file
         self.held = 0
@@ -212,10 +212,13 @@ class lock(object):
         self._inherited = False
         self.postrelease  = []
         self.pid = self._getpid()
+        self.ui = ui
         if dolock:
             self.delay = self.lock()
             if self.acquirefn:
                 self.acquirefn()
+
+        self._debugmessagesprinted = set([])
 
     def __enter__(self):
         return self
@@ -310,10 +313,28 @@ class lock(object):
                 return None
             raise
 
+    def _debugprintonce(self, msg):
+        """Print debug message only once"""
+        if not self.ui or msg in self._debugmessagesprinted:
+            return
+        self._debugmessagesprinted.add(msg)
+        self.ui.debug(msg)
+
     def _testlock(self, lockerdesc):
         if lockerdesc is None:
             return None
-        if not lockerdesc.issamenamespace() or lockerdesc.isrunning():
+        if not lockerdesc.issamenamespace():
+            # this and below debug prints will hopefully help us
+            # understand the issue with stale lock files not being
+            # cleaned up on Windows (T25415269)
+            m = _('locker is not in the same namespace(locker: %r, us: %r)\n')
+            m %= (lockerdesc.namespace, locker.getcurrentnamespace())
+            self._debugprintonce(m)
+            return lockerdesc
+        if lockerdesc.isrunning():
+            m = _('locker is still running (full unique id: %r)\n')
+            m %= (lockerdesc.uniqueid,)
+            self._debugprintonce(m)
             return lockerdesc
         # if locker dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
@@ -321,7 +342,9 @@ class lock(object):
             l = lock(self.vfs, self.f + '.break', timeout=0)
             self.vfs.unlink(self.f)
             l.release()
+            self._debugprintonce('removed the stale lock file\n')
         except error.LockError:
+            self._debugprintonce('failed to remove the stale lock file\n')
             return lockerdesc
 
     def testlock(self):
