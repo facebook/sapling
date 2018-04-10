@@ -17,6 +17,8 @@ extern crate bytes;
 extern crate failure_ext as failure;
 #[macro_use]
 extern crate futures;
+#[macro_use]
+extern crate futures_trace;
 #[cfg(test)]
 #[macro_use]
 extern crate itertools;

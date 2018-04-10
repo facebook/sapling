@@ -10,6 +10,7 @@ use bytes::Bytes;
 use failure::err_msg;
 use futures::{Future, Stream};
 use futures::stream::{iter_ok, once};
+use futures_trace::{self, Traced};
 
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::changegroup::packer::Cg2Packer;
@@ -110,11 +111,14 @@ where
                 .get_raw_content()
                 .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
                 .map(move |content| (entry, content, linknode, basepath))
+                .traced_global("fetching raw content", trace_args!())
+
         })
         .and_then(|(entry, content, linknode, basepath)| {
             entry
                 .get_parents()
                 .map(move |parents| (entry, parents, content, linknode, basepath))
+                .traced_global("fetching parents", trace_args!())
         })
         .map(|(entry, parents, content, linknode, basepath)| {
             let path = match MPath::join_element_opt(basepath.as_ref(), entry.get_name()) {
