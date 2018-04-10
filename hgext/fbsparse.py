@@ -17,6 +17,7 @@ from mercurial import (
     context,
     dirstate,
     commands,
+    fancyopts,
     progress,
     localrepo,
     error,
@@ -445,14 +446,27 @@ def _setupsubcommands(ui):
 
     # when looking for subcommands, have cmdutil.findpossible find them
     def findpossible(orig, cmd, table, strict=False):
-        cmd, hassub, subcmd = cmd.partition(' ')
-        if hassub and cmd == 'sparse':
-            return orig(subcmd, subcmdtable, strict)
+        maincmd, hassub, subcmd = cmd.partition(' ')
+        if hassub and maincmd == 'sparse':
+            res = orig(subcmd, subcmdtable, strict)
+            if subcmd in res[0]:
+                # reslot as the full command, including the first alias
+                res[0][cmd] = res[0].pop(subcmd)
+                res[0][cmd][0][0] = cmd
+            return res
         return orig(cmd, table, strict)
+
+    # when parsing shelve command options, add the switches from subcommands
+    def subcommandopts(orig, args, options, *posargs, **kwargs):
+        sparseopts = cmdtable['^sparse'][1]
+        if options[:len(sparseopts)] == sparseopts:  # parsing sparse options
+            return subcmd.parseargs(orig, args, options, *posargs, **kwargs)
+        return orig(args, options, *posargs, **kwargs)
 
     extensions.wrapcommand(commands.table, 'help', helpacceptmultiplenames)
     extensions.wrapfunction(help._helpdispatch, 'helpcmd', helpsubcommands)
     extensions.wrapfunction(cmdutil, 'findpossible', findpossible)
+    extensions.wrapfunction(fancyopts, 'fancyopts', subcommandopts)
 
 @attr.s(frozen=True, slots=True, cmp=False)
 class SparseConfig(object):
@@ -1218,15 +1232,17 @@ class subcmdfunc(registrar._funcregistrarbase):
     Help info is taken from the function docstring, or can be set explicitly
     with the help='...' keyword argument.
 
+    Per-subcommand options are specified with the options keyword, which
+    takes the same format as the options table for commands.
     """
 
-    def __init__(self, cmd, table=None):
+    def __init__(self, table=None):
         if table is None:
             # List commands in registration order
             table = collections.OrderedDict()
         super(subcmdfunc, self).__init__(table)
 
-    def _doregister(self, func, name, help=None):
+    def _doregister(self, func, name, options=(), synopsis=None, help=None):
         if name in self._table:
             msg = 'duplicate registration for name: "%s"' % name
             raise error.ProgrammingError(msg)
@@ -1238,8 +1254,9 @@ class subcmdfunc(registrar._funcregistrarbase):
         if help is not None:
             dispatch.__doc__ = help
 
-        # TODO: add options and synopsis support, with delegated parsing
-        registration = dispatch, ()
+        registration = dispatch, tuple(options)
+        if synopsis:
+            registration += (synopsis,)
 
         self._table[name] = registration
 
@@ -1258,6 +1275,17 @@ class subcmdfunc(registrar._funcregistrarbase):
         rst += minirst.maketable(list(cmdhelp()), 1)
         return ''.join(rst)
 
+    def parseargs(self, parser, args, options, *posargs, **kwargs):
+        subcmd = args[0] if args else None
+        if subcmd in self._table:
+            options = options + list(self._table[subcmd][1])
+        try:
+            return parser(args, options, *posargs, **kwargs)
+        except pycompat.getopt.GetoptError as ex:
+            if subcmd in self._table:
+                raise error.CommandError('sparse {}'.format(subcmd), ex)
+            raise
+
     def parse(self, args, opts):
         if not args or args[0] not in self._table:
             return
@@ -1269,7 +1297,7 @@ class subcmdfunc(registrar._funcregistrarbase):
         return callsubcmd
 
 subcmdtable = collections.OrderedDict()
-subcmd = subcmdfunc(cmdtable['^sparse'], subcmdtable)
+subcmd = subcmdfunc(subcmdtable)
 
 @subcmd('list')
 def _listprofiles(cmd, ui, repo, *pats, **opts):
