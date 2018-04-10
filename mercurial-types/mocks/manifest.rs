@@ -106,10 +106,7 @@ impl MockManifest {
             "wip should have exactly 1 element left but has {}",
             wip.len()
         );
-        let entries = wip.into_iter()
-            .next()
-            .expect("wip should have 1 element left")
-            .1;
+        let (_, entries) = wip.swap_remove(0);
         Ok(MockManifest { entries })
     }
 
