@@ -5,8 +5,9 @@
 // GNU General Public License version 2 or any later version.
 
 #![deny(warnings)]
-#![feature(try_from)]
+#![feature(never_type, try_from)]
 
+extern crate async_unit;
 extern crate blobrepo;
 extern crate futures;
 extern crate many_files_dirs;
@@ -22,7 +23,6 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use futures::Future;
 use futures::executor::spawn;
-use futures::future;
 use mercurial_types::{Changeset, Entry, FileType, MPath, Manifest, RepoPath, Type, NULL_HASH};
 use mercurial_types::manifest::Content;
 use mercurial_types::manifest_utils::{changed_entry_stream, diff_sorted_vecs, ChangedEntry,
@@ -306,7 +306,7 @@ fn do_check(
 
 #[test]
 fn test_recursive_changed_entry_stream_simple() {
-    tokio::run(future::lazy(|| {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
         let base_hash = NodeHash::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8").unwrap();
@@ -334,12 +334,12 @@ fn test_recursive_changed_entry_stream_simple() {
         ];
         do_check(repo, main_hash, base_hash, expected_added, vec![], vec![]);
         Ok(())
-    }))
+    }).expect("test failed")
 }
 
 #[test]
 fn test_recursive_changed_entry_stream_changed_dirs() {
-    tokio::run(future::lazy(|| {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
         let base_hash = NodeHash::from_str("ecafdc4a4b6748b7a7215c6995f14c837dc1ebec").unwrap();
@@ -365,12 +365,12 @@ fn test_recursive_changed_entry_stream_changed_dirs() {
             expected_modified,
         );
         Ok(())
-    }))
+    }).expect("test failed")
 }
 
 #[test]
 fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
-    tokio::run(future::lazy(|| {
+    async_unit::tokio_unit_test(|| -> Result<_, !> {
         let repo = Arc::new(many_files_dirs::getrepo(None));
         let main_hash = NodeHash::from_str("a6cb7dddec32acaf9a28db46cdb3061682155531").unwrap();
         let base_hash = NodeHash::from_str("473b2e715e0df6b2316010908879a3c78e275dd9").unwrap();
@@ -406,7 +406,7 @@ fn test_recursive_changed_entry_stream_dirs_replaced_with_file() {
             vec![],
         );
         Ok(())
-    }))
+    }).expect("test failed")
 }
 
 #[test]
