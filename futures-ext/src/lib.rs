@@ -26,6 +26,7 @@ use tokio_io::codec::{Decoder, Encoder};
 
 mod bytes_stream;
 mod futures_ordered;
+mod select_all;
 mod streamfork;
 mod stream_wrappers;
 
@@ -36,6 +37,7 @@ pub mod io;
 
 pub use bytes_stream::{BytesStream, BytesStreamFuture};
 pub use futures_ordered::{futures_ordered, FuturesOrdered};
+pub use select_all::select_all;
 pub use stream_wrappers::{BoxStreamWrapper, CollectNoConsume, StreamWrapper, TakeWhile};
 
 /// Map `Item` and `Error` to `()`
