@@ -98,7 +98,6 @@
   hgext/myparent.py not using absolute_import
   hgext/nointerrupt.py not using absolute_import
   hgext/ownercheck.py not using absolute_import
-  hgext/p4fastimport/filetransaction.py not using absolute_import
   hgext/perftweaks.py not using absolute_import
   hgext/phabdiff.py not using absolute_import
   hgext/phabstatus.py not using absolute_import
