@@ -1278,7 +1278,7 @@ def build_libraries(self, libraries):
         # First, compile the source code to object files in the library
         # directory.  (This should probably change to putting object
         # files in a temporary build directory.)
-        macros = build_info.get('macros')
+        macros = build_info.get('macros', [])
         include_dirs = build_info.get('include_dirs')
         extra_args = build_info.get('extra_args')
         objects = self.compiler.compile(sources,
