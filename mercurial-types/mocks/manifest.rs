@@ -44,7 +44,7 @@ impl MockManifest {
             .byte_records()
             .map(|record| {
                 let (path, file_type, content) = parse_record(record?)?;
-                Ok((path, (file_type, content)))
+                Ok((path, (file_type, content, None)))
             })
             .collect();
         let path_map = result?;
@@ -57,11 +57,13 @@ impl MockManifest {
     }
 
     /// Build a root tree manifest from a map of paths to file types and contents.
-    pub fn from_path_map(path_map: BTreeMap<MPath, (FileType, Bytes)>) -> Result<Self> {
+    pub fn from_path_map(
+        path_map: BTreeMap<MPath, (FileType, Bytes, Option<EntryId>)>,
+    ) -> Result<Self> {
         // Stack of directory names and entry lists currently being built
         let mut wip: Vec<(Option<MPath>, _)> = vec![(None, BTreeMap::new())];
 
-        for (path, (file_type, content)) in path_map {
+        for (path, (file_type, content, hash)) in path_map {
             // common_idx is the index of the last component that is common with this path.
             let common_idx = {
                 let last_path = wip.last()
@@ -92,6 +94,9 @@ impl MockManifest {
             let cf = make_file(file_type, content);
             let mut entry = MockEntry::new(RepoPath::FilePath(path), cf);
             entry.set_type(Type::File(file_type));
+            if let Some(h) = hash {
+                entry.set_hash(h);
+            }
             wip.last_mut()
                 .expect("wip should have at least 1 element")
                 .1
@@ -111,6 +116,22 @@ impl MockManifest {
     }
 
     /// A generic version of `from_path_map`.
+    pub fn from_path_hashes<I, P, B>(paths: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = (P, (FileType, B, EntryId))>,
+        P: AsRef<[u8]>,
+        B: Into<Bytes>,
+    {
+        let result: Result<BTreeMap<_, _>> = paths
+            .into_iter()
+            .map(|(p, (ft, b, id))| Ok((MPath::new(p)?, (ft, b.into(), Some(id)))))
+            .collect();
+        let result =
+            result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
+        Self::from_path_map(result?)
+    }
+
+    /// A generic version of `from_path_map` that doesn't accept hashes for entry IDs.
     pub fn from_paths<I, P, B>(paths: I) -> Result<Self>
     where
         I: IntoIterator<Item = (P, (FileType, B))>,
@@ -119,7 +140,7 @@ impl MockManifest {
     {
         let result: Result<BTreeMap<_, _>> = paths
             .into_iter()
-            .map(|(p, (ft, b))| Ok((MPath::new(p)?, (ft, b.into()))))
+            .map(|(p, (ft, b))| Ok((MPath::new(p)?, (ft, b.into(), None))))
             .collect();
         let result =
             result.with_context(|_| ErrorKind::InvalidPathMap("error converting to MPath".into()));
