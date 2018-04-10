@@ -29,11 +29,11 @@ use futures::stream::{FuturesUnordered, StreamFuture};
 /// `select_all` function in the `stream` module, or you can start with an
 /// empty set with the `SelectAll::new` constructor.
 #[must_use = "streams do nothing unless polled"]
-pub struct SelectAll<S> {
+pub struct SelectAll<S: Stream> {
     inner: FuturesUnordered<StreamFuture<S>>,
 }
 
-impl<T: Debug> Debug for SelectAll<T> {
+impl<T: Debug + Stream> Debug for SelectAll<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "SelectAll {{ ... }}")
     }
@@ -78,13 +78,24 @@ impl<S: Stream> Stream for SelectAll<S> {
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        match self.inner.poll().map_err(|(err, _)| err)? {
-            Async::NotReady => Ok(Async::NotReady),
-            Async::Ready(Some((Some(item), remaining))) => {
-                self.push(remaining);
-                Ok(Async::Ready(Some(item)))
+        loop {
+            match self.inner.poll().map_err(|(err, _)| err)? {
+                Async::NotReady => {
+                    return Ok(Async::NotReady);
+                }
+                Async::Ready(Some((Some(item), remaining))) => {
+                    self.push(remaining);
+                    return Ok(Async::Ready(Some(item)));
+                }
+                Async::Ready(Some((None, _))) => {
+                    // One of the internal streams was exhausted. Nothing needs to be done with
+                    // this internal stream anymore.
+                    continue;
+                }
+                Async::Ready(None) => {
+                    return Ok(Async::Ready(None));
+                }
             }
-            Async::Ready(_) => Ok(Async::Ready(None)),
         }
     }
 }
@@ -110,4 +121,25 @@ where
     }
 
     return set;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use async_unit::tokio_unit_test;
+    use futures::executor::spawn;
+    use futures::stream::iter_ok;
+
+    #[test]
+    fn select_all_many_streams() {
+        tokio_unit_test(|| {
+            let streams: Vec<_> = (1..5)
+                .into_iter()
+                .map(|i| iter_ok::<_, ()>((0..i).into_iter()))
+                .collect();
+            let result = spawn(select_all(streams).collect()).wait_future().unwrap();
+            assert_eq!(result.len(), 10);
+        })
+    }
 }

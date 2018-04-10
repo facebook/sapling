@@ -10,6 +10,8 @@
 #[cfg(test)]
 #[macro_use]
 extern crate assert_matches;
+#[cfg(test)]
+extern crate async_unit;
 extern crate bytes;
 #[macro_use]
 extern crate futures;
