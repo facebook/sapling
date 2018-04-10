@@ -5,7 +5,7 @@ then
     echo "CAP environment variable not set."
 fi
 
-cat > notcapable-$CAP.py << EOF
+cat > notcapable-"${CAP}".py << EOF
 from mercurial import extensions, localrepo, repository
 def extsetup():
     extensions.wrapfunction(repository.peer, 'capable', wrapcapable)

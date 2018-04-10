@@ -9,12 +9,6 @@
 # The mercurial source repository was typically orignally cloned with the
 # system mercurial installation, and may require extensions or settings from
 # the system installation.
-syshg () {
-    (
-        syshgenv
-        exec hg "$@"
-    )
-}
 
 # Revert the environment so that running "hg" runs the system hg
 # rather than the test hg installation.
@@ -42,12 +36,20 @@ cat >> "$HGRCPATH" << EOF
 evolution = createmarkers
 EOF
 
-# Use the system hg command if the bundled hg can't read the repository with
+# Use the system hg environment if the bundled hg can't read the repository with
 # no warning nor error.
 if [ -n "`hg id --cwd "$TESTDIR/.." 2>&1 >/dev/null`" ]; then
-    alias testrepohg=syshg
-    alias testrepohgenv=syshgenv
+    testrepohgenv () {
+        syshgenv
+    }
 else
-    alias testrepohg=hg
-    alias testrepohgenv=:
+    testrepohgenv () {
+        # No need to do anything in this case.
+        :
+    }
 fi
+
+testrepohg () {
+    testrepohgenv
+    exec hg "$@"
+}
