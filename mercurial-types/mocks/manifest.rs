@@ -24,9 +24,9 @@ use errors::*;
 
 pub type ContentFactory = Arc<Fn() -> Content + Send + Sync>;
 
-pub fn make_file<C: Into<Bytes>>(content: C) -> ContentFactory {
+pub fn make_file<C: Into<Bytes>>(file_type: FileType, content: C) -> ContentFactory {
     let content = content.into();
-    Arc::new(move || Content::File(Blob::Dirty(content.clone())))
+    Arc::new(move || Content::new_file(file_type, Blob::Dirty(content.clone())))
 }
 
 #[derive(Clone)]
@@ -89,7 +89,7 @@ impl MockManifest {
 
             let basename = path.basename().clone();
 
-            let cf = make_file(content);
+            let cf = make_file(file_type, content);
             let mut entry = MockEntry::new(RepoPath::FilePath(path), cf);
             entry.set_type(Type::File(file_type));
             wip.last_mut()

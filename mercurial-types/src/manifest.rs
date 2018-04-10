@@ -153,6 +153,16 @@ pub enum Content {
     Tree(Box<Manifest + Sync>),
 }
 
+impl Content {
+    pub fn new_file(file_type: FileType, blob: Blob) -> Self {
+        match file_type {
+            FileType::Regular => Content::File(blob),
+            FileType::Executable => Content::Executable(blob),
+            FileType::Symlink => Content::Symlink(blob),
+        }
+    }
+}
+
 /// An entry represents a single entry in a Manifest
 ///
 /// The Entry has at least a name, a type, and the identity of the object it refers to
