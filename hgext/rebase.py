@@ -1693,9 +1693,10 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
     try:
         # If the first commits in the rebased set get skipped during the rebase,
         # their values within the state mapping will be the dest rev id. The
-        # dstates list must must not contain the dest rev (issue4896)
-        dstates = [s for r, s in state.items() if s >= 0 and s != destmap[r]]
-        immutable = [d for d in dstates if not repo[d].mutable()]
+        # rebased list must must not contain the dest rev (issue4896)
+        rebased = [s for r, s in state.items()
+                   if s >= 0 and s != r and s != destmap[r]]
+        immutable = [d for d in rebased if not repo[d].mutable()]
         cleanup = True
         if immutable:
             repo.ui.warn(_("warning: can't clean up public changesets %s\n")
@@ -1704,17 +1705,15 @@ def abort(repo, originalwd, destmap, state, activebookmark=None):
             cleanup = False
 
         descendants = set()
-        if dstates:
-            descendants = set(repo.changelog.descendants(dstates))
-        if descendants - set(dstates):
+        if rebased:
+            descendants = set(repo.changelog.descendants(rebased))
+        if descendants - set(rebased):
             repo.ui.warn(_("warning: new changesets detected on destination "
                            "branch, can't strip\n"))
             cleanup = False
 
         if cleanup:
             shouldupdate = False
-            rebased = [s for r, s in state.items()
-                       if s >= 0 and s != destmap[r]]
             if rebased:
                 strippoints = [
                         c.node() for c in repo.set('roots(%ld)', rebased)]

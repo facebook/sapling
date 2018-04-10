@@ -92,3 +92,30 @@ the hole (B below), not on top of the destination (A).
   |
   o  0: 426bada5c675 A
   
+Abort doesn't lose the commits that were already in the right place
+
+  $ newrepo abort
+  $ hg debugdrawdag <<EOF
+  > C
+  > |
+  > B D  # B/file = B
+  > |/   # D/file = D
+  > A
+  > EOF
+  $ hg rebase -r C+D -d B
+  rebasing 2:ef8c0fe0897b "D" (D)
+  merging file
+  warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+  $ hg tglog
+  o  3: 79f6d6ab7b14 C
+  |
+  | o  2: ef8c0fe0897b D
+  | |
+  o |  1: 594087dbaf71 B
+  |/
+  o  0: 426bada5c675 A
+  
