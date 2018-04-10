@@ -457,9 +457,9 @@ def _setupsubcommands(ui):
 @attr.s(frozen=True, slots=True, cmp=False)
 class SparseConfig(object):
     path = attr.ib()
-    includes = attr.ib()
-    excludes = attr.ib()
-    profiles = attr.ib()
+    includes = attr.ib(convert=frozenset)
+    excludes = attr.ib(convert=frozenset)
+    profiles = attr.ib(convert=tuple)
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __iter__(self):
@@ -582,7 +582,11 @@ def _wraprepo(ui, repo):
                 config = self.readsparseconfig(
                     raw, filename=self.vfs.join('sparse'))
 
-            includes, excludes, profiles = config
+            # create copies, as these datastructures are updated further on
+            includes, excludes, profiles = (
+                set(config.includes), set(config.excludes),
+                list(config.profiles)
+            )
 
             ctx = repo[rev]
             if profiles:
@@ -1334,7 +1338,9 @@ def _explainprofile(cmd, ui, repo, *profiles, **opts):
     exitcode = 0
 
     def sortedsets(d):
-        return {k: sorted(v) if isinstance(v, set) else v for k, v in d.items()}
+        return {
+            k: sorted(v) if isinstance(v, collections.Set) else v
+            for k, v in d.items()}
 
     ui.pager('sparse explain')
     with ui.formatter('sparse', opts) as fm:

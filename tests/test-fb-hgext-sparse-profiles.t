@@ -481,17 +481,16 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
-    .hg*
     profiles
 
   $ hg sparse explain profiles/bar/ham -T json
   [
    {
     "excludes": [],
-    "includes": [".hg*", "interesting", "profiles"],
+    "includes": ["interesting"],
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
-    "profiles": [],
+    "profiles": ["profiles/bar/eggs"],
     "stats": {"filecount": 9, "filecountpercentage": 90.0}
    }
   ]
@@ -499,10 +498,10 @@ We can look at invididual profiles:
   [
    {
     "excludes": [],
-    "includes": [".hg*", "interesting", "profiles"],
+    "includes": ["interesting"],
     "metadata": {"title": "An extended profile including some interesting files"},
     "path": "profiles/bar/ham",
-    "profiles": [],
+    "profiles": ["profiles/bar/eggs"],
     "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145880}
    }
   ]
@@ -529,7 +528,6 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
-    .hg*
     profiles
 
   $ hg sparse explain profiles/bar/eggs --verbose
@@ -556,7 +554,6 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
-    .hg*
     profiles
 
   $ hg sparse explain profiles/bar/eggs profiles/bar/ham profiles/nonsuch --verbose
@@ -584,7 +581,6 @@ We can look at invididual profiles:
   Inclusion rules
   ===============
   
-    .hg*
     profiles
   
   profiles/bar/ham
@@ -598,12 +594,15 @@ We can look at invididual profiles:
   file count    9 (90.00%)
   total size    3.95 MB
   
+  Profiles included
+  =================
+  
+    profiles/bar/eggs
+  
   Inclusion rules
   ===============
   
-    .hg*
     interesting
-    profiles
 
   $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n{stats.filecount}\n"
   profiles/bar/eggs
