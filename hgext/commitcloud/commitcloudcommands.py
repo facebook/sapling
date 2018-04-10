@@ -126,7 +126,7 @@ def cloudsync(ui, repo, **opts):
                     _version, obsmarkers = obsolete._readmarkers(f.read())
             synced, cloudrefs = serv.updatereferences(
                 lastsyncstate.version, lastsyncstate.heads, localheads,
-                lastsyncstate.bookmarks, localbookmarks, obsmarkers)
+                lastsyncstate.bookmarks.keys(), localbookmarks, obsmarkers)
             if synced:
                 lastsyncstate.update(cloudrefs.version, localheads,
                                      localbookmarks)
