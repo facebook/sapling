@@ -634,16 +634,13 @@ def _wraprepo(ui, repo):
             except KeyError:
                 return repo.filectx(profile, changeid=changeid).data()
 
-        def sparsechecksum(self, filepath):
-            with open(filepath) as fh:
-                return hashlib.sha1(fh.read()).hexdigest()
-
-        def _sparsesignature(self, includetemp=True, config=None):
+        def _sparsesignature(self, includetemp=True, config=None, revs=()):
             """Returns the signature string representing the contents of the
             current project sparse configuration. This can be used to cache the
             sparse matcher for a given set of revs."""
             signaturecache = self.signaturecache
-            signature = signaturecache.get('signature')
+            sigkey = config.path if config else '.hg/sparse'
+            signature = signaturecache.get(sigkey)
             if includetemp:
                 tempsignature = signaturecache.get('tempsignature')
             else:
@@ -652,21 +649,26 @@ def _wraprepo(ui, repo):
             if signature is None or (includetemp and tempsignature is None):
                 signature = 0
                 if config is None:
-                    sparsepath = self.vfs.join('sparse')
+                    try:
+                        sparsedata = self.vfs.read('sparse')
+                        signature = hashlib.sha1(sparsedata).hexdigest()
+                    except (OSError, IOError):
+                        pass
                 else:
-                    sparsepath = config.path
-                try:
-                    sparsepath = self.vfs.join('sparse')
-                    signature = self.sparsechecksum(sparsepath)
-                except (OSError, IOError):
-                    pass
-                signaturecache['signature'] = signature
+                    sha1 = hashlib.sha1()
+                    for r in revs:
+                        try:
+                            sha1.update(self.getrawprofile(config.path, r))
+                            signature = sha1.hexdigest()
+                        except KeyError:
+                            pass
+                signaturecache[sigkey] = signature
 
                 tempsignature = 0
                 if includetemp:
                     try:
-                        tempsparsepath = self.vfs.join('tempsparse')
-                        tempsignature = self.sparsechecksum(tempsparsepath)
+                        tempsparsepath = self.vfs.read('tempsparse')
+                        tempsignature = hashlib.sha1(tempsparsepath).hexdigest()
                     except (OSError, IOError):
                         pass
                     signaturecache['tempsignature'] = tempsignature
@@ -708,7 +710,7 @@ def _wraprepo(ui, repo):
             includetemp = kwargs.get('includetemp', True)
             config = kwargs.get('config')
             signature = self._sparsesignature(
-                includetemp=includetemp, config=config)
+                includetemp=includetemp, config=config, revs=revs)
 
             key = '%s:%s' % (signature, ':'.join([str(r) for r in revs]))
 

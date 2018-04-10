@@ -304,9 +304,10 @@ Test profile discovery
   > [extensions]
   > sparse=$TESTDIR/../hgext/fbsparse.py
   > EOF
-  $ mkdir -p profiles/foo profiles/bar
+  $ mkdir -p profiles/foo profiles/bar interesting
   $ touch profiles/README.txt
   $ touch profiles/foo/README
+  $ dd if=/dev/zero of=interesting/sizeable bs=4048 count=1024 2> /dev/null
   $ cat > profiles/foo/spam <<EOF
   > %include profiles/bar/eggs
   > [metadata]
@@ -324,6 +325,13 @@ Test profile discovery
   > [include]
   > profiles
   > EOF
+  $ cat > profiles/bar/ham <<EOF
+  > %include profiles/bar/eggs
+  > [metadata]
+  > title: An extended profile including some interesting files
+  > [include]
+  > interesting
+  > EOF
   $ cat > profiles/foo/monty <<EOF
   > [metadata]
   > hidden: this profile is deliberatly hidden from listings
@@ -339,8 +347,8 @@ Test profile discovery
   > A non-empty file to show that a sparse profile has an impact in terms of
   > file count and bytesize.
   > EOF
-  $ hg add -q profiles hidden
-  $ hg commit -qm 'created profiles and some hidden data'
+  $ hg add -q profiles hidden interesting
+  $ hg commit -qm 'created profiles and some data'
   $ hg sparse --enable-profile profiles/foo/spam
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
@@ -362,10 +370,13 @@ Test profile discovery
   $ cat >> .hg/hgrc <<EOF
   > [sparse]
   > profile_directory = profiles/
+  > [simplecache]
+  > caches=
   > EOF
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
   $ hg sparse list -T json
@@ -374,6 +385,11 @@ Test profile discovery
     "active": "included",
     "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
     "path": "profiles/bar/eggs"
+   },
+   {
+    "active": "inactive",
+    "metadata": {"title": "An extended profile including some interesting files"},
+    "path": "profiles/bar/ham"
    },
    {
     "active": "inactive",
@@ -394,6 +410,7 @@ The current working directory plays no role in listing profiles:
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
   $ cd ..
@@ -405,6 +422,7 @@ not hamper listing.
   $ hg sparse list
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
   * profiles/foo/spam   - Profile that only includes another
 
@@ -413,6 +431,7 @@ Hidden profiles only show up when we use the --verbose switch:
   $ hg sparse list --verbose
   symbols: * = active profile, ~ = transitively included
   ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
     profiles/foo/monty 
   * profiles/foo/spam   - Profile that only includes another
@@ -432,6 +451,7 @@ warnings:
   warning: sparse profile [metadata] section indented lines that do not belong to a multi-line entry, ignoring, in profiles/foo/errors:2
   warning: sparse profile [metadata] section does not appear to have a valid option definition, ignoring, in profiles/foo/errors:3
   ~ profiles/bar/eggs   - Base profile including the profiles directory
+    profiles/bar/ham    - An extended profile including some interesting files
     profiles/bar/python
     profiles/foo/errors
   * profiles/foo/spam   - Profile that only includes another
@@ -450,7 +470,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    7 (87.50%)
+  file count    8 (80.00%)
   
   Additional metadata
   ===================
@@ -464,26 +484,26 @@ We can look at invididual profiles:
     .hg*
     profiles
 
-  $ hg sparse explain profiles/bar/eggs -T json
+  $ hg sparse explain profiles/bar/ham -T json
   [
    {
     "excludes": [],
-    "includes": [".hg*", "profiles"],
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
-    "path": "profiles/bar/eggs",
+    "includes": [".hg*", "interesting", "profiles"],
+    "metadata": {"title": "An extended profile including some interesting files"},
+    "path": "profiles/bar/ham",
     "profiles": [],
-    "stats": {"filecount": 7, "filecountpercentage": 87.5}
+    "stats": {"filecount": 9, "filecountpercentage": 90.0}
    }
   ]
-  $ hg sparse explain profiles/bar/eggs -T json --verbose
+  $ hg sparse explain profiles/bar/ham -T json --verbose
   [
    {
     "excludes": [],
-    "includes": [".hg*", "profiles"],
-    "metadata": {"description": "This is a base profile, you really want to include this one\nif you want to be able to edit profiles. In addition, this profiles has\nsome metadata.", "foo": "bar baz and a whole\nlot more.", "team": "me, myself and I", "title": "Base profile including the profiles directory"},
-    "path": "profiles/bar/eggs",
+    "includes": [".hg*", "interesting", "profiles"],
+    "metadata": {"title": "An extended profile including some interesting files"},
+    "path": "profiles/bar/ham",
     "profiles": [],
-    "stats": {"filecount": 7, "filecountpercentage": 87.5, "totalsize": 608}
+    "stats": {"filecount": 9, "filecountpercentage": 90.0, "totalsize": 4145880}
    }
   ]
   $ hg sparse explain profiles/bar/eggs
@@ -498,7 +518,7 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    7 (87.50%)
+  file count    8 (80.00%)
   
   Additional metadata
   ===================
@@ -524,8 +544,8 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    7 (87.50%)
-  total size    608 bytes
+  file count    8 (80.00%)
+  total size    728 bytes
   
   Additional metadata
   ===================
@@ -539,7 +559,7 @@ We can look at invididual profiles:
     .hg*
     profiles
 
-  $ hg sparse explain profiles/bar/eggs profiles/foo/monty profiles/nonsuch
+  $ hg sparse explain profiles/bar/eggs profiles/bar/ham profiles/nonsuch --verbose
   The profile profiles/nonsuch was not found
   profiles/bar/eggs
   
@@ -552,7 +572,8 @@ We can look at invididual profiles:
   Size impact compared to a full checkout
   =======================================
   
-  file count    7 (87.50%)
+  file count    8 (80.00%)
+  total size    728 bytes
   
   Additional metadata
   ===================
@@ -566,42 +587,35 @@ We can look at invididual profiles:
     .hg*
     profiles
   
-  profiles/foo/monty
+  profiles/bar/ham
   
-  (untitled)
-  """"""""""
+  An extended profile including some interesting files
+  """"""""""""""""""""""""""""""""""""""""""""""""""""
   
   Size impact compared to a full checkout
   =======================================
   
-  file count    7 (87.50%)
-  
-  Additional metadata
-  ===================
-  
-  hidden        this profile is deliberatly hidden from listings
+  file count    9 (90.00%)
+  total size    3.95 MB
   
   Inclusion rules
   ===============
   
-    eric_idle
-    john_cleese
-  
-  Exclusion rules
-  ===============
-  
-    guido_van_rossum
+    .hg*
+    interesting
+    profiles
 
   $ hg sparse explain profiles/bar/eggs -T "{path}\n{metadata.title}\n{stats.filecount}\n"
   profiles/bar/eggs
   Base profile including the profiles directory
-  7
+  8
 
 We can list the files in a profile with the hg sparse files command:
 
   $ hg sparse files profiles/bar/eggs
   profiles/README.txt
   profiles/bar/eggs
+  profiles/bar/ham
   profiles/bar/python
   profiles/foo/README
   profiles/foo/errors
@@ -610,3 +624,23 @@ We can list the files in a profile with the hg sparse files command:
   $ hg sparse files profiles/bar/eggs **/README **/README.*
   profiles/README.txt
   profiles/foo/README
+
+Files for included profiles are taken along:
+
+  $ hg sparse files profiles/bar/ham | wc -l
+  \s*9 (re)
+
+File count and size data for hg explain is cached in the simplecache extension:
+
+  $ cat >> .hg/hgrc <<EOF
+  > [simplecache]
+  > caches=local
+  > cachedir=$TESTTMP/cache
+  > EOF
+  $ hg sparse explain profiles/bar/eggs profiles/bar/ham > /dev/null
+  $ ls -1 $TESTTMP/cache
+  sparseprofile:profiles__bar__eggs:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
+  sparseprofile:profiles__bar__ham:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
+  sparseprofilestats:sparseprofiles:profiles__bar__eggs:ec6899e6d01f48f63f31c356ab861523b19afa6d:0:12ab4b2484dc06085b793b6f7c65b9f7679a7557:False:* (glob)
+  sparseprofilestats:sparseprofiles:profiles__bar__ham:07b4880e6fcb1f6b13998b0c6bc47f256a0f6d33:0:12ab4b2484dc06085b793b6f7c65b9f7679a7557:False:* (glob)
+  sparseprofilestats:sparseprofiles:unfiltered:12ab4b2484dc06085b793b6f7c65b9f7679a7557:* (glob)
