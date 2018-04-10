@@ -73,6 +73,17 @@ std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
   folly::toAppendDelimFit(", ", arg1, rest..., &result);
   return result;
 }
+
+using facebook::eden::Hash;
+std::string logHash(StringPiece thriftArg) {
+  if (thriftArg.size() == Hash::RAW_SIZE) {
+    return Hash{folly::ByteRange{thriftArg}}.toString();
+  } else if (thriftArg.size() == Hash::RAW_SIZE * 2) {
+    return Hash{thriftArg}.toString();
+  } else {
+    return folly::hexlify(thriftArg);
+  }
+}
 } // namespace
 
 #define TLOG(logger, level, file, line) \
@@ -214,7 +225,7 @@ void EdenServiceHandler::checkOutRevision(
   auto helper = INSTRUMENT_THRIFT_CALL(
       folly::LogLevel::DBG1,
       *mountPoint,
-      hashFromThrift(*hash).toString(),
+      logHash(*hash),
       folly::get_default(
           _CheckoutMode_VALUES_TO_NAMES, checkoutMode, "(unknown)"));
   auto hashObj = hashFromThrift(*hash);
@@ -228,9 +239,7 @@ void EdenServiceHandler::resetParentCommits(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<WorkingDirectoryParents> parents) {
   auto helper = INSTRUMENT_THRIFT_CALL(
-      folly::LogLevel::DBG1,
-      *mountPoint,
-      hashFromThrift(parents->parent1).toString());
+      folly::LogLevel::DBG1, *mountPoint, logHash(parents->parent1));
   ParentCommits edenParents;
   edenParents.parent1() = hashFromThrift(parents->parent1);
   if (parents->__isset.parent2) {
@@ -498,10 +507,8 @@ EdenServiceHandler::future_getScmStatus(
   auto helper = INSTRUMENT_THRIFT_CALL(
       folly::LogLevel::DBG2,
       *mountPoint,
-      folly::format(
-          "listIgnored={}, commitHash={}",
-          listIgnored ? "true" : "false",
-          *commitHash));
+      folly::to<string>("listIgnored=", listIgnored ? "true" : "false"),
+      folly::to<string>("commitHash=", logHash(*commitHash)));
 
   auto mount = server_->getMount(*mountPoint);
   Hash hash;
@@ -531,7 +538,8 @@ EdenServiceHandler::future_getScmStatusBetweenRevisions(
   auto helper = INSTRUMENT_THRIFT_CALL(
       folly::LogLevel::DBG2,
       *mountPoint,
-      folly::format("oldHash={}, newHash={}", *oldHash, *newHash));
+      folly::to<string>("oldHash=", logHash(*oldHash)),
+      folly::to<string>("newHash=", logHash(*newHash)));
   auto id1 = hashFromThrift(*oldHash);
   auto id2 = hashFromThrift(*newHash);
   auto mount = server_->getMount(*mountPoint);
@@ -547,7 +555,8 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -578,7 +587,8 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
@@ -603,7 +613,8 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-  auto helper = INSTRUMENT_THRIFT_CALL(folly::LogLevel::DBG3);
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      folly::LogLevel::DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
