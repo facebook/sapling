@@ -25,7 +25,7 @@ size_t bsearch_between(const void *needle,
       return nel;
     }
 
-    const void *ptr = base + (midpoint * width);
+    const void *ptr = (const void *)((char*)base + (midpoint * width));
 
     int cmp = compare(needle, ptr, context);
 

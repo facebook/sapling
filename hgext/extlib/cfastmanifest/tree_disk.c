@@ -189,7 +189,7 @@ read_from_file_result_t read_from_file(char *fname, size_t fname_sz) {
 
   // write all the stats into place.
   result.tree->arena_sz = arena_sz;
-  result.tree->arena_free_start = result.tree->arena + result.tree->arena_sz;
+  result.tree->arena_free_start = (void *)((char *)result.tree->arena + result.tree->arena_sz);
   result.tree->compacted = true;
   result.tree->consumed_memory = header.consumed_memory;
   result.tree->num_leaf_nodes = header.num_leaf_nodes;
@@ -263,7 +263,7 @@ static write_to_file_result_t write_compact_tree_to_file(
   v0_header_t header;
   memset(&header, 0, sizeof(header));           // keeping valgrind happy.
   header.header_sz = sizeof(v0_header_t);
-  size_t used_size = tree->arena_free_start - tree->arena;
+  size_t used_size = (char *)tree->arena_free_start - (char *)tree->arena;
   header.file_sz = header.header_sz + used_size;
 
   memcpy(header.magic, MAGIC, sizeof(MAGIC));
