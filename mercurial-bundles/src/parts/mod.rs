@@ -105,21 +105,25 @@ where
     builder.add_mparam("cache", "True")?;
     builder.add_mparam("category", "manifests")?;
 
+    let buffer_size = 100; // TODO(stash): make it configurable
     let wirepack_parts = entries
-        .and_then(|(entry, linknode, basepath)| {
-            entry
+        .map(|(entry, linknode, basepath)| {
+            let parents = entry
+                .get_parents()
+                .traced_global("fetching parents", trace_args!());
+
+            let raw_content = entry
                 .get_raw_content()
                 .and_then(|blob| blob.into_inner().ok_or(err_msg("bad blob content")))
-                .map(move |content| (entry, content, linknode, basepath))
-                .traced_global("fetching raw content", trace_args!())
+                .traced_global("fetching raw content", trace_args!());
 
+            parents
+                .join(raw_content)
+                .map(move |(parents, raw_content)| {
+                    (entry, parents, raw_content, linknode, basepath)
+                })
         })
-        .and_then(|(entry, content, linknode, basepath)| {
-            entry
-                .get_parents()
-                .map(move |parents| (entry, parents, content, linknode, basepath))
-                .traced_global("fetching parents", trace_args!())
-        })
+        .buffered(buffer_size)
         .map(|(entry, parents, content, linknode, basepath)| {
             let path = match MPath::join_element_opt(basepath.as_ref(), entry.get_name()) {
                 Some(path) => RepoPath::DirectoryPath(path),
