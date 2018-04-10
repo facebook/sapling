@@ -9,21 +9,7 @@
  */
 #pragma once
 
-// Unless overridden by the build machinery, we assume that common/stats is
-// available to the build.  This isn't currently true in our opensource build.
-// If you want to explicitly check that we do the right thing for the opensource
-// build from inside our non-opensource build, you can edit this header and
-// force this to have the value 0.
-#ifndef EDEN_HAS_COMMON_STATS
-#define EDEN_HAS_COMMON_STATS 1
-#endif
-
-#if EDEN_HAS_COMMON_STATS
 #include "common/stats/ThreadLocalStats.h"
-#else
-#include <folly/Synchronized.h>
-#include <folly/stats/TimeseriesHistogram.h>
-#endif
 
 namespace folly {
 template <class T, class Tag, class AccessMode>
@@ -48,20 +34,10 @@ using ThreadLocalEdenStats = folly::ThreadLocal<EdenStats, EdenStatsTag, void>;
  * The ThreadLocalEdenStats object should be used to maintain one EdenStats
  * object for each thread that needs to access/update the stats.
  */
-class EdenStats
-#if EDEN_HAS_COMMON_STATS
-    : public facebook::stats::ThreadLocalStatsT<
-          facebook::stats::TLStatsThreadSafe>
-#endif
-{
+class EdenStats : public facebook::stats::ThreadLocalStatsT<
+                      facebook::stats::TLStatsThreadSafe> {
  public:
-  using Histogram =
-#if EDEN_HAS_COMMON_STATS
-      TLHistogram
-#else
-      folly::Synchronized<folly::TimeseriesHistogram<int64_t>, std::mutex>
-#endif
-      ;
+  using Histogram = TLHistogram;
 
   explicit EdenStats();
 
@@ -121,11 +97,7 @@ class EdenStats
       std::chrono::seconds now);
 
  private:
-#if EDEN_HAS_COMMON_STATS
   Histogram createHistogram(const std::string& name);
-#else
-  folly::TimeseriesHistogram<int64_t> createHistogram(const std::string& name);
-#endif
 };
 
 } // namespace eden

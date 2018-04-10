@@ -18,6 +18,7 @@
 #include <folly/experimental/logging/xlog.h>
 #include <folly/futures/Future.h>
 #include <folly/stop_watch.h>
+#include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Differ.h"

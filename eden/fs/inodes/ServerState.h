@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <folly/ThreadLocal.h>
 #include <memory>
 
 #include "eden/fs/fuse/EdenStats.h"

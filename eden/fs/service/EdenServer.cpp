@@ -20,6 +20,7 @@
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
+#include "common/stats/ServiceData.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/fuse/DirHandle.h"
 #include "eden/fs/fuse/FileHandle.h"
