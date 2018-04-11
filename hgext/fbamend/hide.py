@@ -14,6 +14,7 @@ from mercurial import (
     cmdutil,
     error,
     hg,
+    hintutil,
     extensions,
     obsolete,
     registrar,
@@ -85,6 +86,7 @@ def hide(ui, repo, *revs, **opts):
 
         if len(bmchanges) > 0:
             ui.status(_('%i bookmarks removed\n') % len(bmchanges))
+        hintutil.trigger('undo')
 
 @command('^unhide', [('r', 'rev', [], _("revisions to unhide"))])
 def unhide(ui, repo, *revs, **opts):

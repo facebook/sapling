@@ -74,8 +74,8 @@ outputs, which should be fixed later.
   hgext/fbamend/fold.py:23: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/hiddenoverride.py:10: import should be relative: hgext
   hgext/fbamend/hiddenoverride.py:12: symbol import follows non-symbol import: mercurial.node
-  hgext/fbamend/hide.py:12: imports from mercurial not lexically sorted: extensions < hg
-  hgext/fbamend/hide.py:22: symbol import follows non-symbol import: mercurial.i18n
+  hgext/fbamend/hide.py:12: imports from mercurial not lexically sorted: extensions < hintutil
+  hgext/fbamend/hide.py:23: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/metaedit.py:23: symbol import follows non-symbol import: mercurial.i18n
   hgext/fbamend/movement.py:10: relative import of stdlib module
   hgext/fbamend/movement.py:10: direct symbol import count from itertools

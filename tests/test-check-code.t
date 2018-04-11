@@ -122,16 +122,16 @@ New errors are not allowed. Warnings are strongly discouraged.
   hgext/phabstatus.py:80:
    >             repodir=os.getcwd(), ca_bundle=ca_certs, repo=repo)
    use pycompat.getcwd instead (py3)
-  hgext/undo.py:71:
+  hgext/undo.py:*: (glob)
    >     if 'CHGINTERNALMARK' in os.environ:
    use encoding.environ instead (py3)
-  hgext/undo.py:89:
+  hgext/undo.py:*: (glob)
    >     if '_undologactive' in os.environ:
    use encoding.environ instead (py3)
-  hgext/undo.py:97:
+  hgext/undo.py:*: (glob)
    >             os.environ['_undologactive'] = "active"
    use encoding.environ instead (py3)
-  hgext/undo.py:127:
+  hgext/undo.py:*: (glob)
    >                 del os.environ['_undologactive']
    use encoding.environ instead (py3)
   Skipping i18n/polib.py it has no-che?k-code (glob)

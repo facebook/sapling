@@ -2,6 +2,7 @@
   > [extensions]
   > fbamend=
   > inhibit=
+  > undo =
   > [experimental]
   > evolution = createmarkers, allowunstable
   > EOF
@@ -40,6 +41,8 @@ Hide a single commit
   $ hg hide 3
   hiding commit be0ef73c17ad
   1 changesets hidden
+  hint[undo]: you can undo this using the `hg undo` command
+  hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   o  4 E
   |
@@ -63,6 +66,8 @@ Hide multiple commits with bookmarks on them, hide wc parent
   removing bookmark "cat"
   removing bookmark "dog"
   2 bookmarks removed
+  hint[undo]: you can undo this using the `hg undo` command
+  hint[hint-ack]: use 'hg hint --ack undo' to silence these hints
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   @  0 A
   

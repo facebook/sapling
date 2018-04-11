@@ -54,6 +54,12 @@ configitem = registrar.configitem(configtable)
 
 configitem('undo', '_duringundologlock', default=False)
 
+hint = registrar.hint()
+
+@hint('undo')
+def hintundo():
+    return _("you can undo this using the `hg undo` command")
+
 # Setup
 
 def extsetup(ui):
