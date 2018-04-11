@@ -25,7 +25,11 @@ from mercurial.i18n import _
 cmdtable = {}
 command = registrar.command(cmdtable)
 
-@command('^hide', [('r', 'rev', [], _("revisions to hide"))])
+@command('^hide',
+         [('r', 'rev', [], _("revisions to hide")),
+          ('c', 'cleanup', None,
+           _("cleanup obsolete commits (eg. marked as landed, amended, etc.)")),
+         ])
 def hide(ui, repo, *revs, **opts):
     """hide changesets and their descendants
 
@@ -37,8 +41,18 @@ def hide(ui, repo, *revs, **opts):
     hidden parent.
 
     If there is a bookmark pointing to the commit it will be removed.
+
+    --cleanup hides all the draft, obsolete commits that don't have non-obsolete
+    descendants.
     """
-    revs = list(revs) + opts.pop('rev', [])
+    if opts.get('cleanup') and len(opts.get('rev') + list(revs)) != 0:
+        raise error.Abort(_('--rev and --cleanup are incompatible'))
+    elif opts.get('cleanup'):
+        # hides all the draft, obsolete commits that
+        # don't have non-obsolete descendants
+        revs = ['draft() & ::(head() & obsolete()) - ::(not obsolete())']
+    else:
+        revs = list(revs) + opts.pop('rev', [])
     revs = set(scmutil.revrange(repo, revs))
     hidectxs = list(repo.set("(%ld)::", revs))
 
