@@ -162,9 +162,7 @@ Delete empty file
 
 Add binary file
 
-  $ hg bundle --type v1 --base -2 tip.bundle
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+  $ hg bundle --base -2 tip.bundle
   1 changesets found
   $ hg add tip.bundle
   $ hg commit -i -d '4 0' -m binary<<EOF
@@ -177,21 +175,19 @@ Add binary file
   
 
   $ hg tip -p
-  changeset:   4:ad816da3711e
+  changeset:   4:72e9d7d0ef46
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     binary
   
-  diff -r b39a238f01a1 -r ad816da3711e tip.bundle
+  diff -r b39a238f01a1 -r 72e9d7d0ef46 tip.bundle
   Binary file tip.bundle has changed
   
 
 Change binary file
 
-  $ hg bundle --base -2 --type v1 tip.bundle
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+  $ hg bundle --base -2 tip.bundle
   1 changesets found
   $ hg commit -i -d '5 0' -m binary-change<<EOF
   > y
@@ -202,22 +198,20 @@ Change binary file
   
 
   $ hg tip -p
-  changeset:   5:dccd6f3eb485
+  changeset:   5:c0f95062740f
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:05 1970 +0000
   summary:     binary-change
   
-  diff -r ad816da3711e -r dccd6f3eb485 tip.bundle
+  diff -r 72e9d7d0ef46 -r c0f95062740f tip.bundle
   Binary file tip.bundle has changed
   
 
 Rename and change binary file
 
   $ hg mv tip.bundle top.bundle
-  $ hg bundle --base -2 --type v1 top.bundle
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
+  $ hg bundle --base -2 top.bundle
   1 changesets found
   $ hg commit -i -d '6 0' -m binary-change-rename<<EOF
   > y
@@ -230,15 +224,15 @@ Rename and change binary file
   
 
   $ hg tip -p
-  changeset:   6:7fa44105f5b3
+  changeset:   6:121c8f7bde73
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     binary-change-rename
   
-  diff -r dccd6f3eb485 -r 7fa44105f5b3 tip.bundle
+  diff -r c0f95062740f -r 121c8f7bde73 tip.bundle
   Binary file tip.bundle has changed
-  diff -r dccd6f3eb485 -r 7fa44105f5b3 top.bundle
+  diff -r c0f95062740f -r 121c8f7bde73 top.bundle
   Binary file top.bundle has changed
   
 
@@ -271,13 +265,13 @@ Add plain file
   record this change to 'plain'? [Ynesfdaq?] y
   
   $ hg tip -p
-  changeset:   7:11fb457c1be4
+  changeset:   7:25bd6137b6e6
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     plain
   
-  diff -r 7fa44105f5b3 -r 11fb457c1be4 plain
+  diff -r 121c8f7bde73 -r 25bd6137b6e6 plain
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:07 1970 +0000
   @@ -0,0 +1,10 @@
@@ -337,7 +331,7 @@ Modify end of plain file, no EOL
    9
    10
    11
-  +7264f99c5f5ff3261504828afa4fb4d406c3af54
+  +e00f3f2749af0e3a5233781c507904e161807344
   \ No newline at end of file
   record this change to 'plain'? [Ynesfdaq?] y
   
@@ -479,9 +473,9 @@ Modify end of plain file, add EOL
    9
    10
    11
-  -7264f99c5f5ff3261504828afa4fb4d406c3af54
+  -e00f3f2749af0e3a5233781c507904e161807344
   \ No newline at end of file
-  +7264f99c5f5ff3261504828afa4fb4d406c3af54
+  +e00f3f2749af0e3a5233781c507904e161807344
   record change 1/2 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -525,7 +519,7 @@ changes numbering
    9
    10
   -11
-  -7264f99c5f5ff3261504828afa4fb4d406c3af54
+  -e00f3f2749af0e3a5233781c507904e161807344
   record change 2/3 to 'plain'? [Ynesfdaq?] y
   
   diff --git a/plain2 b/plain2
@@ -539,13 +533,13 @@ changes numbering
   
 
   $ hg tip -p
-  changeset:   13:f941910cff62
+  changeset:   13:0e4b75d875cd
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
   
-  diff -r 33abe24d946c -r f941910cff62 plain
+  diff -r 05c5c95d7872 -r 0e4b75d875cd plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,4 +1,4 @@
@@ -559,8 +553,8 @@ changes numbering
    9
    10
   -11
-  -7264f99c5f5ff3261504828afa4fb4d406c3af54
-  diff -r 33abe24d946c -r f941910cff62 plain2
+  -e00f3f2749af0e3a5233781c507904e161807344
+  diff -r 05c5c95d7872 -r 0e4b75d875cd plain2
   --- a/plain2	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain2	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,1 +1,2 @@
@@ -611,13 +605,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   14:4915f538659b
+  changeset:   14:1a962fbf33f8
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
   
-  diff -r f941910cff62 -r 4915f538659b plain
+  diff -r 0e4b75d875cd -r 1a962fbf33f8 plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
   @@ -7,4 +7,4 @@
@@ -649,13 +643,13 @@ Record beginning
   
 
   $ hg tip -p
-  changeset:   15:1b1f93d4b94b
+  changeset:   15:848213c8ae97
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
   
-  diff -r 4915f538659b -r 1b1f93d4b94b plain
+  diff -r 1a962fbf33f8 -r 848213c8ae97 plain
   --- a/plain	Thu Jan 01 00:00:11 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
   @@ -1,6 +1,3 @@
@@ -757,13 +751,13 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
   
 
   $ hg tip -p
-  changeset:   17:41cf3f5c55ae
+  changeset:   17:62a02df29cdd
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
   
-  diff -r a69d252246e1 -r 41cf3f5c55ae plain
+  diff -r f1e4597e3c10 -r 62a02df29cdd plain
   --- a/plain	Thu Jan 01 00:00:13 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
   @@ -1,5 +1,10 @@
@@ -799,13 +793,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   18:58a72f46bc24
+  changeset:   18:40f1eaffc151
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
   
-  diff -r 41cf3f5c55ae -r 58a72f46bc24 plain
+  diff -r 62a02df29cdd -r 40f1eaffc151 plain
   --- a/plain	Thu Jan 01 00:00:14 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
   @@ -9,3 +9,5 @@
@@ -838,13 +832,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   20:e0f6b99f6c49
+  changeset:   20:3698085a8c2a
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
   
-  diff -r abd26b51de37 -r e0f6b99f6c49 subdir/a
+  diff -r e041290b8096 -r 3698085a8c2a subdir/a
   --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   @@ -1,1 +1,2 @@
@@ -985,13 +979,13 @@ s, all
   
 
   $ hg tip -p
-  changeset:   22:6afbbefacf35
+  changeset:   22:b6ec082e5d4f
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
   
-  diff -r b73c401c693c -r 6afbbefacf35 subdir/f2
+  diff -r 463ebd26c954 -r b6ec082e5d4f subdir/f2
   --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
   +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
   @@ -1,1 +1,2 @@
@@ -1010,13 +1004,13 @@ f
   
 
   $ hg tip -p
-  changeset:   23:715028a33949
+  changeset:   23:f0c58857264c
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
   
-  diff -r 6afbbefacf35 -r 715028a33949 subdir/f1
+  diff -r b6ec082e5d4f -r f0c58857264c subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
   @@ -1,1 +1,2 @@
@@ -1049,7 +1043,7 @@ Preserve chmod +x
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   24:db967c1e5884
+  changeset:   24:04dff1450229
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
@@ -1087,7 +1081,7 @@ Preserve execute permission on original
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   25:88903aef81c3
+  changeset:   25:e43fd23533b3
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
@@ -1127,7 +1121,7 @@ Preserve chmod -x
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   26:7af84b6cf560
+  changeset:   26:d685544b7481
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
