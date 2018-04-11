@@ -51,6 +51,8 @@ def hide(ui, repo, *revs, **opts):
                 raise error.Abort(
                     _('cannot hide immutable changeset: %s') % ctx,
                     hint="see 'hg help phases' for details")
+            if not ui.quiet:
+                ui.status(_('hiding commit %s\n') % ctx)
 
         wdp = repo['.']
         newnode = wdp
@@ -75,6 +77,10 @@ def hide(ui, repo, *revs, **opts):
         for book, node in bookmarksmod.listbinbookmarks(repo):
             if node in hnodes:
                 bmchanges.append((book, None))
+
+        if not ui.quiet:
+            for bmchange in sorted(bmchanges):
+                ui.status(_('removing bookmark "%s"\n') % bmchange[0])
         repo._bookmarks.applychanges(repo, tr, bmchanges)
 
         if len(bmchanges) > 0:

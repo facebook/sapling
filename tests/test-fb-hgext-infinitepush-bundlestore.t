@@ -423,6 +423,7 @@ Scratch pull of pruned commits
   > EOF
   $ hg book -d scratch/mybranch
   $ hg hide 8872775dd97a
+  hiding commit 8872775dd97a
   1 changesets hidden
   $ hg pull -B scratch/mybranch
   pulling from ssh://user@dummy/repo

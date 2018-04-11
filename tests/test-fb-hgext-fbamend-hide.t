@@ -38,6 +38,7 @@ Create repo
 
 Hide a single commit
   $ hg hide 3
+  hiding commit be0ef73c17ad
   1 changesets hidden
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   o  4 E
@@ -53,9 +54,14 @@ Hide multiple commits with bookmarks on them, hide wc parent
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg hide .
+  hiding commit 112478962961
+  hiding commit 26805aba1e60
+  hiding commit 78d2dca436b2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   working directory now at 426bada5c675
   3 changesets hidden
+  removing bookmark "cat"
+  removing bookmark "dog"
   2 bookmarks removed
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   @  0 A
@@ -82,3 +88,4 @@ Unhide stuff
   |
   @  0 A
   
+
