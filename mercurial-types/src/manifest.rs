@@ -131,6 +131,13 @@ pub enum Type {
     Tree,
 }
 
+impl Type {
+    #[inline]
+    pub fn is_tree(&self) -> bool {
+        self == &Type::Tree
+    }
+}
+
 impl Display for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {

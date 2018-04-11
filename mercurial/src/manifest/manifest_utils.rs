@@ -26,8 +26,8 @@ use errors::*;
 pub enum EntryStatus {
     Added(RevlogEntry),
     Deleted(RevlogEntry),
-    // Entries should have the same type. Note - we may change it in future to allow
-    // (File, Symlink), (Symlink, Executable) etc
+    // Entries will always either be File or Tree. However, it's possible for one of the entries
+    // to be Regular and the other to be Symlink, etc.
     Modified {
         to_entry: RevlogEntry,
         from_entry: RevlogEntry,
@@ -157,8 +157,8 @@ pub fn new_entry_intersection_stream(
 /// ChangedEntry, each showing whether a file/directory was added, deleted or modified.
 /// Note: Modified entry contains only entries of the same type i.e. if a file was replaced
 /// with a directory of the same name, then returned stream will contain Deleted file entry,
-/// and Added directory entry. The same applies for executable and symlinks, although we may
-/// change it in future
+/// and Added directory entry. The same *does not* apply for changes between the various
+/// file types (Regular, Executable and Symlink): those will only be one Modified entry.
 pub fn changed_entry_stream(
     to: &RevlogManifest,
     from: &RevlogManifest,
@@ -185,9 +185,9 @@ fn recursive_changed_entry_stream(changed_entry: ChangedEntry) -> BoxStream<Chan
             to_entry,
             from_entry,
         } => {
-            debug_assert!(to_entry.get_type() == from_entry.get_type());
+            debug_assert!(to_entry.get_type().is_tree() == from_entry.get_type().is_tree());
 
-            let substream = if to_entry.get_type() == Type::Tree {
+            let substream = if to_entry.get_type().is_tree() {
                 let contents = to_entry.get_content().join(from_entry.get_content());
                 let path = changed_entry.path.clone();
                 let entry_path = to_entry.get_name().cloned();
@@ -295,7 +295,7 @@ pub fn diff_sorted_vecs(
                     res.push(ChangedEntry::new_deleted(path.clone(), from_entry));
                     to.push_front(to_entry);
                 } else {
-                    if to_entry.get_type() == from_entry.get_type() {
+                    if to_entry.get_type().is_tree() == from_entry.get_type().is_tree() {
                         if to_entry.get_hash() != from_entry.get_hash() {
                             res.push(ChangedEntry::new_modified(
                                 path.clone(),
