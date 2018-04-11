@@ -100,7 +100,7 @@ class BaseMap(dict):
             key = k
         # else make a new regex
         if isinstance(key, str):
-            key = re.compile(re.escape(key))
+            key = re.compile('^%s$' % re.escape(key))
         super(BaseMap, self).__setitem__(key, value)
 
     def __contains__(self, key):
