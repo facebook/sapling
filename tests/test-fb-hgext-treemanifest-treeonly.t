@@ -456,8 +456,6 @@ Switch back to hybrid mode
   $ hg pull
   backfilling missing flat manifests
   adding changesets
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
@@ -476,8 +474,6 @@ Switch back to hybrid mode
 - Manually backfill via command
   $ hg backfillmanifestrevlog
   adding changesets
-  remote: devel-warn: using deprecated bundlev1 format
-  remote:  at: */exchange.py:* (getbundlechunks) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

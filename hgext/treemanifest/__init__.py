@@ -967,7 +967,9 @@ def backfillmanifestrevlog(ui, repo, *args, **opts):
                   cl.changelogrevision(r).manifest in mfrevlog.nodemap]
         with repo.wlock(), repo.lock(), (
              repo.transaction("backfillmanifest")) as tr:
-            cg = remote.getbundle('pull', common=common, heads=heads)
+            bundlecaps = exchange.caps20to10(repo)
+            cg = remote.getbundle('pull', bundlecaps=bundlecaps,
+                                  common=common, heads=heads)
             bundle2.applybundle(repo, cg, tr, 'pull', remote.url())
 
 @command('backfilltree', [
