@@ -370,8 +370,6 @@ Test pushing to a hybrid server w/ pushrebase w/ hooks
   $ hg push -r 2 --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: +++ hg log -r 7ec3c5c54734448e59a0694af54c51578ee4d4de -T '{file_adds}'
   remote: ++ [[ y == \y ]]
   remote: ++ exit 1
@@ -387,8 +385,6 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
   $ hg push -r 2 --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     7ec3c5c54734  add y
   remote: 1 new changeset from the server will be downloaded
@@ -544,8 +540,6 @@ Test pushing flat manifests to a treeonly server
   $ hg push -r tip --to master --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: "unable to find the following nodes locally or on the server: ('', 89bffa38cf192d8f8a234bfb14dd22d0c65064f0)"
   abort: push failed on remote
   [255]
@@ -651,8 +645,6 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   $ hg push --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 4 changesets:
   remote:     7ec3c5c54734  add y
   remote:     5b483416c8aa  hybrid flat+tree commit

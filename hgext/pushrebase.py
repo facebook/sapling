@@ -260,10 +260,7 @@ def createrebasepart(repo, peer, outgoing, onto, newhead):
 
     validaterevset(repo, revsetlang.formatspec('%ln', outgoing.missing))
 
-    if repo.ui.configbool('pushrebase', 'moderncgversion'):
-        version = changegroup.safeversion(repo)
-    else:
-        version = '01'
+    version = changegroup.safeversion(repo)
     cg = changegroup.makestream(repo, outgoing, version, 'push')
 
     # Explicitly notify the server what obsmarker versions the client supports

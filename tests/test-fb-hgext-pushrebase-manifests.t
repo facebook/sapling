@@ -148,8 +148,6 @@ Push from client1 -> server and detach. The background job will wait for
 Wait for the first push to actually enter the hook before removing it.
   $ cd ../server
   $ while [ ! -f ".hg/hookrunning" ]; do sleep 0.01; done
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
 
 Remove the hook.
   $ cp .hg/hgrc.bak .hg/hgrc
@@ -160,8 +158,6 @@ blocking. There shouldn't be any "[client1 push]" output here.
   $ hg push --to default | \sed "s/^/[client2 push] /"
   [client2 push] remote:  (?)
   [client2 push] remote:  (?)
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   [client2 push] pushing to ssh://user@dummy/server
   [client2 push] searching for changes
   [client2 push] remote: read manifest outside the lock :)

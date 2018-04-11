@@ -113,7 +113,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: phabstatus.logpeekahead (int) [30]
   undocumented: phrevset.callsign (str)
   undocumented: pushrebase.blocknonpushrebase (bool)
-  undocumented: pushrebase.moderncgversion (bool)
   undocumented: pushrebase.rewritedates (bool)
   undocumented: rage.fastmanifestcached (bool)
   undocumented: remotefilelog.backgroundrepack (bool)

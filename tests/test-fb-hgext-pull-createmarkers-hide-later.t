@@ -83,8 +83,6 @@ when a diff is landed with landcastle.
   $ hg push -r . --to master
   pushing rev cc68f5e5f8d6 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 2 changesets:
   remote:     e0672eeeb97c  add b
   remote:     cc68f5e5f8d6  add c
@@ -147,8 +145,6 @@ Now land the last diff.
   $ hg push -r . --to master
   pushing rev 296f9d37d5c1 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     296f9d37d5c1  add d
   updating bookmark master

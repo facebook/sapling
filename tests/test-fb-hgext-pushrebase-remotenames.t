@@ -44,8 +44,6 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
   $ hg push --to master
   pushing rev a4f02306629b to destination ssh://user@dummy/server1 bookmark master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     a4f02306629b  changed message
   updating bookmark master
@@ -78,8 +76,6 @@ Test that pushing to a remotename gets rebased
   $ hg push --to master
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     5c3cfb78df2f  client's commit
   remote: 2 new changesets from the server will be downloaded
@@ -119,8 +115,6 @@ Test pushing a new bookmark
   $ hg -R client push --to newbook --create
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     5c3cfb78df2f  client's commit
   exporting bookmark newbook
@@ -206,8 +200,6 @@ Test a push that comes with out-of-date bookmark discovery
   $ hg -R client push --to bm
   pushing rev 5db65b93a12b to destination ssh://user@dummy/server bookmark bm
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: moved bookmark to rev 1
   remote: pushing 1 changeset:
   remote:     5db65b93a12b  cc
@@ -253,8 +245,6 @@ Test that we still don't allow non-ff bm changes
   $ hg -R client push --to bm
   pushing rev efec53e7b035 to destination ssh://user@dummy/server bookmark bm
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: moved bookmark to rev 1
   remote: pushing 2 changesets:
   remote:     5db65b93a12b  cc
@@ -299,8 +289,6 @@ Test force pushes
   $ hg push -f --to master
   pushing rev 1846eede8b68 to destination * (glob)
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     1846eede8b68  b
   updating bookmark master
@@ -354,8 +342,6 @@ Test 'hg push' with a tracking bookmark
   $ hg push
   pushing rev d2ae7f538514 to destination ssh://user@dummy/trackingserver bookmark master
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   remote: pushing 1 changeset:
   remote:     d2ae7f538514  b
   remote: 2 new changesets from the server will be downloaded

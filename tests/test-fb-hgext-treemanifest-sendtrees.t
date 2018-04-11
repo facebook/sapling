@@ -97,6 +97,4 @@ Test bundling/unbundling
   
 Test pushing
   $ hg push -r tip --to master --debug | grep rebasepackpart
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   bundle2-output-part: "b2x:rebasepackpart" (params: 3 mandatory) streamed payload

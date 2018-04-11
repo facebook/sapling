@@ -55,8 +55,6 @@ Pushrebase pushes should be allowed
   $ hg push --config "extensions.pushrebase=" --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */pushrebase.py:* (createrebasepart) (glob)
   pushing 1 changeset:
       1846eede8b68  b
   exporting bookmark master
