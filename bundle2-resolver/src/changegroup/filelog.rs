@@ -23,7 +23,7 @@ use mercurial_types::{delta, manifest, Delta, FileType, HgBlob, MPath, NodeHash,
 
 use errors::*;
 use stats::*;
-use upload_blobs::UploadableBlob;
+use upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct FilelogDeltaed {
@@ -40,7 +40,7 @@ pub struct Filelog {
     pub blob: HgBlob,
 }
 
-impl UploadableBlob for Filelog {
+impl UploadableHgBlob for Filelog {
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
     fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {

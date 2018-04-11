@@ -26,13 +26,13 @@ use slog::Logger;
 use changegroup::{convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
                   Filelog};
 use errors::*;
-use upload_blobs::{upload_blobs, UploadBlobsType, UploadableBlob};
+use upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(mercurial::NodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<mercurial::HgNodeKey, <Filelog as UploadableBlob>::Value>;
-type Manifests = HashMap<mercurial::HgNodeKey, <TreemanifestEntry as UploadableBlob>::Value>;
+type Filelogs = HashMap<mercurial::HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
+type Manifests = HashMap<mercurial::HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<mercurial::NodeHash, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
@@ -176,7 +176,7 @@ impl Bundle2Resolver {
                     convert_to_revlog_changesets(c)
                         .collect()
                         .and_then(|changesets| {
-                            upload_blobs(
+                            upload_hg_blobs(
                                 repo.clone(),
                                 convert_to_revlog_filelog(repo, f),
                                 UploadBlobsType::EnsureNoDuplicates,
@@ -282,7 +282,7 @@ impl Bundle2Resolver {
         next_item(bundle2)
             .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
                 Some(Bundle2Item::B2xTreegroup2(_, parts)) => {
-                    upload_blobs(
+                    upload_hg_blobs(
                         repo,
                         TreemanifestBundle2Parser::new(parts),
                         UploadBlobsType::IgnoreDuplicates,

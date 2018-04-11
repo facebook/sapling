@@ -21,7 +21,7 @@ use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProc
 use mercurial_types::{delta, manifest, HgBlob, NodeHash, RepoPath};
 
 use errors::*;
-use upload_blobs::UploadableBlob;
+use upload_blobs::UploadableHgBlob;
 
 /// Parser for wirepack tree part. It returns a stream of TreemanifestEntry, that can be used by
 /// Mononoke's Commit Api.
@@ -84,7 +84,7 @@ impl TreemanifestEntry {
     }
 }
 
-impl UploadableBlob for TreemanifestEntry {
+impl UploadableHgBlob for TreemanifestEntry {
     type Value = (
         ManifestContent,
         Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,

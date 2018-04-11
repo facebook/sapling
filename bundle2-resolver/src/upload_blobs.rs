@@ -15,7 +15,7 @@ use mercurial;
 
 use errors::*;
 
-pub trait UploadableBlob {
+pub trait UploadableHgBlob {
     type Value: Send + 'static;
 
     fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)>;
@@ -28,14 +28,14 @@ pub enum UploadBlobsType {
 }
 use self::UploadBlobsType::*;
 
-pub fn upload_blobs<S, B>(
+pub fn upload_hg_blobs<S, B>(
     repo: Arc<BlobRepo>,
     blobs: S,
     ubtype: UploadBlobsType,
 ) -> BoxFuture<HashMap<mercurial::HgNodeKey, B::Value>, Error>
 where
     S: Stream<Item = B, Error = Error> + Send + 'static,
-    B: UploadableBlob,
+    B: UploadableHgBlob,
 {
     blobs
         .fold(HashMap::new(), move |mut map, item| {
