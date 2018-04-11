@@ -12,14 +12,13 @@ use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::BlobRepo;
 use mercurial;
-use mercurial_types::RepoPath;
 
 use errors::*;
 
 pub trait UploadableBlob {
     type Value: Send + 'static;
 
-    fn upload(self, repo: &BlobRepo) -> Result<((mercurial::NodeHash, RepoPath), Self::Value)>;
+    fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)>;
 }
 
 #[derive(PartialEq, Eq)]
@@ -33,7 +32,7 @@ pub fn upload_blobs<S, B>(
     repo: Arc<BlobRepo>,
     blobs: S,
     ubtype: UploadBlobsType,
-) -> BoxFuture<HashMap<(mercurial::NodeHash, RepoPath), B::Value>, Error>
+) -> BoxFuture<HashMap<mercurial::HgNodeKey, B::Value>, Error>
 where
     S: Stream<Item = B, Error = Error> + Send + 'static,
     B: UploadableBlob,

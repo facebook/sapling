@@ -58,30 +58,27 @@ where
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TreemanifestEntry {
-    pub node: mercurial::NodeHash,
+    pub node_key: mercurial::HgNodeKey,
     pub data: Bytes,
     pub p1: Option<mercurial::NodeHash>,
     pub p2: Option<mercurial::NodeHash>,
-    pub path: RepoPath,
     pub manifest_content: ManifestContent,
 }
 
 impl TreemanifestEntry {
     fn new(
-        node: mercurial::NodeHash,
+        node_key: mercurial::HgNodeKey,
         data: Bytes,
         p1: mercurial::NodeHash,
         p2: mercurial::NodeHash,
-        path: RepoPath,
     ) -> Result<Self> {
         let manifest_content = ManifestContent::parse(data.as_ref())?;
 
         Ok(Self {
-            node,
+            node_key,
             data,
             p1: p1.into_option(),
             p2: p2.into_option(),
-            path,
             manifest_content,
         })
     }
@@ -93,9 +90,8 @@ impl UploadableBlob for TreemanifestEntry {
         Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>,
     );
 
-    fn upload(self, repo: &BlobRepo) -> Result<((mercurial::NodeHash, RepoPath), Self::Value)> {
-        let path = self.path;
-        let node = self.node;
+    fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {
+        let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
         let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
@@ -104,10 +100,10 @@ impl UploadableBlob for TreemanifestEntry {
             manifest::Type::Tree,
             p1,
             p2,
-            path.clone(),
+            node_key.path.clone(),
         ).map(move |(_node, value)| {
             (
-                (node, path),
+                node_key,
                 (
                     manifest_content,
                     value.map_err(Error::compat).boxify().shared(),
@@ -172,13 +168,15 @@ impl WirePackPartProcessor for TreemanifestPartProcessor {
             return Err(ErrorKind::MalformedTreemanifestPart(msg).into());
         }
 
-        let node = unwrap_field(&mut self.node, "node")?;
+        let node_key = mercurial::HgNodeKey {
+            path: unwrap_field(&mut self.path, "path")?,
+            hash: unwrap_field(&mut self.node, "node")?,
+        };
         let bytes = Bytes::from(delta::apply("".as_bytes(), &data_entry.delta));
         let p1 = unwrap_field(&mut self.p1, "p1")?;
         let p2 = unwrap_field(&mut self.p2, "p2")?;
-        let path = unwrap_field(&mut self.path, "path")?;
 
-        Ok(Some(TreemanifestEntry::new(node, bytes, p1, p2, path)?))
+        Ok(Some(TreemanifestEntry::new(node_key, bytes, p1, p2)?))
     }
 
     fn end(&mut self) -> Result<Option<Self::Data>> {
@@ -337,7 +335,10 @@ mod test {
     }
 
     fn get_expected_entry() -> TreemanifestEntry {
-        let node = nodehash_mocks::ONES_HASH;
+        let node_key = mercurial::HgNodeKey {
+            path: RepoPath::root(),
+            hash: nodehash_mocks::ONES_HASH,
+        };
         let p1 = nodehash_mocks::TWOS_HASH;
         let p2 = nodehash_mocks::THREES_HASH;
 
@@ -347,8 +348,7 @@ mod test {
             data
         };
 
-        let entry =
-            TreemanifestEntry::new(node, Bytes::from(data), p1, p2, RepoPath::root()).unwrap();
+        let entry = TreemanifestEntry::new(node_key, Bytes::from(data), p1, p2).unwrap();
 
         assert_eq!(
             entry.manifest_content,

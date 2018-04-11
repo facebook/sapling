@@ -14,6 +14,7 @@ use ascii::{AsciiStr, AsciiString};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 use errors::*;
+use mercurial_types::RepoPath;
 use mercurial_types::hash::{self, Sha1};
 use serde;
 use sql_types::{HgChangesetIdSql, HgManifestIdSql};
@@ -265,4 +266,12 @@ impl Display for EntryId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(fmt)
     }
+}
+
+/// A (path, hash) combination. This is the key used throughout Mercurial for manifest and file
+/// nodes.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct HgNodeKey {
+    pub path: RepoPath,
+    pub hash: NodeHash,
 }

@@ -33,8 +33,7 @@ pub struct FilelogDeltaed {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Filelog {
-    pub path: RepoPath,
-    pub node: mercurial::NodeHash,
+    pub node_key: mercurial::HgNodeKey,
     pub p1: Option<mercurial::NodeHash>,
     pub p2: Option<mercurial::NodeHash>,
     pub linknode: mercurial::NodeHash,
@@ -44,9 +43,8 @@ pub struct Filelog {
 impl UploadableBlob for Filelog {
     type Value = Shared<BoxFuture<(BlobEntry, RepoPath), Compat<Error>>>;
 
-    fn upload(self, repo: &BlobRepo) -> Result<((mercurial::NodeHash, RepoPath), Self::Value)> {
-        let path = self.path;
-        let node = self.node;
+    fn upload(self, repo: &BlobRepo) -> Result<(mercurial::HgNodeKey, Self::Value)> {
+        let node_key = self.node_key;
         let p1 = self.p1.map(|p1| NodeHash::new(p1.sha1().clone()));
         let p2 = self.p2.map(|p1| NodeHash::new(p1.sha1().clone()));
 
@@ -55,8 +53,8 @@ impl UploadableBlob for Filelog {
             manifest::Type::File(FileType::Regular),
             p1,
             p2,
-            path.clone(),
-        ).map(move |(_node, fut)| ((node, path), fut.map_err(Error::compat).boxify().shared()))
+            node_key.path.clone(),
+        ).map(move |(_node, fut)| (node_key, fut.map_err(Error::compat).boxify().shared()))
     }
 }
 
@@ -80,8 +78,10 @@ where
                 .decode(node.clone(), base.into_option(), delta)
                 .and_then(move |blob| {
                     Ok(Filelog {
-                        path: RepoPath::file(path)?,
-                        node,
+                        node_key: mercurial::HgNodeKey {
+                            path: RepoPath::FilePath(path),
+                            hash: node,
+                        },
                         p1: p1.into_option(),
                         p2: p2.into_option(),
                         linknode,
@@ -167,9 +167,10 @@ impl DeltaCache {
 impl Arbitrary for Filelog {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Filelog {
-            path: RepoPath::file(MPath::arbitrary(g))
-                .unwrap_or(RepoPath::file(MPath::new(b"test").unwrap()).unwrap()),
-            node: mercurial::NodeHash::arbitrary(g),
+            node_key: mercurial::HgNodeKey {
+                path: RepoPath::FilePath(MPath::arbitrary(g)),
+                hash: mercurial::NodeHash::arbitrary(g),
+            },
             p1: mercurial::NodeHash::arbitrary(g).into_option(),
             p2: mercurial::NodeHash::arbitrary(g).into_option(),
             linknode: mercurial::NodeHash::arbitrary(g),
@@ -185,15 +186,9 @@ impl Arbitrary for Filelog {
 
         let mut result = Vec::new();
 
-        if self.path.mpath() != Some(&MPath::new(b"test").unwrap()) {
+        if self.node_key.hash != mercurial::NULL_HASH {
             let mut f = self.clone();
-            f.path = RepoPath::file(MPath::new(b"test").unwrap()).unwrap();
-            append(&mut result, f);
-        }
-
-        if self.node != mercurial::NULL_HASH {
-            let mut f = self.clone();
-            f.node = mercurial::NULL_HASH;
+            f.node_key.hash = mercurial::NULL_HASH;
             append(&mut result, f);
         }
 
@@ -281,9 +276,9 @@ mod tests {
 
     fn filelog_to_deltaed(f: &Filelog) -> FilelogDeltaed {
         FilelogDeltaed {
-            path: f.path.mpath().unwrap().clone(),
+            path: f.node_key.path.mpath().unwrap().clone(),
             chunk: CgDeltaChunk {
-                node: f.node.clone(),
+                node: f.node_key.hash.clone(),
                 p1: f.p1.clone().unwrap_or(NULL_HASH),
                 p2: f.p2.clone().unwrap_or(NULL_HASH),
                 base: NULL_HASH,
@@ -343,8 +338,10 @@ mod tests {
     #[test]
     fn two_fulltext_files() {
         let f1 = Filelog {
-            path: RepoPath::file(MPath::new(b"test").unwrap()).unwrap(),
-            node: ONES_HASH,
+            node_key: mercurial::HgNodeKey {
+                path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
+                hash: ONES_HASH,
+            },
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
@@ -352,8 +349,10 @@ mod tests {
         };
 
         let f2 = Filelog {
-            path: RepoPath::file(MPath::new(b"test2").unwrap()).unwrap(),
-            node: FIVES_HASH,
+            node_key: mercurial::HgNodeKey {
+                path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
+                hash: FIVES_HASH,
+            },
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
@@ -368,8 +367,10 @@ mod tests {
 
     fn files_check_order(correct_order: bool) {
         let f1 = Filelog {
-            path: RepoPath::file(MPath::new(b"test").unwrap()).unwrap(),
-            node: ONES_HASH,
+            node_key: mercurial::HgNodeKey {
+                path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
+                hash: ONES_HASH,
+            },
             p1: Some(TWOS_HASH),
             p2: Some(THREES_HASH),
             linknode: FOURS_HASH,
@@ -377,8 +378,10 @@ mod tests {
         };
 
         let f2 = Filelog {
-            path: RepoPath::file(MPath::new(b"test2").unwrap()).unwrap(),
-            node: FIVES_HASH,
+            node_key: mercurial::HgNodeKey {
+                path: RepoPath::FilePath(MPath::new(b"test2").unwrap()),
+                hash: FIVES_HASH,
+            },
             p1: Some(SIXES_HASH),
             p2: Some(SEVENS_HASH),
             linknode: EIGHTS_HASH,
@@ -388,7 +391,7 @@ mod tests {
         let f1_deltaed = filelog_to_deltaed(&f1);
         let mut f2_deltaed = filelog_to_deltaed(&f2);
 
-        f2_deltaed.chunk.base = f1.node.clone();
+        f2_deltaed.chunk.base = f1.node_key.hash.clone();
         f2_deltaed.chunk.delta =
             compute_delta(f1.blob.as_slice().unwrap(), f2.blob.as_slice().unwrap());
 
@@ -445,17 +448,17 @@ mod tests {
             let mut hash_gen = NodeHashGen::new();
 
             let mut f = f.clone();
-            f.node = hash_gen.next();
+            f.node_key.hash = hash_gen.next();
 
             let mut fs = fs.clone();
             for el in fs.iter_mut() {
-                el.node = hash_gen.next();
+                el.node_key.hash = hash_gen.next();
             }
 
             let mut deltas = vec![filelog_to_deltaed(&f)];
             for filelog in &fs {
                 let mut delta = filelog_to_deltaed(filelog);
-                delta.chunk.base = f.node.clone();
+                delta.chunk.base = f.node_key.hash.clone();
                 delta.chunk.delta =
                     compute_delta(f.blob.as_slice().unwrap(), filelog.blob.as_slice().unwrap());
                 deltas.push(delta);
@@ -471,7 +474,7 @@ mod tests {
 
             let mut fs = fs.clone();
             for el in fs.iter_mut() {
-                el.node = hash_gen.next();
+                el.node_key.hash = hash_gen.next();
             }
 
             let deltas = {
@@ -483,7 +486,7 @@ mod tests {
 
                 for (prev, next) in fs.iter().zip(it) {
                     let mut delta = filelog_to_deltaed(next);
-                    delta.chunk.base = prev.node.clone();
+                    delta.chunk.base = prev.node_key.hash.clone();
                     delta.chunk.delta =
                         compute_delta(prev.blob.as_slice().unwrap(), next.blob.as_slice().unwrap());
                     deltas.push(delta);

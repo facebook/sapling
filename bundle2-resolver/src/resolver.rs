@@ -31,9 +31,8 @@ use wirepackparser::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 type PartId = u32;
 type Changesets = Vec<(mercurial::NodeHash, RevlogChangeset)>;
-type Filelogs = HashMap<(mercurial::NodeHash, RepoPath), <Filelog as UploadableBlob>::Value>;
-type Manifests =
-    HashMap<(mercurial::NodeHash, RepoPath), <TreemanifestEntry as UploadableBlob>::Value>;
+type Filelogs = HashMap<mercurial::HgNodeKey, <Filelog as UploadableBlob>::Value>;
+type Manifests = HashMap<mercurial::HgNodeKey, <TreemanifestEntry as UploadableBlob>::Value>;
 type UploadedChangesets = HashMap<mercurial::NodeHash, ChangesetHandle>;
 
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
@@ -507,7 +506,10 @@ fn walk_manifests(
             };
 
             if details.is_tree() {
-                let key = (nodehash, RepoPath::DirectoryPath(next_path));
+                let key = mercurial::HgNodeKey {
+                    path: RepoPath::DirectoryPath(next_path),
+                    hash: nodehash,
+                };
 
                 if let Some(&(ref manifest_content, ref blobfuture)) = manifests.get(&key) {
                     entries.push(
@@ -518,14 +520,18 @@ fn walk_manifests(
                             .boxify(),
                     );
                     entries.append(&mut walk_helper(
-                        &key.1,
+                        &key.path,
                         manifest_content,
                         manifests,
                         filelogs,
                     )?);
                 }
             } else {
-                if let Some(blobfuture) = filelogs.get(&(nodehash, RepoPath::FilePath(next_path))) {
+                let key = mercurial::HgNodeKey {
+                    path: RepoPath::FilePath(next_path),
+                    hash: nodehash,
+                };
+                if let Some(blobfuture) = filelogs.get(&key) {
                     entries.push(
                         blobfuture
                             .clone()
@@ -540,8 +546,13 @@ fn walk_manifests(
         Ok(entries)
     }
 
+    let root_key = mercurial::HgNodeKey {
+        path: RepoPath::root(),
+        hash: manifest_root_id.clone().into_nodehash(),
+    };
+
     let &(ref manifest_content, ref manifest_root) = manifests
-        .get(&(manifest_root_id.clone().into_nodehash(), RepoPath::root()))
+        .get(&root_key)
         .ok_or_else(|| format_err!("Missing root tree manifest"))?;
 
     Ok((
