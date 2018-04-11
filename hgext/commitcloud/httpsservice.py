@@ -46,6 +46,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # optional, but needed for using a sandbox
         self.certs = ui.config('commitcloud', 'certs')
 
+        # debug option
+        self.debugrequests = ui.config('commitcloud', 'debugrequests')
+
         def getauthparams():
             oauth = ui.configbool('commitcloud', 'oauth')
             """ If OAuth authentication is enabled we require
@@ -120,6 +123,9 @@ class HttpsCommitCloudService(baseservice.BaseService):
     def _send(self, path, data):
         e = None
         rdata = None
+        # print all requests if debugrequests and debug are both on
+        if self.debugrequests:
+            self.ui.debug('%s\n' % json.dumps(data, indent=4))
         if self._getheader('Content-Encoding') == 'gzip':
             buffer = util.stringio()
             with gzip.GzipFile(fileobj=buffer, mode='w') as compressed:

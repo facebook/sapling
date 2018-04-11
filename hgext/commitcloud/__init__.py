@@ -54,6 +54,9 @@
 
     # update to a new revision if the current revision has been moved
     updateonmove = true
+
+    # option to print requests to Commit Cloud web endpoint (in debug level)
+    debugrequests = true
 """
 
 from __future__ import absolute_import
