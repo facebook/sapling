@@ -260,9 +260,9 @@ def restore(ui, repo, dest=None, **opts):
     sourcereporoot = opts.get('reporoot')
     sourcehostname = opts.get('hostname')
     namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
-    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, namingmgr)
-    if len(allbackupstates) == 0:
+    allbackupstates = _downloadbackupstate(
+        ui, other, sourcereporoot, sourcehostname, namingmgr)
+    if not allbackupstates:
         ui.warn(_('no backups found!'))
         return 1
     _checkbackupstates(allbackupstates)
@@ -316,25 +316,25 @@ def getavailablebackups(ui, repo, dest=None, **opts):
     sourcehostname = opts.get('hostname')
 
     namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
-    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, namingmgr)
+    allbackupstates = _downloadbackupstate(
+        ui, other, sourcereporoot, sourcehostname, namingmgr)
 
+    # Preserve allbackupstates MRU order in messages for users
     if opts.get('json'):
-        jsondict = collections.defaultdict(list)
+        jsondict = util.sortdict()
         for hostname, reporoot in allbackupstates.keys():
-            jsondict[hostname].append(reporoot)
-            # make sure the output is sorted. That's not an efficient way to
-            # keep list sorted but we don't have that many backups.
-            jsondict[hostname].sort()
-        ui.write('%s\n' % json.dumps(jsondict))
+            jsondict.setdefault(hostname, []).append(reporoot)
+        ui.write('%s\n' % json.dumps(jsondict, indent=4))
     else:
         if not allbackupstates:
             ui.write(_('no backups available for %s\n') % namingmgr.username)
 
-        ui.write(_('user %s has %d available backups:\n') %
+        ui.write(_('user %s has %d available backups:\n'
+                   '(backed are ordered, '
+                   'the most recent are at the top of the list)\n') %
                  (namingmgr.username, len(allbackupstates)))
 
-        for hostname, reporoot in sorted(allbackupstates.keys()):
+        for hostname, reporoot in allbackupstates.keys():
             ui.write(_('%s on %s\n') % (reporoot, hostname))
 
 @command('debugcheckbackup',
@@ -352,8 +352,8 @@ def checkbackup(ui, repo, dest=None, **opts):
 
     other = _getremote(repo, ui, dest, **opts)
     namingmgr = BackupBookmarkNamingManager(ui, repo, opts.get('user'))
-    allbackupstates = _downloadbackupstate(ui, other, sourcereporoot,
-                                           sourcehostname, namingmgr)
+    allbackupstates = _downloadbackupstate(
+        ui, other, sourcereporoot, sourcehostname, namingmgr)
     if not opts.get('all'):
         _checkbackupstates(allbackupstates)
 
@@ -740,9 +740,29 @@ def _filterbookmarks(localbookmarks, repo, headstobackup):
     return filteredbooks
 
 def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
+    """
+    Sqlindex returns backups in order of insertion
+
+    _downloadbackupstate returns an ordered dict
+        <host, reporoot> => backups
+                            that contains
+                                * heads (ordered dict)
+                                * localbookmarks (ordered dict)
+
+    Hostnames and reporoot in the dict should be in MRU order (most recent used)
+    So, the fresher backups come first
+    Internally backups preserve the order of insertion
+
+    Note:
+
+    Fileindex returns backups in lexicographical order since fileindexapi
+    don't support yet returning bookmarks in the order of insertion
+    Hostnames and reporoot will not be nicely MRU ordered
+    until the order of insertion is not supported in fileindex
+    """
     pattern = namingmgr.getcommonuserprefix()
     fetchedbookmarks = other.listkeyspatterns('bookmarks', patterns=[pattern])
-    allbackupstates = collections.defaultdict(backupstate)
+    allbackupstates = util.sortdict()
     for book, hexnode in fetchedbookmarks.iteritems():
         parsed = _parsebackupbookmark(book, namingmgr)
         if parsed:
@@ -751,6 +771,8 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
             if sourcehostname and sourcehostname != parsed.hostname:
                 continue
             key = (parsed.hostname, parsed.reporoot)
+            if key not in allbackupstates:
+                allbackupstates[key] = backupstate()
             if parsed.localbookmark:
                 bookname = parsed.localbookmark
                 allbackupstates[key].localbookmarks[bookname] = hexnode
@@ -759,23 +781,33 @@ def _downloadbackupstate(ui, other, sourcereporoot, sourcehostname, namingmgr):
         else:
             ui.warn(_('wrong format of backup bookmark: %s') % book)
 
-    return allbackupstates
+    # reverse to make MRU order
+    allbackupstatesrev = util.sortdict()
+    for key, value in reversed(allbackupstates.items()):
+        allbackupstatesrev[key] = value
+
+    return allbackupstatesrev
 
 def _checkbackupstates(allbackupstates):
-    if len(allbackupstates) == 0:
+    if not allbackupstates:
         raise error.Abort('no backups found!')
 
-    hostnames = set(key[0] for key in allbackupstates.iterkeys())
-    reporoots = set(key[1] for key in allbackupstates.iterkeys())
+    def unique(seq):
+        used = set()
+        return [x for x in seq if x not in used and (used.add(x) or True)]
 
+    hostnames = unique([key[0] for key in allbackupstates.iterkeys()])
+    reporoots = unique([key[1] for key in allbackupstates.iterkeys()])
+
+    # Preserve allbackupstates MRU order in messages for users
     if len(hostnames) > 1:
         raise error.Abort(
-            _('ambiguous hostname to restore: %s') % sorted(hostnames),
+            _('ambiguous hostname to restore:\n') + '\n'.join(hostnames),
             hint=_('set --hostname to disambiguate'))
 
     if len(reporoots) > 1:
         raise error.Abort(
-            _('ambiguous repo root to restore: %s') % sorted(reporoots),
+            _('ambiguous repo root to restore:\n') + '\n'.join(reporoots),
             hint=_('set --reporoot to disambiguate'))
 
 class BackupBookmarkNamingManager(object):

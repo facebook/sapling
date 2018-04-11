@@ -87,7 +87,7 @@ class fileindexapi(indexapi):
         return self._read(bookmarkpath)
 
     def getbookmarks(self, query):
-        return dict(self._listbookmarks(query))
+        return sorted(self._listbookmarks(query))
 
     def saveoptionaljsonmetadata(self, node, jsonmetadata):
         vfs = self._repo.vfs

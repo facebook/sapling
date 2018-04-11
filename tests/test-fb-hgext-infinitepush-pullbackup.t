@@ -79,7 +79,9 @@ Restore with ambiguous repo root
   $ hg clone ssh://user@dummy/repo restored -q
   $ cd restored
   $ hg pullbackup
-  abort: ambiguous repo root to restore: ['$TESTTMP/backupsource', '$TESTTMP/backupsource2']
+  abort: ambiguous repo root to restore:
+  $TESTTMP/backupsource2
+  $TESTTMP/backupsource
   (set --reporoot to disambiguate)
   [255]
   $ hg pullbackup --reporoot $TESTTMP/backupsource2
@@ -234,7 +236,11 @@ Make sure commit was pulled by checking that commit is present
 
 Test debugcheckbackup
   $ hg debugcheckbackup
-  abort: ambiguous repo root to restore: ['$TESTTMP', '$TESTTMP/backupsource', '$TESTTMP/backupsource2', '$TESTTMP/bookmarks/backupsource3']
+  abort: ambiguous repo root to restore:
+  $TESTTMP
+  $TESTTMP/bookmarks/backupsource3
+  $TESTTMP/backupsource2
+  $TESTTMP/backupsource
   (set --reporoot to disambiguate)
   [255]
   $ hg debugcheckbackup --user anotheruser --reporoot $TESTTMP/backupsource
@@ -270,13 +276,22 @@ Make sure that both repos were checked even though check for one of them fails
 Test getavailablebackups command
   $ hg getavailablebackups
   user test has 4 available backups:
+  (backed are ordered, the most recent are at the top of the list)
   \$TESTTMP on .* (re)
-  \$TESTTMP/backupsource on .* (re)
-  \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/bookmarks/backupsource3 on .* (re)
+  \$TESTTMP/backupsource2 on .* (re)
+  \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --user anotheruser
   user anotheruser has 2 available backups:
-  \$TESTTMP/backupsource on .* (re)
+  (backed are ordered, the most recent are at the top of the list)
   \$TESTTMP/backupsource2 on .* (re)
+  \$TESTTMP/backupsource on .* (re)
   $ hg getavailablebackups --json
-  {".*": \["\$TESTTMP", "\$TESTTMP/backupsource", "\$TESTTMP/backupsource2", "\$TESTTMP/bookmarks/backupsource3"\]} (re)
+  {
+      ".*": \[ (re)
+          "$TESTTMP", 
+          "$TESTTMP/bookmarks/backupsource3", 
+          "$TESTTMP/backupsource2", 
+          "$TESTTMP/backupsource"
+      ]
+  }
