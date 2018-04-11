@@ -2,6 +2,8 @@
   > [web]
   > push_ssl = false
   > allow_push = *
+  > [format]
+  > allowbundle1=True
   > EOF
 
   $ hg init server

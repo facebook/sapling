@@ -1,5 +1,10 @@
 #require no-msys # MSYS will translate web paths as if they were file paths
 
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > allowbundle1=True
+  > EOF
+
 This is a test of the wire protocol over CGI-based hgweb.
 initialize repository
 
@@ -26,9 +31,11 @@ try hgweb request
 
   $ . "$TESTDIR/cgienv"
   $ QUERY_STRING="cmd=changegroup&roots=0000000000000000000000000000000000000000"; export QUERY_STRING
-  $ $PYTHON hgweb.cgi >page1 2>&1
+  $ $PYTHON hgweb.cgi >page1
+  devel-warn: using deprecated bundlev1 format
+   at: */changegroup.py:* (makechangegroup) (glob)
   $ $PYTHON "$TESTDIR/md5sum.py" page1
-  b76498dc318539f1108a7ca5301b0fe7  page1
+  1f424bb22ec05c3c6bc866b6e67efe43  page1
 
 make sure headers are sent even when there is no body
 

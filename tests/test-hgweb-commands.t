@@ -9,6 +9,8 @@ The following things are tested elsewhere and are therefore omitted:
   $ cat << EOF >> $HGRCPATH
   > [format]
   > usegeneraldelta=yes
+  > [format]
+  > allowbundle1=True
   > EOF
 
 Set up the repo
